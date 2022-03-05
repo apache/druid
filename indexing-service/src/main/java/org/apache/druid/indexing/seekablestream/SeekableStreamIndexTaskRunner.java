@@ -1602,7 +1602,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       return HttpResponses.BAD_REQUEST.error("Request body must contain a map of { partition:endOffset }");
     } else if (!endOffsets.keySet().containsAll(sequenceNumbers.keySet())) {
       return HttpResponses.BAD_REQUEST.error("Request contains partitions not being handled by this task, my partitions: %s",
-                                            endOffsets.keySet());
+                                             endOffsets.keySet());
     } else {
       try {
         pauseLock.lockInterruptibly();
@@ -1632,8 +1632,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           return Response.ok(sequenceNumbers).build();
         } else if (latestSequence.isCheckpointed()) {
           return HttpResponses.BAD_REQUEST.error("Sequence [%s] has already endOffsets set, cannot set to [%s]",
-                                                latestSequence,
-                                                sequenceNumbers);
+                                                 latestSequence,
+                                                 sequenceNumbers);
         } else if (!isPaused()) {
           return HttpResponses.BAD_REQUEST.error("Task must be paused before changing the end offsets");
         }
@@ -1642,8 +1642,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           if (createSequenceNumber(entry.getValue()).compareTo(createSequenceNumber(currOffsets.get(entry.getKey())))
               < 0) {
             return HttpResponses.BAD_REQUEST.error("End sequence must be >= current sequence for partition [%s] (current: %s)",
-                                                  entry.getKey(),
-                                                  currOffsets.get(entry.getKey()));
+                                                   entry.getKey(),
+                                                   currOffsets.get(entry.getKey()));
           }
         }
 

@@ -22,7 +22,6 @@ package org.apache.druid.security.basic.authentication.endpoint;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Smile;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.BasicSecurityDBResourceException;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
@@ -197,7 +196,7 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
 
   private static Response makeResponseForAuthenticatorNotFound(String authenticatorName)
   {
-    return HttpResponses.BAD_REQUEST.error(StringUtils.format("Basic authenticator with name [%s] does not exist.", authenticatorName));
+    return HttpResponses.BAD_REQUEST.error("Basic authenticator with name [%s] does not exist.", authenticatorName);
   }
 
   private static Response makeResponseForBasicSecurityDBResourceException(BasicSecurityDBResourceException bsre)

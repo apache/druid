@@ -117,7 +117,7 @@ public class LookupIntrospectionResourceTest
             .anyTimes();
     EasyMock.replay(mockLookupExtractorFactory);
     Assert.assertEquals(
-        Response.status(Response.Status.NOT_FOUND).build().getStatus(),
+        Response.Status.NOT_FOUND.getStatusCode(),
         ((Response) lookupIntrospectionResource.introspectLookup("lookupId")).getStatus()
     );
   }
@@ -126,7 +126,7 @@ public class LookupIntrospectionResourceTest
   public void testNotExistingLookup()
   {
     Assert.assertEquals(
-        Response.status(Response.Status.NOT_FOUND).build().getStatus(),
+        Response.Status.NOT_FOUND.getStatusCode(),
         ((Response) lookupIntrospectionResource.introspectLookup("not there")).getStatus()
     );
   }

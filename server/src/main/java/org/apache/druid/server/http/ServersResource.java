@@ -28,6 +28,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.InventoryView;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
@@ -125,21 +126,13 @@ public class ServersResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getClusterServers(@QueryParam("full") String full, @QueryParam("simple") String simple)
   {
-    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
-
     if (full != null) {
-      return builder
-          .entity(Collections2.transform(serverInventoryView.getInventory(), ServersResource::makeFullServer))
-          .build();
+      return HttpResponses.OK.json(Collections2.transform(serverInventoryView.getInventory(), ServersResource::makeFullServer));
     } else if (simple != null) {
-      return builder
-          .entity(Collections2.transform(serverInventoryView.getInventory(), ServersResource::makeSimpleServer))
-          .build();
+      return HttpResponses.OK.json(Collections2.transform(serverInventoryView.getInventory(), ServersResource::makeSimpleServer));
     }
 
-    return builder
-        .entity(Collections2.transform(serverInventoryView.getInventory(), DruidServer::getHost))
-        .build();
+    return HttpResponses.OK.json(Collections2.transform(serverInventoryView.getInventory(), DruidServer::getHost));
   }
 
   @GET
@@ -149,16 +142,14 @@ public class ServersResource
   {
     DruidServer server = serverInventoryView.getInventoryValue(serverName);
     if (server == null) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+      return HttpResponses.NOT_FOUND.error("server [%s] does not exist.", serverName);
     }
-
-    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
 
     if (simple != null) {
-      return builder.entity(makeSimpleServer(server)).build();
+      return HttpResponses.OK.json(makeSimpleServer(server));
     }
 
-    return builder.entity(makeFullServer(server)).build();
+    return HttpResponses.OK.json(makeFullServer(server));
   }
 
   @GET
@@ -166,19 +157,16 @@ public class ServersResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getServerSegments(@PathParam("serverName") String serverName, @QueryParam("full") String full)
   {
-    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
     DruidServer server = serverInventoryView.getInventoryValue(serverName);
     if (server == null) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+      return HttpResponses.NOT_FOUND.error("server [%s] does not exist.", serverName);
     }
 
     if (full != null) {
-      return builder.entity(server.iterateAllSegments()).build();
+      return HttpResponses.OK.json(server.iterateAllSegments());
     }
 
-    return builder
-        .entity(Iterables.transform(server.iterateAllSegments(), DataSegment::getId))
-        .build();
+    return HttpResponses.OK.json(Iterables.transform(server.iterateAllSegments(), DataSegment::getId));
   }
 
   @GET
@@ -188,16 +176,16 @@ public class ServersResource
   {
     DruidServer server = serverInventoryView.getInventoryValue(serverName);
     if (server == null) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+      return HttpResponses.NOT_FOUND.error("server [%s] does not exist.", serverName);
     }
 
     for (SegmentId possibleSegmentId : SegmentId.iterateAllPossibleParsings(segmentId)) {
       DataSegment segment = server.getSegment(possibleSegmentId);
       if (segment != null) {
-        return Response.status(Response.Status.OK).entity(segment).build();
+        return HttpResponses.OK.json(segment);
       }
     }
 
-    return Response.status(Response.Status.NOT_FOUND).build();
+    return HttpResponses.NOT_FOUND.error("segment [%s] not found in server.", segmentId, serverName);
   }
 }

@@ -833,7 +833,7 @@ public class OverlordResource
     }
     catch (Exception e) {
       log.error(e, "Error in posting [%s] action to [%s]", action, host);
-      return HttpResponses.SERVER_ERROR.error(e);
+      return HttpResponses.SERVER_ERROR.exception(e);
     }
   }
 
@@ -872,7 +872,7 @@ public class OverlordResource
     }
     catch (Exception e) {
       log.warn(e, "Failed to stream log for task %s", taskid);
-      return HttpResponses.SERVER_ERROR.error(e);
+      return HttpResponses.SERVER_ERROR.exception(e);
     }
   }
 
@@ -895,7 +895,7 @@ public class OverlordResource
     }
     catch (Exception e) {
       log.warn(e, "Failed to stream task reports for task %s", taskid);
-      return HttpResponses.SERVER_ERROR.error(e);
+      return HttpResponses.SERVER_ERROR.exception(e);
     }
   }
 

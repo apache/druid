@@ -24,12 +24,16 @@ import io.netty.util.SuppressForbidden;
 import org.apache.druid.common.utils.ServletResourceUtils;
 import org.apache.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 public enum HttpResponses
 {
+  OK(Response.Status.OK),
+  ACCEPTED(Response.Status.ACCEPTED),
+  NO_CONTENT(Response.Status.NO_CONTENT),
   BAD_REQUEST(Response.Status.BAD_REQUEST),
   FORBIDDEN(Response.Status.FORBIDDEN),
   NOT_FOUND(Response.Status.NOT_FOUND),
@@ -43,27 +47,74 @@ public enum HttpResponses
     this.statusCode = status.getStatusCode();
   }
 
-  public Response error(String message)
+  /**
+   * This method is only for backward compatibility for some old interfaces.
+   * SHOULD NOT be usded in new code
+   *
+   * @return an HTTP response whose Content-Type is text/plain
+   */
+  @SuppressForbidden(reason = "Response#status")
+  public Response text(String message)
   {
-    return object(ImmutableMap.of("error", message));
+    return Response.status(statusCode)
+                   .entity(message)
+                   .type(MediaType.TEXT_PLAIN_TYPE)
+                   .build();
   }
 
-  public Response error(@Nullable Throwable t)
+  /**
+   * @return an HTTP response with JSON formatted message. The message is as:
+   * <code>
+   * {"error": "error message"}
+   * </code>
+   */
+  public Response error(String message)
+  {
+    return json(ImmutableMap.of("error", message));
+  }
+
+  /**
+   * @return an HTTP response with JSON formatted message. The message is as:
+   * <code>
+   * {"error": "error message"}
+   * </code>
+   */
+  public Response exception(@Nullable Throwable t)
   {
     return error(ServletResourceUtils.sanitizeExceptionMessage(t));
   }
 
+  /**
+   * @return an HTTP response with JSON formatted message. The message is as:
+   * <code>
+   * {"error": "error message"}
+   * </code>
+   */
   public Response error(String messageFormat, Object... formatArgs)
   {
     return error(StringUtils.format(messageFormat, formatArgs));
   }
 
+  /**
+   * @param entity object
+   * @return an HTTP response with JSON formatted body
+   */
   @SuppressForbidden(reason = "Response#status")
-  public Response object(Object entity)
+  public Response json(@Nonnull Object entity)
   {
     return Response.status(statusCode)
                    .type(MediaType.APPLICATION_JSON)
                    .entity(entity)
+                   .build();
+  }
+
+  /**
+   * @return an HTTP response without body
+   */
+  @SuppressForbidden(reason = "Response#status")
+  public Response empty()
+  {
+    return Response.status(statusCode)
                    .build();
   }
 }

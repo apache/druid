@@ -85,7 +85,7 @@ public class ClusterResource
       entityBuilder.put(NodeRole.ROUTER, routerNodes);
     }
 
-    return Response.status(Response.Status.OK).entity(entityBuilder.build()).build();
+    return HttpResponses.OK.json(entityBuilder.build());
   }
 
   @GET
@@ -96,7 +96,7 @@ public class ClusterResource
     if (nodeRole == null) {
       return HttpResponses.BAD_REQUEST.error("Invalid nodeRole of null. Valid node roles are " + Arrays.toString(NodeRole.values()));
     } else {
-      return Response.status(Response.Status.OK).entity(getNodes(nodeRole, full)).build();
+      return HttpResponses.OK.json(getNodes(nodeRole, full));
     }
   }
 

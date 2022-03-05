@@ -28,6 +28,7 @@ import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -74,9 +75,9 @@ public class CompactionResource
   {
     final Long notCompactedSegmentSizeBytes = coordinator.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
     if (notCompactedSegmentSizeBytes == null) {
-      return Response.status(Response.Status.NOT_FOUND).entity(ImmutableMap.of("error", "unknown dataSource")).build();
+      return HttpResponses.NOT_FOUND.error("unknown dataSource [%s]", dataSource);
     } else {
-      return Response.ok(ImmutableMap.of("remainingSegmentSize", notCompactedSegmentSizeBytes)).build();
+      return HttpResponses.OK.json(ImmutableMap.of("remainingSegmentSize", notCompactedSegmentSizeBytes));
     }
   }
 
@@ -94,10 +95,10 @@ public class CompactionResource
     } else {
       AutoCompactionSnapshot autoCompactionSnapshot = coordinator.getAutoCompactionSnapshotForDataSource(dataSource);
       if (autoCompactionSnapshot == null) {
-        return Response.status(Response.Status.NOT_FOUND).entity(ImmutableMap.of("error", "unknown dataSource")).build();
+        return HttpResponses.NOT_FOUND.error("unknown dataSource [%s]", dataSource);
       }
       snapshots = ImmutableList.of(autoCompactionSnapshot);
     }
-    return Response.ok(ImmutableMap.of("latestStatus", snapshots)).build();
+    return HttpResponses.OK.json(ImmutableMap.of("latestStatus", snapshots));
   }
 }

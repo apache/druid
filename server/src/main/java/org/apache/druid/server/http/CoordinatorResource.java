@@ -28,6 +28,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -74,9 +75,9 @@ public class CoordinatorResource
     final boolean leading = coordinator.isLeader();
     final Map<String, Boolean> response = ImmutableMap.of("leader", leading);
     if (leading) {
-      return Response.ok(response).build();
+      return HttpResponses.OK.json(response);
     } else {
-      return Response.status(Response.Status.NOT_FOUND).entity(response).build();
+      return HttpResponses.NOT_FOUND.json(response);
     }
   }
 
@@ -91,15 +92,15 @@ public class CoordinatorResource
   )
   {
     if (simple != null) {
-      return Response.ok(coordinator.computeNumsUnavailableUsedSegmentsPerDataSource()).build();
+      return HttpResponses.OK.json(coordinator.computeNumsUnavailableUsedSegmentsPerDataSource());
     }
 
     if (full != null) {
       return computeUsingClusterView != null
-             ? Response.ok(coordinator.computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView()).build() :
-             Response.ok(coordinator.computeUnderReplicationCountsPerDataSourcePerTier()).build();
+             ? HttpResponses.OK.json(coordinator.computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView()) :
+             HttpResponses.OK.json(coordinator.computeUnderReplicationCountsPerDataSourcePerTier());
     }
-    return Response.ok(coordinator.getLoadStatus()).build();
+    return HttpResponses.OK.json(coordinator.getLoadStatus());
   }
 
   @GET
@@ -143,10 +144,10 @@ public class CoordinatorResource
     }
 
     if (full != null) {
-      return Response.ok(coordinator.getLoadManagementPeons()).build();
+      return HttpResponses.OK.json(coordinator.getLoadManagementPeons());
     }
 
-    return Response.ok(
+    return HttpResponses.OK.json(
         Maps.transformValues(
             coordinator.getLoadManagementPeons(),
             new Function<LoadQueuePeon, Object>()
@@ -162,6 +163,6 @@ public class CoordinatorResource
               }
             }
         )
-    ).build();
+    );
   }
 }

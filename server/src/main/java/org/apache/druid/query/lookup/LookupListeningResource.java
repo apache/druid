@@ -87,18 +87,18 @@ class LookupListeningResource extends ListenerResource
             }
             catch (final IOException ex) {
               LOG.debug(ex, "Bad request");
-              return HttpResponses.BAD_REQUEST.error(ex);
+              return HttpResponses.BAD_REQUEST.exception(ex);
             }
 
             try {
               state.getToLoad().forEach(manager::add);
               state.getToDrop().forEach(manager::remove);
 
-              return Response.status(Response.Status.ACCEPTED).entity(manager.getAllLookupsState()).build();
+              return HttpResponses.OK.json(manager.getAllLookupsState());
             }
             catch (Exception e) {
               LOG.error(e, "Error handling request");
-              return HttpResponses.SERVER_ERROR.error(e);
+              return HttpResponses.SERVER_ERROR.exception(e);
             }
           }
 

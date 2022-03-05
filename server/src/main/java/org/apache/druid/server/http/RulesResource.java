@@ -72,7 +72,7 @@ public class RulesResource
   @ResourceFilters(StateResourceFilter.class)
   public Response getRules()
   {
-    return Response.ok(databaseRuleManager.getAllRules()).build();
+    return HttpResponses.OK.json(databaseRuleManager.getAllRules());
   }
 
   @GET
@@ -85,11 +85,9 @@ public class RulesResource
   )
   {
     if (full != null) {
-      return Response.ok(databaseRuleManager.getRulesWithDefault(dataSourceName))
-                     .build();
+      return HttpResponses.OK.json(databaseRuleManager.getRulesWithDefault(dataSourceName));
     }
-    return Response.ok(databaseRuleManager.getRules(dataSourceName))
-                   .build();
+    return HttpResponses.OK.json(databaseRuleManager.getRules(dataSourceName));
   }
 
   // default value is used for backwards compatibility
@@ -110,9 +108,9 @@ public class RulesResource
         rules,
         new AuditInfo(author, comment, req.getRemoteAddr())
     )) {
-      return Response.ok().build();
+      return HttpResponses.OK.empty();
     }
-    return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+    return HttpResponses.SERVER_ERROR.empty();
   }
 
   @GET
@@ -126,7 +124,7 @@ public class RulesResource
   )
   {
     try {
-      return Response.ok(getRuleHistory(dataSourceName, interval, count)).build();
+      return HttpResponses.OK.json(getRuleHistory(dataSourceName, interval, count));
     }
     catch (IllegalArgumentException e) {
       return HttpResponses.BAD_REQUEST.error(e.getMessage());
@@ -143,7 +141,7 @@ public class RulesResource
   )
   {
     try {
-      return Response.ok(getRuleHistory(null, interval, count)).build();
+      return HttpResponses.OK.json(getRuleHistory(null, interval, count));
     }
     catch (IllegalArgumentException e) {
       return HttpResponses.BAD_REQUEST.error(e.getMessage());

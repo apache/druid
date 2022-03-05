@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.BrokerServerView;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -48,7 +49,7 @@ public class BrokerResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLoadStatus()
   {
-    return Response.ok(ImmutableMap.of("inventoryInitialized", brokerServerView.isInitialized())).build();
+    return HttpResponses.OK.json(ImmutableMap.of("inventoryInitialized", brokerServerView.isInitialized()));
   }
 
   @GET
@@ -56,9 +57,9 @@ public class BrokerResource
   public Response getReadiness()
   {
     if (brokerServerView.isInitialized()) {
-      return Response.ok().build();
+      return HttpResponses.OK.empty();
     } else {
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+      return HttpResponses.SERVICE_UNAVAILABLE.empty();
     }
   }
 }

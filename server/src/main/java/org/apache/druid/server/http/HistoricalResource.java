@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 
 import javax.inject.Inject;
 import javax.ws.rs.GET;
@@ -58,9 +59,9 @@ public class HistoricalResource
   public Response getReadiness()
   {
     if (segmentLoadDropHandler.isStarted()) {
-      return Response.ok().build();
+      return HttpResponses.OK.empty();
     } else {
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+      return HttpResponses.SERVICE_UNAVAILABLE.empty();
     }
   }
 }

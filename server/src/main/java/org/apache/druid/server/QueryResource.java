@@ -58,6 +58,7 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Keys;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
@@ -81,7 +82,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -170,7 +170,7 @@ public class QueryResource implements QueryCountStatsProvider
     }
 
     queryScheduler.cancelQuery(queryId);
-    return Response.status(Response.Status.ACCEPTED).build();
+    return HttpResponses.ACCEPTED.empty();
   }
 
   @POST

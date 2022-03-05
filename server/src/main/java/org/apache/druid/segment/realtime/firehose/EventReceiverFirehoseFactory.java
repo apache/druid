@@ -612,15 +612,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       Long producerSequence = producerSequences.computeIfAbsent(producerId, key -> Long.MIN_VALUE);
 
       if (producerSequences.size() >= MAX_FIREHOSE_PRODUCERS) {
-        return Response
-            .status(Response.Status.FORBIDDEN)
-            .entity(
-                ImmutableMap.of(
-                    "error",
-                    "Too many individual producer IDs for this firehose.  Max is " + MAX_FIREHOSE_PRODUCERS
-                )
-            )
-            .build();
+        return HttpResponses.FORBIDDEN.error("Too many individual producer IDs for this firehose.  Max is " + MAX_FIREHOSE_PRODUCERS);
       }
 
       try {

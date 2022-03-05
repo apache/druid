@@ -90,7 +90,7 @@ public abstract class ListenerResource
     }
     catch (Exception e) {
       LOG.error(e, "Exception in handling POSTAll request");
-      return HttpResponses.SERVER_ERROR.error(e);
+      return HttpResponses.SERVER_ERROR.exception(e);
     }
   }
 
@@ -111,7 +111,7 @@ public abstract class ListenerResource
     }
     catch (Exception e) {
       LOG.error(e, "Exception in handling updates request");
-      return HttpResponses.SERVER_ERROR.error(e);
+      return HttpResponses.SERVER_ERROR.exception(e);
     }
   }
 
@@ -124,7 +124,7 @@ public abstract class ListenerResource
     }
     catch (Exception e) {
       LOG.error(e, "Exception in handling GETAll request");
-      return HttpResponses.SERVER_ERROR.error(e);
+      return HttpResponses.SERVER_ERROR.exception(e);
     }
   }
 
@@ -143,7 +143,7 @@ public abstract class ListenerResource
     }
     catch (Exception e) {
       LOG.error(e, "Exception in handling GET request for [%s]", id);
-      return HttpResponses.SERVER_ERROR.error(e);
+      return HttpResponses.SERVER_ERROR.exception(e);
     }
   }
 
@@ -162,7 +162,7 @@ public abstract class ListenerResource
     }
     catch (Exception e) {
       LOG.error(e, "Exception in handling DELETE request for [%s]", id);
-      return HttpResponses.SERVER_ERROR.error(e);
+      return HttpResponses.SERVER_ERROR.exception(e);
     }
   }
 
@@ -186,7 +186,7 @@ public abstract class ListenerResource
     }
     catch (Exception e) {
       LOG.error(e, "Exception in handling POST request for ID [%s]", id);
-      return HttpResponses.SERVER_ERROR.error(e);
+      return HttpResponses.SERVER_ERROR.exception(e);
     }
   }
 

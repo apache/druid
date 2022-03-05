@@ -20,10 +20,8 @@
 package org.apache.druid.server.initialization.jetty;
 
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.server.security.ForbiddenException;
 
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
@@ -34,11 +32,6 @@ public class ForbiddenExceptionMapper implements ExceptionMapper<ForbiddenExcept
   @Override
   public Response toResponse(ForbiddenException exception)
   {
-    return Response.status(Response.Status.FORBIDDEN)
-                   .type(MediaType.APPLICATION_JSON)
-                   .entity(ImmutableMap.of(
-                       "Access-Check-Result", exception.getMessage()
-                   ))
-                   .build();
+    return HttpResponses.FORBIDDEN.error(exception.getMessage());
   }
 }

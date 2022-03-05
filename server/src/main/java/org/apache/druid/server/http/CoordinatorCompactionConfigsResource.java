@@ -21,7 +21,6 @@ package org.apache.druid.server.http;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditInfo;
@@ -163,10 +162,10 @@ public class CoordinatorCompactionConfigsResource
 
     final DataSourceCompactionConfig config = configs.get(dataSource);
     if (config == null) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+      return HttpResponses.NOT_FOUND.empty();
     }
 
-    return Response.ok().entity(config).build();
+    return HttpResponses.OK.json(config);
   }
 
   @DELETE
@@ -219,19 +218,17 @@ public class CoordinatorCompactionConfigsResource
     }
     catch (Exception e) {
       LOG.warn(e, "Update compaction config failed");
-      return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                     .entity(ImmutableMap.of("error", createErrorMessage(e)))
-                     .build();
+      return HttpResponses.SERVER_ERROR.error(createErrorMessage(e));
     }
 
     if (setResult.isOk()) {
       return Response.ok().build();
     } else if (setResult.getException() instanceof NoSuchElementException) {
       LOG.warn(setResult.getException(), "Update compaction config failed");
-      return Response.status(Response.Status.NOT_FOUND).build();
+      return HttpResponses.NOT_FOUND.empty();
     } else {
       LOG.warn(setResult.getException(), "Update compaction config failed");
-      return HttpResponses.BAD_REQUEST.error(setResult.getException());
+      return HttpResponses.BAD_REQUEST.exception(setResult.getException());
     }
   }
 

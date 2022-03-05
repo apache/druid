@@ -135,7 +135,6 @@ public class DataSourcesResource
       @Context final HttpServletRequest req
   )
   {
-    Response.ResponseBuilder builder = Response.ok();
     final Set<ImmutableDruidDataSource> datasources =
         InventoryViewUtils.getSecuredDataSources(req, serverInventoryView, authorizerMapper);
 
@@ -149,7 +148,7 @@ public class DataSourcesResource
       entity = datasources.stream().map(ImmutableDruidDataSource::getName).collect(Collectors.toList());
     }
 
-    return builder.entity(entity).build();
+    return HttpResponses.OK.json(entity);
   }
 
   @GET
@@ -273,21 +272,15 @@ public class DataSourcesResource
   {
     try {
       int numChangedSegments = markSegments.markSegments();
-      return Response.ok(ImmutableMap.of("numChangedSegments", numChangedSegments)).build();
+      return HttpResponses.OK.json(ImmutableMap.of("numChangedSegments", numChangedSegments));
     }
     catch (UnknownSegmentIdsException e) {
       log.warn("Segment ids %s are not found", e.getUnknownSegmentIds());
-      return Response
-          .status(Response.Status.NOT_FOUND)
-          .entity(ImmutableMap.of("message", e.getMessage()))
-          .build();
+      return HttpResponses.NOT_FOUND.error(e.getMessage());
     }
     catch (Exception e) {
       log.error(e, "Error occurred during [%s] call, data source: [%s]", method, dataSourceName);
-      return Response
-          .serverError()
-          .entity(ImmutableMap.of("error", "Exception occurred.", "message", Throwables.getRootCause(e).toString()))
-          .build();
+      return HttpResponses.SERVER_ERROR.json(ImmutableMap.of("error", "Exception occurred.", "message", Throwables.getRootCause(e).toString()));
     }
   }
 
@@ -310,7 +303,7 @@ public class DataSourcesResource
   )
   {
     if (indexingServiceClient == null) {
-      return Response.ok(ImmutableMap.of("error", "no indexing service found")).build();
+      return HttpResponses.OK.json(ImmutableMap.of("error", "no indexing service found"));
     }
 
     boolean killSegments = kill != null && Boolean.valueOf(kill);
@@ -332,7 +325,7 @@ public class DataSourcesResource
   )
   {
     if (indexingServiceClient == null) {
-      return Response.ok(ImmutableMap.of("error", "no indexing service found")).build();
+      return HttpResponses.OK.json(ImmutableMap.of("error", "no indexing service found"));
     }
     if (StringUtils.contains(interval, '_')) {
       log.warn("Use interval with '/', not '_': [%s] given", interval);
@@ -340,7 +333,7 @@ public class DataSourcesResource
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     try {
       indexingServiceClient.killUnusedSegments("api-issued", dataSourceName, theInterval);
-      return Response.ok().build();
+      return HttpResponses.OK.empty();
     }
     catch (Exception e) {
       return Response
@@ -373,7 +366,7 @@ public class DataSourcesResource
       final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd().reversed();
       Set<Interval> intervals = new TreeSet<>(comparator);
       dataSource.getSegments().forEach(segment -> intervals.add(segment.getInterval()));
-      return Response.ok(intervals).build();
+      return HttpResponses.OK.json(intervals);
     } else {
       return getServedSegmentsInInterval(dataSourceName, full != null, interval -> true);
     }
@@ -402,7 +395,7 @@ public class DataSourcesResource
           segmentIds.add(dataSegment.getId());
         }
       }
-      return Response.ok(segmentIds).build();
+      return HttpResponses.OK.json(segmentIds);
     }
     return getServedSegmentsInInterval(dataSourceName, full != null, theInterval::contains);
   }
@@ -442,21 +435,18 @@ public class DataSourcesResource
     }
 
     if (Iterables.size(segments.get()) == 0) {
-      return Response
-          .status(Response.Status.NO_CONTENT)
-          .entity("No used segment found for the given datasource and interval")
-          .build();
+      return HttpResponses.NO_CONTENT.error("No used segment found for the given datasource and interval");
     }
 
     if (simple != null) {
       // Calculate response for simple mode
       SegmentsLoadStatistics segmentsLoadStatistics = computeSegmentLoadStatistics(segments.get());
-      return Response.ok(
+      return HttpResponses.OK.json(
           ImmutableMap.of(
               dataSourceName,
               segmentsLoadStatistics.getNumUnavailableSegments()
           )
-      ).build();
+      );
     } else if (full != null) {
       // Calculate response for full mode
       Map<String, Object2LongMap<String>> segmentLoadMap =
@@ -466,16 +456,16 @@ public class DataSourcesResource
       if (segmentLoadMap.isEmpty()) {
         return HttpResponses.SERVER_ERROR.error("Coordinator segment replicant lookup is not initialized yet. Try again later.");
       }
-      return Response.ok(segmentLoadMap).build();
+      return HttpResponses.OK.json(segmentLoadMap);
     } else {
       // Calculate response for default mode
       SegmentsLoadStatistics segmentsLoadStatistics = computeSegmentLoadStatistics(segments.get());
-      return Response.ok(
+      return HttpResponses.OK.json(
           ImmutableMap.of(
               dataSourceName,
               100 * ((double) (segmentsLoadStatistics.getNumLoadedSegments()) / (double) segmentsLoadStatistics.getNumPublishedSegments())
           )
-      ).build();
+      );
     }
   }
 
@@ -570,7 +560,7 @@ public class DataSourcesResource
         }
       }
 
-      return Response.ok(retVal).build();
+      return HttpResponses.OK.json(retVal);
     } else {
       final Map<Interval, Map<SimpleProperties, Object>> statsPerInterval = new TreeMap<>(comparator);
       for (DataSegment dataSegment : dataSource.getSegments()) {
@@ -582,7 +572,7 @@ public class DataSourcesResource
         }
       }
 
-      return Response.ok(statsPerInterval).build();
+      return HttpResponses.OK.json(statsPerInterval);
     }
   }
 
@@ -600,12 +590,11 @@ public class DataSourcesResource
       return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
 
-    Response.ResponseBuilder builder = Response.ok();
     if (full != null) {
-      return builder.entity(dataSource.getSegments()).build();
+      return HttpResponses.OK.json(dataSource.getSegments());
     }
 
-    return builder.entity(Iterables.transform(dataSource.getSegments(), DataSegment::getId)).build();
+    return HttpResponses.OK.json(Iterables.transform(dataSource.getSegments(), DataSegment::getId));
   }
 
   @GET
@@ -625,7 +614,7 @@ public class DataSourcesResource
     for (SegmentId possibleSegmentId : SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId)) {
       Pair<DataSegment, Set<String>> retVal = getServersWhereSegmentIsServed(possibleSegmentId);
       if (retVal != null) {
-        return Response.ok(ImmutableMap.of("metadata", retVal.lhs, "servers", retVal.rhs)).build();
+        return HttpResponses.OK.json(ImmutableMap.of("metadata", retVal.lhs, "servers", retVal.rhs));
       }
     }
     log.warn("Segment id [%s] is unknown", segmentId);
@@ -642,7 +631,7 @@ public class DataSourcesResource
   {
     final SegmentId segmentId = SegmentId.tryParse(dataSourceName, segmentIdString);
     final boolean segmentStateChanged = segmentId != null && segmentsMetadataManager.markSegmentAsUnused(segmentId);
-    return Response.ok(ImmutableMap.of("segmentStateChanged", segmentStateChanged)).build();
+    return HttpResponses.OK.json(ImmutableMap.of("segmentStateChanged", segmentStateChanged));
   }
 
   @POST
@@ -655,7 +644,7 @@ public class DataSourcesResource
   )
   {
     boolean segmentStateChanged = segmentsMetadataManager.markSegmentAsUsed(segmentId);
-    return Response.ok().entity(ImmutableMap.of("segmentStateChanged", segmentStateChanged)).build();
+    return HttpResponses.OK.json(ImmutableMap.of("segmentStateChanged", segmentStateChanged));
   }
 
   @GET
@@ -671,7 +660,7 @@ public class DataSourcesResource
       }
     }
 
-    return Response.ok(retVal).build();
+    return HttpResponses.OK.json(retVal);
   }
 
   @Nullable
@@ -820,10 +809,10 @@ public class DataSourcesResource
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     if (timeline == null) {
       log.debug("No timeline found for datasource[%s]", dataSourceName);
-      return Response.ok(new ArrayList<ImmutableSegmentLoadInfo>()).build();
+      return HttpResponses.OK.json(new ArrayList<ImmutableSegmentLoadInfo>());
     }
 
-    return Response.ok(prepareServedSegmentsInInterval(timeline, theInterval)).build();
+    return HttpResponses.OK.json(prepareServedSegmentsInInterval(timeline, theInterval));
   }
 
   private Iterable<ImmutableSegmentLoadInfo> prepareServedSegmentsInInterval(

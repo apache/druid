@@ -25,6 +25,7 @@ import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.InventoryView;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -66,8 +67,6 @@ public class TiersResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getTiers(@QueryParam("simple") String simple)
   {
-    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
-
     if (simple != null) {
       Map<String, Map<TierMetadataKeys, Long>> metadata = new HashMap<>();
       for (DruidServer druidServer : serverInventoryView.getInventory()) {
@@ -76,7 +75,7 @@ public class TiersResource
         tierMetadata.merge(TierMetadataKeys.currSize, druidServer.getCurrSize(), Long::sum);
         tierMetadata.merge(TierMetadataKeys.maxSize, druidServer.getMaxSize(), Long::sum);
       }
-      return builder.entity(metadata).build();
+      return HttpResponses.OK.json(metadata);
     }
 
     Set<String> tiers = serverInventoryView
@@ -85,7 +84,7 @@ public class TiersResource
         .map(DruidServer::getTier)
         .collect(Collectors.toSet());
 
-    return builder.entity(tiers).build();
+    return HttpResponses.OK.json(tiers);
   }
 
   private enum IntervalProperties

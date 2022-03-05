@@ -22,6 +22,7 @@ package org.apache.druid.client;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -53,9 +54,9 @@ public class HttpServerInventoryViewResource
   public Response getDebugInfo()
   {
     if (httpServerInventoryView == null) {
-      return Response.status(Response.Status.FORBIDDEN).entity("HttpServerInventoryView is NULL.").build();
+      return HttpResponses.FORBIDDEN.error("HttpServerInventoryView is NULL.");
     }
 
-    return Response.ok().entity(httpServerInventoryView.getDebugInfo()).build();
+    return HttpResponses.OK.json(httpServerInventoryView.getDebugInfo());
   }
 }

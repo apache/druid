@@ -33,6 +33,7 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.JettyUtils;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
@@ -161,8 +162,7 @@ public class MetadataResource
     final Iterable<DataSegment> authorizedSegments =
         AuthorizationUtils.filterAuthorizedResources(req, usedSegments::iterator, raGenerator, authorizerMapper);
 
-    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
-    return builder.entity(authorizedSegments).build();
+    return Response.ok(authorizedSegments).build();
   }
 
   private Response getAllUsedSegmentsWithOvershadowedStatus(
@@ -197,8 +197,7 @@ public class MetadataResource
         authorizerMapper
     );
 
-    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
-    return builder.entity(authorizedSegments).build();
+    return Response.ok(authorizedSegments).build();
   }
 
   /**
@@ -214,10 +213,10 @@ public class MetadataResource
     ImmutableDruidDataSource dataSource =
         segmentsMetadataManager.getImmutableDataSourceWithUsedSegments(dataSourceName);
     if (dataSource == null) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+      return HttpResponses.NOT_FOUND.error("data source [%s] does not exist", dataSourceName);
     }
 
-    return Response.status(Response.Status.OK).entity(dataSource).build();
+    return Response.ok(dataSource).build();
   }
 
   @GET
@@ -232,15 +231,14 @@ public class MetadataResource
     ImmutableDruidDataSource dataSource =
         segmentsMetadataManager.getImmutableDataSourceWithUsedSegments(dataSourceName);
     if (dataSource == null) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+      return HttpResponses.NOT_FOUND.error("data source [%s] does not exist", dataSourceName);
     }
 
-    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
     if (full != null) {
-      return builder.entity(dataSource.getSegments()).build();
+      return Response.ok(dataSource.getSegments()).build();
     }
 
-    return builder.entity(Collections2.transform(dataSource.getSegments(), DataSegment::getId)).build();
+    return Response.ok(Collections2.transform(dataSource.getSegments(), DataSegment::getId)).build();
   }
 
   /**
@@ -260,12 +258,11 @@ public class MetadataResource
     Collection<DataSegment> segments = metadataStorageCoordinator
         .retrieveUsedSegmentsForIntervals(dataSourceName, intervals, Segments.INCLUDING_OVERSHADOWED);
 
-    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
     if (full != null) {
-      return builder.entity(segments).build();
+      return Response.ok(segments).build();
     }
 
-    return builder.entity(Collections2.transform(segments, DataSegment::getId)).build();
+    return Response.ok(Collections2.transform(segments, DataSegment::getId)).build();
   }
 
   @GET
@@ -279,15 +276,16 @@ public class MetadataResource
   {
     ImmutableDruidDataSource dataSource = segmentsMetadataManager.getImmutableDataSourceWithUsedSegments(dataSourceName);
     if (dataSource == null) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+      return HttpResponses.NOT_FOUND.error("data source [%s] does not exist", dataSourceName);
     }
 
     for (SegmentId possibleSegmentId : SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId)) {
       DataSegment segment = dataSource.getSegment(possibleSegmentId);
       if (segment != null) {
-        return Response.status(Response.Status.OK).entity(segment).build();
+        return Response.ok(segment).build();
       }
     }
-    return Response.status(Response.Status.NOT_FOUND).build();
+
+    return HttpResponses.NOT_FOUND.error("Can't find segment [%s] in data source [%s].", segmentId, dataSourceName);
   }
 }
