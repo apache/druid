@@ -71,6 +71,7 @@ import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
 import org.easymock.IArgumentMatcher;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -539,7 +540,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     EasyMock.verify(S3_CLIENT);
   }
 
-  @Test(expected = SdkClientException.class)
+  @Test
   public void testReaderRetriesOnSdkClientExceptionButNeverSucceedsThenThrows() throws Exception
   {
     EasyMock.reset(S3_CLIENT);
@@ -570,14 +571,13 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         temporaryFolder.newFolder()
     );
 
-    CloseableIterator<InputRow> iterator = reader.read();
-
-    while (iterator.hasNext()) {
-      InputRow nextRow = iterator.next();
-      Assert.assertEquals(NOW, nextRow.getTimestamp());
-      Assert.assertEquals("hello", nextRow.getDimension("dim1").get(0));
-      Assert.assertEquals("world", nextRow.getDimension("dim2").get(0));
-    }
+    final IllegalStateException e = Assert.assertThrows(IllegalStateException.class, reader::read);
+    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IOException.class));
+    MatcherAssert.assertThat(e.getCause().getCause(), CoreMatchers.instanceOf(SdkClientException.class));
+    MatcherAssert.assertThat(
+        e.getCause().getCause().getMessage(),
+        CoreMatchers.startsWith("Data read has a different length than the expected")
+    );
 
     EasyMock.verify(S3_CLIENT);
   }
@@ -749,12 +749,14 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
             return AWSCredentialsUtils.defaultAWSCredentialsProviderChain(null);
           }
 
-          @Override public List<? extends Module> getJacksonModules()
+          @Override
+          public List<? extends Module> getJacksonModules()
           {
             return Collections.emptyList();
           }
 
-          @Override public void configure(Binder binder)
+          @Override
+          public void configure(Binder binder)
           {
 
           }

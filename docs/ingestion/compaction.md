@@ -95,10 +95,10 @@ To perform a manual compaction, you submit a compaction task. Compaction tasks m
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "ioConfig": <IO config>,
-    "dimensionsSpec" <custom dimensionsSpec>,
-    "metricsSpec" <custom metricsSpec>,
-    "tuningConfig" <parallel indexing task tuningConfig>,
-    "granularitySpec" <compaction task granularitySpec>,
+    "dimensionsSpec": <custom dimensionsSpec>,
+    "metricsSpec": <custom metricsSpec>,
+    "tuningConfig": <parallel indexing task tuningConfig>,
+    "granularitySpec": <compaction task granularitySpec>,
     "context": <task context>
 }
 ```
@@ -133,27 +133,25 @@ Note that the metadata between input segments and the resulting compacted segmen
 
 
 ### Example compaction task
-The following JSON illustrates a compaction task to compact _all segments_ within the interval `2017-01-01/2018-01-01` and create new segments:
+The following JSON illustrates a compaction task to compact _all segments_ within the interval `2020-01-01/2021-01-01` and create new segments:
 
 ```json
 {
-  "type" : "compact",
-  "dataSource" : "wikipedia",
-  "ioConfig" : {
+  "type": "compact",
+  "dataSource": "wikipedia",
+  "ioConfig": {
     "type": "compact",
     "inputSpec": {
       "type": "interval",
-      "interval": "2020-01-01/2021-01-01",
+      "interval": "2020-01-01/2021-01-01"
     }
   },
   "granularitySpec": {
-      "segmentGranularity":"day",
-      "queryGranularity":"hour"
-    }
+    "segmentGranularity": "day",
+    "queryGranularity": "hour"
+  }
 }
 ```
-
-This task doesn't specify a `granularitySpec` so Druid retains the original segment granularity unchanged when compaction is complete.
 
 ### Compaction I/O configuration
 
@@ -203,17 +201,17 @@ Druid supports two supported `inputSpec` formats:
 For example, to set the segment granularity to "day", the query granularity to "hour", and enabling rollup:
 ```json
 {
-  "type" : "compact",
-  "dataSource" : "wikipedia",
-  "ioConfig" : {
+  "type": "compact",
+  "dataSource": "wikipedia",
+  "ioConfig": {
     "type": "compact",
     "inputSpec": {
       "type": "interval",
       "interval": "2017-01-01/2018-01-01"
     },
     "granularitySpec": {
-      "segmentGranularity":"day",
-      "queryGranularity":"hour",
+      "segmentGranularity": "day",
+      "queryGranularity": "hour",
       "rollup": true
     }
   }
