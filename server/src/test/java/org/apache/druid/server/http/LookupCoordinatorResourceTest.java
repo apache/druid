@@ -699,7 +699,7 @@ public class LookupCoordinatorResourceTest
     );
 
     Assert.assertEquals(500, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("error", "Unknown error updating configuration"), response.getEntity());
+    Assert.assertEquals(ImmutableMap.of("error", "Unknown error updating configuration for tier [lookupTier] lookup [lookupName]"), response.getEntity());
     Assert.assertTrue(auditInfoCapture.hasCaptured());
     final AuditInfo auditInfo = auditInfoCapture.getValue();
     Assert.assertEquals(author, auditInfo.getAuthor());
