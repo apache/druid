@@ -186,6 +186,6 @@ public class ServersResource
       }
     }
 
-    return HttpResponses.NOT_FOUND.error("segment [%s] not found in server.", segmentId, serverName);
+    return HttpResponses.NOT_FOUND.error("segment [%s] not found in server [%s].", segmentId, serverName);
   }
 }
