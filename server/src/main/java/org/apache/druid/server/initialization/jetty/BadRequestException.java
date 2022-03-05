@@ -22,10 +22,9 @@ package org.apache.druid.server.initialization.jetty;
 import javax.ws.rs.core.Response;
 
 /**
- * This class is for any exceptions that should return a bad request status code (400).
- * See {@code BadQueryException} for query requests.
+ * Throw this when a request is illegal, and we want to send a 400 response back,
+ * Jersey exception mapper {@link ResponseStatusExceptionMapper} will take care of sending the response.
  *
- * @see ResponseStatusExceptionMapper
  */
 public class BadRequestException extends ResponseStatusException
 {

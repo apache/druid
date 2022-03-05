@@ -19,29 +19,17 @@
 
 package org.apache.druid.server.initialization.jetty;
 
-import org.apache.druid.java.util.common.StringUtils;
-
 import javax.ws.rs.core.Response;
 
 /**
- * This class is for any exceptions that should return a not found status code (404).
+ * Throw this when an internal resource is not found, and we want to send a 404 response back,
+ * Jersey exception mapper {@link ResponseStatusExceptionMapper} will take care of sending the response.
  *
- * @see ResponseStatusExceptionMapper
  */
 public class NotFoundException extends ResponseStatusException
 {
   public NotFoundException(String msg)
   {
     super(Response.Status.NOT_FOUND, msg);
-  }
-
-  public static Response toResponse(String message)
-  {
-    return toResponse(Response.Status.NOT_FOUND, message);
-  }
-
-  public static Response toResponse(String messageFormat, Object... formatArgs)
-  {
-    return toResponse(Response.Status.NOT_FOUND, StringUtils.format(messageFormat, formatArgs));
   }
 }

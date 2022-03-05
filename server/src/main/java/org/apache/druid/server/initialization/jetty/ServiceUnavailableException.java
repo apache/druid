@@ -19,16 +19,17 @@
 
 package org.apache.druid.server.initialization.jetty;
 
+import javax.ws.rs.core.Response;
+
 /**
- * This class is for any exceptions that should return a Service unavailable status code (503).
- * See {@code BadQueryException} for query requests.
+ * Throw this when current service is not able to serve the request, and we want to send a 503 response back,
+ * Jersey exception mapper {@link ResponseStatusExceptionMapper} will take care of sending the response.
  *
- * @see ServiceUnavailableExceptionMapper
  */
-public class ServiceUnavailableException extends RuntimeException
+public class ServiceUnavailableException extends ResponseStatusException
 {
   public ServiceUnavailableException(String msg)
   {
-    super(msg);
+    super(Response.Status.SERVICE_UNAVAILABLE, msg);
   }
 }
