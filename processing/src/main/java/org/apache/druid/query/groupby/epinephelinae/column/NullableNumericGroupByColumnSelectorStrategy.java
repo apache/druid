@@ -38,10 +38,13 @@ import java.nio.ByteBuffer;
 public class NullableNumericGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy
 {
   private final GroupByColumnSelectorStrategy delegate;
+  private final byte[] nullKeyBytes;
 
   public NullableNumericGroupByColumnSelectorStrategy(GroupByColumnSelectorStrategy delegate)
   {
     this.delegate = delegate;
+    this.nullKeyBytes = new byte[delegate.getGroupingKeySize() + 1];
+    this.nullKeyBytes[0] = NullHandling.IS_NULL_BYTE;
   }
 
   @Override
@@ -80,22 +83,25 @@ public class NullableNumericGroupByColumnSelectorStrategy implements GroupByColu
   public void writeToKeyBuffer(int keyBufferPosition, @Nullable Object obj, ByteBuffer keyBuffer)
   {
     if (obj == null) {
-      keyBuffer.put(keyBufferPosition, NullHandling.IS_NULL_BYTE);
+      keyBuffer.position(keyBufferPosition);
+      keyBuffer.put(nullKeyBytes);
     } else {
       keyBuffer.put(keyBufferPosition, NullHandling.IS_NOT_NULL_BYTE);
+      delegate.writeToKeyBuffer(keyBufferPosition + Byte.BYTES, obj, keyBuffer);
     }
-    delegate.writeToKeyBuffer(keyBufferPosition + Byte.BYTES, obj, keyBuffer);
   }
 
   @Override
   public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
   {
     if (selector.isNull()) {
-      keyBuffer.put(keyBufferPosition, NullHandling.IS_NULL_BYTE);
+      keyBuffer.position(keyBufferPosition);
+      keyBuffer.put(nullKeyBytes);
+      return 0;
     } else {
-      keyBuffer.putLong(keyBufferPosition, NullHandling.IS_NOT_NULL_BYTE);
+      keyBuffer.put(keyBufferPosition, NullHandling.IS_NOT_NULL_BYTE);
+      return delegate.writeToKeyBuffer(keyBufferPosition + Byte.BYTES, selector, keyBuffer);
     }
-    return delegate.writeToKeyBuffer(keyBufferPosition + Byte.BYTES, selector, keyBuffer);
   }
 
   @Override

@@ -134,7 +134,7 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
   );
 
   /**
-   * Write a given object to the keyBuffer at keyBufferPosition.
+   * Write a given object to the keyBuffer at keyBufferPosition. The position of the keyBuffer may be modified.
    *
    * @param keyBufferPosition starting offset for this column's value within the grouping key
    * @param obj               row value object retrieved from {@link #initColumnValues}
@@ -144,7 +144,7 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
 
   /**
    * Write a single object from the given selector to the keyBuffer at keyBufferPosition. The reading column must
-   * have a single value.
+   * have a single value. The position of the keyBuffer may be modified.
    *
    * @param keyBufferPosition starting offset for this column's value within the grouping key
    * @param selector          selector to retrieve row value object from
