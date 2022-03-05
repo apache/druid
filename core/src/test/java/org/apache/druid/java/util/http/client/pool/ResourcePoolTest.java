@@ -39,13 +39,23 @@ public class ResourcePoolTest
   @Before
   public void setUp()
   {
+    setUpPool(true);
+  }
+
+  public void setUpPoolWithoutEagerInitialization()
+  {
+    setUpPool(false);
+  }
+
+  public void setUpPool(boolean eagerInitialization)
+  {
     resourceFactory = (ResourceFactory<String, String>) EasyMock.createMock(ResourceFactory.class);
 
     EasyMock.replay(resourceFactory);
     pool = new ResourcePool<String, String>(
         resourceFactory,
         new ResourcePoolConfig(2, TimeUnit.MINUTES.toMillis(4)),
-        true
+        eagerInitialization
     );
 
     EasyMock.verify(resourceFactory);
@@ -60,13 +70,41 @@ public class ResourcePoolTest
   }
 
   @Test
-  public void test_lazyInstantiation()
+  public void testTakeOnce_lazy()
   {
-    pool = new ResourcePool<String, String>(
-        resourceFactory,
-        new ResourcePoolConfig(2, TimeUnit.MINUTES.toMillis(4)),
-        false
-    );
+    setUpPoolWithoutEagerInitialization();
+
+    EasyMock.expect(resourceFactory.generate("billy")).andAnswer(new StringIncrementingAnswer("billy")).times(1);
+    EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(true).times(1);
+    EasyMock.replay(resourceFactory);
+
+    ResourceContainer<String> billyString = pool.take("billy");
+    Assert.assertEquals("billy0", billyString.get());
+
+    billyString.returnResource();
+  }
+
+  @Test
+  public void testTakeAfterReturn_lazy()
+  {
+    setUpPoolWithoutEagerInitialization();
+
+    // Generate and check before return
+    EasyMock.expect(resourceFactory.generate("billy")).andAnswer(new StringIncrementingAnswer("billy")).times(1);
+    EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(true).times(1);
+    // Only check since there's no need to generate after return
+    EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(true).times(1);
+    EasyMock.replay(resourceFactory);
+
+    ResourceContainer<String> billyString = pool.take("billy");
+    Assert.assertEquals("billy0", billyString.get());
+
+    billyString.returnResource();
+
+    billyString = pool.take("billy");
+    Assert.assertEquals("billy0", billyString.get());
+
+    billyString.returnResource();
   }
 
   private void primePool()
