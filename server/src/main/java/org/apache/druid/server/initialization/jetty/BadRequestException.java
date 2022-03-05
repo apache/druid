@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.initialization.jetty;
 
-import javax.annotation.Nullable;
 import javax.ws.rs.core.Response;
 
 /**
@@ -33,20 +32,5 @@ public class BadRequestException extends ResponseStatusException
   public BadRequestException(String msg)
   {
     super(Response.Status.BAD_REQUEST, msg);
-  }
-
-  public static Response toResponse(String message)
-  {
-    return toResponse(Response.Status.BAD_REQUEST, message);
-  }
-
-  public static Response toResponse(String messageFormat, Object... formatArgs)
-  {
-    return toResponse(Response.Status.BAD_REQUEST, messageFormat, formatArgs);
-  }
-
-  public static Response toResponse(@Nullable Throwable t)
-  {
-    return toResponse(Response.Status.BAD_REQUEST, t);
   }
 }

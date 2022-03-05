@@ -33,5 +33,6 @@ public class ResponseStatusExceptionMapper implements ExceptionMapper<ResponseSt
   public Response toResponse(ResponseStatusException exception)
   {
     return ResponseStatusException.toResponse(exception.getStatusCode(), exception.getMessage());
+
   }
 }

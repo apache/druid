@@ -41,7 +41,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.server.initialization.jetty.BadRequestException;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.server.metrics.EventReceiverFirehoseMetric;
 import org.apache.druid.server.metrics.EventReceiverFirehoseRegister;
 import org.apache.druid.server.security.Access;
@@ -357,7 +357,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
           authorizerMapper
       );
       if (!accessResult.isAllowed()) {
-        return Response.status(403).build();
+        return HttpResponses.FORBIDDEN.error(accessResult.toString());
       }
 
       final String reqContentType = req.getContentType();
@@ -540,7 +540,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
           authorizerMapper
       );
       if (!accessResult.isAllowed()) {
-        return Response.status(403).build();
+        return HttpResponses.FORBIDDEN.error(accessResult.toString());
       }
 
       try {
@@ -568,7 +568,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
         return Response.ok().build();
       }
       catch (IllegalArgumentException e) {
-        return BadRequestException.toResponse(e.getMessage());
+        return HttpResponses.BAD_REQUEST.error(e.getMessage());
       }
     }
 
@@ -606,7 +606,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       final String sequenceValue = req.getHeader("X-Firehose-Producer-Seq");
 
       if (sequenceValue == null) {
-        return BadRequestException.toResponse("Producer sequence value is missing");
+        return HttpResponses.BAD_REQUEST.error("Producer sequence value is missing");
       }
 
       Long producerSequence = producerSequences.computeIfAbsent(producerId, key -> Long.MIN_VALUE);
@@ -643,7 +643,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
         throw new RuntimeException(ex);
       }
       catch (NumberFormatException ex) {
-        return BadRequestException.toResponse("Producer sequence must be a number");
+        return HttpResponses.BAD_REQUEST.error("Producer sequence must be a number");
       }
     }
   }

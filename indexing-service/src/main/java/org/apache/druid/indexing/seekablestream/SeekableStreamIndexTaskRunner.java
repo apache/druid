@@ -83,7 +83,7 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResul
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
-import org.apache.druid.server.initialization.jetty.BadRequestException;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -1599,9 +1599,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   ) throws InterruptedException
   {
     if (sequenceNumbers == null) {
-      return BadRequestException.toResponse("Request body must contain a map of { partition:endOffset }");
+      return HttpResponses.BAD_REQUEST.error("Request body must contain a map of { partition:endOffset }");
     } else if (!endOffsets.keySet().containsAll(sequenceNumbers.keySet())) {
-      return BadRequestException.toResponse("Request contains partitions not being handled by this task, my partitions: %s",
+      return HttpResponses.BAD_REQUEST.error("Request contains partitions not being handled by this task, my partitions: %s",
                                             endOffsets.keySet());
     } else {
       try {
@@ -1631,17 +1631,17 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           resume();
           return Response.ok(sequenceNumbers).build();
         } else if (latestSequence.isCheckpointed()) {
-          return BadRequestException.toResponse("Sequence [%s] has already endOffsets set, cannot set to [%s]",
+          return HttpResponses.BAD_REQUEST.error("Sequence [%s] has already endOffsets set, cannot set to [%s]",
                                                 latestSequence,
                                                 sequenceNumbers);
         } else if (!isPaused()) {
-          return BadRequestException.toResponse("Task must be paused before changing the end offsets");
+          return HttpResponses.BAD_REQUEST.error("Task must be paused before changing the end offsets");
         }
 
         for (Map.Entry<PartitionIdType, SequenceOffsetType> entry : sequenceNumbers.entrySet()) {
           if (createSequenceNumber(entry.getValue()).compareTo(createSequenceNumber(currOffsets.get(entry.getKey())))
               < 0) {
-            return BadRequestException.toResponse("End sequence must be >= current sequence for partition [%s] (current: %s)",
+            return HttpResponses.BAD_REQUEST.error("End sequence must be >= current sequence for partition [%s] (current: %s)",
                                                   entry.getKey(),
                                                   currOffsets.get(entry.getKey()));
           }
@@ -1685,9 +1685,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         backgroundThreadException = e;
         // should resume to immediately finish kafka index task as failed
         resume();
-        return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                       .entity(Throwables.getStackTraceAsString(e))
-                       .build();
+        return HttpResponses.SERVER_ERROR.error(Throwables.getStackTraceAsString(e));
       }
       finally {
         pauseLock.unlock();
@@ -1752,7 +1750,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   public Response pause() throws InterruptedException
   {
     if (!(status == Status.PAUSED || status == Status.READING)) {
-      return BadRequestException.toResponse("Can't pause, task is not in a pausable state (state: [%s])", status);
+      return HttpResponses.BAD_REQUEST.error("Can't pause, task is not in a pausable state (state: [%s])", status);
     }
 
     pauseLock.lockInterruptibly();

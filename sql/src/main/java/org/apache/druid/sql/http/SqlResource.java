@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
+import io.netty.util.SuppressForbidden;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.guice.annotations.Json;
@@ -247,6 +248,7 @@ public class SqlResource
     sqlLifecycleManager.remove(sqlQueryId, lifecycle);
   }
 
+  @SuppressForbidden(reason = "Response#status")
   private Response buildNonOkResponse(int status, SanitizableException e, String sqlQueryId)
       throws JsonProcessingException
   {

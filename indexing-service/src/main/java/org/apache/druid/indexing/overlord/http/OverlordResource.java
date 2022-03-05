@@ -68,7 +68,7 @@ import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
-import org.apache.druid.server.initialization.jetty.BadRequestException;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -190,7 +190,7 @@ public class OverlordResource
             return Response.ok(ImmutableMap.of("task", task.getId())).build();
           }
           catch (EntryExistsException e) {
-            return BadRequestException.toResponse("Task[%s] already exists!", task.getId());
+            return HttpResponses.BAD_REQUEST.error("Task[%s] already exists!", task.getId());
           }
         }
     );
@@ -229,7 +229,7 @@ public class OverlordResource
   public Response getDatasourceLockedIntervals(Map<String, Integer> minTaskPriority)
   {
     if (minTaskPriority == null || minTaskPriority.isEmpty()) {
-      return BadRequestException.toResponse("No Datasource provided");
+      return HttpResponses.BAD_REQUEST.error("No Datasource provided");
     }
 
     // Build the response
@@ -390,7 +390,7 @@ public class OverlordResource
   public Response getMultipleTaskStatuses(Set<String> taskIds)
   {
     if (taskIds == null || taskIds.size() == 0) {
-      return BadRequestException.toResponse("No TaskIds provided.");
+      return HttpResponses.BAD_REQUEST.error("No TaskIds provided.");
     }
 
     Map<String, TaskStatus> result = Maps.newHashMapWithExpectedSize(taskIds.size());
@@ -526,7 +526,7 @@ public class OverlordResource
         return Response.ok(workerEntryList).build();
       }
       catch (IllegalArgumentException e) {
-        return BadRequestException.toResponse(e.getMessage());
+        return HttpResponses.BAD_REQUEST.error(e.getMessage());
       }
     }
     List<AuditEntry> workerEntryList = auditManager.fetchAuditHistory(
@@ -563,7 +563,7 @@ public class OverlordResource
             }
             catch (Exception e) {
               log.warn(e, "Failed to perform task action");
-              return Response.serverError().entity(ImmutableMap.of("error", e.getMessage())).build();
+              return HttpResponses.SERVER_ERROR.error(e.getMessage());
             }
 
             return Response.ok().entity(retMap).build();
@@ -625,7 +625,7 @@ public class OverlordResource
     //check for valid state
     if (state != null) {
       if (!API_TASK_STATES.contains(StringUtils.toLowerCase(state))) {
-        throw new BadRequestException(StringUtils.format("Invalid state : %s, valid values are: %s", state, API_TASK_STATES));
+        return HttpResponses.BAD_REQUEST.error("Invalid state : %s, valid values are: %s", state, API_TASK_STATES);
       }
     }
     // early authorization check if datasource != null
@@ -641,7 +641,7 @@ public class OverlordResource
           authorizerMapper
       );
       if (!authResult.isAllowed()) {
-        throw new ForbiddenException(StringUtils.format("Access-Check-Result: %s", authResult.toString()));
+        return HttpResponses.FORBIDDEN.error("Access-Check-Result: %s", authResult.toString());
       }
     }
     List<TaskStatusPlus> finalTaskList = new ArrayList<>();
@@ -768,7 +768,7 @@ public class OverlordResource
       final int numDeleted = indexerMetadataStorageAdapter.deletePendingSegments(dataSource, deleteInterval);
       return Response.ok().entity(ImmutableMap.of("numDeleted", numDeleted)).build();
     } else {
-      return Response.status(Status.SERVICE_UNAVAILABLE).build();
+      return HttpResponses.SERVICE_UNAVAILABLE.error("Current node is not leader");
     }
   }
 
@@ -793,9 +793,7 @@ public class OverlordResource
                   taskRunner,
                   taskRunner.getClass().getName()
               );
-              return Response.serverError()
-                             .entity(ImmutableMap.of("error", "Task Runner does not support worker listing"))
-                             .build();
+              return HttpResponses.SERVER_ERROR.error("Task Runner does not support worker listing");
             }
           }
         }
@@ -830,16 +828,12 @@ public class OverlordResource
         workerTaskRunnerQueryAdapter.enableWorker(host);
         return Response.ok(ImmutableMap.of(host, "enabled")).build();
       } else {
-        return Response.serverError()
-                       .entity(ImmutableMap.of("error", "Worker does not support " + action + " action!"))
-                       .build();
+        return HttpResponses.SERVER_ERROR.error("Worker does not support " + action + " action!");
       }
     }
     catch (Exception e) {
       log.error(e, "Error in posting [%s] action to [%s]", action, host);
-      return Response.serverError()
-                     .entity(ImmutableMap.of("error", e.getMessage()))
-                     .build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -872,17 +866,13 @@ public class OverlordResource
       if (stream.isPresent()) {
         return Response.ok(stream.get().openStream()).build();
       } else {
-        return Response.status(Response.Status.NOT_FOUND)
-                       .entity(
-                           "No log was found for this task. "
-                           + "The task may not exist, or it may not have begun running yet."
-                       )
-                       .build();
+        return HttpResponses.NOT_FOUND.error("No log was found for this task. "
+                                             + "The task may not exist, or it may not have begun running yet.");
       }
     }
     catch (Exception e) {
       log.warn(e, "Failed to stream log for task %s", taskid);
-      return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -899,17 +889,13 @@ public class OverlordResource
       if (stream.isPresent()) {
         return Response.ok(stream.get().openStream()).build();
       } else {
-        return Response.status(Response.Status.NOT_FOUND)
-                       .entity(
-                           "No task reports were found for this task. "
-                           + "The task may not exist, or it may not have completed yet."
-                       )
-                       .build();
+        return HttpResponses.NOT_FOUND.error("No task reports were found for this task. "
+                                             + "The task may not exist, or it may not have completed yet.");
       }
     }
     catch (Exception e) {
       log.warn(e, "Failed to stream task reports for task %s", taskid);
-      return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -919,7 +905,7 @@ public class OverlordResource
       return f.apply(x.get());
     } else {
       // Encourage client to try again soon, when we'll likely have a redirect set up
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+      return HttpResponses.SERVICE_UNAVAILABLE.error("Current node is not leader.");
     }
   }
 
@@ -1031,9 +1017,7 @@ public class OverlordResource
       final String taskDatasource = taskStatusPlus.getDataSource();
       if (taskDatasource == null) {
         throw new WebApplicationException(
-            Response.serverError().entity(
-                StringUtils.format("No task information found for task with id: [%s]", taskId)
-            ).build()
+            HttpResponses.SERVER_ERROR.error("No task information found for task with id: [%s]", taskId)
         );
       }
       return Collections.singletonList(

@@ -22,7 +22,6 @@ package org.apache.druid.security.basic.authorization.endpoint;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Smile;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.BasicSecurityDBResourceException;
@@ -38,7 +37,7 @@ import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUserF
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUserFullSimplifiedPermissions;
 import org.apache.druid.security.basic.authorization.entity.GroupMappingAndRoleMap;
 import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
-import org.apache.druid.server.initialization.jetty.BadRequestException;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
@@ -436,12 +435,12 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
 
   private static Response makeResponseForAuthorizerNotFound(String authorizerName)
   {
-    return BadRequestException.toResponse(StringUtils.format("Basic authorizer with name [%s] does not exist.", authorizerName));
+    return HttpResponses.BAD_REQUEST.error("Basic authorizer with name [%s] does not exist.", authorizerName);
   }
 
   private static Response makeResponseForBasicSecurityDBResourceException(BasicSecurityDBResourceException bsre)
   {
-    return BadRequestException.toResponse(bsre.getMessage());
+    return HttpResponses.BAD_REQUEST.error(bsre.getMessage());
   }
 
   private Response getUserSimple(String authorizerName, String userName)

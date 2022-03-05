@@ -34,8 +34,7 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
-import org.apache.druid.server.initialization.jetty.BadRequestException;
-import org.apache.druid.server.initialization.jetty.NotFoundException;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -520,11 +519,10 @@ public class SupervisorResource
           } else {
             Optional<SupervisorSpec> spec = manager.getSupervisorSpec(id);
             if (spec.isPresent()) {
-              return BadRequestException.toResponse("[%s] is already %s",
-                                                    id, suspend ? "suspended" : "running");
+              return HttpResponses.BAD_REQUEST.error("[%s] is already %s",
+                                                     id, suspend ? "suspended" : "running");
             } else {
-              return NotFoundException.toResponse("[%s] does not exist",
-                                                  id);
+              return HttpResponses.NOT_FOUND.error("[%s] does not exist", id);
             }
           }
         }

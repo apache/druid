@@ -34,7 +34,7 @@ import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
-import org.apache.druid.server.initialization.jetty.BadRequestException;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -231,7 +231,7 @@ public class CoordinatorCompactionConfigsResource
       return Response.status(Response.Status.NOT_FOUND).build();
     } else {
       LOG.warn(setResult.getException(), "Update compaction config failed");
-      return BadRequestException.toResponse(setResult.getException());
+      return HttpResponses.BAD_REQUEST.error(setResult.getException());
     }
   }
 

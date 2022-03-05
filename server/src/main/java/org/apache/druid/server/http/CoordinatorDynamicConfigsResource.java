@@ -27,7 +27,7 @@ import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
-import org.apache.druid.server.initialization.jetty.BadRequestException;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.joda.time.Interval;
 
 import javax.inject.Inject;
@@ -92,11 +92,11 @@ public class CoordinatorDynamicConfigsResource
       if (setResult.isOk()) {
         return Response.ok().build();
       } else {
-        return BadRequestException.toResponse(setResult.getException());
+        return HttpResponses.BAD_REQUEST.error(setResult.getException());
       }
     }
     catch (IllegalArgumentException e) {
-      return BadRequestException.toResponse(e);
+      return HttpResponses.BAD_REQUEST.error(e);
     }
   }
 
@@ -121,7 +121,7 @@ public class CoordinatorDynamicConfigsResource
                        .build();
       }
       catch (IllegalArgumentException e) {
-        return BadRequestException.toResponse(e);
+        return HttpResponses.BAD_REQUEST.error(e);
       }
     }
     return Response.ok(

@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
+import io.netty.util.SuppressForbidden;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Json;
@@ -525,6 +526,7 @@ public class QueryResource implements QueryCountStatsProvider
       return buildNonOkResponse(BadQueryException.STATUS_CODE, e);
     }
 
+    @SuppressForbidden(reason = "Response#status")
     Response buildNonOkResponse(int status, Exception e) throws JsonProcessingException
     {
       return Response.status(status)

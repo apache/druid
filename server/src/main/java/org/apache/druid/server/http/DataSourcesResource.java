@@ -55,7 +55,7 @@ import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
-import org.apache.druid.server.initialization.jetty.BadRequestException;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -252,7 +252,7 @@ public class DataSourcesResource
   {
     if (payload == null || !payload.isValid()) {
       log.warn("Invalid request payload: [%s]", payload);
-      return BadRequestException.toResponse("Invalid request payload, either interval or segmentIds array must be specified");
+      return HttpResponses.BAD_REQUEST.error("Invalid request payload, either interval or segmentIds array must be specified");
     }
 
     final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
@@ -421,7 +421,7 @@ public class DataSourcesResource
   )
   {
     if (forceMetadataRefresh == null) {
-      return BadRequestException.toResponse("Invalid request. forceMetadataRefresh must be specified");
+      return HttpResponses.BAD_REQUEST.error("Invalid request. forceMetadataRefresh must be specified");
     }
     final Interval theInterval;
     if (interval == null) {
@@ -464,9 +464,7 @@ public class DataSourcesResource
           coordinator.computeUnderReplicationCountsPerDataSourcePerTierForSegmentsUsingClusterView(segments.get()) :
           coordinator.computeUnderReplicationCountsPerDataSourcePerTierForSegments(segments.get());
       if (segmentLoadMap.isEmpty()) {
-        return Response.serverError()
-                       .entity("Coordinator segment replicant lookup is not initialized yet. Try again later.")
-                       .build();
+        return HttpResponses.SERVER_ERROR.error("Coordinator segment replicant lookup is not initialized yet. Try again later.");
       }
       return Response.ok(segmentLoadMap).build();
     } else {

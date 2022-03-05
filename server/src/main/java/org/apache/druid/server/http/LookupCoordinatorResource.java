@@ -34,11 +34,10 @@ import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.utils.ServletResourceUtils;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.LookupsState;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
-import org.apache.druid.server.initialization.jetty.BadRequestException;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
 
@@ -112,14 +111,14 @@ public class LookupCoordinatorResource
       }
 
       if (knownLookups == null) {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        return HttpResponses.NOT_FOUND.error("No known lookups");
       } else {
         return Response.ok().entity(knownLookups.keySet()).build();
       }
     }
     catch (Exception e) {
       LOG.error(e, "Error getting list of lookups");
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -132,14 +131,14 @@ public class LookupCoordinatorResource
       final Map<String, Map<String, LookupExtractorFactoryMapContainer>> knownLookups = lookupCoordinatorManager
           .getKnownLookups();
       if (knownLookups == null) {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        return HttpResponses.NOT_FOUND.error("No known lookups");
       } else {
         return Response.ok().entity(knownLookups).build();
       }
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting lookups status");
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(ex)).build();
+      return HttpResponses.SERVER_ERROR.error(ex);
     }
   }
 
@@ -164,17 +163,17 @@ public class LookupCoordinatorResource
         });
       }
       catch (IOException e) {
-        return BadRequestException.toResponse(e);
+        return HttpResponses.BAD_REQUEST.error(e);
       }
       if (lookupCoordinatorManager.updateLookups(map, new AuditInfo(author, comment, req.getRemoteAddr()))) {
         return Response.status(Response.Status.ACCEPTED).entity(map).build();
       } else {
-        throw new RuntimeException("Unknown error updating configuration");
+        return HttpResponses.SERVER_ERROR.error("Unknown error updating configuration");
       }
     }
     catch (Exception e) {
       LOG.error(e, "Error creating new lookups");
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -190,18 +189,18 @@ public class LookupCoordinatorResource
   {
     try {
       if (Strings.isNullOrEmpty(tier)) {
-        return BadRequestException.toResponse("`tier` required");
+        return HttpResponses.BAD_REQUEST.error("`tier` required");
       }
 
       if (lookupCoordinatorManager.deleteTier(tier, new AuditInfo(author, comment, req.getRemoteAddr()))) {
         return Response.status(Response.Status.ACCEPTED).build();
       } else {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        return HttpResponses.NOT_FOUND.error("Tier [%] not found", tier);
       }
     }
     catch (Exception e) {
       LOG.error(e, "Error deleting tier [%s]", tier);
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -218,17 +217,17 @@ public class LookupCoordinatorResource
   {
     try {
       if (Strings.isNullOrEmpty(tier)) {
-        return BadRequestException.toResponse("`tier` required");
+        return HttpResponses.BAD_REQUEST.error("`tier` required");
       }
 
       if (Strings.isNullOrEmpty(lookup)) {
-        return BadRequestException.toResponse("`lookup` required");
+        return HttpResponses.BAD_REQUEST.error("`lookup` required");
       }
 
       if (lookupCoordinatorManager.deleteLookup(tier, lookup, new AuditInfo(author, comment, req.getRemoteAddr()))) {
         return Response.status(Response.Status.ACCEPTED).build();
       } else {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        return HttpResponses.NOT_FOUND.error("Lookup [%s] in tier [%s] not found", lookup, tier);
       }
     }
     catch (Exception e) {
@@ -251,11 +250,11 @@ public class LookupCoordinatorResource
   {
     try {
       if (Strings.isNullOrEmpty(tier)) {
-        return BadRequestException.toResponse("`tier` required");
+        return HttpResponses.BAD_REQUEST.error("`tier` required");
       }
 
       if (Strings.isNullOrEmpty(lookup)) {
-        return BadRequestException.toResponse("`lookup` required");
+        return HttpResponses.BAD_REQUEST.error("`lookup` required");
       }
       final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(req.getContentType());
       final ObjectMapper mapper = isSmile ? smileMapper : jsonMapper;
@@ -264,7 +263,7 @@ public class LookupCoordinatorResource
         lookupSpec = mapper.readValue(in, LookupExtractorFactoryMapContainer.class);
       }
       catch (IOException e) {
-        return BadRequestException.toResponse(e);
+        return HttpResponses.BAD_REQUEST.error(e);
       }
       if (lookupCoordinatorManager.updateLookup(
           tier,
@@ -274,12 +273,12 @@ public class LookupCoordinatorResource
       )) {
         return Response.status(Response.Status.ACCEPTED).build();
       } else {
-        throw new RuntimeException("Unknown error updating configuration");
+        return HttpResponses.SERVER_ERROR.error("Unknown error updating configuration for tier [%s] lookup [%s]", tier, lookup);
       }
     }
     catch (Exception e) {
       LOG.error(e, "Error updating tier [%s] lookup [%s]", tier, lookup);
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -293,22 +292,20 @@ public class LookupCoordinatorResource
   {
     try {
       if (Strings.isNullOrEmpty(tier)) {
-        return BadRequestException.toResponse("`tier` required");
+        return HttpResponses.BAD_REQUEST.error("`tier` required");
       }
       if (Strings.isNullOrEmpty(lookup)) {
-        return BadRequestException.toResponse("`lookup` required");
+        return HttpResponses.BAD_REQUEST.error("`lookup` required");
       }
       final LookupExtractorFactoryMapContainer map = lookupCoordinatorManager.getLookup(tier, lookup);
       if (map == null) {
-        return Response.status(Response.Status.NOT_FOUND)
-                       .entity(ServletResourceUtils.sanitizeException(new RE("lookup [%s] not found", lookup)))
-                       .build();
+        return HttpResponses.NOT_FOUND.error("lookup [%s] not found", lookup);
       }
       return Response.ok().entity(map).build();
     }
     catch (Exception e) {
       LOG.error(e, "Error getting lookup [%s]", lookup);
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -323,19 +320,15 @@ public class LookupCoordinatorResource
   {
     try {
       if (Strings.isNullOrEmpty(tier)) {
-        return BadRequestException.toResponse("`tier` required");
+        return HttpResponses.BAD_REQUEST.error("`tier` required");
       }
       final Map<String, Map<String, LookupExtractorFactoryMapContainer>> map = lookupCoordinatorManager.getKnownLookups();
       if (map == null) {
-        return Response.status(Response.Status.NOT_FOUND)
-                       .entity(ServletResourceUtils.sanitizeException(new RE("No lookups found")))
-                       .build();
+        return HttpResponses.NOT_FOUND.error("No lookups found");
       }
       final Map<String, LookupExtractorFactoryMapContainer> tierLookups = map.get(tier);
       if (tierLookups == null) {
-        return Response.status(Response.Status.NOT_FOUND)
-                       .entity(ServletResourceUtils.sanitizeException(new RE("Tier [%s] not found", tier)))
-                       .build();
+        return HttpResponses.NOT_FOUND.error("Tier [%s] not found", tier);
       }
       if (detailed) {
         return Response.ok().entity(tierLookups).build();
@@ -345,7 +338,7 @@ public class LookupCoordinatorResource
     }
     catch (Exception e) {
       LOG.error(e, "Error getting tier [%s]", tier);
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -360,9 +353,7 @@ public class LookupCoordinatorResource
       Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups = lookupCoordinatorManager
           .getKnownLookups();
       if (configuredLookups == null) {
-        return Response.status(Response.Status.NOT_FOUND)
-                       .entity(ServletResourceUtils.jsonize("No lookups found"))
-                       .build();
+        return HttpResponses.NOT_FOUND.error("No lookups found");
       }
 
       Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> lookupsStateOnNodes = lookupCoordinatorManager
@@ -394,7 +385,7 @@ public class LookupCoordinatorResource
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting lookups status");
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(ex)).build();
+      return HttpResponses.SERVER_ERROR.error(ex);
     }
   }
 
@@ -410,18 +401,13 @@ public class LookupCoordinatorResource
       Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups = lookupCoordinatorManager
           .getKnownLookups();
       if (configuredLookups == null) {
-        return Response.status(Response.Status.NOT_FOUND)
-                       .entity(ServletResourceUtils.jsonize("No lookups found"))
-                       .build();
+        return HttpResponses.NOT_FOUND.error("No lookups found");
       }
 
       Map<String, LookupExtractorFactoryMapContainer> tierLookups = configuredLookups.get(tier);
       if (tierLookups == null) {
-        return Response.status(Response.Status.NOT_FOUND)
-                       .entity(ServletResourceUtils.jsonize("No lookups found for tier [%s].", tier))
-                       .build();
+        return HttpResponses.NOT_FOUND.error("No lookups found for tier [%s].", tier);
       }
-
 
       Map<String, LookupStatus> lookupStatusMap = new HashMap<>();
       Collection<HostAndPort> hosts = lookupCoordinatorManager.discoverNodesInTier(tier);
@@ -440,7 +426,7 @@ public class LookupCoordinatorResource
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting lookups status for tier [%s].", tier);
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(ex)).build();
+      return HttpResponses.SERVER_ERROR.error(ex);
     }
   }
 
@@ -457,23 +443,17 @@ public class LookupCoordinatorResource
       Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups = lookupCoordinatorManager
           .getKnownLookups();
       if (configuredLookups == null) {
-        return Response.status(Response.Status.NOT_FOUND)
-                       .entity(ServletResourceUtils.jsonize("No lookups found"))
-                       .build();
+        return HttpResponses.NOT_FOUND.error("No lookups found");
       }
 
       Map<String, LookupExtractorFactoryMapContainer> tierLookups = configuredLookups.get(tier);
       if (tierLookups == null) {
-        return Response.status(Response.Status.NOT_FOUND)
-                       .entity(ServletResourceUtils.jsonize("No lookups found for tier [%s].", tier))
-                       .build();
+        return HttpResponses.NOT_FOUND.error("No lookups found for tier [%s].", tier);
       }
 
       LookupExtractorFactoryMapContainer lookupDef = tierLookups.get(lookup);
       if (lookupDef == null) {
-        return Response.status(Response.Status.NOT_FOUND)
-                       .entity(ServletResourceUtils.jsonize("Lookup [%s] not found for tier [%s].", lookup, tier))
-                       .build();
+        return HttpResponses.NOT_FOUND.error("Lookup [%s] not found for tier [%s].", lookup, tier);
       }
 
       return Response.ok(
@@ -488,7 +468,7 @@ public class LookupCoordinatorResource
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting lookups status for tier [%s] and lookup [%s].", tier, lookup);
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(ex)).build();
+      return HttpResponses.SERVER_ERROR.error(ex);
     }
   }
 
@@ -540,9 +520,7 @@ public class LookupCoordinatorResource
         Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups = lookupCoordinatorManager
             .getKnownLookups();
         if (configuredLookups == null) {
-          return Response.status(Response.Status.NOT_FOUND)
-                         .entity(ServletResourceUtils.jsonize("No lookups configured."))
-                         .build();
+          return HttpResponses.NOT_FOUND.error("No lookups configured.");
         }
         tiers = configuredLookups.keySet();
       }
@@ -561,7 +539,7 @@ public class LookupCoordinatorResource
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting node status.");
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(ex)).build();
+      return HttpResponses.SERVER_ERROR.error(ex);
     }
   }
 
@@ -593,7 +571,7 @@ public class LookupCoordinatorResource
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting node status for tier [%s].", tier);
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(ex)).build();
+      return HttpResponses.SERVER_ERROR.error(ex);
     }
   }
 
@@ -611,21 +589,16 @@ public class LookupCoordinatorResource
 
       LookupsState<LookupExtractorFactoryMapContainer> lookupsState = lookupsStateOnHosts.get(hostAndPort);
       if (lookupsState == null) {
-        return Response.status(Response.Status.NOT_FOUND)
-                       .entity(ServletResourceUtils.jsonize("Node [%s] status is unknown.", hostAndPort))
-                       .build();
+        return HttpResponses.NOT_FOUND.error("Node [%s] status is unknown.", hostAndPort);
       } else {
         return Response.ok(lookupsState).build();
       }
-
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting node status for [%s].", hostAndPort);
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(ex)).build();
+      return HttpResponses.SERVER_ERROR.error(ex);
     }
   }
-
-
 
   /**
    * Build 'simple' lookup cluster status, broken down by tier, host, and then the {@link LookupsState} with

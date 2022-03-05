@@ -21,31 +21,49 @@ package org.apache.druid.server.initialization.jetty;
 
 import com.google.common.collect.ImmutableMap;
 import io.netty.util.SuppressForbidden;
+import org.apache.druid.common.utils.ServletResourceUtils;
+import org.apache.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-public class ResponseStatusException extends RuntimeException
+public enum HttpResponses
 {
-  private final Response.Status statusCode;
+  BAD_REQUEST(Response.Status.BAD_REQUEST),
+  FORBIDDEN(Response.Status.FORBIDDEN),
+  NOT_FOUND(Response.Status.NOT_FOUND),
+  SERVER_ERROR(Response.Status.INTERNAL_SERVER_ERROR),
+  SERVICE_UNAVAILABLE(Response.Status.SERVICE_UNAVAILABLE);
 
-  public ResponseStatusException(Response.Status statusCode, String message)
+  private final int statusCode;
+
+  HttpResponses(Response.Status status)
   {
-    super(message);
-    this.statusCode = statusCode;
+    this.statusCode = status.getStatusCode();
   }
 
-  public Response.Status getStatusCode()
+  public Response error(String message)
   {
-    return statusCode;
+    return object(ImmutableMap.of("error", message));
+  }
+
+  public Response error(@Nullable Throwable t)
+  {
+    return error(ServletResourceUtils.sanitizeExceptionMessage(t));
+  }
+
+  public Response error(String messageFormat, Object... formatArgs)
+  {
+    return error(StringUtils.format(messageFormat, formatArgs));
   }
 
   @SuppressForbidden(reason = "Response#status")
-  public static Response toResponse(Response.Status status, String message)
+  public Response object(Object entity)
   {
-    return Response.status(status)
+    return Response.status(statusCode)
                    .type(MediaType.APPLICATION_JSON)
-                   .entity(ImmutableMap.of("error", message))
+                   .entity(entity)
                    .build();
   }
 }

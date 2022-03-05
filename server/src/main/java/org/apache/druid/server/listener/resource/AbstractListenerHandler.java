@@ -26,10 +26,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import org.apache.druid.common.utils.ServletResourceUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.initialization.jetty.BadRequestException;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.Response;
@@ -69,11 +68,11 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
     }
     catch (JsonParseException | JsonMappingException e) {
       LOG.debug(e, "Bad request");
-      return BadRequestException.toResponse(e);
+      return HttpResponses.BAD_REQUEST.error(e);
     }
     catch (Exception e) {
       LOG.error(e, "Error handling request");
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -100,7 +99,7 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
     }
     catch (final IOException ex) {
       LOG.debug(ex, "Bad request");
-      return BadRequestException.toResponse(ex);
+      return HttpResponses.BAD_REQUEST.error(ex);
     }
     final Object returnObj;
     try {
@@ -108,16 +107,14 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
     }
     catch (Exception e) {
       LOG.error(e, "Error handling request");
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
     if (returnObj == null) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+      return HttpResponses.NOT_FOUND.error("object not found");
     } else {
       return Response.status(Response.Status.ACCEPTED).entity(returnObj).build();
     }
   }
-
-
 
   @Override
   public final Response handleGET(String id)
@@ -132,7 +129,7 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
     }
     catch (Exception e) {
       LOG.error(e, "Error handling get request for [%s]", id);
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -150,7 +147,7 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
     }
     catch (Exception e) {
       LOG.error(e, "Error getting all");
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -167,7 +164,7 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
     }
     catch (Exception e) {
       LOG.error(e, "Error in processing delete request for [%s]", id);
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 

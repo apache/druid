@@ -23,11 +23,11 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.Response;
 import java.util.Optional;
 
 @Path("/druid/v1/lookups/introspect")
@@ -54,7 +54,7 @@ public class LookupIntrospectionResource
 
     if (!maybeContainer.isPresent()) {
       LOGGER.error("trying to introspect non existing lookup [%s]", lookupId);
-      return Response.status(Response.Status.NOT_FOUND).build();
+      return HttpResponses.NOT_FOUND.error("lookupId [%s] does not exist", lookupId);
     }
 
     final LookupExtractorFactoryContainer container = maybeContainer.get();
@@ -67,7 +67,7 @@ public class LookupIntrospectionResource
           lookupId,
           container.getLookupExtractorFactory().get().getClass()
       );
-      return Response.status(Response.Status.NOT_FOUND).build();
+      return HttpResponses.NOT_FOUND.error("lookupId [%s] does not provide resource", lookupId);
     }
   }
 }

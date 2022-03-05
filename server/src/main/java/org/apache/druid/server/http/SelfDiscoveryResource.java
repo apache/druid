@@ -29,7 +29,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.http.security.StateResourceFilter;
-import org.eclipse.jetty.http.HttpStatus;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -103,7 +103,7 @@ public class SelfDiscoveryResource
     if (isDiscoveredAllRoles()) {
       return Response.ok().build();
     } else {
-      return Response.status(HttpStatus.SERVICE_UNAVAILABLE_503).build();
+      return HttpResponses.SERVICE_UNAVAILABLE.error("No roles discovered.");
     }
   }
 

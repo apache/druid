@@ -24,12 +24,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.common.utils.ServletResourceUtils;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
-import org.apache.druid.server.initialization.jetty.BadRequestException;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.server.listener.resource.AbstractListenerHandler;
 import org.apache.druid.server.listener.resource.ListenerResource;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
@@ -88,7 +87,7 @@ class LookupListeningResource extends ListenerResource
             }
             catch (final IOException ex) {
               LOG.debug(ex, "Bad request");
-              return BadRequestException.toResponse(ex);
+              return HttpResponses.BAD_REQUEST.error(ex);
             }
 
             try {
@@ -99,7 +98,7 @@ class LookupListeningResource extends ListenerResource
             }
             catch (Exception e) {
               LOG.error(e, "Error handling request");
-              return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+              return HttpResponses.SERVER_ERROR.error(e);
             }
           }
 

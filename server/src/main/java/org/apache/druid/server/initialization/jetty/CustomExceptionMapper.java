@@ -36,7 +36,7 @@ public class CustomExceptionMapper implements ExceptionMapper<JsonMappingExcepti
      * JsonMappingException#getMessage never returns null.
      * If the underlying message is null, it returns a string 'N/A' instead
      */
-    return BadRequestException.toResponse("N/A".equals(exception.getMessage()) ?
-                                          "unknown json mapping exception" : exception.getMessage());
+    return ResponseStatusException.toResponse(Response.Status.BAD_REQUEST,
+                                              "N/A".equals(exception.getMessage()) ? "unknown json mapping exception" : exception.getMessage());
   }
 }

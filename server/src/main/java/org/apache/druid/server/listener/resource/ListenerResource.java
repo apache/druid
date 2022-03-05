@@ -23,11 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import org.apache.druid.common.utils.ServletResourceUtils;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.initialization.jetty.BadRequestException;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -91,7 +90,7 @@ public abstract class ListenerResource
     }
     catch (Exception e) {
       LOG.error(e, "Exception in handling POSTAll request");
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -112,7 +111,7 @@ public abstract class ListenerResource
     }
     catch (Exception e) {
       LOG.error(e, "Exception in handling updates request");
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -125,7 +124,7 @@ public abstract class ListenerResource
     }
     catch (Exception e) {
       LOG.error(e, "Exception in handling GETAll request");
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -144,7 +143,7 @@ public abstract class ListenerResource
     }
     catch (Exception e) {
       LOG.error(e, "Exception in handling GET request for [%s]", id);
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -163,7 +162,7 @@ public abstract class ListenerResource
     }
     catch (Exception e) {
       LOG.error(e, "Exception in handling DELETE request for [%s]", id);
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -187,12 +186,12 @@ public abstract class ListenerResource
     }
     catch (Exception e) {
       LOG.error(e, "Exception in handling POST request for ID [%s]", id);
-      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
   public static Response makeNullIdResponse()
   {
-    return BadRequestException.toResponse("Cannot have null or empty id");
+    return HttpResponses.BAD_REQUEST.error("Cannot have null or empty id");
   }
 }
