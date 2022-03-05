@@ -60,3 +60,9 @@ javax.annotation.concurrent.GuardedBy
 com.amazonaws.annotation.GuardedBy
 
 org.powermock.** @ Use Mockito instead of Powermock for compatibility with newer Java versions
+
+@defaultMessage Use org.apache.druid.server.initialization.jetty.HttpResponses instead
+javax.ws.rs.core.Response#status(int)
+javax.ws.rs.core.Response#status(javax.ws.rs.core.Response$Status)
+javax.ws.rs.core.Response#status(javax.ws.rs.core.Response$StatusType)
+javax.ws.rs.core.Response#serverError()
