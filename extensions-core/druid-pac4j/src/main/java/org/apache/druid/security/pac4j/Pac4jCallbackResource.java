@@ -22,6 +22,7 @@ package org.apache.druid.security.pac4j;
 import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -51,7 +52,7 @@ public class Pac4jCallbackResource
         new RuntimeException(),
         "This endpoint is to be handled by the pac4j filter to redirect users, request should never reach here."
     );
-    return Response.serverError().build();
+    return HttpResponses.SERVER_ERROR.empty();
   }
 }
 

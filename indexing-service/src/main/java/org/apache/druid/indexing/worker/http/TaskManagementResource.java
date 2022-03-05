@@ -36,6 +36,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.AsyncEvent;
@@ -208,7 +209,7 @@ public class TaskManagementResource
       return Response.ok().build();
     }
     catch (RuntimeException ex) {
-      return Response.serverError().entity(ex.getMessage()).build();
+      return HttpResponses.SERVER_ERROR.exception(ex);
     }
   }
 

@@ -336,15 +336,12 @@ public class DataSourcesResource
       return HttpResponses.OK.empty();
     }
     catch (Exception e) {
-      return Response
-          .serverError()
-          .entity(
+      return HttpResponses.SERVER_ERROR.json(
               ImmutableMap.of(
                   "error", "Exception occurred. Are you sure you have an indexing service?",
                   "message", e.toString()
               )
-          )
-          .build();
+          );
     }
   }
 
@@ -886,7 +883,7 @@ public class DataSourcesResource
     }
     catch (Exception e) {
       log.error(e, "Error while handling hand off check request");
-      return Response.serverError().entity(ImmutableMap.of("error", e.toString())).build();
+      return HttpResponses.SERVER_ERROR.exception(e);
     }
   }
 

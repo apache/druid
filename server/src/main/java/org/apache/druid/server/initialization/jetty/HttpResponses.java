@@ -44,6 +44,7 @@ public enum HttpResponses
 
   // 5xx
   SERVER_ERROR(Response.Status.INTERNAL_SERVER_ERROR),
+  NOT_IMPLEMENTED(501),
   SERVICE_UNAVAILABLE(Response.Status.SERVICE_UNAVAILABLE);
 
   private final int statusCode;
@@ -51,6 +52,11 @@ public enum HttpResponses
   HttpResponses(Response.Status status)
   {
     this.statusCode = status.getStatusCode();
+  }
+
+  HttpResponses(int statusCode)
+  {
+    this.statusCode = statusCode;
   }
 
   /**

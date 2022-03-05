@@ -382,7 +382,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
         );
       }
       catch (IOException e) {
-        return Response.serverError().entity(ImmutableMap.<String, Object>of("error", e.getMessage())).build();
+        return HttpResponses.SERVER_ERROR.exception(e);
       }
       finally {
         bytesReceived.addAndGet(countingInputStream.getCount());

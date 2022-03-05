@@ -41,6 +41,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.BaseJettyTest;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.server.Handler;
@@ -269,7 +270,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
       if ("hello".equals(input)) {
         return Response.ok("hello").build();
       } else {
-        return Response.serverError().build();
+        return HttpResponses.SERVER_ERROR.empty();
       }
     }
 
