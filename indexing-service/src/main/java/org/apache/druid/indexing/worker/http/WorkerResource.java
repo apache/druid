@@ -28,7 +28,6 @@ import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.sun.jersey.spi.container.ResourceFilters;
-import io.netty.util.SuppressForbidden;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.indexing.overlord.TaskRunner;
@@ -200,7 +199,6 @@ public class WorkerResource
   @Path("/task/{taskid}/log")
   @Produces(HttpMediaType.TEXT_PLAIN_UTF8)
   @ResourceFilters(StateResourceFilter.class)
-  @SuppressForbidden(reason = "Response#status")
   public Response doGetLog(
       @PathParam("taskid") String taskId,
       @QueryParam("offset") @DefaultValue("0") long offset
