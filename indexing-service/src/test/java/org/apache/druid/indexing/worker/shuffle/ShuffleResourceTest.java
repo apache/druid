@@ -131,7 +131,7 @@ public class ShuffleResourceTest
     );
     Assert.assertEquals(Status.NOT_FOUND.getStatusCode(), response.getStatus());
     Assert.assertNotNull(response.getEntity());
-    final String errorMessage = (String) response.getEntity();
+    final String errorMessage = (String) ((Map) response.getEntity()).get("error");
     Assert.assertTrue(errorMessage.contains("Can't find the partition for supervisorTask"));
   }
 

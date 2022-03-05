@@ -200,7 +200,7 @@ public class SupervisorResource
         manager -> {
           Optional<SupervisorSpec> spec = manager.getSupervisorSpec(id);
           if (!spec.isPresent()) {
-            return HttpResponses.NO_CONTENT.error("[%s] does not exist", id);
+            return HttpResponses.NOT_FOUND.error("[%s] does not exist", id);
           }
 
           return HttpResponses.OK.json(spec.get());

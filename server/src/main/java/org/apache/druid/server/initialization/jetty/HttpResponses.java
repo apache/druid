@@ -34,9 +34,9 @@ public enum HttpResponses
   // 2xx
   OK(Response.Status.OK),
   ACCEPTED(Response.Status.ACCEPTED),
+  NO_CONTENT(Response.Status.NO_CONTENT),
 
   // 4xx
-  NO_CONTENT(Response.Status.NO_CONTENT),
   BAD_REQUEST(Response.Status.BAD_REQUEST),
   FORBIDDEN(Response.Status.FORBIDDEN),
   NOT_FOUND(Response.Status.NOT_FOUND),
