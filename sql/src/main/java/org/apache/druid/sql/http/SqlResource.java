@@ -40,6 +40,7 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -64,7 +65,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -275,7 +275,7 @@ public class SqlResource
 
     List<SqlLifecycle> lifecycles = sqlLifecycleManager.getAll(sqlQueryId);
     if (lifecycles.isEmpty()) {
-      return Response.status(Status.NOT_FOUND).build();
+      return HttpResponses.NOT_FOUND.error("query for [%s] does not exist", sqlQueryId);
     }
     Set<ResourceAction> resources = lifecycles
         .stream()
@@ -291,9 +291,9 @@ public class SqlResource
       // should remove only the lifecycles in the snapshot.
       sqlLifecycleManager.removeAll(sqlQueryId, lifecycles);
       lifecycles.forEach(SqlLifecycle::cancel);
-      return Response.status(Status.ACCEPTED).build();
+      return HttpResponses.ACCEPTED.empty();
     } else {
-      return Response.status(Status.FORBIDDEN).build();
+      return HttpResponses.FORBIDDEN.error(access.toString());
     }
   }
 }

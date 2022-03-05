@@ -1455,7 +1455,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     authorizationCheck(req, Action.WRITE);
     stopGracefully();
-    return Response.status(Response.Status.OK).build();
+    return HttpResponses.OK.empty();
   }
 
   @GET
@@ -1563,7 +1563,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   )
   {
     authorizationCheck(req, Action.READ);
-    return Response.ok(doGetRowStats()).build();
+    return HttpResponses.OK.json(doGetRowStats());
   }
 
   @GET
@@ -1574,7 +1574,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   )
   {
     authorizationCheck(req, Action.READ);
-    return Response.ok(doGetLiveReports()).build();
+    return HttpResponses.OK.json(doGetLiveReports());
   }
 
 
@@ -1589,7 +1589,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     List<ParseExceptionReport> events = IndexTaskUtils.getReportListFromSavedParseExceptions(
         parseExceptionHandler.getSavedParseExceptionReports()
     );
-    return Response.ok(events).build();
+    return HttpResponses.OK.json(events);
   }
 
   @VisibleForTesting
@@ -1629,7 +1629,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             || (latestSequence.getEndOffsets().equals(sequenceNumbers) && finish)) {
           log.warn("Ignoring duplicate request, end offsets already set for sequences [%s]", sequenceNumbers);
           resume();
-          return Response.ok(sequenceNumbers).build();
+          return HttpResponses.OK.json(sequenceNumbers);
         } else if (latestSequence.isCheckpointed()) {
           return HttpResponses.BAD_REQUEST.error("Sequence [%s] has already endOffsets set, cannot set to [%s]",
                                                  latestSequence,
@@ -1694,7 +1694,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     resume();
 
-    return Response.ok(sequenceNumbers).build();
+    return HttpResponses.OK.json(sequenceNumbers);
   }
 
   private void resetNextCheckpointTime()
@@ -1772,9 +1772,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       long nanos = TimeUnit.SECONDS.toNanos(2);
       while (!isPaused()) {
         if (nanos <= 0L) {
-          return Response.status(Response.Status.ACCEPTED)
-                         .entity("Request accepted but task has not yet paused")
-                         .build();
+          return HttpResponses.ACCEPTED.error("Request accepted but task has not yet paused");
         }
         nanos = hasPaused.awaitNanos(nanos);
       }
@@ -1797,7 +1795,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     authorizationCheck(req, Action.WRITE);
     resume();
-    return Response.status(Response.Status.OK).build();
+    return HttpResponses.OK.empty();
   }
 
 

@@ -37,7 +37,7 @@ import java.util.Map;
 public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerResourceHandler
 {
   private static final Logger log = new Logger(DefaultBasicAuthorizerResourceHandler.class);
-  private static final Response NOT_FOUND_RESPONSE = Response.status(Response.Status.NOT_FOUND).build();
+  private static final Response NOT_FOUND_RESPONSE = HttpResponses.NOT_FOUND.empty();
   private static final String UNKNOWN_AUTHORIZER_MSG_FORMAT = "Received update for unknown authorizer[%s]";
 
   private final BasicAuthorizerCacheManager cacheManager;
@@ -201,7 +201,7 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
     }
 
     cacheManager.handleAuthorizerUserUpdate(authorizerName, serializedUserAndRoleMap);
-    return Response.ok().build();
+    return HttpResponses.OK.empty();
   }
 
   @Override
@@ -214,7 +214,7 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
     }
 
     cacheManager.handleAuthorizerGroupMappingUpdate(authorizerName, serializedGroupMappingAndRoleMap);
-    return Response.ok().build();
+    return HttpResponses.OK.empty();
   }
 
   @Override
@@ -229,6 +229,6 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
                                          cacheManager.getGroupMappingRoleMap(authorizerName) != null);
         }
     );
-    return Response.ok(loadStatus).build();
+    return HttpResponses.OK.json(loadStatus);
   }
 }

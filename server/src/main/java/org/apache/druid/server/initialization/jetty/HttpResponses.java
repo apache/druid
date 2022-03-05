@@ -31,12 +31,18 @@ import javax.ws.rs.core.Response;
 
 public enum HttpResponses
 {
+  // 2xx
   OK(Response.Status.OK),
   ACCEPTED(Response.Status.ACCEPTED),
+
+  // 4xx
   NO_CONTENT(Response.Status.NO_CONTENT),
   BAD_REQUEST(Response.Status.BAD_REQUEST),
   FORBIDDEN(Response.Status.FORBIDDEN),
   NOT_FOUND(Response.Status.NOT_FOUND),
+  GONE(Response.Status.GONE),
+
+  // 5xx
   SERVER_ERROR(Response.Status.INTERNAL_SERVER_ERROR),
   SERVICE_UNAVAILABLE(Response.Status.SERVICE_UNAVAILABLE);
 

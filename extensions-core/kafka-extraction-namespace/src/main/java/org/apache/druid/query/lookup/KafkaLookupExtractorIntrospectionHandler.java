@@ -20,6 +20,7 @@
 package org.apache.druid.query.lookup;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.core.Response;
@@ -40,7 +41,7 @@ public class KafkaLookupExtractorIntrospectionHandler implements LookupIntrospec
     if (future != null && !future.isDone()) {
       return Response.ok().build();
     } else {
-      return Response.status(Response.Status.GONE).build();
+      return HttpResponses.GONE.empty();
     }
   }
 }

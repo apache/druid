@@ -20,9 +20,9 @@
 package org.apache.druid.query.lookup;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.utils.ServletResourceUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.extraction.MapLookupExtractor;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 
 import javax.ws.rs.GET;
@@ -47,10 +47,10 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
   public Response getKeys()
   {
     try {
-      return Response.ok(getLatest().keySet()).build();
+      return HttpResponses.OK.json(getLatest().keySet());
     }
     catch (ISE e) {
-      return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.NOT_FOUND.exception(e);
     }
   }
 
@@ -60,10 +60,10 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
   public Response getValues()
   {
     try {
-      return Response.ok(getLatest().values()).build();
+      return HttpResponses.OK.json(getLatest().values());
     }
     catch (ISE e) {
-      return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.NOT_FOUND.exception(e);
     }
   }
 
@@ -74,10 +74,10 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
   {
     final CacheScheduler.CacheState cacheState = factory.entry.getCacheState();
     if (cacheState instanceof CacheScheduler.NoCache) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+      return HttpResponses.NOT_FOUND.empty();
     } else {
       String version = ((CacheScheduler.VersionedCache) cacheState).getVersion();
-      return Response.ok(ImmutableMap.of("version", version)).build();
+      return HttpResponses.OK.json(ImmutableMap.of("version", version));
     }
   }
 
@@ -86,10 +86,10 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
   public Response getMap()
   {
     try {
-      return Response.ok(getLatest()).build();
+      return HttpResponses.OK.json(getLatest());
     }
     catch (ISE e) {
-      return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
+      return HttpResponses.NOT_FOUND.exception(e);
     }
   }
 

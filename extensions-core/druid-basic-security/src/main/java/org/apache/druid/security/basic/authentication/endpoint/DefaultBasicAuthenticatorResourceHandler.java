@@ -35,7 +35,7 @@ import java.util.Map;
 public class DefaultBasicAuthenticatorResourceHandler implements BasicAuthenticatorResourceHandler
 {
   private static final Logger log = new Logger(DefaultBasicAuthenticatorResourceHandler.class);
-  private static final Response NOT_FOUND_RESPONSE = Response.status(Response.Status.NOT_FOUND).build();
+  private static final Response NOT_FOUND_RESPONSE = HttpResponses.NOT_FOUND.empty();
   private static final String UNKNOWN_AUTHENTICATOR_MSG_FORMAT = "Received user update for unknown authenticator[%s]";
 
   private final BasicAuthenticatorCacheManager cacheManager;

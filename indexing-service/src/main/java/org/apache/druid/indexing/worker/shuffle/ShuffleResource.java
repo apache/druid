@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.joda.time.Interval;
 
 import javax.ws.rs.DELETE;
@@ -36,7 +37,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.util.Optional;
@@ -94,7 +94,7 @@ public class ShuffleResource
           interval,
           bucketId
       );
-      return Response.status(Status.NOT_FOUND).entity(errorMessage).build();
+      return HttpResponses.NOT_FOUND.error(errorMessage);
     } else {
       try {
         long size = partitionFile.get().size();
@@ -122,7 +122,7 @@ public class ShuffleResource
     }
     catch (IOException e) {
       log.error(e, "Error while deleting partitions of supervisorTask[%s]", supervisorTaskId);
-      return Response.status(Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
+      return HttpResponses.SERVER_ERROR.exception(e);
     }
   }
 }

@@ -101,7 +101,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -1247,7 +1246,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
     catch (MaxAllowedLocksExceededException malee) {
       getCurrentRunner().stopGracefully(malee.getMessage());
-      return Response.status(Response.Status.BAD_REQUEST).entity(malee.getMessage()).build();
+      return HttpResponses.BAD_REQUEST.error(malee.getMessage());
     }
     catch (IOException | IllegalStateException e) {
       return HttpResponses.SERVER_ERROR.error(Throwables.getStackTraceAsString(e));
@@ -1297,7 +1296,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       final ParallelIndexTaskRunner runner = currentSubTaskHolder.getTask();
       //noinspection unchecked
       runner.collectReport(report);
-      return Response.ok().build();
+      return HttpResponses.OK.empty();
     }
   }
 
@@ -1340,7 +1339,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (currentRunner == null) {
       return HttpResponses.SERVICE_UNAVAILABLE.error("task is not running yet");
     } else {
-      return Response.ok(currentRunner.getProgress()).build();
+      return HttpResponses.OK.json(currentRunner.getProgress());
     }
   }
 
@@ -1354,7 +1353,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (currentRunner == null) {
       return HttpResponses.SERVICE_UNAVAILABLE.error("task is not running yet");
     } else {
-      return Response.ok(currentRunner.getRunningTaskIds()).build();
+      return HttpResponses.OK.json(currentRunner.getRunningTaskIds());
     }
   }
 
@@ -1368,7 +1367,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (currentRunner == null) {
       return HttpResponses.SERVICE_UNAVAILABLE.error("task is not running yet");
     } else {
-      return Response.ok(currentRunner.getSubTaskSpecs()).build();
+      return HttpResponses.OK.json(currentRunner.getSubTaskSpecs());
     }
   }
 
@@ -1382,7 +1381,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (currentRunner == null) {
       return HttpResponses.SERVICE_UNAVAILABLE.error("task is not running yet");
     } else {
-      return Response.ok(currentRunner.getRunningSubTaskSpecs()).build();
+      return HttpResponses.OK.json(currentRunner.getRunningSubTaskSpecs());
     }
   }
 
@@ -1396,7 +1395,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (currentRunner == null) {
       return HttpResponses.SERVICE_UNAVAILABLE.error(("task is not running yet"));
     } else {
-      return Response.ok(currentRunner.getCompleteSubTaskSpecs()).build();
+      return HttpResponses.OK.json(currentRunner.getCompleteSubTaskSpecs());
     }
   }
 
@@ -1413,9 +1412,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     } else {
       final SubTaskSpec subTaskSpec = currentRunner.getSubTaskSpec(id);
       if (subTaskSpec == null) {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        return HttpResponses.NOT_FOUND.error("sub task [%s] not found.", id);
       } else {
-        return Response.ok(subTaskSpec).build();
+        return HttpResponses.OK.json(subTaskSpec);
       }
     }
   }
@@ -1432,9 +1431,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     } else {
       final SubTaskSpecStatus subTaskSpecStatus = currentRunner.getSubTaskState(id);
       if (subTaskSpecStatus == null) {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        return HttpResponses.NOT_FOUND.error("sub task [%s] not found.", id);
       } else {
-        return Response.ok(subTaskSpecStatus).build();
+        return HttpResponses.OK.json(subTaskSpecStatus);
       }
     }
   }
@@ -1454,9 +1453,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     } else {
       final TaskHistory taskHistory = currentRunner.getCompleteSubTaskSpecAttemptHistory(id);
       if (taskHistory == null) {
-        return Response.status(Status.NOT_FOUND).build();
+        return HttpResponses.NOT_FOUND.error("sub task spec [%s] not found.", id);
       } else {
-        return Response.ok(taskHistory.getAttemptHistory()).build();
+        return HttpResponses.OK.json(taskHistory.getAttemptHistory());
       }
     }
   }
@@ -1659,7 +1658,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    return Response.ok(doGetRowStatsAndUnparseableEvents(full, false).lhs).build();
+    return HttpResponses.OK.json(doGetRowStatsAndUnparseableEvents(full, false).lhs);
   }
 
   @VisibleForTesting
@@ -1705,7 +1704,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
 
-    return Response.ok(doGetLiveReports(full)).build();
+    return HttpResponses.OK.json(doGetLiveReports(full));
   }
 
   /**

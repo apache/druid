@@ -80,7 +80,7 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
         storageUpdater.getCurrentUserMapBytes(authenticatorName)
     );
 
-    return Response.ok(userMap.keySet()).build();
+    return HttpResponses.OK.json(userMap.keySet());
   }
 
   @Override
@@ -101,7 +101,7 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
       if (user == null) {
         throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
       }
-      return Response.ok(user).build();
+      return HttpResponses.OK.json(user);
     }
     catch (BasicSecurityDBResourceException cfe) {
       return makeResponseForBasicSecurityDBResourceException(cfe);
@@ -118,7 +118,7 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
 
     try {
       storageUpdater.createUser(authenticatorName, userName);
-      return Response.ok().build();
+      return HttpResponses.OK.empty();
     }
     catch (BasicSecurityDBResourceException cfe) {
       return makeResponseForBasicSecurityDBResourceException(cfe);
@@ -135,7 +135,7 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
 
     try {
       storageUpdater.deleteUser(authenticatorName, userName);
-      return Response.ok().build();
+      return HttpResponses.OK.empty();
     }
     catch (BasicSecurityDBResourceException cfe) {
       return makeResponseForBasicSecurityDBResourceException(cfe);
@@ -152,7 +152,7 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
 
     try {
       storageUpdater.setUserCredentials(authenticatorName, userName, update);
-      return Response.ok().build();
+      return HttpResponses.OK.empty();
     }
     catch (BasicSecurityDBResourceException cfe) {
       return makeResponseForBasicSecurityDBResourceException(cfe);
@@ -167,20 +167,20 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
       return makeResponseForAuthenticatorNotFound(authenticatorName);
     }
 
-    return Response.ok(storageUpdater.getCachedSerializedUserMap(authenticatorName)).build();
+    return HttpResponses.OK.json(storageUpdater.getCachedSerializedUserMap(authenticatorName));
   }
 
   @Override
   public Response refreshAll()
   {
     storageUpdater.refreshAllNotification();
-    return Response.ok().build();
+    return HttpResponses.OK.empty();
   }
 
   @Override
   public Response authenticatorUserUpdateListener(String authenticatorName, byte[] serializedUserMap)
   {
-    return Response.status(Response.Status.NOT_FOUND).build();
+    return HttpResponses.NOT_FOUND.empty();
   }
 
   @Override
@@ -191,7 +191,7 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
         (authenticatorName, authenticator) ->
           loadStatus.put(authenticatorName, storageUpdater.getCachedUserMap(authenticatorName) != null)
     );
-    return Response.ok(loadStatus).build();
+    return HttpResponses.OK.json(loadStatus);
   }
 
   private static Response makeResponseForAuthenticatorNotFound(String authenticatorName)

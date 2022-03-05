@@ -99,7 +99,6 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -187,7 +186,7 @@ public class OverlordResource
         taskQueue -> {
           try {
             taskQueue.add(task);
-            return Response.ok(ImmutableMap.of("task", task.getId())).build();
+            return HttpResponses.OK.json(ImmutableMap.of("task", task.getId()));
           }
           catch (EntryExistsException e) {
             return HttpResponses.BAD_REQUEST.error("Task[%s] already exists!", task.getId());
@@ -202,7 +201,7 @@ public class OverlordResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLeader()
   {
-    return Response.ok(taskMaster.getCurrentLeader()).build();
+    return HttpResponses.OK.json(taskMaster.getCurrentLeader());
   }
 
   /**
@@ -216,9 +215,9 @@ public class OverlordResource
     final boolean leading = taskMaster.isLeader();
     final Map<String, Boolean> response = ImmutableMap.of("leader", leading);
     if (leading) {
-      return Response.ok(response).build();
+      return HttpResponses.OK.json(response);
     } else {
-      return Response.status(Response.Status.NOT_FOUND).entity(response).build();
+      return HttpResponses.NOT_FOUND.json(response);
     }
   }
 
@@ -233,7 +232,7 @@ public class OverlordResource
     }
 
     // Build the response
-    return Response.ok(taskStorageQueryAdapter.getLockedIntervals(minTaskPriority)).build();
+    return HttpResponses.OK.json(taskStorageQueryAdapter.getLockedIntervals(minTaskPriority));
   }
 
   @GET
@@ -247,11 +246,11 @@ public class OverlordResource
         taskStorageQueryAdapter.getTask(taskid).orNull()
     );
 
-    final Response.Status status = response.getPayload() == null
-                                   ? Response.Status.NOT_FOUND
-                                   : Response.Status.OK;
+    final HttpResponses httpResponse = response.getPayload() == null
+                                       ? HttpResponses.NOT_FOUND
+                                       : HttpResponses.OK;
 
-    return Response.status(status).entity(response).build();
+    return httpResponse.json(response);
   }
 
   @GET
@@ -318,11 +317,11 @@ public class OverlordResource
       response = new TaskStatusResponse(taskid, null);
     }
 
-    final Response.Status status = response.getStatus() == null
-                                   ? Response.Status.NOT_FOUND
-                                   : Response.Status.OK;
+    final HttpResponses status = response.getStatus() == null
+                                   ? HttpResponses.NOT_FOUND
+                                   : HttpResponses.OK;
 
-    return Response.status(status).entity(response).build();
+    return status.json(response);
   }
 
   @Deprecated
@@ -333,7 +332,7 @@ public class OverlordResource
   public Response getTaskSegments(@PathParam("taskid") String taskid)
   {
     final Set<DataSegment> segments = taskStorageQueryAdapter.getInsertedSegments(taskid);
-    return Response.ok().entity(segments).build();
+    return HttpResponses.OK.json(segments);
   }
 
   @POST
@@ -350,7 +349,7 @@ public class OverlordResource
           public Response apply(TaskQueue taskQueue)
           {
             taskQueue.shutdown(taskid, "Shutdown request from user");
-            return Response.ok(ImmutableMap.of("task", taskid)).build();
+            return HttpResponses.OK.json(ImmutableMap.of("task", taskid));
           }
         }
     );
@@ -371,12 +370,12 @@ public class OverlordResource
           {
             final List<TaskInfo<Task, TaskStatus>> tasks = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
             if (tasks.isEmpty()) {
-              return Response.status(Status.NOT_FOUND).build();
+              return HttpResponses.NOT_FOUND.empty();
             } else {
               for (final TaskInfo<Task, TaskStatus> task : tasks) {
                 taskQueue.shutdown(task.getId(), "Shutdown request from user");
               }
-              return Response.ok(ImmutableMap.of("dataSource", dataSource)).build();
+              return HttpResponses.OK.json(ImmutableMap.of("dataSource", dataSource));
             }
           }
         }
@@ -401,7 +400,7 @@ public class OverlordResource
       }
     }
 
-    return Response.ok().entity(result).build();
+    return HttpResponses.OK.json(result);
   }
 
   @GET
@@ -414,7 +413,7 @@ public class OverlordResource
       workerConfigRef = configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class);
     }
 
-    return Response.ok(workerConfigRef.get()).build();
+    return HttpResponses.OK.json(workerConfigRef.get());
   }
 
   /**
@@ -431,7 +430,7 @@ public class OverlordResource
     Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
     if (!taskRunnerOptional.isPresent()) {
       // Cannot serve call as not leader
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+      return HttpResponses.SERVICE_UNAVAILABLE.empty();
     }
     TaskRunner taskRunner = taskRunnerOptional.get();
     Collection<ImmutableWorkerInfo> workers;
@@ -477,7 +476,7 @@ public class OverlordResource
       );
       maximumCapacity = -1;
     }
-    return Response.ok(new TotalWorkerCapacityResponse(currentCapacity, maximumCapacity)).build();
+    return HttpResponses.OK.json(new TotalWorkerCapacityResponse(currentCapacity, maximumCapacity));
   }
 
   // default value is used for backwards compatibility
@@ -500,9 +499,9 @@ public class OverlordResource
     if (setResult.isOk()) {
       log.info("Updating Worker configs: %s", workerBehaviorConfig);
 
-      return Response.ok().build();
+      return HttpResponses.OK.empty();
     } else {
-      return Response.status(Response.Status.BAD_REQUEST).build();
+      return HttpResponses.BAD_REQUEST.empty();
     }
   }
 
@@ -523,7 +522,7 @@ public class OverlordResource
             WorkerBehaviorConfig.CONFIG_KEY,
             count
         );
-        return Response.ok(workerEntryList).build();
+        return HttpResponses.OK.json(workerEntryList);
       }
       catch (IllegalArgumentException e) {
         return HttpResponses.BAD_REQUEST.error(e.getMessage());
@@ -534,7 +533,7 @@ public class OverlordResource
         WorkerBehaviorConfig.CONFIG_KEY,
         theInterval
     );
-    return Response.ok(workerEntryList).build();
+    return HttpResponses.OK.json(workerEntryList);
   }
 
   @POST
@@ -566,7 +565,7 @@ public class OverlordResource
               return HttpResponses.SERVER_ERROR.error(e.getMessage());
             }
 
-            return Response.ok().entity(retMap).build();
+            return HttpResponses.OK.json(retMap);
           }
         }
     );
@@ -737,7 +736,7 @@ public class OverlordResource
         type,
         req
     );
-    return Response.ok(authorizedList).build();
+    return HttpResponses.OK.json(authorizedList);
   }
 
   @DELETE
@@ -766,7 +765,7 @@ public class OverlordResource
 
     if (taskMaster.isLeader()) {
       final int numDeleted = indexerMetadataStorageAdapter.deletePendingSegments(dataSource, deleteInterval);
-      return Response.ok().entity(ImmutableMap.of("numDeleted", numDeleted)).build();
+      return HttpResponses.OK.json(ImmutableMap.of("numDeleted", numDeleted));
     } else {
       return HttpResponses.SERVICE_UNAVAILABLE.error("Current node is not leader");
     }
@@ -786,7 +785,7 @@ public class OverlordResource
           public Response apply(TaskRunner taskRunner)
           {
             if (taskRunner instanceof WorkerTaskRunner) {
-              return Response.ok(((WorkerTaskRunner) taskRunner).getWorkers()).build();
+              return HttpResponses.OK.json(((WorkerTaskRunner) taskRunner).getWorkers());
             } else {
               log.debug(
                   "Task runner [%s] of type [%s] does not support listing workers",
@@ -823,10 +822,10 @@ public class OverlordResource
     try {
       if (WorkerTaskRunner.ActionType.DISABLE.equals(action)) {
         workerTaskRunnerQueryAdapter.disableWorker(host);
-        return Response.ok(ImmutableMap.of(host, "disabled")).build();
+        return HttpResponses.OK.json(ImmutableMap.of(host, "disabled"));
       } else if (WorkerTaskRunner.ActionType.ENABLE.equals(action)) {
         workerTaskRunnerQueryAdapter.enableWorker(host);
-        return Response.ok(ImmutableMap.of(host, "enabled")).build();
+        return HttpResponses.OK.json(ImmutableMap.of(host, "enabled"));
       } else {
         return HttpResponses.SERVER_ERROR.error("Worker does not support " + action + " action!");
       }
@@ -846,9 +845,9 @@ public class OverlordResource
     // Don't use asLeaderWith, since we want to return 200 instead of 503 when missing an autoscaler.
     final Optional<ScalingStats> rms = taskMaster.getScalingStats();
     if (rms.isPresent()) {
-      return Response.ok(rms.get()).build();
+      return HttpResponses.OK.json(rms.get());
     } else {
-      return Response.ok().build();
+      return HttpResponses.OK.empty();
     }
   }
 
@@ -918,7 +917,7 @@ public class OverlordResource
     Optional<TaskRunner> taskRunnerOpt = taskMaster.getTaskRunner();
     if (!taskRunnerOpt.isPresent()) {
       throw new WebApplicationException(
-          Response.serverError().entity("No task runner found").build()
+          HttpResponses.SERVER_ERROR.error("No task runner found")
       );
     }
     TaskRunner runner = taskRunnerOpt.get();

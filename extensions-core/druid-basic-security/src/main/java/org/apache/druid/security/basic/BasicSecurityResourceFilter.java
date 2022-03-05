@@ -21,8 +21,8 @@ package org.apache.druid.security.basic;
 
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.http.security.AbstractResourceFilter;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -31,8 +31,6 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
 import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 
 public class BasicSecurityResourceFilter extends AbstractResourceFilter
 {
@@ -62,10 +60,7 @@ public class BasicSecurityResourceFilter extends AbstractResourceFilter
 
     if (!authResult.isAllowed()) {
       throw new WebApplicationException(
-          Response.status(Response.Status.FORBIDDEN)
-                  .type(MediaType.TEXT_PLAIN)
-                  .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
-                  .build()
+          HttpResponses.FORBIDDEN.error("Access-Check-Result: %s", authResult.toString())
       );
     }
 
