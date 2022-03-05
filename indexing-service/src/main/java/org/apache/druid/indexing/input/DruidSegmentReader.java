@@ -142,6 +142,12 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
   }
 
   @Override
+  protected InputEntity source()
+  {
+    return source;
+  }
+
+  @Override
   protected List<InputRow> parseInputRows(Map<String, Object> intermediateRow) throws ParseException
   {
     return Collections.singletonList(MapInputRowParser.parse(inputRowSchema, intermediateRow));

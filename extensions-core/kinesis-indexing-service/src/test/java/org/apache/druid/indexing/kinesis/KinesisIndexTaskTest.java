@@ -1351,10 +1351,10 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         "Unable to parse value[notanumber] for field[met1]",
         "could not convert value [notanumber] to float",
         "could not convert value [notanumber] to long",
-        "Timestamp[null] is unparseable! Event: {}",
-        "Unable to parse [] as the intermediateRow resulted in empty input row",
-        "Unable to parse row [unparseable]",
-        "Encountered row with timestamp[246140482-04-24T15:36:27.903Z] that cannot be represented as a long: [{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}]"
+        "Timestamp[null] is unparseable! Event: {} (Record: 1)",
+        "Unable to parse [] as the intermediateRow resulted in empty input row (Record: 1)",
+        "Unable to parse row [unparseable] (Record: 1)",
+        "Encountered row with timestamp[246140482-04-24T15:36:27.903Z] that cannot be represented as a long: [{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}] (Record: 1)"
     );
     List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
       return ((List<String>) r.get("details")).get(0);
@@ -1457,8 +1457,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         .get(RowIngestionMeters.BUILD_SEGMENTS);
 
     List<String> expectedMessages = Arrays.asList(
-        "Unable to parse [] as the intermediateRow resulted in empty input row",
-        "Unable to parse row [unparseable]"
+        "Unable to parse [] as the intermediateRow resulted in empty input row (Record: 1)",
+        "Unable to parse row [unparseable] (Record: 1)"
     );
     List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
       return ((List<String>) r.get("details")).get(0);

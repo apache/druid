@@ -85,8 +85,8 @@ public class KillDatasourceMetadataTest
     );
     killDatasourceMetadata = new KillDatasourceMetadata(druidCoordinatorConfig, mockIndexerMetadataStorageCoordinator, mockMetadataSupervisorManager);
     killDatasourceMetadata.run(mockDruidCoordinatorRuntimeParams);
-    Mockito.verifyZeroInteractions(mockIndexerMetadataStorageCoordinator);
-    Mockito.verifyZeroInteractions(mockMetadataSupervisorManager);
+    Mockito.verifyNoInteractions(mockIndexerMetadataStorageCoordinator);
+    Mockito.verifyNoInteractions(mockMetadataSupervisorManager);
   }
 
   @Test

@@ -1361,6 +1361,7 @@ public class IndexTaskTest extends IngestionTestBase
     // report parse exception
     final IndexTuningConfig tuningConfig = createTuningConfig(2, null, null, null, null, false, true);
     final IndexIngestionSpec indexIngestionSpec;
+    List<String> expectedMessages;
     if (useInputFormatApi) {
       indexIngestionSpec = createIngestionSpec(
           jsonMapper,
@@ -1374,6 +1375,12 @@ public class IndexTaskTest extends IngestionTestBase
           false,
           false
       );
+      expectedMessages = ImmutableList.of(
+          StringUtils.format(
+              "Timestamp[unparseable] is unparseable! Event: {time=unparseable, d=a, val=1} (Path: %s, Record: 1, Line: 2)",
+              tmpFile.toURI()
+          )
+      );
     } else {
       indexIngestionSpec = createIngestionSpec(
           jsonMapper,
@@ -1384,6 +1391,9 @@ public class IndexTaskTest extends IngestionTestBase
           tuningConfig,
           false,
           false
+      );
+      expectedMessages = ImmutableList.of(
+          "Timestamp[unparseable] is unparseable! Event: {time=unparseable, d=a, val=1}"
       );
     }
 
@@ -1404,9 +1414,6 @@ public class IndexTaskTest extends IngestionTestBase
         .getUnparseableEvents()
         .get(RowIngestionMeters.BUILD_SEGMENTS);
 
-    List<String> expectedMessages = ImmutableList.of(
-        "Timestamp[unparseable] is unparseable! Event: {time=unparseable, d=a, val=1}"
-    );
     List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
       return ((List<String>) r.get("details")).get(0);
     }).collect(Collectors.toList());
@@ -1538,39 +1545,42 @@ public class IndexTaskTest extends IngestionTestBase
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
-    Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        RowIngestionMeters.DETERMINE_PARTITIONS,
-        Arrays.asList(
-            "Unable to parse row [this is not JSON]",
-            "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
-            "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}]",
-            "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
-        ),
-        RowIngestionMeters.BUILD_SEGMENTS,
-        Arrays.asList(
-            "Unable to parse row [this is not JSON]",
-            "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
-            "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}]",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2014-01-01T00:00:10.000Z, event={time=2014-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=4.0, val=notnumber}, dimensions=[dim, dimLong, dimFloat]}], exceptions: [Unable to parse value[notnumber] for field[val]]",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2014-01-01T00:00:10.000Z, event={time=2014-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=notnumber, val=1}, dimensions=[dim, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to float]",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2014-01-01T00:00:10.000Z, event={time=2014-01-01T00:00:10Z, dim=b, dimLong=notnumber, dimFloat=3.0, val=1}, dimensions=[dim, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to long]",
-            "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
-        )
-    );
-
     List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
         .getUnparseableEvents()
         .get(RowIngestionMeters.BUILD_SEGMENTS);
 
-    List<String> expectedMessages = Arrays.asList(
-        "Unable to parse row [this is not JSON]",
-        "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
-        "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}]",
-        "Unable to parse value[notnumber] for field[val]",
-        "could not convert value [notnumber] to float",
-        "could not convert value [notnumber] to long",
-        "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
-    );
+    List<String> expectedMessages;
+    if (useInputFormatApi) {
+      expectedMessages = Arrays.asList(
+          StringUtils.format("Unable to parse row [this is not JSON] (Path: %s, Record: 6, Line: 9)", tmpFile.toURI()),
+          StringUtils.format(
+              "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 6, Line: 8)",
+              tmpFile.toURI()
+          ),
+          StringUtils.format(
+              "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}] (Path: %s, Record: 5, Line: 6)",
+              tmpFile.toURI()
+          ),
+          "Unable to parse value[notnumber] for field[val]",
+          "could not convert value [notnumber] to float",
+          "could not convert value [notnumber] to long",
+          StringUtils.format(
+              "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 1, Line: 1)",
+              tmpFile.toURI()
+          )
+      );
+    } else {
+      expectedMessages = Arrays.asList(
+          "Unable to parse row [this is not JSON]",
+          "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
+          "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}]",
+          "Unable to parse value[notnumber] for field[val]",
+          "could not convert value [notnumber] to float",
+          "could not convert value [notnumber] to long",
+          "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
+      );
+    }
+
     List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
       return ((List<String>) r.get("details")).get(0);
     }).collect(Collectors.toList());
@@ -1594,12 +1604,31 @@ public class IndexTaskTest extends IngestionTestBase
         .getUnparseableEvents()
         .get(RowIngestionMeters.DETERMINE_PARTITIONS);
 
-    expectedMessages = Arrays.asList(
-        "Unable to parse row [this is not JSON]",
-        "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
-        "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}]",
-        "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
-    );
+    if (useInputFormatApi) {
+      expectedMessages = Arrays.asList(
+          StringUtils.format("Unable to parse row [this is not JSON] (Path: %s, Record: 6, Line: 9)", tmpFile.toURI()),
+          StringUtils.format(
+              "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 6, Line: 8)",
+              tmpFile.toURI()
+          ),
+          StringUtils.format(
+              "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}] (Path: %s, Record: 5, Line: 6)",
+              tmpFile.toURI()
+          ),
+          StringUtils.format(
+              "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 1, Line: 1)",
+              tmpFile.toURI()
+          )
+      );
+    } else {
+      expectedMessages = Arrays.asList(
+          "Unable to parse row [this is not JSON]",
+          "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
+          "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}]",
+          "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
+      );
+    }
+
     actualMessages = parseExceptionReports.stream().map((r) -> {
       return ((List<String>) r.get("details")).get(0);
     }).collect(Collectors.toList());
@@ -1672,6 +1701,8 @@ public class IndexTaskTest extends IngestionTestBase
     );
     final List<String> columns = Arrays.asList("time", "dim", "dimLong", "dimFloat", "val");
     final IndexIngestionSpec ingestionSpec;
+
+    List<String> expectedMessages;
     if (useInputFormatApi) {
       ingestionSpec = createIngestionSpec(
           jsonMapper,
@@ -1685,6 +1716,20 @@ public class IndexTaskTest extends IngestionTestBase
           false,
           false
       );
+      expectedMessages = Arrays.asList(
+          StringUtils.format(
+              "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 3, Line: 6)",
+              tmpFile.toURI()
+          ),
+          StringUtils.format(
+              "Timestamp[9.0] is unparseable! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 2, Line: 4)",
+              tmpFile.toURI()
+          ),
+          StringUtils.format(
+              "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 1, Line: 2)",
+              tmpFile.toURI()
+          )
+      );
     } else {
       ingestionSpec = createIngestionSpec(
           jsonMapper,
@@ -1695,6 +1740,11 @@ public class IndexTaskTest extends IngestionTestBase
           tuningConfig,
           false,
           false
+      );
+      expectedMessages = Arrays.asList(
+          "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
+          "Timestamp[9.0] is unparseable! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
+          "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
       );
     }
 
@@ -1734,11 +1784,6 @@ public class IndexTaskTest extends IngestionTestBase
         .getUnparseableEvents()
         .get(RowIngestionMeters.BUILD_SEGMENTS);
 
-    List<String> expectedMessages = Arrays.asList(
-        "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
-        "Timestamp[9.0] is unparseable! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
-        "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
-    );
     List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
       return ((List<String>) r.get("details")).get(0);
     }).collect(Collectors.toList());
@@ -1809,6 +1854,8 @@ public class IndexTaskTest extends IngestionTestBase
     );
     final List<String> columns = Arrays.asList("time", "dim", "dimLong", "dimFloat", "val");
     final IndexIngestionSpec ingestionSpec;
+
+    List<String> expectedMessages;
     if (useInputFormatApi) {
       ingestionSpec = createIngestionSpec(
           jsonMapper,
@@ -1822,6 +1869,11 @@ public class IndexTaskTest extends IngestionTestBase
           false,
           false
       );
+      expectedMessages = Arrays.asList(
+          StringUtils.format("Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 3, Line: 6)", tmpFile.toURI()),
+          StringUtils.format("Timestamp[9.0] is unparseable! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 2, Line: 4)", tmpFile.toURI()),
+          StringUtils.format("Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 1, Line: 2)", tmpFile.toURI())
+      );
     } else {
       ingestionSpec = createIngestionSpec(
           jsonMapper,
@@ -1832,6 +1884,11 @@ public class IndexTaskTest extends IngestionTestBase
           tuningConfig,
           false,
           false
+      );
+      expectedMessages = Arrays.asList(
+          "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
+          "Timestamp[9.0] is unparseable! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
+          "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
       );
     }
 
@@ -1871,11 +1928,6 @@ public class IndexTaskTest extends IngestionTestBase
         .getUnparseableEvents()
         .get(RowIngestionMeters.DETERMINE_PARTITIONS);
 
-    List<String> expectedMessages = Arrays.asList(
-        "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
-        "Timestamp[9.0] is unparseable! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
-        "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
-    );
     List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
       return ((List<String>) r.get("details")).get(0);
     }).collect(Collectors.toList());
@@ -1995,6 +2047,7 @@ public class IndexTaskTest extends IngestionTestBase
     // report parse exception
     final IndexTuningConfig tuningConfig = createTuningConfig(2, null, null, null, null, false, true);
     final IndexIngestionSpec ingestionSpec;
+    List<String> expectedMessages;
     if (useInputFormatApi) {
       ingestionSpec = createIngestionSpec(
           jsonMapper,
@@ -2008,6 +2061,12 @@ public class IndexTaskTest extends IngestionTestBase
           false,
           false
       );
+      expectedMessages = ImmutableList.of(
+          StringUtils.format(
+              "Timestamp[null] is unparseable! Event: {column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1} (Path: %s, Record: 1, Line: 2)",
+              tmpFile.toURI()
+          )
+      );
     } else {
       ingestionSpec = createIngestionSpec(
           jsonMapper,
@@ -2018,6 +2077,9 @@ public class IndexTaskTest extends IngestionTestBase
           tuningConfig,
           false,
           false
+      );
+      expectedMessages = ImmutableList.of(
+          "Timestamp[null] is unparseable! Event: {column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1}"
       );
     }
 
@@ -2039,9 +2101,6 @@ public class IndexTaskTest extends IngestionTestBase
         .getUnparseableEvents()
         .get(RowIngestionMeters.BUILD_SEGMENTS);
 
-    List<String> expectedMessages = ImmutableList.of(
-        "Timestamp[null] is unparseable! Event: {column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1}"
-    );
     List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
       return ((List<String>) r.get("details")).get(0);
     }).collect(Collectors.toList());

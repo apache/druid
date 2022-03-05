@@ -85,6 +85,12 @@ public class ProtobufReader extends IntermediateRowParsingReader<DynamicMessage>
   }
 
   @Override
+  protected InputEntity source()
+  {
+    return source;
+  }
+
+  @Override
   protected List<InputRow> parseInputRows(DynamicMessage intermediateRow) throws ParseException, JsonProcessingException
   {
     Map<String, Object> record;
