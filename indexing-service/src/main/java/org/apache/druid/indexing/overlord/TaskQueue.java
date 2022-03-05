@@ -325,13 +325,17 @@ public class TaskQueue
     final Set<String> tasksToKill = Sets.difference(runnerTaskFutures.keySet(), knownTaskIds);
     if (!tasksToKill.isEmpty()) {
       log.info("Asking taskRunner to clean up %,d tasks.", tasksToKill.size());
+
+      // On large installations running several thousands of tasks,
+      // concatenating the list of known task ids can be compupationally expensive.
+      final boolean logKnownTaskIds = log.isDebugEnabled();
+      final String reason = logKnownTaskIds
+              ? StringUtils.format("Task is not in knownTaskIds[%s]", knownTaskIds)
+              : "Task is not in knownTaskIds";
+
       for (final String taskId : tasksToKill) {
         try {
-          taskRunner.shutdown(
-              taskId,
-              "task is not in knownTaskIds[%s]",
-              knownTaskIds
-          );
+          taskRunner.shutdown(taskId, reason);
         }
         catch (Exception e) {
           log.warn(e, "TaskRunner failed to clean up task: %s", taskId);

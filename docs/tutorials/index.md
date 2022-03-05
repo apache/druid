@@ -46,11 +46,9 @@ information on deploying Druid services across clustered machines.
 The software requirements for the installation machine are:
 
 * Linux, Mac OS X, or other Unix-like OS (Windows is not supported)
-* Java 8, Update 92 or later (8u92+)
+* Java 8, Update 92 or later (8u92+) or Java 11
 
-> Druid officially supports Java 8 only. Support for later major versions of Java is currently in experimental status.
-
-> Druid relies on the environment variables `JAVA_HOME` or `DRUID_JAVA_HOME` to find Java on the machine. You can set 
+> Druid relies on the environment variables `JAVA_HOME` or `DRUID_JAVA_HOME` to find Java on the machine. You can set
 `DRUID_JAVA_HOME` if there is more than one instance of Java. To verify Java requirements for your environment, run the 
 `bin/verify-java` script.
 

@@ -72,6 +72,7 @@ import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
@@ -12851,6 +12852,165 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "travel",
             "array_agg_distinct",
             new String[] {"preferred", "t"}
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+  @Test
+  public void testGroupByFloatMaxExpressionVsVirtualColumn()
+  {
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("nil", "nil", ColumnType.STRING))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "v0",
+                "\"floatNumericNull\"",
+                ColumnType.FLOAT,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setAggregatorSpecs(
+            new FloatMinAggregatorFactory(
+                "min",
+                "floatNumericNull"
+            ),
+            new FloatMinAggregatorFactory(
+                "minExpression",
+                null,
+                "\"floatNumericNull\"",
+                TestExprMacroTable.INSTANCE
+            ),
+            new FloatMinAggregatorFactory(
+                "minVc",
+                "v0"
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "nil",
+            null,
+            "min",
+            NullHandling.replaceWithDefault() ? 0.0 : 10.0,
+            "minExpression",
+            NullHandling.replaceWithDefault() ? 0.0 : 10.0,
+            "minVc",
+            NullHandling.replaceWithDefault() ? 0.0 : 10.0
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+  @Test
+  public void testGroupByFloatMinExpressionVsVirtualColumnWithNonFloatInputButMatchingVirtualColumnType()
+  {
+    // SQL should never plan anything like this, the virtual column would be inferred to be a string type, and
+    // would try to make a string min aggregator, which would throw an exception at the time of this comment since
+    // it doesn't exist...
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("nil", "nil", ColumnType.STRING))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "v0",
+                "\"placement\"",
+                ColumnType.FLOAT,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setAggregatorSpecs(
+            new FloatMinAggregatorFactory(
+                "minExpression",
+                null,
+                "\"placement\"",
+                TestExprMacroTable.INSTANCE
+            ),
+            new FloatMinAggregatorFactory(
+                "minVc",
+                "v0"
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "nil",
+            null,
+            "minExpression",
+            NullHandling.replaceWithDefault() ? Float.POSITIVE_INFINITY : null,
+            "minVc",
+            NullHandling.defaultFloatValue()
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+  @Test
+  public void testGroupByFloatMinExpressionVsVirtualColumnWithExplicitStringVirtualColumnTypedInput()
+  {
+    cannotVectorize();
+    // SQL should never plan anything like this, where the virtual column type mismatches the aggregator type
+    // but it still works ok
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("nil", "nil", ColumnType.STRING))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "v0",
+                "\"placement\"",
+                ColumnType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setAggregatorSpecs(
+            new FloatMinAggregatorFactory(
+                "min",
+                "placement"
+            ),
+            new FloatMinAggregatorFactory(
+                "minExpression",
+                null,
+                "\"placement\"",
+                TestExprMacroTable.INSTANCE
+            ),
+            new FloatMinAggregatorFactory(
+                "minVc",
+                "v0"
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "nil",
+            null,
+            "min",
+            Float.POSITIVE_INFINITY,
+            "minExpression",
+            NullHandling.replaceWithDefault() ? Float.POSITIVE_INFINITY : null,
+            "minVc",
+            NullHandling.replaceWithDefault() ? Float.POSITIVE_INFINITY : null
         )
     );
 

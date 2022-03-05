@@ -149,7 +149,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
       boolean appendToExisting
   )
   {
-    final ParallelIndexSupervisorTask task = newTask(
+    final ParallelIndexSupervisorTask task = createTask(
         timestampSpec,
         dimensionsSpec,
         inputFormat,
@@ -165,15 +165,26 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     return runTask(task, expectedTaskStatus);
   }
 
-  Set<DataSegment> runTask(Task task, TaskState expectedTaskStatus)
+  void runTaskAndVerifyStatus(Task task, TaskState expectedTaskStatus)
   {
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     TaskStatus taskStatus = getIndexingServiceClient().runAndWait(task);
     Assert.assertEquals(expectedTaskStatus, taskStatus.getStatusCode());
+  }
+
+  Set<DataSegment> runTask(Task task, TaskState expectedTaskStatus)
+  {
+    runTaskAndVerifyStatus(task, expectedTaskStatus);
     return getIndexingServiceClient().getPublishedSegments(task);
   }
 
-  protected ParallelIndexSupervisorTask newTask(
+  Map<String, Object> runTaskAndGetReports(Task task, TaskState expectedTaskStatus)
+  {
+    runTaskAndVerifyStatus(task, expectedTaskStatus);
+    return getIndexingServiceClient().getTaskReport(task.getId());
+  }
+
+  protected ParallelIndexSupervisorTask createTask(
       @Nullable TimestampSpec timestampSpec,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable InputFormat inputFormat,

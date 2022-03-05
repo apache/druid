@@ -112,6 +112,12 @@ public class AvroOCFReader extends IntermediateRowParsingReader<GenericRecord>
   }
 
   @Override
+  protected InputEntity source()
+  {
+    return source;
+  }
+
+  @Override
   protected List<InputRow> parseInputRows(GenericRecord intermediateRow) throws ParseException
   {
     return Collections.singletonList(

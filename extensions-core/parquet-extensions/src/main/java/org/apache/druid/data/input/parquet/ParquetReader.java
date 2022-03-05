@@ -133,6 +133,12 @@ public class ParquetReader extends IntermediateRowParsingReader<Group>
   }
 
   @Override
+  protected InputEntity source()
+  {
+    return source;
+  }
+
+  @Override
   protected List<InputRow> parseInputRows(Group intermediateRow) throws ParseException
   {
     return Collections.singletonList(
