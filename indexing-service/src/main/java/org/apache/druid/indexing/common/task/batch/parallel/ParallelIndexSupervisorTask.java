@@ -1320,7 +1320,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (isParallelMode()) {
       final ParallelIndexTaskRunner runner = getCurrentRunner();
       if (runner == null) {
-        return HttpResponses.SERVICE_UNAVAILABLE.error("task is not running");
+        return HttpResponses.SERVICE_UNAVAILABLE.error("task is not running yet");
       } else {
         return Response.ok(runner.getName()).build();
       }

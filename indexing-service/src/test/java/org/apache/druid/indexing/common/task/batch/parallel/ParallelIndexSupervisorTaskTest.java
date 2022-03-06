@@ -37,6 +37,7 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.DimensionRangeBucketShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
@@ -52,6 +53,9 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -59,6 +63,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -381,6 +386,239 @@ public class ParallelIndexSupervisorTaskTest
                                     0, task1, task2);
       verifyPartitionIdAndLocations(day2, 7, partitionToLocations,
                                     1, task1);
+    }
+
+    @Test
+    public void testAllocateSegmentUnvailable()
+    {
+      HttpEndpointTestBuilder.builder()
+                             .expectStatus(Response.Status.SERVICE_UNAVAILABLE)
+                             .expectError("task is not running yet")
+                             .verify((task, request) -> task.allocateSegment(new Object(), request));
+    }
+
+    @Test
+    public void testReportUnvailable()
+    {
+      HttpEndpointTestBuilder.builder()
+                             .expectStatus(Response.Status.SERVICE_UNAVAILABLE)
+                             .expectError("task is not running yet")
+                             .verify((task, request) -> task.report(null, request));
+    }
+
+    @Test
+    public void testGetPhaseNameBadRequest()
+    {
+      HttpEndpointTestBuilder.builder()
+                             .isParallel(false)
+                             .expectStatus(Response.Status.BAD_REQUEST)
+                             .expectError("task is running in the sequential mode")
+                             .verify(ParallelIndexSupervisorTask::getPhaseName);
+    }
+
+    @Test
+    public void testGetPhaseNameUnvailable()
+    {
+      HttpEndpointTestBuilder.builder()
+                             .expectStatus(Response.Status.SERVICE_UNAVAILABLE)
+                             .expectError("task is not running yet")
+                             .verify(ParallelIndexSupervisorTask::getPhaseName);
+    }
+
+    @Test
+    public void testGetProgressUnvailable()
+    {
+      HttpEndpointTestBuilder.builder()
+                             .expectStatus(Response.Status.SERVICE_UNAVAILABLE)
+                             .expectError("task is not running yet")
+                             .verify(ParallelIndexSupervisorTask::getProgress);
+    }
+
+    @Test
+    public void testGetRunningTasksUnvailable()
+    {
+      HttpEndpointTestBuilder.builder()
+                             .expectStatus(Response.Status.SERVICE_UNAVAILABLE)
+                             .expectError("task is not running yet")
+                             .verify(ParallelIndexSupervisorTask::getRunningTasks);
+    }
+
+    @Test
+    public void testGetSubTaskSpecsUnvailable()
+    {
+      HttpEndpointTestBuilder.builder()
+                             .expectStatus(Response.Status.SERVICE_UNAVAILABLE)
+                             .expectError("task is not running yet")
+                             .verify(ParallelIndexSupervisorTask::getSubTaskSpecs);
+    }
+
+    @Test
+    public void testGetRunningSubTaskSpecsUnvailable()
+    {
+      HttpEndpointTestBuilder.builder()
+                             .expectStatus(Response.Status.SERVICE_UNAVAILABLE)
+                             .expectError("task is not running yet")
+                             .verify(ParallelIndexSupervisorTask::getRunningSubTaskSpecs);
+    }
+
+    @Test
+    public void testGetCompleteSubTaskSpecsUnvailable()
+    {
+      HttpEndpointTestBuilder.builder()
+                             .expectStatus(Response.Status.SERVICE_UNAVAILABLE)
+                             .expectError("task is not running yet")
+                             .verify(ParallelIndexSupervisorTask::getCompleteSubTaskSpecs);
+    }
+
+    @Test
+    public void testGetSubTaskSpecUnvailable()
+    {
+      HttpEndpointTestBuilder.builder()
+                             .expectStatus(Response.Status.SERVICE_UNAVAILABLE)
+                             .expectError("task is not running yet")
+                             .verify((task, request) -> task.getSubTaskSpec("id", request));
+    }
+
+    @Test
+    public void testGetRunningSubTaskSpecUnvailable()
+    {
+      HttpEndpointTestBuilder.builder()
+                             .expectStatus(Response.Status.SERVICE_UNAVAILABLE)
+                             .expectError("task is not running yet")
+                             .verify(ParallelIndexSupervisorTask::getRunningSubTaskSpecs);
+    }
+
+    @Test
+    public void testGetSubTaskStateUnvailable()
+    {
+      HttpEndpointTestBuilder.builder()
+                             .expectStatus(Response.Status.SERVICE_UNAVAILABLE)
+                             .expectError("task is not running yet")
+                             .verify((task, request) -> task.getSubTaskState("id", request));
+    }
+
+    @Test
+    public void testGetCompleteSubTaskSpecAttemptHistoryUnvailable()
+    {
+      HttpEndpointTestBuilder.builder()
+                             .expectStatus(Response.Status.SERVICE_UNAVAILABLE)
+                             .expectError("task is not running yet")
+                             .verify((task, request) -> task.getCompleteSubTaskSpecAttemptHistory("id", request));
+    }
+
+    static class HttpEndpointTestBuilder
+    {
+      private boolean isParallel = true;
+      private int statusCode;
+      private String errorMessage;
+
+      public static HttpEndpointTestBuilder builder()
+      {
+        return new HttpEndpointTestBuilder();
+      }
+
+      public HttpEndpointTestBuilder isParallel(boolean val)
+      {
+        this.isParallel = val;
+        return this;
+      }
+
+      public HttpEndpointTestBuilder expectStatus(Response.Status status)
+      {
+        statusCode = status.getStatusCode();
+        return this;
+      }
+
+      public HttpEndpointTestBuilder expectError(String message)
+      {
+        this.errorMessage = message;
+        return this;
+      }
+
+      public void verify(BiFunction<ParallelIndexSupervisorTask, HttpServletRequest, Response> targetApi)
+      {
+        HttpServletRequest request = EasyMock.mock(HttpServletRequest.class);
+        EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(true);
+        EasyMock.replay(request);
+
+        ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTask(null,
+                                                                           null,
+                                                                           null,
+                                                                           createIngestionSpec(isParallel),
+                                                                           null);
+        Response response = targetApi.apply(task, request);
+
+        Assert.assertEquals(this.statusCode, response.getStatus());
+        Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
+        if (errorMessage != null) {
+          Assert.assertEquals(errorMessage, ((Map) response.getEntity()).get("error"));
+        }
+      }
+    }
+
+    private static ParallelIndexIngestionSpec createIngestionSpec(boolean isParallel)
+    {
+      return new ParallelIndexIngestionSpec(
+          new DataSchema(
+              "datasource",
+              new TimestampSpec(null, null, null),
+              DimensionsSpec.EMPTY,
+              null,
+              null,
+              null
+          ),
+          new ParallelIndexIOConfig(
+              null,
+              new InlineInputSource("test") {
+                @Override
+                public boolean isSplittable()
+                {
+                  return isParallel;
+                }
+              },
+              new JsonInputFormat(null, null, null),
+              false,
+              null
+          ),
+          new ParallelIndexTuningConfig(
+              null,
+              null,
+              null,
+              10,
+              1000L,
+              null,
+              null,
+              null,
+              null,
+              new HashedPartitionsSpec(null, 10, null),
+              new IndexSpec(
+                  new RoaringBitmapSerdeFactory(true),
+                  CompressionStrategy.UNCOMPRESSED,
+                  CompressionStrategy.LZF,
+                  LongEncodingStrategy.LONGS
+              ),
+              new IndexSpec(),
+              1,
+              true,
+              true,
+              10000L,
+              OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+              null,
+              10,
+              100,
+              20L,
+              new Duration(3600),
+              128,
+              null,
+              null,
+              false,
+              null,
+              null,
+              null,
+              null,
+              null
+          )
+      );
     }
 
     private PartitionStat createRangePartitionStat(Interval interval, int bucketId)
