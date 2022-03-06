@@ -38,6 +38,7 @@ import org.junit.Test;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Collections;
 import java.util.Map;
 
 public class ServersResourceTest
@@ -249,7 +250,7 @@ public class ServersResourceTest
     Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, res.getMetadata().getFirst("Content-Type"));
 
     String result = objectMapper.writeValueAsString(res.getEntity());
-    String expected = objectMapper.writeValueAsString(segment.getId());
+    String expected = objectMapper.writeValueAsString(Collections.singletonList(segment.getId()));
     Assert.assertEquals(expected, result);
   }
 
