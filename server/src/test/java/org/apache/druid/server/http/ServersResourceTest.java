@@ -19,6 +19,9 @@
 
 package org.apache.druid.server.http;
 
+import com.fasterxml.jackson.databind.BeanProperty;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.CoordinatorServerView;
@@ -33,24 +36,41 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Map;
 
 public class ServersResourceTest
 {
   private DruidServer server;
+  private DataSegment segment;
   private ServersResource serversResource;
-  private ObjectMapper objectMapper = new DefaultObjectMapper();
+  private ObjectMapper objectMapper;
 
   @Before
   public void setUp()
   {
+    objectMapper = new DefaultObjectMapper();
+    objectMapper.setInjectableValues(new InjectableValues()
+    {
+      @Override
+      public Object findInjectableValue(Object valueId, DeserializationContext ctxt, BeanProperty forProperty, Object beanInstance)
+      {
+        if ("org.apache.druid.timeline.DataSegment$PruneSpecsHolder".equals(valueId)) {
+          return DataSegment.PruneSpecsHolder.DEFAULT;
+        } else {
+          return null;
+        }
+      }
+    });
+
     DruidServer dummyServer = new DruidServer("dummy", "host", null, 1234L, ServerType.HISTORICAL, "tier", 0);
-    DataSegment segment = DataSegment.builder()
-                                     .dataSource("dataSource")
-                                     .interval(Intervals.of("2016-03-22T14Z/2016-03-22T15Z"))
-                                     .version("v0")
-                                     .size(1L)
-                                     .build();
+    segment = DataSegment.builder()
+                         .dataSource("dataSource")
+                         .interval(Intervals.of("2016-03-22T14Z/2016-03-22T15Z"))
+                         .version("v0")
+                         .size(1L)
+                         .build();
     dummyServer.addDataSegment(segment);
 
     CoordinatorServerView inventoryView = EasyMock.createMock(CoordinatorServerView.class);
@@ -174,5 +194,103 @@ public class ServersResourceTest
         objectMapper.writeValueAsString(metadata),
         DruidServerMetadata.class
     ));
+  }
+
+  @Test
+  public void testGetServerNotFound()
+  {
+    CoordinatorServerView inventoryView = EasyMock.createMock(CoordinatorServerView.class);
+    EasyMock.expect(inventoryView.getInventoryValue("not_exist_server")).andReturn(null);
+    EasyMock.replay(inventoryView);
+    ServersResource serversResource = new ServersResource(inventoryView);
+
+    Response res = serversResource.getServer("not_exist_server", "simple");
+
+    Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), res.getStatus());
+    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, res.getMetadata().getFirst("Content-Type"));
+    Assert.assertEquals("server [not_exist_server] does not exist.", ((Map) res.getEntity()).get("error"));
+  }
+
+  @Test
+  public void testGetServerSegmentsNotFound()
+  {
+    CoordinatorServerView inventoryView = EasyMock.createMock(CoordinatorServerView.class);
+    EasyMock.expect(inventoryView.getInventoryValue("not_exist_server")).andReturn(null);
+    EasyMock.replay(inventoryView);
+    ServersResource serversResource = new ServersResource(inventoryView);
+
+    Response res = serversResource.getServerSegments("not_exist_server", "full");
+
+    Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), res.getStatus());
+    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, res.getMetadata().getFirst("Content-Type"));
+    Assert.assertEquals("server [not_exist_server] does not exist.", ((Map) res.getEntity()).get("error"));
+  }
+
+  @Test
+  public void testGetFullServerSegments() throws Exception
+  {
+    Response res = serversResource.getServerSegments(server.getName(), "full");
+
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
+    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, res.getMetadata().getFirst("Content-Type"));
+
+    String result = objectMapper.writeValueAsString(res.getEntity());
+    DataSegment[] actual = objectMapper.readValue(result, DataSegment[].class);
+    Assert.assertEquals(server.getTotalSegments(), actual.length);
+    Assert.assertEquals(server.iterateAllSegments().iterator().next(), actual[0]);
+  }
+
+  @Test
+  public void testGetSimpleServerSegments() throws Exception
+  {
+    Response res = serversResource.getServerSegments(server.getName(), null);
+
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
+    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, res.getMetadata().getFirst("Content-Type"));
+
+    String result = objectMapper.writeValueAsString(res.getEntity());
+    String expected = objectMapper.writeValueAsString(segment.getId());
+    Assert.assertEquals(expected, result);
+  }
+
+  @Test
+  public void testGetServerSegment_ServerNotFound()
+  {
+    CoordinatorServerView inventoryView = EasyMock.createMock(CoordinatorServerView.class);
+    EasyMock.expect(inventoryView.getInventoryValue("not_exist_server")).andReturn(null);
+    EasyMock.replay(inventoryView);
+    ServersResource serversResource = new ServersResource(inventoryView);
+
+    Response res = serversResource.getServerSegment("not_exist_server", "segmentId");
+
+    Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), res.getStatus());
+    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, res.getMetadata().getFirst("Content-Type"));
+    Assert.assertEquals("server [not_exist_server] does not exist.", ((Map) res.getEntity()).get("error"));
+  }
+
+  @Test
+  public void testGetServerSegment() throws Exception
+  {
+    Response res = serversResource.getServerSegment(server.getName(), segment.getId().toString());
+
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
+    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, res.getMetadata().getFirst("Content-Type"));
+
+    String result = objectMapper.writeValueAsString(res.getEntity());
+    String expected = objectMapper.writeValueAsString(segment);
+    Assert.assertEquals(expected, result);
+  }
+
+  @Test
+  public void testGetServerSegment_SegmentNotFound()
+  {
+    Response res = serversResource.getServerSegment(server.getName(), "not-exist-datasource_1000_3000");
+
+    Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), res.getStatus());
+    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, res.getMetadata().getFirst("Content-Type"));
+
+    Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), res.getStatus());
+    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, res.getMetadata().getFirst("Content-Type"));
+    Assert.assertEquals("segment [not-exist-datasource_1000_3000] not found in server [dummy].", ((Map) res.getEntity()).get("error"));
   }
 }
