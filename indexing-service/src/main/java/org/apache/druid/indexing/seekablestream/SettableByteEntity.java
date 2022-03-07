@@ -21,6 +21,7 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.io.ByteBufferInputStream;
 import org.apache.druid.java.util.common.IAE;
 
@@ -32,7 +33,7 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 
 /**
- * This is a package private class only to be used with {@link SettableByteEntityReader}. It is useful for stream
+ * This class is only to be used with {@link SettableByteEntityReader} and {code KafkaInputFormat}. It is useful for stream
  * processing where binary records are arriving as a list but {@link org.apache.druid.data.input.InputEntityReader}, that
  * parses the data, expects an {@link InputStream}. This class mimics a continuous InputStream while behind the scenes,
  * binary records are being put one after the other that the InputStream consumes bytes from. One record is fully
@@ -41,19 +42,21 @@ import java.nio.ByteBuffer;
  *
  */
 @NotThreadSafe
-class SettableByteEntity implements InputEntity
+public class SettableByteEntity implements InputEntity
 {
   private final SettableByteBufferInputStream inputStream;
   private boolean opened = false;
+  private ByteEntity entity;
 
-  SettableByteEntity()
+  public SettableByteEntity()
   {
     this.inputStream = new SettableByteBufferInputStream();
   }
 
-  public void setBuffer(ByteBuffer buffer)
+  public void setEntity(ByteEntity entity)
   {
-    inputStream.setBuffer(buffer);
+    inputStream.setBuffer(entity.getBuffer());
+    this.entity = entity;
     opened = false;
   }
 
@@ -62,6 +65,11 @@ class SettableByteEntity implements InputEntity
   public URI getUri()
   {
     return null;
+  }
+
+  public ByteEntity getEntity()
+  {
+    return entity;
   }
 
   /**

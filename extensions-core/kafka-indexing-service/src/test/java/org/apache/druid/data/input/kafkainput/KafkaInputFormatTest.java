@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
+import org.apache.druid.indexing.seekablestream.SettableByteEntity;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -180,7 +181,7 @@ public class KafkaInputFormatTest
             ))),
             ColumnsFilter.all()
         ),
-        inputEntity,
+        newSettableByteEntity(inputEntity),
         null
     );
 
@@ -253,7 +254,7 @@ public class KafkaInputFormatTest
             ))),
             ColumnsFilter.all()
         ),
-        inputEntity,
+        newSettableByteEntity(inputEntity),
         null
     );
 
@@ -325,7 +326,7 @@ public class KafkaInputFormatTest
             ))),
             ColumnsFilter.all()
         ),
-        inputEntity,
+        newSettableByteEntity(inputEntity),
         null
     );
 
@@ -418,7 +419,7 @@ public class KafkaInputFormatTest
             ))),
             ColumnsFilter.all()
         ),
-        inputEntity,
+        newSettableByteEntity(inputEntity),
         null
     );
 
@@ -442,5 +443,12 @@ public class KafkaInputFormatTest
       Assert.assertEquals(numExpectedIterations, numActualIterations);
     }
 
+  }
+
+  private SettableByteEntity newSettableByteEntity(KafkaRecordEntity kafkaRecordEntity)
+  {
+    SettableByteEntity settableByteEntity = new SettableByteEntity();
+    settableByteEntity.setEntity(kafkaRecordEntity);
+    return settableByteEntity;
   }
 }

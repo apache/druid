@@ -61,7 +61,7 @@ class SettableByteEntityReader implements InputEntityReader
 
   void setEntity(ByteEntity entity)
   {
-    this.entity.setBuffer(entity.getBuffer());
+    this.entity.setEntity(entity);
   }
 
   @Override
