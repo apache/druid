@@ -99,14 +99,14 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
    * If the size of the row is > 0, write 1 to stack[] at columnIndex, otherwise write 0.
    *
    * @param keyBufferPosition Starting offset for this column's value within the grouping key.
-   * @param columnIndex       Index of the column within the row values array
+   * @param dimensionIndex    Index of this dimension within the {@code stack} array
    * @param rowObj            Row value object for this column
    * @param keyBuffer         grouping key
    * @param stack             array containing the current within-row value index for each column
    */
   void initGroupingKeyColumnValue(
       int keyBufferPosition,
-      int columnIndex,
+      int dimensionIndex,
       Object rowObj,
       ByteBuffer keyBuffer,
       int[] stack
@@ -132,15 +132,6 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
       int rowValIdx,
       ByteBuffer keyBuffer
   );
-
-  /**
-   * Write a given object to the keyBuffer at keyBufferPosition. The position of the keyBuffer may be modified.
-   *
-   * @param keyBufferPosition starting offset for this column's value within the grouping key
-   * @param obj               row value object retrieved from {@link #initColumnValues}
-   * @param keyBuffer         grouping key
-   */
-  void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer);
 
   /**
    * Write a single object from the given selector to the keyBuffer at keyBufferPosition. The reading column must

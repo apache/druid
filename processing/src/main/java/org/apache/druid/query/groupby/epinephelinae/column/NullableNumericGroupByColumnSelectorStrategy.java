@@ -80,18 +80,6 @@ public class NullableNumericGroupByColumnSelectorStrategy implements GroupByColu
   }
 
   @Override
-  public void writeToKeyBuffer(int keyBufferPosition, @Nullable Object obj, ByteBuffer keyBuffer)
-  {
-    if (obj == null) {
-      keyBuffer.position(keyBufferPosition);
-      keyBuffer.put(nullKeyBytes);
-    } else {
-      keyBuffer.put(keyBufferPosition, NullHandling.IS_NOT_NULL_BYTE);
-      delegate.writeToKeyBuffer(keyBufferPosition + Byte.BYTES, obj, keyBuffer);
-    }
-  }
-
-  @Override
   public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
   {
     if (selector.isNull()) {
@@ -119,14 +107,27 @@ public class NullableNumericGroupByColumnSelectorStrategy implements GroupByColu
   @Override
   public void initGroupingKeyColumnValue(
       int keyBufferPosition,
-      int columnIndex,
+      int dimensionIndex,
       Object rowObj,
       ByteBuffer keyBuffer,
       int[] stack
   )
   {
-    writeToKeyBuffer(keyBufferPosition, rowObj, keyBuffer);
-    stack[columnIndex] = 1;
+    if (rowObj == null) {
+      keyBuffer.position(keyBufferPosition);
+      keyBuffer.put(nullKeyBytes);
+    } else {
+      keyBuffer.put(keyBufferPosition, NullHandling.IS_NOT_NULL_BYTE);
+
+      // No need to update stack ourselves; we expect the delegate to do this.
+      delegate.initGroupingKeyColumnValue(
+          keyBufferPosition + Byte.BYTES,
+          dimensionIndex,
+          rowObj,
+          keyBuffer,
+          stack
+      );
+    }
   }
 
   @Override

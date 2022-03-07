@@ -100,7 +100,7 @@ public abstract class ArrayNumericGroupByColumnSelectorStrategy<T extends Compar
   @Override
   public void initGroupingKeyColumnValue(
       int keyBufferPosition,
-      int columnIndex,
+      int dimensionIndex,
       Object rowObj,
       ByteBuffer keyBuffer,
       int[] stack
@@ -109,9 +109,9 @@ public abstract class ArrayNumericGroupByColumnSelectorStrategy<T extends Compar
     final int groupingKey = (int) rowObj;
     writeToKeyBuffer(keyBufferPosition, groupingKey, keyBuffer);
     if (groupingKey == GROUP_BY_MISSING_VALUE) {
-      stack[columnIndex] = 0;
+      stack[dimensionIndex] = 0;
     } else {
-      stack[columnIndex] = 1;
+      stack[dimensionIndex] = 1;
     }
 
   }
@@ -128,12 +128,6 @@ public abstract class ArrayNumericGroupByColumnSelectorStrategy<T extends Compar
   }
 
   protected abstract int computeDictionaryId(ColumnValueSelector selector);
-
-  @Override
-  public void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer)
-  {
-    keyBuffer.putInt(keyBufferPosition, (int) obj);
-  }
 
   @Override
   public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
@@ -205,5 +199,11 @@ public abstract class ArrayNumericGroupByColumnSelectorStrategy<T extends Compar
     dictionary.clear();
     reverseDictionary.clear();
     estimatedFootprint = 0;
+  }
+
+  @VisibleForTesting
+  void writeToKeyBuffer(int keyBufferPosition, int groupingKey, ByteBuffer keyBuffer)
+  {
+    keyBuffer.putInt(keyBufferPosition, groupingKey);
   }
 }

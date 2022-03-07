@@ -58,12 +58,6 @@ public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorS
   }
 
   @Override
-  public void writeToKeyBuffer(int keyBufferPosition, @Nullable Object obj, ByteBuffer keyBuffer)
-  {
-    keyBuffer.putLong(keyBufferPosition, DimensionHandlerUtils.nullToZero((Long) obj));
-  }
-
-  @Override
   public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
   {
     keyBuffer.putLong(keyBufferPosition, selector.getLong());
@@ -86,14 +80,14 @@ public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorS
   @Override
   public void initGroupingKeyColumnValue(
       int keyBufferPosition,
-      int columnIndex,
+      int dimensionIndex,
       Object rowObj,
       ByteBuffer keyBuffer,
       int[] stack
   )
   {
-    writeToKeyBuffer(keyBufferPosition, rowObj, keyBuffer);
-    stack[columnIndex] = 1;
+    writeToKeyBuffer(keyBufferPosition, DimensionHandlerUtils.nullToZero((Long) rowObj), keyBuffer);
+    stack[dimensionIndex] = 1;
   }
 
   @Override
@@ -113,5 +107,10 @@ public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorS
   public void reset()
   {
     // Nothing to do.
+  }
+
+  public void writeToKeyBuffer(int keyBufferPosition, long value, ByteBuffer keyBuffer)
+  {
+    keyBuffer.putLong(keyBufferPosition, value);
   }
 }

@@ -58,12 +58,6 @@ public class FloatGroupByColumnSelectorStrategy implements GroupByColumnSelector
   }
 
   @Override
-  public void writeToKeyBuffer(int keyBufferPosition, @Nullable Object obj, ByteBuffer keyBuffer)
-  {
-    keyBuffer.putFloat(keyBufferPosition, DimensionHandlerUtils.nullToZero((Float) obj));
-  }
-
-  @Override
   public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
   {
     keyBuffer.putFloat(keyBufferPosition, selector.getFloat());
@@ -86,14 +80,14 @@ public class FloatGroupByColumnSelectorStrategy implements GroupByColumnSelector
   @Override
   public void initGroupingKeyColumnValue(
       int keyBufferPosition,
-      int columnIndex,
+      int dimensionIndex,
       Object rowObj,
       ByteBuffer keyBuffer,
       int[] stack
   )
   {
-    writeToKeyBuffer(keyBufferPosition, rowObj, keyBuffer);
-    stack[columnIndex] = 1;
+    writeToKeyBuffer(keyBufferPosition, DimensionHandlerUtils.nullToZero((Float) rowObj), keyBuffer);
+    stack[dimensionIndex] = 1;
   }
 
   @Override
@@ -113,5 +107,10 @@ public class FloatGroupByColumnSelectorStrategy implements GroupByColumnSelector
   public void reset()
   {
     // Nothing to do.
+  }
+
+  private void writeToKeyBuffer(int keyBufferPosition, float value, ByteBuffer keyBuffer)
+  {
+    keyBuffer.putFloat(keyBufferPosition, value);
   }
 }

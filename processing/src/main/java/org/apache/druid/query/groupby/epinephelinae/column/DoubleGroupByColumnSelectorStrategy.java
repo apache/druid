@@ -57,12 +57,6 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
   }
 
   @Override
-  public void writeToKeyBuffer(int keyBufferPosition, @Nullable Object obj, ByteBuffer keyBuffer)
-  {
-    keyBuffer.putDouble(keyBufferPosition, DimensionHandlerUtils.nullToZero((Double) obj));
-  }
-
-  @Override
   public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
   {
     keyBuffer.putDouble(keyBufferPosition, selector.getDouble());
@@ -72,14 +66,14 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
   @Override
   public void initGroupingKeyColumnValue(
       int keyBufferPosition,
-      int columnIndex,
+      int dimensionIndex,
       Object rowObj,
       ByteBuffer keyBuffer,
       int[] stack
   )
   {
-    writeToKeyBuffer(keyBufferPosition, rowObj, keyBuffer);
-    stack[columnIndex] = 1;
+    writeToKeyBuffer(keyBufferPosition, DimensionHandlerUtils.nullToZero((Double) rowObj), keyBuffer);
+    stack[dimensionIndex] = 1;
   }
 
   @Override
@@ -109,5 +103,10 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
   public void reset()
   {
     // Nothing to do.
+  }
+
+  private void writeToKeyBuffer(int keyBufferPosition, double value, ByteBuffer keyBuffer)
+  {
+    keyBuffer.putDouble(keyBufferPosition, value);
   }
 }
