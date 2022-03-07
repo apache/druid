@@ -213,10 +213,7 @@ public class ResourcePool<K, V> implements Closeable
     private final long unusedResourceTimeoutMillis;
     // Hold previously created / returned resources
     protected final ArrayDeque<ResourceHolder<V>> resourceHolderList;
-    // For eager initialization, it indicates the number of resources that couldn't be returned and can be added to the list
-    // For lazy initialization, it maintains the failures until deficit + numLentResources < maxSize, and later follows the above behaviour
-    private int deficit = 0;
-    //
+    // Keep track of resources that have been successfully returned to caller
     private int numLentResources = 0;
     private boolean closed = false;
 
@@ -272,12 +269,8 @@ public class ResourcePool<K, V> implements Closeable
               expired = true;
             }
           }
-        } else if (deficit > 0) {
-          // We are allowed to generate to fill the deficit objects
-          deficit--;
-          poolVal = null;
         } else {
-          throw new IllegalStateException("Unexpected state: No objects left, and no object deficit");
+          throw new IllegalStateException("Unexpected state: More objects lent than permissible");
         }
       }
 
@@ -295,7 +288,6 @@ public class ResourcePool<K, V> implements Closeable
       }
       catch (Throwable e) {
         synchronized (this) {
-          deficit++;
           this.notifyAll();
         }
         Throwables.propagateIfPossible(e);
