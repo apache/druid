@@ -45,7 +45,6 @@ import java.util.Map;
 
 public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhaseParallelIndexingTest
 {
-
   private static final String TIME = "ts";
   private static final String DIM1 = "dim1";
   private static final String DIM2 = "dim2";
