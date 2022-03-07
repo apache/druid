@@ -81,6 +81,7 @@ import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
@@ -367,7 +368,12 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
     final DimFilter maybeOptimized = optimize ? dimFilter.optimize() : dimFilter;
     final Filter filter = maybeOptimized.toFilter();
-    return cnf ? Filters.toCnf(filter) : filter;
+    try {
+      return cnf ? Filters.toCnf(filter) : filter;
+    }
+    catch (CNFFilterExplosionException cnfFilterExplosionException) {
+      throw new RuntimeException(cnfFilterExplosionException);
+    }
   }
 
   private DimFilter maybeOptimize(final DimFilter dimFilter)

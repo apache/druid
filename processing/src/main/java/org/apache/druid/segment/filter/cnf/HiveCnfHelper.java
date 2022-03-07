@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.filter.cnf;
 
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.filter.AndFilter;
@@ -78,7 +79,7 @@ public class HiveCnfHelper
     return current;
   }
 
-  public static Filter convertToCnf(Filter current)
+  public static Filter convertToCnf(Filter current) throws CNFFilterExplosionException
   {
     if (current instanceof NotFilter) {
       return new NotFilter(convertToCnf(((NotFilter) current).getBaseFilter()));
@@ -159,7 +160,7 @@ public class HiveCnfHelper
       List<Filter> result,
       List<Filter> andList,
       List<Filter> nonAndList
-  )
+  ) throws CNFFilterExplosionException
   {
     List<Filter> children = new ArrayList<>(((AndFilter) andList.get(0)).getFilters());
     if (result.isEmpty()) {
@@ -178,6 +179,11 @@ public class HiveCnfHelper
           a.add(child);
           // Result must receive an actual OrFilter.
           result.add(idempotentOr(Filters.or(a)));
+          if (result.size() >= 10_000) {
+            throw new CNFFilterExplosionException(
+                "Atleast 10,000 filters created by CNF (conjunctive normal form) conversion of the filter. "
+                + "Please disable %s flag if enabled", QueryContexts.USE_FILTER_CNF_KEY);
+          }
         }
       }
     }
