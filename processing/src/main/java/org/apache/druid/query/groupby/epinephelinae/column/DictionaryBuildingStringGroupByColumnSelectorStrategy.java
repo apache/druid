@@ -28,6 +28,7 @@ import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionDictionary;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.data.IndexedInts;
@@ -43,9 +44,6 @@ import java.util.List;
 public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends StringGroupByColumnSelectorStrategy
 {
   private static final int GROUP_BY_MISSING_VALUE = -1;
-
-  // Entry in dictionary, node pointer in reverseDictionary, hash + k/v/next pointer in reverseDictionary nodes
-  public static final int ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY = Long.BYTES * 5 + Integer.BYTES;
 
   private final List<String> dictionary = DictionaryBuilding.createDictionary();
   private final Object2IntMap<String> reverseDictionary = DictionaryBuilding.createReverseDictionary();
@@ -96,7 +94,7 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
         reverseDictionary.put(value, nextId);
         newRow.setValue(i, nextId);
         stateFootprintIncrease +=
-            (value == null ? 0 : value.length()) * Character.BYTES + ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY;
+            DictionaryBuilding.estimateEntryFootprint((value == null ? 0 : value.length()) * Character.BYTES);
       } else {
         newRow.setValue(i, dictId);
       }
@@ -120,7 +118,7 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
 
     final String value = dimSelector.lookupName(row.get(0));
     final int dictId = reverseDictionary.getInt(value);
-    if (dictId == DictionaryBuilding.UNKNOWN_DICTIONARY_ID) {
+    if (dictId == DimensionDictionary.ABSENT_VALUE_ID) {
       final int nextId = dictionary.size();
       dictionary.add(value);
       reverseDictionary.put(value, nextId);

@@ -62,6 +62,7 @@ import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionDictionary;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.RowAdapter;
@@ -1521,7 +1522,7 @@ public class RowBasedGrouperHelper
       {
         final ComparableList comparableList = (ComparableList) key.getKey()[idx];
         int id = reverseDictionary.getInt(comparableList);
-        if (id == DictionaryBuilding.UNKNOWN_DICTIONARY_ID) {
+        if (id == DimensionDictionary.ABSENT_VALUE_ID) {
           id = listDictionary.size();
           reverseListDictionary.put(comparableList, id);
           listDictionary.add(comparableList);
@@ -1597,7 +1598,7 @@ public class RowBasedGrouperHelper
       private int addToArrayDictionary(final ComparableStringArray s)
       {
         int idx = reverseArrayDictionary.getInt(s);
-        if (idx == DictionaryBuilding.UNKNOWN_DICTIONARY_ID) {
+        if (idx == DimensionDictionary.ABSENT_VALUE_ID) {
           idx = arrayDictionary.size();
           reverseArrayDictionary.put(s, idx);
           arrayDictionary.add(s);
@@ -1687,7 +1688,7 @@ public class RowBasedGrouperHelper
       private int addToDictionary(final String s)
       {
         int idx = reverseDictionary.getInt(s);
-        if (idx == DictionaryBuilding.UNKNOWN_DICTIONARY_ID) {
+        if (idx == DimensionDictionary.ABSENT_VALUE_ID) {
           final long additionalEstimatedSize = estimateStringKeySize(s);
           if (currentEstimatedSize + additionalEstimatedSize > maxDictionarySize) {
             return -1;
@@ -1719,7 +1720,7 @@ public class RowBasedGrouperHelper
         final String stringKey = (String) key.getKey()[idx];
 
         final int dictIndex = reverseDictionary.getInt(stringKey);
-        if (dictIndex == DictionaryBuilding.UNKNOWN_DICTIONARY_ID) {
+        if (dictIndex == DimensionDictionary.ABSENT_VALUE_ID) {
           throw new ISE("Cannot find key[%s] from dictionary", stringKey);
         }
         keyBuffer.putInt(dictIndex);

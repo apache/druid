@@ -21,6 +21,7 @@ package org.apache.druid.query.groupby.epinephelinae;
 
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import org.apache.druid.segment.DimensionDictionary;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,20 +31,25 @@ import java.util.List;
  */
 public class DictionaryBuilding
 {
-  public static final int UNKNOWN_DICTIONARY_ID = -1;
-
   // Entry in dictionary, node pointer in reverseDictionary, hash + k/v/next pointer in reverseDictionary nodes
   private static final int ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY = Long.BYTES * 5 + Integer.BYTES;
 
+  /**
+   * Creates a forward dictionary (dictionary ID -> value).
+   */
   public static <T> List<T> createDictionary()
   {
     return new ArrayList<>();
   }
 
+  /**
+   * Creates a reverse dictionary (value -> dictionary ID). If a value is not present in the reverse dictionary,
+   * {@link Object2IntMap#getInt} will return {@link DimensionDictionary#ABSENT_VALUE_ID}.
+   */
   public static <T> Object2IntMap<T> createReverseDictionary()
   {
     final Object2IntOpenHashMap<T> m = new Object2IntOpenHashMap<>();
-    m.defaultReturnValue(UNKNOWN_DICTIONARY_ID);
+    m.defaultReturnValue(DimensionDictionary.ABSENT_VALUE_ID);
     return m;
   }
 
