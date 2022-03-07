@@ -36,7 +36,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.scan.ScanResultValue;
-import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
@@ -195,39 +194,6 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
         numShards
     );
     assertHashedPartition(publishedSegments, expectedIntervalToNumSegments);
-  }
-
-  @Test
-  public void testRowStats()
-  {
-    final Integer maxRowsPerSegment = numShards == null ? 10 : null;
-    ParallelIndexSupervisorTask task = createTask(
-        new HashedPartitionsSpec(
-            maxRowsPerSegment,
-            numShards,
-            ImmutableList.of("dim1", "dim2"),
-            HashPartitionFunction.MURMUR3_32_ABS),
-        false);
-    RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(200, 0, 0, 0);
-    Map<String, Object> expectedReports;
-    if (maxNumConcurrentSubTasks <= 1) {
-      expectedReports = buildExpectedTaskReportSequential(
-          task.getId(),
-          ImmutableList.of(),
-          numShards == null ? expectedTotals : new RowIngestionMetersTotals(0, 0, 0, 0),
-          expectedTotals
-      );
-    } else {
-      // when useInputFormatApi is false, maxConcurrentSubTasks=2 and it uses the single phase runner
-      // instead of sequential runner
-      expectedReports = buildExpectedTaskReportParallel(
-          task.getId(),
-          ImmutableList.of(),
-          expectedTotals
-      );
-    }
-    Map<String, Object> actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
-    compareTaskReports(expectedReports, actualReports);
   }
 
   private Map<Interval, Integer> computeExpectedIntervalToNumSegments(
