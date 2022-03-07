@@ -242,24 +242,6 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
   }
 
   @Test
-  public void testRowStats()
-  {
-    if (useMultivalueDim) {
-      return;
-    }
-    final int targetRowsPerSegment = NUM_ROW / DIM_FILE_CARDINALITY / NUM_PARTITION;
-    ParallelIndexSupervisorTask task = runTestTask(
-        new SingleDimensionPartitionsSpec(targetRowsPerSegment, null, DIM1, false),
-        false);
-    Map<String, Object> expectedReports = buildExpectedTaskReportParallel(
-        task.getId(),
-        ImmutableList.of(),
-        new RowIngestionMetersTotals(600, 0, 0, 0));
-    Map<String, Object> actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
-    compareTaskReports(expectedReports, actualReports);
-  }
-
-  @Test
   public void testAppendLinearlyPartitionedSegmentsToHashPartitionedDatasourceSuccessfullyAppend()
   {
     if (useMultivalueDim) {
