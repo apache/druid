@@ -167,7 +167,7 @@ public class ResourcePool<K, V> implements Closeable
     }
   }
 
-  private static class EagerCreationResourceHolder<K, V> extends ResourceHolderPerKey<K, V>
+  private static class EagerCreationResourceHolder<K, V> extends LazyCreationResourceHolder<K, V>
   {
     private EagerCreationResourceHolder(
         int maxSize,
@@ -177,7 +177,6 @@ public class ResourcePool<K, V> implements Closeable
     )
     {
       super(maxSize, unusedResourceTimeoutMillis, key, factory);
-      eagerInstantiation = true;
       // Eagerly Instantiate
       for (int i = 0; i < maxSize; i++) {
         resourceHolderList.add(
@@ -212,11 +211,13 @@ public class ResourcePool<K, V> implements Closeable
     private final K key;
     private final ResourceFactory<K, V> factory;
     private final long unusedResourceTimeoutMillis;
+    // Hold previously created / returned resources
     protected final ArrayDeque<ResourceHolder<V>> resourceHolderList;
+    // Maintains count of times when get() threw an exception.
     private int deficit = 0;
-    private boolean closed = false;
-    protected boolean eagerInstantiation = false;
+    // Maintains count of tiems when get() successfully returned a resource.
     private int numLentResources = 0;
+    private boolean closed = false;
 
     protected ResourceHolderPerKey(
         int maxSize,
@@ -234,6 +235,10 @@ public class ResourcePool<K, V> implements Closeable
 
     /**
      * Returns a resource or null if this holder is already closed or the current thread is interrupted.
+     *
+     * Try to return a previously created resource if it isGood(). Else, generate a new resource
+     *
+     * If an exception occurs, keep count so that the deficit can be filled with newly generated resources as required.
      */
     @Nullable
     V get()
@@ -255,10 +260,8 @@ public class ResourcePool<K, V> implements Closeable
           log.info(StringUtils.format("get() called even though I'm closed. key[%s]", key));
           return null;
         } else if (numLentResources + deficit < maxSize) {
+          // Attempt to take an existing resource or create one if list is empty
           if (resourceHolderList.isEmpty()) {
-            if (eagerInstantiation) {
-              throw new IllegalStateException("Unexpected state: No objects left, but not all have been lent");
-            }
             poolVal = factory.generate(key);
           } else {
             ResourceHolder<V> holder = resourceHolderList.removeFirst();
@@ -270,6 +273,7 @@ public class ResourcePool<K, V> implements Closeable
             }
           }
         } else if (deficit > 0) {
+          // We are allowed to generate to fill the deficit objects
           deficit--;
           poolVal = null;
         } else {
@@ -288,7 +292,6 @@ public class ResourcePool<K, V> implements Closeable
           }
           retVal = factory.generate(key);
         }
-        numLentResources++;
       }
       catch (Throwable e) {
         synchronized (this) {
@@ -299,6 +302,7 @@ public class ResourcePool<K, V> implements Closeable
         throw new RuntimeException(e);
       }
 
+      numLentResources++;
       return retVal;
     }
 
