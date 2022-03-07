@@ -213,9 +213,10 @@ public class ResourcePool<K, V> implements Closeable
     private final long unusedResourceTimeoutMillis;
     // Hold previously created / returned resources
     protected final ArrayDeque<ResourceHolder<V>> resourceHolderList;
-    // Maintains count of times when get() threw an exception.
+    // For eager initialization, it indicates the number of resources that couldn't be returned and can be added to the list
+    // For lazy initialization, it maintains the failures until deficit + numLentResources < maxSize, and later follows the above behaviour
     private int deficit = 0;
-    // Maintains count of tiems when get() successfully returned a resource.
+    //
     private int numLentResources = 0;
     private boolean closed = false;
 
@@ -245,6 +246,7 @@ public class ResourcePool<K, V> implements Closeable
     {
       // resourceHolderList can't have nulls, so we'll use a null to signal that we need to create a new resource.
       final V poolVal;
+      boolean expired = false;
       synchronized (this) {
         while (!closed && (numLentResources == maxSize)) {
           try {
@@ -259,17 +261,15 @@ public class ResourcePool<K, V> implements Closeable
         if (closed) {
           log.info(StringUtils.format("get() called even though I'm closed. key[%s]", key));
           return null;
-        } else if (numLentResources + deficit < maxSize) {
+        } else if (numLentResources < maxSize) {
           // Attempt to take an existing resource or create one if list is empty
           if (resourceHolderList.isEmpty()) {
             poolVal = factory.generate(key);
           } else {
             ResourceHolder<V> holder = resourceHolderList.removeFirst();
+            poolVal = holder.getResource();
             if (System.currentTimeMillis() - holder.getLastAccessedTime() > unusedResourceTimeoutMillis) {
-              factory.close(holder.getResource());
-              poolVal = factory.generate(key);
-            } else {
-              poolVal = holder.getResource();
+              expired = true;
             }
           }
         } else if (deficit > 0) {
@@ -284,7 +284,7 @@ public class ResourcePool<K, V> implements Closeable
       // At this point, we must either return a valid resource or increment "deficit".
       final V retVal;
       try {
-        if (poolVal != null && factory.isGood(poolVal)) {
+        if (poolVal != null && !expired && factory.isGood(poolVal)) {
           retVal = poolVal;
         } else {
           if (poolVal != null) {

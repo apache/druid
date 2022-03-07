@@ -288,6 +288,7 @@ public class ResourcePoolTest
     EasyMock.expectLastCall();
     EasyMock.expect(resourceFactory.generate("billy")).andThrow(new ISE("where's billy?")).times(1);
     EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy2").times(1);
+    EasyMock.expect(resourceFactory.isGood("billy2")).andReturn(true).times(1);
     EasyMock.replay(resourceFactory);
 
     IllegalStateException e1 = null;
@@ -441,7 +442,6 @@ public class ResourcePoolTest
 
     EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy1").times(1);
     resourceFactory.close("billy1");
-    EasyMock.expect(resourceFactory.isGood("billy1")).andReturn(true).times(1);
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billy = pool.take("billy");
