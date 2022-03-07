@@ -65,7 +65,7 @@ public class JsonInputFormat extends NestedInputFormat
   }
 
   public JsonInputFormat(
-      JSONPathSpec flattenSpec,
+      @Nullable JSONPathSpec flattenSpec,
       Map<String, Boolean> featureSpec,
       Boolean keepNullColumns,
       boolean lineSplittable

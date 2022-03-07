@@ -203,7 +203,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     expectedLongSumMetric.put("expression", null);
     return new CompactionState(
       new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
+      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
       ImmutableList.of(expectedLongSumMetric),
       null,
       mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
@@ -356,7 +356,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         expectedLongSumMetric.put("expression", null);
         CompactionState expectedState = new CompactionState(
             new HashedPartitionsSpec(null, 3, null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
             ImmutableList.of(expectedLongSumMetric),
             null,
             compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
@@ -649,7 +649,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     expectedLongSumMetric.put("expression", null);
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
         ImmutableList.of(expectedLongSumMetric),
         getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
         mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
@@ -711,7 +711,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     expectedLongSumMetric.put("expression", null);
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
         ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
         getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
         mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),

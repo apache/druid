@@ -137,14 +137,14 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     return new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
-                .withDimensionsSpec(new DimensionsSpec(
-                    Arrays.asList(
-                        new StringDimensionSchema("dimA"),
-                        new LongDimensionSchema("metA")
-                    ),
-                    null,
-                    null
-                ))
+                .withDimensionsSpec(
+                    new DimensionsSpec(
+                        Arrays.asList(
+                            new StringDimensionSchema("dimA"),
+                            new LongDimensionSchema("metA")
+                        )
+                    )
+                )
                 .withRollup(withRollup)
                 .build()
         )

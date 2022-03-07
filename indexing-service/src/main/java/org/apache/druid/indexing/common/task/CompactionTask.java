@@ -898,7 +898,7 @@ public class CompactionTask extends AbstractBatchIndexTask
                                                             })
                                                             .collect(Collectors.toList());
 
-    return new DimensionsSpec(dimensionSchemas, null, null);
+    return new DimensionsSpec(dimensionSchemas);
   }
 
   private static List<NonnullPair<QueryableIndex, DataSegment>> loadSegments(

@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.scan.ScanResultValue;
+import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
@@ -161,15 +162,14 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   public void testRun() throws Exception
   {
     final Integer maxRowsPerSegment = numShards == null ? 10 : null;
-    final Set<DataSegment> publishedSegments = runTestTask(
+    final Set<DataSegment> publishedSegments = runTask(createTask(
         new HashedPartitionsSpec(
             maxRowsPerSegment,
             numShards,
             ImmutableList.of("dim1", "dim2")
         ),
-        TaskState.SUCCESS,
         false
-    );
+    ), TaskState.SUCCESS);
 
     final Map<Interval, Integer> expectedIntervalToNumSegments = computeExpectedIntervalToNumSegments(
         maxRowsPerSegment,
@@ -182,21 +182,52 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   public void testRunWithHashPartitionFunction() throws Exception
   {
     final Integer maxRowsPerSegment = numShards == null ? 10 : null;
-    final Set<DataSegment> publishedSegments = runTestTask(
+    final Set<DataSegment> publishedSegments = runTask(createTask(
         new HashedPartitionsSpec(
             maxRowsPerSegment,
             numShards,
             ImmutableList.of("dim1", "dim2"),
             HashPartitionFunction.MURMUR3_32_ABS
         ),
-        TaskState.SUCCESS,
-        false
-    );
+        false), TaskState.SUCCESS);
     final Map<Interval, Integer> expectedIntervalToNumSegments = computeExpectedIntervalToNumSegments(
         maxRowsPerSegment,
         numShards
     );
     assertHashedPartition(publishedSegments, expectedIntervalToNumSegments);
+  }
+
+  @Test
+  public void testRowStats()
+  {
+    final Integer maxRowsPerSegment = numShards == null ? 10 : null;
+    ParallelIndexSupervisorTask task = createTask(
+        new HashedPartitionsSpec(
+            maxRowsPerSegment,
+            numShards,
+            ImmutableList.of("dim1", "dim2"),
+            HashPartitionFunction.MURMUR3_32_ABS),
+        false);
+    RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(200, 0, 0, 0);
+    Map<String, Object> expectedReports;
+    if (maxNumConcurrentSubTasks <= 1) {
+      expectedReports = buildExpectedTaskReportSequential(
+          task.getId(),
+          ImmutableList.of(),
+          numShards == null ? expectedTotals : new RowIngestionMetersTotals(0, 0, 0, 0),
+          expectedTotals
+      );
+    } else {
+      // when useInputFormatApi is false, maxConcurrentSubTasks=2 and it uses the single phase runner
+      // instead of sequential runner
+      expectedReports = buildExpectedTaskReportParallel(
+          task.getId(),
+          ImmutableList.of(),
+          expectedTotals
+      );
+    }
+    Map<String, Object> actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
+    compareTaskReports(expectedReports, actualReports);
   }
 
   private Map<Interval, Integer> computeExpectedIntervalToNumSegments(
@@ -224,27 +255,26 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   {
     final Set<DataSegment> publishedSegments = new HashSet<>();
     publishedSegments.addAll(
-        runTestTask(
-            new HashedPartitionsSpec(null, numShards, ImmutableList.of("dim1", "dim2")),
-            TaskState.SUCCESS,
-            false
-        )
+        runTask(
+            createTask(
+                new HashedPartitionsSpec(null, numShards, ImmutableList.of("dim1", "dim2")),
+                false),
+            TaskState.SUCCESS)
     );
     // Append
     publishedSegments.addAll(
-        runTestTask(
-            new DynamicPartitionsSpec(5, null),
-            TaskState.SUCCESS,
-            true
-        )
-    );
+        runTask(
+            createTask(
+                new DynamicPartitionsSpec(5, null),
+                true),
+            TaskState.SUCCESS));
     // And append again
     publishedSegments.addAll(
-        runTestTask(
-            new DynamicPartitionsSpec(10, null),
-            TaskState.SUCCESS,
-            true
-        )
+        runTask(
+            createTask(
+                new DynamicPartitionsSpec(10, null),
+                true),
+            TaskState.SUCCESS)
     );
 
     final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
@@ -275,14 +305,13 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
     }
   }
 
-  private Set<DataSegment> runTestTask(
+  private ParallelIndexSupervisorTask createTask(
       PartitionsSpec partitionsSpec,
-      TaskState expectedTaskState,
       boolean appendToExisting
   )
   {
     if (isUseInputFormatApi()) {
-      return runTestTask(
+      return createTask(
           TIMESTAMP_SPEC,
           DIMENSIONS_SPEC,
           INPUT_FORMAT,
@@ -292,11 +321,10 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
           "test_*",
           partitionsSpec,
           maxNumConcurrentSubTasks,
-          expectedTaskState,
           appendToExisting
       );
     } else {
-      return runTestTask(
+      return createTask(
           null,
           null,
           null,
@@ -306,7 +334,6 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
           "test_*",
           partitionsSpec,
           maxNumConcurrentSubTasks,
-          expectedTaskState,
           appendToExisting
       );
     }

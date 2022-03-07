@@ -19,8 +19,6 @@
 
 package org.apache.druid.indexing.input;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.loading.SegmentCacheManager;
@@ -92,11 +90,5 @@ public class DruidSegmentInputEntity implements InputEntity
         }
       }
     };
-  }
-
-  @Override
-  public Predicate<Throwable> getRetryCondition()
-  {
-    return Predicates.alwaysFalse();
   }
 }

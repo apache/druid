@@ -206,6 +206,7 @@ public class WorkerResource
     IdUtils.validateId("taskId", taskId);
     if (!(taskRunner instanceof TaskLogStreamer)) {
       return Response.status(501)
+                     .type(MediaType.TEXT_PLAIN)
                      .entity(StringUtils.format(
                          "Log streaming not supported by [%s]",
                          taskRunner.getClass().getName()

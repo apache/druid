@@ -38,6 +38,7 @@ import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.azure.blob.ListBlobItemHolderFactory;
 
@@ -52,7 +53,10 @@ public class AzureStorageDruidModule implements DruidModule
 {
 
   static final String SCHEME = "azure";
-  public static final String STORAGE_CONNECTION_STRING = "DefaultEndpointsProtocol=%s;AccountName=%s;AccountKey=%s";
+  public static final String
+      STORAGE_CONNECTION_STRING_WITH_KEY = "DefaultEndpointsProtocol=%s;AccountName=%s;AccountKey=%s";
+  public static final String
+      STORAGE_CONNECTION_STRING_WITH_TOKEN = "DefaultEndpointsProtocol=%s;AccountName=%s;SharedAccessSignature=%s";
   public static final String INDEX_ZIP_FILE_NAME = "index.zip";
 
   @Override
@@ -125,17 +129,39 @@ public class AzureStorageDruidModule implements DruidModule
   @LazySingleton
   public Supplier<CloudBlobClient> getCloudBlobClient(final AzureAccountConfig config)
   {
+    if ((config.getKey() != null && config.getSharedAccessStorageToken() != null)
+        ||
+        (config.getKey() == null && config.getSharedAccessStorageToken() == null)) {
+      throw new ISE("Either set 'key' or 'sharedAccessStorageToken' in the azure config but not both."
+                    + " Please refer to azure documentation.");
+    }
     return Suppliers.memoize(() -> {
       try {
-        CloudStorageAccount account = CloudStorageAccount.parse(
-            StringUtils.format(
-                STORAGE_CONNECTION_STRING,
-                config.getProtocol(),
-                config.getAccount(),
-                config.getKey()
-            )
-        );
-        return account.createCloudBlobClient();
+        final CloudStorageAccount account;
+        if (config.getKey() != null) {
+          account = CloudStorageAccount.parse(
+              StringUtils.format(
+                  STORAGE_CONNECTION_STRING_WITH_KEY,
+                  config.getProtocol(),
+                  config.getAccount(),
+                  config.getKey()
+              )
+
+          );
+          return account.createCloudBlobClient();
+        } else if (config.getSharedAccessStorageToken() != null) {
+          account = CloudStorageAccount.parse(StringUtils.format(
+              STORAGE_CONNECTION_STRING_WITH_TOKEN,
+              config.getProtocol(),
+              config.getAccount(),
+              config.getSharedAccessStorageToken()
+          ));
+          return account.createCloudBlobClient();
+        } else {
+          throw new ISE(
+              "None of 'key' or 'sharedAccessStorageToken' is set in the azure config."
+              + " Please refer to azure extension documentation.");
+        }
       }
       catch (URISyntaxException | InvalidKeyException e) {
         throw new RuntimeException(e);
