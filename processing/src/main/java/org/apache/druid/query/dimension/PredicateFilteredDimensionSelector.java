@@ -82,7 +82,7 @@ final class PredicateFilteredDimensionSelector extends AbstractDimensionSelector
           }
         }
         // null should match empty rows in multi-value columns if predicate matches null
-        return nullRow && predicate.apply(null);
+        return nullRow && value == null && predicate.apply(null);
       }
 
       @Override
