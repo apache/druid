@@ -65,7 +65,7 @@ public interface Indexed<T> extends Iterable<T>, HotLoopCallee
    *
    * @return index of value, or negative number equal to (-(insertion point) - 1).
    */
-  static <T> int indexOf(IndexedGetter<T> indexed, int size, Comparator<T> comparator, @Nullable T value)
+  static <T> int indexOf(Indexed<T> indexed, int size, Comparator<T> comparator, @Nullable T value)
   {
     int minIndex = 0;
     int maxIndex = size - 1;

@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.collect.ImmutableList;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
@@ -39,6 +41,8 @@ import org.apache.druid.segment.serde.StringBitmapIndexColumnPartSupplier;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Set;
+import java.util.function.IntPredicate;
 
 /**
  */
@@ -171,10 +175,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
       VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(dimension);
       ColumnCapabilities virtualCapabilities = null;
       if (virtualColumn != null) {
-        virtualCapabilities = virtualColumn.capabilities(
-            QueryableIndexStorageAdapter.getColumnInspectorForIndex(index),
-            dimension
-        );
+        virtualCapabilities = virtualColumn.capabilities(index, dimension);
       }
       return virtualCapabilities != null ? virtualCapabilities.hasMultipleValues() : ColumnCapabilities.Capable.FALSE;
     }
@@ -264,6 +265,78 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
             return bitmapFactory.makeEmptyImmutableBitmap();
           }
         }
+
+        @Override
+        public ImmutableBitmap getBitmapForValue(@Nullable String value)
+        {
+          if (NullHandling.isNullOrEquivalent(value)) {
+            return bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), getNumRows());
+          } else {
+            return bitmapFactory.makeEmptyImmutableBitmap();
+          }
+        }
+
+        @Override
+        public Iterable<ImmutableBitmap> getBitmapsInRange(
+            @Nullable String startValue,
+            boolean startStrict,
+            @Nullable String endValue,
+            boolean endStrict,
+            IntPredicate matcher
+        )
+        {
+          final int startIndex; // inclusive
+          int endIndex; // exclusive
+
+          if (startValue == null) {
+            startIndex = 0;
+          } else {
+            if (NullHandling.isNullOrEquivalent(startValue)) {
+              startIndex = startStrict ? 1 : 0;
+            } else {
+              startIndex = 1;
+            }
+          }
+
+          if (endValue == null) {
+            endIndex = 1;
+          } else {
+            if (NullHandling.isNullOrEquivalent(endValue)) {
+              endIndex = endStrict ? 0 : 1;
+            } else {
+              endIndex = 1;
+            }
+          }
+
+          endIndex = startIndex > endIndex || !matcher.test(endIndex) ? startIndex : endIndex;
+          if (matcher.test(startIndex)) {
+            final IntIterator rangeIterator = IntListUtils.fromTo(startIndex, endIndex).iterator();
+            return () -> new Iterator<ImmutableBitmap>()
+            {
+              @Override
+              public boolean hasNext()
+              {
+                return rangeIterator.hasNext();
+              }
+
+              @Override
+              public ImmutableBitmap next()
+              {
+                return getBitmap(rangeIterator.nextInt());
+              }
+            };
+          }
+          return ImmutableList.of(bitmapFactory.makeEmptyImmutableBitmap());
+        }
+
+        @Override
+        public Iterable<ImmutableBitmap> getBitmapsForValues(Set<String> values)
+        {
+          if (values.contains(null) || (NullHandling.replaceWithDefault() && values.contains(""))) {
+            return ImmutableList.of(getBitmap(0));
+          }
+          return ImmutableList.of(bitmapFactory.makeEmptyImmutableBitmap());
+        }
       };
     } else if (columnHolder.getCapabilities().hasBitmapIndexes() && columnHolder.getCapabilities().is(ValueType.STRING)) {
       // currently BitmapIndex are reliant on STRING dictionaries to operate correctly, and will fail when used with
@@ -282,7 +355,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
       if (idx == null) {
         return null;
       }
-      return idx.getBitmap(idx.getIndex(value));
+      return idx.getBitmapForValue(value);
     }
 
     final ColumnHolder columnHolder = index.getColumnHolder(dimension);
@@ -301,7 +374,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
     }
 
     final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
-    return bitmapIndex.getBitmap(bitmapIndex.getIndex(value));
+    return bitmapIndex.getBitmapForValue(value);
   }
 
   @Override
@@ -322,5 +395,12 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   private boolean isVirtualColumn(final String columnName)
   {
     return virtualColumns.getVirtualColumn(columnName) != null;
+  }
+
+  @Nullable
+  @Override
+  public ColumnCapabilities getColumnCapabilities(String column)
+  {
+    return virtualColumns.getColumnCapabilities(index, column);
   }
 }

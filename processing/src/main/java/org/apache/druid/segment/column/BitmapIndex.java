@@ -23,6 +23,8 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 
 import javax.annotation.Nullable;
+import java.util.Set;
+import java.util.function.IntPredicate;
 
 /**
  */
@@ -47,4 +49,26 @@ public interface BitmapIndex
   int getIndex(@Nullable String value);
 
   ImmutableBitmap getBitmap(int idx);
+
+  ImmutableBitmap getBitmapForValue(@Nullable String value);
+
+  default Iterable<ImmutableBitmap> getBitmapsInRange(
+      @Nullable String startValue,
+      boolean startStrict,
+      @Nullable String endValue,
+      boolean endStrict
+  )
+  {
+    return getBitmapsInRange(startValue, startStrict, endValue, endStrict, (index) -> true);
+  }
+
+  Iterable<ImmutableBitmap> getBitmapsInRange(
+      @Nullable String startValue,
+      boolean startStrict,
+      @Nullable String endValue,
+      boolean endStrict,
+      IntPredicate matcher
+  );
+
+  Iterable<ImmutableBitmap> getBitmapsForValues(Set<String> values);
 }

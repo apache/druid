@@ -21,8 +21,6 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import it.unimi.dsi.fastutil.ints.IntIterable;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
@@ -47,7 +45,6 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 
@@ -180,7 +177,7 @@ public class LikeFilter implements Filter
 
         // Union bitmaps for all matching dimension values in range.
         // Use lazy iterator to allow unioning bitmaps one by one and avoid materializing all of them at once.
-        return Filters.bitmapsFromIndexes(getDimValueIndexIterableForPrefixMatch(bitmapIndex, dimValues), bitmapIndex);
+        return getDimValueIndexIterableForPrefixMatch(bitmapIndex, dimValues);
       }
       catch (IOException e) {
         throw new UncheckedIOException(e);
@@ -211,7 +208,7 @@ public class LikeFilter implements Filter
     return extractionFn == null && !likeMatcher.getPrefix().isEmpty();
   }
 
-  private IntIterable getDimValueIndexIterableForPrefixMatch(
+  private Iterable<ImmutableBitmap> getDimValueIndexIterableForPrefixMatch(
       final BitmapIndex bitmapIndex,
       final Indexed<String> dimValues
   )
@@ -220,69 +217,13 @@ public class LikeFilter implements Filter
     final String lower = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix());
     final String upper = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix()) + Character.MAX_VALUE;
 
-    final int startIndex; // inclusive
-    final int endIndex; // exclusive
-
-    if (lower == null) {
-      // For Null values
-      startIndex = bitmapIndex.getIndex(null);
-      endIndex = startIndex + 1;
-    } else {
-      final int lowerFound = bitmapIndex.getIndex(lower);
-      startIndex = lowerFound >= 0 ? lowerFound : -(lowerFound + 1);
-
-      final int upperFound = bitmapIndex.getIndex(upper);
-      endIndex = upperFound >= 0 ? upperFound + 1 : -(upperFound + 1);
-    }
-
-    return new IntIterable()
-    {
-      @Override
-      public IntIterator iterator()
-      {
-        return new IntIterator()
-        {
-          int currIndex = startIndex;
-          int found;
-
-          {
-            found = findNext();
-          }
-
-          private int findNext()
-          {
-            while (currIndex < endIndex && !likeMatcher.matchesSuffixOnly(dimValues, currIndex)) {
-              currIndex++;
-            }
-
-            if (currIndex < endIndex) {
-              return currIndex++;
-            } else {
-              return -1;
-            }
-          }
-
-          @Override
-          public boolean hasNext()
-          {
-            return found != -1;
-          }
-
-          @Override
-          public int nextInt()
-          {
-            int cur = found;
-
-            if (cur == -1) {
-              throw new NoSuchElementException();
-            }
-
-            found = findNext();
-            return cur;
-          }
-        };
-      }
-    };
+    return bitmapIndex.getBitmapsInRange(
+        lower,
+        false,
+        upper,
+        false,
+        (index) -> likeMatcher.matchesSuffixOnly(dimValues, index)
+    );
   }
 
   @Override

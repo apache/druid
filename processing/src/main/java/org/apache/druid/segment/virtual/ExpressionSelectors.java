@@ -237,11 +237,14 @@ public class ExpressionSelectors
    */
   public static boolean canMapOverDictionary(
       final Expr.BindingAnalysis bindingAnalysis,
-      final ColumnCapabilities.Capable hasMultipleValues
+      final ColumnCapabilities columnCapabilities
   )
   {
     Preconditions.checkState(bindingAnalysis.getRequiredBindings().size() == 1, "requiredBindings.size == 1");
-    return !hasMultipleValues.isUnknown() && !bindingAnalysis.hasInputArrays() && !bindingAnalysis.isOutputArray();
+    return columnCapabilities != null &&
+           !columnCapabilities.hasMultipleValues().isUnknown() &&
+           !bindingAnalysis.hasInputArrays() &&
+           !bindingAnalysis.isOutputArray();
   }
 
   /**

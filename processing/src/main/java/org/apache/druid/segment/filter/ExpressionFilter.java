@@ -47,6 +47,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -229,8 +230,9 @@ public class ExpressionFilter implements Filter
       // Single-column expression. We can use bitmap indexes if this column has an index and the expression can
       // map over the values of the index.
       final String column = Iterables.getOnlyElement(details.getRequiredBindings());
+      final ColumnCapabilities capabilities = selector.getColumnCapabilities(column);
       return selector.getBitmapIndex(column) != null
-             && ExpressionSelectors.canMapOverDictionary(details, selector.hasMultipleValues(column));
+             && ExpressionSelectors.canMapOverDictionary(details, capabilities);
     } else {
       // Multi-column expression.
       return false;

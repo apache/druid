@@ -355,7 +355,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     if (!allowReverseLookup) {
       throw new UnsupportedOperationException("Reverse lookup not allowed.");
     }
-    return Indexed.indexOf(indexed::get, size, strategy, value);
+    return Indexed.indexOf(indexed, size, strategy, value);
   }
 
   @Override
