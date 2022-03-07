@@ -233,7 +233,7 @@ public class ExpressionSelectors
    * and that single column has a dictionary.
    *
    * @param bindingAnalysis       result of calling {@link Expr#analyzeInputs()} on an expression
-   * @param hasMultipleValues result of calling {@link ColumnCapabilities#hasMultipleValues()}
+   * @param columnCapabilities    {@link ColumnCapabilities} for the input binding
    */
   public static boolean canMapOverDictionary(
       final Expr.BindingAnalysis bindingAnalysis,
