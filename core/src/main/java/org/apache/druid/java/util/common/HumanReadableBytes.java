@@ -115,11 +115,11 @@ public class HumanReadableBytes
    * g - gigabyte = 1,000,000,000
    * t - terabyte = 1,000,000,000,000
    * p - petabyte = 1,000,000,000,000,000
-   * KiB - kilo binary byte = 1024
-   * MiB - mega binary byte = 1024*1204
-   * GiB - giga binary byte = 1024*1024*1024
-   * TiB - tera binary byte = 1024*1024*1024*1024
-   * PiB - peta binary byte = 1024*1024*1024*1024*1024
+   * Ki(B) - kilo binary byte = 1024
+   * Mi(B) - mega binary byte = 1024*1204
+   * Gi(B) - giga binary byte = 1024*1024*1024
+   * Ti(B) - tera binary byte = 1024*1024*1024*1024
+   * Pi(B) - peta binary byte = 1024*1024*1024*1024*1024
    * <p>
    *
    * @param nullValue to be returned when given number is null or empty
@@ -161,7 +161,15 @@ public class HumanReadableBytes
 
       unit = number.charAt(lastDigitIndex--);
       isBinaryByte = true;
+    } else if (unit == 'i') {
+      //unit ends with 'i' must be format of Ki/Mi/Gi/Ti/Pi, so at least 2 extra characters are required
+      if (lastDigitIndex < 1) {
+        throw new IAE("Invalid format of number: %s", rawNumber);
+      }
+      unit = number.charAt(lastDigitIndex--);
+      isBinaryByte = true;
     }
+
 
     long base = 1;
     switch (unit) {
@@ -227,7 +235,12 @@ public class HumanReadableBytes
      * simplified SI format without 'B' indicator
      * eg: K, M, G ...
      */
-    DECIMAL
+    DECIMAL,
+    /**
+     * same as binary byte format, that k8s uses
+     * eg: Ki, Mi, Gi ...
+     */
+    KUBERNETES_BYTE
   }
 
   /**
@@ -251,6 +264,8 @@ public class HumanReadableBytes
         return DecimalFormatter.format(bytes, pattern, "B");
       case DECIMAL:
         return DecimalFormatter.format(bytes, pattern, "").trim();
+      case KUBERNETES_BYTE:
+        return BinaryFormatter.format(bytes, pattern, "").trim();
       default:
         throw new IAE("Unkonwn unit system[%s]", unitSystem);
     }
