@@ -1554,6 +1554,7 @@ D1
 D2
 D3
 druid.query.groupBy.defaultStrategy
+druid.query.groupBy.maxSelectorDictionarySize
 druid.query.groupBy.maxMergingDictionarySize
 druid.query.groupBy.maxOnDiskStorage
 druid.query.groupBy.maxResults.
@@ -1563,6 +1564,7 @@ maxResults
 orderby
 orderbys
 outputName
+pre-existing
 pushdown
 row1
 subtotalsSpec

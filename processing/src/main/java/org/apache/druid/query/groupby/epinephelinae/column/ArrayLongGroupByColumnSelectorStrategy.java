@@ -31,10 +31,9 @@ import java.util.stream.Collectors;
 
 public class ArrayLongGroupByColumnSelectorStrategy extends ArrayNumericGroupByColumnSelectorStrategy<Long>
 {
-
   public ArrayLongGroupByColumnSelectorStrategy()
   {
-
+    super(Long.BYTES);
   }
 
   @VisibleForTesting
@@ -43,12 +42,11 @@ public class ArrayLongGroupByColumnSelectorStrategy extends ArrayNumericGroupByC
       Object2IntOpenHashMap<List<Long>> reverseDictionary
   )
   {
-    super(dictionary, reverseDictionary);
+    super(dictionary, reverseDictionary, Long.BYTES);
   }
 
-
   @Override
-  public Object getOnlyValue(ColumnValueSelector selector)
+  protected int computeDictionaryId(ColumnValueSelector selector)
   {
     Object object = selector.getObject();
     if (object == null) {

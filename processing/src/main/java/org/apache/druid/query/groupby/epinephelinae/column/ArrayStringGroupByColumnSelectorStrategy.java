@@ -24,6 +24,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.DictionaryBuilding;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
@@ -35,8 +36,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public class ArrayStringGroupByColumnSelectorStrategy
-    implements GroupByColumnSelectorStrategy
+public class ArrayStringGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy
 {
   private static final int GROUP_BY_MISSING_VALUE = -1;
 
@@ -49,6 +49,8 @@ public class ArrayStringGroupByColumnSelectorStrategy
   // for eg : [a,b,c] would be converted to [1,2,3] and assigned a integer value 1.
   // [1,2,3] <-> 1
   private final BiMap<ComparableIntArray, Integer> intListToInt;
+
+  private long estimatedFootprint = 0L;
 
   @Override
   public int getGroupingKeySize()
@@ -98,20 +100,22 @@ public class ArrayStringGroupByColumnSelectorStrategy
   }
 
   @Override
-  public void initColumnValues(
+  public int initColumnValues(
       ColumnValueSelector selector,
       int columnIndex,
       Object[] valuess
   )
   {
-    final int groupingKey = (int) getOnlyValue(selector);
+    final long priorFootprint = estimatedFootprint;
+    final int groupingKey = computeDictionaryId(selector);
     valuess[columnIndex] = groupingKey;
+    return (int) (estimatedFootprint - priorFootprint);
   }
 
   @Override
   public void initGroupingKeyColumnValue(
       int keyBufferPosition,
-      int columnIndex,
+      int dimensionIndex,
       Object rowObj,
       ByteBuffer keyBuffer,
       int[] stack
@@ -120,9 +124,9 @@ public class ArrayStringGroupByColumnSelectorStrategy
     final int groupingKey = (int) rowObj;
     writeToKeyBuffer(keyBufferPosition, groupingKey, keyBuffer);
     if (groupingKey == GROUP_BY_MISSING_VALUE) {
-      stack[columnIndex] = 0;
+      stack[dimensionIndex] = 0;
     } else {
-      stack[columnIndex] = 1;
+      stack[dimensionIndex] = 1;
     }
   }
 
@@ -137,8 +141,11 @@ public class ArrayStringGroupByColumnSelectorStrategy
     return false;
   }
 
-  @Override
-  public Object getOnlyValue(ColumnValueSelector selector)
+  /**
+   * Compute dictionary ID for the given selector. Updates {@link #estimatedFootprint} as necessary.
+   */
+  @VisibleForTesting
+  int computeDictionaryId(ColumnValueSelector selector)
   {
     final int[] intRepresentation;
     Object object = selector.getObject();
@@ -172,9 +179,15 @@ public class ArrayStringGroupByColumnSelectorStrategy
     final ComparableIntArray comparableIntArray = ComparableIntArray.of(intRepresentation);
     final int dictId = intListToInt.getOrDefault(comparableIntArray, GROUP_BY_MISSING_VALUE);
     if (dictId == GROUP_BY_MISSING_VALUE) {
-      final int dictionarySize = intListToInt.keySet().size();
-      intListToInt.put(comparableIntArray, dictionarySize);
-      return dictionarySize;
+      final int nextId = intListToInt.keySet().size();
+      intListToInt.put(comparableIntArray, nextId);
+
+      // We're not using the dictionary and reverseDictionary from DictionaryBuilding, but the BiMap is close enough
+      // that we expect this footprint calculation to still be useful. (It doesn't have to be exact.)
+      estimatedFootprint +=
+          DictionaryBuilding.estimateEntryFootprint(comparableIntArray.getDelegate().length * Integer.BYTES);
+
+      return nextId;
     } else {
       return dictId;
     }
@@ -184,18 +197,29 @@ public class ArrayStringGroupByColumnSelectorStrategy
   {
     final Integer dictId = dictionaryToInt.get(value);
     if (dictId == null) {
-      final int size = dictionaryToInt.size();
-      dictionaryToInt.put(value, dictionaryToInt.size());
-      return size;
+      final int nextId = dictionaryToInt.size();
+      dictionaryToInt.put(value, nextId);
+
+      // We're not using the dictionary and reverseDictionary from DictionaryBuilding, but the BiMap is close enough
+      // that we expect this footprint calculation to still be useful. (It doesn't have to be exact.)
+      estimatedFootprint +=
+          DictionaryBuilding.estimateEntryFootprint((value == null ? 0 : value.length()) * Character.BYTES);
+
+      return nextId;
     } else {
       return dictId;
     }
   }
 
   @Override
-  public void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer)
+  public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
   {
-    keyBuffer.putInt(keyBufferPosition, (int) obj);
+    final long priorFootprint = estimatedFootprint;
+
+    // computeDictionaryId updates estimatedFootprint
+    keyBuffer.putInt(keyBufferPosition, computeDictionaryId(selector));
+
+    return (int) (estimatedFootprint - priorFootprint);
   }
 
   @Override
@@ -230,5 +254,18 @@ public class ArrayStringGroupByColumnSelectorStrategy
       }
     };
   }
-}
 
+  @Override
+  public void reset()
+  {
+    dictionaryToInt.clear();
+    intListToInt.clear();
+    estimatedFootprint = 0;
+  }
+
+  @VisibleForTesting
+  void writeToKeyBuffer(int keyBufferPosition, int groupingKey, ByteBuffer keyBuffer)
+  {
+    keyBuffer.putInt(keyBufferPosition, groupingKey);
+  }
+}

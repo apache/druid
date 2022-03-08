@@ -33,7 +33,7 @@ public class ArrayDoubleGroupByColumnSelectorStrategy extends ArrayNumericGroupB
 {
   public ArrayDoubleGroupByColumnSelectorStrategy()
   {
-
+    super(Double.BYTES);
   }
 
   @VisibleForTesting
@@ -42,11 +42,11 @@ public class ArrayDoubleGroupByColumnSelectorStrategy extends ArrayNumericGroupB
       Object2IntOpenHashMap<List<Double>> reverseDictionary
   )
   {
-    super(dictionary, reverseDictionary);
+    super(dictionary, reverseDictionary, Double.BYTES);
   }
 
   @Override
-  public Object getOnlyValue(ColumnValueSelector selector)
+  protected int computeDictionaryId(ColumnValueSelector selector)
   {
     Object object = selector.getObject();
     if (object == null) {

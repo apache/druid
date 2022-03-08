@@ -244,7 +244,12 @@ public class VectorGroupByEngine
     @Nullable
     private Interval bucketInterval;
 
+    // -1 if the current vector was fully aggregated after a call to "initNewDelegate". Otherwise, the number of
+    // rows of the current vector that were aggregated.
     private int partiallyAggregatedRows = -1;
+
+    // Sum of internal state footprint across all "selectors".
+    private long selectorInternalFootprint = 0;
 
     @Nullable
     private CloseableGrouperIterator<Memory, ResultRow> delegate = null;
@@ -304,6 +309,8 @@ public class VectorGroupByEngine
             if (delegate != null) {
               delegate.close();
               vectorGrouper.reset();
+              selectors.forEach(GroupByVectorColumnSelector::reset);
+              selectorInternalFootprint = 0;
             }
 
             delegate = initNewDelegate();
@@ -390,7 +397,11 @@ public class VectorGroupByEngine
           // Write keys to the keySpace.
           int keyOffset = 0;
           for (final GroupByVectorColumnSelector selector : selectors) {
-            selector.writeKeys(keySpace, keySize, keyOffset, startOffset, granulizer.getEndOffset());
+            // Update selectorInternalFootprint now, but check it later. (We reset on the first vector that causes us
+            // to go past the limit.)
+            selectorInternalFootprint +=
+                selector.writeKeys(keySpace, keySize, keyOffset, startOffset, granulizer.getEndOffset());
+
             keyOffset += selector.getGroupingKeySize();
           }
 
@@ -419,6 +430,8 @@ public class VectorGroupByEngine
         } else if (!granulizer.advanceCursorWithinBucket()) {
           // Advance bucketInterval.
           bucketInterval = bucketIterator.hasNext() ? bucketIterator.next() : null;
+          break;
+        } else if (selectorInternalFootprint > querySpecificConfig.getMaxSelectorDictionarySize()) {
           break;
         }
       }
