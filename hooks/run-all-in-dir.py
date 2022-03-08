@@ -20,13 +20,15 @@ import sys
 import subprocess
 
 
-if len(sys.argv) != 2:
+if len(sys.argv) < 2:
 	sys.stderr.write('usage: program <hooks directory>\n')
 	sys.exit(1)
 
 hooks_dir = sys.argv[1]
+args = sys.argv[2:]
 
 for hook in os.listdir(hooks_dir):
 	if not hook.startswith("_"):
-		print("Running {}".format(hook))
-		subprocess.run(os.path.join(hooks_dir, hook), shell=True)
+		command = [os.path.join(hooks_dir, hook)] + args
+		print("Running {}".format(command))
+		subprocess.run(command, shell=True)

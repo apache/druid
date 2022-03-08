@@ -19,4 +19,4 @@
 # under the License.
 #
 
-.git/hooks/run-all-in-dir.py .git/hooks/pre-pushes
+.git/hooks/run-all-in-dir.py .git/hooks/pre-pushes $1 $2

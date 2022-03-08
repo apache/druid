@@ -33,3 +33,5 @@ DRUID_ROOT=$1
 rm -f ${DRUID_ROOT}/.git/hooks/run-all-in-dir.py
 rm -rf ${DRUID_ROOT}/.git/hooks/pre-commits
 rm -rf ${DRUID_ROOT}/.git/hooks/pre-pushes
+
+echo "This script does not remove or modify the git hook script files in .git/hooks, such as 'pre-commit' or 'pre-push'. Those scripts should be removed or modified manually."
