@@ -307,8 +307,11 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
         tombstones++;
       }
     }
-    Assert.assertEquals(11, tombstones);
-    Assert.assertEquals(10, publishedSegmentsAfterReplace.size() - tombstones);
+
+    if (!useMultivalueDim) {
+      Assert.assertEquals(11, tombstones);
+      Assert.assertEquals(10, publishedSegmentsAfterReplace.size() - tombstones);
+    }
   }
 
   @Test
