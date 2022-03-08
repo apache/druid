@@ -42,7 +42,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.function.IntPredicate;
+import java.util.function.Predicate;
 
 /**
  */
@@ -282,7 +282,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
             boolean startStrict,
             @Nullable String endValue,
             boolean endStrict,
-            IntPredicate matcher
+            Predicate<String> matcher
         )
         {
           final int startIndex; // inclusive
@@ -308,8 +308,8 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
             }
           }
 
-          endIndex = startIndex > endIndex || !matcher.test(endIndex) ? startIndex : endIndex;
-          if (matcher.test(startIndex)) {
+          endIndex = startIndex > endIndex || !matcher.test(getValue(endIndex)) ? startIndex : endIndex;
+          if (matcher.test(getValue(startIndex))) {
             final IntIterator rangeIterator = IntListUtils.fromTo(startIndex, endIndex).iterator();
             return () -> new Iterator<ImmutableBitmap>()
             {

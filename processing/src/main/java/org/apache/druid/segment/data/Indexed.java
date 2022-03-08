@@ -55,8 +55,8 @@ public interface Indexed<T> extends Iterable<T>, HotLoopCallee
   int indexOf(@Nullable T value);
 
   /**
-   * Returns the index of "value" in some object whose values are accessible by index some {@link IndexedGetter}, or
-   * (-(insertion point) - 1) if the value is not present, in the manner of Arrays.binarySearch.
+   * Returns the index of "value" in some object in the {@link Indexed}, or (-(insertion point) - 1) if the value is
+   * not present, in the manner of Arrays.binarySearch.
    *
    * This is used by {@link GenericIndexed} to strengthen the contract of {@link #indexOf(Object)}, which only
    * guarantees that values-not-found will return some negative number.

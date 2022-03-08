@@ -230,9 +230,14 @@ public class ExpressionFilter implements Filter
       // Single-column expression. We can use bitmap indexes if this column has an index and the expression can
       // map over the values of the index.
       final String column = Iterables.getOnlyElement(details.getRequiredBindings());
-      final ColumnCapabilities capabilities = selector.getColumnCapabilities(column);
-      return selector.getBitmapIndex(column) != null
-             && ExpressionSelectors.canMapOverDictionary(details, capabilities);
+      // we use a default 'all false' capabilities here because if the column has a bitmap index, but the capabilities
+      // are null, it means that the column is missing and should take the single valued path, while truly unknown
+      // things will not have a bitmap index available
+      final ColumnCapabilities capabilities = selector.getColumnCapabilitiesWithDefault(
+          column,
+          ColumnCapabilitiesImpl.createDefault()
+      );
+      return selector.getBitmapIndex(column) != null && ExpressionSelectors.canMapOverDictionary(details, capabilities);
     } else {
       // Multi-column expression.
       return false;

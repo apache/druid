@@ -50,7 +50,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.IntPredicate;
+import java.util.function.Predicate;
 
 /**
  * {@link VirtualColumn} form of {@link ListFilteredDimensionSpec}, powered by
@@ -289,7 +289,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
         boolean startStrict,
         @Nullable String endValue,
         boolean endStrict,
-        IntPredicate matcher
+        Predicate<String> matcher
     )
     {
       int startIndex, endIndex;
@@ -327,7 +327,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
 
         private int findNext()
         {
-          while (currIndex < end && !matcher.test(currIndex)) {
+          while (currIndex < end && !matcher.test(delegate.getValue(idMapping.getReverseId(currIndex)))) {
             currIndex++;
           }
 

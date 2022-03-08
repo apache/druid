@@ -38,12 +38,8 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.BitmapIndex;
-import org.apache.druid.segment.data.CloseableIndexed;
-import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -172,16 +168,18 @@ public class LikeFilter implements Filter
         return ImmutableList.of(likeMatcher.matches(null) ? Filters.allTrue(selector) : Filters.allFalse(selector));
       }
 
-      // search for start, end indexes in the bitmaps; then include all matching bitmaps between those points
-      try (final CloseableIndexed<String> dimValues = selector.getDimensionValues(dimension)) {
+      final String lower = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix());
+      final String upper = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix()) + Character.MAX_VALUE;
 
-        // Union bitmaps for all matching dimension values in range.
-        // Use lazy iterator to allow unioning bitmaps one by one and avoid materializing all of them at once.
-        return getDimValueIndexIterableForPrefixMatch(bitmapIndex, dimValues);
-      }
-      catch (IOException e) {
-        throw new UncheckedIOException(e);
-      }
+      // Union bitmaps for all matching dimension values in range.
+      // Use lazy iterator to allow unioning bitmaps one by one and avoid materializing all of them at once.
+      return bitmapIndex.getBitmapsInRange(
+          lower,
+          false,
+          upper,
+          false,
+          (value) -> likeMatcher.matchesSuffixOnly(value)
+      );
     } else {
       // fallback
       return Filters.matchPredicateNoUnion(
@@ -206,24 +204,6 @@ public class LikeFilter implements Filter
   private boolean isSimplePrefix()
   {
     return extractionFn == null && !likeMatcher.getPrefix().isEmpty();
-  }
-
-  private Iterable<ImmutableBitmap> getDimValueIndexIterableForPrefixMatch(
-      final BitmapIndex bitmapIndex,
-      final Indexed<String> dimValues
-  )
-  {
-
-    final String lower = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix());
-    final String upper = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix()) + Character.MAX_VALUE;
-
-    return bitmapIndex.getBitmapsInRange(
-        lower,
-        false,
-        upper,
-        false,
-        (index) -> likeMatcher.matchesSuffixOnly(dimValues, index)
-    );
   }
 
   @Override

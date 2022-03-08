@@ -34,7 +34,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
-import java.util.function.IntPredicate;
+import java.util.function.Predicate;
 
 public class FiltersTest extends InitializedNullHandlingTest
 {
@@ -111,7 +111,7 @@ public class FiltersTest extends InitializedNullHandlingTest
           boolean startStrict,
           @Nullable String endValue,
           boolean endStrict,
-          IntPredicate matcher
+          Predicate<String> matcher
       )
       {
         throw new UnsupportedOperationException();

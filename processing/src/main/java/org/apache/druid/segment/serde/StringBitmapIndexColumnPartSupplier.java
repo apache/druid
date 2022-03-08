@@ -32,7 +32,7 @@ import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.function.IntPredicate;
+import java.util.function.Predicate;
 
 /**
  * Provides {@link BitmapIndex} for some dictionary encoded column, where the dictionary and bitmaps are stored in some
@@ -164,7 +164,7 @@ public class StringBitmapIndexColumnPartSupplier implements Supplier<BitmapIndex
           boolean startStrict,
           @Nullable String endValue,
           boolean endStrict,
-          IntPredicate indexMatcher
+          Predicate<String> indexMatcher
       )
       {
         int startIndex, endIndex;
@@ -202,7 +202,7 @@ public class StringBitmapIndexColumnPartSupplier implements Supplier<BitmapIndex
 
           private int findNext()
           {
-            while (currIndex < end && !indexMatcher.test(currIndex)) {
+            while (currIndex < end && !indexMatcher.test(dictionary.get(currIndex))) {
               currIndex++;
             }
 
