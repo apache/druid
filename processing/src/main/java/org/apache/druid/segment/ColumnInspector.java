@@ -39,7 +39,7 @@ public interface ColumnInspector extends Expr.InputBindingInspector
 
   default ColumnCapabilities getColumnCapabilitiesWithDefault(String column, ColumnCapabilities defaultCapabilites)
   {
-    final ColumnCapabilities capabilities  = getColumnCapabilities(column);
+    final ColumnCapabilities capabilities = getColumnCapabilities(column);
     if (capabilities != null) {
       return capabilities;
     }
