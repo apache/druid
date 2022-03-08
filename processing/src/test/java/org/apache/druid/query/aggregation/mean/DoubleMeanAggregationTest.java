@@ -130,7 +130,8 @@ public class DoubleMeanAggregationTest
         .setGranularity(Granularities.ALL)
         .setInterval("1970/2050")
         .setAggregatorSpecs(
-            new DoubleMeanAggregatorFactory("meanOnDouble", SimpleTestIndex.DOUBLE_COL)
+            new DoubleMeanAggregatorFactory("meanOnDouble", SimpleTestIndex.DOUBLE_COL),
+            new DoubleMeanAggregatorFactory("meanOnMultiValue", SimpleTestIndex.MULTI_VALUE_DOUBLE_AS_STRING_DIM)
         )
         .setContext(Collections.singletonMap(QueryContexts.VECTORIZE_KEY, doVectorize))
         .build();
@@ -143,6 +144,7 @@ public class DoubleMeanAggregationTest
     Row result = Iterables.getOnlyElement(seq.toList()).toMapBasedRow(query);
 
     Assert.assertEquals(6.2d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
+    Assert.assertEquals(4.1333d, result.getMetric("meanOnMultiValue").doubleValue(), 0.0001d);
   }
 
   @Test
