@@ -284,7 +284,7 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
               } else {
                 // Try again by starting the watch from the beginning. This can happen if the
                 // watch goes bad.
-                LOGGER.warn("Received NULL item. Restarting watch");
+                LOGGER.debug("Received NULL item while watching node type [%s]. Restarting watch.", this.nodeRole);
                 return;
               }
             }
