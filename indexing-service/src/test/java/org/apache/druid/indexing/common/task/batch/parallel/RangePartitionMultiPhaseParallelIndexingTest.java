@@ -255,10 +255,15 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     intervalToDims.put(interval, Arrays.asList(dim1Value, dim2Value));
   }
 
+  // The next test also verifies replace functionality. Now, they are together to save on test execution time
+  // due to Travis CI 10 minute default running time (with no output) -- having it separate made it
+  // last longer. At some point we should really simplify this file, so it runs faster (splitting, etc.)
   @Test
   public void createsCorrectRangePartitions() throws Exception
   {
     int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
+
+    // verify dropExisting false
     final Set<DataSegment> publishedSegments = runTask(runTestTask(
         new DimensionRangePartitionsSpec(
             targetRowsPerSegment,
@@ -274,31 +279,11 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     if (!useMultivalueDim) {
       assertRangePartitions(publishedSegments);
     }
-  }
 
-  @Test
-  public void createsCorrectRangePartitionsWithReplace() throws Exception
-  {
-    if (intervalToIndex == null || useMultivalueDim) {
+    // verify dropExisting true
+    if (intervalToIndex == null) {
       // dropExisting requires intervals
       return;
-    }
-    int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
-
-    final Set<DataSegment> publishedSegments = runTask(runTestTask(
-        new DimensionRangePartitionsSpec(
-            targetRowsPerSegment,
-            null,
-            Collections.singletonList(DIM1),
-            false
-        ),
-        inputDir,
-        false,
-        false
-    ), useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS);
-
-    if (!useMultivalueDim) {
-      assertRangePartitions(publishedSegments);
     }
 
     File inputDirectory = temporaryFolder.newFolder("dataReplace");

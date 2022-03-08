@@ -158,9 +158,15 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
     inputIntervals.sort(Comparators.intervalsByStartThenEnd());
   }
 
+
+  // The next test also verifies replace functionality. Now, they are together to save on test execution time
+  // due to Travis CI 10 minute default running time (with no output) -- having it separate made it
+  // last longer. At some point we should really simplify this file, so it runs faster (splitting, etc.)
   @Test
   public void testRun() throws Exception
   {
+
+    // verify dropExisting false:
     final Integer maxRowsPerSegment = numShards == null ? 10 : null;
     final Set<DataSegment> publishedSegments = runTask(createTask(
         new HashedPartitionsSpec(
@@ -178,33 +184,12 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
         numShards
     );
     assertHashedPartition(publishedSegments, expectedIntervalToNumSegments);
-  }
 
-  @Test
-  public void testRunWithReplace() throws Exception
-  {
+    // verify dropExisting true:
     if (intervalToIndex == null) {
       // replace only works when intervals are provided
       return;
     }
-    final Integer maxRowsPerSegment = numShards == null ? 10 : null;
-    final Set<DataSegment> publishedSegments = runTask(createTask(
-        new HashedPartitionsSpec(
-            maxRowsPerSegment,
-            numShards,
-            ImmutableList.of("dim1", "dim2")
-        ),
-        inputDir,
-        false,
-        false
-    ), TaskState.SUCCESS);
-
-    final Map<Interval, Integer> expectedIntervalToNumSegments = computeExpectedIntervalToNumSegments(
-        maxRowsPerSegment,
-        numShards
-    );
-    assertHashedPartition(publishedSegments, expectedIntervalToNumSegments);
-
     final Set<DataSegment> publishedSegmentsAfterReplace = runTask(createTask(
         new HashedPartitionsSpec(
             maxRowsPerSegment,
