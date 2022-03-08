@@ -50,6 +50,9 @@ public class DoubleMeanBufferAggregator implements BufferAggregator
   public void aggregate(ByteBuffer buf, int position)
   {
     Object update = selector.getObject();
+    if (selector.isNull()) {
+      return;
+    }
 
     if (update instanceof DoubleMeanHolder) {
       DoubleMeanHolder.update(buf, position, (DoubleMeanHolder) update);

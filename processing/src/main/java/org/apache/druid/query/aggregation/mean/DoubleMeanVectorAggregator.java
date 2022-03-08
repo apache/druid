@@ -44,8 +44,15 @@ public class DoubleMeanVectorAggregator implements VectorAggregator
   @Override
   public void aggregate(final ByteBuffer buf, final int position, final int startRow, final int endRow)
   {
+    final boolean[] nullVector = selector.getNullVector();
+
     final double[] vector = selector.getDoubleVector();
     for (int i = startRow; i < endRow; i++) {
+      if (nullVector != null) {
+        if (nullVector[i]) {
+          continue;
+        }
+      }
       DoubleMeanHolder.update(buf, position, vector[i]);
     }
   }
@@ -59,9 +66,15 @@ public class DoubleMeanVectorAggregator implements VectorAggregator
       final int positionOffset
   )
   {
+    final boolean[] nullVector = selector.getNullVector();
     final double[] vector = selector.getDoubleVector();
 
     for (int i = 0; i < numRows; i++) {
+      if (nullVector != null) {
+        if (nullVector[i]) {
+          continue;
+        }
+      }
       final double val = vector[rows != null ? rows[i] : i];
       DoubleMeanHolder.update(buf, positions[i] + positionOffset, val);
     }
