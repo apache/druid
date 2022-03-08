@@ -438,7 +438,7 @@ public class Filters
       return useCNF ? Filters.toCnf(filter) : filter;
     }
     catch (CNFFilterExplosionException cnfFilterExplosionException) {
-      throw new RuntimeException(cnfFilterExplosionException);
+      return filter; // cannot convert to CNF, return the filter as is
     }
   }
 
