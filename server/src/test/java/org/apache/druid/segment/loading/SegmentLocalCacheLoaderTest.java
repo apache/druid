@@ -63,7 +63,7 @@ public class SegmentLocalCacheLoaderTest
 
     segmentLocalCacheLoader = new SegmentLocalCacheLoader(cacheManager, null, objectMapper);
 
-    TombstoneLoadSpec.witeFactoryFile(storageLoc.getCacheDir());
+    TombstoneLoadSpec.writeFactoryFile(storageLoc.getCacheDir());
   }
 
   @Test

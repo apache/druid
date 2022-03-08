@@ -35,7 +35,7 @@ public class TombstoneLoadSpec implements LoadSpec
   public LoadSpecResult loadSegment(File destDir) throws SegmentLoadingException
   {
     try {
-      return new LoadSpecResult(witeFactoryFile(destDir));
+      return new LoadSpecResult(writeFactoryFile(destDir));
     }
     catch (IOException e) {
       throw new SegmentLoadingException(
