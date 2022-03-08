@@ -47,7 +47,7 @@ public class TombstoneLoadSpec implements LoadSpec
   }
 
   @VisibleForTesting
-  public static int witeFactoryFile(File destDir) throws IOException
+  public static int writeFactoryFile(File destDir) throws IOException
   {
     final String factoryJSONString = "{\"type\":\"tombstoneSegmentFactory\"}";
     final File factoryJson = new File(destDir, "factory.json");
