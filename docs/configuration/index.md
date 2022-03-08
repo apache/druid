@@ -1026,7 +1026,7 @@ The below is a list of the supported configurations for auto compaction.
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|
-|`dropExisting`|If `true` the compaction task replaces all existing segments fully contained by the umbrella interval of the compacted segments when the task publishes new segments and tombstones. If compaction fails, Druid does publish any segments or tombstones. WARNING: this functionality is still in beta. Note that changing this config does not cause intervals to be compacted again.|false|no|
+|`dropExisting`|If `true` the compaction task replaces all existing segments fully contained by the umbrella interval of the compacted segments when the task publishes new segments and tombstones. If compaction fails, Druid does not publish any segments or tombstones. WARNING: this functionality is still in beta. Note that changing this config does not cause intervals to be compacted again.|false|no|
 
 ### Overlord
 
