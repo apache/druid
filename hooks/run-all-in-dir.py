@@ -1,4 +1,5 @@
-#!/bin/bash -eu
+#!/usr/bin/env python3
+
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -14,5 +15,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# set thread count to 2 times of cores to speed up checking
-mvn checkstyle:checkstyle -T 2C --fail-at-end
+import os
+import sys
+import subprocess
+
+
+if len(sys.argv) < 2:
+	sys.stderr.write('usage: program <hooks directory>\n')
+	sys.exit(1)
+
+hooks_dir = sys.argv[1]
+args = sys.argv[2:]
+
+for hook in os.listdir(hooks_dir):
+	if not hook.startswith("_"):
+		command = [os.path.join(hooks_dir, hook)] + args
+		print("Running {}".format(command))
+		subprocess.run(command, shell=True)
