@@ -41,7 +41,6 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.scan.ScanResultValue;
-import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -325,25 +324,6 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     }
     Assert.assertEquals(11, tombstones);
     Assert.assertEquals(10, publishedSegmentsAfterReplace.size() - tombstones);
-  }
-
-  @Test
-  public void testRowStats()
-  {
-    if (useMultivalueDim) {
-      return;
-    }
-    final int targetRowsPerSegment = NUM_ROW / DIM_FILE_CARDINALITY / NUM_PARTITION;
-    ParallelIndexSupervisorTask task = runTestTask(
-        new SingleDimensionPartitionsSpec(targetRowsPerSegment, null, DIM1, false),
-        inputDir, false, false
-    );
-    Map<String, Object> expectedReports = buildExpectedTaskReportParallel(
-        task.getId(),
-        ImmutableList.of(),
-        new RowIngestionMetersTotals(600, 0, 0, 0));
-    Map<String, Object> actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
-    compareTaskReports(expectedReports, actualReports);
   }
 
   @Test

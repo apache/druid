@@ -177,8 +177,13 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @MonotonicNonNull
   private volatile TaskToolbox toolbox;
 
+  /**
+   * Row stats for index generate phase of parallel indexing. This variable is
+   * lazily initialized in {@link #runTask}.
+   * Volatile since HTTP API calls can use this variable while this task is running.
+   */
   @MonotonicNonNull
-  private Pair<Map<String, Object>, Map<String, Object>> indexGenerateRowStats;
+  private volatile Pair<Map<String, Object>, Map<String, Object>> indexGenerateRowStats;
 
   private IngestionState ingestionState;
 
