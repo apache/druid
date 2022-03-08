@@ -214,7 +214,6 @@ public class ResourcePool<K, V> implements Closeable
     // Hold previously created / returned resources
     protected final ArrayDeque<ResourceHolder<V>> resourceHolderList;
     // To keep track of resources that have been successfully returned to caller.
-    // Please enclose span of access / modifiers of variable in synchronized block
     private int numLentResources = 0;
     private boolean closed = false;
 
@@ -242,7 +241,7 @@ public class ResourcePool<K, V> implements Closeable
     {
       final V poolVal;
       // resourceHolderList can't have nulls, so we'll use a null to signal that we need to create a new resource.
-      final V retVal;
+      boolean expired = false;
       synchronized (this) {
         while (!closed && (numLentResources == maxSize)) {
           try {
@@ -254,12 +253,11 @@ public class ResourcePool<K, V> implements Closeable
           }
         }
 
-        boolean expired = false;
         if (closed) {
           log.info(StringUtils.format("get() called even though I'm closed. key[%s]", key));
           return null;
         } else if (numLentResources < maxSize) {
-          // Attempt to take an existing resource or create one if list is empty
+          // Attempt to take an existing resource or create one if list is empty, and increment numLentResources
           if (resourceHolderList.isEmpty()) {
             poolVal = factory.generate(key);
           } else {
@@ -269,30 +267,31 @@ public class ResourcePool<K, V> implements Closeable
               expired = true;
             }
           }
+          numLentResources++;
         } else {
           throw new IllegalStateException("Unexpected state: More objects lent than permissible");
         }
+      }
 
-        // At this point, we must either return a valid resource and increment "numLentResources"
-        // Or throw and exception
-        try {
-          if (poolVal != null && !expired && factory.isGood(poolVal)) {
-            retVal = poolVal;
-          } else {
-            if (poolVal != null) {
-              factory.close(poolVal);
-            }
-            retVal = factory.generate(key);
+      final V retVal;
+      // At this point, we must either return a valid resource. Or throw and exception decrement "numLentResources"
+      try {
+        if (poolVal != null && !expired && factory.isGood(poolVal)) {
+          retVal = poolVal;
+        } else {
+          if (poolVal != null) {
+            factory.close(poolVal);
           }
-          numLentResources++;
+          retVal = factory.generate(key);
         }
-        catch (Throwable e) {
-          synchronized (this) {
-            this.notifyAll();
-          }
-          Throwables.propagateIfPossible(e);
-          throw new RuntimeException(e);
+      }
+      catch (Throwable e) {
+        synchronized (this) {
+          numLentResources--;
+          this.notifyAll();
         }
+        Throwables.propagateIfPossible(e);
+        throw new RuntimeException(e);
       }
 
       return retVal;
