@@ -133,15 +133,15 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     private BaseTestSeekableStreamSupervisor()
     {
       super(
-              "testSupervisorId",
-              taskStorage,
-              taskMaster,
-              indexerMetadataStorageCoordinator,
-              taskClientFactory,
-              OBJECT_MAPPER,
-              spec,
-              rowIngestionMetersFactory,
-              false
+          "testSupervisorId",
+          taskStorage,
+          taskMaster,
+          indexerMetadataStorageCoordinator,
+          taskClientFactory,
+          OBJECT_MAPPER,
+          spec,
+          rowIngestionMetersFactory,
+          false
       );
     }
 
@@ -154,7 +154,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     @Override
     protected void updatePartitionLagFromStream()
     {
-        // do nothing
+      // do nothing
     }
 
     @Nullable
@@ -173,25 +173,25 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     @Override
     protected SeekableStreamIndexTaskIOConfig createTaskIoConfig(
-            int groupId,
-            Map<String, String> startPartitions,
-            Map<String, String> endPartitions,
-            String baseSequenceName,
-            DateTime minimumMessageTime,
-            DateTime maximumMessageTime,
-            Set<String> exclusiveStartSequenceNumberPartitions,
-            SeekableStreamSupervisorIOConfig ioConfig
+        int groupId,
+        Map<String, String> startPartitions,
+        Map<String, String> endPartitions,
+        String baseSequenceName,
+        DateTime minimumMessageTime,
+        DateTime maximumMessageTime,
+        Set<String> exclusiveStartSequenceNumberPartitions,
+        SeekableStreamSupervisorIOConfig ioConfig
     )
     {
       return new SeekableStreamIndexTaskIOConfig<String, String>(
-              groupId,
-              baseSequenceName,
-              new SeekableStreamStartSequenceNumbers<>(STREAM, startPartitions, exclusiveStartSequenceNumberPartitions),
-              new SeekableStreamEndSequenceNumbers<>(STREAM, endPartitions),
-              true,
-              minimumMessageTime,
-              maximumMessageTime,
-              ioConfig.getInputFormat()
+          groupId,
+          baseSequenceName,
+          new SeekableStreamStartSequenceNumbers<>(STREAM, startPartitions, exclusiveStartSequenceNumberPartitions),
+          new SeekableStreamEndSequenceNumbers<>(STREAM, endPartitions),
+          true,
+          minimumMessageTime,
+          maximumMessageTime,
+          ioConfig.getInputFormat()
       )
       {
       };
@@ -199,13 +199,13 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     @Override
     protected List<SeekableStreamIndexTask<String, String, ByteEntity>> createIndexTasks(
-            int replicas,
-            String baseSequenceName,
-            ObjectMapper sortingMapper,
-            TreeMap<Integer, Map<String, String>> sequenceOffsets,
-            SeekableStreamIndexTaskIOConfig taskIoConfig,
-            SeekableStreamIndexTaskTuningConfig taskTuningConfig,
-            RowIngestionMetersFactory rowIngestionMetersFactory
+        int replicas,
+        String baseSequenceName,
+        ObjectMapper sortingMapper,
+        TreeMap<Integer, Map<String, String>> sequenceOffsets,
+        SeekableStreamIndexTaskIOConfig taskIoConfig,
+        SeekableStreamIndexTaskTuningConfig taskTuningConfig,
+        RowIngestionMetersFactory rowIngestionMetersFactory
     )
     {
       return null;
@@ -231,8 +231,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     @Override
     protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetaDataForReset(
-            String stream,
-            Map<String, String> map
+        String stream,
+        Map<String, String> map
     )
     {
       return null;
@@ -271,27 +271,27 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     @Override
     protected SeekableStreamSupervisorReportPayload<String, String> createReportPayload(
-            int numPartitions,
-            boolean includeOffsets
+        int numPartitions,
+        boolean includeOffsets
     )
     {
       return new SeekableStreamSupervisorReportPayload<String, String>(
-              DATASOURCE,
-              STREAM,
-              1,
-              1,
-              1L,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              false,
-              true,
-              null,
-              null,
-              null
+          DATASOURCE,
+          STREAM,
+          1,
+          1,
+          1L,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          false,
+          true,
+          null,
+          null,
+          null
       )
       {
       };
@@ -340,7 +340,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     @Override
     protected void scheduleReporting(ScheduledExecutorService reportingExec)
     {
-        // do nothing
+      // do nothing
     }
 
     @Override
@@ -362,34 +362,37 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     private SeekableStreamSupervisor supervisor;
     private String id;
 
-    public TestSeekableStreamSupervisorSpec(SeekableStreamSupervisorIngestionSpec ingestionSchema,
-                                             @Nullable Map<String, Object> context,
-                                             Boolean suspended,
-                                             TaskStorage taskStorage,
-                                             TaskMaster taskMaster,
-                                             IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
-                                             SeekableStreamIndexTaskClientFactory indexTaskClientFactory,
-                                             ObjectMapper mapper,
-                                             ServiceEmitter emitter,
-                                             DruidMonitorSchedulerConfig monitorSchedulerConfig,
-                                             RowIngestionMetersFactory rowIngestionMetersFactory,
-                                             SupervisorStateManagerConfig supervisorStateManagerConfig,
-                                             SeekableStreamSupervisor supervisor,
-                                             String id)
+    public TestSeekableStreamSupervisorSpec(
+        SeekableStreamSupervisorIngestionSpec ingestionSchema,
+        @Nullable Map<String, Object> context,
+        Boolean suspended,
+        TaskStorage taskStorage,
+        TaskMaster taskMaster,
+        IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
+        SeekableStreamIndexTaskClientFactory indexTaskClientFactory,
+        ObjectMapper mapper,
+        ServiceEmitter emitter,
+        DruidMonitorSchedulerConfig monitorSchedulerConfig,
+        RowIngestionMetersFactory rowIngestionMetersFactory,
+        SupervisorStateManagerConfig supervisorStateManagerConfig,
+        SeekableStreamSupervisor supervisor,
+        String id
+    )
     {
       super(
-              ingestionSchema,
-              context,
-              suspended,
-              taskStorage,
-              taskMaster,
-              indexerMetadataStorageCoordinator,
-              indexTaskClientFactory,
-              mapper,
-              emitter,
-              monitorSchedulerConfig,
-              rowIngestionMetersFactory,
-              supervisorStateManagerConfig);
+          ingestionSchema,
+          context,
+          suspended,
+          taskStorage,
+          taskMaster,
+          indexerMetadataStorageCoordinator,
+          indexTaskClientFactory,
+          mapper,
+          emitter,
+          monitorSchedulerConfig,
+          rowIngestionMetersFactory,
+          supervisorStateManagerConfig
+      );
 
       this.supervisor = supervisor;
       this.id = id;
@@ -482,26 +485,26 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
       public SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig()
       {
         return new SeekableStreamIndexTaskTuningConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
         )
         {
           @Override
@@ -530,17 +533,30 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     AutoScalerConfig autoScalerConfigNull = mapper.convertValue(null, AutoScalerConfig.class);
     Assert.assertNull(autoScalerConfigNull);
 
-    AutoScalerConfig autoScalerConfigDefault = mapper.convertValue(ImmutableMap.of("autoScalerStrategy", "lagBased"), AutoScalerConfig.class);
+    AutoScalerConfig autoScalerConfigDefault = mapper.convertValue(
+        ImmutableMap.of("autoScalerStrategy", "lagBased"),
+        AutoScalerConfig.class
+    );
     Assert.assertTrue(autoScalerConfigDefault instanceof LagBasedAutoScalerConfig);
 
-    AutoScalerConfig autoScalerConfigValue = mapper.convertValue(ImmutableMap.of("lagCollectionIntervalMillis", "1"), AutoScalerConfig.class);
+    AutoScalerConfig autoScalerConfigValue = mapper.convertValue(
+        ImmutableMap.of("lagCollectionIntervalMillis", "1"),
+        AutoScalerConfig.class
+    );
     Assert.assertTrue(autoScalerConfigValue instanceof LagBasedAutoScalerConfig);
     LagBasedAutoScalerConfig lagBasedAutoScalerConfig = (LagBasedAutoScalerConfig) autoScalerConfigValue;
     Assert.assertEquals(lagBasedAutoScalerConfig.getLagCollectionIntervalMillis(), 1);
 
     Exception e = null;
     try {
-      AutoScalerConfig autoScalerError = mapper.convertValue(ImmutableMap.of("enableTaskAutoScaler", "true", "taskCountMax", "1", "taskCountMin", "4"), AutoScalerConfig.class);
+      AutoScalerConfig autoScalerError = mapper.convertValue(ImmutableMap.of(
+          "enableTaskAutoScaler",
+          "true",
+          "taskCountMax",
+          "1",
+          "taskCountMin",
+          "4"
+      ), AutoScalerConfig.class);
     }
     catch (RuntimeException ex) {
       e = ex;
@@ -550,14 +566,15 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     e = null;
     try {
       // taskCountMax and taskCountMin couldn't be ignored.
-      AutoScalerConfig autoScalerError2 = mapper.convertValue(ImmutableMap.of("enableTaskAutoScaler", "true"), AutoScalerConfig.class);
+      AutoScalerConfig autoScalerError2 = mapper.convertValue(
+          ImmutableMap.of("enableTaskAutoScaler", "true"),
+          AutoScalerConfig.class
+      );
     }
     catch (RuntimeException ex) {
       e = ex;
     }
     Assert.assertNotNull(e);
-
-
   }
 
   @Test
@@ -584,51 +601,60 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
     EasyMock.replay(ingestionSchema);
 
-    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(autoScalerConfig, AutoScalerConfig.class)).anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoScalerConfig())
+            .andReturn(mapper.convertValue(autoScalerConfig, AutoScalerConfig.class))
+            .anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
     EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
     EasyMock.replay(supervisor4);
 
-    TestSeekableStreamSupervisorSpec spec = new TestSeekableStreamSupervisorSpec(ingestionSchema,
-            null,
-            false,
-            taskStorage,
-            taskMaster,
-            indexerMetadataStorageCoordinator,
-            indexTaskClientFactory,
-            mapper,
-            emitter,
-            monitorSchedulerConfig,
-            rowIngestionMetersFactory,
-            supervisorStateManagerConfig,
-            supervisor4,
-            "id1");
+    TestSeekableStreamSupervisorSpec spec = new TestSeekableStreamSupervisorSpec(
+        ingestionSchema,
+        null,
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig,
+        supervisor4,
+        "id1"
+    );
     SupervisorTaskAutoScaler autoscaler = spec.createAutoscaler(supervisor4);
     Assert.assertTrue(autoscaler instanceof LagBasedAutoScaler);
 
     EasyMock.reset(seekableStreamSupervisorIOConfig);
     autoScalerConfig.put("enableTaskAutoScaler", false);
-    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(autoScalerConfig, AutoScalerConfig.class)).anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoScalerConfig())
+            .andReturn(mapper.convertValue(autoScalerConfig, AutoScalerConfig.class))
+            .anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
     SupervisorTaskAutoScaler autoscaler2 = spec.createAutoscaler(supervisor4);
     Assert.assertTrue(autoscaler2 instanceof NoopTaskAutoScaler);
 
     EasyMock.reset(seekableStreamSupervisorIOConfig);
     autoScalerConfig.remove("enableTaskAutoScaler");
-    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(autoScalerConfig, AutoScalerConfig.class)).anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoScalerConfig())
+            .andReturn(mapper.convertValue(autoScalerConfig, AutoScalerConfig.class))
+            .anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
     SupervisorTaskAutoScaler autoscaler3 = spec.createAutoscaler(supervisor4);
     Assert.assertTrue(autoscaler3 instanceof NoopTaskAutoScaler);
 
     EasyMock.reset(seekableStreamSupervisorIOConfig);
     autoScalerConfig.clear();
-    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(autoScalerConfig, AutoScalerConfig.class)).anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoScalerConfig())
+            .andReturn(mapper.convertValue(autoScalerConfig, AutoScalerConfig.class))
+            .anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
     Assert.assertTrue(autoScalerConfig.isEmpty());
     SupervisorTaskAutoScaler autoscaler4 = spec.createAutoscaler(supervisor4);
     Assert.assertTrue(autoscaler4 instanceof NoopTaskAutoScaler);
-
   }
 
   @Test
@@ -639,26 +665,38 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
     EasyMock.replay(ingestionSchema);
 
-    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoscalerConfig()).andReturn(mapper.convertValue(ImmutableMap.of("lagCollectionIntervalMillis", "1", "enableTaskAutoScaler", true, "taskCountMax", "4", "taskCountMin", "1"), AutoScalerConfig.class)).anyTimes();
+    EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoScalerConfig())
+            .andReturn(mapper.convertValue(ImmutableMap.of("lagCollectionIntervalMillis",
+                                                           "1",
+                                                           "enableTaskAutoScaler",
+                                                           true,
+                                                           "taskCountMax",
+                                                           "4",
+                                                           "taskCountMin",
+                                                           "1"
+            ), AutoScalerConfig.class))
+            .anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
 
     EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
     EasyMock.replay(supervisor4);
 
-    TestSeekableStreamSupervisorSpec spec = new TestSeekableStreamSupervisorSpec(ingestionSchema,
-            null,
-            false,
-            taskStorage,
-            taskMaster,
-            indexerMetadataStorageCoordinator,
-            indexTaskClientFactory,
-            mapper,
-            emitter,
-            monitorSchedulerConfig,
-            rowIngestionMetersFactory,
-            supervisorStateManagerConfig,
-            supervisor4,
-            "id1");
+    TestSeekableStreamSupervisorSpec spec = new TestSeekableStreamSupervisorSpec(
+        ingestionSchema,
+        null,
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig,
+        supervisor4,
+        "id1"
+    );
     SupervisorTaskAutoScaler autoscaler = spec.createAutoscaler(supervisor4);
     Assert.assertTrue(autoscaler instanceof LagBasedAutoScaler);
     LagBasedAutoScaler lagBasedAutoScaler = (LagBasedAutoScaler) autoscaler;
@@ -679,7 +717,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   @Test
   public void testSeekableStreamSupervisorSpecWithScaleOut() throws InterruptedException
   {
-
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
@@ -700,27 +737,31 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(3);
 
-    LagStats lagStats = supervisor.computeLagStats();
-
-    LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(supervisor, DATASOURCE, mapper.convertValue(getScaleOutProperties(2), LagBasedAutoScalerConfig.class), spec);
+    LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
+        supervisor,
+        DATASOURCE,
+        mapper.convertValue(
+            getScaleOutProperties(2),
+            LagBasedAutoScalerConfig.class
+        ),
+        spec
+    );
     supervisor.start();
     autoScaler.start();
     supervisor.runInternal();
     int taskCountBeforeScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(1, taskCountBeforeScaleOut);
-    Thread.sleep(1 * 1000);
+    Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScaleOut);
 
     autoScaler.reset();
     autoScaler.stop();
-
   }
 
   @Test
   public void testSeekableStreamSupervisorSpecWithScaleOutSmallPartitionNumber() throws InterruptedException
   {
-
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
@@ -740,28 +781,31 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.replay(taskMaster);
 
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(2);
-
-    LagStats lagStats = supervisor.computeLagStats();
-
-    LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(supervisor, DATASOURCE, mapper.convertValue(getScaleOutProperties(3), LagBasedAutoScalerConfig.class), spec);
+    LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
+        supervisor,
+        DATASOURCE,
+        mapper.convertValue(
+            getScaleOutProperties(3),
+            LagBasedAutoScalerConfig.class
+        ),
+        spec
+    );
     supervisor.start();
     autoScaler.start();
     supervisor.runInternal();
     int taskCountBeforeScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(1, taskCountBeforeScaleOut);
-    Thread.sleep(1 * 1000);
+    Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScaleOut);
 
     autoScaler.reset();
     autoScaler.stop();
-
   }
 
   @Test
   public void testSeekableStreamSupervisorSpecWithScaleIn() throws InterruptedException
   {
-
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
@@ -781,7 +825,15 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.replay(taskMaster);
 
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(3);
-    LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(supervisor, DATASOURCE, mapper.convertValue(getScaleInProperties(), LagBasedAutoScalerConfig.class), spec);
+    LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
+        supervisor,
+        DATASOURCE,
+        mapper.convertValue(
+            getScaleInProperties(),
+            LagBasedAutoScalerConfig.class
+        ),
+        spec
+    );
 
     // enable autoscaler so that taskcount config will be ignored and init value of taskCount will use taskCountMin.
     Assert.assertEquals(1, (int) supervisor.getIoConfig().getTaskCount());
@@ -791,7 +843,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     supervisor.runInternal();
     int taskCountBeforeScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountBeforeScaleOut);
-    Thread.sleep(1 * 1000);
+    Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(1, taskCountAfterScaleOut);
 
@@ -802,20 +854,21 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   @Test
   public void testSeekableStreamSupervisorSpecWithScaleDisable() throws InterruptedException
   {
-
     SeekableStreamSupervisorIOConfig seekableStreamSupervisorIOConfig = new SeekableStreamSupervisorIOConfig(
-            "stream",
-            new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
-            1,
-            1,
-            new Period("PT1H"),
-            new Period("P1D"),
-            new Period("PT30S"),
-            false,
-            new Period("PT30M"),
-            null,
-            null, null, null
-    ) {};
+        "stream",
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
+        1,
+        1,
+        new Period("PT1H"),
+        new Period("P1D"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null, null, null
+    )
+    {
+    };
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
@@ -856,16 +909,16 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     dimensions.add(StringDimensionSchema.create("dim2"));
 
     return new DataSchema(
-            DATASOURCE,
-            new TimestampSpec("timestamp", "iso", null),
-            new DimensionsSpec(dimensions),
-            new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-            new UniformGranularitySpec(
-                    Granularities.HOUR,
-                    Granularities.NONE,
-                    ImmutableList.of()
-            ),
-            null
+        DATASOURCE,
+        new TimestampSpec("timestamp", "iso", null),
+        new DimensionsSpec(dimensions),
+        new AggregatorFactory[]{new CountAggregatorFactory("rows")},
+        new UniformGranularitySpec(
+            Granularities.HOUR,
+            Granularities.NONE,
+            ImmutableList.of()
+        ),
+        null
     );
   }
 
@@ -873,32 +926,38 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   {
     if (scaleOut) {
       return new SeekableStreamSupervisorIOConfig(
-              "stream",
-              new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
-              1,
-              taskCount,
-              new Period("PT1H"),
-              new Period("P1D"),
-              new Period("PT30S"),
-              false,
-              new Period("PT30M"),
-              null,
-              null, mapper.convertValue(getScaleOutProperties(2), AutoScalerConfig.class), null
-      ) {};
+          "stream",
+          new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
+          1,
+          taskCount,
+          new Period("PT1H"),
+          new Period("P1D"),
+          new Period("PT30S"),
+          false,
+          new Period("PT30M"),
+          null,
+          null,
+          mapper.convertValue(getScaleOutProperties(2), AutoScalerConfig.class), null
+      )
+      {
+      };
     } else {
       return new SeekableStreamSupervisorIOConfig(
-              "stream",
-              new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
-              1,
-              taskCount,
-              new Period("PT1H"),
-              new Period("P1D"),
-              new Period("PT30S"),
-              false,
-              new Period("PT30M"),
-              null,
-              null, mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class), null
-        ) {};
+          "stream",
+          new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
+          1,
+          taskCount,
+          new Period("PT1H"),
+          new Period("P1D"),
+          new Period("PT30S"),
+          false,
+          new Period("PT30M"),
+          null,
+          null,
+          mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class), null
+      )
+      {
+      };
     }
   }
 
