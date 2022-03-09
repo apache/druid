@@ -87,6 +87,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTestBase;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SettableByteEntity;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.test.TestDataSegmentAnnouncer;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
@@ -3124,13 +3125,14 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     @Override
     public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
     {
-      final KafkaRecordEntity recordEntity = (KafkaRecordEntity) source;
-      final InputEntityReader delegate = baseInputFormat.createReader(inputRowSchema, recordEntity, temporaryDirectory);
+      final SettableByteEntity<KafkaRecordEntity> settableByteEntity = (SettableByteEntity<KafkaRecordEntity>) source;
+      final InputEntityReader delegate = baseInputFormat.createReader(inputRowSchema, source, temporaryDirectory);
       return new InputEntityReader()
       {
         @Override
         public CloseableIterator<InputRow> read() throws IOException
         {
+          KafkaRecordEntity recordEntity = (KafkaRecordEntity) settableByteEntity.getEntity();
           return delegate.read().map(
               r -> {
                 MapBasedInputRow row = (MapBasedInputRow) r;
