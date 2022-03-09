@@ -599,19 +599,15 @@ public class GroupByQueryEngineV2
       return indexedInts.size() == 1 ? indexedInts.get(0) : GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE;
     }
 
+    /**
+     * Throws {@link UnexpectedMultiValueDimensionException} if "allowMultiValueGrouping" is false.
+     */
     protected void checkIfMultiValueGroupingIsAllowed(String dimName)
     {
       if (!allowMultiValueGrouping) {
-        throw new ISE(
-            "Encountered multi-value dimension %s that cannot be processed with %s set to false."
-            + " Consider setting %s to true.",
-            dimName,
-            GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY,
-            GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY
-        );
+        throw new UnexpectedMultiValueDimensionException(dimName);
       }
     }
-
   }
 
   private static class HashAggregateIterator extends GroupByEngineIterator<ByteBuffer>

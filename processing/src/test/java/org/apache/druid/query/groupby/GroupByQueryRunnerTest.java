@@ -114,6 +114,7 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SearchQueryDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensionException;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.having.DimensionSelectorHavingSpec;
 import org.apache.druid.query.groupby.having.EqualToHavingSpec;
@@ -137,6 +138,7 @@ import org.apache.druid.segment.data.ComparableList;
 import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
@@ -145,6 +147,7 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableCauseMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -160,6 +163,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -1330,12 +1334,16 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       ));
     } else if (!vectorize) {
       expectedException.expect(RuntimeException.class);
+      expectedException.expectCause(CoreMatchers.instanceOf(ExecutionException.class));
+      expectedException.expectCause(
+          ThrowableCauseMatcher.hasCause(CoreMatchers.instanceOf(UnexpectedMultiValueDimensionException.class))
+      );
       expectedException.expectMessage(StringUtils.format(
-          "Encountered multi-value dimension %s that cannot be processed with %s set to false."
-          + " Consider setting %s to true.",
+          "Encountered multi-value dimension [%s] that cannot be processed with '%s' set to false."
+          + " Consider setting '%s' to true in your query context.",
           "placementish",
-          GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY,
-          GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY
+          GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
+          GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING
       ));
     } else {
       cannotVectorize();
