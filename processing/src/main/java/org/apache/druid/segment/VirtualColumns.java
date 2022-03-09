@@ -174,10 +174,9 @@ public class VirtualColumns implements Cacheable
   public BitmapIndex getBitmapIndex(String columnName, ColumnSelector columnSelector)
   {
     final VirtualColumn virtualColumn = getVirtualColumnForSelector(columnName);
-    return virtualColumn.capabilities(columnName).hasBitmapIndexes() ? virtualColumn.getBitmapIndex(
-        columnName,
-        columnSelector
-    ) : null;
+    return virtualColumn.capabilities(columnSelector, columnName).hasBitmapIndexes()
+           ? virtualColumn.getBitmapIndex(columnName, columnSelector)
+           : null;
   }
 
   /**

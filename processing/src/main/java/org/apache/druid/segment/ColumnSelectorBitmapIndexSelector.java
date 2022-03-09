@@ -20,7 +20,6 @@
 package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableList;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
@@ -40,6 +39,7 @@ import org.apache.druid.segment.serde.StringBitmapIndexColumnPartSupplier;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -308,23 +308,12 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
             }
           }
 
-          endIndex = startIndex > endIndex || !matcher.test(getValue(endIndex)) ? startIndex : endIndex;
-          if (matcher.test(getValue(startIndex))) {
-            final IntIterator rangeIterator = IntListUtils.fromTo(startIndex, endIndex).iterator();
-            return () -> new Iterator<ImmutableBitmap>()
-            {
-              @Override
-              public boolean hasNext()
-              {
-                return rangeIterator.hasNext();
-              }
-
-              @Override
-              public ImmutableBitmap next()
-              {
-                return getBitmap(rangeIterator.nextInt());
-              }
-            };
+          endIndex = Math.max(startIndex, endIndex);
+          if (startIndex == endIndex) {
+            return Collections.emptyList();
+          }
+          if (matcher.test(null)) {
+            return ImmutableList.of(getBitmap(0));
           }
           return ImmutableList.of(bitmapFactory.makeEmptyImmutableBitmap());
         }

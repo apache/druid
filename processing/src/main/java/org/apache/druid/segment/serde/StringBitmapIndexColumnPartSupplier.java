@@ -20,6 +20,8 @@
 package org.apache.druid.segment.serde;
 
 import com.google.common.base.Supplier;
+import it.unimi.dsi.fastutil.ints.IntIntImmutablePair;
+import it.unimi.dsi.fastutil.ints.IntIntPair;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
@@ -87,7 +89,6 @@ public class StringBitmapIndexColumnPartSupplier implements Supplier<BitmapIndex
       @Override
       public int getIndex(@Nullable String value)
       {
-        // GenericIndexed.indexOf satisfies contract needed by BitmapIndex.indexOf
         return dictionary.indexOf(value);
       }
 
@@ -117,33 +118,12 @@ public class StringBitmapIndexColumnPartSupplier implements Supplier<BitmapIndex
           boolean endStrict
       )
       {
-        int startIndex, endIndex;
-        if (startValue == null) {
-          startIndex = 0;
-        } else {
-          final int found = dictionary.indexOf(NullHandling.emptyToNullIfNeeded(startValue));
-          if (found >= 0) {
-            startIndex = startStrict ? found + 1 : found;
-          } else {
-            startIndex = -(found + 1);
-          }
-        }
-
-        if (endValue == null) {
-          endIndex = dictionary.size();
-        } else {
-          final int found = dictionary.indexOf(NullHandling.emptyToNullIfNeeded(endValue));
-          if (found >= 0) {
-            endIndex = endStrict ? found : found + 1;
-          } else {
-            endIndex = -(found + 1);
-          }
-        }
-
-        endIndex = startIndex > endIndex ? startIndex : endIndex;
-        final IntIterator rangeIterator = IntListUtils.fromTo(startIndex, endIndex).iterator();
+        final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
+        final int start = range.leftInt(), end = range.rightInt();
         return () -> new Iterator<ImmutableBitmap>()
         {
+          final IntIterator rangeIterator = IntListUtils.fromTo(start, end).iterator();
+
           @Override
           public boolean hasNext()
           {
@@ -167,31 +147,8 @@ public class StringBitmapIndexColumnPartSupplier implements Supplier<BitmapIndex
           Predicate<String> indexMatcher
       )
       {
-        int startIndex, endIndex;
-        if (startValue == null) {
-          startIndex = 0;
-        } else {
-          final int found = dictionary.indexOf(NullHandling.emptyToNullIfNeeded(startValue));
-          if (found >= 0) {
-            startIndex = startStrict ? found + 1 : found;
-          } else {
-            startIndex = -(found + 1);
-          }
-        }
-
-        if (endValue == null) {
-          endIndex = dictionary.size();
-        } else {
-          final int found = dictionary.indexOf(NullHandling.emptyToNullIfNeeded(endValue));
-          if (found >= 0) {
-            endIndex = endStrict ? found : found + 1;
-          } else {
-            endIndex = -(found + 1);
-          }
-        }
-
-        endIndex = startIndex > endIndex ? startIndex : endIndex;
-        final int start = startIndex, end = endIndex;
+        final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
+        final int start = range.leftInt(), end = range.rightInt();
         return () -> new Iterator<ImmutableBitmap>()
         {
           int currIndex = start;
@@ -273,6 +230,35 @@ public class StringBitmapIndexColumnPartSupplier implements Supplier<BitmapIndex
             }
           }
         };
+      }
+
+      private IntIntPair getRange(@Nullable String startValue, boolean startStrict, @Nullable String endValue, boolean endStrict)
+      {
+        int startIndex, endIndex;
+        if (startValue == null) {
+          startIndex = 0;
+        } else {
+          final int found = dictionary.indexOf(NullHandling.emptyToNullIfNeeded(startValue));
+          if (found >= 0) {
+            startIndex = startStrict ? found + 1 : found;
+          } else {
+            startIndex = -(found + 1);
+          }
+        }
+
+        if (endValue == null) {
+          endIndex = dictionary.size();
+        } else {
+          final int found = dictionary.indexOf(NullHandling.emptyToNullIfNeeded(endValue));
+          if (found >= 0) {
+            endIndex = endStrict ? found : found + 1;
+          } else {
+            endIndex = -(found + 1);
+          }
+        }
+
+        endIndex = Math.max(startIndex, endIndex);
+        return new IntIntImmutablePair(startIndex, endIndex);
       }
     };
   }
