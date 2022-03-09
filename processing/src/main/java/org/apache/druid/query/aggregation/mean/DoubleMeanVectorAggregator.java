@@ -53,7 +53,7 @@ public class DoubleMeanVectorAggregator implements VectorAggregator
         for (int i = startRow; i < endRow; i++) {
           DoubleMeanHolder.update(buf, position, vector[i]);
         }
-      }else {
+      } else {
         for (int i = startRow; i < endRow; i++) {
           if (!nulls[i]) {
             DoubleMeanHolder.update(buf, position, vector[i]);

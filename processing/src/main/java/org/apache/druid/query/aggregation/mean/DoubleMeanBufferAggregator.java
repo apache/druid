@@ -52,7 +52,7 @@ public class DoubleMeanBufferAggregator implements BufferAggregator
   {
     Object update = selector.getObject();
 
-    if (update == null && NullHandling.replaceWithDefault()==false) {
+    if (update == null && NullHandling.replaceWithDefault() == false) {
       return;
     }
     if (update instanceof DoubleMeanHolder) {
