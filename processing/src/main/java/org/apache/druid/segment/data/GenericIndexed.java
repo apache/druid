@@ -350,12 +350,17 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     if (!allowReverseLookup) {
       throw new UnsupportedOperationException("Reverse lookup not allowed.");
     }
+    return indexOf(this, value);
+  }
+
+  private int indexOf(Indexed<T> indexed, @Nullable T value)
+  {
     int minIndex = 0;
     int maxIndex = size - 1;
     while (minIndex <= maxIndex) {
       int currIndex = (minIndex + maxIndex) >>> 1;
 
-      T currValue = get(currIndex);
+      T currValue = indexed.get(currIndex);
       int comparison = strategy.compare(currValue, value);
       if (comparison == 0) {
         return currIndex;
