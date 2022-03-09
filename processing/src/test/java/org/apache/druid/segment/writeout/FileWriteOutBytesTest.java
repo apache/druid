@@ -182,12 +182,6 @@ public class FileWriteOutBytesTest
     int fileSize = 4096;
     int numOfInt = fileSize / Integer.BYTES;
     ByteBuffer destination = ByteBuffer.allocate(Integer.BYTES);
-    EasyMock.expect(mockFileChannel.write(EasyMock.anyObject(ByteBuffer.class)))
-            .andAnswer(() -> {
-              ByteBuffer buffer = (ByteBuffer) EasyMock.getCurrentArguments()[0];
-              buffer.position(buffer.remaining());
-              return 0;
-            }).times(1);
     EasyMock.replay(mockFileChannel);
     for (int i = 0; i < numOfInt; i++) {
       fileWriteOutBytes.writeInt(i);
