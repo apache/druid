@@ -760,6 +760,7 @@ All Druid components can communicate with each other over HTTP.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.global.http.numConnections`|Size of connection pool per destination URL. If there are more HTTP requests than this number that all need to speak to the same URL, then they will queue up.|`20`|
+|`druid.global.http.eagerInitialization`|Indicates that http connections should be eagerly initialized. If set to true, `numConnections` connections are created upon initialization|`true`|
 |`druid.global.http.compressionCodec`|Compression codec to communicate with others. May be "gzip" or "identity".|`gzip`|
 |`druid.global.http.readTimeout`|The timeout for data reads.|`PT15M`|
 |`druid.global.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.global.http.readTimeout`. Set this timeout = ~90% of `druid.global.http.readTimeout`|`PT4M`|
@@ -1761,6 +1762,7 @@ client has the following configuration options.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.broker.http.numConnections`|Size of connection pool for the Broker to connect to Historical and real-time processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|`20`|
+|`druid.broker.http.eagerInitialization`|Indicates that http connections from Broker to Historical and Real-time processes should be eagerly initialized. If set to true, `numConnections` connections are created upon initialization|`true`|
 |`druid.broker.http.compressionCodec`|Compression codec the Broker uses to communicate with Historical and real-time processes. May be "gzip" or "identity".|`gzip`|
 |`druid.broker.http.readTimeout`|The timeout for data reads from Historical servers and real-time tasks.|`PT15M`|
 |`druid.broker.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.broker.http.readTimeout`. Set this timeout = ~90% of `druid.broker.http.readTimeout`|`PT4M`|
@@ -2152,6 +2154,7 @@ Supported query contexts:
 |`druid.router.avatica.balancer.type`|Class to use for balancing Avatica queries across Brokers. Please see [Avatica Query Balancing](../design/router.md#avatica-query-balancing).|rendezvousHash|
 |`druid.router.managementProxy.enabled`|Enables the Router's [management proxy](../design/router.md#router-as-management-proxy) functionality.|false|
 |`druid.router.http.numConnections`|Size of connection pool for the Router to connect to Broker processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|`20`|
+|`druid.router.http.eagerInitialization`|Indicates that http connections from Router to Broker should be eagerly initialized. If set to true, `numConnections` connections are created upon initialization|`true`|
 |`druid.router.http.readTimeout`|The timeout for data reads from Broker processes.|`PT15M`|
 |`druid.router.http.numMaxThreads`|Maximum number of worker threads to handle HTTP requests and responses|`max(10, ((number of cores * 17) / 16 + 2) + 30)`|
 |`druid.router.http.numRequestsQueued`|Maximum number of requests that may be queued to a destination|`1024`|
