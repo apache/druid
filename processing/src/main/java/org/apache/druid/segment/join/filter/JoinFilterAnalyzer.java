@@ -32,6 +32,7 @@ import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
 import javax.annotation.Nullable;
@@ -107,7 +108,20 @@ public class JoinFilterAnalyzer
       normalizedOrClauses = Filters.toNormalizedOrClauses(key.getFilter());
     }
     catch (CNFFilterExplosionException cnfFilterExplosionException) {
-      return preAnalysisBuilder.build(); // disable the filter pushdown and rewrite optimization
+      JoinFilterRewriteConfig configWithoutPushdownAndRewrite = new JoinFilterRewriteConfig(
+          false, // disable the filter pushdown and rewrite optimization
+          false,
+          key.getRewriteConfig().isEnableRewriteValueColumnFilters(),
+          key.getRewriteConfig().isEnableRewriteJoinToFilter(),
+          key.getRewriteConfig().getFilterRewriteMaxSize()
+      );
+      JoinFilterPreAnalysisKey keyWithoutPushdownAndRewrite = new JoinFilterPreAnalysisKey(
+          configWithoutPushdownAndRewrite,
+          key.getJoinableClauses(),
+          key.getVirtualColumns(),
+          key.getFilter()
+      );
+      return new JoinFilterPreAnalysis.Builder(keyWithoutPushdownAndRewrite, postJoinVirtualColumns).build();
     }
 
     List<Filter> normalizedBaseTableClauses = new ArrayList<>();
