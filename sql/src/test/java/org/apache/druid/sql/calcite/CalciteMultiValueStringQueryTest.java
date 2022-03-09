@@ -123,11 +123,11 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
         exception -> {
           exception.expect(RuntimeException.class);
           expectedException.expectMessage(StringUtils.format(
-              "Encountered multi-value dimension %s that cannot be processed with %s set to false."
-              + " Consider setting %s to true.",
+              "Encountered multi-value dimension [%s] that cannot be processed with '%s' set to false."
+              + " Consider setting '%s' to true in your query context.",
               "v0",
-              GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY,
-              GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY
+              GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
+              GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING
           ));
         }
     );
