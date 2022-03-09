@@ -38,9 +38,9 @@ import java.io.IOException;
  * A settable {@link InputEntityReader}. This class is intended to be used for only stream parsing in Kafka or Kinesis
  * indexing.
  */
-class SettableByteEntityReader implements InputEntityReader
+class SettableByteEntityReader<T extends ByteEntity> implements InputEntityReader
 {
-  private final SettableByteEntity entity;
+  private final SettableByteEntity<T> entity;
   private final InputEntityReader delegate;
 
   SettableByteEntityReader(
@@ -52,14 +52,14 @@ class SettableByteEntityReader implements InputEntityReader
   {
     Preconditions.checkNotNull(inputFormat, "inputFormat");
     final InputFormat format = (inputFormat instanceof JsonInputFormat) ? ((JsonInputFormat) inputFormat).withLineSplittable(false) : inputFormat;
-    this.entity = new SettableByteEntity();
+    this.entity = new SettableByteEntity<>();
     this.delegate = new TransformingInputEntityReader(
         format.createReader(inputRowSchema, entity, indexingTmpDir),
         transformSpec.toTransformer()
     );
   }
 
-  void setEntity(ByteEntity entity)
+  void setEntity(T entity)
   {
     this.entity.setEntity(entity);
   }

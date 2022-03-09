@@ -476,7 +476,7 @@ public class KafkaInputFormatTest
     }
 
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);
-    SettableByteEntity settableByteEntity = new SettableByteEntity();
+    SettableByteEntity<KafkaRecordEntity> settableByteEntity = new SettableByteEntity<>();
 
     final InputEntityReader reader = format.createReader(
         new InputRowSchema(
@@ -546,9 +546,9 @@ public class KafkaInputFormatTest
     }
   }
 
-  private SettableByteEntity newSettableByteEntity(KafkaRecordEntity kafkaRecordEntity)
+  private SettableByteEntity<KafkaRecordEntity> newSettableByteEntity(KafkaRecordEntity kafkaRecordEntity)
   {
-    SettableByteEntity settableByteEntity = new SettableByteEntity();
+    SettableByteEntity<KafkaRecordEntity> settableByteEntity = new SettableByteEntity<>();
     settableByteEntity.setEntity(kafkaRecordEntity);
     return settableByteEntity;
   }

@@ -3125,7 +3125,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     @Override
     public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
     {
-      final SettableByteEntity settableByteEntity = (SettableByteEntity) source;
+      final SettableByteEntity<KafkaRecordEntity> settableByteEntity = (SettableByteEntity<KafkaRecordEntity>) source;
       final InputEntityReader delegate = baseInputFormat.createReader(inputRowSchema, source, temporaryDirectory);
       return new InputEntityReader()
       {

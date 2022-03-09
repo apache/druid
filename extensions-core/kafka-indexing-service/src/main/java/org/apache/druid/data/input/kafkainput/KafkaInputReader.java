@@ -49,7 +49,7 @@ public class KafkaInputReader implements InputEntityReader
   private static final Logger log = new Logger(KafkaInputReader.class);
 
   private final InputRowSchema inputRowSchema;
-  private final SettableByteEntity source;
+  private final SettableByteEntity<KafkaRecordEntity> source;
   private final Function<KafkaRecordEntity, KafkaHeaderReader> headerParserSupplier;
   private final Function<KafkaRecordEntity, InputEntityReader> keyParserSupplier;
   private final InputEntityReader valueParser;
@@ -68,7 +68,7 @@ public class KafkaInputReader implements InputEntityReader
    */
   public KafkaInputReader(
       InputRowSchema inputRowSchema,
-      SettableByteEntity source,
+      SettableByteEntity<KafkaRecordEntity> source,
       @Nullable Function<KafkaRecordEntity, KafkaHeaderReader> headerParserSupplier,
       @Nullable Function<KafkaRecordEntity, InputEntityReader> keyParserSupplier,
       InputEntityReader valueParser,
@@ -149,7 +149,7 @@ public class KafkaInputReader implements InputEntityReader
   @Override
   public CloseableIterator<InputRow> read() throws IOException
   {
-    KafkaRecordEntity record = (KafkaRecordEntity) source.getEntity();
+    KafkaRecordEntity record = source.getEntity();
     Map<String, Object> mergeMap = new HashMap<>();
     if (headerParserSupplier != null) {
       KafkaHeaderReader headerParser = headerParserSupplier.apply(record);

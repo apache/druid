@@ -42,18 +42,18 @@ import java.nio.ByteBuffer;
  *
  */
 @NotThreadSafe
-public class SettableByteEntity implements InputEntity
+public class SettableByteEntity<T extends ByteEntity> implements InputEntity
 {
   private final SettableByteBufferInputStream inputStream;
   private boolean opened = false;
-  private ByteEntity entity;
+  private T entity;
 
   public SettableByteEntity()
   {
     this.inputStream = new SettableByteBufferInputStream();
   }
 
-  public void setEntity(ByteEntity entity)
+  public void setEntity(T entity)
   {
     inputStream.setBuffer(entity.getBuffer());
     this.entity = entity;
@@ -67,7 +67,7 @@ public class SettableByteEntity implements InputEntity
     return null;
   }
 
-  public ByteEntity getEntity()
+  public T getEntity()
   {
     return entity;
   }
@@ -103,21 +103,21 @@ public class SettableByteEntity implements InputEntity
     @Override
     public int read()
     {
-      Preconditions.checkNotNull(delegate, "Buffet is not set");
+      Preconditions.checkNotNull(delegate, "Buffer is not set");
       return delegate.read();
     }
 
     @Override
     public int read(byte[] bytes, int off, int len)
     {
-      Preconditions.checkNotNull(delegate, "Buffet is not set");
+      Preconditions.checkNotNull(delegate, "Buffer is not set");
       return delegate.read(bytes, off, len);
     }
 
     @Override
     public int available()
     {
-      Preconditions.checkNotNull(delegate, "Buffet is not set");
+      Preconditions.checkNotNull(delegate, "Buffer is not set");
       return delegate.available();
     }
   }
