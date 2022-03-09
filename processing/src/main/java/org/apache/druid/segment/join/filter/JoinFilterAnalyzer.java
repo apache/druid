@@ -31,6 +31,7 @@ import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
+import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
 import javax.annotation.Nullable;
@@ -101,7 +102,13 @@ public class JoinFilterAnalyzer
       return preAnalysisBuilder.build();
     }
 
-    List<Filter> normalizedOrClauses = Filters.toNormalizedOrClauses(key.getFilter());
+    List<Filter> normalizedOrClauses;
+    try {
+      normalizedOrClauses = Filters.toNormalizedOrClauses(key.getFilter());
+    }
+    catch (CNFFilterExplosionException cnfFilterExplosionException) {
+      return preAnalysisBuilder.build(); // disable the filter pushdown and rewrite optimization
+    }
 
     List<Filter> normalizedBaseTableClauses = new ArrayList<>();
     List<Filter> normalizedJoinTableClauses = new ArrayList<>();
