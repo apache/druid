@@ -64,6 +64,7 @@ final class PredicateFilteredDimensionSelector extends AbstractDimensionSelector
   @Override
   public ValueMatcher makeValueMatcher(final String value)
   {
+    final boolean matchNull = predicate.apply(null);
     return new ValueMatcher()
     {
       @Override
@@ -82,7 +83,7 @@ final class PredicateFilteredDimensionSelector extends AbstractDimensionSelector
           }
         }
         // null should match empty rows in multi-value columns if predicate matches null
-        return nullRow && value == null && predicate.apply(null);
+        return nullRow && value == null && matchNull;
       }
 
       @Override
