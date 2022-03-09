@@ -196,7 +196,7 @@ public class IndexMergerNullHandlingTest
             if (expectedNullRows.size() > 0) {
               Assert.assertEquals(subsetList.toString(), 0, bitmapIndex.getIndex(null));
 
-              final ImmutableBitmap nullBitmap = bitmapIndex.getBitmap(bitmapIndex.getIndex(null));
+              final ImmutableBitmap nullBitmap = bitmapIndex.getBitmapForValue(null);
               final List<Integer> actualNullRows = new ArrayList<>();
               final IntIterator iterator = nullBitmap.iterator();
               while (iterator.hasNext()) {

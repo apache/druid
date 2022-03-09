@@ -247,6 +247,7 @@ public class Filters
     // Missing dimension -> match all rows if the predicate matches null; match no rows otherwise
     try (final CloseableIndexed<String> dimValues = selector.getDimensionValues(dimension)) {
       if (dimValues == null || dimValues.size() == 0) {
+
         return ImmutableList.of(predicate.apply(null) ? allTrue(selector) : allFalse(selector));
       }
 
