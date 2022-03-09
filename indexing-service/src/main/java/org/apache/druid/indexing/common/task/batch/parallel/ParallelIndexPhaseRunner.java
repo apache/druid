@@ -453,8 +453,6 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     return tuningConfig;
   }
 
-
-  @VisibleForTesting
   TaskToolbox getToolbox()
   {
     return toolbox;

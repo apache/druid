@@ -780,6 +780,17 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
       boolean splittableInputSource
   )
   {
+    return newTask(interval, segmentGranularity, appendToExisting, splittableInputSource, false);
+  }
+
+  private ParallelIndexSupervisorTask newTask(
+      @Nullable Interval interval,
+      Granularity segmentGranularity,
+      boolean appendToExisting,
+      boolean splittableInputSource,
+      boolean isReplace
+  )
+  {
     return newTask(
         interval,
         segmentGranularity,

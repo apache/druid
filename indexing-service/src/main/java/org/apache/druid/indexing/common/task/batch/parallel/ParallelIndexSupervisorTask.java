@@ -220,6 +220,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     this.ingestionSchema = ingestionSchema;
     this.baseSubtaskSpecName = baseSubtaskSpecName == null ? getId() : baseSubtaskSpecName;
 
+    if (ingestionSchema.getIOConfig().isDropExisting() &&
+        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals().isEmpty()) {
+      throw new ISE("GranularitySpec's intervals cannot be empty when setting dropExisting to true.");
+    }
+
     if (isGuaranteedRollup(ingestionSchema.getIOConfig(), ingestionSchema.getTuningConfig())) {
       checkPartitionsSpecForForceGuaranteedRollup(ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec());
     }
@@ -1084,9 +1089,29 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         ingestionSchema
     );
 
-    Set<DataSegment> segmentsFoundForDrop = null;
+    Set<DataSegment> tombStones;
     if (ingestionSchema.getIOConfig().isDropExisting()) {
-      segmentsFoundForDrop = getUsedSegmentsWithinInterval(toolbox, getDataSource(), ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals());
+      TombstoneHelper tombstoneHelper = new TombstoneHelper(
+          newSegments,
+          ingestionSchema.getDataSchema(),
+          toolbox.getTaskActionClient()
+      );
+      List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals();
+      if (!tombstoneIntervals.isEmpty()) {
+
+        Map<Interval, SegmentIdWithShardSpec> tombstonesAnShards = new HashMap<>();
+        for (Interval interval : tombstoneIntervals) {
+          SegmentIdWithShardSpec segmentIdWithShardSpec = allocateNewSegmentForTombstone(
+              ingestionSchema,
+              interval.getStart(),
+              toolbox
+          );
+          tombstonesAnShards.put(interval, segmentIdWithShardSpec);
+        }
+        tombStones = tombstoneHelper.computeTombstones(tombstonesAnShards);
+        newSegments.addAll(tombStones);
+        LOG.debugSegments(tombStones, "To publish tombstones");
+      }
     }
 
     final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
@@ -1095,7 +1120,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         );
     final boolean published =
         newSegments.isEmpty()
-        || publisher.publishSegments(oldSegments, segmentsFoundForDrop, newSegments, annotateFunction, null).isSuccess();
+        || publisher.publishSegments(oldSegments,
+                                     Collections.emptySet(),
+                                     newSegments, annotateFunction,
+                                     null).isSuccess();
 
     if (published) {
       LOG.info("Published [%d] segments", newSegments.size());
@@ -1261,15 +1289,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
   }
 
-  @Nullable
-  public static String findVersion(Map<Interval, String> versions, Interval interval)
-  {
-    return versions.entrySet().stream()
-                   .filter(entry -> entry.getKey().contains(interval))
-                   .map(Entry::getValue)
-                   .findFirst()
-                   .orElse(null);
-  }
 
   static InputFormat getInputFormat(ParallelIndexIngestionSpec ingestionSchema)
   {

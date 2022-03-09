@@ -126,6 +126,7 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
         "test_*",
         new HashedPartitionsSpec(null, numShards, ImmutableList.of("dim1", "dim2"), null),
         maxNumConcurrentSubTasks,
+        false,
         false
     );
 
@@ -163,6 +164,7 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
         //new DimensionRangePartitionsSpec(targetRowsPerSegment, null, DIMS, false),
         new SingleDimensionPartitionsSpec(targetRowsPerSegment, null, DIM1, false),
         10,
+        false,
         false
     );
     Map<String, Object> expectedReports = buildExpectedTaskReportParallel(

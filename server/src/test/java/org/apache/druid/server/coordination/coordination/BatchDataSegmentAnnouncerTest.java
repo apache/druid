@@ -52,6 +52,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -229,6 +230,43 @@ public class BatchDataSegmentAnnouncerTest
     ).get();
     Assert.assertEquals(0, snapshot.getRequests().size());
     Assert.assertEquals(4, snapshot.getCounter().getCounter());
+  }
+
+  @Test
+  public void testSingleTombstoneAnnounce() throws Exception
+  {
+    DataSegment firstSegment = makeSegment(0, true);
+
+    segmentAnnouncer.announceSegment(firstSegment);
+
+    List<String> zNodes = cf.getChildren().forPath(TEST_SEGMENTS_PATH);
+
+    for (String zNode : zNodes) {
+      Set<DataSegment> segments = segmentReader.read(JOINER.join(TEST_SEGMENTS_PATH, zNode));
+      Assert.assertEquals(segments.iterator().next(), firstSegment);
+    }
+
+    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = segmentAnnouncer.getSegmentChangesSince(
+        new ChangeRequestHistory.Counter(-1, -1)
+    ).get();
+    Assert.assertEquals(1, snapshot.getRequests().size());
+    Assert.assertEquals(1, snapshot.getCounter().getCounter());
+
+    segmentAnnouncer.unannounceSegment(firstSegment);
+
+    Assert.assertTrue(cf.getChildren().forPath(TEST_SEGMENTS_PATH).isEmpty());
+
+    snapshot = segmentAnnouncer.getSegmentChangesSince(
+        snapshot.getCounter()
+    ).get();
+    Assert.assertEquals(1, snapshot.getRequests().size());
+    Assert.assertEquals(2, snapshot.getCounter().getCounter());
+
+    snapshot = segmentAnnouncer.getSegmentChangesSince(
+        new ChangeRequestHistory.Counter(-1, -1)
+    ).get();
+    Assert.assertEquals(0, snapshot.getRequests().size());
+    Assert.assertEquals(2, snapshot.getCounter().getCounter());
   }
 
   @Test
@@ -430,22 +468,31 @@ public class BatchDataSegmentAnnouncerTest
     }
   }
 
+  private DataSegment makeSegment(int offset, boolean isTombstone)
+  {
+    DataSegment.Builder builder = DataSegment.builder();
+    builder.dataSource("foo")
+           .interval(
+               new Interval(
+                   DateTimes.of("2013-01-01").plusDays(offset),
+                   DateTimes.of("2013-01-02").plusDays(offset)
+               )
+           )
+           .version(DateTimes.nowUtc().toString())
+           .dimensions(ImmutableList.of("dim1", "dim2"))
+           .metrics(ImmutableList.of("met1", "met2"))
+           .loadSpec(ImmutableMap.of("type", "local"))
+           .size(0);
+    if (isTombstone) {
+      builder.loadSpec(Collections.singletonMap("type", DataSegment.TOMBSTONE_LOADSPEC_TYPE));
+    }
+
+    return builder.build();
+  }
+
   private DataSegment makeSegment(int offset)
   {
-    return DataSegment.builder()
-                      .dataSource("foo")
-                      .interval(
-                          new Interval(
-                              DateTimes.of("2013-01-01").plusDays(offset),
-                              DateTimes.of("2013-01-02").plusDays(offset)
-                          )
-                      )
-                      .version(DateTimes.nowUtc().toString())
-                      .dimensions(ImmutableList.of("dim1", "dim2"))
-                      .metrics(ImmutableList.of("met1", "met2"))
-                      .loadSpec(ImmutableMap.of("type", "local"))
-                      .size(0)
-                      .build();
+    return makeSegment(offset, false);
   }
 
   private static class SegmentReader
