@@ -81,10 +81,18 @@ public class DoubleMeanVectorAggregator implements VectorAggregator
     final boolean[] nulls = selector.getNullVector();
 
     if (nulls != null) {
-      for (int j = 0; j < numRows; j++) {
-        if (!nulls[j]) {
-          final double val = vector[rows != null ? rows[j] : j];
-          DoubleMeanHolder.update(buf, positions[j] + positionOffset, val);
+      if (NullHandling.replaceWithDefault()) {
+        for (int i = 0; i < numRows; i++) {
+          final double val = vector[rows != null ? rows[i] : i];
+          DoubleMeanHolder.update(buf, positions[i] + positionOffset, val);
+        }
+      }
+      else {
+        for (int j = 0; j < numRows; j++) {
+          if (!nulls[j]) {
+            final double val = vector[rows != null ? rows[j] : j];
+            DoubleMeanHolder.update(buf, positions[j] + positionOffset, val);
+          }
         }
       }
     } else {
