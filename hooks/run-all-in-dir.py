@@ -31,4 +31,4 @@ for hook in os.listdir(hooks_dir):
 	if not hook.startswith("_"):
 		command = [os.path.join(hooks_dir, hook)] + args
 		print("Running {}".format(command))
-		subprocess.run(command, shell=True)
+		subprocess.run(command, check=True)
