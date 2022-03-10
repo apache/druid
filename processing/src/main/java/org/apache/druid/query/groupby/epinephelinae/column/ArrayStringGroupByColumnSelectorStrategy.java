@@ -29,6 +29,7 @@ import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ComparableIntArray;
 import org.apache.druid.segment.data.ComparableStringArray;
 
@@ -173,7 +174,7 @@ public class ArrayStringGroupByColumnSelectorStrategy implements GroupByColumnSe
         intRepresentation[i] = addToIndexedDictionary((String) ((Object[]) object)[i]);
       }
     } else {
-      throw new ISE("Found unknowm type %s in ColumnValueSelector.", object.getClass().toString());
+      throw new ISE("Found unexpected object type [%s] in %s array.", object.getClass().getName(), ValueType.STRING);
     }
 
     final ComparableIntArray comparableIntArray = ComparableIntArray.of(intRepresentation);

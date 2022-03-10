@@ -114,6 +114,7 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SearchQueryDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensionException;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.having.DimensionSelectorHavingSpec;
 import org.apache.druid.query.groupby.having.EqualToHavingSpec;
@@ -137,6 +138,9 @@ import org.apache.druid.segment.data.ComparableList;
 import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.Description;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
@@ -145,6 +149,7 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableCauseMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -160,6 +165,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -1321,6 +1327,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testMultiValueDimensionNotAllowed()
   {
+    final String dimName = "placementish";
 
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UOE.class);
@@ -1330,13 +1337,38 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       ));
     } else if (!vectorize) {
       expectedException.expect(RuntimeException.class);
-      expectedException.expectMessage(StringUtils.format(
-          "Encountered multi-value dimension %s that cannot be processed with %s set to false."
-          + " Consider setting %s to true.",
-          "placementish",
-          GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY,
-          GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY
-      ));
+      expectedException.expectCause(CoreMatchers.instanceOf(ExecutionException.class));
+      expectedException.expectCause(
+          ThrowableCauseMatcher.hasCause(CoreMatchers.instanceOf(UnexpectedMultiValueDimensionException.class))
+      );
+      expectedException.expect(
+          new BaseMatcher<Throwable>()
+          {
+            @Override
+            public boolean matches(Object o)
+            {
+              final UnexpectedMultiValueDimensionException cause =
+                  (UnexpectedMultiValueDimensionException) ((Throwable) o).getCause().getCause();
+
+              return dimName.equals(cause.getDimensionName());
+            }
+
+            @Override
+            public void describeTo(Description description)
+            {
+              description.appendText("an UnexpectedMultiValueDimensionException with dimension [placementish]");
+            }
+          }
+      );
+      expectedException.expectMessage(
+          StringUtils.format(
+              "Encountered multi-value dimension [%s] that cannot be processed with '%s' set to false."
+              + " Consider setting '%s' to true in your query context.",
+              dimName,
+              GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
+              GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING
+          )
+      );
     } else {
       cannotVectorize();
     }
@@ -1344,7 +1376,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("placementish", "alias"))
+        .setDimensions(new DefaultDimensionSpec(dimName, "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false))
