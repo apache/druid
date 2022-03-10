@@ -86,8 +86,7 @@ public class DoubleMeanVectorAggregator implements VectorAggregator
           final double val = vector[rows != null ? rows[i] : i];
           DoubleMeanHolder.update(buf, positions[i] + positionOffset, val);
         }
-      }
-      else {
+      } else {
         for (int j = 0; j < numRows; j++) {
           if (!nulls[j]) {
             final double val = vector[rows != null ? rows[j] : j];

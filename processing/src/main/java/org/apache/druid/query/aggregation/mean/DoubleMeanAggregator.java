@@ -43,8 +43,8 @@ public class DoubleMeanAggregator implements Aggregator
   public void aggregate()
   {
     Object update = selector.getObject();
-    boolean status = selector.isNull();
-    if (status == true && NullHandling.replaceWithDefault() == false) {
+
+    if (update == null && NullHandling.replaceWithDefault() == false) {
       return;
     }
 
