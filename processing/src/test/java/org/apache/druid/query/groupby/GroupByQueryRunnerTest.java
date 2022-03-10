@@ -138,7 +138,9 @@ import org.apache.druid.segment.data.ComparableList;
 import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.hamcrest.BaseMatcher;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.Description;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
@@ -1325,6 +1327,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testMultiValueDimensionNotAllowed()
   {
+    final String dimName = "placementish";
 
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UOE.class);
@@ -1338,13 +1341,34 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       expectedException.expectCause(
           ThrowableCauseMatcher.hasCause(CoreMatchers.instanceOf(UnexpectedMultiValueDimensionException.class))
       );
-      expectedException.expectMessage(StringUtils.format(
-          "Encountered multi-value dimension [%s] that cannot be processed with '%s' set to false."
-          + " Consider setting '%s' to true in your query context.",
-          "placementish",
-          GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
-          GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING
-      ));
+      expectedException.expect(
+          new BaseMatcher<Throwable>()
+          {
+            @Override
+            public boolean matches(Object o)
+            {
+              final UnexpectedMultiValueDimensionException cause =
+                  (UnexpectedMultiValueDimensionException) ((Throwable) o).getCause().getCause();
+
+              return dimName.equals(cause.getDimensionName());
+            }
+
+            @Override
+            public void describeTo(Description description)
+            {
+              description.appendText("an UnexpectedMultiValueDimensionException with dimension [placementish]");
+            }
+          }
+      );
+      expectedException.expectMessage(
+          StringUtils.format(
+              "Encountered multi-value dimension [%s] that cannot be processed with '%s' set to false."
+              + " Consider setting '%s' to true in your query context.",
+              dimName,
+              GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
+              GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING
+          )
+      );
     } else {
       cannotVectorize();
     }
@@ -1352,7 +1376,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("placementish", "alias"))
+        .setDimensions(new DefaultDimensionSpec(dimName, "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false))
