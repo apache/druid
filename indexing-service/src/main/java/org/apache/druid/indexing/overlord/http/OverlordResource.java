@@ -60,10 +60,15 @@ import org.apache.druid.indexing.overlord.http.security.TaskResourceFilter;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.metadata.MetadataStorageActionHandler.ActiveTaskLookup;
+import org.apache.druid.metadata.MetadataStorageActionHandler.CompleteTaskLookup;
+import org.apache.druid.metadata.MetadataStorageActionHandler.TaskLookup;
+import org.apache.druid.metadata.MetadataStorageActionHandler.TaskLookupType;
 import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
@@ -108,6 +113,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  *
@@ -129,6 +135,24 @@ public class OverlordResource
 
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
   private static final List API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
+
+  private enum TaskStateLookup
+  {
+    ALL,
+    WAITING,
+    PENDING,
+    RUNNING,
+    COMPLETE;
+
+    private static TaskStateLookup fromString(@Nullable String state)
+    {
+      if (state == null) {
+        return ALL;
+      } else {
+        return TaskStateLookup.valueOf(StringUtils.toUpperCase(state));
+      }
+    }
+  }
 
   @Inject
   public OverlordResource(
@@ -623,6 +647,166 @@ public class OverlordResource
     return getTasks("complete", null, null, maxTaskStatuses, null, req);
   }
 
+  private List<TaskStatusPlus> getTasks(
+      TaskRunner taskRunner,
+      TaskStateLookup state,
+      @Nullable String dataSource,
+      @Nullable String createdTimeInterval,
+      @Nullable Integer maxCompletedTasks,
+      @Nullable String type
+  )
+  {
+    final Duration createdTimeDuration;
+    if (createdTimeInterval != null) {
+      final Interval theInterval = Intervals.of(StringUtils.replace(createdTimeInterval, "_", "/"));
+      createdTimeDuration = theInterval.toDuration();
+    } else {
+      createdTimeDuration = null;
+    }
+
+    // Ideally, snapshotting in taskStorage and taskRunner should be done atomically,
+    // but there is no way to do it today.
+    // Instead, we first gets a snapshot from taskStorage and then one from taskRunner.
+    // This way, we can use the snapshot from taskStorage as the source of truth for the set of tasks to process
+    // and use the snapshot from taskRunner as a reference for potential task state updates happened
+    // after the first snapshotting.
+    final Map<TaskLookupType, TaskLookup> taskLookups;
+    if (state == TaskStateLookup.ALL) {
+      taskLookups = ImmutableMap.of(
+          TaskLookupType.ACTIVE,
+          ActiveTaskLookup.getInstance(),
+          TaskLookupType.COMPLETE,
+          new CompleteTaskLookup(maxCompletedTasks, createdTimeDuration)
+      );
+    } else {
+      if (state == TaskStateLookup.COMPLETE) {
+        taskLookups = ImmutableMap.of(
+            TaskLookupType.COMPLETE,
+            new CompleteTaskLookup(maxCompletedTasks, createdTimeDuration)
+        );
+      } else {
+        taskLookups = ImmutableMap.of(
+            TaskLookupType.ACTIVE,
+            ActiveTaskLookup.getInstance()
+        );
+      }
+    }
+    Stream<TaskInfo<Task, TaskStatus>> taskInfoStreamFromTaskStorage = taskStorageQueryAdapter.getTaskInfos(
+        taskLookups,
+        dataSource
+    ).stream();
+    if (type != null) {
+      taskInfoStreamFromTaskStorage = taskInfoStreamFromTaskStorage.filter(
+          info -> type.equals(info.getTask() == null ? null : info.getTask().getType())
+      );
+    }
+
+    Stream<? extends TaskRunnerWorkItem> runnerWorkItemsStream;
+    switch (state) {
+      case ALL:
+      case WAITING:
+        // waiting tasks can be found by (all tasks in taskStorage - all tasks in taskRunner)
+        runnerWorkItemsStream = taskRunner.getKnownTasks().stream();
+        break;
+      case PENDING:
+        runnerWorkItemsStream = taskRunner.getPendingTasks().stream();
+        break;
+      case RUNNING:
+        runnerWorkItemsStream = taskRunner.getRunningTasks().stream();
+        break;
+      case COMPLETE:
+        runnerWorkItemsStream = Stream.empty();
+        break;
+      default:
+        throw new IAE("Unknown state: [%s]", state);
+    }
+    if (dataSource != null) {
+      runnerWorkItemsStream = runnerWorkItemsStream.filter(item -> dataSource.equals(item.getDataSource()));
+    }
+    if (type != null) {
+      runnerWorkItemsStream = runnerWorkItemsStream.filter(item -> type.equals(item.getTaskType()));
+    }
+    final Map<String, ? extends TaskRunnerWorkItem> runnerWorkItems = runnerWorkItemsStream.
+        collect(Collectors.toMap(TaskRunnerWorkItem::getTaskId, item -> item));
+    if (state == TaskStateLookup.PENDING || state == TaskStateLookup.RUNNING) {
+      taskInfoStreamFromTaskStorage = taskInfoStreamFromTaskStorage
+          .filter(info -> runnerWorkItems.containsKey(info.getId()));
+    }
+    final List<TaskInfo<Task, TaskStatus>> taskInfoFromTaskStorage = taskInfoStreamFromTaskStorage.collect(
+        Collectors.toList()
+    );
+
+    final List<TaskInfo<Task, TaskStatus>> completeTaskInfoFromTaskStorage = new ArrayList<>();
+    final List<TaskInfo<Task, TaskStatus>> activeTaskInfoFromTaskStorage = new ArrayList<>();
+    for (TaskInfo<Task, TaskStatus> info : taskInfoFromTaskStorage) {
+      if (info.getStatus().isComplete()) {
+        completeTaskInfoFromTaskStorage.add(info);
+      } else {
+        activeTaskInfoFromTaskStorage.add(info);
+      }
+    }
+    final List<TaskStatusPlus> statuses = new ArrayList<>();
+    completeTaskInfoFromTaskStorage.forEach(taskInfo -> statuses.add(
+        new TaskStatusPlus(
+            taskInfo.getId(),
+            taskInfo.getTask() == null ? null : taskInfo.getTask().getGroupId(),
+            taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
+            taskInfo.getCreatedTime(),
+            DateTimes.EPOCH,
+            taskInfo.getStatus().getStatusCode(),
+            RunnerTaskState.COMPLETE,
+            taskInfo.getStatus().getDuration(),
+            taskInfo.getStatus().getLocation(),
+            taskInfo.getDataSource(),
+            taskInfo.getStatus().getErrorMsg()
+        )
+    ));
+
+    activeTaskInfoFromTaskStorage.forEach(taskInfo -> {
+      final TaskRunnerWorkItem runnerWorkItem = runnerWorkItems.get(taskInfo.getId());
+      if (runnerWorkItem == null) {
+        // this is assumed to be a waiting task
+        if (state == TaskStateLookup.WAITING || state == TaskStateLookup.ALL) {
+          statuses.add(
+              new TaskStatusPlus(
+                  taskInfo.getId(),
+                  taskInfo.getTask() == null ? null : taskInfo.getTask().getGroupId(),
+                  taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
+                  taskInfo.getCreatedTime(),
+                  DateTimes.EPOCH,
+                  taskInfo.getStatus().getStatusCode(),
+                  RunnerTaskState.WAITING,
+                  taskInfo.getStatus().getDuration(),
+                  taskInfo.getStatus().getLocation(),
+                  taskInfo.getDataSource(),
+                  taskInfo.getStatus().getErrorMsg()
+              )
+          );
+        }
+      } else {
+        if (state == TaskStateLookup.PENDING || state == TaskStateLookup.RUNNING || state == TaskStateLookup.ALL) {
+          statuses.add(
+              new TaskStatusPlus(
+                  taskInfo.getId(),
+                  taskInfo.getTask() == null ? null : taskInfo.getTask().getGroupId(),
+                  taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
+                  runnerWorkItem.getCreatedTime(),
+                  runnerWorkItem.getQueueInsertionTime(),
+                  taskInfo.getStatus().getStatusCode(),
+                  taskRunner.getRunnerTaskState(taskInfo.getId()), // this is racy for remoteTaskRunner
+                  taskInfo.getStatus().getDuration(),
+                  runnerWorkItem.getLocation(), // location in taskInfo is only updated after the task is done.
+                  taskInfo.getDataSource(),
+                  taskInfo.getStatus().getErrorMsg()
+              )
+          );
+        }
+      }
+    });
+
+    return statuses;
+  }
+
   @GET
   @Path("/tasks")
   @Produces(MediaType.APPLICATION_JSON)
@@ -665,100 +849,110 @@ public class OverlordResource
         );
       }
     }
-    List<TaskStatusPlus> finalTaskList = new ArrayList<>();
-    Function<AnyTask, TaskStatusPlus> activeTaskTransformFunc = workItem -> new TaskStatusPlus(
-        workItem.getTaskId(),
-        workItem.getTaskGroupId(),
-        workItem.getTaskType(),
-        workItem.getCreatedTime(),
-        workItem.getQueueInsertionTime(),
-        workItem.getTaskState(),
-        workItem.getRunnerTaskState(),
-        null,
-        workItem.getLocation(),
-        workItem.getDataSource(),
-        null
-    );
 
-    Function<TaskInfo<Task, TaskStatus>, TaskStatusPlus> completeTaskTransformFunc = taskInfo -> new TaskStatusPlus(
-        taskInfo.getId(),
-        taskInfo.getTask() == null ? null : taskInfo.getTask().getGroupId(),
-        taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
-        taskInfo.getCreatedTime(),
-        // Would be nice to include the real queue insertion time, but the
-        // TaskStorage API doesn't yet allow it.
-        DateTimes.EPOCH,
-        taskInfo.getStatus().getStatusCode(),
-        RunnerTaskState.NONE,
-        taskInfo.getStatus().getDuration(),
-        taskInfo.getStatus().getLocation() == null ? TaskLocation.unknown() : taskInfo.getStatus().getLocation(),
-        taskInfo.getDataSource(),
-        taskInfo.getStatus().getErrorMsg()
-    );
 
-    //checking for complete tasks first to avoid querying active tasks if user only wants complete tasks
-    if (state == null || "complete".equals(StringUtils.toLowerCase(state))) {
-      Duration createdTimeDuration = null;
-      if (createdTimeInterval != null) {
-        final Interval theInterval = Intervals.of(StringUtils.replace(createdTimeInterval, "_", "/"));
-        createdTimeDuration = theInterval.toDuration();
-      }
-      final List<TaskInfo<Task, TaskStatus>> taskInfoList =
-          taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(maxCompletedTasks, createdTimeDuration, dataSource);
-      final List<TaskStatusPlus> completedTasks = taskInfoList.stream()
-                                                              .map(completeTaskTransformFunc::apply)
-                                                              .collect(Collectors.toList());
-      finalTaskList.addAll(completedTasks);
-    }
+//    List<TaskStatusPlus> finalTaskList = new ArrayList<>();
+//    Function<AnyTask, TaskStatusPlus> activeTaskTransformFunc = workItem -> new TaskStatusPlus(
+//        workItem.getTaskId(),
+//        workItem.getTaskGroupId(),
+//        workItem.getTaskType(),
+//        workItem.getCreatedTime(),
+//        workItem.getQueueInsertionTime(),
+//        workItem.getTaskState(),
+//        workItem.getRunnerTaskState(),
+//        null,
+//        workItem.getLocation(),
+//        workItem.getDataSource(),
+//        null
+//    );
+//
+//    Function<TaskInfo<Task, TaskStatus>, TaskStatusPlus> completeTaskTransformFunc = taskInfo -> new TaskStatusPlus(
+//        taskInfo.getId(),
+//        taskInfo.getTask() == null ? null : taskInfo.getTask().getGroupId(),
+//        taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
+//        taskInfo.getCreatedTime(),
+//        // Would be nice to include the real queue insertion time, but the
+//        // TaskStorage API doesn't yet allow it.
+//        DateTimes.EPOCH,
+//        taskInfo.getStatus().getStatusCode(),
+//        RunnerTaskState.COMPLETE,
+//        taskInfo.getStatus().getDuration(),
+//        taskInfo.getStatus().getLocation() == null ? TaskLocation.unknown() : taskInfo.getStatus().getLocation(),
+//        taskInfo.getDataSource(),
+//        taskInfo.getStatus().getErrorMsg()
+//    );
+//
+//    //checking for complete tasks first to avoid querying active tasks if user only wants complete tasks
+//    if (state == null || "complete".equals(StringUtils.toLowerCase(state))) {
+//      final List<TaskInfo<Task, TaskStatus>> taskInfoList =
+//          taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(maxCompletedTasks, createdTimeDuration, dataSource);
+//      final List<TaskStatusPlus> completedTasks = taskInfoList.stream()
+//                                                              .map(completeTaskTransformFunc::apply)
+//                                                              .collect(Collectors.toList());
+//      finalTaskList.addAll(completedTasks);
+//    }
+//
+//    final List<TaskInfo<Task, TaskStatus>> allActiveTaskInfo;
+//    final List<AnyTask> allActiveTasks = new ArrayList<>();
+//    if (state == null || !"complete".equals(StringUtils.toLowerCase(state))) {
+//      allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
+//      for (final TaskInfo<Task, TaskStatus> task : allActiveTaskInfo) {
+//        allActiveTasks.add(
+//            new AnyTask(
+//                task.getId(),
+//                task.getTask() == null ? null : task.getTask().getGroupId(),
+//                task.getTask() == null ? null : task.getTask().getType(),
+//                SettableFuture.create(),
+//                task.getDataSource(),
+//                null,
+//                null,
+//                task.getCreatedTime(),
+//                DateTimes.EPOCH,
+//                TaskLocation.unknown()
+//            ));
+//      }
+//    }
+//    if (state == null || "waiting".equals(StringUtils.toLowerCase(state))) {
+//      final List<AnyTask> waitingWorkItems = filterActiveTasks(RunnerTaskState.WAITING, allActiveTasks);
+//      List<TaskStatusPlus> transformedWaitingList = waitingWorkItems.stream()
+//                                                                    .map(activeTaskTransformFunc::apply)
+//                                                                    .collect(Collectors.toList());
+//      finalTaskList.addAll(transformedWaitingList);
+//    }
+//    if (state == null || "pending".equals(StringUtils.toLowerCase(state))) {
+//      final List<AnyTask> pendingWorkItems = filterActiveTasks(RunnerTaskState.PENDING, allActiveTasks);
+//      List<TaskStatusPlus> transformedPendingList = pendingWorkItems.stream()
+//                                                                    .map(activeTaskTransformFunc::apply)
+//                                                                    .collect(Collectors.toList());
+//      finalTaskList.addAll(transformedPendingList);
+//    }
+//    if (state == null || "running".equals(StringUtils.toLowerCase(state))) {
+//      final List<AnyTask> runningWorkItems = filterActiveTasks(RunnerTaskState.RUNNING, allActiveTasks);
+//      List<TaskStatusPlus> transformedRunningList = runningWorkItems.stream()
+//                                                                    .map(activeTaskTransformFunc::apply)
+//                                                                    .collect(Collectors.toList());
+//      finalTaskList.addAll(transformedRunningList);
+//    }
 
-    final List<TaskInfo<Task, TaskStatus>> allActiveTaskInfo;
-    final List<AnyTask> allActiveTasks = new ArrayList<>();
-    if (state == null || !"complete".equals(StringUtils.toLowerCase(state))) {
-      allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
-      for (final TaskInfo<Task, TaskStatus> task : allActiveTaskInfo) {
-        allActiveTasks.add(
-            new AnyTask(
-                task.getId(),
-                task.getTask() == null ? null : task.getTask().getGroupId(),
-                task.getTask() == null ? null : task.getTask().getType(),
-                SettableFuture.create(),
-                task.getDataSource(),
-                null,
-                null,
-                task.getCreatedTime(),
-                DateTimes.EPOCH,
-                TaskLocation.unknown()
-            ));
-      }
-    }
-    if (state == null || "waiting".equals(StringUtils.toLowerCase(state))) {
-      final List<AnyTask> waitingWorkItems = filterActiveTasks(RunnerTaskState.WAITING, allActiveTasks);
-      List<TaskStatusPlus> transformedWaitingList = waitingWorkItems.stream()
-                                                                    .map(activeTaskTransformFunc::apply)
-                                                                    .collect(Collectors.toList());
-      finalTaskList.addAll(transformedWaitingList);
-    }
-    if (state == null || "pending".equals(StringUtils.toLowerCase(state))) {
-      final List<AnyTask> pendingWorkItems = filterActiveTasks(RunnerTaskState.PENDING, allActiveTasks);
-      List<TaskStatusPlus> transformedPendingList = pendingWorkItems.stream()
-                                                                    .map(activeTaskTransformFunc::apply)
-                                                                    .collect(Collectors.toList());
-      finalTaskList.addAll(transformedPendingList);
-    }
-    if (state == null || "running".equals(StringUtils.toLowerCase(state))) {
-      final List<AnyTask> runningWorkItems = filterActiveTasks(RunnerTaskState.RUNNING, allActiveTasks);
-      List<TaskStatusPlus> transformedRunningList = runningWorkItems.stream()
-                                                                    .map(activeTaskTransformFunc::apply)
-                                                                    .collect(Collectors.toList());
-      finalTaskList.addAll(transformedRunningList);
-    }
-    final List<TaskStatusPlus> authorizedList = securedTaskStatusPlus(
-        finalTaskList,
-        dataSource,
-        type,
-        req
+    return asLeaderWith(
+        taskMaster.getTaskRunner(),
+        taskRunner -> {
+          final List<TaskStatusPlus> authorizedList = securedTaskStatusPlus(
+              getTasks(
+                  taskRunner,
+                  TaskStateLookup.fromString(state),
+                  dataSource,
+                  createdTimeInterval,
+                  maxCompletedTasks,
+                  type
+              ),
+              dataSource,
+              type,
+              req
+          );
+          return Response.ok(authorizedList).build();
+        }
     );
-    return Response.ok(authorizedList).build();
   }
 
   @DELETE
@@ -1062,12 +1256,12 @@ public class OverlordResource
       );
     };
     List<TaskStatusPlus> optionalTypeFilteredList = collectionToFilter;
-    if (type != null) {
-      optionalTypeFilteredList = collectionToFilter
-          .stream()
-          .filter(task -> type.equals(task.getType()))
-          .collect(Collectors.toList());
-    }
+//    if (type != null) {
+//      optionalTypeFilteredList = collectionToFilter
+//          .stream()
+//          .filter(task -> type.equals(task.getType()))
+//          .collect(Collectors.toList());
+//    }
     if (dataSource != null) {
       //skip auth check here, as it's already done in getTasks
       return optionalTypeFilteredList;

@@ -1752,7 +1752,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       PENDING_WORKER_ASSIGN(1, true, RunnerTaskState.PENDING),
 
       RUNNING(2, false, RunnerTaskState.RUNNING),
-      COMPLETE(3, false, RunnerTaskState.NONE);
+      COMPLETE(3, false, RunnerTaskState.COMPLETE);
 
       private final int index;
       private final boolean isPending;

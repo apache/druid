@@ -25,8 +25,10 @@ package org.apache.druid.indexer;
  */
 public enum RunnerTaskState
 {
+  // Waiting tasks are not tracked.
+  // Instead, they are computed by (all tasks in metadata store - all tasks in taskRunner).
   WAITING,
   PENDING,
   RUNNING,
-  NONE // is used for a completed task
+  COMPLETE // is used for a completed task
 }

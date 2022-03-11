@@ -32,6 +32,7 @@ import javax.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
 {
@@ -194,6 +195,26 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
     {
       return TaskLookupType.COMPLETE;
     }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      CompleteTaskLookup that = (CompleteTaskLookup) o;
+      return Objects.equals(maxTaskStatuses, that.maxTaskStatuses)
+             && Objects.equals(tasksCreatedPriorTo, that.tasksCreatedPriorTo);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(maxTaskStatuses, tasksCreatedPriorTo);
+    }
   }
 
   class ActiveTaskLookup implements TaskLookup
@@ -213,6 +234,18 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
     public TaskLookupType getType()
     {
       return TaskLookupType.ACTIVE;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return 0;
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+      return obj instanceof ActiveTaskLookup;
     }
   }
 

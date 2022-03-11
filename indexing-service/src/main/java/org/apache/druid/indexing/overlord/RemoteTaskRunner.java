@@ -474,7 +474,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       return RunnerTaskState.RUNNING;
     }
     if (completeTasks.containsKey(taskId)) {
-      return RunnerTaskState.NONE;
+      return RunnerTaskState.COMPLETE;
     }
 
     return null;
