@@ -19,12 +19,17 @@
 
 package org.apache.druid.metadata;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.TaskInfo;
+import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -90,18 +95,126 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    *
    * @return list of {@link TaskInfo}
    */
-  List<TaskInfo<EntryType, StatusType>> getCompletedTaskInfo(
-      DateTime timestamp,
-      @Nullable Integer maxNumStatuses,
-      @Nullable String datasource
-  );
 
   /**
    * Return {@link TaskInfo} objects for all active entries
    *
    * @return list of {@link TaskInfo}
    */
-  List<TaskInfo<EntryType, StatusType>> getActiveTaskInfo(@Nullable String dataSource);
+
+  /**
+   * TODO
+   * @param taskLookup
+   * @param datasource
+   * @return
+   */
+  List<TaskInfo<EntryType, StatusType>> getTaskInfos(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String datasource
+  );
+
+  default List<TaskInfo<EntryType, StatusType>> getTaskInfos(
+      TaskLookup taskLookup,
+      @Nullable String datasource
+  )
+  {
+    return getTaskInfos(Collections.singletonMap(taskLookup.getType(), taskLookup), datasource);
+  }
+
+  enum TaskLookupType
+  {
+    ACTIVE,
+    COMPLETE
+  }
+
+  interface TaskLookup
+  {
+    TaskLookupType getType();
+  }
+
+  class CompleteTaskLookup implements TaskLookup
+  {
+    @Nullable
+    private final Integer maxTaskStatuses;
+    @Nullable
+    private final DateTime tasksCreatedPriorTo;
+
+    public CompleteTaskLookup(
+        @Nullable Integer maxTaskStatuses,
+        @Nullable Duration durationBeforeNow
+    )
+    {
+      this.maxTaskStatuses = maxTaskStatuses;
+      this.tasksCreatedPriorTo = durationBeforeNow == null ? null : computeTimestampPriorToNow(durationBeforeNow);
+    }
+
+    @VisibleForTesting
+    public CompleteTaskLookup(
+        @Nullable Integer maxTaskStatuses,
+        DateTime tasksCreatedPriorTo
+    )
+    {
+      this.maxTaskStatuses = maxTaskStatuses;
+      this.tasksCreatedPriorTo = tasksCreatedPriorTo;
+    }
+
+    public boolean hasTaskCreatedTimeFilter()
+    {
+      return tasksCreatedPriorTo != null;
+    }
+
+    public CompleteTaskLookup withDurationBeforeNow(Duration durationBeforeNow)
+    {
+      return new CompleteTaskLookup(
+          maxTaskStatuses,
+          Preconditions.checkNotNull(durationBeforeNow, "durationBeforeNow")
+      );
+    }
+
+    private static DateTime computeTimestampPriorToNow(Duration durationBeforeNow)
+    {
+      return DateTimes
+          .nowUtc()
+          .minus(durationBeforeNow);
+    }
+
+    public DateTime getTasksCreatedPriorTo()
+    {
+      return tasksCreatedPriorTo;
+    }
+
+    @Nullable
+    public Integer getMaxTaskStatuses()
+    {
+      return maxTaskStatuses;
+    }
+
+    @Override
+    public TaskLookupType getType()
+    {
+      return TaskLookupType.COMPLETE;
+    }
+  }
+
+  class ActiveTaskLookup implements TaskLookup
+  {
+    private static final ActiveTaskLookup INSTANCE = new ActiveTaskLookup();
+
+    public static ActiveTaskLookup getInstance()
+    {
+      return INSTANCE;
+    }
+
+    private ActiveTaskLookup()
+    {
+    }
+
+    @Override
+    public TaskLookupType getType()
+    {
+      return TaskLookupType.ACTIVE;
+    }
+  }
 
   /**
    * Add a lock to the given entry

@@ -26,10 +26,13 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.metadata.EntryExistsException;
-import org.joda.time.Duration;
+import org.apache.druid.metadata.MetadataStorageActionHandler.TaskLookup;
+import org.apache.druid.metadata.MetadataStorageActionHandler.TaskLookupType;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public interface TaskStorage
 {
@@ -153,7 +156,6 @@ public interface TaskStorage
    *
    * @return list of {@link TaskInfo}
    */
-  List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource);
 
   /**
    * Returns up to {@code maxTaskStatuses} {@link TaskInfo} objects of recently finished tasks as stored in the storage
@@ -167,11 +169,25 @@ public interface TaskStorage
    *
    * @return list of {@link TaskInfo}
    */
-  List<TaskInfo<Task, TaskStatus>> getRecentlyCreatedAlreadyFinishedTaskInfo(
-      @Nullable Integer maxTaskStatuses,
-      @Nullable Duration durationBeforeNow,
+
+  /**
+   * TODO
+   * @param taskLookup
+   * @param datasource
+   * @return
+   */
+  List<TaskInfo<Task, TaskStatus>> getTaskInfos(
+      Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource
   );
+
+  default List<TaskInfo<Task, TaskStatus>> getTaskInfos(
+      TaskLookup taskLookup,
+      @Nullable String datasource
+  )
+  {
+    return getTaskInfos(Collections.singletonMap(taskLookup.getType(), taskLookup), datasource);
+  }
 
   /**
    * Returns a list of locks for a particular task.
