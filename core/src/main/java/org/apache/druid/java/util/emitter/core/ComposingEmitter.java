@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.emitter.core;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 
