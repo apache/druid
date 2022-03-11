@@ -219,6 +219,24 @@ public class ForkingTaskRunner
                           );
                         }
 
+                        // Override task specific javaOptsArray
+                        Object taskJavaOptsArray = task.getContextValue(
+                            ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY
+                        );
+                        if (taskJavaOptsArray != null) {
+                          if (taskJavaOptsArray instanceof List) {
+                            for (Object javaOpt : (List<?>) taskJavaOptsArray) {
+                              if (javaOpt instanceof String) {
+                                command.add((String) javaOpt);
+                              } else {
+                                LOGGER.warn("%s in javaOptsArray in task context is not a String", javaOpt);
+                              }
+                            }
+                          } else {
+                            LOGGER.warn("javaOptsArray in task context must be a list");
+                          }
+                        }
+
                         for (String propName : props.stringPropertyNames()) {
                           for (String allowedPrefix : config.getAllowedPrefixes()) {
                             // See https://github.com/apache/druid/issues/1841
