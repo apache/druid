@@ -92,7 +92,6 @@ public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter
   }
 
   @Override
-  @LifecycleStart
   public void start()
   {
     // Use full synchronized instead of atomic flag, because otherwise some thread may think that the emitter is already

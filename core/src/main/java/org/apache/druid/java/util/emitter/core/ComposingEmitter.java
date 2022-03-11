@@ -39,7 +39,6 @@ public class ComposingEmitter implements Emitter
   }
 
   @Override
-  @LifecycleStart
   public void start()
   {
     log.info("Starting Composing Emitter.");

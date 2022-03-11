@@ -54,7 +54,6 @@ public class LoggingEmitter implements Emitter
   }
 
   @Override
-  @LifecycleStart
   public void start()
   {
     final boolean alreadyStarted = started.getAndSet(true);

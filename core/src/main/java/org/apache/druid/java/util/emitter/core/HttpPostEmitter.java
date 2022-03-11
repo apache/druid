@@ -183,7 +183,6 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
   }
 
   @Override
-  @LifecycleStart
   public void start()
   {
     synchronized (startLock) {
