@@ -21,8 +21,6 @@ package org.apache.druid.initialization.jetty;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import org.apache.druid.server.initialization.jetty.CustomExceptionMapper;
-import org.apache.druid.server.initialization.jetty.ResponseStatusException;
-import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
 import org.apache.druid.test.utils.ResponseTestUtils;
 import org.junit.Test;
 
@@ -47,16 +45,6 @@ public class ExceptionMapperTest
         new CustomExceptionMapper().toResponse(new JsonMappingException("this exception message")),
         Response.Status.BAD_REQUEST,
         "this exception message"
-    );
-  }
-
-  @Test
-  public void testResponseStatusExceptionMapper()
-  {
-    ResponseTestUtils.assertErrorResponse(
-        new ResponseStatusExceptionMapper().toResponse(new ResponseStatusException(Response.Status.BAD_REQUEST, "this error message")),
-        Response.Status.BAD_REQUEST,
-        "this error message"
     );
   }
 }

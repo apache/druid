@@ -279,7 +279,6 @@ public class RulesResourceTest
     Response response = rulesResource.getRules();
 
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
     Assert.assertEquals(objectMapper.writeValueAsString(rules),
                         objectMapper.writeValueAsString(response.getEntity()));
 
@@ -297,7 +296,6 @@ public class RulesResourceTest
     Response response = rulesResource.getDatasourceRules("b", "full");
 
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
     Assert.assertEquals(objectMapper.writeValueAsString(rules),
                         objectMapper.writeValueAsString(response.getEntity()));
 

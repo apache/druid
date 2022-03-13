@@ -208,7 +208,6 @@ public class ServersResourceTest
     Response res = serversResource.getServer("not_exist_server", "simple");
 
     Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), res.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, res.getMetadata().getFirst("Content-Type"));
     Assert.assertEquals("server [not_exist_server] does not exist.", ((Map) res.getEntity()).get("error"));
   }
 
@@ -223,7 +222,6 @@ public class ServersResourceTest
     Response res = serversResource.getServerSegments("not_exist_server", "full");
 
     Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), res.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, res.getMetadata().getFirst("Content-Type"));
     Assert.assertEquals("server [not_exist_server] does not exist.", ((Map) res.getEntity()).get("error"));
   }
 
@@ -233,7 +231,6 @@ public class ServersResourceTest
     Response res = serversResource.getServerSegments(server.getName(), "full");
 
     Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, res.getMetadata().getFirst("Content-Type"));
 
     String result = objectMapper.writeValueAsString(res.getEntity());
     DataSegment[] actual = objectMapper.readValue(result, DataSegment[].class);
@@ -247,7 +244,6 @@ public class ServersResourceTest
     Response res = serversResource.getServerSegments(server.getName(), null);
 
     Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, res.getMetadata().getFirst("Content-Type"));
 
     String result = objectMapper.writeValueAsString(res.getEntity());
     String expected = objectMapper.writeValueAsString(Collections.singletonList(segment.getId()));
@@ -265,7 +261,6 @@ public class ServersResourceTest
     Response res = serversResource.getServerSegment("not_exist_server", "segmentId");
 
     Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), res.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, res.getMetadata().getFirst("Content-Type"));
     Assert.assertEquals("server [not_exist_server] does not exist.", ((Map) res.getEntity()).get("error"));
   }
 
@@ -275,7 +270,7 @@ public class ServersResourceTest
     Response res = serversResource.getServerSegment(server.getName(), segment.getId().toString());
 
     Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, res.getMetadata().getFirst("Content-Type"));
+
 
     String result = objectMapper.writeValueAsString(res.getEntity());
     String expected = objectMapper.writeValueAsString(segment);
@@ -288,10 +283,6 @@ public class ServersResourceTest
     Response res = serversResource.getServerSegment(server.getName(), "not-exist-datasource_1000_3000");
 
     Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), res.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, res.getMetadata().getFirst("Content-Type"));
-
-    Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), res.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, res.getMetadata().getFirst("Content-Type"));
     Assert.assertEquals("segment [not-exist-datasource_1000_3000] not found in server [dummy].", ((Map) res.getEntity()).get("error"));
   }
 }

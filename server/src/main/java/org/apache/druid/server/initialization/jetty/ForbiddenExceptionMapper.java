@@ -19,17 +19,28 @@
 
 package org.apache.druid.server.initialization.jetty;
 
-import javax.ws.rs.core.Response;
 
-/**
- * Throw this when an internal resource is not found, and we want to send a 404 response back,
- * Jersey exception mapper {@link ResponseStatusExceptionMapper} will take care of sending the response.
- *
- */
-public class NotFoundException extends ResponseStatusException
+import com.google.common.collect.ImmutableMap;
+import io.netty.util.SuppressForbidden;
+import org.apache.druid.server.security.ForbiddenException;
+
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.ExceptionMapper;
+import javax.ws.rs.ext.Provider;
+
+@Provider
+public class ForbiddenExceptionMapper implements ExceptionMapper<ForbiddenException>
 {
-  public NotFoundException(String msg)
+  @Override
+  @SuppressForbidden(reason = "Response#status")
+  public Response toResponse(ForbiddenException exception)
   {
-    super(Response.Status.NOT_FOUND, msg);
+    return Response.status(Response.Status.FORBIDDEN)
+                   .type(MediaType.APPLICATION_JSON)
+                   .entity(ImmutableMap.of(
+                       "Access-Check-Result", exception.getMessage()
+                   ))
+                   .build();
   }
 }

@@ -31,7 +31,6 @@ public class ResponseTestUtils
                                          Response.Status expectedStatusCode,
                                          String expectedErrorMessage)
   {
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
     Assert.assertEquals(expectedStatusCode.getStatusCode(), response.getStatus());
     Assert.assertEquals(expectedErrorMessage, ((Map) response.getEntity()).get("error"));
   }

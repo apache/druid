@@ -60,7 +60,7 @@ public class ResponseException extends ISE
   {
     String type = response.getHeaders().get("Content-Type");
     if (!"application/json".equals(type)) {
-      throw new ISE("Content-Type is [{%s], expected [application/json]", type);
+      throw new ISE("Content-Type is [%s], expected [application/json]", type);
     }
 
     try {

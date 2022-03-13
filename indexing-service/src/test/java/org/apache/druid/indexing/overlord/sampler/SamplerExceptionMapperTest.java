@@ -34,7 +34,6 @@ public class SamplerExceptionMapperTest
     Response response = new SamplerExceptionMapper().toResponse(new SamplerException(null, "%s", "test"));
 
     Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
     Assert.assertEquals("test", ((Map) response.getEntity()).get("error"));
   }
 }

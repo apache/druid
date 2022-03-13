@@ -27,9 +27,8 @@ import com.sun.jersey.spi.container.ContainerRequest;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.http.security.AbstractResourceFilter;
-import org.apache.druid.server.initialization.jetty.NotFoundException;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -75,7 +74,7 @@ public class TaskResourceFilter extends AbstractResourceFilter
 
     Optional<Task> taskOptional = taskStorageQueryAdapter.getTask(taskId);
     if (!taskOptional.isPresent()) {
-      throw new NotFoundException(StringUtils.format("Cannot find any task with id: [%s]", taskId));
+      throw HttpResponses.NOT_FOUND.exception("Cannot find any task with id: [%s]", taskId);
     }
     final String dataSourceName = Preconditions.checkNotNull(taskOptional.get().getDataSource());
 

@@ -80,7 +80,7 @@ import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.initialization.ZkPathsConfig;
-import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -607,8 +607,7 @@ public class DruidCoordinator
     }
 
     if (computeUsingClusterView && cluster == null) {
-      throw new ServiceUnavailableException(
-          "coordinator hasn't populated information about cluster yet, try again later");
+      throw HttpResponses.SERVER_ERROR.exception("coordinator hasn't populated information about cluster yet, try again later");
     }
 
     final DateTime now = DateTimes.nowUtc();

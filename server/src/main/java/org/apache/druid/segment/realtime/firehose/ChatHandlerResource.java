@@ -23,7 +23,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.server.initialization.jetty.BadRequestException;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 
 import javax.ws.rs.Path;
@@ -61,9 +61,7 @@ public class ChatHandlerResource
       if (requestTaskId != null
           && !requestTaskId.equals(taskId)
           && !StringUtils.urlDecode(requestTaskId).equals(taskId)) {
-        throw new BadRequestException(
-            StringUtils.format("Requested taskId[%s] doesn't match with taskId[%s]", requestTaskId, taskId)
-        );
+        throw HttpResponses.BAD_REQUEST.exception("Requested taskId[%s] doesn't match with taskId[%s]", requestTaskId, taskId);
       }
     }
 
@@ -73,6 +71,6 @@ public class ChatHandlerResource
       return handler.get();
     }
 
-    throw new BadRequestException(StringUtils.format("Can't find chatHandler for handler[%s]", handlerId));
+    throw HttpResponses.BAD_REQUEST.exception("Can't find chatHandler for handler[%s]", handlerId);
   }
 }

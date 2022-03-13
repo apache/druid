@@ -90,7 +90,6 @@ public class CoordinatorResourceTest
     final Response response1 = new CoordinatorResource(mock).getLoadStatus("simple", null, null);
 
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response1.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response1.getMetadata().getFirst("Content-Type"));
     Assert.assertEquals(Object2IntMaps.singleton("k", 1), response1.getEntity());
   }
 
@@ -104,7 +103,6 @@ public class CoordinatorResourceTest
     final Response response1 = new CoordinatorResource(mock).getLoadStatus(null, "full", null);
 
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response1.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response1.getMetadata().getFirst("Content-Type"));
     Assert.assertEquals(ImmutableMap.of("datasource", Object2LongMaps.singleton("k", 1L)), response1.getEntity());
   }
 
@@ -117,7 +115,6 @@ public class CoordinatorResourceTest
     final Response response1 = new CoordinatorResource(mock).getLoadStatus(null, null, null);
 
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response1.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response1.getMetadata().getFirst("Content-Type"));
     Assert.assertEquals(ImmutableMap.of("a", 1.0), response1.getEntity());
   }
 
@@ -130,7 +127,6 @@ public class CoordinatorResourceTest
     final Response response1 = new CoordinatorResource(mock).getLoadQueue(null, "full");
 
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response1.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response1.getMetadata().getFirst("Content-Type"));
 
     ObjectMapper mapper = new DefaultObjectMapper();
     Assert.assertEquals(
@@ -148,7 +144,6 @@ public class CoordinatorResourceTest
     final Response response1 = new CoordinatorResource(mock).getLoadQueue(null, null);
 
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response1.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response1.getMetadata().getFirst("Content-Type"));
 
     ObjectMapper mapper = new DefaultObjectMapper();
     Assert.assertEquals(

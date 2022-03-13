@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
@@ -59,6 +60,13 @@ public enum HttpResponses
     this.statusCode = statusCode;
   }
 
+  @SuppressForbidden(reason = "Response#status")
+  public static Response.ResponseBuilder builder(int statusCode, MediaType mediaType)
+  {
+    return Response.status(statusCode)
+                   .type(mediaType);
+  }
+
   /**
    * This method is only for backward compatibility for some old interfaces.
    * SHOULD NOT be usded in new code
@@ -72,6 +80,25 @@ public enum HttpResponses
                    .entity(message)
                    .type(MediaType.TEXT_PLAIN_TYPE)
                    .build();
+  }
+
+  /**
+   * Returns an {@link WebApplicationException} exception which will be handled by the servlet framework automatically.
+   *
+   * This method is usually called in a {@link com.sun.jersey.spi.container.ContainerRequestFilter}.
+   * Since the servlet handles the exceptions thrown from the filter differently from the {@link Response} returned by an endpoint,
+   * the ContentType is explictly set to application/json.
+   *
+   * If this method is called within an endpoint instead of filter,
+   * and the endpoint declares Content-Type by {@link javax.ws.rs.Produces}, the declaration should contain application/json.
+   */
+  @SuppressForbidden(reason = "Response#status")
+  public RuntimeException exception(String messageFormat, Object... args)
+  {
+    return new WebApplicationException(Response.status(statusCode)
+                                               .type(MediaType.APPLICATION_JSON_TYPE)
+                                               .entity(ImmutableMap.of("error", StringUtils.format(messageFormat, args)))
+                                               .build());
   }
 
   /**
@@ -108,14 +135,21 @@ public enum HttpResponses
   }
 
   /**
+   * NOTE: the Content-Type is not set on the returned Response object.
+   * For any http endpoint, it MUST declare a {@link javax.ws.rs.Produces} annotation,
+   * so that the servlet framework knows how to serialize this entity.
+   * <p>
+   * If the {@link javax.ws.rs.Produces} annotation on an endpoint misses,
+   * the servlet will infer the returned Content-Type by the input 'Accept' header and the entity type,
+   * which might cause an XSS problem.
+   *
    * @param entity object
-   * @return an HTTP response with JSON formatted body
+   * @return an HTTP response
    */
   @SuppressForbidden(reason = "Response#status")
   public Response json(@Nonnull Object entity)
   {
     return Response.status(statusCode)
-                   .type(MediaType.APPLICATION_JSON)
                    .entity(entity)
                    .build();
   }
@@ -128,12 +162,5 @@ public enum HttpResponses
   {
     return Response.status(statusCode)
                    .build();
-  }
-
-  @SuppressForbidden(reason = "Response#status")
-  public static Response.ResponseBuilder builder(int statusCode, MediaType mediaType)
-  {
-    return Response.status(statusCode)
-                   .type(mediaType);
   }
 }

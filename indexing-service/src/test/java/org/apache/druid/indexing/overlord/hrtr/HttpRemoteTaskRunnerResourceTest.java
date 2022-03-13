@@ -124,7 +124,6 @@ public class HttpRemoteTaskRunnerResourceTest
       Response response = targetApi.apply(resource);
 
       Assert.assertEquals(this.statusCode, response.getStatus());
-      Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
       if (errorMessage != null) {
         Assert.assertEquals(errorMessage, ((Map) response.getEntity()).get("error"));
       }

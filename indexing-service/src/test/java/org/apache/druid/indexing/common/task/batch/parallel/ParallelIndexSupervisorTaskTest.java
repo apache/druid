@@ -549,7 +549,6 @@ public class ParallelIndexSupervisorTaskTest
         Response response = targetApi.apply(task, request);
 
         Assert.assertEquals(this.statusCode, response.getStatus());
-        Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
         if (errorMessage != null) {
           Assert.assertEquals(errorMessage, ((Map) response.getEntity()).get("error"));
         }

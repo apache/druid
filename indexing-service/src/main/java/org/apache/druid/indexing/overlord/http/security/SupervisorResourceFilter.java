@@ -28,9 +28,8 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.http.security.AbstractResourceFilter;
-import org.apache.druid.server.initialization.jetty.NotFoundException;
+import org.apache.druid.server.initialization.jetty.HttpResponses;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -76,7 +75,7 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
 
     Optional<SupervisorSpec> supervisorSpecOptional = supervisorManager.getSupervisorSpec(supervisorId);
     if (!supervisorSpecOptional.isPresent()) {
-      throw new NotFoundException(StringUtils.format("Cannot find any supervisor with id: [%s]", supervisorId));
+      throw HttpResponses.NOT_FOUND.exception("Cannot find any supervisor with id: [%s]", supervisorId);
     }
 
     final SupervisorSpec spec = supervisorSpecOptional.get();
