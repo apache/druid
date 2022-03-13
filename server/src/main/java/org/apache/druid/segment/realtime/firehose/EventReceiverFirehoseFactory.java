@@ -382,7 +382,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
         );
       }
       catch (IOException e) {
-        return HttpResponses.SERVER_ERROR.exception(e);
+        return HttpResponses.SERVER_ERROR.error(e);
       }
       finally {
         bytesReceived.addAndGet(countingInputStream.getCount());

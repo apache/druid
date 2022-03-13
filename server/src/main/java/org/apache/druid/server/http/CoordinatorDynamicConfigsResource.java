@@ -92,11 +92,11 @@ public class CoordinatorDynamicConfigsResource
       if (setResult.isOk()) {
         return Response.ok().build();
       } else {
-        return HttpResponses.BAD_REQUEST.exception(setResult.getException());
+        return HttpResponses.BAD_REQUEST.error(setResult.getException());
       }
     }
     catch (IllegalArgumentException e) {
-      return HttpResponses.BAD_REQUEST.exception(e);
+      return HttpResponses.BAD_REQUEST.error(e);
     }
   }
 
@@ -121,7 +121,7 @@ public class CoordinatorDynamicConfigsResource
                        .build();
       }
       catch (IllegalArgumentException e) {
-        return HttpResponses.BAD_REQUEST.exception(e);
+        return HttpResponses.BAD_REQUEST.error(e);
       }
     }
     return Response.ok(

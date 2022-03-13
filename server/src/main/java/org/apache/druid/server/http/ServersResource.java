@@ -127,12 +127,12 @@ public class ServersResource
   public Response getClusterServers(@QueryParam("full") String full, @QueryParam("simple") String simple)
   {
     if (full != null) {
-      return HttpResponses.OK.json(Collections2.transform(serverInventoryView.getInventory(), ServersResource::makeFullServer));
+      return HttpResponses.OK.entity(Collections2.transform(serverInventoryView.getInventory(), ServersResource::makeFullServer));
     } else if (simple != null) {
-      return HttpResponses.OK.json(Collections2.transform(serverInventoryView.getInventory(), ServersResource::makeSimpleServer));
+      return HttpResponses.OK.entity(Collections2.transform(serverInventoryView.getInventory(), ServersResource::makeSimpleServer));
     }
 
-    return HttpResponses.OK.json(Collections2.transform(serverInventoryView.getInventory(), DruidServer::getHost));
+    return HttpResponses.OK.entity(Collections2.transform(serverInventoryView.getInventory(), DruidServer::getHost));
   }
 
   @GET
@@ -146,10 +146,10 @@ public class ServersResource
     }
 
     if (simple != null) {
-      return HttpResponses.OK.json(makeSimpleServer(server));
+      return HttpResponses.OK.entity(makeSimpleServer(server));
     }
 
-    return HttpResponses.OK.json(makeFullServer(server));
+    return HttpResponses.OK.entity(makeFullServer(server));
   }
 
   @GET
@@ -163,10 +163,10 @@ public class ServersResource
     }
 
     if (full != null) {
-      return HttpResponses.OK.json(server.iterateAllSegments());
+      return HttpResponses.OK.entity(server.iterateAllSegments());
     }
 
-    return HttpResponses.OK.json(Iterables.transform(server.iterateAllSegments(), DataSegment::getId));
+    return HttpResponses.OK.entity(Iterables.transform(server.iterateAllSegments(), DataSegment::getId));
   }
 
   @GET
@@ -182,7 +182,7 @@ public class ServersResource
     for (SegmentId possibleSegmentId : SegmentId.iterateAllPossibleParsings(segmentId)) {
       DataSegment segment = server.getSegment(possibleSegmentId);
       if (segment != null) {
-        return HttpResponses.OK.json(segment);
+        return HttpResponses.OK.entity(segment);
       }
     }
 

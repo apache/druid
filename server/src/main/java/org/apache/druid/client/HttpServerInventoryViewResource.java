@@ -57,6 +57,6 @@ public class HttpServerInventoryViewResource
       return HttpResponses.FORBIDDEN.error("HttpServerInventoryView is NULL.");
     }
 
-    return HttpResponses.OK.json(httpServerInventoryView.getDebugInfo());
+    return HttpResponses.OK.entity(httpServerInventoryView.getDebugInfo());
   }
 }

@@ -117,7 +117,7 @@ public class LookupCoordinatorResource
     }
     catch (Exception e) {
       LOG.error(e, "Error getting list of lookups");
-      return HttpResponses.SERVER_ERROR.exception(e);
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -137,7 +137,7 @@ public class LookupCoordinatorResource
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting lookups status");
-      return HttpResponses.SERVER_ERROR.exception(ex);
+      return HttpResponses.SERVER_ERROR.error(ex);
     }
   }
 
@@ -162,17 +162,17 @@ public class LookupCoordinatorResource
         });
       }
       catch (IOException e) {
-        return HttpResponses.BAD_REQUEST.exception(e);
+        return HttpResponses.BAD_REQUEST.error(e);
       }
       if (lookupCoordinatorManager.updateLookups(map, new AuditInfo(author, comment, req.getRemoteAddr()))) {
-        return HttpResponses.ACCEPTED.json(map);
+        return HttpResponses.ACCEPTED.entity(map);
       } else {
         return HttpResponses.SERVER_ERROR.error("Unknown error updating configuration");
       }
     }
     catch (Exception e) {
       LOG.error(e, "Error creating new lookups");
-      return HttpResponses.SERVER_ERROR.exception(e);
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -199,7 +199,7 @@ public class LookupCoordinatorResource
     }
     catch (Exception e) {
       LOG.error(e, "Error deleting tier [%s]", tier);
-      return HttpResponses.SERVER_ERROR.exception(e);
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -231,7 +231,7 @@ public class LookupCoordinatorResource
     }
     catch (Exception e) {
       LOG.error(e, "Error deleting lookup [%s]", lookup);
-      return HttpResponses.SERVER_ERROR.exception(e);
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -262,7 +262,7 @@ public class LookupCoordinatorResource
         lookupSpec = mapper.readValue(in, LookupExtractorFactoryMapContainer.class);
       }
       catch (IOException e) {
-        return HttpResponses.BAD_REQUEST.exception(e);
+        return HttpResponses.BAD_REQUEST.error(e);
       }
       if (lookupCoordinatorManager.updateLookup(
           tier,
@@ -277,7 +277,7 @@ public class LookupCoordinatorResource
     }
     catch (Exception e) {
       LOG.error(e, "Error updating tier [%s] lookup [%s]", tier, lookup);
-      return HttpResponses.SERVER_ERROR.exception(e);
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -304,7 +304,7 @@ public class LookupCoordinatorResource
     }
     catch (Exception e) {
       LOG.error(e, "Error getting lookup [%s]", lookup);
-      return HttpResponses.SERVER_ERROR.exception(e);
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -337,7 +337,7 @@ public class LookupCoordinatorResource
     }
     catch (Exception e) {
       LOG.error(e, "Error getting tier [%s]", tier);
-      return HttpResponses.SERVER_ERROR.exception(e);
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -384,7 +384,7 @@ public class LookupCoordinatorResource
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting lookups status");
-      return HttpResponses.SERVER_ERROR.exception(ex);
+      return HttpResponses.SERVER_ERROR.error(ex);
     }
   }
 
@@ -425,7 +425,7 @@ public class LookupCoordinatorResource
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting lookups status for tier [%s].", tier);
-      return HttpResponses.SERVER_ERROR.exception(ex);
+      return HttpResponses.SERVER_ERROR.error(ex);
     }
   }
 
@@ -467,7 +467,7 @@ public class LookupCoordinatorResource
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting lookups status for tier [%s] and lookup [%s].", tier, lookup);
-      return HttpResponses.SERVER_ERROR.exception(ex);
+      return HttpResponses.SERVER_ERROR.error(ex);
     }
   }
 
@@ -538,7 +538,7 @@ public class LookupCoordinatorResource
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting node status.");
-      return HttpResponses.SERVER_ERROR.exception(ex);
+      return HttpResponses.SERVER_ERROR.error(ex);
     }
   }
 
@@ -570,7 +570,7 @@ public class LookupCoordinatorResource
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting node status for tier [%s].", tier);
-      return HttpResponses.SERVER_ERROR.exception(ex);
+      return HttpResponses.SERVER_ERROR.error(ex);
     }
   }
 
@@ -595,7 +595,7 @@ public class LookupCoordinatorResource
     }
     catch (Exception ex) {
       LOG.error(ex, "Error getting node status for [%s].", hostAndPort);
-      return HttpResponses.SERVER_ERROR.exception(ex);
+      return HttpResponses.SERVER_ERROR.error(ex);
     }
   }
 

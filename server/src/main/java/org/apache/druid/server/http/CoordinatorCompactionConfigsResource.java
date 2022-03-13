@@ -165,7 +165,7 @@ public class CoordinatorCompactionConfigsResource
       return HttpResponses.NOT_FOUND.empty();
     }
 
-    return HttpResponses.OK.json(config);
+    return HttpResponses.OK.entity(config);
   }
 
   @DELETE
@@ -228,7 +228,7 @@ public class CoordinatorCompactionConfigsResource
       return HttpResponses.NOT_FOUND.empty();
     } else {
       LOG.warn(setResult.getException(), "Update compaction config failed");
-      return HttpResponses.BAD_REQUEST.exception(setResult.getException());
+      return HttpResponses.BAD_REQUEST.error(setResult.getException());
     }
   }
 

@@ -1339,7 +1339,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (currentRunner == null) {
       return HttpResponses.SERVICE_UNAVAILABLE.error("task is not running yet");
     } else {
-      return HttpResponses.OK.json(currentRunner.getProgress());
+      return HttpResponses.OK.entity(currentRunner.getProgress());
     }
   }
 
@@ -1353,7 +1353,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (currentRunner == null) {
       return HttpResponses.SERVICE_UNAVAILABLE.error("task is not running yet");
     } else {
-      return HttpResponses.OK.json(currentRunner.getRunningTaskIds());
+      return HttpResponses.OK.entity(currentRunner.getRunningTaskIds());
     }
   }
 
@@ -1367,7 +1367,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (currentRunner == null) {
       return HttpResponses.SERVICE_UNAVAILABLE.error("task is not running yet");
     } else {
-      return HttpResponses.OK.json(currentRunner.getSubTaskSpecs());
+      return HttpResponses.OK.entity(currentRunner.getSubTaskSpecs());
     }
   }
 
@@ -1381,7 +1381,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (currentRunner == null) {
       return HttpResponses.SERVICE_UNAVAILABLE.error("task is not running yet");
     } else {
-      return HttpResponses.OK.json(currentRunner.getRunningSubTaskSpecs());
+      return HttpResponses.OK.entity(currentRunner.getRunningSubTaskSpecs());
     }
   }
 
@@ -1395,7 +1395,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (currentRunner == null) {
       return HttpResponses.SERVICE_UNAVAILABLE.error(("task is not running yet"));
     } else {
-      return HttpResponses.OK.json(currentRunner.getCompleteSubTaskSpecs());
+      return HttpResponses.OK.entity(currentRunner.getCompleteSubTaskSpecs());
     }
   }
 
@@ -1414,7 +1414,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       if (subTaskSpec == null) {
         return HttpResponses.NOT_FOUND.error("sub task [%s] not found.", id);
       } else {
-        return HttpResponses.OK.json(subTaskSpec);
+        return HttpResponses.OK.entity(subTaskSpec);
       }
     }
   }
@@ -1433,7 +1433,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       if (subTaskSpecStatus == null) {
         return HttpResponses.NOT_FOUND.error("sub task [%s] not found.", id);
       } else {
-        return HttpResponses.OK.json(subTaskSpecStatus);
+        return HttpResponses.OK.entity(subTaskSpecStatus);
       }
     }
   }
@@ -1455,7 +1455,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       if (taskHistory == null) {
         return HttpResponses.NOT_FOUND.error("sub task spec [%s] not found.", id);
       } else {
-        return HttpResponses.OK.json(taskHistory.getAttemptHistory());
+        return HttpResponses.OK.entity(taskHistory.getAttemptHistory());
       }
     }
   }
@@ -1658,7 +1658,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    return HttpResponses.OK.json(doGetRowStatsAndUnparseableEvents(full, false).lhs);
+    return HttpResponses.OK.entity(doGetRowStatsAndUnparseableEvents(full, false).lhs);
   }
 
   @VisibleForTesting
@@ -1704,7 +1704,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
 
-    return HttpResponses.OK.json(doGetLiveReports(full));
+    return HttpResponses.OK.entity(doGetLiveReports(full));
   }
 
   /**

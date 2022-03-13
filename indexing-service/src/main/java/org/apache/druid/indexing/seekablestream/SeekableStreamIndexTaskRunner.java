@@ -1563,7 +1563,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   )
   {
     authorizationCheck(req, Action.READ);
-    return HttpResponses.OK.json(doGetRowStats());
+    return HttpResponses.OK.entity(doGetRowStats());
   }
 
   @GET
@@ -1574,7 +1574,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   )
   {
     authorizationCheck(req, Action.READ);
-    return HttpResponses.OK.json(doGetLiveReports());
+    return HttpResponses.OK.entity(doGetLiveReports());
   }
 
 
@@ -1589,7 +1589,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     List<ParseExceptionReport> events = IndexTaskUtils.getReportListFromSavedParseExceptions(
         parseExceptionHandler.getSavedParseExceptionReports()
     );
-    return HttpResponses.OK.json(events);
+    return HttpResponses.OK.entity(events);
   }
 
   @VisibleForTesting
@@ -1629,7 +1629,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             || (latestSequence.getEndOffsets().equals(sequenceNumbers) && finish)) {
           log.warn("Ignoring duplicate request, end offsets already set for sequences [%s]", sequenceNumbers);
           resume();
-          return HttpResponses.OK.json(sequenceNumbers);
+          return HttpResponses.OK.entity(sequenceNumbers);
         } else if (latestSequence.isCheckpointed()) {
           return HttpResponses.BAD_REQUEST.error("Sequence [%s] has already endOffsets set, cannot set to [%s]",
                                                  latestSequence,
@@ -1694,7 +1694,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     resume();
 
-    return HttpResponses.OK.json(sequenceNumbers);
+    return HttpResponses.OK.entity(sequenceNumbers);
   }
 
   private void resetNextCheckpointTime()

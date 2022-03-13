@@ -64,15 +64,15 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
   {
     try {
       final Object o = post(ImmutableMap.of(id, mapper.readValue(inputStream, inObjTypeRef)));
-      return HttpResponses.ACCEPTED.json(o);
+      return HttpResponses.ACCEPTED.entity(o);
     }
     catch (JsonParseException | JsonMappingException e) {
       LOG.debug(e, "Bad request");
-      return HttpResponses.BAD_REQUEST.exception(e);
+      return HttpResponses.BAD_REQUEST.error(e);
     }
     catch (Exception e) {
       LOG.error(e, "Error handling request");
-      return HttpResponses.SERVER_ERROR.exception(e);
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -99,7 +99,7 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
     }
     catch (final IOException ex) {
       LOG.debug(ex, "Bad request");
-      return HttpResponses.BAD_REQUEST.exception(ex);
+      return HttpResponses.BAD_REQUEST.error(ex);
     }
     final Object returnObj;
     try {
@@ -107,12 +107,12 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
     }
     catch (Exception e) {
       LOG.error(e, "Error handling request");
-      return HttpResponses.SERVER_ERROR.exception(e);
+      return HttpResponses.SERVER_ERROR.error(e);
     }
     if (returnObj == null) {
       return HttpResponses.NOT_FOUND.error("object not found");
     } else {
-      return HttpResponses.ACCEPTED.json(returnObj);
+      return HttpResponses.ACCEPTED.entity(returnObj);
     }
   }
 
@@ -124,12 +124,12 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
       if (returnObj == null) {
         return HttpResponses.NOT_FOUND.empty();
       } else {
-        return HttpResponses.OK.json(returnObj);
+        return HttpResponses.OK.entity(returnObj);
       }
     }
     catch (Exception e) {
       LOG.error(e, "Error handling get request for [%s]", id);
-      return HttpResponses.SERVER_ERROR.exception(e);
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -142,12 +142,12 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
       if (all == null) {
         return HttpResponses.NOT_FOUND.empty();
       } else {
-        return HttpResponses.OK.json(all);
+        return HttpResponses.OK.entity(all);
       }
     }
     catch (Exception e) {
       LOG.error(e, "Error getting all");
-      return HttpResponses.SERVER_ERROR.exception(e);
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -159,12 +159,12 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
       if (returnObj == null) {
         return HttpResponses.NOT_FOUND.empty();
       } else {
-        return HttpResponses.ACCEPTED.json(returnObj);
+        return HttpResponses.ACCEPTED.entity(returnObj);
       }
     }
     catch (Exception e) {
       LOG.error(e, "Error in processing delete request for [%s]", id);
-      return HttpResponses.SERVER_ERROR.exception(e);
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 

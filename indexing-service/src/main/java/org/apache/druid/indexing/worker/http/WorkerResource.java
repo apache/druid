@@ -35,7 +35,6 @@ import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.WorkerCuratorCoordinator;
 import org.apache.druid.indexing.worker.WorkerTaskManager;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
@@ -115,7 +114,7 @@ public class WorkerResource
       return Response.ok(ImmutableMap.of(enabledWorker.getHost(), "disabled")).build();
     }
     catch (Exception e) {
-      return HttpResponses.SERVER_ERROR.exception(e);
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -133,7 +132,7 @@ public class WorkerResource
       return Response.ok(ImmutableMap.of(enabledWorker.getHost(), "enabled")).build();
     }
     catch (Exception e) {
-      return HttpResponses.SERVER_ERROR.exception(e);
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -147,7 +146,7 @@ public class WorkerResource
       return Response.ok(ImmutableMap.of(enabledWorker.getHost(), workerTaskManager.isWorkerEnabled())).build();
     }
     catch (Exception e) {
-      return HttpResponses.SERVER_ERROR.exception(e);
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -175,7 +174,7 @@ public class WorkerResource
       ).build();
     }
     catch (Exception e) {
-      return HttpResponses.SERVER_ERROR.exception(e);
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 
@@ -190,7 +189,7 @@ public class WorkerResource
     }
     catch (Exception e) {
       log.error(e, "Failed to issue shutdown for task: %s", taskid);
-      return HttpResponses.SERVER_ERROR.exception(e);
+      return HttpResponses.SERVER_ERROR.error(e);
     }
     return Response.ok(ImmutableMap.of("task", taskid)).build();
   }
@@ -206,21 +205,21 @@ public class WorkerResource
   {
     IdUtils.validateId("taskId", taskId);
     if (!(taskRunner instanceof TaskLogStreamer)) {
-      return HttpResponses.NOT_IMPLEMENTED.text(StringUtils.format("Log streaming not supported by [%s]",
-                                                                   taskRunner.getClass().getName()));
+      return HttpResponses.NOT_IMPLEMENTED.text(MediaType.TEXT_PLAIN_TYPE,
+                                                "Log streaming not supported by [%s]", taskRunner.getClass().getName());
     }
     try {
       final Optional<ByteSource> stream = ((TaskLogStreamer) taskRunner).streamTaskLog(taskId, offset);
 
       if (stream.isPresent()) {
-        return Response.ok(stream.get().openStream()).build();
+        return HttpResponses.OK.entity(stream.get().openStream());
       } else {
         return HttpResponses.NOT_FOUND.empty();
       }
     }
     catch (IOException e) {
       log.warn(e, "Failed to read log for task: %s", taskId);
-      return HttpResponses.SERVER_ERROR.exception(e);
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 }

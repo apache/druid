@@ -229,6 +229,6 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
                                          cacheManager.getGroupMappingRoleMap(authorizerName) != null);
         }
     );
-    return HttpResponses.OK.json(loadStatus);
+    return HttpResponses.OK.entity(loadStatus);
   }
 }

@@ -72,7 +72,7 @@ public class RulesResource
   @ResourceFilters(StateResourceFilter.class)
   public Response getRules()
   {
-    return HttpResponses.OK.json(databaseRuleManager.getAllRules());
+    return HttpResponses.OK.entity(databaseRuleManager.getAllRules());
   }
 
   @GET
@@ -85,9 +85,9 @@ public class RulesResource
   )
   {
     if (full != null) {
-      return HttpResponses.OK.json(databaseRuleManager.getRulesWithDefault(dataSourceName));
+      return HttpResponses.OK.entity(databaseRuleManager.getRulesWithDefault(dataSourceName));
     }
-    return HttpResponses.OK.json(databaseRuleManager.getRules(dataSourceName));
+    return HttpResponses.OK.entity(databaseRuleManager.getRules(dataSourceName));
   }
 
   // default value is used for backwards compatibility
@@ -124,7 +124,7 @@ public class RulesResource
   )
   {
     try {
-      return HttpResponses.OK.json(getRuleHistory(dataSourceName, interval, count));
+      return HttpResponses.OK.entity(getRuleHistory(dataSourceName, interval, count));
     }
     catch (IllegalArgumentException e) {
       return HttpResponses.BAD_REQUEST.error(e.getMessage());
@@ -141,7 +141,7 @@ public class RulesResource
   )
   {
     try {
-      return HttpResponses.OK.json(getRuleHistory(null, interval, count));
+      return HttpResponses.OK.entity(getRuleHistory(null, interval, count));
     }
     catch (IllegalArgumentException e) {
       return HttpResponses.BAD_REQUEST.error(e.getMessage());

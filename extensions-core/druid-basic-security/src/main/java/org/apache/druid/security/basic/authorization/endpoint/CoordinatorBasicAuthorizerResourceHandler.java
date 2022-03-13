@@ -92,7 +92,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
         objectMapper,
         storageUpdater.getCurrentUserMapBytes(authorizerName)
     );
-    return HttpResponses.OK.json(userMap.keySet());
+    return HttpResponses.OK.entity(userMap.keySet());
   }
 
   @Override
@@ -107,7 +107,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
         objectMapper,
         storageUpdater.getCurrentGroupMappingMapBytes(authorizerName)
     );
-    return HttpResponses.OK.json(groupMappingMap.keySet());
+    return HttpResponses.OK.entity(groupMappingMap.keySet());
   }
 
   @Override
@@ -221,7 +221,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
         storageUpdater.getCurrentRoleMapBytes(authorizerName)
     );
 
-    return HttpResponses.OK.json(roleMap.keySet());
+    return HttpResponses.OK.entity(roleMap.keySet());
   }
 
   @Override
@@ -382,7 +382,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
         storageUpdater.getCachedRoleMap(authorizerName)
     );
 
-    return HttpResponses.OK.json(userAndRoleMap);
+    return HttpResponses.OK.entity(userAndRoleMap);
   }
 
   @Override
@@ -397,7 +397,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
         storageUpdater.getCachedRoleMap(authorizerName)
     );
 
-    return HttpResponses.OK.json(groupMappingAndRoleMap);
+    return HttpResponses.OK.entity(groupMappingAndRoleMap);
   }
 
   @Override
@@ -430,7 +430,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
                                          storageUpdater.getCachedRoleMap(authorizerName) != null);
         }
     );
-    return HttpResponses.OK.json(loadStatus);
+    return HttpResponses.OK.entity(loadStatus);
   }
 
   private static Response makeResponseForAuthorizerNotFound(String authorizerName)
@@ -455,7 +455,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
       if (user == null) {
         throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
       }
-      return HttpResponses.OK.json(user);
+      return HttpResponses.OK.entity(user);
     }
     catch (BasicSecurityDBResourceException e) {
       return makeResponseForBasicSecurityDBResourceException(e);
@@ -486,11 +486,11 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
             userName,
             roles
         );
-        return HttpResponses.OK.json(fullUser);
+        return HttpResponses.OK.entity(fullUser);
       } else {
         Set<BasicAuthorizerRole> roles = getRolesForUser(user, roleMap);
         BasicAuthorizerUserFull fullUser = new BasicAuthorizerUserFull(userName, roles);
-        return HttpResponses.OK.json(fullUser);
+        return HttpResponses.OK.entity(fullUser);
       }
     }
     catch (BasicSecurityDBResourceException e) {
@@ -549,7 +549,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
       if (groupMapping == null) {
         throw new BasicSecurityDBResourceException("Group mapping [%s] does not exist.", groupMappingName);
       }
-      return HttpResponses.OK.json(groupMapping);
+      return HttpResponses.OK.entity(groupMapping);
     }
     catch (BasicSecurityDBResourceException e) {
       return makeResponseForBasicSecurityDBResourceException(e);
@@ -585,7 +585,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
       }
 
       BasicAuthorizerGroupMappingFull fullGroup = new BasicAuthorizerGroupMappingFull(groupMapping.getName(), groupMapping.getGroupPattern(), roles);
-      return HttpResponses.OK.json(fullGroup);
+      return HttpResponses.OK.entity(fullGroup);
     }
     catch (BasicSecurityDBResourceException e) {
       return makeResponseForBasicSecurityDBResourceException(e);
@@ -606,9 +606,9 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
       }
 
       if (simplifyPermissions) {
-        return HttpResponses.OK.json(new BasicAuthorizerRoleSimplifiedPermissions(role, null));
+        return HttpResponses.OK.entity(new BasicAuthorizerRoleSimplifiedPermissions(role, null));
       } else {
-        return HttpResponses.OK.json(role);
+        return HttpResponses.OK.entity(role);
       }
     }
     catch (BasicSecurityDBResourceException e) {
@@ -653,7 +653,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
         }
       }
       if (simplifyPermissions) {
-        return HttpResponses.OK.json(new BasicAuthorizerRoleSimplifiedPermissions(role, users));
+        return HttpResponses.OK.entity(new BasicAuthorizerRoleSimplifiedPermissions(role, users));
       } else {
         BasicAuthorizerRoleFull roleFull = new BasicAuthorizerRoleFull(
             roleName,
@@ -661,7 +661,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
             groupMappings,
             role.getPermissions()
         );
-        return HttpResponses.OK.json(roleFull);
+        return HttpResponses.OK.entity(roleFull);
       }
     }
     catch (BasicSecurityDBResourceException e) {
@@ -681,7 +681,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
       if (role == null) {
         throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
       }
-      return HttpResponses.OK.json(role.getPermissions());
+      return HttpResponses.OK.entity(role.getPermissions());
     }
     catch (BasicSecurityDBResourceException e) {
       return makeResponseForBasicSecurityDBResourceException(e);

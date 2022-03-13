@@ -66,3 +66,5 @@ javax.ws.rs.core.Response#status(int)
 javax.ws.rs.core.Response#status(javax.ws.rs.core.Response$Status)
 javax.ws.rs.core.Response#status(javax.ws.rs.core.Response$StatusType)
 javax.ws.rs.core.Response#serverError()
+
+org.apache.druid.server.initialization.jetty.HttpResponses.entity(java.lang.String) @Use HttpResponses.text(javax.ws.rs.core.MediaType, java.lang.String) instead

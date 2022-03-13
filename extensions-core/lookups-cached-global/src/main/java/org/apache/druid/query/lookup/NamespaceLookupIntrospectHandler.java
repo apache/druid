@@ -47,10 +47,10 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
   public Response getKeys()
   {
     try {
-      return HttpResponses.OK.json(getLatest().keySet());
+      return HttpResponses.OK.entity(getLatest().keySet());
     }
     catch (ISE e) {
-      return HttpResponses.NOT_FOUND.exception(e);
+      return HttpResponses.NOT_FOUND.error(e);
     }
   }
 
@@ -60,10 +60,10 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
   public Response getValues()
   {
     try {
-      return HttpResponses.OK.json(getLatest().values());
+      return HttpResponses.OK.entity(getLatest().values());
     }
     catch (ISE e) {
-      return HttpResponses.NOT_FOUND.exception(e);
+      return HttpResponses.NOT_FOUND.error(e);
     }
   }
 
@@ -77,7 +77,7 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
       return HttpResponses.NOT_FOUND.empty();
     } else {
       String version = ((CacheScheduler.VersionedCache) cacheState).getVersion();
-      return HttpResponses.OK.json(ImmutableMap.of("version", version));
+      return HttpResponses.OK.entity(ImmutableMap.of("version", version));
     }
   }
 
@@ -86,10 +86,10 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
   public Response getMap()
   {
     try {
-      return HttpResponses.OK.json(getLatest());
+      return HttpResponses.OK.entity(getLatest());
     }
     catch (ISE e) {
-      return HttpResponses.NOT_FOUND.exception(e);
+      return HttpResponses.NOT_FOUND.error(e);
     }
   }
 

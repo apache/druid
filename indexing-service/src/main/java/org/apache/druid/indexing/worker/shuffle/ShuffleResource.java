@@ -122,7 +122,7 @@ public class ShuffleResource
     }
     catch (IOException e) {
       log.error(e, "Error while deleting partitions of supervisorTask[%s]", supervisorTaskId);
-      return HttpResponses.SERVER_ERROR.exception(e);
+      return HttpResponses.SERVER_ERROR.error(e);
     }
   }
 }

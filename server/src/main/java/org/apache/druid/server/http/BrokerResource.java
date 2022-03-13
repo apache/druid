@@ -49,7 +49,7 @@ public class BrokerResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLoadStatus()
   {
-    return HttpResponses.OK.json(ImmutableMap.of("inventoryInitialized", brokerServerView.isInitialized()));
+    return HttpResponses.OK.entity(ImmutableMap.of("inventoryInitialized", brokerServerView.isInitialized()));
   }
 
   @GET

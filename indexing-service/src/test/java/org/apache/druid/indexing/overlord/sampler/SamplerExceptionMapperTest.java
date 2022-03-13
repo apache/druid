@@ -22,7 +22,6 @@ package org.apache.druid.indexing.overlord.sampler;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Map;
 

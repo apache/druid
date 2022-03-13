@@ -75,7 +75,7 @@ public class TiersResource
         tierMetadata.merge(TierMetadataKeys.currSize, druidServer.getCurrSize(), Long::sum);
         tierMetadata.merge(TierMetadataKeys.maxSize, druidServer.getMaxSize(), Long::sum);
       }
-      return HttpResponses.OK.json(metadata);
+      return HttpResponses.OK.entity(metadata);
     }
 
     Set<String> tiers = serverInventoryView
@@ -84,7 +84,7 @@ public class TiersResource
         .map(DruidServer::getTier)
         .collect(Collectors.toSet());
 
-    return HttpResponses.OK.json(tiers);
+    return HttpResponses.OK.entity(tiers);
   }
 
   private enum IntervalProperties

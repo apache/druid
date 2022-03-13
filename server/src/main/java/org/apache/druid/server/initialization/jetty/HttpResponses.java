@@ -22,6 +22,7 @@ package org.apache.druid.server.initialization.jetty;
 import com.google.common.collect.ImmutableMap;
 import io.netty.util.SuppressForbidden;
 import org.apache.druid.common.utils.ServletResourceUtils;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nonnull;
@@ -68,37 +69,40 @@ public enum HttpResponses
   }
 
   /**
-   * This method is only for backward compatibility for some old interfaces.
-   * SHOULD NOT be usded in new code
-   *
-   * @return an HTTP response whose Content-Type is text/plain
+   * @param mediaType Content-Type in the HTTP response.
+   *                  NOTE: It's dangerous to set the type to text/html which might cause an XSS problem.
+   * @param text      text
+   * @return an HTTP response
    */
   @SuppressForbidden(reason = "Response#status")
-  public Response text(String message)
+  public Response text(MediaType mediaType, String text)
   {
     return Response.status(statusCode)
-                   .entity(message)
-                   .type(MediaType.TEXT_PLAIN_TYPE)
+                   .entity(text)
+                   .type(mediaType)
                    .build();
+  }
+
+  public Response text(MediaType mediaType, String format, Object...args)
+  {
+    return text(mediaType, StringUtils.format(format, args));
   }
 
   /**
    * Returns an {@link WebApplicationException} exception which will be handled by the servlet framework automatically.
-   *
+   * <p>
    * This method is usually called in a {@link com.sun.jersey.spi.container.ContainerRequestFilter}.
    * Since the servlet handles the exceptions thrown from the filter differently from the {@link Response} returned by an endpoint,
    * the ContentType is explictly set to application/json.
-   *
+   * <p>
    * If this method is called within an endpoint instead of filter,
    * and the endpoint declares Content-Type by {@link javax.ws.rs.Produces}, the declaration should contain application/json.
    */
-  @SuppressForbidden(reason = "Response#status")
   public RuntimeException exception(String messageFormat, Object... args)
   {
-    return new WebApplicationException(Response.status(statusCode)
-                                               .type(MediaType.APPLICATION_JSON_TYPE)
-                                               .entity(ImmutableMap.of("error", StringUtils.format(messageFormat, args)))
-                                               .build());
+    Response response = error(messageFormat, args);
+    response.getMetadata().putSingle("Content-Type", MediaType.APPLICATION_JSON);
+    return new WebApplicationException(response);
   }
 
   /**
@@ -109,18 +113,7 @@ public enum HttpResponses
    */
   public Response error(String message)
   {
-    return json(ImmutableMap.of("error", message));
-  }
-
-  /**
-   * @return an HTTP response with JSON formatted message. The message is as:
-   * <code>
-   * {"error": "error message"}
-   * </code>
-   */
-  public Response exception(@Nullable Throwable t)
-  {
-    return error(ServletResourceUtils.sanitizeExceptionMessage(t));
+    return entity(ImmutableMap.of("error", message));
   }
 
   /**
@@ -132,6 +125,17 @@ public enum HttpResponses
   public Response error(String messageFormat, Object... formatArgs)
   {
     return error(StringUtils.format(messageFormat, formatArgs));
+  }
+
+  /**
+   * @return an HTTP response with JSON formatted message. The message is as:
+   * <code>
+   * {"error": "error message"}
+   * </code>
+   */
+  public Response error(@Nullable Throwable t)
+  {
+    return error(ServletResourceUtils.sanitizeExceptionMessage(t));
   }
 
   /**
@@ -147,11 +151,23 @@ public enum HttpResponses
    * @return an HTTP response
    */
   @SuppressForbidden(reason = "Response#status")
-  public Response json(@Nonnull Object entity)
+  public Response entity(@Nonnull Object entity)
   {
     return Response.status(statusCode)
                    .entity(entity)
                    .build();
+  }
+
+  /**
+   * An overrided version of {@link #entity(Object)}
+   * <p>
+   * It's a little dangerous to return String-based entity if it lacks of explicit Content-Type.
+   * So it's designed to be prohibitted in the forbidden-apis.txt
+   * By this way, the forbidden checks helps developers to know if a String is really needed to return.
+   */
+  public Response entity(String entity)
+  {
+    throw new ISE("Not Supported API. Call text() function instead.");
   }
 
   /**

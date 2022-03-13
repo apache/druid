@@ -60,7 +60,7 @@ public class HttpRemoteTaskRunnerResource
       return HttpResponses.FORBIDDEN.error("HttpRemoteTaskRunner is NULL.");
     }
 
-    return HttpResponses.OK.json(httpRemoteTaskRunner.getKnownTasks());
+    return HttpResponses.OK.entity(httpRemoteTaskRunner.getKnownTasks());
   }
 
   @GET
@@ -73,7 +73,7 @@ public class HttpRemoteTaskRunnerResource
       return HttpResponses.FORBIDDEN.error("HttpRemoteTaskRunner is NULL.");
     }
 
-    return HttpResponses.OK.json(httpRemoteTaskRunner.getPendingTasksList());
+    return HttpResponses.OK.entity(httpRemoteTaskRunner.getPendingTasksList());
   }
 
   @GET
@@ -86,7 +86,7 @@ public class HttpRemoteTaskRunnerResource
       return HttpResponses.FORBIDDEN.error("HttpRemoteTaskRunner is NULL.");
     }
 
-    return HttpResponses.OK.json(httpRemoteTaskRunner.getWorkerSyncerDebugInfo());
+    return HttpResponses.OK.entity(httpRemoteTaskRunner.getWorkerSyncerDebugInfo());
   }
 
   @GET
@@ -99,7 +99,7 @@ public class HttpRemoteTaskRunnerResource
       return HttpResponses.FORBIDDEN.error("HttpRemoteTaskRunner is NULL.");
     }
 
-    return HttpResponses.OK.json(httpRemoteTaskRunner.getBlacklistedWorkers());
+    return HttpResponses.OK.entity(httpRemoteTaskRunner.getBlacklistedWorkers());
   }
 
   @GET
@@ -112,7 +112,7 @@ public class HttpRemoteTaskRunnerResource
       return HttpResponses.FORBIDDEN.error("HttpRemoteTaskRunner is NULL.");
     }
 
-    return HttpResponses.OK.json(httpRemoteTaskRunner.getLazyWorkers());
+    return HttpResponses.OK.entity(httpRemoteTaskRunner.getLazyWorkers());
   }
 
   @GET
@@ -125,7 +125,7 @@ public class HttpRemoteTaskRunnerResource
       return HttpResponses.FORBIDDEN.error("HttpRemoteTaskRunner is NULL.");
     }
 
-    return HttpResponses.OK.json(httpRemoteTaskRunner.getWorkersWithUnacknowledgedTasks());
+    return HttpResponses.OK.entity(httpRemoteTaskRunner.getWorkersWithUnacknowledgedTasks());
   }
 
   @GET
@@ -138,7 +138,7 @@ public class HttpRemoteTaskRunnerResource
       return HttpResponses.FORBIDDEN.error("HttpRemoteTaskRunner is NULL.");
     }
 
-    return HttpResponses.OK.json(httpRemoteTaskRunner.getWorkersEligibleToRunTasks());
+    return HttpResponses.OK.entity(httpRemoteTaskRunner.getWorkersEligibleToRunTasks());
   }
 
   private HttpRemoteTaskRunner getHttpRemoteTaskRunner()

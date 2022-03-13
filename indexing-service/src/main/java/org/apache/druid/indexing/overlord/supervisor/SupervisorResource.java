@@ -115,7 +115,7 @@ public class SupervisorResource
           }
 
           manager.createOrUpdateAndStartSupervisor(spec);
-          return HttpResponses.OK.json(ImmutableMap.of("id", spec.getId()));
+          return HttpResponses.OK.entity(ImmutableMap.of("id", spec.getId()));
         }
     );
   }
@@ -182,10 +182,10 @@ public class SupervisorResource
                 })
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
-            return HttpResponses.OK.json(allStates);
+            return HttpResponses.OK.entity(allStates);
           }
 
-          return HttpResponses.OK.json(authorizedSupervisorIds);
+          return HttpResponses.OK.entity(authorizedSupervisorIds);
         }
     );
   }
@@ -203,7 +203,7 @@ public class SupervisorResource
             return HttpResponses.NOT_FOUND.error("[%s] does not exist", id);
           }
 
-          return HttpResponses.OK.json(spec.get());
+          return HttpResponses.OK.entity(spec.get());
         }
     );
   }
@@ -221,7 +221,7 @@ public class SupervisorResource
             return HttpResponses.NOT_FOUND.error("[%s] does not exist", id);
           }
 
-          return HttpResponses.OK.json(spec.get());
+          return HttpResponses.OK.entity(spec.get());
         }
     );
   }
@@ -240,7 +240,7 @@ public class SupervisorResource
           }
 
           HttpResponses response = healthy.get() ? HttpResponses.OK : HttpResponses.SERVICE_UNAVAILABLE;
-          return response.json(ImmutableMap.of("healthy", healthy.get()));
+          return response.entity(ImmutableMap.of("healthy", healthy.get()));
         }
     );
   }
@@ -260,7 +260,7 @@ public class SupervisorResource
             return HttpResponses.NOT_FOUND.error("[%s] does not exist", id);
           }
 
-          return HttpResponses.OK.json(stats.get());
+          return HttpResponses.OK.entity(stats.get());
         }
     );
   }
@@ -280,7 +280,7 @@ public class SupervisorResource
             return HttpResponses.NOT_FOUND.error("[%s] does not exist", id);
           }
 
-          return HttpResponses.OK.json(parseErrors.get());
+          return HttpResponses.OK.entity(parseErrors.get());
         }
     );
   }
@@ -322,7 +322,7 @@ public class SupervisorResource
     return asLeaderWithSupervisorManager(
         manager -> {
           if (manager.stopAndRemoveSupervisor(id)) {
-            return HttpResponses.OK.json(ImmutableMap.of("id", id));
+            return HttpResponses.OK.entity(ImmutableMap.of("id", id));
           } else {
             return HttpResponses.NOT_FOUND.error("[%s] does not exist", id);
           }
@@ -363,7 +363,7 @@ public class SupervisorResource
             manager.stopAndRemoveSupervisor(supervisorId);
           }
 
-          return HttpResponses.OK.json(ImmutableMap.of("status", "success"));
+          return HttpResponses.OK.entity(ImmutableMap.of("status", "success"));
         }
     );
   }
@@ -374,7 +374,7 @@ public class SupervisorResource
   public Response specGetAllHistory(@Context final HttpServletRequest req)
   {
     return asLeaderWithSupervisorManager(
-        manager -> HttpResponses.OK.json(
+        manager -> HttpResponses.OK.entity(
             AuthorizationUtils.filterAuthorizedResources(
                 req,
                 manager.getSupervisorHistory(),
@@ -407,7 +407,7 @@ public class SupervisorResource
                     )
                 );
             if (authorizedHistoryForId.size() > 0) {
-              return HttpResponses.OK.json(authorizedHistoryForId);
+              return HttpResponses.OK.entity(authorizedHistoryForId);
             }
           }
 
@@ -425,7 +425,7 @@ public class SupervisorResource
     return asLeaderWithSupervisorManager(
         manager -> {
           if (manager.resetSupervisor(id, null)) {
-            return HttpResponses.OK.json(ImmutableMap.of("id", id));
+            return HttpResponses.OK.entity(ImmutableMap.of("id", id));
           } else {
             return HttpResponses.NOT_FOUND.error("[%s] does not exist", id);
           }
@@ -478,7 +478,7 @@ public class SupervisorResource
         manager -> {
           if (manager.suspendOrResumeSupervisor(id, suspend)) {
             Optional<SupervisorSpec> spec = manager.getSupervisorSpec(id);
-            return HttpResponses.OK.json(spec.get());
+            return HttpResponses.OK.entity(spec.get());
           } else {
             Optional<SupervisorSpec> spec = manager.getSupervisorSpec(id);
             if (spec.isPresent()) {
@@ -506,7 +506,7 @@ public class SupervisorResource
             manager.suspendOrResumeSupervisor(supervisorId, suspend);
           }
 
-          return HttpResponses.OK.json(ImmutableMap.of("status", "success"));
+          return HttpResponses.OK.entity(ImmutableMap.of("status", "success"));
         }
     );
   }

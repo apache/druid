@@ -209,7 +209,7 @@ public class TaskManagementResource
       return Response.ok().build();
     }
     catch (RuntimeException ex) {
-      return HttpResponses.SERVER_ERROR.exception(ex);
+      return HttpResponses.SERVER_ERROR.error(ex);
     }
   }
 

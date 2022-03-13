@@ -77,7 +77,7 @@ public class CompactionResource
     if (notCompactedSegmentSizeBytes == null) {
       return HttpResponses.NOT_FOUND.error("unknown dataSource [%s]", dataSource);
     } else {
-      return HttpResponses.OK.json(ImmutableMap.of("remainingSegmentSize", notCompactedSegmentSizeBytes));
+      return HttpResponses.OK.entity(ImmutableMap.of("remainingSegmentSize", notCompactedSegmentSizeBytes));
     }
   }
 
@@ -99,6 +99,6 @@ public class CompactionResource
       }
       snapshots = ImmutableList.of(autoCompactionSnapshot);
     }
-    return HttpResponses.OK.json(ImmutableMap.of("latestStatus", snapshots));
+    return HttpResponses.OK.entity(ImmutableMap.of("latestStatus", snapshots));
   }
 }

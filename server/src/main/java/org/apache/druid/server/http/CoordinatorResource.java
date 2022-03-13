@@ -75,9 +75,9 @@ public class CoordinatorResource
     final boolean leading = coordinator.isLeader();
     final Map<String, Boolean> response = ImmutableMap.of("leader", leading);
     if (leading) {
-      return HttpResponses.OK.json(response);
+      return HttpResponses.OK.entity(response);
     } else {
-      return HttpResponses.NOT_FOUND.json(response);
+      return HttpResponses.NOT_FOUND.entity(response);
     }
   }
 
@@ -92,15 +92,15 @@ public class CoordinatorResource
   )
   {
     if (simple != null) {
-      return HttpResponses.OK.json(coordinator.computeNumsUnavailableUsedSegmentsPerDataSource());
+      return HttpResponses.OK.entity(coordinator.computeNumsUnavailableUsedSegmentsPerDataSource());
     }
 
     if (full != null) {
       return computeUsingClusterView != null
-             ? HttpResponses.OK.json(coordinator.computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView()) :
-             HttpResponses.OK.json(coordinator.computeUnderReplicationCountsPerDataSourcePerTier());
+             ? HttpResponses.OK.entity(coordinator.computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView()) :
+             HttpResponses.OK.entity(coordinator.computeUnderReplicationCountsPerDataSourcePerTier());
     }
-    return HttpResponses.OK.json(coordinator.getLoadStatus());
+    return HttpResponses.OK.entity(coordinator.getLoadStatus());
   }
 
   @GET
@@ -144,10 +144,10 @@ public class CoordinatorResource
     }
 
     if (full != null) {
-      return HttpResponses.OK.json(coordinator.getLoadManagementPeons());
+      return HttpResponses.OK.entity(coordinator.getLoadManagementPeons());
     }
 
-    return HttpResponses.OK.json(
+    return HttpResponses.OK.entity(
         Maps.transformValues(
             coordinator.getLoadManagementPeons(),
             new Function<LoadQueuePeon, Object>()
