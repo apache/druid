@@ -73,6 +73,7 @@ public class ParametrizedUriEmitterTest
     lifecycle = new Lifecycle();
     Emitter emitter = Emitters.create(props, httpClient, lifecycle);
     Assert.assertEquals(ParametrizedUriEmitter.class, emitter.getClass());
+    lifecycle.addMaybeStartStartCloseInstance(emitter);
     lifecycle.start();
     return emitter;
   }

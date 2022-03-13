@@ -124,7 +124,7 @@ public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter
         try {
           emitter = emitters.computeIfAbsent(uri, u -> {
             try {
-              return innerLifecycle.addMaybeStartManagedInstance(
+              return innerLifecycle.addMaybeStartStartCloseInstance(
                   new HttpPostEmitter(config.buildHttpEmitterConfig(u.toString()), client, jsonMapper)
               );
             }
