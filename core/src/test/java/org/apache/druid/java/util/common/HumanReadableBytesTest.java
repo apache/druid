@@ -445,28 +445,6 @@ public class HumanReadableBytesTest
   }
 
   @Test
-  public void testFormatInBinaryK8sByte()
-  {
-    Assert.assertEquals("-8.00 Ei", HumanReadableBytes.format(Long.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.KUBERNETES_BYTE));
-    Assert.assertEquals("-8.000 Ei", HumanReadableBytes.format(Long.MIN_VALUE, 3, HumanReadableBytes.UnitSystem.KUBERNETES_BYTE));
-
-    Assert.assertEquals("-2.00 Gi", HumanReadableBytes.format(Integer.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.KUBERNETES_BYTE));
-    Assert.assertEquals("-32.00 Ki", HumanReadableBytes.format(Short.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.KUBERNETES_BYTE));
-
-    Assert.assertEquals("-128", HumanReadableBytes.format(Byte.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.KUBERNETES_BYTE));
-    Assert.assertEquals("-1", HumanReadableBytes.format(-1, 2, HumanReadableBytes.UnitSystem.KUBERNETES_BYTE));
-    Assert.assertEquals("0", HumanReadableBytes.format(0, 2, HumanReadableBytes.UnitSystem.KUBERNETES_BYTE));
-    Assert.assertEquals("1", HumanReadableBytes.format(1, 2, HumanReadableBytes.UnitSystem.KUBERNETES_BYTE));
-
-    Assert.assertEquals("1.00 Ki", HumanReadableBytes.format(1024L, 2, HumanReadableBytes.UnitSystem.KUBERNETES_BYTE));
-    Assert.assertEquals("1.00 Mi", HumanReadableBytes.format(1024L * 1024, 2, HumanReadableBytes.UnitSystem.KUBERNETES_BYTE));
-    Assert.assertEquals("1.00 Gi", HumanReadableBytes.format(1024L * 1024 * 1024, 2, HumanReadableBytes.UnitSystem.KUBERNETES_BYTE));
-    Assert.assertEquals("1.00 Ti", HumanReadableBytes.format(1024L * 1024 * 1024 * 1024, 2, HumanReadableBytes.UnitSystem.KUBERNETES_BYTE));
-    Assert.assertEquals("1.00 Pi", HumanReadableBytes.format(1024L * 1024 * 1024 * 1024 * 1024, 2, HumanReadableBytes.UnitSystem.KUBERNETES_BYTE));
-    Assert.assertEquals("8.00 Ei", HumanReadableBytes.format(Long.MAX_VALUE, 2, HumanReadableBytes.UnitSystem.KUBERNETES_BYTE));
-  }
-
-  @Test
   public void testPrecisionInBinaryFormat()
   {
     Assert.assertEquals("1 KiB", HumanReadableBytes.format(1500, 0, HumanReadableBytes.UnitSystem.BINARY_BYTE));

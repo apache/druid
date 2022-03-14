@@ -170,7 +170,6 @@ public class HumanReadableBytes
       isBinaryByte = true;
     }
 
-
     long base = 1;
     switch (unit) {
       case 'k':
@@ -235,12 +234,7 @@ public class HumanReadableBytes
      * simplified SI format without 'B' indicator
      * eg: K, M, G ...
      */
-    DECIMAL,
-    /**
-     * same as binary byte format, that k8s uses
-     * eg: Ki, Mi, Gi ...
-     */
-    KUBERNETES_BYTE
+    DECIMAL
   }
 
   /**
@@ -264,8 +258,6 @@ public class HumanReadableBytes
         return DecimalFormatter.format(bytes, pattern, "B");
       case DECIMAL:
         return DecimalFormatter.format(bytes, pattern, "").trim();
-      case KUBERNETES_BYTE:
-        return BinaryFormatter.format(bytes, pattern, "").trim();
       default:
         throw new IAE("Unkonwn unit system[%s]", unitSystem);
     }
