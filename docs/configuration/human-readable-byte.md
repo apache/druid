@@ -90,7 +90,7 @@ druid.cache.sizeInBytes=256MiB
 ```
 
 ```properties
-# 256MiB bytes = 256 * 1024 * 1024 bytes
+# 256Mi = 256MiB = 256 * 1024 * 1024 bytes
 druid.cache.sizeInBytes=256Mi
 ```
 
