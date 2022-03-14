@@ -65,6 +65,27 @@ public class StringTuple implements Comparable<StringTuple>
     return values.length;
   }
 
+  /**
+   * Esimated heap size of this {@code StringTuple} in bytes including JVM
+   * object overhead.
+   */
+  public long sizeInBytes()
+  {
+    // Size = 16B (object header) + 8B (array ref) + array size
+    long bytes = 16L + 8L;
+
+    // Add size of array
+    bytes += Integer.BYTES;
+    for (String value : values) {
+      bytes += Long.BYTES;
+      if (value != null) {
+        bytes += 28 + 16 + (2L * value.length());
+      }
+    }
+
+    return bytes;
+  }
+
   @JsonValue
   public String[] toArray()
   {

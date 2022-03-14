@@ -133,6 +133,20 @@ public class StringSketchTest
       Assert.assertEquals(MAX_STRING, target.getDelegate().getMaxValue());
     }
 
+    @Test
+    public void testSizeInBytes()
+    {
+      Assert.assertEquals(92L, target.sizeInBytes());
+      for (int i = 0; i < 1_000_000; ++i) {
+        target.put(
+            StringTuple.create("dim0-" + i, "dim1-" + i, "dim2-" + i)
+        );
+      }
+      final long sketchSize = target.sizeInBytes();
+      Assert.assertTrue(sketchSize > 5_400_000L);
+      Assert.assertTrue(sketchSize < 5_450_000L);
+    }
+
     private long getCount()
     {
       return target.getDelegate().getN();

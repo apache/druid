@@ -65,4 +65,13 @@ public interface StringDistribution
    * sorted elements.
    */
   PartitionBoundaries getEvenPartitionsByTargetSize(int targetSize);
+
+  /**
+   * Estimated heap size of this StringDistribution in bytes. The estimated value
+   * must inlude JVM object overheads.
+   *
+   * @return Estimated heap size of this {@code StringDistribution} in bytes including
+   * JVM object overhead.
+   */
+  long sizeInBytes();
 }

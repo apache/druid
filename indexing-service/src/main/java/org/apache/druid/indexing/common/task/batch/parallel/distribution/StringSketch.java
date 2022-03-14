@@ -33,6 +33,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.quantiles.ItemsSketch;
+import org.apache.datasketches.quantiles.ItemsSketchIterator;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 
@@ -129,6 +130,27 @@ public class StringSketch implements StringDistribution
     );
     StringTuple[] partitions = delegate.getQuantiles(evenPartitionCount + 1); // add 1 since this returns endpoints
     return new PartitionBoundaries((partitions == null) ? new StringTuple[0] : partitions);
+  }
+
+  @Override
+  public long sizeInBytes()
+  {
+    // Size = 16L (object overhead) + 8L (sketch ref) + sketch size
+    long bytes = 16L + 8L;
+
+    // Sketch size = 16L (object overhead) + 3 ints + 4 refs + 1 long
+    // + size of entries
+    bytes += 16L + 3 * Integer.BYTES + 4 * Long.BYTES + Long.BYTES;
+
+    // Add size of entries
+    final ItemsSketchIterator<StringTuple> iterator = delegate.iterator();
+    while (iterator.next()) {
+      StringTuple value = iterator.getValue();
+      bytes += Long.BYTES;
+      bytes += value == null ? 0 : value.sizeInBytes();
+    }
+
+    return bytes;
   }
 
   @Override

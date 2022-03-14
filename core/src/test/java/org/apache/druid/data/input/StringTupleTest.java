@@ -145,4 +145,14 @@ public class StringTupleTest
         StringTuple.create("c", "b")
     );
   }
+
+  @Test
+  public void testSizeInBytes()
+  {
+    assertEquals(44L, StringTuple.create(null, null).sizeInBytes());
+    assertEquals(90L, StringTuple.create(null, "b").sizeInBytes());
+    assertEquals(136L, StringTuple.create("a", "b").sizeInBytes());
+    assertEquals(154L, StringTuple.create("apple", "banana").sizeInBytes());
+    assertEquals(194L, StringTuple.create("apple apple apple", "banana nana na").sizeInBytes());
+  }
 }
