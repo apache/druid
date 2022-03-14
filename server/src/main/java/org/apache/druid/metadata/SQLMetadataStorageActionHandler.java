@@ -280,8 +280,8 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     return getConnector().retryTransaction(
         (handle, status) -> {
           final List<TaskInfo<EntryType, StatusType>> tasks = new ArrayList<>();
-          Query<Map<String, Object>> query;
           for (Entry<TaskLookupType, TaskLookup> entry : taskLookups.entrySet()) {
+            final Query<Map<String, Object>> query;
             switch (entry.getKey()) {
               case ACTIVE:
                 query = createActiveTaskInfoQuery(

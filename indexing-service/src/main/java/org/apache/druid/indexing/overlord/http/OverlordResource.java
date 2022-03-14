@@ -643,6 +643,69 @@ public class OverlordResource
     return getTasks("complete", null, null, maxTaskStatuses, null, req);
   }
 
+  @GET
+  @Path("/tasks")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getTasks(
+      @QueryParam("state") final String state,
+      @QueryParam("datasource") final String dataSource,
+      @QueryParam("createdTimeInterval") final String createdTimeInterval,
+      @QueryParam("max") final Integer maxCompletedTasks,
+      @QueryParam("type") final String type,
+      @Context final HttpServletRequest req
+  )
+  {
+    //check for valid state
+    if (state != null) {
+      if (!API_TASK_STATES.contains(StringUtils.toLowerCase(state))) {
+        return Response.status(Status.BAD_REQUEST)
+                       .type(MediaType.TEXT_PLAIN)
+                       .entity(StringUtils.format("Invalid state : %s, valid values are: %s", state, API_TASK_STATES))
+                       .build();
+      }
+    }
+    // early authorization check if datasource != null
+    // fail fast if user not authorized to access datasource
+    if (dataSource != null) {
+      final ResourceAction resourceAction = new ResourceAction(
+          new Resource(dataSource, ResourceType.DATASOURCE),
+          Action.READ
+      );
+      final Access authResult = AuthorizationUtils.authorizeResourceAction(
+          req,
+          resourceAction,
+          authorizerMapper
+      );
+      if (!authResult.isAllowed()) {
+        throw new WebApplicationException(
+            Response.status(Response.Status.FORBIDDEN)
+                    .type(MediaType.TEXT_PLAIN)
+                    .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
+                    .build()
+        );
+      }
+    }
+
+    return asLeaderWith(
+        taskMaster.getTaskRunner(),
+        taskRunner -> {
+          final List<TaskStatusPlus> authorizedList = securedTaskStatusPlus(
+              getTasks(
+                  taskRunner,
+                  TaskStateLookup.fromString(state),
+                  dataSource,
+                  createdTimeInterval,
+                  maxCompletedTasks,
+                  type
+              ),
+              dataSource,
+              req
+          );
+          return Response.ok(authorizedList).build();
+        }
+    );
+  }
+
   private List<TaskStatusPlus> getTasks(
       TaskRunner taskRunner,
       TaskStateLookup state,
@@ -845,69 +908,6 @@ public class OverlordResource
     }
     return runnerWorkItemsStream
         .collect(Collectors.toMap(TaskRunnerWorkItem::getTaskId, item -> item));
-  }
-
-  @GET
-  @Path("/tasks")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response getTasks(
-      @QueryParam("state") final String state,
-      @QueryParam("datasource") final String dataSource,
-      @QueryParam("createdTimeInterval") final String createdTimeInterval,
-      @QueryParam("max") final Integer maxCompletedTasks,
-      @QueryParam("type") final String type,
-      @Context final HttpServletRequest req
-  )
-  {
-    //check for valid state
-    if (state != null) {
-      if (!API_TASK_STATES.contains(StringUtils.toLowerCase(state))) {
-        return Response.status(Status.BAD_REQUEST)
-                       .type(MediaType.TEXT_PLAIN)
-                       .entity(StringUtils.format("Invalid state : %s, valid values are: %s", state, API_TASK_STATES))
-                       .build();
-      }
-    }
-    // early authorization check if datasource != null
-    // fail fast if user not authorized to access datasource
-    if (dataSource != null) {
-      final ResourceAction resourceAction = new ResourceAction(
-          new Resource(dataSource, ResourceType.DATASOURCE),
-          Action.READ
-      );
-      final Access authResult = AuthorizationUtils.authorizeResourceAction(
-          req,
-          resourceAction,
-          authorizerMapper
-      );
-      if (!authResult.isAllowed()) {
-        throw new WebApplicationException(
-            Response.status(Response.Status.FORBIDDEN)
-                    .type(MediaType.TEXT_PLAIN)
-                    .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
-                    .build()
-        );
-      }
-    }
-
-    return asLeaderWith(
-        taskMaster.getTaskRunner(),
-        taskRunner -> {
-          final List<TaskStatusPlus> authorizedList = securedTaskStatusPlus(
-              getTasks(
-                  taskRunner,
-                  TaskStateLookup.fromString(state),
-                  dataSource,
-                  createdTimeInterval,
-                  maxCompletedTasks,
-                  type
-              ),
-              dataSource,
-              req
-          );
-          return Response.ok(authorizedList).build();
-        }
-    );
   }
 
   @DELETE
