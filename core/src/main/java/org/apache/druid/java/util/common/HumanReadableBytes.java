@@ -164,7 +164,7 @@ public class HumanReadableBytes
     } else if (unit == 'i') {
       //unit ends with 'i' must be format of Ki/Mi/Gi/Ti/Pi, so at least 2 extra characters are required
       if (lastDigitIndex < 1) {
-        throw new IAE("Invalid format of number: %s", rawNumber);
+        throw new IAE("Invalid format of number [%s]. The unit should be one of Pi/Ti/Gi/Mi/Ki", rawNumber);
       }
       unit = number.charAt(lastDigitIndex--);
       isBinaryByte = true;
