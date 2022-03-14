@@ -26,8 +26,8 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.metadata.EntryExistsException;
-import org.apache.druid.metadata.MetadataStorageActionHandler.TaskLookup;
-import org.apache.druid.metadata.MetadataStorageActionHandler.TaskLookupType;
+import org.apache.druid.metadata.TaskLookup;
+import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -151,30 +151,14 @@ public interface TaskStorage
   List<Task> getActiveTasksByDatasource(String datasource);
 
   /**
-   * Returns a list of currently running or pending tasks as stored in the storage facility as {@link TaskInfo}. No
+   * Returns a list of tasks stored in the storage facility as {@link TaskInfo}. No
    * particular order is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
    *
-   * @return list of {@link TaskInfo}
-   */
-
-  /**
-   * Returns up to {@code maxTaskStatuses} {@link TaskInfo} objects of recently finished tasks as stored in the storage
-   * facility. No particular order is guaranteed, but implementations are encouraged to return tasks in descending order
-   * of creation. No particular standard of "recent" is guaranteed, and in fact, this method is permitted to simply
-   * return nothing.
+   * The returned list can contain active tasks and complete tasks depending on the {@code taskLookups} parameter.
+   * See {@link TaskLookup} for more details of active and complete tasks.
    *
-   * @param maxTaskStatuses   maxTaskStatuses
-   * @param durationBeforeNow duration
-   * @param datasource        datasource
-   *
-   * @return list of {@link TaskInfo}
-   */
-
-  /**
-   * TODO
-   * @param taskLookup
-   * @param datasource
-   * @return
+   * @param taskLookups lookup types and filters
+   * @param datasource  datasource filter
    */
   List<TaskInfo<Task, TaskStatus>> getTaskInfos(
       Map<TaskLookupType, TaskLookup> taskLookups,

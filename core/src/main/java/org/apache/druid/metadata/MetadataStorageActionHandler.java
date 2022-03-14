@@ -19,20 +19,16 @@
 
 package org.apache.druid.metadata;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.TaskInfo;
-import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
 {
@@ -88,26 +84,15 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   TaskInfo<EntryType, StatusType> getTaskInfo(String entryId);
 
   /**
-   * Return up to {@code maxNumStatuses} {@link TaskInfo} objects for all inactive entries
-   * created on or later than the given timestamp
+   * Returns a list of {@link TaskInfo} from metadata store that matches to the given filters.
    *
-   * @param timestamp      timestamp
-   * @param maxNumStatuses maxNumStatuses
+   * If {@code taskLookups} includes {@link TaskLookupType#ACTIVE}, it returns all active tasks in the metadata store.
+   * If {@code taskLookups} includes {@link TaskLookupType#COMPLETE}, it returns all complete tasks in the metadata
+   * store. For complete tasks, additional filters in {@link org.apache.druid.metadata.TaskLookup.CompleteTaskLookup}
+   * can be applied. All lookups should be processed atomically if there are more than one lookup is given.
    *
-   * @return list of {@link TaskInfo}
-   */
-
-  /**
-   * Return {@link TaskInfo} objects for all active entries
-   *
-   * @return list of {@link TaskInfo}
-   */
-
-  /**
-   * TODO
-   * @param taskLookup
-   * @param datasource
-   * @return
+   * @param taskLookups task lookup type and filters.
+   * @param datasource  datasource filter
    */
   List<TaskInfo<EntryType, StatusType>> getTaskInfos(
       Map<TaskLookupType, TaskLookup> taskLookups,
@@ -120,133 +105,6 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   )
   {
     return getTaskInfos(Collections.singletonMap(taskLookup.getType(), taskLookup), datasource);
-  }
-
-  enum TaskLookupType
-  {
-    ACTIVE,
-    COMPLETE
-  }
-
-  interface TaskLookup
-  {
-    TaskLookupType getType();
-  }
-
-  class CompleteTaskLookup implements TaskLookup
-  {
-    @Nullable
-    private final Integer maxTaskStatuses;
-    @Nullable
-    private final DateTime tasksCreatedPriorTo;
-
-    public CompleteTaskLookup(
-        @Nullable Integer maxTaskStatuses,
-        @Nullable Duration durationBeforeNow
-    )
-    {
-      this.maxTaskStatuses = maxTaskStatuses;
-      this.tasksCreatedPriorTo = durationBeforeNow == null ? null : computeTimestampPriorToNow(durationBeforeNow);
-    }
-
-    @VisibleForTesting
-    public CompleteTaskLookup(
-        @Nullable Integer maxTaskStatuses,
-        DateTime tasksCreatedPriorTo
-    )
-    {
-      this.maxTaskStatuses = maxTaskStatuses;
-      this.tasksCreatedPriorTo = tasksCreatedPriorTo;
-    }
-
-    public boolean hasTaskCreatedTimeFilter()
-    {
-      return tasksCreatedPriorTo != null;
-    }
-
-    public CompleteTaskLookup withDurationBeforeNow(Duration durationBeforeNow)
-    {
-      return new CompleteTaskLookup(
-          maxTaskStatuses,
-          Preconditions.checkNotNull(durationBeforeNow, "durationBeforeNow")
-      );
-    }
-
-    private static DateTime computeTimestampPriorToNow(Duration durationBeforeNow)
-    {
-      return DateTimes
-          .nowUtc()
-          .minus(durationBeforeNow);
-    }
-
-    public DateTime getTasksCreatedPriorTo()
-    {
-      return tasksCreatedPriorTo;
-    }
-
-    @Nullable
-    public Integer getMaxTaskStatuses()
-    {
-      return maxTaskStatuses;
-    }
-
-    @Override
-    public TaskLookupType getType()
-    {
-      return TaskLookupType.COMPLETE;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      CompleteTaskLookup that = (CompleteTaskLookup) o;
-      return Objects.equals(maxTaskStatuses, that.maxTaskStatuses)
-             && Objects.equals(tasksCreatedPriorTo, that.tasksCreatedPriorTo);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(maxTaskStatuses, tasksCreatedPriorTo);
-    }
-  }
-
-  class ActiveTaskLookup implements TaskLookup
-  {
-    private static final ActiveTaskLookup INSTANCE = new ActiveTaskLookup();
-
-    public static ActiveTaskLookup getInstance()
-    {
-      return INSTANCE;
-    }
-
-    private ActiveTaskLookup()
-    {
-    }
-
-    @Override
-    public TaskLookupType getType()
-    {
-      return TaskLookupType.ACTIVE;
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return 0;
-    }
-
-    @Override
-    public boolean equals(Object obj)
-    {
-      return obj instanceof ActiveTaskLookup;
-    }
   }
 
   /**

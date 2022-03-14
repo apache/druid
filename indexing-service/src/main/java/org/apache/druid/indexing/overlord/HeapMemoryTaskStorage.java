@@ -37,9 +37,9 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.EntryExistsException;
-import org.apache.druid.metadata.MetadataStorageActionHandler.CompleteTaskLookup;
-import org.apache.druid.metadata.MetadataStorageActionHandler.TaskLookup;
-import org.apache.druid.metadata.MetadataStorageActionHandler.TaskLookupType;
+import org.apache.druid.metadata.TaskLookup;
+import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
+import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -205,11 +205,8 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   /**
-   * This method is racy.
-   *
-   * @param taskLookups
-   * @param datasource
-   * @return
+   * NOTE: This method is racy as it searches for complete tasks and active tasks separately outside a lock.
+   * This method should be used only for testing.
    */
   @Override
   public List<TaskInfo<Task, TaskStatus>> getTaskInfos(

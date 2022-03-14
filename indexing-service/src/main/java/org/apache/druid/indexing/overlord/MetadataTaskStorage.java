@@ -40,14 +40,14 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.MetadataStorageActionHandler;
-import org.apache.druid.metadata.MetadataStorageActionHandler.ActiveTaskLookup;
-import org.apache.druid.metadata.MetadataStorageActionHandler.CompleteTaskLookup;
-import org.apache.druid.metadata.MetadataStorageActionHandler.TaskLookup;
-import org.apache.druid.metadata.MetadataStorageActionHandler.TaskLookupType;
 import org.apache.druid.metadata.MetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.MetadataStorageActionHandlerTypes;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.apache.druid.metadata.TaskLookup;
+import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
+import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
+import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
