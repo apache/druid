@@ -77,7 +77,7 @@ To make it clear, the base of units are defined in Druid as below
 
 Unit is case-insensitive. `k`, `kib`, `ki`, `KiB`, `Ki`, `kiB` are all acceptable.
 
-Here are two examples
+Here are some examples
 
 ```properties
 # 1G bytes = 1_000_000_000 bytes
