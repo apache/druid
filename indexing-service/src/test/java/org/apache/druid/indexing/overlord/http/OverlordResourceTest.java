@@ -25,7 +25,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
@@ -543,7 +542,7 @@ public class OverlordResourceTest
                     getTaskWithIdAndDatasource("id_4", "allow")
                 )
             )
-      );
+    );
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks()).andReturn(
         ImmutableList.of(
             new MockTaskRunnerWorkItem("id_1"),
@@ -871,7 +870,7 @@ public class OverlordResourceTest
                     getTaskWithIdAndDatasource("id_3", "allow")
                 )
             )
-      );
+    );
 
     EasyMock.replay(
         taskRunner,
