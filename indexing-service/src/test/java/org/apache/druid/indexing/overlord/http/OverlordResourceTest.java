@@ -271,8 +271,8 @@ public class OverlordResourceTest
 
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks()).andReturn(
         ImmutableList.of(
-            new MockTaskRunnerWorkItem("id_1", null),
-            new MockTaskRunnerWorkItem("id_4", null)
+            new MockTaskRunnerWorkItem("id_1"),
+            new MockTaskRunnerWorkItem("id_4")
         )
     );
 
@@ -348,8 +348,8 @@ public class OverlordResourceTest
     List<String> tasksIds = ImmutableList.of("id_1", "id_2");
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(
         ImmutableList.of(
-            new MockTaskRunnerWorkItem(tasksIds.get(0), null),
-            new MockTaskRunnerWorkItem(tasksIds.get(1), null)
+            new MockTaskRunnerWorkItem(tasksIds.get(0)),
+            new MockTaskRunnerWorkItem(tasksIds.get(1))
         )
     );
     EasyMock.expect(
@@ -457,8 +457,8 @@ public class OverlordResourceTest
 
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks()).andReturn(
         ImmutableList.of(
-            new MockTaskRunnerWorkItem("id_1", null),
-            new MockTaskRunnerWorkItem("id_4", null)
+            new MockTaskRunnerWorkItem("id_1"),
+            new MockTaskRunnerWorkItem("id_4")
         )
     ).atLeastOnce();
 
@@ -546,8 +546,8 @@ public class OverlordResourceTest
       );
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks()).andReturn(
         ImmutableList.of(
-            new MockTaskRunnerWorkItem("id_1", null),
-            new MockTaskRunnerWorkItem("id_4", null)
+            new MockTaskRunnerWorkItem("id_1"),
+            new MockTaskRunnerWorkItem("id_4")
         )
     ).atLeastOnce();
     EasyMock.replay(
@@ -615,8 +615,8 @@ public class OverlordResourceTest
 
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks()).andReturn(
         ImmutableList.of(
-            new MockTaskRunnerWorkItem("id_1", null),
-            new MockTaskRunnerWorkItem("id_4", null)
+            new MockTaskRunnerWorkItem("id_1"),
+            new MockTaskRunnerWorkItem("id_4")
         )
     );
 
@@ -689,8 +689,8 @@ public class OverlordResourceTest
     List<String> tasksIds = ImmutableList.of("id_1", "id_2");
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(
         ImmutableList.of(
-            new MockTaskRunnerWorkItem(tasksIds.get(0), null, "allow"),
-            new MockTaskRunnerWorkItem(tasksIds.get(1), null, "allow")
+            new MockTaskRunnerWorkItem(tasksIds.get(0), "allow", "test"),
+            new MockTaskRunnerWorkItem(tasksIds.get(1), "allow", "test")
         )
     );
     EasyMock.expect(taskRunner.getRunnerTaskState("id_1")).andReturn(RunnerTaskState.RUNNING);
@@ -722,8 +722,8 @@ public class OverlordResourceTest
     List<String> tasksIds = ImmutableList.of("id_1", "id_2");
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getPendingTasks()).andReturn(
         ImmutableList.of(
-            new MockTaskRunnerWorkItem(tasksIds.get(0), null),
-            new MockTaskRunnerWorkItem(tasksIds.get(1), null)
+            new MockTaskRunnerWorkItem(tasksIds.get(0)),
+            new MockTaskRunnerWorkItem(tasksIds.get(1))
         )
     );
     EasyMock.expect(
@@ -912,15 +912,15 @@ public class OverlordResourceTest
         ImmutableList.of(
             createTaskInfo("id_5", Datasources.WIKIPEDIA),
             createTaskInfo("id_6", Datasources.BUZZFEED),
-            createTaskInfo("id_1", Datasources.WIKIPEDIA, TaskState.RUNNING),
-            createTaskInfo("id_4", Datasources.BUZZFEED, TaskState.RUNNING)
+            createTaskInfo("id_1", Datasources.WIKIPEDIA, TaskState.RUNNING, "test"),
+            createTaskInfo("id_4", Datasources.BUZZFEED, TaskState.RUNNING, "test")
         )
     );
 
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks()).andReturn(
         ImmutableList.of(
-            new MockTaskRunnerWorkItem("id_1", null, Datasources.WIKIPEDIA),
-            new MockTaskRunnerWorkItem("id_4", null, Datasources.BUZZFEED)
+            new MockTaskRunnerWorkItem("id_1", Datasources.WIKIPEDIA, "test"),
+            new MockTaskRunnerWorkItem("id_4", Datasources.BUZZFEED, "test")
         )
     ).atLeastOnce();
 
@@ -948,26 +948,67 @@ public class OverlordResourceTest
   }
 
   @Test
-  public void testGetTasksFilterByDatasourceRequiresReadAccess()
+  public void testGetTasksFilterByTaskTypeRequiresDatasourceRead()
   {
     // Setup mocks for a user who has read access to "wikipedia"
     // and no access to "buzzfeed"
     expectAuthorizationTokenCheck(Users.WIKI_READER);
 
     // Setup mocks to return completed, active, known, pending and running tasks
-    EasyMock.expect(taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(null, null, null)).andStubReturn(
+    EasyMock.expect(
+        taskStorageQueryAdapter.getTaskInfos(
+            ImmutableMap.of(
+                TaskLookupType.COMPLETE,
+                new CompleteTaskLookup(null, (Duration) null),
+                TaskLookupType.ACTIVE,
+                ActiveTaskLookup.getInstance()
+            ),
+            null
+        )
+    ).andStubReturn(
         ImmutableList.of(
             createTaskInfo("id_5", Datasources.WIKIPEDIA),
-            createTaskInfo("id_6", Datasources.BUZZFEED)
+            createTaskInfo("id_6", Datasources.BUZZFEED),
+            createTaskInfo("id_1", Datasources.WIKIPEDIA, TaskState.RUNNING, "to-return"),
+            createTaskInfo("id_4", Datasources.WIKIPEDIA, TaskState.RUNNING, "test")
         )
     );
 
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null)).andStubReturn(
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks()).andReturn(
         ImmutableList.of(
-            createTaskInfo("id_1", Datasources.WIKIPEDIA),
-            createTaskInfo("id_2", Datasources.BUZZFEED)
+            new MockTaskRunnerWorkItem("id_1", Datasources.WIKIPEDIA, "to-return"),
+            new MockTaskRunnerWorkItem("id_4", Datasources.WIKIPEDIA, "test")
         )
+    ).atLeastOnce();
+
+    EasyMock.expect(taskRunner.getRunnerTaskState("id_1")).andReturn(RunnerTaskState.RUNNING);
+
+    // Replay all mocks
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter
     );
+
+    // Verify that only the tasks of read access datasource are returned
+    List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
+        .getTasks(null, null, null, null, "to-return", req)
+        .getEntity();
+    Assert.assertEquals(1, responseObjects.size());
+    for (TaskStatusPlus taskStatus : responseObjects) {
+      Assert.assertEquals("to-return", taskStatus.getType());
+    }
+  }
+
+  @Test
+  public void testGetTasksFilterByDatasourceRequiresReadAccess()
+  {
+    // Setup mocks for a user who has read access to "wikipedia"
+    // and no access to "buzzfeed"
+    expectAuthorizationTokenCheck(Users.WIKI_READER);
 
     // Replay all mocks
     EasyMock.replay(
@@ -1686,12 +1727,17 @@ public class OverlordResourceTest
 
   private Task getTaskWithIdAndDatasource(String id, String datasource)
   {
+    return getTaskWithIdAndDatasource(id, datasource, "test");
+  }
+
+  private Task getTaskWithIdAndDatasource(String id, String datasource, String taskType)
+  {
     return new AbstractTask(id, datasource, null)
     {
       @Override
       public String getType()
       {
-        return "test";
+        return taskType;
       }
 
       @Override
@@ -1718,13 +1764,14 @@ public class OverlordResourceTest
       String datasource
   )
   {
-    return createTaskInfo(taskId, datasource, TaskState.SUCCESS);
+    return createTaskInfo(taskId, datasource, TaskState.SUCCESS, "test");
   }
 
   private TaskInfo<Task, TaskStatus> createTaskInfo(
       String taskId,
       String datasource,
-      TaskState state
+      TaskState state,
+      String taskType
   )
   {
     return new TaskInfo<>(
@@ -1732,7 +1779,7 @@ public class OverlordResourceTest
         DateTime.now(ISOChronology.getInstanceUTC()),
         TaskStatus.fromCode(taskId, state),
         datasource,
-        getTaskWithIdAndDatasource(taskId, datasource)
+        getTaskWithIdAndDatasource(taskId, datasource, taskType)
     );
   }
 
@@ -1758,23 +1805,22 @@ public class OverlordResourceTest
   private static class MockTaskRunnerWorkItem extends TaskRunnerWorkItem
   {
     private final String dataSource;
+    private final String type;
 
-    public MockTaskRunnerWorkItem(
-        String taskId,
-        ListenableFuture<TaskStatus> result
-    )
+    public MockTaskRunnerWorkItem(String taskId)
     {
-      this(taskId, result, "ds_test");
+      this(taskId, "ds_test", "test");
     }
 
     public MockTaskRunnerWorkItem(
         String taskId,
-        ListenableFuture<TaskStatus> result,
-        String dataSource
+        String dataSource,
+        String type
     )
     {
-      super(taskId, result);
+      super(taskId, null);
       this.dataSource = dataSource;
+      this.type = type;
     }
 
     @Override
@@ -1786,7 +1832,7 @@ public class OverlordResourceTest
     @Override
     public String getTaskType()
     {
-      return "test";
+      return type;
     }
 
     @Override
