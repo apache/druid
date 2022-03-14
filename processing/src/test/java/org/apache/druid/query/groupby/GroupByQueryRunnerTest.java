@@ -5853,7 +5853,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setGranularity(Granularities.ALL)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(
-            new DoubleMeanAggregatorFactory("meanOnDouble", "index")
+            new DoubleMeanAggregatorFactory("meanOnDouble", "doubleNumericNull")
         )
         .build();
 
@@ -5864,7 +5864,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     } else {
       Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
       Row result = Iterables.getOnlyElement(results).toMapBasedRow(query);
-      Assert.assertEquals(479.2062d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
+      Assert.assertEquals(39.2307d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
     }
   }
 
