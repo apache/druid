@@ -5864,7 +5864,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     } else {
       Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
       Row result = Iterables.getOnlyElement(results).toMapBasedRow(query);
-      Assert.assertEquals(39.2307d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
+      if (NullHandling.replaceWithDefault()) {
+        Assert.assertEquals(39.2307d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
+      } else {
+        Assert.assertEquals(51.0d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
+      }
     }
   }
 
