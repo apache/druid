@@ -53,7 +53,7 @@ public class ClientCompactionIntervalSpec
       // We must adjust the interval of the compaction task to fully cover and align with the segmentGranularity
       // For example,
       // - The umbrella interval of the segments is 2015-04-11/2015-04-12 but configured segmentGranularity is YEAR,
-      // if the compaction task's interval is 2015-04-11/2015-04-12 then we can run into race condition where after submiting
+      // if the compaction task's interval is 2015-04-11/2015-04-12 then we can run into race condition where after submitting
       // the compaction task, a new segment outside of the interval (i.e. 2015-02-11/2015-02-12) got created will be lost as it is
       // overshadowed by the compacted segment (compacted segment has interval 2015-01-01/2016-01-01.
       // Hence, in this case, we must adjust the compaction task interval to 2015-01-01/2016-01-01.
