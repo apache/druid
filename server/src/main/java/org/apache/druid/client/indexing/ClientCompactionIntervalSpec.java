@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -44,12 +45,27 @@ public class ClientCompactionIntervalSpec
   @Nullable
   private final String sha256OfSortedSegmentIds;
 
-  public static ClientCompactionIntervalSpec fromSegments(List<DataSegment> segments)
+  public static ClientCompactionIntervalSpec fromSegments(List<DataSegment> segments, Granularity segmentGranularity)
   {
+    Interval interval = JodaUtils.umbrellaInterval(segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()));
+    if (segmentGranularity != null) {
+      // If segmentGranularity is set, then the segmentGranularity of the segments may not align with the configured segmentGranularity
+      // We must adjust the interval of the compaction task to fully cover and align with the segmentGranularity
+      // For example,
+      // - The umbrella interval of the segments is 2015-04-11/2015-04-12 but configured segmentGranularity is YEAR,
+      // if the compaction task's interval is 2015-04-11/2015-04-12 then we can run into race condition where after submiting
+      // the compaction task, a new segment outside of the interval (i.e. 2015-02-11/2015-02-12) got created will be lost as it is
+      // overshadowed by the compacted segment (compacted segment has interval 2015-01-01/2016-01-01.
+      // Hence, in this case, we must adjust the compaction task interval to 2015-01-01/2016-01-01.
+      // - The umbrella interval of the segments is 2015-02-01/2015-03-01 but configured segmentGranularity is MONTH,
+      // if the compaction task's interval is 2015-02-01/2015-03-01 then compacted segments created will be
+      // 2015-01-26/2015-02-02, 2015-02-02/2015-02-09, 2015-02-09/2015-02-16, 2015-02-16/2015-02-23, 2015-02-23/2015-03-02.
+      // The compacted segment would cause existing data from 2015-01-26 to 2015-02-01 and 2015-03-01 to 2015-03-02 to be lost.
+      //  Hence, in this case, we must adjust the compaction task interval to 2015-01-26/2015-03-02
+      interval = JodaUtils.umbrellaInterval(segmentGranularity.getIterable(interval));
+    }
     return new ClientCompactionIntervalSpec(
-        JodaUtils.umbrellaInterval(
-            segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
-        ),
+        interval,
         null
     );
   }
