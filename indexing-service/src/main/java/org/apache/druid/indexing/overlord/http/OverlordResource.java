@@ -772,7 +772,7 @@ public class OverlordResource
             taskInfo.getCreatedTime(),
             DateTimes.EPOCH,
             taskInfo.getStatus().getStatusCode(),
-            RunnerTaskState.COMPLETE,
+            RunnerTaskState.NONE,
             taskInfo.getStatus().getDuration(),
             taskInfo.getStatus().getLocation(),
             taskInfo.getDataSource(),
@@ -840,13 +840,13 @@ public class OverlordResource
             TaskLookupType.ACTIVE,
             ActiveTaskLookup.getInstance(),
             TaskLookupType.COMPLETE,
-            new CompleteTaskLookup(maxCompletedTasks, createdTimeDuration)
+            CompleteTaskLookup.of(maxCompletedTasks, createdTimeDuration)
         );
         break;
       case COMPLETE:
         taskLookups = ImmutableMap.of(
             TaskLookupType.COMPLETE,
-            new CompleteTaskLookup(maxCompletedTasks, createdTimeDuration)
+            CompleteTaskLookup.of(maxCompletedTasks, createdTimeDuration)
         );
         break;
       case WAITING:

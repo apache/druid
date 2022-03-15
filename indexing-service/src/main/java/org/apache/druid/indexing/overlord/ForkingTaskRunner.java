@@ -589,7 +589,7 @@ public class ForkingTaskRunner
       } else if (workItem.processHolder.process.isAlive()) {
         return RunnerTaskState.RUNNING;
       } else {
-        return RunnerTaskState.COMPLETE;
+        return RunnerTaskState.NONE;
       }
     }
   }

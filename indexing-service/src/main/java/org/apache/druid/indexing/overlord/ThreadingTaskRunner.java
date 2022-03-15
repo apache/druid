@@ -217,7 +217,7 @@ public class ThreadingTaskRunner
                               );
                             }
                             finally {
-                              taskWorkItem.setState(RunnerTaskState.COMPLETE);
+                              taskWorkItem.setState(RunnerTaskState.NONE);
                               Thread.currentThread().setName(priorThreadName);
                               if (reportsFile.exists()) {
                                 taskLogPusher.pushTaskReports(task.getId(), reportsFile);

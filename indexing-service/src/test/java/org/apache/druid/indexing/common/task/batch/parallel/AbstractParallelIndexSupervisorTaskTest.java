@@ -614,7 +614,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                 DateTimes.EPOCH,
                 DateTimes.EPOCH,
                 taskStatus.getStatusCode(),
-                taskStatus.isComplete() ? RunnerTaskState.COMPLETE : RunnerTaskState.RUNNING,
+                taskStatus.isComplete() ? RunnerTaskState.NONE : RunnerTaskState.RUNNING,
                 -1L,
                 TaskLocation.unknown(),
                 null,

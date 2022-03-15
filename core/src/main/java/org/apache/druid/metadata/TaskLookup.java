@@ -64,19 +64,29 @@ public interface TaskLookup
     @Nullable
     private final DateTime tasksCreatedPriorTo;
 
-    public CompleteTaskLookup(
+    public static CompleteTaskLookup of(
         @Nullable Integer maxTaskStatuses,
         @Nullable Duration durationBeforeNow
     )
     {
-      this.maxTaskStatuses = maxTaskStatuses;
-      this.tasksCreatedPriorTo = durationBeforeNow == null ? null : computeTimestampPriorToNow(durationBeforeNow);
+      return new CompleteTaskLookup(
+          maxTaskStatuses,
+          durationBeforeNow == null ? null : computeTimestampPriorToNow(durationBeforeNow)
+      );
     }
 
     @VisibleForTesting
-    public CompleteTaskLookup(
+    public static CompleteTaskLookup withTasksCreatedPriorTo(
         @Nullable Integer maxTaskStatuses,
-        DateTime tasksCreatedPriorTo
+        @Nullable DateTime tasksCreatedPriorTo
+    )
+    {
+      return new CompleteTaskLookup(maxTaskStatuses, tasksCreatedPriorTo);
+    }
+
+    private CompleteTaskLookup(
+        @Nullable Integer maxTaskStatuses,
+        @Nullable DateTime tasksCreatedPriorTo
     )
     {
       this.maxTaskStatuses = maxTaskStatuses;
@@ -90,7 +100,7 @@ public interface TaskLookup
 
     public CompleteTaskLookup withDurationBeforeNow(Duration durationBeforeNow)
     {
-      return new CompleteTaskLookup(
+      return CompleteTaskLookup.of(
           maxTaskStatuses,
           Preconditions.checkNotNull(durationBeforeNow, "durationBeforeNow")
       );
@@ -105,6 +115,7 @@ public interface TaskLookup
 
     public DateTime getTasksCreatedPriorTo()
     {
+      assert tasksCreatedPriorTo != null;
       return tasksCreatedPriorTo;
     }
 

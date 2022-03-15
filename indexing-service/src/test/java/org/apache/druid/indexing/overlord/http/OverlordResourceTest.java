@@ -298,7 +298,7 @@ public class OverlordResourceTest
 
     EasyMock.expect(
         taskStorageQueryAdapter.getTaskInfos(
-            ImmutableMap.of(TaskLookupType.COMPLETE, new CompleteTaskLookup(null, (Duration) null)), null)
+            ImmutableMap.of(TaskLookupType.COMPLETE, CompleteTaskLookup.of(null, (Duration) null)), null)
     ).andStubReturn(
         ImmutableList.of(
             new TaskInfo<>(
@@ -403,7 +403,7 @@ public class OverlordResourceTest
                 TaskLookupType.ACTIVE,
                 ActiveTaskLookup.getInstance(),
                 TaskLookupType.COMPLETE,
-                new CompleteTaskLookup(null, (Duration) null)
+                CompleteTaskLookup.of(null, null)
             ),
             null
         )
@@ -484,7 +484,7 @@ public class OverlordResourceTest
         taskStorageQueryAdapter.getTaskInfos(
             ImmutableMap.of(
                 TaskLookupType.COMPLETE,
-                new CompleteTaskLookup(null, (Duration) null),
+                CompleteTaskLookup.of(null, null),
                 TaskLookupType.ACTIVE,
                 ActiveTaskLookup.getInstance()
             ),
@@ -792,7 +792,7 @@ public class OverlordResourceTest
     expectAuthorizationTokenCheck();
     EasyMock.expect(
         taskStorageQueryAdapter.getTaskInfos(
-            ImmutableMap.of(TaskLookupType.COMPLETE, new CompleteTaskLookup(null, (Duration) null)),
+            ImmutableMap.of(TaskLookupType.COMPLETE, CompleteTaskLookup.of(null, (Duration) null)),
             null
         )
     ).andStubReturn(
@@ -901,7 +901,7 @@ public class OverlordResourceTest
         taskStorageQueryAdapter.getTaskInfos(
             ImmutableMap.of(
                 TaskLookupType.COMPLETE,
-                new CompleteTaskLookup(null, (Duration) null),
+                CompleteTaskLookup.of(null, null),
                 TaskLookupType.ACTIVE,
                 ActiveTaskLookup.getInstance()
             ),
@@ -958,7 +958,7 @@ public class OverlordResourceTest
         taskStorageQueryAdapter.getTaskInfos(
             ImmutableMap.of(
                 TaskLookupType.COMPLETE,
-                new CompleteTaskLookup(null, (Duration) null),
+                CompleteTaskLookup.of(null, null),
                 TaskLookupType.ACTIVE,
                 ActiveTaskLookup.getInstance()
             ),
@@ -1032,7 +1032,7 @@ public class OverlordResourceTest
         taskStorageQueryAdapter.getTaskInfos(
             ImmutableMap.of(
                 TaskLookupType.COMPLETE,
-                new CompleteTaskLookup(null, (Duration) null)
+                CompleteTaskLookup.of(null, null)
             ),
             null
         )

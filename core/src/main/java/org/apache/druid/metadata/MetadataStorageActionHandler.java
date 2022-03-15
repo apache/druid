@@ -88,8 +88,8 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    *
    * If {@code taskLookups} includes {@link TaskLookupType#ACTIVE}, it returns all active tasks in the metadata store.
    * If {@code taskLookups} includes {@link TaskLookupType#COMPLETE}, it returns all complete tasks in the metadata
-   * store. For complete tasks, additional filters in {@link org.apache.druid.metadata.TaskLookup.CompleteTaskLookup}
-   * can be applied. All lookups should be processed atomically if there are more than one lookup is given.
+   * store. For complete tasks, additional filters in {@code CompleteTaskLookup} can be applied.
+   * All lookups should be processed atomically if there are more than one lookup is given.
    *
    * @param taskLookups task lookup type and filters.
    * @param datasource  datasource filter

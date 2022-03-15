@@ -91,7 +91,7 @@ public class TaskStorageQueryAdapter
       @Nullable String dataSource
   )
   {
-    return storage.getTaskInfos(new CompleteTaskLookup(maxTaskStatuses, duration), dataSource);
+    return storage.getTaskInfos(CompleteTaskLookup.of(maxTaskStatuses, duration), dataSource);
   }
 
   public List<TaskInfo<Task, TaskStatus>> getTaskInfos(

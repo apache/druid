@@ -740,7 +740,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
               DateTimes.EPOCH,
               DateTimes.EPOCH,
               state,
-              RunnerTaskState.COMPLETE,
+              RunnerTaskState.NONE,
               -1L,
               TaskLocation.unknown(),
               null,
