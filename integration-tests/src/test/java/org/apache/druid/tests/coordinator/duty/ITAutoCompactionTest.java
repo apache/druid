@@ -728,7 +728,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       Assert.assertNotNull(compactTask);
       TaskPayloadResponse task = indexer.getTaskPayload(compactTask.getId());
       // Verify that compaction task interval is adjusted to align with segmentGranularity
-      Assert.assertEquals(Intervals.of("2013-01-01T00:00:00.000Z/2014-01-01T00:00:00.000Z"), ((CompactionIntervalSpec) ((CompactionTask) task.getPayload()).getIoConfig().getInputSpec()).getInterval());
+      Assert.assertEquals(Intervals.of("2013-08-01T00:00:00.000Z/2013-10-01T00:00:00.000Z"), ((CompactionIntervalSpec) ((CompactionTask) task.getPayload()).getIoConfig().getInputSpec()).getInterval());
     }
   }
 
