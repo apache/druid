@@ -263,7 +263,8 @@ public class FireDepartmentMetrics
     retVal.messageMaxTimestamp.set(messageMaxTimestamp.get());
     retVal.messageProcessingCompletionTime.set(messageProcessingCompletionTime.get());
     retVal.messageProcessingCompletionTime.compareAndSet(DEFAULT_PROCESSING_COMPLETION_TIME, System.currentTimeMillis());
-    retVal.messageGap.set(retVal.messageProcessingCompletionTime.get() - messageMaxTimestamp.get());
+    long maxTimestamp = retVal.messageMaxTimestamp.get();
+    retVal.messageGap.set(maxTimestamp > 0 ? retVal.messageProcessingCompletionTime.get() - maxTimestamp : 0L);
     return retVal;
   }
 }
