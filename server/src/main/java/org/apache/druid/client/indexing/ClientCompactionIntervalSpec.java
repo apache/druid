@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -39,6 +40,8 @@ import java.util.stream.Collectors;
  */
 public class ClientCompactionIntervalSpec
 {
+  private static final Logger LOGGER = new Logger(ClientCompactionIntervalSpec.class);
+
   private static final String TYPE = "interval";
 
   private final Interval interval;
@@ -48,6 +51,7 @@ public class ClientCompactionIntervalSpec
   public static ClientCompactionIntervalSpec fromSegments(List<DataSegment> segments, @Nullable Granularity segmentGranularity)
   {
     Interval interval = JodaUtils.umbrellaInterval(segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()));
+    LOGGER.info("Original umbrella interval %s in compaction task for datasource %s", interval, segments.get(0).getDataSource());
     if (segmentGranularity != null) {
       // If segmentGranularity is set, then the segmentGranularity of the segments may not align with the configured segmentGranularity
       // We must adjust the interval of the compaction task to fully cover and align with the segmentGranularity
@@ -66,6 +70,12 @@ public class ClientCompactionIntervalSpec
       // from 2015-01-26 to 2015-02-01 and 2015-03-01 to 2015-03-02 to be lost. Hence, in this case,
       // we must adjust the compaction task interval to 2015-01-26/2015-03-02
       interval = JodaUtils.umbrellaInterval(segmentGranularity.getIterable(interval));
+      LOGGER.info(
+          "Interval adjusted to %s in compaction task for datasource %s with configured segmentGranularity %s",
+          interval,
+          segments.get(0).getDataSource(),
+          segmentGranularity
+      );
     }
     return new ClientCompactionIntervalSpec(
         interval,
