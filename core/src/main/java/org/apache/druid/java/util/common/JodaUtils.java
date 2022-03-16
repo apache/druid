@@ -22,15 +22,12 @@ package org.apache.druid.java.util.common;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
-import org.apache.commons.lang.ObjectUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeComparator;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
