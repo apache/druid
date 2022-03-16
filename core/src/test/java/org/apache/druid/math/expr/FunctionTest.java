@@ -985,7 +985,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testMultiplyOnString()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("operator '*' in expression (\"str1\" * \"str2\") is not supported on type of string.");
+    expectedException.expectMessage("operator '*' in expression (\"str1\" * \"str2\") is not supported on type 'string'.");
     assertExpr("str1 * str2", null);
   }
 
@@ -993,7 +993,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testMinusOnString()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("operator '-' in expression (\"str1\" - \"str2\") is not supported on type of string.");
+    expectedException.expectMessage("operator '-' in expression (\"str1\" - \"str2\") is not supported on type 'string'.");
     assertExpr("str1 - str2", null);
   }
 
@@ -1001,7 +1001,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testDivOnString()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("operator '/' in expression (\"str1\" / \"str2\") is not supported on type of string.");
+    expectedException.expectMessage("operator '/' in expression (\"str1\" / \"str2\") is not supported on type 'string'.");
     assertExpr("str1 / str2", null);
   }
 

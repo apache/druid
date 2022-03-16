@@ -152,7 +152,7 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
 
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    throw new IAE("operator '%s' in expression (%s %s %s) is not supported on type of string.",
+    throw new IAE("operator '%s' in expression (%s %s %s) is not supported on type 'string'.",
                   this.op,
                   this.left.stringify(),
                   this.op,
