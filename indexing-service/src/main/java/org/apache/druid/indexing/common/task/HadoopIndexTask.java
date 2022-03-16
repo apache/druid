@@ -54,6 +54,7 @@ import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.hadoop.OverlordActionBasedUsedSegmentsRetriever;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -198,7 +199,19 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       Interval interval = JodaUtils.umbrellaInterval(
           JodaUtils.condenseIntervals(intervals)
       );
-      return taskActionClient.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)) != null;
+      final TaskLock lock = taskActionClient.submit(
+          new TimeChunkLockTryAcquireAction(
+              TaskLockType.EXCLUSIVE,
+              interval
+          )
+      );
+      if (lock == null) {
+        return false;
+      }
+      if (lock.isRevoked()) {
+        throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
+      }
+      return true;
     } else {
       return true;
     }
@@ -393,6 +406,9 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
             ),
             "Cannot acquire a lock for interval[%s]", interval
         );
+        if (lock.isRevoked()) {
+          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
+        }
         version = lock.getVersion();
       } else {
         Iterable<TaskLock> locks = getTaskLocks(toolbox.getTaskActionClient());
@@ -405,13 +421,15 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         if (specVersion.compareTo(version) < 0) {
           version = specVersion;
         } else {
-          log.error(
-              "Spec version can not be greater than or equal to the lock version, Spec version: [%s] Lock version: [%s].",
-              specVersion,
-              version
-          );
+          String errMsg =
+              StringUtils.format(
+                  "Spec version can not be greater than or equal to the lock version, Spec version: [%s] Lock version: [%s].",
+                  specVersion,
+                  version
+              );
+          log.error(errMsg);
           toolbox.getTaskReportFileWriter().write(getId(), null);
-          return TaskStatus.failure(getId());
+          return TaskStatus.failure(getId(), errMsg);
         }
       }
 
@@ -465,7 +483,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
           // for awaitSegmentAvailabilityTimeoutMillis
           if (spec.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis() > 0) {
             ingestionState = IngestionState.SEGMENT_AVAILABILITY_WAIT;
-            segmentAvailabilityConfirmationCompleted = waitForSegmentAvailability(
+            waitForSegmentAvailability(
                 toolbox,
                 segments,
                 spec.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis()
@@ -658,7 +676,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
                 null,
                 getTaskCompletionRowStats(),
                 errorMsg,
-                segmentAvailabilityConfirmationCompleted
+                segmentAvailabilityConfirmationCompleted,
+                segmentAvailabilityWaitTimeMs
             )
         )
     );

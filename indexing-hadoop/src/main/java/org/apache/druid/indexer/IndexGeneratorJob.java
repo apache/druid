@@ -117,9 +117,13 @@ public class IndexGeneratorJob implements Jobby
       FileSystem fs = descriptorInfoDir.getFileSystem(conf);
 
       for (FileStatus status : fs.listStatus(descriptorInfoDir)) {
-        final DataSegmentAndIndexZipFilePath segmentAndIndexZipFilePath = jsonMapper.readValue((InputStream) fs.open(status.getPath()), DataSegmentAndIndexZipFilePath.class);
+        final DataSegmentAndIndexZipFilePath segmentAndIndexZipFilePath = jsonMapper.readValue((InputStream) fs.open(
+            status.getPath()), DataSegmentAndIndexZipFilePath.class);
         publishedSegmentAndIndexZipFilePathsBuilder.add(segmentAndIndexZipFilePath);
-        log.info("Adding segment %s to the list of published segments", segmentAndIndexZipFilePath.getSegment().getId());
+        log.info(
+            "Adding segment %s to the list of published segments",
+            segmentAndIndexZipFilePath.getSegment().getId()
+        );
       }
     }
     catch (FileNotFoundException e) {
@@ -303,10 +307,10 @@ public class IndexGeneratorJob implements Jobby
 
     // Build the incremental-index according to the spec that was chosen by the user
     IncrementalIndex newIndex = tuningConfig.getAppendableIndexSpec().builder()
-        .setIndexSchema(indexSchema)
-        .setMaxRowCount(tuningConfig.getMaxRowsInMemory())
-        .setMaxBytesInMemory(tuningConfig.getMaxBytesInMemoryOrDefault())
-        .build();
+                                            .setIndexSchema(indexSchema)
+                                            .setMaxRowCount(tuningConfig.getMaxRowsInMemory())
+                                            .setMaxBytesInMemory(tuningConfig.getMaxBytesInMemoryOrDefault())
+                                            .build();
 
     if (oldDimOrder != null && !indexSchema.getDimensionsSpec().hasCustomDimensions()) {
       newIndex.loadDimensionIterable(oldDimOrder, oldCapabilities);
@@ -609,7 +613,18 @@ public class IndexGeneratorJob implements Jobby
     {
       boolean rollup = config.getSchema().getDataSchema().getGranularitySpec().isRollup();
       return HadoopDruidIndexerConfig.INDEX_MERGER_V9
-          .mergeQueryableIndex(indexes, rollup, aggs, null, file, config.getIndexSpec(), progressIndicator, null, -1);
+          .mergeQueryableIndex(
+              indexes,
+              rollup,
+              aggs,
+              null,
+              file,
+              config.getIndexSpec(),
+              config.getIndexSpecForIntermediatePersists(),
+              progressIndicator,
+              null,
+              -1
+          );
     }
 
     @Override

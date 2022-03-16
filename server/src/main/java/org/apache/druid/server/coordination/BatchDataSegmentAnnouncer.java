@@ -165,7 +165,6 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
           SegmentZNode availableZNode = iter.next();
           if (availableZNode.getBytes().length + newBytesLen < config.getMaxBytesPerNode()) {
             availableZNode.addSegment(toAnnounce);
-
             log.info(
                 "Announcing segment[%s] at existing path[%s]",
                 toAnnounce.getId(),
@@ -194,7 +193,11 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
         SegmentZNode availableZNode = new SegmentZNode(makeServedSegmentPath());
         availableZNode.addSegment(toAnnounce);
 
-        log.info("Announcing segment[%s] at new path[%s]", toAnnounce.getId(), availableZNode.getPath());
+        log.info("Announcing %s[%s] at new path[%s]",
+                 toAnnounce.isTombstone() ? DataSegment.TOMBSTONE_LOADSPEC_TYPE : "segment",
+                 toAnnounce.getId(),
+                 availableZNode.getPath()
+        );
         announcer.announce(availableZNode.getPath(), availableZNode.getBytes());
         segmentLookup.put(toAnnounce, availableZNode);
         availableZNodes.add(availableZNode);

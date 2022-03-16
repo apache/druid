@@ -32,7 +32,7 @@ import org.apache.druid.segment.ConstantDimensionSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -477,9 +477,9 @@ public class IndexedTableJoinMatcherTest
     return new IndexedTable.Index()
     {
       @Override
-      public ValueType keyType()
+      public ColumnType keyType()
       {
-        return ValueType.STRING;
+        return ColumnType.STRING;
       }
 
       @Override
@@ -507,9 +507,9 @@ public class IndexedTableJoinMatcherTest
     return new IndexedTable.Index()
     {
       @Override
-      public ValueType keyType()
+      public ColumnType keyType()
       {
-        return ValueType.STRING;
+        return ColumnType.STRING;
       }
 
       @Override
@@ -541,9 +541,9 @@ public class IndexedTableJoinMatcherTest
     return new IndexedTable.Index()
     {
       @Override
-      public ValueType keyType()
+      public ColumnType keyType()
       {
-        return ValueType.LONG;
+        return ColumnType.LONG;
       }
 
       @Override
@@ -577,9 +577,9 @@ public class IndexedTableJoinMatcherTest
     return new IndexedTable.Index()
     {
       @Override
-      public ValueType keyType()
+      public ColumnType keyType()
       {
-        return ValueType.LONG;
+        return ColumnType.LONG;
       }
 
       @Override

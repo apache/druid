@@ -23,7 +23,7 @@ import { Capabilities } from '../../../utils';
 
 import { ServicesCard } from './services-card';
 
-describe('services card', () => {
+describe('ServicesCard', () => {
   it('matches snapshot', () => {
     const servicesCard = <ServicesCard capabilities={Capabilities.FULL} />;
 

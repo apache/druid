@@ -17,6 +17,7 @@
  */
 
 import axios, { AxiosResponse } from 'axios';
+import { SqlRef } from 'druid-query-toolkit';
 
 import { Api } from '../singletons';
 
@@ -56,8 +57,17 @@ export function parseHtmlError(htmlStr: string): string | undefined {
     .replace(/&gt;/g, '>');
 }
 
+function getDruidErrorObject(e: any): DruidErrorResponse | string {
+  if (e.response) {
+    // This is a direct axios response error
+    return e.response.data || {};
+  } else {
+    return e; // Assume the error was passed in directly
+  }
+}
+
 export function getDruidErrorMessage(e: any): string {
-  const data: DruidErrorResponse | string = (e.response || {}).data || {};
+  const data = getDruidErrorObject(e);
   switch (typeof data) {
     case 'object':
       return (
@@ -130,9 +140,8 @@ export class DruidError extends Error {
       };
     }
 
-    const matchLexical = /Lexical error at line (\d+), column (\d+).\s+Encountered: "\\u201\w"/.exec(
-      errorMessage,
-    );
+    const matchLexical =
+      /Lexical error at line (\d+), column (\d+).\s+Encountered: "\\u201\w"/.exec(errorMessage);
     if (matchLexical) {
       return {
         label: 'Replace fancy quotes with ASCII quotes',
@@ -148,9 +157,10 @@ export class DruidError extends Error {
 
     // Incorrect quoting on table
     // ex: org.apache.calcite.runtime.CalciteContextException: From line 3, column 17 to line 3, column 31: Column '#ar.wikipedia' not found in any table
-    const matchQuotes = /org.apache.calcite.runtime.CalciteContextException: From line (\d+), column (\d+) to line \d+, column \d+: Column '([^']+)' not found in any table/.exec(
-      errorMessage,
-    );
+    const matchQuotes =
+      /org.apache.calcite.runtime.CalciteContextException: From line (\d+), column (\d+) to line \d+, column \d+: Column '([^']+)' not found in any table/.exec(
+        errorMessage,
+      );
     if (matchQuotes) {
       const line = Number(matchQuotes[1]);
       const column = Number(matchQuotes[2]);
@@ -235,12 +245,12 @@ export class DruidError extends Error {
   public host?: string;
   public suggestion?: QuerySuggestion;
 
-  constructor(e: any) {
+  constructor(e: any, removeLines?: number) {
     super(axios.isCancel(e) ? CANCELED_MESSAGE : getDruidErrorMessage(e));
     if (axios.isCancel(e)) {
       this.canceled = true;
     } else {
-      const data: DruidErrorResponse | string = (e.response || {}).data || {};
+      const data = getDruidErrorObject(e);
 
       let druidErrorResponse: DruidErrorResponse;
       switch (typeof data) {
@@ -261,6 +271,13 @@ export class DruidError extends Error {
       Object.assign(this, druidErrorResponse);
 
       if (this.errorMessage) {
+        if (removeLines) {
+          this.errorMessage = this.errorMessage.replace(
+            /line (\d+),/g,
+            (_, c) => `line ${Number(c) - removeLines},`,
+          );
+        }
+
         this.position = DruidError.parsePosition(this.errorMessage);
         this.suggestion = DruidError.getSuggestion(this.errorMessage);
 
@@ -296,73 +313,15 @@ export async function queryDruidSql<T = any>(sqlQueryPayload: Record<string, any
   return sqlResultResp.data;
 }
 
-export interface BasicQueryExplanation {
+export interface QueryExplanation {
   query: any;
-  signature: string | null;
+  signature: { name: string; type: string }[];
 }
 
-export interface SemiJoinQueryExplanation {
-  mainQuery: BasicQueryExplanation;
-  subQueryRight: BasicQueryExplanation;
-}
-
-function parseQueryPlanResult(queryPlanResult: string): BasicQueryExplanation {
-  if (!queryPlanResult) {
-    return {
-      query: null,
-      signature: null,
-    };
-  }
-
-  const queryAndSignature = queryPlanResult.split(', signature=');
-  const queryValue = new RegExp(/query=(.+)/).exec(queryAndSignature[0]);
-  const signatureValue = queryAndSignature[1];
-
-  let parsedQuery: any;
-
-  if (queryValue && queryValue[1]) {
-    try {
-      parsedQuery = JSON.parse(queryValue[1]);
-    } catch (e) {}
-  }
-
-  return {
-    query: parsedQuery || queryPlanResult,
-    signature: signatureValue || null,
-  };
-}
-
-export function parseQueryPlan(
-  raw: string,
-): BasicQueryExplanation | SemiJoinQueryExplanation | string {
-  let plan: string = raw;
-  plan = plan.replace(/\n/g, '');
-
-  if (plan.includes('DruidOuterQueryRel(')) {
-    return plan; // don't know how to parse this
-  }
-
-  let queryArgs: string;
-  const queryRelFnStart = 'DruidQueryRel(';
-  const semiJoinFnStart = 'DruidSemiJoin(';
-
-  if (plan.startsWith(queryRelFnStart)) {
-    queryArgs = plan.substring(queryRelFnStart.length, plan.length - 1);
-  } else if (plan.startsWith(semiJoinFnStart)) {
-    queryArgs = plan.substring(semiJoinFnStart.length, plan.length - 1);
-    const leftExpressionsArgs = ', leftExpressions=';
-    const keysArgumentIdx = queryArgs.indexOf(leftExpressionsArgs);
-    if (keysArgumentIdx !== -1) {
-      return {
-        mainQuery: parseQueryPlanResult(queryArgs.substring(0, keysArgumentIdx)),
-        subQueryRight: parseQueryPlan(queryArgs.substring(queryArgs.indexOf(queryRelFnStart))),
-      } as SemiJoinQueryExplanation;
-    }
-  } else {
-    return plan;
-  }
-
-  return parseQueryPlanResult(queryArgs);
+export function formatSignature(queryExplanation: QueryExplanation): string {
+  return queryExplanation.signature
+    .map(({ name, type }) => `${SqlRef.column(name)}::${type}`)
+    .join(', ');
 }
 
 export function trimSemicolon(query: string): string {

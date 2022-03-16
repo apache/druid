@@ -25,7 +25,6 @@ import com.google.common.collect.Sets;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.Smoosh;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -34,6 +33,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.WriteOutBytes;
+import org.apache.druid.utils.CloseableUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -322,12 +322,17 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
           Assert.assertEquals(subVals.get(j), vals.get(i)[j]);
         }
       }
-      CloseQuietly.close(columnarMultiInts);
-      mapper.close();
+      CloseableUtils.closeAll(columnarMultiInts, mapper);
     }
   }
 
-  private void generateV2SerializedSizeAndData(long numRows, int maxValue, int maxValuesPerRow, int offsetChunkFactor, int valueChunkFactor) throws Exception
+  private void generateV2SerializedSizeAndData(
+      long numRows,
+      int maxValue,
+      int maxValuesPerRow,
+      int offsetChunkFactor,
+      int valueChunkFactor
+  ) throws Exception
   {
     File tmpDirectory = FileUtils.createTempDir(StringUtils.format(
         "CompressedVSizeIndexedV3WriterTest_%d_%d",
@@ -395,8 +400,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
           Assert.assertEquals(subVals.get(j), expected[j]);
         }
       }
-      CloseQuietly.close(columnarMultiInts);
-      mapper.close();
+      CloseableUtils.closeAll(columnarMultiInts, mapper);
     }
   }
 }

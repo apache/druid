@@ -21,7 +21,7 @@ import React from 'react';
 
 import { FormGroupWithInfo } from './form-group-with-info';
 
-describe('form group with info', () => {
+describe('FormGroupWithInfo', () => {
   it('matches snapshot', () => {
     const formGroupWithInfo = (
       <FormGroupWithInfo label="Goodies" info={<div>Information is gold</div>}>

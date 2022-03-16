@@ -24,6 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import com.google.inject.name.Named;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.query.QueryMetrics;
@@ -57,7 +58,8 @@ public class MovingAverageQueryToolChest extends QueryToolChest<Row, MovingAvera
    * @param requestLogger
    */
   @Inject
-  public MovingAverageQueryToolChest(Provider<QuerySegmentWalker> walkerProvider, RequestLogger requestLogger)
+  public MovingAverageQueryToolChest(@Named("movingAverage") Provider<QuerySegmentWalker> walkerProvider,
+                                     @Named("movingAverage") RequestLogger requestLogger)
   {
     this.walkerProvider = walkerProvider;
     this.requestLogger = requestLogger;

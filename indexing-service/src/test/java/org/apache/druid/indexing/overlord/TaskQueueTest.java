@@ -40,6 +40,7 @@ import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -493,33 +494,33 @@ public class TaskQueueTest extends IngestionTestBase
     }
 
     @Override
-    public long getTotalTaskSlotCount()
+    public Map<String, Long> getTotalTaskSlotCount()
     {
-      return 0;
+      return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, 0L);
     }
 
     @Override
-    public long getIdleTaskSlotCount()
+    public Map<String, Long> getIdleTaskSlotCount()
     {
-      return 0;
+      return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, 0L);
     }
 
     @Override
-    public long getUsedTaskSlotCount()
+    public Map<String, Long> getUsedTaskSlotCount()
     {
-      return 0;
+      return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, 0L);
     }
 
     @Override
-    public long getLazyTaskSlotCount()
+    public Map<String, Long> getLazyTaskSlotCount()
     {
-      return 0;
+      return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, 0L);
     }
 
     @Override
-    public long getBlacklistedTaskSlotCount()
+    public Map<String, Long> getBlacklistedTaskSlotCount()
     {
-      return 0;
+      return ImmutableMap.of(WorkerConfig.DEFAULT_CATEGORY, 0L);
     }
   }
 }

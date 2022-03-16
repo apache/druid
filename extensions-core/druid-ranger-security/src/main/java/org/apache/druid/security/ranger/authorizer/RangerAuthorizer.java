@@ -126,7 +126,7 @@ class RangerDruidResource extends RangerAccessResourceImpl
 {
   public RangerDruidResource(Resource resource)
   {
-    setValue(resource.getType().name().toLowerCase(Locale.ENGLISH), resource.getName());
+    setValue(resource.getType().toLowerCase(Locale.ENGLISH), resource.getName());
   }
 }
 

@@ -176,11 +176,15 @@ public class TestTaskRunner implements TaskRunner, QuerySegmentWalker
           TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), taskStatus);
         }
         catch (Exception e) {
-          TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(task.getId()));
+          String errMsg = "Graceful shutdown of task aborted with exception, see task logs for more information";
+          TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(task.getId(), errMsg));
           throw new RE(e, "Graceful shutdown of task[%s] aborted with exception", task.getId());
         }
       } else {
-        TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(task.getId()));
+        TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(
+            task.getId(),
+            "Task failure while shutting down gracefully"
+        ));
       }
     }
 
@@ -269,31 +273,31 @@ public class TestTaskRunner implements TaskRunner, QuerySegmentWalker
   }
 
   @Override
-  public long getTotalTaskSlotCount()
+  public Map<String, Long> getTotalTaskSlotCount()
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public long getIdleTaskSlotCount()
+  public Map<String, Long> getIdleTaskSlotCount()
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public long getUsedTaskSlotCount()
+  public Map<String, Long> getUsedTaskSlotCount()
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public long getLazyTaskSlotCount()
+  public Map<String, Long> getLazyTaskSlotCount()
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public long getBlacklistedTaskSlotCount()
+  public Map<String, Long> getBlacklistedTaskSlotCount()
   {
     throw new UnsupportedOperationException();
   }
@@ -416,11 +420,11 @@ public class TestTaskRunner implements TaskRunner, QuerySegmentWalker
           log.warn(e, "Interrupted while running task[%s]", task);
         }
 
-        status = TaskStatus.failure(task.getId());
+        status = TaskStatus.failure(task.getId(), "Task failed due to its thread being interrupted");
       }
       catch (Exception e) {
         log.error(e, "Exception while running task[%s]", task);
-        status = TaskStatus.failure(task.getId());
+        status = TaskStatus.failure(task.getId(), "Task failed");
       }
       catch (Throwable t) {
         throw new RE(t, "Uncaught Throwable while running task[%s]", task);

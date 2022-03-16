@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
 
@@ -55,6 +56,16 @@ public class ExpressionLambdaAggregatorInputBindings implements Expr.ObjectBindi
       return accumulator.value();
     }
     return inputBindings.get(name);
+  }
+
+  @Nullable
+  @Override
+  public ExpressionType getType(String name)
+  {
+    if (accumlatorIdentifier.equals(name)) {
+      return accumulator.type();
+    }
+    return inputBindings.getType(name);
   }
 
   public void accumulate(ExprEval<?> eval)

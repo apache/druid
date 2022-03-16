@@ -43,8 +43,8 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(new Duration("PT60s"), config.getCoordinatorPeriod());
     Assert.assertEquals(new Duration("PT1800s"), config.getCoordinatorIndexingPeriod());
     Assert.assertEquals(86400000, config.getCoordinatorKillPeriod().getMillis());
-    Assert.assertEquals(-1000, config.getCoordinatorKillDurationToRetain().getMillis());
-    Assert.assertEquals(0, config.getCoordinatorKillMaxSegments());
+    Assert.assertEquals(7776000000L, config.getCoordinatorKillDurationToRetain().getMillis());
+    Assert.assertEquals(100, config.getCoordinatorKillMaxSegments());
     Assert.assertEquals(new Duration(15 * 60 * 1000), config.getLoadTimeoutDelay());
     Assert.assertEquals(Duration.millis(50), config.getLoadQueuePeonRepeatDelay());
     Assert.assertTrue(config.getCompactionSkipLockedIntervals());

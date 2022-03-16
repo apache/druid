@@ -18,50 +18,18 @@
 
 .history-dialog {
   &.bp3-dialog {
-    width: 600px;
+    width: 75%;
     top: 5%;
+    height: 75vh;
   }
 
-  .history-record-container {
-    .history-dialog-title {
-      padding-left: 10px;
-      margin-bottom: 2px;
-      font-size: 24px;
-      font-weight: 600;
-    }
+  .bp3-tabs {
+    position: relative;
+    height: 100%;
+    width: 100%;
 
-    .no-record {
-      height: 25vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .history-record-entries {
-      margin: 10px 0;
-      max-height: 60vh;
-      overflow: scroll;
-
-      .history-record-entry {
-        padding: 5px;
-        border-style: dot-dash;
-        word-wrap: break-word;
-
-        .bp3-card {
-          padding-bottom: 10px;
-        }
-
-        .history-record-title {
-          justify-content: space-between;
-          display: flex;
-          margin-bottom: 5px;
-
-          .history-record-title-change {
-            font-weight: 600;
-            font-size: 16px;
-          }
-        }
-      }
+    .bp3-tab-panel {
+      flex: 1;
     }
   }
 }

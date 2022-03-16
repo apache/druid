@@ -78,24 +78,21 @@ public abstract class SimpleSqlAggregator implements SqlAggregator
     final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
 
     final String fieldName;
-    final String expression;
 
     if (arg.isDirectColumnAccess()) {
       fieldName = arg.getDirectColumn();
-      expression = null;
     } else {
-      fieldName = null;
-      expression = arg.getExpression();
+      // sharing is caring, make a virtual column to maximize re-use
+      fieldName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, aggregateCall.getType());
     }
 
-    return getAggregation(name, aggregateCall, macroTable, fieldName, expression);
+    return getAggregation(name, aggregateCall, macroTable, fieldName);
   }
 
   abstract Aggregation getAggregation(
       String name,
       AggregateCall aggregateCall,
       ExprMacroTable macroTable,
-      String fieldName,
-      String expression
+      String fieldName
   );
 }

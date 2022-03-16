@@ -27,6 +27,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.io.Files;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
+import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
@@ -60,8 +61,10 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
@@ -108,6 +111,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -115,6 +119,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
 public class CompactionTaskRunTest extends IngestionTestBase
@@ -192,8 +197,16 @@ public class CompactionTaskRunTest extends IngestionTestBase
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     // Expected compaction state to exist after compaction as we store compaction state by default
+    Map<String, String> expectedLongSumMetric = new HashMap<>();
+    expectedLongSumMetric.put("type", "longSum");
+    expectedLongSumMetric.put("name", "val");
+    expectedLongSumMetric.put("fieldName", "val");
+    expectedLongSumMetric.put("expression", null);
     return new CompactionState(
       new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
+      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+      ImmutableList.of(expectedLongSumMetric),
+      null,
       mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
       mapper.readValue(
           mapper.writeValueAsString(
@@ -316,6 +329,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 null,
                 null,
                 null,
+                null,
                 null
             )
         )
@@ -336,8 +350,16 @@ public class CompactionTaskRunTest extends IngestionTestBase
             interval,
             segments.get(segmentIdx).getInterval()
         );
+        Map<String, String> expectedLongSumMetric = new HashMap<>();
+        expectedLongSumMetric.put("type", "longSum");
+        expectedLongSumMetric.put("name", "val");
+        expectedLongSumMetric.put("fieldName", "val");
+        expectedLongSumMetric.put("expression", null);
         CompactionState expectedState = new CompactionState(
             new HashedPartitionsSpec(null, 3, null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+            ImmutableList.of(expectedLongSumMetric),
+            null,
             compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
             getObjectMapper().readValue(
                 getObjectMapper().writeValueAsString(
@@ -592,6 +614,127 @@ public class CompactionTaskRunTest extends IngestionTestBase
   }
 
   @Test
+  public void testCompactionWithFilterInTransformSpec() throws Exception
+  {
+    runIndexTask();
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    // day segmentGranularity
+    final CompactionTask compactionTask = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null))
+        .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim", "a", null)))
+        .build();
+
+    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    List<DataSegment> segments = resultPair.rhs;
+
+    Assert.assertEquals(1, segments.size());
+
+    Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
+    Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
+
+    ObjectMapper mapper = new DefaultObjectMapper();
+    Map<String, String> expectedLongSumMetric = new HashMap<>();
+    expectedLongSumMetric.put("type", "longSum");
+    expectedLongSumMetric.put("name", "val");
+    expectedLongSumMetric.put("fieldName", "val");
+    expectedLongSumMetric.put("expression", null);
+    CompactionState expectedCompactionState = new CompactionState(
+        new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+        ImmutableList.of(expectedLongSumMetric),
+        getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
+        mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
+        mapper.readValue(
+            mapper.writeValueAsString(
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    true,
+                    ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
+                )
+            ),
+            Map.class
+        )
+    );
+    Assert.assertEquals(
+        expectedCompactionState,
+        segments.get(0).getLastCompactionState()
+    );
+  }
+
+  @Test
+  public void testCompactionWithNewMetricInMetricsSpec() throws Exception
+  {
+    runIndexTask();
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    // day segmentGranularity
+    final CompactionTask compactionTask = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null))
+        .metricsSpec(new AggregatorFactory[] {new CountAggregatorFactory("cnt"), new LongSumAggregatorFactory("val", "val")})
+        .build();
+
+    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    List<DataSegment> segments = resultPair.rhs;
+
+    Assert.assertEquals(1, segments.size());
+
+    Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
+    Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
+
+    ObjectMapper mapper = new DefaultObjectMapper();
+    Map<String, String> expectedCountMetric = new HashMap<>();
+    expectedCountMetric.put("type", "count");
+    expectedCountMetric.put("name", "cnt");
+    Map<String, String> expectedLongSumMetric = new HashMap<>();
+    expectedLongSumMetric.put("type", "longSum");
+    expectedLongSumMetric.put("name", "val");
+    expectedLongSumMetric.put("fieldName", "val");
+    expectedLongSumMetric.put("expression", null);
+    CompactionState expectedCompactionState = new CompactionState(
+        new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+        ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
+        getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
+        mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
+        mapper.readValue(
+            mapper.writeValueAsString(
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    true,
+                    ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
+                )
+            ),
+            Map.class
+        )
+    );
+    Assert.assertEquals(
+        expectedCompactionState,
+        segments.get(0).getLastCompactionState()
+    );
+  }
+
+  @Test
   public void testWithGranularitySpecNonNullSegmentGranularityAndNullQueryGranularity() throws Exception
   {
     runIndexTask();
@@ -605,7 +748,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     // day segmentGranularity
     final CompactionTask compactionTask1 = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, null))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null))
         .build();
 
     Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
@@ -626,7 +769,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     // hour segmentGranularity
     final CompactionTask compactionTask2 = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.HOUR, null))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.HOUR, null, null))
         .build();
 
     resultPair = runTask(compactionTask2);
@@ -660,7 +803,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     // day queryGranularity
     final CompactionTask compactionTask1 = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .granularitySpec(new ClientCompactionTaskGranularitySpec(null, Granularities.SECOND))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(null, Granularities.SECOND, null))
         .build();
 
     Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
@@ -705,7 +848,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     // day segmentGranularity and day queryGranularity
     final CompactionTask compactionTask1 = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.DAY))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.DAY, null))
         .build();
 
     Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
@@ -737,7 +880,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final CompactionTask compactionTask1 = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .granularitySpec(new ClientCompactionTaskGranularitySpec(null, null))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(null, null, null))
         .build();
 
     Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
@@ -810,23 +953,52 @@ public class CompactionTaskRunTest extends IngestionTestBase
       return;
     }
 
-    // This creates HOUR segments with intervals of
+    // The following task creates (several, more than three, last time I checked, six) HOUR segments with intervals of
     // - 2014-01-01T00:00:00/2014-01-01T01:00:00
     // - 2014-01-01T01:00:00/2014-01-01T02:00:00
     // - 2014-01-01T02:00:00/2014-01-01T03:00:00
-    runIndexTask();
+    // The six segments are:
+    // three rows in hour 00:
+    // 2014-01-01T00:00:00.000Z_2014-01-01T01:00:00.000Z with two rows
+    // 2014-01-01T00:00:00.000Z_2014-01-01T01:00:00.000Z_1 with one row
+    // three rows in hour 01:
+    // 2014-01-01T01:00:00.000Z_2014-01-01T02:00:00.000Z with two rows
+    // 2014-01-01T01:00:00.000Z_2014-01-01T02:00:00.000Z_1 with one row
+    // four rows in hour 02:
+    // 2014-01-01T02:00:00.000Z_2014-01-01T03:00:00.000Z with two rows
+    // 2014-01-01T02:00:00.000Z_2014-01-01T03:00:00.000Z_1 with two rows
+    // there are 10 rows total in data set
 
-    final Interval compactionPartialInterval = Intervals.of("2014-01-01T01:00:00/2014-01-01T02:00:00");
-
-    // Segments that did not belong in the compaction interval are expected unchanged
-    final Set<DataSegment> expectedSegments = new HashSet<>();
-    expectedSegments.addAll(
-        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
-            DATA_SOURCE,
-            Collections.singletonList(Intervals.of("2014-01-01T02:00:00/2014-01-01T03:00:00")),
-            Segments.ONLY_VISIBLE
-        )
+    // maxRowsPerSegment is set to 2 inside the runIndexTask methods
+    Pair<TaskStatus, List<DataSegment>> result = runIndexTask();
+    Assert.assertEquals(6, result.rhs.size());
+    
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY
     );
+
+    // Setup partial compaction:
+    // Change the granularity from HOUR to MINUTE through compaction for hour 01, there are three rows in the compaction interval,
+    // all three in the same timestamp (see TEST_ROWS), this should generate one segments (task will now use
+    // the default rows per segments since compaction's tuning config is null) in same minute and
+    // 59 tombstones to completely overshadow the existing hour 01 segment. Since the segments outside the
+    // compaction interval should remanin unchanged there should be a total of 1 + (2 + 59) + 2 = 64 segments
+
+    // **** PARTIAL COMPACTION: hour -> minute ****
+    final Interval compactionPartialInterval = Intervals.of("2014-01-01T01:00:00/2014-01-01T02:00:00");
+    final CompactionTask partialCompactionTask = builder
+        .segmentGranularity(Granularities.MINUTE)
+        // Set dropExisting to true
+        .inputSpec(new CompactionIntervalSpec(compactionPartialInterval, null), true)
+        .build();
+    final Pair<TaskStatus, List<DataSegment>> partialCompactionResult = runTask(partialCompactionTask);
+    Assert.assertTrue(partialCompactionResult.lhs.isSuccess());
+
+    // Segments that did not belong in the compaction interval (hours 00 and 02) are expected unchanged
+    // add 2 unchanged segments for hour 00:
+    final Set<DataSegment> expectedSegments = new HashSet<>();
     expectedSegments.addAll(
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
@@ -834,27 +1006,19 @@ public class CompactionTaskRunTest extends IngestionTestBase
             Segments.ONLY_VISIBLE
         )
     );
-
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+    // add 2 unchanged segments for hour 02:
+    expectedSegments.addAll(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
+            DATA_SOURCE,
+            Collections.singletonList(Intervals.of("2014-01-01T02:00:00/2014-01-01T03:00:00")),
+            Segments.ONLY_VISIBLE
+        )
     );
-
-    final CompactionTask partialCompactionTask = builder
-        .segmentGranularity(Granularities.MINUTE)
-        // Set dropExisting to true
-        .inputSpec(new CompactionIntervalSpec(compactionPartialInterval, null), true)
-        .build();
-
-    final Pair<TaskStatus, List<DataSegment>> partialCompactionResult = runTask(partialCompactionTask);
-    Assert.assertTrue(partialCompactionResult.lhs.isSuccess());
-
-    // New segments that was compacted are expected. However, old segments of the compacted interval should be drop
-    // regardless of the new segments fully overshadow the old segments or not. Hence, we do not expect old segments
-    // of the 2014-01-01T01:00:00/2014-01-01T02:00:00 interval post-compaction
     expectedSegments.addAll(partialCompactionResult.rhs);
+    Assert.assertEquals(64, expectedSegments.size());
 
+    // New segments that were compacted are expected. However, old segments of the compacted interval should be
+    // overshadowed by the new tombstones (59) being created for all minutes other than 01:01
     final Set<DataSegment> segmentsAfterPartialCompaction = new HashSet<>(
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
@@ -862,17 +1026,39 @@ public class CompactionTaskRunTest extends IngestionTestBase
             Segments.ONLY_VISIBLE
         )
     );
-
     Assert.assertEquals(expectedSegments, segmentsAfterPartialCompaction);
+    final List<DataSegment> realSegmentsAfterPartialCompaction =
+        segmentsAfterPartialCompaction.stream()
+                                      .filter(s -> !s.isTombstone())
+                                      .collect(Collectors.toList());
+    final List<DataSegment> tombstonesAfterPartialCompaction =
+        segmentsAfterPartialCompaction.stream()
+                                   .filter(s -> s.isTombstone())
+                                   .collect(Collectors.toList());
+    Assert.assertEquals(59, tombstonesAfterPartialCompaction.size());
+    Assert.assertEquals(5, realSegmentsAfterPartialCompaction.size());
+    Assert.assertEquals(64, segmentsAfterPartialCompaction.size());
 
+    // Setup full compaction:
+    // Full Compaction with null segmentGranularity meaning that the original segmentGranularity is preserved.
+    // For the intervals, 2014-01-01T00:00:00.000Z/2014-01-01T01:00:00.000Z and 2014-01-01T02:00:00.000Z/2014-01-01T03:00:00.000Z
+    // the original segmentGranularity is HOUR from the initial ingestion.
+    // For the interval, 2014-01-01T01:00:00.000Z/2014-01-01T01:01:00.000Z, the original segmentGranularity is
+    // MINUTE from the partial compaction done earlier.
+    // Again since the tuningconfig for the compaction is null, the maxRowsPerSegment is the default so
+    // for hour 00 one real HOUR segment will be generated;
+    // for hour 01, one real minute segment plus 59 minute tombstones;
+    // and hour 02 one real HOUR segment for a total of 1 + (1+59) + 1 = 62 total segments
     final CompactionTask fullCompactionTask = builder
         .segmentGranularity(null)
         // Set dropExisting to true
         .inputSpec(new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null), true)
         .build();
 
+    // **** FULL COMPACTION ****
     final Pair<TaskStatus, List<DataSegment>> fullCompactionResult = runTask(fullCompactionTask);
     Assert.assertTrue(fullCompactionResult.lhs.isSuccess());
+
 
     final List<DataSegment> segmentsAfterFullCompaction = new ArrayList<>(
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
@@ -884,25 +1070,33 @@ public class CompactionTaskRunTest extends IngestionTestBase
     segmentsAfterFullCompaction.sort(
         (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(s1.getInterval(), s2.getInterval())
     );
+    Assert.assertEquals(62, segmentsAfterFullCompaction.size());
 
-    Assert.assertEquals(3, segmentsAfterFullCompaction.size());
-    // Full Compaction with null segmentGranularity meaning that the original segmentGrnaularity is perserved
-    // For the intervals, 2014-01-01T00:00:00.000Z/2014-01-01T01:00:00.000Z and 2014-01-01T02:00:00.000Z/2014-01-01T03:00:00.000Z
-    // the original segmentGranularity is HOUR from the initial ingestion.
-    // For the interval, 2014-01-01T01:00:00.000Z/2014-01-01T01:01:00.000Z, the original segmentGranularity is
-    // MINUTE from the partial compaction done earlier.
+    final List<DataSegment> tombstonesAfterFullCompaction =
+        segmentsAfterFullCompaction.stream()
+                                   .filter(s -> s.isTombstone())
+                                   .collect(Collectors.toList());
+    Assert.assertEquals(59, tombstonesAfterFullCompaction.size());
+
+    final List<DataSegment> realSegmentsAfterFullCompaction =
+        segmentsAfterFullCompaction.stream()
+                                   .filter(s -> !s.isTombstone())
+                                   .collect(Collectors.toList());
+    Assert.assertEquals(3, realSegmentsAfterFullCompaction.size());
+
     Assert.assertEquals(
         Intervals.of("2014-01-01T00:00:00.000Z/2014-01-01T01:00:00.000Z"),
-        segmentsAfterFullCompaction.get(0).getInterval()
+        realSegmentsAfterFullCompaction.get(0).getInterval()
     );
     Assert.assertEquals(
         Intervals.of("2014-01-01T01:00:00.000Z/2014-01-01T01:01:00.000Z"),
-        segmentsAfterFullCompaction.get(1).getInterval()
+        realSegmentsAfterFullCompaction.get(1).getInterval()
     );
     Assert.assertEquals(
         Intervals.of("2014-01-01T02:00:00.000Z/2014-01-01T03:00:00.000Z"),
-        segmentsAfterFullCompaction.get(2).getInterval()
+        realSegmentsAfterFullCompaction.get(2).getInterval()
     );
+    
   }
 
   @Test
@@ -1297,7 +1491,20 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
 
     return new TaskToolbox(
-        new TaskConfig(null, null, null, null, null, false, null, null, null, false, false),
+        new TaskConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            false,
+            null,
+            null,
+            null,
+            false,
+            false,
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        ),
         null,
         createActionClient(task),
         null,

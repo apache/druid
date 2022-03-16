@@ -107,6 +107,12 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
+  public int markSegmentsAsUnusedWithinInterval(String dataSource, Interval interval)
+  {
+    return 0;
+  }
+
+  @Override
   public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments)
   {
     Set<DataSegment> added = new HashSet<>();

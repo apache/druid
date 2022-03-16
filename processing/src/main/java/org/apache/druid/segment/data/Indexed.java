@@ -25,6 +25,13 @@ import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
 
 import javax.annotation.Nullable;
 
+/**
+ * Indexed is a fixed-size, immutable, indexed set of values which allows
+ * locating a specific index via an exact match, the semantics of which are defined
+ * by the implementation. The indexed is ordered, and may contain duplicate values.
+ *
+ * @param <T> the type of the value
+ */
 @PublicApi
 public interface Indexed<T> extends Iterable<T>, HotLoopCallee
 {
@@ -45,4 +52,11 @@ public interface Indexed<T> extends Iterable<T>, HotLoopCallee
    * @return index of value, or a negative number
    */
   int indexOf(@Nullable T value);
+
+  @FunctionalInterface
+  interface IndexedGetter<T>
+  {
+    @Nullable
+    T get(int id);
+  }
 }

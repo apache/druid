@@ -24,8 +24,8 @@ import { IngestionOverview } from './component/ingestion/overview';
 import { ConfigureSchemaConfig } from './component/load-data/config/configure-schema';
 import {
   PartitionConfig,
+  RangePartitionsSpec,
   SegmentGranularity,
-  SingleDimPartitionsSpec,
 } from './component/load-data/config/partition';
 import { PublishConfig } from './component/load-data/config/publish';
 import { ReindexDataConnector } from './component/load-data/data-connector/reindex';
@@ -59,8 +59,8 @@ describe('Reindexing from Druid', () => {
     await browser.close();
   });
 
-  it('Reindex datasource from dynamic to single dim partitions', async () => {
-    const testName = 'reindex-dynamic-to-single-dim-';
+  it('Reindex datasource from dynamic to range partitions', async () => {
+    const testName = 'reindex-dynamic-to-range-';
     const datasourceName = testName + new Date().toISOString();
     const interval = '2015-09-12/2015-09-13';
     const dataConnector = new ReindexDataConnector(page, {
@@ -71,8 +71,8 @@ describe('Reindexing from Druid', () => {
     const partitionConfig = new PartitionConfig({
       segmentGranularity: SegmentGranularity.DAY,
       timeIntervals: null,
-      partitionsSpec: new SingleDimPartitionsSpec({
-        partitionDimension: 'channel',
+      partitionsSpec: new RangePartitionsSpec({
+        partitionDimensions: ['channel'],
         targetRowsPerSegment: 10_000,
         maxRowsPerSegment: null,
       }),
@@ -128,15 +128,9 @@ function validateConnectLocalData(preview: string) {
       ',"namespace":"Talk"' +
       ',"page":"Talk:Oswald Tilghman"' +
       ',"user":"GELongstreet"' +
-      ',"added":"36"' +
-      ',"deleted":"0"' +
-      ',"delta":"36"' +
-      ',"cityName":null' +
-      ',"countryIsoCode":null' +
-      ',"countryName":null' +
-      ',"regionIsoCode":null' +
-      ',"regionName":null' +
-      ',"metroCode":null' +
+      ',"added":36' +
+      ',"deleted":0' +
+      ',"delta":36' +
       '}',
   );
   const lastLine = lines[lines.length - 1];
@@ -153,15 +147,9 @@ function validateConnectLocalData(preview: string) {
       ',"namespace":"Main"' +
       ',"page":"Hapoel Katamon Jerusalem F.C."' +
       ',"user":"The Quixotic Potato"' +
-      ',"added":"1"' +
-      ',"deleted":"0"' +
-      ',"delta":"1"' +
-      ',"cityName":null' +
-      ',"countryIsoCode":null' +
-      ',"countryName":null' +
-      ',"regionIsoCode":null' +
-      ',"regionName":null' +
-      ',"metroCode":null' +
+      ',"added":1' +
+      ',"deleted":0' +
+      ',"delta":1' +
       '}',
   );
 }

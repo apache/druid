@@ -20,7 +20,7 @@
 package org.apache.druid.query.topn;
 
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Map;
 
@@ -102,7 +102,7 @@ public class DimValHolder
      *                 {@link org.apache.druid.query.dimension.DimensionSpec} associated with dimValue from the
      *                 calling TopNResultBuilder
      */
-    public Builder withDimValue(Comparable dimValue, ValueType type)
+    public Builder withDimValue(Comparable dimValue, ColumnType type)
     {
       this.dimValue = DimensionHandlerUtils.convertObjectToType(dimValue, type);
       return this;

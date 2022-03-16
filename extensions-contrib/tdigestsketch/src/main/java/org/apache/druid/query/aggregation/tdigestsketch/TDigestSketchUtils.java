@@ -22,8 +22,6 @@ package org.apache.druid.query.aggregation.tdigestsketch;
 import com.tdunning.math.stats.MergingDigest;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
@@ -88,8 +86,8 @@ public class TDigestSketchUtils
   {
     // Check input for equivalence.
     final boolean inputMatches;
-    final VirtualColumn virtualInput =
-        virtualColumnRegistry.findVirtualColumns(factory.requiredFields())
+    final DruidExpression virtualInput =
+        virtualColumnRegistry.findVirtualColumnExpressions(factory.requiredFields())
                              .stream()
                              .findFirst()
                              .orElse(null);
@@ -97,7 +95,7 @@ public class TDigestSketchUtils
     if (virtualInput == null) {
       inputMatches = input.isDirectColumnAccess() && input.getDirectColumn().equals(factory.getFieldName());
     } else {
-      inputMatches = ((ExpressionVirtualColumn) virtualInput).getExpression().equals(input.getExpression());
+      inputMatches = virtualInput.equals(input);
     }
     return inputMatches && compression == factory.getCompression();
   }

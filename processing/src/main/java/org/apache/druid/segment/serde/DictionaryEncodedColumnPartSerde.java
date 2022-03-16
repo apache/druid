@@ -350,7 +350,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
               builder.getFileMapper()
           );
           builder.setBitmapIndex(
-              new BitmapIndexColumnPartSupplier(
+              new StringBitmapIndexColumnPartSupplier(
                   bitmapSerdeFactory.getBitmapFactory(),
                   rBitmaps,
                   rDictionary

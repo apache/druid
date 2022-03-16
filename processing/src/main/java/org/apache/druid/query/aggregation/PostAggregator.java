@@ -21,6 +21,9 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.Cacheable;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
@@ -45,11 +48,29 @@ public interface PostAggregator extends Cacheable
   String getName();
 
   /**
-   * Return the output type of a row processed with this post aggregator. Refer to the {@link ValueType} javadocs
+   * Return the output type of a row processed with this post aggregator. Refer to the {@link ColumnType} javadocs
    * for details on the implications of choosing a type.
+   *
+   * @param signature
    */
   @Nullable
-  ValueType getType();
+  default ColumnType getType(ColumnInspector signature)
+  {
+    return ColumnTypeFactory.ofValueType(getType());
+  }
+
+  /**
+   * This method is deprecated and will be removed soon. Use {@link #getType(ColumnInspector)} instead. Do not call this
+   * method, it will likely produce incorrect results, it exists for backwards compatibility.
+   */
+  @Deprecated
+  default ValueType getType()
+  {
+    throw new UnsupportedOperationException(
+        "Do not call or implement this method, it is deprecated, use 'getType(ColumnInspector)' instead"
+    );
+  }
+
 
   /**
    * Allows returning an enriched post aggregator, built from contextual information available from the given map of

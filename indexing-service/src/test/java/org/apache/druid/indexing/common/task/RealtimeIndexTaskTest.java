@@ -813,9 +813,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
                 new TimeAndDimsParseSpec(
                     new TimestampSpec("t", "auto", null),
                     new DimensionsSpec(
-                        DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim1t")),
-                        null,
-                        null
+                        DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim1t"))
                     )
                 )
             ),
@@ -899,7 +897,8 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         null,
         null,
         false,
-        false
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
     );
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, mdc);
     try {

@@ -491,7 +491,7 @@ public class TaskLockboxTest
     lockbox.add(task);
     Assert.assertTrue(tryTimeChunkLock(TaskLockType.SHARED, task, interval).isOk());
 
-    Assert.assertFalse(
+    Assert.assertTrue(
         lockbox.doInCriticalSection(
             task,
             Collections.singletonList(interval),
@@ -1380,7 +1380,7 @@ public class TaskLockboxTest
     @Override
     public TaskStatus run(TaskToolbox toolbox)
     {
-      return TaskStatus.failure("how?");
+      return TaskStatus.failure("how?", "Dummy task status err msg");
     }
   }
 }

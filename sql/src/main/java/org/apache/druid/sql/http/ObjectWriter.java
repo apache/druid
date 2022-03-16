@@ -21,14 +21,20 @@ package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.List;
 
 public class ObjectWriter implements ResultFormat.Writer
 {
+  static final String TYPE_HEADER_NAME = "type";
+  static final String SQL_TYPE_HEADER_NAME = "sqlType";
+
   private final JsonGenerator jsonGenerator;
   private final OutputStream outputStream;
 
@@ -36,6 +42,9 @@ public class ObjectWriter implements ResultFormat.Writer
   {
     this.jsonGenerator = jsonMapper.getFactory().createGenerator(outputStream);
     this.outputStream = outputStream;
+
+    // Disable automatic JSON termination, so clients can detect truncated responses.
+    jsonGenerator.configure(JsonGenerator.Feature.AUTO_CLOSE_JSON_CONTENT, false);
   }
 
   @Override
@@ -55,15 +64,13 @@ public class ObjectWriter implements ResultFormat.Writer
   }
 
   @Override
-  public void writeHeader(final List<String> columnNames) throws IOException
+  public void writeHeader(
+      final RelDataType rowType,
+      final boolean includeTypes,
+      final boolean includeSqlTypes
+  ) throws IOException
   {
-    jsonGenerator.writeStartObject();
-
-    for (String columnName : columnNames) {
-      jsonGenerator.writeNullField(columnName);
-    }
-
-    jsonGenerator.writeEndObject();
+    writeHeader(jsonGenerator, rowType, includeTypes, includeSqlTypes);
   }
 
   @Override
@@ -89,5 +96,45 @@ public class ObjectWriter implements ResultFormat.Writer
   public void close() throws IOException
   {
     jsonGenerator.close();
+  }
+
+  static void writeHeader(
+      final JsonGenerator jsonGenerator,
+      final RelDataType rowType,
+      final boolean includeTypes,
+      final boolean includeSqlTypes
+  ) throws IOException
+  {
+    final RowSignature signature = RowSignatures.fromRelDataType(rowType.getFieldNames(), rowType);
+
+    jsonGenerator.writeStartObject();
+
+    for (int i = 0; i < signature.size(); i++) {
+      jsonGenerator.writeFieldName(signature.getColumnName(i));
+
+      if (!includeTypes && !includeSqlTypes) {
+        jsonGenerator.writeNull();
+      } else {
+        jsonGenerator.writeStartObject();
+
+        if (includeTypes) {
+          jsonGenerator.writeStringField(
+              ObjectWriter.TYPE_HEADER_NAME,
+              signature.getColumnType(i).map(TypeSignature::asTypeString).orElse(null)
+          );
+        }
+
+        if (includeSqlTypes) {
+          jsonGenerator.writeStringField(
+              ObjectWriter.SQL_TYPE_HEADER_NAME,
+              rowType.getFieldList().get(i).getType().getSqlTypeName().getName()
+          );
+        }
+
+        jsonGenerator.writeEndObject();
+      }
+    }
+
+    jsonGenerator.writeEndObject();
   }
 }

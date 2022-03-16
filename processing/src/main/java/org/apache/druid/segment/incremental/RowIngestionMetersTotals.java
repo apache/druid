@@ -22,6 +22,8 @@ package org.apache.druid.segment.incremental;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 public class RowIngestionMetersTotals
 {
   private final long processed;
@@ -65,5 +67,38 @@ public class RowIngestionMetersTotals
   public long getUnparseable()
   {
     return unparseable;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    RowIngestionMetersTotals that = (RowIngestionMetersTotals) o;
+    return processed == that.processed
+           && processedWithError == that.processedWithError
+           && thrownAway == that.thrownAway
+           && unparseable == that.unparseable;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(processed, processedWithError, thrownAway, unparseable);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "RowIngestionMetersTotals{" +
+           "processed=" + processed +
+           ", processedWithError=" + processedWithError +
+           ", thrownAway=" + thrownAway +
+           ", unparseable=" + unparseable +
+           '}';
   }
 }

@@ -304,16 +304,10 @@ $actual-icon-height: 400px;
   }
 
   .control-buttons {
-    position: relative;
+    text-align: right;
 
     .bp3-button {
-      margin-right: 15px;
-    }
-
-    .right {
-      position: absolute;
-      right: 0;
-      margin-right: 0;
+      margin-left: 15px;
     }
   }
 

@@ -20,7 +20,7 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
@@ -37,13 +37,22 @@ public interface ColumnInspector extends Expr.InputBindingInspector
   @Nullable
   ColumnCapabilities getColumnCapabilities(String column);
 
+  default ColumnCapabilities getColumnCapabilitiesWithDefault(String column, ColumnCapabilities defaultCapabilites)
+  {
+    final ColumnCapabilities capabilities = getColumnCapabilities(column);
+    if (capabilities != null) {
+      return capabilities;
+    }
+    return defaultCapabilites;
+  }
+
   @Nullable
   @Override
-  default ExprType getType(String name)
+  default ExpressionType getType(String name)
   {
     ColumnCapabilities capabilities = getColumnCapabilities(name);
     if (capabilities != null) {
-      return ExprType.fromValueType(capabilities.getType());
+      return ExpressionType.fromColumnType(capabilities);
     }
     return null;
   }

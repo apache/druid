@@ -27,13 +27,16 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionIOConfig;
 import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
+import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
+import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
@@ -47,6 +50,9 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.BitmapSerde.DefaultBitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
@@ -116,7 +122,10 @@ public class ClientCompactionTaskQuerySerdeTest
             1000,
             100
         ),
-        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR),
+        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
+        new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+        new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
+        new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
         ImmutableMap.of("key", "value")
     );
 
@@ -203,10 +212,26 @@ public class ClientCompactionTaskQuerySerdeTest
         task.getGranularitySpec().getSegmentGranularity()
     );
     Assert.assertEquals(
+        query.getGranularitySpec().isRollup(),
+        task.getGranularitySpec().isRollup()
+    );
+    Assert.assertEquals(
         query.getIoConfig().isDropExisting(),
         task.getIoConfig().isDropExisting()
     );
     Assert.assertEquals(query.getContext(), task.getContext());
+    Assert.assertEquals(
+        query.getDimensionsSpec().getDimensions(),
+        task.getDimensionsSpec().getDimensions()
+    );
+    Assert.assertEquals(
+        query.getTransformSpec().getFilter(),
+        task.getTransformSpec().getFilter()
+    );
+    Assert.assertArrayEquals(
+        query.getMetricsSpec(),
+        task.getMetricsSpec()
+    );
   }
 
   @Test
@@ -261,10 +286,19 @@ public class ClientCompactionTaskQuerySerdeTest
                 null,
                 null,
                 null,
+                null,
                 null
             )
         )
-        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true))
+        .dimensionsSpec(
+            DimensionsSpec.builder()
+                          .setDimensions(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")))
+                          .setDimensionExclusions(ImmutableList.of("__time", "val"))
+                          .build()
+        )
+        .metricsSpec(new AggregatorFactory[] {new CountAggregatorFactory("cnt")})
+        .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
         .build();
 
     final ClientCompactionTaskQuery expected = new ClientCompactionTaskQuery(
@@ -307,7 +341,10 @@ public class ClientCompactionTaskQuerySerdeTest
             1000,
             100
         ),
-        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR),
+        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
+        new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+        new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
+        new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
         new HashMap<>()
     );
 

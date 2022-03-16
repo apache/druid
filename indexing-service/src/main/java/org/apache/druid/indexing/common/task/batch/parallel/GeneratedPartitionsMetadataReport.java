@@ -21,23 +21,26 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexing.common.TaskReport;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Report containing the {@link GenericPartitionStat}s created by a {@link PartialSegmentGenerateTask}. This report is
- * collected by {@link ParallelIndexSupervisorTask} and used to generate {@link PartialGenericSegmentMergeIOConfig}.
+ * collected by {@link ParallelIndexSupervisorTask} and used to generate {@link PartialSegmentMergeIOConfig}.
  */
-class GeneratedPartitionsMetadataReport extends GeneratedPartitionsReport<GenericPartitionStat>
+class GeneratedPartitionsMetadataReport extends GeneratedPartitionsReport
 {
   public static final String TYPE = "generated_partitions_metadata";
 
   @JsonCreator
   GeneratedPartitionsMetadataReport(
       @JsonProperty("taskId") String taskId,
-      @JsonProperty("partitionStats") List<GenericPartitionStat> partitionStats
+      @JsonProperty("partitionStats") List<PartitionStat> partitionStats,
+      @JsonProperty("taskReport") Map<String, TaskReport> taskReport
   )
   {
-    super(taskId, partitionStats);
+    super(taskId, partitionStats, taskReport);
   }
 }

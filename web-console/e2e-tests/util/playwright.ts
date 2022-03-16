@@ -50,6 +50,13 @@ export async function getLabeledInput(page: playwright.Page, label: string): Pro
   );
 }
 
+export async function getLabeledTextarea(page: playwright.Page, label: string): Promise<string> {
+  return await page.$eval(
+    `//*[text()="${label}"]/following-sibling::div//textarea`,
+    el => (el as HTMLInputElement).value,
+  );
+}
+
 export async function setLabeledInput(
   page: playwright.Page,
   label: string,
@@ -98,6 +105,10 @@ export async function clickLabeledButton(
   text: string,
 ): Promise<void> {
   await page.click(`//*[text()="${label}"]/following-sibling::div${buttonSelector(text)}`);
+}
+
+export async function clickText(page: playwright.Page, text: string): Promise<void> {
+  await page.click(`//*[text()="${text}"]`);
 }
 
 export async function selectSuggestibleInput(

@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.table;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.plan.RelOptTable;
@@ -34,27 +35,40 @@ import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.external.ExternalDataSource;
+import org.apache.druid.sql.calcite.external.ExternalTableScan;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 public class DruidTable implements TranslatableTable
 {
   private final DataSource dataSource;
   private final RowSignature rowSignature;
+
+  @Nullable
+  private final ObjectMapper objectMapper;
   private final boolean joinable;
   private final boolean broadcast;
 
   public DruidTable(
       final DataSource dataSource,
       final RowSignature rowSignature,
+      @Nullable final ObjectMapper objectMapper,
       final boolean isJoinable,
       final boolean isBroadcast
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.rowSignature = Preconditions.checkNotNull(rowSignature, "rowSignature");
+    this.objectMapper = objectMapper;
     this.joinable = isJoinable;
     this.broadcast = isBroadcast;
+
+    if (dataSource instanceof ExternalDataSource && objectMapper == null) {
+      // objectMapper is used by ExternalTableScan to generate its digest.
+      throw new NullPointerException("ObjectMapper is required for external datasources");
+    }
   }
 
   public DataSource getDataSource()
@@ -115,7 +129,13 @@ public class DruidTable implements TranslatableTable
   @Override
   public RelNode toRel(final RelOptTable.ToRelContext context, final RelOptTable table)
   {
-    return LogicalTableScan.create(context.getCluster(), table);
+    if (dataSource instanceof ExternalDataSource) {
+      // Cannot use LogicalTableScan here, because its digest is solely based on the name of the table macro.
+      // Must use our own class that computes its own digest.
+      return new ExternalTableScan(context.getCluster(), objectMapper, this);
+    } else {
+      return LogicalTableScan.create(context.getCluster(), table);
+    }
   }
 
   @Override

@@ -224,8 +224,19 @@ public class DataSourcesResource
       if (interval != null) {
         return segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
       } else {
-        final Set<String> segmentIds = payload.getSegmentIds();
-        return segmentsMetadataManager.markSegmentsAsUnused(dataSourceName, segmentIds);
+        final Set<SegmentId> segmentIds =
+            payload.getSegmentIds()
+                   .stream()
+                   .map(idStr -> SegmentId.tryParse(dataSourceName, idStr))
+                   .filter(Objects::nonNull)
+                   .collect(Collectors.toSet());
+
+        // Note: segments for the "wrong" datasource are ignored.
+        return segmentsMetadataManager.markSegmentsAsUnused(
+            segmentIds.stream()
+                      .filter(segmentId -> segmentId.getDataSource().equals(dataSourceName))
+                      .collect(Collectors.toSet())
+        );
       }
     };
     return doMarkSegmentsWithPayload("markSegmentsAsUnused", dataSourceName, payload, markSegments);
@@ -633,10 +644,11 @@ public class DataSourcesResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markSegmentAsUnused(
       @PathParam("dataSourceName") String dataSourceName,
-      @PathParam("segmentId") String segmentId
+      @PathParam("segmentId") String segmentIdString
   )
   {
-    boolean segmentStateChanged = segmentsMetadataManager.markSegmentAsUnused(segmentId);
+    final SegmentId segmentId = SegmentId.tryParse(dataSourceName, segmentIdString);
+    final boolean segmentStateChanged = segmentId != null && segmentsMetadataManager.markSegmentAsUnused(segmentId);
     return Response.ok(ImmutableMap.of("segmentStateChanged", segmentStateChanged)).build();
   }
 

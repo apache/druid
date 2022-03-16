@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -403,7 +404,19 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
 
       // Verify that auto cleanup eventually removes supervisor spec after termination
       ITRetryUtil.retryUntil(
-          () -> indexer.getSupervisorHistory(generatedTestConfig2.getSupervisorId()) == null,
+          () -> {
+              try {
+                indexer.getSupervisorHistory(generatedTestConfig2.getSupervisorId());
+                LOG.warn("Supervisor history should not exist");
+                return false;
+              }
+              catch (ISE e) {
+                if (e.getMessage().contains("Not Found")) {
+                  return true;
+                }
+                throw e;
+              }
+          },
           true,
           10000,
           30,

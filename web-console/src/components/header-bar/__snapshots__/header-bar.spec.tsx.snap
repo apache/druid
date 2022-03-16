@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`header bar matches snapshot 1`] = `
+exports[`HeaderBar matches snapshot 1`] = `
 <Blueprint3.Navbar
   className="header-bar"
 >
@@ -220,7 +220,7 @@ exports[`header bar matches snapshot 1`] = `
             popoverProps={Object {}}
             shouldDismissPopover={true}
             target="_blank"
-            text="ASF Slack channel"
+            text="Slack channel"
           />
           <Blueprint3.MenuItem
             disabled={false}

@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`table action dialog matches snapshot 1`] = `
+exports[`TableActionDialog matches snapshot 1`] = `
 <div
   class="bp3-portal"
 >

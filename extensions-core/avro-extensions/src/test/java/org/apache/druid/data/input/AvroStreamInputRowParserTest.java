@@ -101,7 +101,7 @@ public class AvroStreamInputRowParserTest
   );
   static final AvroParseSpec PARSE_SPEC = new AvroParseSpec(
       new TimestampSpec("nested", "millis", null),
-      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(DIMENSIONS), Collections.emptyList(), null),
+      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(DIMENSIONS)),
       new JSONPathSpec(
           true,
           ImmutableList.of(
@@ -111,7 +111,7 @@ public class AvroStreamInputRowParserTest
   );
   private static final AvroParseSpec PARSE_SPEC_SCHEMALESS = new AvroParseSpec(
       new TimestampSpec("nested", "millis", null),
-      new DimensionsSpec(null, null, null),
+      DimensionsSpec.EMPTY,
       new JSONPathSpec(
           true,
           ImmutableList.of(

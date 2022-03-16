@@ -25,9 +25,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
@@ -96,7 +99,9 @@ public class ExpressionTransform implements Transform
     @Override
     public Object eval(final Row row)
     {
-      return ExpressionSelectors.coerceEvalToSelectorObject(expr.eval(name -> getValueFromRow(row, name)));
+      return ExpressionSelectors.coerceEvalToSelectorObject(
+          expr.eval(InputBindings.forFunction(name -> getValueFromRow(row, name)))
+      );
     }
   }
 
@@ -107,7 +112,11 @@ public class ExpressionTransform implements Transform
     } else {
       Object raw = row.getRaw(column);
       if (raw instanceof List) {
-        return ExprEval.coerceListToArray((List) raw, true);
+        NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) raw, true);
+        if (coerced == null) {
+          return null;
+        }
+        return coerced.rhs;
       }
       return raw;
     }

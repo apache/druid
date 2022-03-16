@@ -33,13 +33,14 @@ public class ClientKillUnusedSegmentsTaskQueryTest
   private static final String DATA_SOURCE = "data_source";
   public static final DateTime START = DateTimes.nowUtc();
   private static final Interval INTERVAL = new Interval(START, START.plus(1));
+  private static final Boolean MARK_UNUSED = true;
 
   ClientKillUnusedSegmentsTaskQuery clientKillUnusedSegmentsQuery;
 
   @Before
   public void setUp()
   {
-    clientKillUnusedSegmentsQuery = new ClientKillUnusedSegmentsTaskQuery("killTaskId", DATA_SOURCE, INTERVAL);
+    clientKillUnusedSegmentsQuery = new ClientKillUnusedSegmentsTaskQuery("killTaskId", DATA_SOURCE, INTERVAL, true);
   }
 
   @After
@@ -64,6 +65,12 @@ public class ClientKillUnusedSegmentsTaskQueryTest
   public void testGetInterval()
   {
     Assert.assertEquals(INTERVAL, clientKillUnusedSegmentsQuery.getInterval());
+  }
+
+  @Test
+  public void testGetMarkUnused()
+  {
+    Assert.assertEquals(MARK_UNUSED, clientKillUnusedSegmentsQuery.getMarkAsUnused());
   }
 
   @Test

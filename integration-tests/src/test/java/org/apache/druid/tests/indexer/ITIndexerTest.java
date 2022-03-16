@@ -170,6 +170,35 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
   }
 
   @Test
+  public void testReIndexWithNonExistingDatasource() throws Exception
+  {
+    Pair<Boolean, Boolean> dummyPair = new Pair<>(false, false);
+    final String fullBaseDatasourceName = "nonExistingDatasource2904";
+    final String fullReindexDatasourceName = "newDatasource123";
+
+    String taskSpec = StringUtils.replace(
+        getResourceAsString(REINDEX_TASK_WITH_DRUID_INPUT_SOURCE),
+        "%%DATASOURCE%%",
+        fullBaseDatasourceName
+    );
+    taskSpec = StringUtils.replace(
+        taskSpec,
+        "%%REINDEX_DATASOURCE%%",
+        fullReindexDatasourceName
+    );
+
+    // This method will also verify task is successful after task finish running
+    // We expect task to be successful even if the datasource to reindex does not exist
+    submitTaskAndWait(
+        taskSpec,
+        fullReindexDatasourceName,
+        false,
+        false,
+        dummyPair
+    );
+  }
+
+  @Test
   public void testMERGEIndexData() throws Exception
   {
     final String reindexDatasource = MERGE_REINDEX_DATASOURCE + "-testMergeIndexData";
@@ -331,9 +360,26 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           Collections.singletonList(Intervals.of("2013-08-31/2013-09-02"))
       );
 
-      waitForAllTasksToCompleteForDataSource(datasourceName);
+      ITRetryUtil.retryUntilTrue(
+          () -> coordinator.areSegmentsLoaded(datasourceName),
+          "Segment Load"
+      );
     }
-
   }
 
+  @Test
+  public void testJsonFunctions() throws Exception
+  {
+    final String taskSpec = getResourceAsString("/indexer/json_path_index_task.json");
+
+    submitTaskAndWait(
+        taskSpec,
+        "json_path_index_test",
+        false,
+        true,
+        new Pair<>(false, false)
+    );
+
+    doTestQuery("json_path_index_test", "/indexer/json_path_index_queries.json");
+  }
 }

@@ -22,6 +22,7 @@ import React from 'react';
 import { AutoForm, ExternalLink, Field } from '../components';
 import { getLink } from '../links';
 import {
+  allowKeys,
   deepDelete,
   deepGet,
   deepMove,
@@ -31,8 +32,9 @@ import {
   EMPTY_OBJECT,
   filterMap,
   oneOf,
+  typeIs,
 } from '../utils';
-import { HeaderAndRows } from '../utils/sampler';
+import { SampleHeaderAndRows } from '../utils/sampler';
 
 import {
   DimensionsSpec,
@@ -56,17 +58,17 @@ export const MAX_INLINE_DATA_LENGTH = 65536;
 const CURRENT_YEAR = new Date().getUTCFullYear();
 
 export interface IngestionSpec {
-  type: IngestionType;
-  spec: IngestionSpecInner;
+  readonly type: IngestionType;
+  readonly spec: IngestionSpecInner;
 }
 
 export interface IngestionSpecInner {
-  ioConfig: IoConfig;
-  dataSchema: DataSchema;
-  tuningConfig?: TuningConfig;
+  readonly ioConfig: IoConfig;
+  readonly dataSchema: DataSchema;
+  readonly tuningConfig?: TuningConfig;
 }
 
-export function isEmptyIngestionSpec(spec: IngestionSpec) {
+export function isEmptyIngestionSpec(spec: Partial<IngestionSpec>) {
   return Object.keys(spec).length === 0;
 }
 
@@ -105,7 +107,9 @@ function ingestionTypeToIoAndTuningConfigType(ingestionType: IngestionType): str
   }
 }
 
-export function getIngestionComboType(spec: IngestionSpec): IngestionComboType | undefined {
+export function getIngestionComboType(
+  spec: Partial<IngestionSpec>,
+): IngestionComboType | undefined {
   const ioConfig = deepGet(spec, 'spec.ioConfig') || EMPTY_OBJECT;
 
   switch (ioConfig.type) {
@@ -187,7 +191,7 @@ export function getIngestionImage(ingestionType: IngestionComboTypeWithExtra): s
   return ingestionType;
 }
 
-export function getIngestionDocLink(spec: IngestionSpec): string {
+export function getIngestionDocLink(spec: Partial<IngestionSpec>): string {
   const type = getSpecType(spec);
 
   switch (type) {
@@ -227,7 +231,7 @@ export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): s
   }
 }
 
-export function getIssueWithSpec(spec: IngestionSpec): string | undefined {
+export function getIssueWithSpec(spec: Partial<IngestionSpec>): string | undefined {
   if (!deepGet(spec, 'spec.dataSchema.dataSource')) {
     return 'missing spec.dataSchema.dataSource';
   }
@@ -256,12 +260,12 @@ export interface DataSchema {
 
 export type DimensionMode = 'specific' | 'auto-detect';
 
-export function getDimensionMode(spec: IngestionSpec): DimensionMode {
+export function getDimensionMode(spec: Partial<IngestionSpec>): DimensionMode {
   const dimensions = deepGet(spec, 'spec.dataSchema.dimensionsSpec.dimensions') || EMPTY_ARRAY;
   return Array.isArray(dimensions) && dimensions.length === 0 ? 'auto-detect' : 'specific';
 }
 
-export function getRollup(spec: IngestionSpec): boolean {
+export function getRollup(spec: Partial<IngestionSpec>): boolean {
   const specRollup = deepGet(spec, 'spec.dataSchema.granularitySpec.rollup');
   return typeof specRollup === 'boolean' ? specRollup : true;
 }
@@ -275,7 +279,7 @@ export function getSpecType(spec: Partial<IngestionSpec>): IngestionType {
   );
 }
 
-export function isTask(spec: IngestionSpec) {
+export function isTask(spec: Partial<IngestionSpec>) {
   const type = String(getSpecType(spec));
   return (
     type.startsWith('index_') ||
@@ -283,8 +287,25 @@ export function isTask(spec: IngestionSpec) {
   );
 }
 
-export function isDruidSource(spec: IngestionSpec): boolean {
+export function isDruidSource(spec: Partial<IngestionSpec>): boolean {
   return deepGet(spec, 'spec.ioConfig.inputSource.type') === 'druid';
+}
+
+// ---------------------------------
+// Spec cleanup and normalization
+
+/**
+ * Make sure that the ioConfig, dataSchema, e.t.c. are nested inside of spec and not just hanging out at the top level
+ * @param spec
+ */
+function nestSpecIfNeeded(spec: any): Partial<IngestionSpec> {
+  if (spec?.type && typeof spec.spec !== 'object' && (spec.ioConfig || spec.dataSchema)) {
+    return {
+      type: spec.type,
+      spec: deepDelete(spec, 'type'),
+    };
+  }
+  return spec;
 }
 
 /**
@@ -297,10 +318,7 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
     spec = {};
   }
 
-  // Make sure that if we actually get a task payload we extract the spec
-  if (typeof spec.spec !== 'object' && typeof (spec as any).ioConfig === 'object') {
-    spec = { spec: spec as any };
-  }
+  spec = nestSpecIfNeeded(spec);
 
   const specType =
     deepGet(spec, 'type') ||
@@ -315,15 +333,60 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
 }
 
 /**
- * Make sure that any extra junk in the spec other than 'type' and 'spec' is removed
- * @param spec
+ * Make sure that any extra junk in the spec other than 'type', 'spec', and 'context' is removed
+ * @param spec - the spec to clean
+ * @param allowSuspended - allow keeping 'suspended' also
  */
-export function cleanSpec(spec: IngestionSpec): IngestionSpec {
-  return {
-    type: spec.type,
-    spec: spec.spec,
-  };
+export function cleanSpec(
+  spec: Partial<IngestionSpec>,
+  allowSuspended?: boolean,
+): Partial<IngestionSpec> {
+  return allowKeys(
+    spec,
+    ['type', 'spec', 'context'].concat(allowSuspended ? ['suspended'] : []),
+  ) as IngestionSpec;
 }
+
+export function upgradeSpec(spec: any): Partial<IngestionSpec> {
+  spec = nestSpecIfNeeded(spec);
+
+  // Upgrade firehose if exists
+  if (deepGet(spec, 'spec.ioConfig.firehose')) {
+    switch (deepGet(spec, 'spec.ioConfig.firehose.type')) {
+      case 'static-s3':
+        deepSet(spec, 'spec.ioConfig.firehose.type', 's3');
+        break;
+
+      case 'static-google-blobstore':
+        deepSet(spec, 'spec.ioConfig.firehose.type', 'google');
+        deepMove(spec, 'spec.ioConfig.firehose.blobs', 'spec.ioConfig.firehose.objects');
+        break;
+    }
+
+    spec = deepMove(spec, 'spec.ioConfig.firehose', 'spec.ioConfig.inputSource');
+  }
+
+  // Decompose parser if exists
+  if (deepGet(spec, 'spec.dataSchema.parser')) {
+    spec = deepMove(
+      spec,
+      'spec.dataSchema.parser.parseSpec.timestampSpec',
+      'spec.dataSchema.timestampSpec',
+    );
+    spec = deepMove(
+      spec,
+      'spec.dataSchema.parser.parseSpec.dimensionsSpec',
+      'spec.dataSchema.dimensionsSpec',
+    );
+    spec = deepMove(spec, 'spec.dataSchema.parser.parseSpec', 'spec.ioConfig.inputFormat');
+    spec = deepDelete(spec, 'spec.dataSchema.parser');
+    spec = deepMove(spec, 'spec.ioConfig.inputFormat.format', 'spec.ioConfig.inputFormat.type');
+  }
+
+  return spec;
+}
+
+// ------------------------------------
 
 export interface GranularitySpec {
   type?: string;
@@ -585,7 +648,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
               </p>
             </>
           ),
-          adjustment: (ioConfig: IoConfig) => {
+          adjustment: ioConfig => {
             return deepSet(
               ioConfig,
               'inputSource.properties.secretAccessKey.type',
@@ -598,7 +661,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Access key ID environment variable',
           type: 'string',
           placeholder: '(environment variable name)',
-          defined: (ioConfig: IoConfig) =>
+          defined: ioConfig =>
             deepGet(ioConfig, 'inputSource.properties.accessKeyId.type') === 'environment',
           info: <p>The environment variable containing the S3 access key for this S3 bucket.</p>,
         },
@@ -607,7 +670,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Access key ID value',
           type: 'string',
           placeholder: '(access key)',
-          defined: (ioConfig: IoConfig) =>
+          defined: ioConfig =>
             deepGet(ioConfig, 'inputSource.properties.accessKeyId.type') === 'default',
           info: (
             <>
@@ -646,7 +709,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Secret key value',
           type: 'string',
           placeholder: '(environment variable name)',
-          defined: (ioConfig: IoConfig) =>
+          defined: ioConfig =>
             deepGet(ioConfig, 'inputSource.properties.secretAccessKey.type') === 'environment',
           info: <p>The environment variable containing the S3 secret key for this S3 bucket.</p>,
         },
@@ -655,7 +718,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Secret key value',
           type: 'string',
           placeholder: '(secret key)',
-          defined: (ioConfig: IoConfig) =>
+          defined: ioConfig =>
             deepGet(ioConfig, 'inputSource.properties.secretAccessKey.type') === 'default',
           info: (
             <>
@@ -825,7 +888,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'topic',
           type: 'string',
           required: true,
-          defined: (i: IoConfig) => i.type === 'kafka',
+          defined: typeIs('kafka'),
         },
         {
           name: 'consumerProperties',
@@ -1005,7 +1068,7 @@ export function getIoConfigTuningFormFields(
         {
           name: 'useEarliestOffset',
           type: 'boolean',
-          defined: (i: IoConfig) => i.type === 'kafka',
+          defined: typeIs('kafka'),
           required: true,
           info: (
             <>
@@ -1021,7 +1084,7 @@ export function getIoConfigTuningFormFields(
         {
           name: 'useEarliestSequenceNumber',
           type: 'boolean',
-          defined: (i: IoConfig) => i.type === 'kinesis',
+          defined: typeIs('kinesis'),
           required: true,
           info: (
             <>
@@ -1091,15 +1154,15 @@ export function getIoConfigTuningFormFields(
         {
           name: 'recordsPerFetch',
           type: 'number',
-          defaultValue: 2000,
-          defined: (i: IoConfig) => i.type === 'kinesis',
+          defaultValue: 4000,
+          defined: typeIs('kinesis'),
           info: <>The number of records to request per GetRecords call to Kinesis.</>,
         },
         {
           name: 'pollTimeout',
           type: 'number',
           defaultValue: 100,
-          defined: (i: IoConfig) => i.type === 'kafka',
+          defined: typeIs('kafka'),
           info: (
             <>
               <p>
@@ -1111,15 +1174,15 @@ export function getIoConfigTuningFormFields(
         {
           name: 'fetchDelayMillis',
           type: 'number',
-          defaultValue: 1000,
-          defined: (i: IoConfig) => i.type === 'kinesis',
+          defaultValue: 0,
+          defined: typeIs('kinesis'),
           info: <>Time in milliseconds to wait between subsequent GetRecords calls to Kinesis.</>,
         },
         {
           name: 'deaggregate',
           type: 'boolean',
           defaultValue: false,
-          defined: (i: IoConfig) => i.type === 'kinesis',
+          defined: typeIs('kinesis'),
           info: <>Whether to use the de-aggregate function of the KCL.</>,
         },
         {
@@ -1187,7 +1250,7 @@ export function getIoConfigTuningFormFields(
           name: 'skipOffsetGaps',
           type: 'boolean',
           defaultValue: false,
-          defined: (i: IoConfig) => i.type === 'kafka',
+          defined: typeIs('kafka'),
           info: (
             <>
               <p>
@@ -1221,13 +1284,47 @@ function basenameFromFilename(filename: string): string | undefined {
   return filename.split('.')[0];
 }
 
-export function fillDataSourceNameIfNeeded(spec: IngestionSpec): IngestionSpec {
+export function fillDataSourceNameIfNeeded(spec: Partial<IngestionSpec>): Partial<IngestionSpec> {
   const possibleName = guessDataSourceName(spec);
   if (!possibleName) return spec;
   return deepSetIfUnset(spec, 'spec.dataSchema.dataSource', possibleName);
 }
 
-export function guessDataSourceName(spec: IngestionSpec): string | undefined {
+export function guessDataSourceNameFromInputSource(inputSource: InputSource): string | undefined {
+  switch (inputSource.type) {
+    case 'local':
+      if (inputSource.filter && filterIsFilename(inputSource.filter)) {
+        return basenameFromFilename(inputSource.filter);
+      } else if (inputSource.baseDir) {
+        return filenameFromPath(inputSource.baseDir);
+      } else {
+        return;
+      }
+
+    case 's3':
+    case 'azure':
+    case 'google': {
+      const actualPath = (inputSource.objects || EMPTY_ARRAY)[0];
+      const uriPath =
+        (inputSource.uris || EMPTY_ARRAY)[0] || (inputSource.prefixes || EMPTY_ARRAY)[0];
+      return actualPath ? actualPath.path : uriPath ? filenameFromPath(uriPath) : undefined;
+    }
+
+    case 'http':
+      return Array.isArray(inputSource.uris) ? filenameFromPath(inputSource.uris[0]) : undefined;
+
+    case 'druid':
+      return inputSource.dataSource;
+
+    case 'inline':
+      return 'inline_data';
+
+    default:
+      return;
+  }
+}
+
+export function guessDataSourceName(spec: Partial<IngestionSpec>): string | undefined {
   const ioConfig = deepGet(spec, 'spec.ioConfig');
   if (!ioConfig) return;
 
@@ -1236,39 +1333,7 @@ export function guessDataSourceName(spec: IngestionSpec): string | undefined {
     case 'index_parallel': {
       const inputSource = ioConfig.inputSource;
       if (!inputSource) return;
-
-      switch (inputSource.type) {
-        case 'local':
-          if (inputSource.filter && filterIsFilename(inputSource.filter)) {
-            return basenameFromFilename(inputSource.filter);
-          } else if (inputSource.baseDir) {
-            return filenameFromPath(inputSource.baseDir);
-          } else {
-            return;
-          }
-
-        case 's3':
-        case 'azure':
-        case 'google': {
-          const actualPath = (inputSource.objects || EMPTY_ARRAY)[0];
-          const uriPath =
-            (inputSource.uris || EMPTY_ARRAY)[0] || (inputSource.prefixes || EMPTY_ARRAY)[0];
-          return actualPath ? actualPath.path : uriPath ? filenameFromPath(uriPath) : undefined;
-        }
-
-        case 'http':
-          return Array.isArray(inputSource.uris)
-            ? filenameFromPath(inputSource.uris[0])
-            : undefined;
-
-        case 'druid':
-          return inputSource.dataSource;
-
-        case 'inline':
-          return 'inline_data';
-      }
-
-      return;
+      return guessDataSourceNameFromInputSource(inputSource);
     }
 
     case 'kafka':
@@ -1315,7 +1380,7 @@ export interface TuningConfig {
 }
 
 export interface PartitionsSpec {
-  type: 'string';
+  type: string;
 
   // For type: dynamic
   maxTotalRows?: number;
@@ -1331,25 +1396,25 @@ export interface PartitionsSpec {
   assumeGrouped?: boolean;
 }
 
-export function adjustForceGuaranteedRollup(spec: IngestionSpec) {
+export function adjustForceGuaranteedRollup(spec: Partial<IngestionSpec>) {
   if (getSpecType(spec) !== 'index_parallel') return spec;
 
   const partitionsSpecType = deepGet(spec, 'spec.tuningConfig.partitionsSpec.type') || 'dynamic';
   if (partitionsSpecType === 'dynamic') {
     spec = deepDelete(spec, 'spec.tuningConfig.forceGuaranteedRollup');
-  } else if (oneOf(partitionsSpecType, 'hashed', 'single_dim')) {
+  } else if (oneOf(partitionsSpecType, 'hashed', 'single_dim', 'range')) {
     spec = deepSet(spec, 'spec.tuningConfig.forceGuaranteedRollup', true);
   }
 
   return spec;
 }
 
-export function invalidPartitionConfig(spec: IngestionSpec): boolean {
+export function invalidPartitionConfig(spec: Partial<IngestionSpec>): boolean {
   return (
     // Bad primary partitioning, or...
     !deepGet(spec, 'spec.dataSchema.granularitySpec.segmentGranularity') ||
     // Bad secondary partitioning
-    Boolean(AutoForm.issueWithModel(spec, getSecondaryPartitionRelatedFormFields(spec, undefined)))
+    !AutoForm.isValidModel(spec, getSecondaryPartitionRelatedFormFields(spec, undefined))
   );
 }
 
@@ -1358,7 +1423,7 @@ export const PRIMARY_PARTITION_RELATED_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.dataSchema.granularitySpec.segmentGranularity',
     label: 'Segment granularity',
     type: 'string',
-    suggestions: ['hour', 'day', 'week', 'month', 'year'],
+    suggestions: ['hour', 'day', 'week', 'month', 'year', 'all'],
     required: true,
     info: (
       <>
@@ -1397,7 +1462,7 @@ export const PRIMARY_PARTITION_RELATED_FORM_FIELDS: Field<IngestionSpec>[] = [
 ];
 
 export function getSecondaryPartitionRelatedFormFields(
-  spec: IngestionSpec,
+  spec: Partial<IngestionSpec>,
   dimensionSuggestions: string[] | undefined,
 ): Field<IngestionSpec>[] {
   const specType = getSpecType(spec);
@@ -1409,28 +1474,33 @@ export function getSecondaryPartitionRelatedFormFields(
           label: 'Partitioning type',
           type: 'string',
           required: true,
-          suggestions: ['dynamic', 'hashed', 'single_dim'],
+          suggestions: ['dynamic', 'hashed', 'range'],
           info: (
             <p>
               For perfect rollup, you should use either <Code>hashed</Code> (partitioning based on
-              the hash of dimensions in each row) or <Code>single_dim</Code> (based on ranges of a
-              single dimension). For best-effort rollup, you should use <Code>dynamic</Code>.
+              the hash of dimensions in each row) or <Code>range</Code> (based on several
+              dimensions). For best-effort rollup, you should use <Code>dynamic</Code>.
             </p>
           ),
           adjustment: s => {
-            if (
-              deepGet(s, 'spec.tuningConfig.partitionsSpec.type') !== 'single_dim' ||
-              !Array.isArray(dimensionSuggestions) ||
-              !dimensionSuggestions.length
-            ) {
-              return s;
+            if (Array.isArray(dimensionSuggestions) && dimensionSuggestions.length) {
+              const partitionsSpecType = deepGet(s, 'spec.tuningConfig.partitionsSpec.type');
+              if (partitionsSpecType === 'range') {
+                return deepSet(s, 'spec.tuningConfig.partitionsSpec.partitionDimensions', [
+                  dimensionSuggestions[0],
+                ]);
+              }
+
+              if (partitionsSpecType === 'single_dim') {
+                return deepSet(
+                  s,
+                  'spec.tuningConfig.partitionsSpec.partitionDimension',
+                  dimensionSuggestions[0],
+                );
+              }
             }
 
-            return deepSet(
-              s,
-              'spec.tuningConfig.partitionsSpec.partitionDimension',
-              dimensionSuggestions[0],
-            );
+            return s;
           },
         },
         // partitionsSpec type: dynamic
@@ -1498,9 +1568,19 @@ export function getSecondaryPartitionRelatedFormFields(
           type: 'string-array',
           placeholder: '(all dimensions)',
           defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'hashed',
-          info: <p>The dimensions to partition on. Leave blank to select all dimensions.</p>,
+          info: (
+            <>
+              <p>The dimensions to partition on.</p>
+              <p>Leave blank to select all dimensions.</p>
+              <p>
+                If you want to partition on specific dimensions then you would likely be better off
+                using <Code>range</Code> partitioning instead.
+              </p>
+            </>
+          ),
+          hideInMore: true,
         },
-        // partitionsSpec type: single_dim
+        // partitionsSpec type: single_dim, range
         {
           name: 'spec.tuningConfig.partitionsSpec.partitionDimension',
           type: 'string',
@@ -1521,11 +1601,27 @@ export function getSecondaryPartitionRelatedFormFields(
           ),
         },
         {
+          name: 'spec.tuningConfig.partitionsSpec.partitionDimensions',
+          type: 'string-array',
+          defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'range',
+          required: true,
+          suggestions: dimensionSuggestions
+            ? s => {
+                const existingDimensions =
+                  deepGet(s, 'spec.tuningConfig.partitionsSpec.partitionDimensions') || [];
+                return dimensionSuggestions.filter(
+                  dimensionSuggestion => !existingDimensions.includes(dimensionSuggestion),
+                );
+              }
+            : undefined,
+          info: <p>The dimensions to partition on.</p>,
+        },
+        {
           name: 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment',
           type: 'number',
           zeroMeansUndefined: true,
           defined: s =>
-            deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'single_dim' &&
+            oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'single_dim', 'range') &&
             !deepGet(s, 'spec.tuningConfig.partitionsSpec.maxRowsPerSegment'),
           required: s =>
             !deepGet(s, 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment') &&
@@ -1542,7 +1638,7 @@ export function getSecondaryPartitionRelatedFormFields(
           type: 'number',
           zeroMeansUndefined: true,
           defined: s =>
-            deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'single_dim' &&
+            oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'single_dim', 'range') &&
             !deepGet(s, 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment'),
           required: s =>
             !deepGet(s, 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment') &&
@@ -1554,7 +1650,8 @@ export function getSecondaryPartitionRelatedFormFields(
           type: 'boolean',
           defaultValue: false,
           hideInMore: true,
-          defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'single_dim',
+          defined: s =>
+            oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'single_dim', 'range'),
           info: (
             <p>
               Assume that input data has already been grouped on time and dimensions. Ingestion will
@@ -1591,7 +1688,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     type: 'number',
     defaultValue: 1,
     min: 1,
-    defined: s => s.type === 'index_parallel',
+    defined: typeIs('index_parallel'),
     info: (
       <>
         Maximum number of tasks which can be run at the same time. The supervisor task would spawn
@@ -1606,7 +1703,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.maxRetry',
     type: 'number',
     defaultValue: 3,
-    defined: s => s.type === 'index_parallel',
+    defined: typeIs('index_parallel'),
     hideInMore: true,
     info: <>Maximum number of retries on task failures.</>,
   },
@@ -1614,7 +1711,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.taskStatusCheckPeriodMs',
     type: 'number',
     defaultValue: 1000,
-    defined: s => s.type === 'index_parallel',
+    defined: typeIs('index_parallel'),
     hideInMore: true,
     info: <>Polling period in milliseconds to check running task statuses.</>,
   },
@@ -1624,10 +1721,8 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     defaultValue: 10,
     min: 1,
     defined: s =>
-      Boolean(
-        s.type === 'index_parallel' &&
-          oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
-      ),
+      s.type === 'index_parallel' &&
+      oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim', 'range'),
     info: <>Number of tasks to merge partial segments after shuffle.</>,
   },
   {
@@ -1635,10 +1730,8 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     type: 'number',
     defaultValue: 100,
     defined: s =>
-      Boolean(
-        s.type === 'index_parallel' &&
-          oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
-      ),
+      s.type === 'index_parallel' &&
+      oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim', 'range'),
     info: (
       <>
         Max limit for the number of segments a single task can merge at the same time after shuffle.
@@ -1661,7 +1754,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.resetOffsetAutomatically',
     type: 'boolean',
     defaultValue: false,
-    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
+    defined: typeIs('kafka', 'kinesis'),
     info: (
       <>
         Whether to reset the consumer offset if the next offset that it is trying to fetch is less
@@ -1673,7 +1766,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.skipSequenceNumberAvailabilityCheck',
     type: 'boolean',
     defaultValue: false,
-    defined: s => s.type === 'kinesis',
+    defined: typeIs('kinesis'),
     info: (
       <>
         Whether to enable checking if the current sequence number is still available in a particular
@@ -1686,14 +1779,14 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.intermediatePersistPeriod',
     type: 'duration',
     defaultValue: 'PT10M',
-    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
+    defined: typeIs('kafka', 'kinesis'),
     info: <>The period that determines the rate at which intermediate persists occur.</>,
   },
   {
     name: 'spec.tuningConfig.intermediateHandoffPeriod',
     type: 'duration',
     defaultValue: 'P2147483647D',
-    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
+    defined: typeIs('kafka', 'kinesis'),
     info: (
       <>
         How often the tasks should hand off segments. Handoff will happen either if
@@ -1730,7 +1823,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.handoffConditionTimeout',
     type: 'number',
     defaultValue: 0,
-    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
+    defined: typeIs('kafka', 'kinesis'),
     hideInMore: true,
     info: <>Milliseconds to wait for segment handoff. 0 means to wait forever.</>,
   },
@@ -1783,7 +1876,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     defaultValue: 1073741824,
     min: 1000000,
     defined: s =>
-      s.type === 'index_parallel' && deepGet(s, 'spec.ioConfig.inputFormat.type') !== 'http',
+      s.type === 'index_parallel' && deepGet(s, 'spec.ioConfig.inputSource.type') !== 'http',
     hideInMore: true,
     adjustment: s => deepSet(s, 'splitHintSpec.type', 'maxSize'),
     info: (
@@ -1799,7 +1892,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     type: 'number',
     defaultValue: 1000,
     min: 1,
-    defined: s => s.type === 'index_parallel',
+    defined: typeIs('index_parallel'),
     hideInMore: true,
     adjustment: s => deepSet(s, 'splitHintSpec.type', 'maxSize'),
     info: (
@@ -1817,7 +1910,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.chatHandlerTimeout',
     type: 'duration',
     defaultValue: 'PT10S',
-    defined: s => s.type === 'index_parallel',
+    defined: typeIs('index_parallel'),
     hideInMore: true,
     info: <>Timeout for reporting the pushed segments in worker tasks.</>,
   },
@@ -1825,7 +1918,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.chatHandlerNumRetries',
     type: 'number',
     defaultValue: 5,
-    defined: s => s.type === 'index_parallel',
+    defined: typeIs('index_parallel'),
     hideInMore: true,
     info: <>Retries for reporting the pushed segments in worker tasks.</>,
   },
@@ -1833,7 +1926,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.workerThreads',
     type: 'number',
     placeholder: 'min(10, taskCount)',
-    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
+    defined: typeIs('kafka', 'kinesis'),
     info: (
       <>The number of threads that will be used by the supervisor for asynchronous operations.</>
     ),
@@ -1842,7 +1935,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.chatThreads',
     type: 'number',
     placeholder: 'min(10, taskCount * replicas)',
-    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
+    defined: typeIs('kafka', 'kinesis'),
     hideInMore: true,
     info: <>The number of threads that will be used for communicating with indexing tasks.</>,
   },
@@ -1850,7 +1943,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.chatRetries',
     type: 'number',
     defaultValue: 8,
-    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
+    defined: typeIs('kafka', 'kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -1863,14 +1956,14 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.httpTimeout',
     type: 'duration',
     defaultValue: 'PT10S',
-    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
+    defined: typeIs('kafka', 'kinesis'),
     info: <>How long to wait for a HTTP response from an indexing task.</>,
   },
   {
     name: 'spec.tuningConfig.shutdownTimeout',
     type: 'duration',
     defaultValue: 'PT80S',
-    defined: s => oneOf(s.type, 'kafka', 'kinesis'),
+    defined: typeIs('kafka', 'kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -1882,7 +1975,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.offsetFetchPeriod',
     type: 'duration',
     defaultValue: 'PT30S',
-    defined: s => s.type === 'kafka',
+    defined: typeIs('kafka'),
     info: (
       <>
         How often the supervisor queries Kafka and the indexing tasks to fetch current offsets and
@@ -1894,7 +1987,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.recordBufferSize',
     type: 'number',
     defaultValue: 10000,
-    defined: s => s.type === 'kinesis',
+    defined: typeIs('kinesis'),
     info: (
       <>
         Size of the buffer (number of events) used between the Kinesis fetch threads and the main
@@ -1906,7 +1999,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.recordBufferOfferTimeout',
     type: 'number',
     defaultValue: 5000,
-    defined: s => s.type === 'kinesis',
+    defined: typeIs('kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -1920,7 +2013,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     hideInMore: true,
     type: 'number',
     defaultValue: 5000,
-    defined: s => s.type === 'kinesis',
+    defined: typeIs('kinesis'),
     info: (
       <>
         Length of time in milliseconds to wait for the buffer to drain before attempting to fetch
@@ -1932,7 +2025,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.fetchSequenceNumberTimeout',
     type: 'number',
     defaultValue: 60000,
-    defined: s => s.type === 'kinesis',
+    defined: typeIs('kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -1947,7 +2040,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.fetchThreads',
     type: 'number',
     placeholder: 'max(1, {numProcessors} - 1)',
-    defined: s => s.type === 'kinesis',
+    defined: typeIs('kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -1960,7 +2053,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.maxRecordsPerPoll',
     type: 'number',
     defaultValue: 100,
-    defined: s => s.type === 'kinesis',
+    defined: typeIs('kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -1973,7 +2066,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.repartitionTransitionDuration',
     type: 'duration',
     defaultValue: 'PT2M',
-    defined: s => s.type === 'kinesis',
+    defined: typeIs('kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -2013,9 +2106,9 @@ export interface Bitmap {
 // --------------
 
 export function updateIngestionType(
-  spec: IngestionSpec,
+  spec: Partial<IngestionSpec>,
   comboType: IngestionComboType,
-): IngestionSpec {
+): Partial<IngestionSpec> {
   const [ingestionType, inputSourceType] = comboType.split(':');
   const ioAndTuningConfigType = ingestionTypeToIoAndTuningConfigType(
     ingestionType as IngestionType,
@@ -2061,7 +2154,10 @@ export function issueWithSampleData(sampleData: string[]): JSX.Element | undefin
   return;
 }
 
-export function fillInputFormatIfNeeded(spec: IngestionSpec, sampleData: string[]): IngestionSpec {
+export function fillInputFormatIfNeeded(
+  spec: Partial<IngestionSpec>,
+  sampleData: string[],
+): Partial<IngestionSpec> {
   if (deepGet(spec, 'spec.ioConfig.inputFormat.type')) return spec;
   return deepSet(spec, 'spec.ioConfig.inputFormat', guessInputFormat(sampleData));
 }
@@ -2100,21 +2196,37 @@ export function guessInputFormat(sampleData: string[]): InputFormat {
     if (sampleDatum.split(',').length > 3) {
       return inputFormatFromType('csv', !/,\d+,/.test(sampleDatum));
     }
+    // Contains more than 3 semicolons assume semicolon separated
+    if (sampleDatum.split(';').length > 3) {
+      return inputFormatFromType('tsv', !/;\d+;/.test(sampleDatum), ';');
+    }
+    // Contains more than 3 pipes assume pipe separated
+    if (sampleDatum.split('|').length > 3) {
+      return inputFormatFromType('tsv', !/\|\d+\|/.test(sampleDatum), '|');
+    }
   }
 
   return inputFormatFromType('regex');
 }
 
-function inputFormatFromType(type: string, findColumnsFromHeader?: boolean): InputFormat {
-  const inputFormat: InputFormat = { type };
+function inputFormatFromType(
+  type: string,
+  findColumnsFromHeader?: boolean,
+  delimiter?: string,
+): InputFormat {
+  let inputFormat: InputFormat = { type };
 
   if (type === 'regex') {
-    inputFormat.pattern = '(.*)';
-    inputFormat.columns = ['column1'];
+    inputFormat = deepSet(inputFormat, 'pattern', '(.*)');
+    inputFormat = deepSet(inputFormat, 'columns', ['column1']);
   }
 
   if (typeof findColumnsFromHeader === 'boolean') {
-    inputFormat.findColumnsFromHeader = findColumnsFromHeader;
+    inputFormat = deepSet(inputFormat, 'findColumnsFromHeader', findColumnsFromHeader);
+  }
+
+  if (delimiter) {
+    inputFormat = deepSet(inputFormat, 'delimiter', delimiter);
   }
 
   return inputFormat;
@@ -2122,32 +2234,48 @@ function inputFormatFromType(type: string, findColumnsFromHeader?: boolean): Inp
 
 // ------------------------
 
-export function guessTypeFromSample(sample: any[]): string {
-  const definedValues = sample.filter(v => v != null);
+export function guessColumnTypeFromInput(
+  sampleValues: any[],
+  guessNumericStringsAsNumbers: boolean,
+): string {
+  const definedValues = sampleValues.filter(v => v != null);
+
+  // If we have no usable sample, assume string
+  if (!definedValues.length) return 'string';
+
+  // If we see any arrays in the input this is a multi-value dimension that must be a string
+  if (definedValues.some(v => Array.isArray(v))) return 'string';
+
   if (
-    definedValues.length &&
-    definedValues.every(v => !isNaN(v) && oneOf(typeof v, 'number', 'string'))
+    definedValues.every(v => {
+      return (
+        (typeof v === 'number' || (guessNumericStringsAsNumbers && typeof v === 'string')) &&
+        !isNaN(Number(v))
+      );
+    })
   ) {
-    if (definedValues.every(v => v % 1 === 0)) {
-      return 'long';
-    } else {
-      return 'double';
-    }
+    return definedValues.every(v => v % 1 === 0) ? 'long' : 'double';
   } else {
     return 'string';
   }
 }
 
-export function getColumnTypeFromHeaderAndRows(
-  headerAndRows: HeaderAndRows,
+export function guessColumnTypeFromHeaderAndRows(
+  headerAndRows: SampleHeaderAndRows,
   column: string,
+  guessNumericStringsAsNumbers: boolean,
 ): string {
-  return guessTypeFromSample(
-    filterMap(headerAndRows.rows, (r: any) => (r.parsed ? r.parsed[column] : undefined)),
+  return guessColumnTypeFromInput(
+    filterMap(headerAndRows.rows, r => r.input?.[column]),
+    guessNumericStringsAsNumbers,
   );
 }
 
-function getTypeHintsFromSpec(spec: IngestionSpec): Record<string, string> {
+export function inputFormatOutputsNumericStrings(inputFormat: InputFormat | undefined): boolean {
+  return oneOf(inputFormat?.type, 'csv', 'tsv', 'regex');
+}
+
+function getTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, string> {
   const typeHints: Record<string, string> = {};
   const currentDimensions = deepGet(spec, 'spec.dataSchema.dimensionsSpec.dimensions') || [];
   for (const currentDimension of currentDimensions) {
@@ -2167,13 +2295,16 @@ function getTypeHintsFromSpec(spec: IngestionSpec): Record<string, string> {
 }
 
 export function updateSchemaWithSample(
-  spec: IngestionSpec,
-  headerAndRows: HeaderAndRows,
+  spec: Partial<IngestionSpec>,
+  headerAndRows: SampleHeaderAndRows,
   dimensionMode: DimensionMode,
   rollup: boolean,
   forcePartitionInitialization = false,
-): IngestionSpec {
+): Partial<IngestionSpec> {
   const typeHints = getTypeHintsFromSpec(spec);
+  const guessNumericStringsAsNumbers = inputFormatOutputsNumericStrings(
+    deepGet(spec, 'spec.ioConfig.inputFormat'),
+  );
 
   let newSpec = spec;
 
@@ -2183,7 +2314,12 @@ export function updateSchemaWithSample(
   } else {
     newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions');
 
-    const dimensions = getDimensionSpecs(headerAndRows, typeHints, rollup);
+    const dimensions = getDimensionSpecs(
+      headerAndRows,
+      typeHints,
+      guessNumericStringsAsNumbers,
+      rollup,
+    );
     if (dimensions) {
       newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions', dimensions);
     }
@@ -2192,7 +2328,7 @@ export function updateSchemaWithSample(
   if (rollup) {
     newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'hour');
 
-    const metrics = getMetricSpecs(headerAndRows, typeHints);
+    const metrics = getMetricSpecs(headerAndRows, typeHints, guessNumericStringsAsNumbers);
     if (metrics) {
       newSpec = deepSet(newSpec, 'spec.dataSchema.metricsSpec', metrics);
     }
@@ -2216,70 +2352,6 @@ export function updateSchemaWithSample(
 
   newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.rollup', rollup);
   return newSpec;
-}
-
-// ------------------------
-
-export function upgradeSpec(spec: any): any {
-  if (deepGet(spec, 'spec.ioConfig.firehose')) {
-    switch (deepGet(spec, 'spec.ioConfig.firehose.type')) {
-      case 'static-s3':
-        deepSet(spec, 'spec.ioConfig.firehose.type', 's3');
-        break;
-
-      case 'static-google-blobstore':
-        deepSet(spec, 'spec.ioConfig.firehose.type', 'google');
-        deepMove(spec, 'spec.ioConfig.firehose.blobs', 'spec.ioConfig.firehose.objects');
-        break;
-    }
-
-    spec = deepMove(spec, 'spec.ioConfig.firehose', 'spec.ioConfig.inputSource');
-    spec = deepMove(
-      spec,
-      'spec.dataSchema.parser.parseSpec.timestampSpec',
-      'spec.dataSchema.timestampSpec',
-    );
-    spec = deepMove(
-      spec,
-      'spec.dataSchema.parser.parseSpec.dimensionsSpec',
-      'spec.dataSchema.dimensionsSpec',
-    );
-    spec = deepMove(spec, 'spec.dataSchema.parser.parseSpec', 'spec.ioConfig.inputFormat');
-    spec = deepDelete(spec, 'spec.dataSchema.parser');
-    spec = deepMove(spec, 'spec.ioConfig.inputFormat.format', 'spec.ioConfig.inputFormat.type');
-  }
-  return spec;
-}
-
-export function downgradeSpec(spec: any): any {
-  if (deepGet(spec, 'spec.ioConfig.inputSource')) {
-    spec = deepMove(spec, 'spec.ioConfig.inputFormat.type', 'spec.ioConfig.inputFormat.format');
-    spec = deepSet(spec, 'spec.dataSchema.parser', { type: 'string' });
-    spec = deepMove(spec, 'spec.ioConfig.inputFormat', 'spec.dataSchema.parser.parseSpec');
-    spec = deepMove(
-      spec,
-      'spec.dataSchema.dimensionsSpec',
-      'spec.dataSchema.parser.parseSpec.dimensionsSpec',
-    );
-    spec = deepMove(
-      spec,
-      'spec.dataSchema.timestampSpec',
-      'spec.dataSchema.parser.parseSpec.timestampSpec',
-    );
-    spec = deepMove(spec, 'spec.ioConfig.inputSource', 'spec.ioConfig.firehose');
-
-    switch (deepGet(spec, 'spec.ioConfig.firehose.type')) {
-      case 's3':
-        deepSet(spec, 'spec.ioConfig.firehose.type', 'static-s3');
-        break;
-
-      case 'google':
-        deepSet(spec, 'spec.ioConfig.firehose.type', 'static-google-blobstore');
-        deepMove(spec, 'spec.ioConfig.firehose.objects', 'spec.ioConfig.firehose.blobs');
-        break;
-    }
-  }
-  return spec;
 }
 
 export function adjustId(id: string): string {

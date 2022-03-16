@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`warning checklist matches snapshot 1`] = `
+exports[`WarningChecklist matches snapshot 1`] = `
 <div
   class="warning-checklist"
 >

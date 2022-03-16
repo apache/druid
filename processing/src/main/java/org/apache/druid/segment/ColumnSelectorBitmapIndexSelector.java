@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
@@ -31,12 +32,17 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.NumericColumn;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.IndexedIterable;
+import org.apache.druid.segment.serde.StringBitmapIndexColumnPartSupplier;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  */
@@ -111,6 +117,11 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
     if (columnHolder == null) {
       return null;
     }
+    if (!columnHolder.getCapabilities().toColumnType().is(ValueType.STRING)) {
+      // this method only supports returning STRING values, so other types of dictionary encoded columns will not
+      // work correctly here until reworking is done to support filtering/indexing other types of columns
+      return null;
+    }
     BaseColumn col = columnHolder.getColumn();
     if (!(col instanceof DictionaryEncodedColumn)) {
       return null;
@@ -164,10 +175,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
       VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(dimension);
       ColumnCapabilities virtualCapabilities = null;
       if (virtualColumn != null) {
-        virtualCapabilities = virtualColumn.capabilities(
-            QueryableIndexStorageAdapter.getColumnInspectorForIndex(index),
-            dimension
-        );
+        virtualCapabilities = virtualColumn.capabilities(index, dimension);
       }
       return virtualCapabilities != null ? virtualCapabilities.hasMultipleValues() : ColumnCapabilities.Capable.FALSE;
     }
@@ -238,7 +246,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
 
         /**
          * Return -2 for non-null values to match what the {@link BitmapIndex} implementation in
-         * {@link org.apache.druid.segment.serde.BitmapIndexColumnPartSupplier}
+         * {@link StringBitmapIndexColumnPartSupplier}
          * would return for {@link BitmapIndex#getIndex(String)} when there is only a single index, for the null value.
          * i.e., return an 'insertion point' of 1 for non-null values (see {@link BitmapIndex} interface)
          */
@@ -257,8 +265,71 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
             return bitmapFactory.makeEmptyImmutableBitmap();
           }
         }
+
+        @Override
+        public ImmutableBitmap getBitmapForValue(@Nullable String value)
+        {
+          if (NullHandling.isNullOrEquivalent(value)) {
+            return bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), getNumRows());
+          } else {
+            return bitmapFactory.makeEmptyImmutableBitmap();
+          }
+        }
+
+        @Override
+        public Iterable<ImmutableBitmap> getBitmapsInRange(
+            @Nullable String startValue,
+            boolean startStrict,
+            @Nullable String endValue,
+            boolean endStrict,
+            Predicate<String> matcher
+        )
+        {
+          final int startIndex; // inclusive
+          int endIndex; // exclusive
+
+          if (startValue == null) {
+            startIndex = 0;
+          } else {
+            if (NullHandling.isNullOrEquivalent(startValue)) {
+              startIndex = startStrict ? 1 : 0;
+            } else {
+              startIndex = 1;
+            }
+          }
+
+          if (endValue == null) {
+            endIndex = 1;
+          } else {
+            if (NullHandling.isNullOrEquivalent(endValue)) {
+              endIndex = endStrict ? 0 : 1;
+            } else {
+              endIndex = 1;
+            }
+          }
+
+          endIndex = Math.max(startIndex, endIndex);
+          if (startIndex == endIndex) {
+            return Collections.emptyList();
+          }
+          if (matcher.test(null)) {
+            return ImmutableList.of(getBitmap(0));
+          }
+          return ImmutableList.of(bitmapFactory.makeEmptyImmutableBitmap());
+        }
+
+        @Override
+        public Iterable<ImmutableBitmap> getBitmapsForValues(Set<String> values)
+        {
+          if (values.contains(null) || (NullHandling.replaceWithDefault() && values.contains(""))) {
+            return ImmutableList.of(getBitmap(0));
+          }
+          return ImmutableList.of(bitmapFactory.makeEmptyImmutableBitmap());
+        }
       };
-    } else if (columnHolder.getCapabilities().hasBitmapIndexes()) {
+    } else if (columnHolder.getCapabilities().hasBitmapIndexes() && columnHolder.getCapabilities().is(ValueType.STRING)) {
+      // currently BitmapIndex are reliant on STRING dictionaries to operate correctly, and will fail when used with
+      // other types of dictionary encoded columns
       return columnHolder.getBitmapIndex();
     } else {
       return null;
@@ -273,7 +344,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
       if (idx == null) {
         return null;
       }
-      return idx.getBitmap(idx.getIndex(value));
+      return idx.getBitmapForValue(value);
     }
 
     final ColumnHolder columnHolder = index.getColumnHolder(dimension);
@@ -285,12 +356,14 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
       }
     }
 
-    if (!columnHolder.getCapabilities().hasBitmapIndexes()) {
+    if (!columnHolder.getCapabilities().hasBitmapIndexes() || !columnHolder.getCapabilities().is(ValueType.STRING)) {
+      // currently BitmapIndex are reliant on STRING dictionaries to operate correctly, and will fail when used with
+      // other types of dictionary encoded columns
       return null;
     }
 
     final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
-    return bitmapIndex.getBitmap(bitmapIndex.getIndex(value));
+    return bitmapIndex.getBitmapForValue(value);
   }
 
   @Override
@@ -311,5 +384,12 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   private boolean isVirtualColumn(final String columnName)
   {
     return virtualColumns.getVirtualColumn(columnName) != null;
+  }
+
+  @Nullable
+  @Override
+  public ColumnCapabilities getColumnCapabilities(String column)
+  {
+    return virtualColumns.getColumnCapabilities(index, column);
   }
 }

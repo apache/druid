@@ -7,6 +7,79 @@ exports[`QueryView matches snapshot 1`] = `
   <ColumnTree
     columnMetadataLoading={true}
     defaultSchema="druid"
+    defaultWhere={
+      SqlComparison {
+        "decorator": undefined,
+        "keywords": Object {
+          "op": ">=",
+        },
+        "lhs": SqlRef {
+          "columnRefName": RefName {
+            "name": "__time",
+            "quotes": false,
+          },
+          "keywords": Object {},
+          "namespaceRefName": undefined,
+          "spacing": Object {},
+          "tableRefName": undefined,
+          "type": "ref",
+        },
+        "not": false,
+        "op": ">=",
+        "rhs": SqlMulti {
+          "args": SeparatedArray {
+            "separators": Array [
+              Separator {
+                "left": " ",
+                "right": " ",
+                "separator": "-",
+              },
+            ],
+            "values": Array [
+              SqlFunction {
+                "args": undefined,
+                "decorator": undefined,
+                "functionName": "CURRENT_TIMESTAMP",
+                "keywords": Object {
+                  "functionName": "CURRENT_TIMESTAMP",
+                },
+                "spacing": Object {},
+                "specialParen": "none",
+                "type": "function",
+                "whereClause": undefined,
+              },
+              SqlInterval {
+                "intervalValue": SqlLiteral {
+                  "keywords": Object {},
+                  "spacing": Object {},
+                  "stringValue": "'1'",
+                  "type": "literal",
+                  "value": "1",
+                },
+                "keywords": Object {
+                  "interval": "INTERVAL",
+                },
+                "spacing": Object {
+                  "postInterval": " ",
+                  "postIntervalValue": " ",
+                },
+                "type": "interval",
+                "unit": "DAY",
+              },
+            ],
+          },
+          "keywords": Object {},
+          "op": "-",
+          "spacing": Object {},
+          "type": "multi",
+        },
+        "spacing": Object {
+          "postOp": " ",
+          "preOp": " ",
+        },
+        "type": "comparison",
+      }
+    }
     getParsedQuery={[Function]}
     onQueryChange={[Function]}
   />
@@ -86,6 +159,79 @@ exports[`QueryView matches snapshot with query 1`] = `
   <ColumnTree
     columnMetadataLoading={true}
     defaultSchema="druid"
+    defaultWhere={
+      SqlComparison {
+        "decorator": undefined,
+        "keywords": Object {
+          "op": ">=",
+        },
+        "lhs": SqlRef {
+          "columnRefName": RefName {
+            "name": "__time",
+            "quotes": false,
+          },
+          "keywords": Object {},
+          "namespaceRefName": undefined,
+          "spacing": Object {},
+          "tableRefName": undefined,
+          "type": "ref",
+        },
+        "not": false,
+        "op": ">=",
+        "rhs": SqlMulti {
+          "args": SeparatedArray {
+            "separators": Array [
+              Separator {
+                "left": " ",
+                "right": " ",
+                "separator": "-",
+              },
+            ],
+            "values": Array [
+              SqlFunction {
+                "args": undefined,
+                "decorator": undefined,
+                "functionName": "CURRENT_TIMESTAMP",
+                "keywords": Object {
+                  "functionName": "CURRENT_TIMESTAMP",
+                },
+                "spacing": Object {},
+                "specialParen": "none",
+                "type": "function",
+                "whereClause": undefined,
+              },
+              SqlInterval {
+                "intervalValue": SqlLiteral {
+                  "keywords": Object {},
+                  "spacing": Object {},
+                  "stringValue": "'1'",
+                  "type": "literal",
+                  "value": "1",
+                },
+                "keywords": Object {
+                  "interval": "INTERVAL",
+                },
+                "spacing": Object {
+                  "postInterval": " ",
+                  "postIntervalValue": " ",
+                },
+                "type": "interval",
+                "unit": "DAY",
+              },
+            ],
+          },
+          "keywords": Object {},
+          "op": "-",
+          "spacing": Object {},
+          "type": "multi",
+        },
+        "spacing": Object {
+          "postOp": " ",
+          "preOp": " ",
+        },
+        "type": "comparison",
+      }
+    }
     getParsedQuery={[Function]}
     onQueryChange={[Function]}
   />

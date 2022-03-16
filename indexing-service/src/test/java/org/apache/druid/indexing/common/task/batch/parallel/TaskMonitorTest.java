@@ -240,7 +240,7 @@ public class TaskMonitorTest
       monitor.collectReport(new SimpleSubTaskReport(getId()));
       if (shouldFail) {
         Thread.sleep(getRunTime());
-        return TaskStatus.failure(getId());
+        return TaskStatus.failure(getId(), "Dummy task status failure for testing");
       } else {
         return super.run(toolbox);
       }

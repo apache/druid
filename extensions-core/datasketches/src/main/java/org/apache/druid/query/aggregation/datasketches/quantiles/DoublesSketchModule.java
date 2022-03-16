@@ -34,6 +34,7 @@ import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSket
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchRankOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchSummaryOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchToHistogramOperatorConversion;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.sql.guice.SqlBindings;
 
@@ -45,6 +46,8 @@ public class DoublesSketchModule implements DruidModule
 
   public static final String DOUBLES_SKETCH = "quantilesDoublesSketch";
   public static final String DOUBLES_SKETCH_MERGE = "quantilesDoublesSketchMerge";
+  public static final ColumnType TYPE = ColumnType.ofComplex(DOUBLES_SKETCH);
+  public static final ColumnType MERGE_TYPE = ColumnType.ofComplex(DOUBLES_SKETCH_MERGE);
 
   public static final String DOUBLES_SKETCH_HISTOGRAM_POST_AGG = "quantilesDoublesSketchToHistogram";
   public static final String DOUBLES_SKETCH_QUANTILE_POST_AGG = "quantilesDoublesSketchToQuantile";

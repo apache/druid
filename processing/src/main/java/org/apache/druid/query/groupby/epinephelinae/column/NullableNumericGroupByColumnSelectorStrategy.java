@@ -38,10 +38,13 @@ import java.nio.ByteBuffer;
 public class NullableNumericGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy
 {
   private final GroupByColumnSelectorStrategy delegate;
+  private final byte[] nullKeyBytes;
 
   public NullableNumericGroupByColumnSelectorStrategy(GroupByColumnSelectorStrategy delegate)
   {
     this.delegate = delegate;
+    this.nullKeyBytes = new byte[delegate.getGroupingKeySize() + 1];
+    this.nullKeyBytes[0] = NullHandling.IS_NULL_BYTE;
   }
 
   @Override
@@ -66,34 +69,27 @@ public class NullableNumericGroupByColumnSelectorStrategy implements GroupByColu
   }
 
   @Override
-  public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] values)
+  public int initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] values)
   {
     if (selector.isNull()) {
       values[columnIndex] = null;
+      return 0;
     } else {
-      delegate.initColumnValues(selector, columnIndex, values);
+      return delegate.initColumnValues(selector, columnIndex, values);
     }
   }
 
   @Override
-  @Nullable
-  public Object getOnlyValue(ColumnValueSelector selector)
+  public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
   {
     if (selector.isNull()) {
-      return null;
-    }
-    return delegate.getOnlyValue(selector);
-  }
-
-  @Override
-  public void writeToKeyBuffer(int keyBufferPosition, @Nullable Object obj, ByteBuffer keyBuffer)
-  {
-    if (obj == null) {
-      keyBuffer.put(keyBufferPosition, NullHandling.IS_NULL_BYTE);
+      keyBuffer.position(keyBufferPosition);
+      keyBuffer.put(nullKeyBytes);
+      return 0;
     } else {
       keyBuffer.put(keyBufferPosition, NullHandling.IS_NOT_NULL_BYTE);
+      return delegate.writeToKeyBuffer(keyBufferPosition + Byte.BYTES, selector, keyBuffer);
     }
-    delegate.writeToKeyBuffer(keyBufferPosition + Byte.BYTES, obj, keyBuffer);
   }
 
   @Override
@@ -111,14 +107,27 @@ public class NullableNumericGroupByColumnSelectorStrategy implements GroupByColu
   @Override
   public void initGroupingKeyColumnValue(
       int keyBufferPosition,
-      int columnIndex,
+      int dimensionIndex,
       Object rowObj,
       ByteBuffer keyBuffer,
       int[] stack
   )
   {
-    writeToKeyBuffer(keyBufferPosition, rowObj, keyBuffer);
-    stack[columnIndex] = 1;
+    if (rowObj == null) {
+      keyBuffer.position(keyBufferPosition);
+      keyBuffer.put(nullKeyBytes);
+    } else {
+      keyBuffer.put(keyBufferPosition, NullHandling.IS_NOT_NULL_BYTE);
+
+      // No need to update stack ourselves; we expect the delegate to do this.
+      delegate.initGroupingKeyColumnValue(
+          keyBufferPosition + Byte.BYTES,
+          dimensionIndex,
+          rowObj,
+          keyBuffer,
+          stack
+      );
+    }
   }
 
   @Override
@@ -132,5 +141,11 @@ public class NullableNumericGroupByColumnSelectorStrategy implements GroupByColu
     // rows from a nullable column always have a single value, multi-value is not currently supported
     // this method handles row values after the first in a multivalued row, so just return false
     return false;
+  }
+
+  @Override
+  public void reset()
+  {
+    delegate.reset();
   }
 }

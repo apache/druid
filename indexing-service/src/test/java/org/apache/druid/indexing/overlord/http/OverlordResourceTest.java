@@ -24,7 +24,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
@@ -37,13 +39,21 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
+import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
+import org.apache.druid.indexing.overlord.autoscaling.AutoScaler;
+import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
+import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
@@ -71,6 +81,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.util.Arrays;
@@ -78,11 +89,14 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class OverlordResourceTest
 {
   private OverlordResource overlordResource;
   private TaskMaster taskMaster;
+  private JacksonConfigManager configManager;
+  private ProvisioningStrategy provisioningStrategy;
   private TaskStorageQueryAdapter taskStorageQueryAdapter;
   private IndexerMetadataStorageAdapter indexerMetadataStorageAdapter;
   private HttpServletRequest req;
@@ -96,6 +110,8 @@ public class OverlordResourceTest
   public void setUp()
   {
     taskRunner = EasyMock.createMock(TaskRunner.class);
+    configManager = EasyMock.createMock(JacksonConfigManager.class);
+    provisioningStrategy = EasyMock.createMock(ProvisioningStrategy.class);
     taskMaster = EasyMock.createStrictMock(TaskMaster.class);
     taskStorageQueryAdapter = EasyMock.createStrictMock(TaskStorageQueryAdapter.class);
     indexerMetadataStorageAdapter = EasyMock.createStrictMock(IndexerMetadataStorageAdapter.class);
@@ -116,10 +132,22 @@ public class OverlordResourceTest
           @Override
           public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
           {
-            if (resource.getName().equals("allow")) {
-              return new Access(true);
-            } else {
-              return new Access(false);
+            final String username = authenticationResult.getIdentity();
+            switch (resource.getName()) {
+              case "allow":
+                return new Access(true);
+              case Datasources.WIKIPEDIA:
+                // Only "Wiki Reader" can read "wikipedia"
+                return new Access(
+                    action == Action.READ && Users.WIKI_READER.equals(username)
+                );
+              case Datasources.BUZZFEED:
+                // Only "Buzz Reader" can read "buzzfeed"
+                return new Access(
+                    action == Action.READ && Users.BUZZ_READER.equals(username)
+                );
+              default:
+                return new Access(false);
             }
           }
 
@@ -132,10 +160,11 @@ public class OverlordResourceTest
         taskStorageQueryAdapter,
         indexerMetadataStorageAdapter,
         null,
-        null,
+        configManager,
         null,
         authMapper,
-        workerTaskRunnerQueryAdapter
+        workerTaskRunnerQueryAdapter,
+        provisioningStrategy
     );
   }
 
@@ -842,6 +871,104 @@ public class OverlordResourceTest
   }
 
   @Test
+  public void testGetTasksRequiresDatasourceRead()
+  {
+    // Setup mocks for a user who has read access to "wikipedia"
+    // and no access to "buzzfeed"
+    expectAuthorizationTokenCheck(Users.WIKI_READER);
+
+    // Setup mocks to return completed, active, known, pending and running tasks
+    EasyMock.expect(taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(null, null, null)).andStubReturn(
+        ImmutableList.of(
+            createTaskInfo("id_5", Datasources.WIKIPEDIA),
+            createTaskInfo("id_6", Datasources.BUZZFEED)
+        )
+    );
+
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null)).andStubReturn(
+        ImmutableList.of(
+            createTaskInfo("id_1", Datasources.WIKIPEDIA),
+            createTaskInfo("id_2", Datasources.BUZZFEED)
+        )
+    );
+
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks()).andReturn(
+        ImmutableList.of(
+            new MockTaskRunnerWorkItem("id_1", null),
+            new MockTaskRunnerWorkItem("id_4", null)
+        )
+    ).atLeastOnce();
+
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getPendingTasks()).andReturn(
+        ImmutableList.of(
+            new MockTaskRunnerWorkItem("id_4", null)
+        )
+    );
+
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(
+        ImmutableList.of(
+            new MockTaskRunnerWorkItem("id_1", null)
+        )
+    );
+
+    // Replay all mocks
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter
+    );
+
+    // Verify that only the tasks of read access datasource are returned
+    List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
+        .getTasks(null, null, null, null, null, req)
+        .getEntity();
+    Assert.assertEquals(2, responseObjects.size());
+    for (TaskStatusPlus taskStatus : responseObjects) {
+      Assert.assertEquals(Datasources.WIKIPEDIA, taskStatus.getDataSource());
+    }
+  }
+
+  @Test
+  public void testGetTasksFilterByDatasourceRequiresReadAccess()
+  {
+    // Setup mocks for a user who has read access to "wikipedia"
+    // and no access to "buzzfeed"
+    expectAuthorizationTokenCheck(Users.WIKI_READER);
+
+    // Setup mocks to return completed, active, known, pending and running tasks
+    EasyMock.expect(taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(null, null, null)).andStubReturn(
+        ImmutableList.of(
+            createTaskInfo("id_5", Datasources.WIKIPEDIA),
+            createTaskInfo("id_6", Datasources.BUZZFEED)
+        )
+    );
+
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null)).andStubReturn(
+        ImmutableList.of(
+            createTaskInfo("id_1", Datasources.WIKIPEDIA),
+            createTaskInfo("id_2", Datasources.BUZZFEED)
+        )
+    );
+
+    // Replay all mocks
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter
+    );
+
+    // Verify that only the tasks of read access datasource are returned
+    expectedException.expect(WebApplicationException.class);
+    overlordResource.getTasks(null, Datasources.BUZZFEED, null, null, null, req);
+  }
+
+  @Test
   public void testGetNullCompleteTask()
   {
     expectAuthorizationTokenCheck();
@@ -923,6 +1050,27 @@ public class OverlordResourceTest
         workerTaskRunnerQueryAdapter
     );
     Task task = NoopTask.create();
+    overlordResource.taskPost(task, req);
+  }
+
+  @Test
+  public void testTaskPostDeniesDatasourceReadUser()
+  {
+    expectAuthorizationTokenCheck(Users.WIKI_READER);
+
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter
+    );
+
+    // Verify that taskPost fails for user who has only datasource read access
+    Task task = NoopTask.create(Datasources.WIKIPEDIA);
+    expectedException.expect(ForbiddenException.class);
+    expectedException.expect(ForbiddenException.class);
     overlordResource.taskPost(task, req);
   }
 
@@ -1315,9 +1463,190 @@ public class OverlordResourceTest
     Assert.assertEquals(ImmutableMap.of("error", "Worker API returns error!"), response.getEntity());
   }
 
+  @Test
+  public void testGetTotalWorkerCapacityNotLeader()
+  {
+    EasyMock.reset(taskMaster);
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(
+        Optional.absent()
+    ).anyTimes();
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        configManager
+    );
+    final Response response = overlordResource.getTotalWorkerCapacity();
+    Assert.assertEquals(HttpResponseStatus.SERVICE_UNAVAILABLE.getCode(), response.getStatus());
+  }
+
+  @Test
+  public void testGetTotalWorkerCapacityWithUnknown()
+  {
+    WorkerBehaviorConfig workerBehaviorConfig = EasyMock.createMock(WorkerBehaviorConfig.class);
+    AtomicReference<WorkerBehaviorConfig> workerBehaviorConfigAtomicReference = new AtomicReference<>(workerBehaviorConfig);
+    EasyMock.expect(configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class)).andReturn(workerBehaviorConfigAtomicReference);
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        configManager
+    );
+    final Response response = overlordResource.getTotalWorkerCapacity();
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
+    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
+  }
+
+  @Test
+  public void testGetTotalWorkerCapacityWithWorkerTaskRunnerButWorkerBehaviorConfigNotConfigured()
+  {
+    AtomicReference<WorkerBehaviorConfig> workerBehaviorConfigAtomicReference = new AtomicReference<>(null);
+    EasyMock.expect(configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class)).andReturn(workerBehaviorConfigAtomicReference);
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        configManager
+    );
+    final Response response = overlordResource.getTotalWorkerCapacity();
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
+    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
+  }
+
+  @Test
+  public void testGetTotalWorkerCapacityWithWorkerTaskRunnerButAutoScaleNotConfigured()
+  {
+    DefaultWorkerBehaviorConfig workerBehaviorConfig = new DefaultWorkerBehaviorConfig(null, null);
+    AtomicReference<WorkerBehaviorConfig> workerBehaviorConfigAtomicReference = new AtomicReference<>(workerBehaviorConfig);
+    EasyMock.expect(configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class)).andReturn(workerBehaviorConfigAtomicReference);
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        configManager
+    );
+    final Response response = overlordResource.getTotalWorkerCapacity();
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
+    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
+  }
+
+  @Test
+  public void testGetTotalWorkerCapacityWithAutoScaleConfiguredAndProvisioningStrategySupportExpectedWorkerCapacity()
+  {
+    int expectedWorkerCapacity = 3;
+    int maxNumWorkers = 2;
+    WorkerTaskRunner workerTaskRunner = EasyMock.createMock(WorkerTaskRunner.class);
+    Collection<ImmutableWorkerInfo> workerInfos = ImmutableList.of(
+        new ImmutableWorkerInfo(
+            new Worker(
+                "http", "testWorker", "192.0.0.1", expectedWorkerCapacity, "v1", WorkerConfig.DEFAULT_CATEGORY
+            ),
+            2,
+            ImmutableSet.of("grp1", "grp2"),
+            ImmutableSet.of("task1", "task2"),
+            DateTimes.of("2015-01-01T01:01:01Z")
+        )
+    );
+    EasyMock.expect(workerTaskRunner.getWorkers()).andReturn(workerInfos);
+    EasyMock.reset(taskMaster);
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(
+        Optional.of(workerTaskRunner)
+    ).anyTimes();
+    EasyMock.expect(provisioningStrategy.getExpectedWorkerCapacity(workerInfos)).andReturn(expectedWorkerCapacity).anyTimes();
+    AutoScaler autoScaler = EasyMock.createMock(AutoScaler.class);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
+    EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(maxNumWorkers);
+    DefaultWorkerBehaviorConfig workerBehaviorConfig = new DefaultWorkerBehaviorConfig(null, autoScaler);
+    AtomicReference<WorkerBehaviorConfig> workerBehaviorConfigAtomicReference = new AtomicReference<>(workerBehaviorConfig);
+    EasyMock.expect(configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class)).andReturn(workerBehaviorConfigAtomicReference);
+    EasyMock.replay(
+        workerTaskRunner,
+        autoScaler,
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        configManager,
+        provisioningStrategy
+    );
+    final Response response = overlordResource.getTotalWorkerCapacity();
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(expectedWorkerCapacity, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
+    Assert.assertEquals(expectedWorkerCapacity * maxNumWorkers, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
+  }
+
+  @Test
+  public void testGetTotalWorkerCapacityWithAutoScaleConfiguredAndProvisioningStrategyNotSupportExpectedWorkerCapacity()
+  {
+    int invalidExpectedCapacity = -1;
+    int maxNumWorkers = 2;
+    WorkerTaskRunner workerTaskRunner = EasyMock.createMock(WorkerTaskRunner.class);
+    Collection<ImmutableWorkerInfo> workerInfos = ImmutableList.of(
+        new ImmutableWorkerInfo(
+            new Worker(
+                "http", "testWorker", "192.0.0.1", 3, "v1", WorkerConfig.DEFAULT_CATEGORY
+            ),
+            2,
+            ImmutableSet.of("grp1", "grp2"),
+            ImmutableSet.of("task1", "task2"),
+            DateTimes.of("2015-01-01T01:01:01Z")
+        )
+    );
+    EasyMock.expect(workerTaskRunner.getWorkers()).andReturn(workerInfos);
+    EasyMock.reset(taskMaster);
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(
+        Optional.of(workerTaskRunner)
+    ).anyTimes();
+    EasyMock.expect(provisioningStrategy.getExpectedWorkerCapacity(workerInfos)).andReturn(invalidExpectedCapacity).anyTimes();
+    AutoScaler autoScaler = EasyMock.createMock(AutoScaler.class);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
+    EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(maxNumWorkers);
+    DefaultWorkerBehaviorConfig workerBehaviorConfig = new DefaultWorkerBehaviorConfig(null, autoScaler);
+    AtomicReference<WorkerBehaviorConfig> workerBehaviorConfigAtomicReference = new AtomicReference<>(workerBehaviorConfig);
+    EasyMock.expect(configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class)).andReturn(workerBehaviorConfigAtomicReference);
+    EasyMock.replay(
+        workerTaskRunner,
+        autoScaler,
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        configManager,
+        provisioningStrategy
+    );
+    final Response response = overlordResource.getTotalWorkerCapacity();
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(workerInfos.stream().findFirst().get().getWorker().getCapacity(), ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
+    Assert.assertEquals(invalidExpectedCapacity, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
+  }
+
   private void expectAuthorizationTokenCheck()
   {
-    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, null);
+    expectAuthorizationTokenCheck(Users.DRUID);
+  }
+
+  private void expectAuthorizationTokenCheck(String username)
+  {
+    AuthenticationResult authenticationResult = new AuthenticationResult(username, "druid", null, null);
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
@@ -1358,6 +1687,36 @@ public class OverlordResourceTest
         return null;
       }
     };
+  }
+
+  private TaskInfo<Task, TaskStatus> createTaskInfo(String taskId, String datasource)
+  {
+    return new TaskInfo<>(
+        taskId,
+        DateTime.now(ISOChronology.getInstanceUTC()),
+        TaskStatus.success(taskId),
+        datasource,
+        getTaskWithIdAndDatasource(taskId, datasource)
+    );
+  }
+
+  /**
+   * Usernames to use in the tests.
+   */
+  private static class Users
+  {
+    private static final String DRUID = "druid";
+    private static final String WIKI_READER = "Wiki Reader";
+    private static final String BUZZ_READER = "Buzz Reader";
+  }
+
+  /**
+   * Datasource names to use in the tests.
+   */
+  private static class Datasources
+  {
+    private static final String WIKIPEDIA = "wikipedia";
+    private static final String BUZZFEED = "buzzfeed";
   }
 
   private static class MockTaskRunnerWorkItem extends TaskRunnerWorkItem

@@ -796,6 +796,7 @@ public class Druids
     private List<String> columns;
     private Boolean legacy;
     private ScanQuery.Order order;
+    private List<ScanQuery.OrderBy> orderBy;
 
     public ScanQueryBuilder()
     {
@@ -811,6 +812,7 @@ public class Druids
       columns = new ArrayList<>();
       legacy = null;
       order = null;
+      orderBy = null;
     }
 
     public ScanQuery build()
@@ -824,6 +826,7 @@ public class Druids
           offset,
           limit,
           order,
+          orderBy,
           dimFilter,
           columns,
           legacy,
@@ -845,7 +848,7 @@ public class Druids
           .columns(query.getColumns())
           .legacy(query.isLegacy())
           .context(query.getContext())
-          .order(query.getOrder());
+          .orderBy(query.getOrderBys());
     }
 
     public ScanQueryBuilder dataSource(String ds)
@@ -934,6 +937,12 @@ public class Druids
     public ScanQueryBuilder order(ScanQuery.Order order)
     {
       this.order = order;
+      return this;
+    }
+
+    public ScanQueryBuilder orderBy(List<ScanQuery.OrderBy> orderBys)
+    {
+      this.orderBy = orderBys;
       return this;
     }
   }

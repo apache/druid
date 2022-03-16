@@ -17,38 +17,49 @@
  */
 
 import { Field } from '../components';
-import { filterMap } from '../utils';
-import { HeaderAndRows } from '../utils/sampler';
+import { filterMap, typeIs } from '../utils';
+import { SampleHeaderAndRows } from '../utils/sampler';
 
-import { getColumnTypeFromHeaderAndRows } from './ingestion-spec';
+import { guessColumnTypeFromHeaderAndRows } from './ingestion-spec';
 
 export interface DimensionsSpec {
-  dimensions?: (string | DimensionSpec)[];
-  dimensionExclusions?: string[];
-  spatialDimensions?: any[];
+  readonly dimensions?: (string | DimensionSpec)[];
+  readonly dimensionExclusions?: string[];
+  readonly spatialDimensions?: any[];
 }
 
 export interface DimensionSpec {
-  type: string;
-  name: string;
-  createBitmapIndex?: boolean;
+  readonly type: string;
+  readonly name: string;
+  readonly createBitmapIndex?: boolean;
+  readonly multiValueHandling?: string;
 }
 
 export const DIMENSION_SPEC_FIELDS: Field<DimensionSpec>[] = [
   {
     name: 'name',
     type: 'string',
+    required: true,
+    placeholder: 'dimension_name',
   },
   {
     name: 'type',
     type: 'string',
+    required: true,
     suggestions: ['string', 'long', 'float', 'double'],
   },
   {
     name: 'createBitmapIndex',
     type: 'boolean',
+    defined: typeIs('string'),
     defaultValue: true,
-    defined: (dimensionSpec: DimensionSpec) => dimensionSpec.type === 'string',
+  },
+  {
+    name: 'multiValueHandling',
+    type: 'string',
+    defined: typeIs('string'),
+    defaultValue: 'SORTED_ARRAY',
+    suggestions: ['SORTED_ARRAY', 'SORTED_SET', 'ARRAY'],
   },
 ];
 
@@ -67,13 +78,16 @@ export function inflateDimensionSpec(dimensionSpec: string | DimensionSpec): Dim
 }
 
 export function getDimensionSpecs(
-  headerAndRows: HeaderAndRows,
+  headerAndRows: SampleHeaderAndRows,
   typeHints: Record<string, string>,
+  guessNumericStringsAsNumbers: boolean,
   hasRollup: boolean,
 ): (string | DimensionSpec)[] {
   return filterMap(headerAndRows.header, h => {
     if (h === '__time') return;
-    const type = typeHints[h] || getColumnTypeFromHeaderAndRows(headerAndRows, h);
+    const type =
+      typeHints[h] ||
+      guessColumnTypeFromHeaderAndRows(headerAndRows, h, guessNumericStringsAsNumbers);
     if (type === 'string') return h;
     if (hasRollup) return;
     return {

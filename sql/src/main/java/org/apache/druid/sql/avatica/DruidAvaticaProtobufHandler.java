@@ -24,6 +24,7 @@ import org.apache.calcite.avatica.remote.LocalService;
 import org.apache.calcite.avatica.remote.Service;
 import org.apache.calcite.avatica.server.AvaticaProtobufHandler;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.DruidNode;
 import org.eclipse.jetty.server.Request;
 
@@ -35,6 +36,7 @@ import java.io.IOException;
 public class DruidAvaticaProtobufHandler extends AvaticaProtobufHandler
 {
   public static final String AVATICA_PATH = "/druid/v2/sql/avatica-protobuf/";
+  public static final String AVATICA_PATH_NO_TRAILING_SLASH = "/druid/v2/sql/avatica-protobuf";
 
   @Inject
   public DruidAvaticaProtobufHandler(
@@ -55,7 +57,7 @@ public class DruidAvaticaProtobufHandler extends AvaticaProtobufHandler
       final HttpServletResponse response
   ) throws IOException, ServletException
   {
-    if (request.getRequestURI().equals(AVATICA_PATH)) {
+    if (AVATICA_PATH_NO_TRAILING_SLASH.equals(StringUtils.maybeRemoveTrailingSlash(request.getRequestURI()))) {
       super.handle(target, baseRequest, request, response);
     }
   }

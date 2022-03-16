@@ -29,7 +29,7 @@ Apache Druid Extension to enable using Kubernetes API Server for node discovery 
 
 ## Configuration
 
-To use this extension please make sure to  [include](../../development/extensions.md#loading-extensions) `druid-kubernetes-extensions` as an extension.
+To use this extension please make sure to  [include](../../development/extensions.md#loading-extensions) `druid-kubernetes-extensions` in the extensions load list.
 
 This extension works together with HTTP based segment and task management in Druid. Consequently, following configurations must be set on all Druid nodes.
 

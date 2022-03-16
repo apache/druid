@@ -73,8 +73,9 @@ public class StringAnyAggregatorFactoryTest extends InitializedNullHandlingTest
   public void factorizeVectorWithoutCapabilitiesShouldReturnAggregatorWithMultiDimensionSelector()
   {
     Mockito.doReturn(null).when(vectorSelectorFactory).getColumnCapabilities(FIELD_NAME);
-    Mockito.doReturn(multiValueDimensionVectorSelector)
-           .when(vectorSelectorFactory).makeMultiValueDimensionSelector(any());
+    Mockito.doReturn(singleValueDimensionVectorSelector)
+           .when(vectorSelectorFactory)
+           .makeSingleValueDimensionSelector(any());
     StringAnyVectorAggregator aggregator = target.factorizeVector(vectorSelectorFactory);
     Assert.assertNotNull(aggregator);
   }
@@ -83,7 +84,8 @@ public class StringAnyAggregatorFactoryTest extends InitializedNullHandlingTest
   public void factorizeVectorWithUnknownCapabilitiesShouldReturnAggregatorWithMultiDimensionSelector()
   {
     Mockito.doReturn(multiValueDimensionVectorSelector)
-           .when(vectorSelectorFactory).makeMultiValueDimensionSelector(any());
+           .when(vectorSelectorFactory)
+           .makeMultiValueDimensionSelector(any());
     StringAnyVectorAggregator aggregator = target.factorizeVector(vectorSelectorFactory);
     Assert.assertNotNull(aggregator);
   }
@@ -93,7 +95,8 @@ public class StringAnyAggregatorFactoryTest extends InitializedNullHandlingTest
   {
     Mockito.doReturn(ColumnCapabilities.Capable.TRUE).when(capabilities).hasMultipleValues();
     Mockito.doReturn(multiValueDimensionVectorSelector)
-           .when(vectorSelectorFactory).makeMultiValueDimensionSelector(any());
+           .when(vectorSelectorFactory)
+           .makeMultiValueDimensionSelector(any());
     StringAnyVectorAggregator aggregator = target.factorizeVector(vectorSelectorFactory);
     Assert.assertNotNull(aggregator);
   }
@@ -103,7 +106,8 @@ public class StringAnyAggregatorFactoryTest extends InitializedNullHandlingTest
   {
     Mockito.doReturn(ColumnCapabilities.Capable.FALSE).when(capabilities).hasMultipleValues();
     Mockito.doReturn(singleValueDimensionVectorSelector)
-           .when(vectorSelectorFactory).makeSingleValueDimensionSelector(any());
+           .when(vectorSelectorFactory)
+           .makeSingleValueDimensionSelector(any());
     StringAnyVectorAggregator aggregator = target.factorizeVector(vectorSelectorFactory);
     Assert.assertNotNull(aggregator);
   }

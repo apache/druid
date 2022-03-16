@@ -64,7 +64,7 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
       return;
     }
 
-    final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN)
+    final WritableMemory mem = WritableMemory.writableWrap(buf, ByteOrder.LITTLE_ENDIAN)
                                              .writableRegion(position, helper.getSize());
 
     final Union union = Union.writableWrap(mem);

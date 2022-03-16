@@ -20,18 +20,19 @@ import { Button, ButtonGroup, FormGroup, Intent, NumericInput } from '@blueprint
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
-import { deepDelete, deepGet, deepSet } from '../../utils';
+import { deepDelete, deepGet, deepSet, durationSanitizer } from '../../utils';
 import { ArrayInput } from '../array-input/array-input';
 import { FormGroupWithInfo } from '../form-group-with-info/form-group-with-info';
 import { IntervalInput } from '../interval-input/interval-input';
 import { JsonInput } from '../json-input/json-input';
 import { NumericInputWithDefault } from '../numeric-input-with-default/numeric-input-with-default';
 import { PopoverText } from '../popover-text/popover-text';
-import { SuggestibleInput, Suggestion } from '../suggestible-input/suggestible-input';
+import { SuggestibleInput } from '../suggestible-input/suggestible-input';
+import { Suggestion } from '../suggestion-menu/suggestion-menu';
 
 import './auto-form.scss';
 
-export type Functor<M, R> = R | ((model: M) => R);
+export type Functor<M, R> = R | ((model: Partial<M>) => R);
 
 export interface Field<M> {
   name: string;
@@ -56,10 +57,11 @@ export interface Field<M> {
   disabled?: Functor<M, boolean>;
   defined?: Functor<M, boolean>;
   required?: Functor<M, boolean>;
+  multiline?: Functor<M, boolean>;
   hide?: Functor<M, boolean>;
   hideInMore?: Functor<M, boolean>;
   valueAdjustment?: (value: any) => any;
-  adjustment?: (model: M) => M;
+  adjustment?: (model: Partial<M>) => Partial<M>;
   issueWithValue?: (value: any) => string | undefined;
 }
 
@@ -71,12 +73,12 @@ interface ComputedFieldValues {
 
 export interface AutoFormProps<M> {
   fields: Field<M>[];
-  model: M | undefined;
-  onChange: (newModel: M) => void;
+  model: Partial<M> | undefined;
+  onChange: (newModel: Partial<M>) => void;
   onFinalize?: () => void;
-  showCustom?: (model: M) => boolean;
+  showCustom?: (model: Partial<M>) => boolean;
   large?: boolean;
-  globalAdjustment?: (model: M) => M;
+  globalAdjustment?: (model: Partial<M>) => Partial<M>;
 }
 
 export interface AutoFormState {
@@ -111,7 +113,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
   static evaluateFunctor<M, R>(
     functor: undefined | Functor<M, R>,
-    model: M | undefined,
+    model: Partial<M> | undefined,
     defaultValue: R,
   ): R {
     if (!model || functor == null) return defaultValue;
@@ -122,7 +124,14 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     }
   }
 
-  static issueWithModel<M>(model: M | undefined, fields: readonly Field<M>[]): string | undefined {
+  static isValidModel<M>(model: Partial<M> | undefined, fields: readonly Field<M>[]): model is M {
+    return !AutoForm.issueWithModel(model, fields);
+  }
+
+  static issueWithModel<M>(
+    model: Partial<M> | undefined,
+    fields: readonly Field<M>[],
+  ): string | undefined {
     if (typeof model === 'undefined') {
       return `model is undefined`;
     }
@@ -179,7 +188,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
       newValue = field.valueAdjustment(newValue);
     }
 
-    let newModel: T;
+    let newModel: Partial<T>;
     if (typeof newValue === 'undefined') {
       if (typeof field.emptyValue === 'undefined') {
         newModel = deepDelete(model, field.name);
@@ -197,7 +206,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     this.modelChange(newModel);
   };
 
-  private readonly modelChange = (newModel: T) => {
+  private readonly modelChange = (newModel: Partial<T>) => {
     const { globalAdjustment, fields, onChange, model } = this.props;
 
     // Delete things that are not defined now (but were defined prior to the change)
@@ -274,15 +283,16 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     );
   }
 
-  private renderStringInput(field: Field<T>, sanitize?: (str: string) => string): JSX.Element {
+  private renderStringInput(field: Field<T>, sanitizer?: (str: string) => string): JSX.Element {
     const { model, large, onFinalize } = this.props;
     const { required, defaultValue, modelValue } = AutoForm.computeFieldValues(model, field);
 
     return (
       <SuggestibleInput
         value={modelValue != null ? modelValue : defaultValue || ''}
+        sanitizer={sanitizer}
+        issueWithValue={field.issueWithValue}
         onValueChange={v => {
-          if (sanitize && typeof v === 'string') v = sanitize(v);
           this.fieldChange(field, v);
         }}
         onBlur={() => {
@@ -294,6 +304,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
         intent={required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined}
+        multiline={AutoForm.evaluateFunctor(field.multiline, model, false)}
       />
     );
   }
@@ -361,6 +372,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
         intent={required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined}
+        suggestions={AutoForm.evaluateFunctor(field.suggestions, model, undefined)}
       />
     );
   }
@@ -390,9 +402,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
       case 'string':
         return this.renderStringInput(field);
       case 'duration':
-        return this.renderStringInput(field, (str: string) =>
-          str.toUpperCase().replace(/[^0-9PYMDTHS.,]/g, ''),
-        );
+        return this.renderStringInput(field, durationSanitizer);
       case 'boolean':
         return this.renderBooleanInput(field);
       case 'string-array':

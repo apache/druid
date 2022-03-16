@@ -31,8 +31,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -217,7 +217,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
     final RowBasedColumnSelectorFactory<MapBasedRow> columnSelectorFactory = RowBasedColumnSelectorFactory.create(
         RowAdapters.standardRow(),
         () -> new MapBasedRow(0, row),
-        RowSignature.builder().add("dim", ValueType.STRING).build(),
+        RowSignature.builder().add("dim", ColumnType.STRING).build(),
         true
     );
 

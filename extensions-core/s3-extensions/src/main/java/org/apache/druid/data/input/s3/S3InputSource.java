@@ -40,6 +40,7 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.s3.S3InputDataConfig;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
@@ -67,6 +68,7 @@ public class S3InputSource extends CloudObjectInputSource
   private final S3InputSourceConfig s3InputSourceConfig;
   private final S3InputDataConfig inputDataConfig;
   private final AWSCredentialsProvider awsCredentialsProvider;
+  private int maxRetries;
 
   /**
    * Constructor for S3InputSource
@@ -124,6 +126,7 @@ public class S3InputSource extends CloudObjectInputSource
           }
         }
     );
+    this.maxRetries = RetryUtils.DEFAULT_MAX_TRIES;
     this.awsCredentialsProvider = awsCredentialsProvider;
   }
 
@@ -139,6 +142,22 @@ public class S3InputSource extends CloudObjectInputSource
   )
   {
     this(s3Client, s3ClientBuilder, inputDataConfig, uris, prefixes, objects, s3InputSourceConfig, null);
+  }
+
+  @VisibleForTesting
+  public S3InputSource(
+      ServerSideEncryptingAmazonS3 s3Client,
+      ServerSideEncryptingAmazonS3.Builder s3ClientBuilder,
+      S3InputDataConfig inputDataConfig,
+      List<URI> uris,
+      List<URI> prefixes,
+      List<CloudObjectLocation> objects,
+      S3InputSourceConfig s3InputSourceConfig,
+      int maxRetries
+  )
+  {
+    this(s3Client, s3ClientBuilder, inputDataConfig, uris, prefixes, objects, s3InputSourceConfig, null);
+    this.maxRetries = maxRetries;
   }
 
   private void applyAssumeRole(
@@ -186,7 +205,7 @@ public class S3InputSource extends CloudObjectInputSource
   @Override
   protected InputEntity createEntity(CloudObjectLocation location)
   {
-    return new S3Entity(s3ClientSupplier.get(), location);
+    return new S3Entity(s3ClientSupplier.get(), location, maxRetries);
   }
 
   @Override
@@ -254,6 +273,10 @@ public class S3InputSource extends CloudObjectInputSource
 
   private Iterable<S3ObjectSummary> getIterableObjectsFromPrefixes()
   {
-    return () -> S3Utils.objectSummaryIterator(s3ClientSupplier.get(), getPrefixes(), inputDataConfig.getMaxListingLength());
+    return () -> S3Utils.objectSummaryIterator(s3ClientSupplier.get(),
+                                               getPrefixes(),
+                                               inputDataConfig.getMaxListingLength(),
+                                               maxRetries
+                                               );
   }
 }

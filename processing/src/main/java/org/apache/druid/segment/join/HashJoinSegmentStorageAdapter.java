@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.join;
 
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -34,7 +33,6 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.filter.Filters;
@@ -188,21 +186,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     }
   }
 
-  @Nullable
-  @Override
-  public String getColumnTypeName(String column)
-  {
-    final Optional<JoinableClause> maybeClause = getClauseForColumn(column);
-
-    if (maybeClause.isPresent()) {
-      final JoinableClause clause = maybeClause.get();
-      final ColumnCapabilities capabilities = clause.getJoinable().getColumnCapabilities(clause.unprefix(column));
-      return capabilities != null ? capabilities.getType().toString() : null;
-    } else {
-      return baseAdapter.getColumnTypeName(column);
-    }
-  }
-
   @Override
   public int getNumRows()
   {
@@ -224,6 +207,13 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     // Cannot get meaningful Metadata for this segment, since it isn't real. At the time of this writing, this method
     // is only used by the 'segmentMetadata' query, which isn't meant to support join segments anyway.
     throw new UnsupportedOperationException("Cannot retrieve metadata from join segment");
+  }
+
+  @Override
+  public boolean hasBuiltInFilters()
+  {
+    return clauses.stream()
+                  .anyMatch(clause -> clause.getJoinType() == JoinType.INNER && !clause.getCondition().isAlwaysTrue());
   }
 
   @Override
@@ -343,7 +333,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
           return PostJoinCursor.wrap(
               retVal,
               VirtualColumns.create(postJoinVirtualColumns),
-              joinFilterSplit.getJoinTableFilter().isPresent() ? joinFilterSplit.getJoinTableFilter().get() : null
+              joinFilterSplit.getJoinTableFilter().orElse(null)
           );
         }
     ).withBaggage(joinablesCloser);
@@ -378,10 +368,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       @Nullable List<VirtualColumn> postJoinVirtualColumns
   )
   {
-    final Set<String> baseColumns = new HashSet<>();
-    baseColumns.add(ColumnHolder.TIME_COLUMN_NAME);
-    Iterables.addAll(baseColumns, baseAdapter.getAvailableDimensions());
-    Iterables.addAll(baseColumns, baseAdapter.getAvailableMetrics());
+    final Set<String> baseColumns = new HashSet<>(baseAdapter.getRowSignature().getColumnNames());
 
     for (VirtualColumn virtualColumn : virtualColumns.getVirtualColumns()) {
       // Virtual columns cannot depend on each other, so we don't need to check transitive dependencies.

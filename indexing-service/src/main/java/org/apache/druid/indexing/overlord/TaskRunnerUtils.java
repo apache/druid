@@ -105,14 +105,9 @@ public class TaskRunnerUtils
     );
 
     try {
-      return new URI(StringUtils.format(
-          "http://%s:%s%s",
-          taskLocation.getHost(),
-          taskLocation.getPort(),
-          path
-      )).toURL();
+      return taskLocation.makeURL(path);
     }
-    catch (URISyntaxException | MalformedURLException e) {
+    catch (MalformedURLException e) {
       throw new RuntimeException(e);
     }
   }

@@ -45,6 +45,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleDescendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.join.Equality;
@@ -68,7 +69,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
   private static final int UNINITIALIZED_CURRENT_ROW = -1;
 
   // Key column type to use when the actual key type is unknown.
-  static final ValueType DEFAULT_KEY_TYPE = ValueType.STRING;
+  static final ColumnType DEFAULT_KEY_TYPE = ColumnType.STRING;
 
   private final IndexedTable table;
   private final List<ConditionMatcher> conditionMatchers;
@@ -343,7 +344,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
 
     private static final int MAX_NUM_CACHE = 10;
 
-    private final ValueType keyType;
+    private final ColumnType keyType;
     private final IndexedTable.Index index;
 
     // DimensionSelector -> (int) dimension id -> (IntList) row numbers
@@ -379,7 +380,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     }
 
     @Override
-    public ValueType defaultType()
+    public ColumnType defaultType()
     {
       return keyType;
     }
@@ -456,7 +457,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     @Override
     public ConditionMatcher makeLongProcessor(BaseLongColumnValueSelector selector)
     {
-      if (index.keyType() == ValueType.LONG) {
+      if (index.keyType().is(ValueType.LONG)) {
         return makePrimitiveLongMatcher(selector);
       } else if (NullHandling.replaceWithDefault()) {
         return () -> index.find(selector.getLong()).iterator();

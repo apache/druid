@@ -33,6 +33,7 @@ import com.google.common.collect.Sets;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -40,6 +41,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -49,6 +51,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.js.JavaScriptConfig;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
@@ -70,6 +73,7 @@ import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
@@ -79,6 +83,7 @@ import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
+import org.apache.druid.query.aggregation.mean.DoubleMeanAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
@@ -98,6 +103,7 @@ import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.extraction.SearchQuerySpecDimExtractionFn;
 import org.apache.druid.query.extraction.StringFormatExtractionFn;
 import org.apache.druid.query.extraction.StrlenExtractionFn;
+import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.extraction.TimeFormatExtractionFn;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
@@ -110,6 +116,7 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SearchQueryDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensionException;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.having.DimensionSelectorHavingSpec;
 import org.apache.druid.query.groupby.having.EqualToHavingSpec;
@@ -128,9 +135,14 @@ import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.data.ComparableList;
+import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.Description;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
@@ -139,6 +151,7 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableCauseMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -154,6 +167,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -292,6 +306,12 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       }
 
       @Override
+      public long getMaxSelectorDictionarySize()
+      {
+        return 20;
+      }
+
+      @Override
       public long getMaxMergingDictionarySize()
       {
         return 400;
@@ -392,8 +412,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, bufferPool),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-            bufferPool
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             processingConfig,
@@ -1025,7 +1044,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "vc",
                 "quality + 'x'",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -1088,7 +1107,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "vc",
                 "cast(quality, 'STRING')",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -1305,6 +1324,833 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "multi-value-dim");
+  }
+
+  @Test
+  public void testMultiValueDimensionNotAllowed()
+  {
+    final String dimName = "placementish";
+
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UOE.class);
+      expectedException.expectMessage(StringUtils.format(
+          "GroupBy v1 does not support %s as false",
+          GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING
+      ));
+    } else if (!vectorize) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectCause(CoreMatchers.instanceOf(ExecutionException.class));
+      expectedException.expectCause(
+          ThrowableCauseMatcher.hasCause(CoreMatchers.instanceOf(UnexpectedMultiValueDimensionException.class))
+      );
+      expectedException.expect(
+          new BaseMatcher<Throwable>()
+          {
+            @Override
+            public boolean matches(Object o)
+            {
+              final UnexpectedMultiValueDimensionException cause =
+                  (UnexpectedMultiValueDimensionException) ((Throwable) o).getCause().getCause();
+
+              return dimName.equals(cause.getDimensionName());
+            }
+
+            @Override
+            public void describeTo(Description description)
+            {
+              description.appendText("an UnexpectedMultiValueDimensionException with dimension [placementish]");
+            }
+          }
+      );
+      expectedException.expectMessage(
+          StringUtils.format(
+              "Encountered multi-value dimension [%s] that cannot be processed with '%s' set to false."
+              + " Consider setting '%s' to true in your query context.",
+              dimName,
+              GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
+              GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING
+          )
+      );
+    } else {
+      cannotVectorize();
+    }
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec(dimName, "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false))
+        .build();
+
+    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+  }
+
+  @Test
+  public void testMultiValueDimensionAsArray()
+  {
+    // array types don't work with group by v1
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage(
+          "GroupBy v1 only supports dimensions with an outputType of STRING.");
+    }
+
+    // Cannot vectorize due to multi-value dimensions.
+    cannotVectorize();
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "v0",
+            "mv_to_array(placementish)",
+            ColumnType.STRING_ARRAY,
+            ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new DefaultDimensionSpec("v0", "alias", ColumnType.STRING_ARRAY))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("a", "preferred"), "rows", 2L, "idx", 282L),
+        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("b", "preferred"), "rows", 2L, "idx", 230L),
+        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("e", "preferred"), "rows", 2L, "idx", 324L),
+        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("h", "preferred"), "rows", 2L, "idx", 233L),
+        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("m", "preferred"), "rows", 6L, "idx", 5317L),
+        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("n", "preferred"), "rows", 2L, "idx", 235L),
+        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("p", "preferred"), "rows", 6L, "idx", 5405L),
+        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("preferred", "t"), "rows", 4L, "idx", 420L)
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "multi-value-dim-groupby-arrays");
+  }
+
+  @Test
+  public void testSingleValueDimensionAsArray()
+  {
+    // array types don't work with group by v1
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage(
+          "GroupBy v1 only supports dimensions with an outputType of STRING");
+    }
+
+    // Cannot vectorize due to multi-value dimensions.
+    cannotVectorize();
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "v0",
+            "mv_to_array(placement)",
+            ColumnType.STRING_ARRAY,
+            ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new DefaultDimensionSpec("v0", "alias", ColumnType.STRING_ARRAY))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            new LongSumAggregatorFactory("idx", "index")
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = ImmutableList.of(
+        makeRow(query, "2011-04-01", "alias",
+                ComparableStringArray.of("preferred"), "rows", 26L, "idx", 12446L
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "multi-value-dim-groupby-arrays");
+  }
+
+  @Test
+  public void testMultiValueDimensionAsArrayWithOtherDims()
+  {
+    // array types don't work with group by v1
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage(
+          "GroupBy v1 only supports dimensions with an outputType of STRING");
+    }
+
+
+    // Cannot vectorize due to multi-value dimensions.
+    cannotVectorize();
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "v0",
+            "mv_to_array(placementish)",
+            ColumnType.STRING_ARRAY,
+            ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new DefaultDimensionSpec("v0", "alias", ColumnType.STRING_ARRAY),
+            new DefaultDimensionSpec("quality", "quality")
+        )
+        .setLimitSpec(new DefaultLimitSpec(
+            ImmutableList.of(new OrderByColumnSpec(
+                "alias",
+                OrderByColumnSpec.Direction.ASCENDING,
+                StringComparators.LEXICOGRAPHIC
+            ), new OrderByColumnSpec(
+                "quality",
+                OrderByColumnSpec.Direction.ASCENDING,
+                StringComparators.LEXICOGRAPHIC
+            )),
+            Integer.MAX_VALUE - 1
+        ))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            ComparableStringArray.of("a", "preferred"),
+            "quality",
+            "automotive",
+            "rows",
+            2L,
+            "idx",
+            282L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            ComparableStringArray.of("b", "preferred"),
+            "quality",
+            "business",
+            "rows",
+            2L,
+            "idx",
+            230L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            ComparableStringArray.of("e", "preferred"),
+            "quality",
+            "entertainment",
+            "rows",
+            2L,
+            "idx",
+            324L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            ComparableStringArray.of("h", "preferred"),
+            "quality",
+            "health",
+            "rows",
+            2L,
+            "idx",
+            233L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            ComparableStringArray.of("m", "preferred"),
+            "quality",
+            "mezzanine",
+            "rows",
+            6L,
+            "idx",
+            5317L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            ComparableStringArray.of("n", "preferred"),
+            "quality",
+            "news",
+            "rows",
+            2L,
+            "idx",
+            235L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            ComparableStringArray.of("p", "preferred"),
+            "quality",
+            "premium",
+            "rows",
+            6L,
+            "idx",
+            5405L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            ComparableStringArray.of("preferred", "t"),
+            "quality",
+            "technology",
+            "rows",
+            2L,
+            "idx",
+            175L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            ComparableStringArray.of("preferred", "t"),
+            "quality",
+            "travel",
+            "rows",
+            2L,
+            "idx",
+            245L
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "multi-value-dims-groupby-arrays");
+
+    query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "v0",
+            "mv_to_array(placementish)",
+            ColumnType.STRING_ARRAY,
+            ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new DefaultDimensionSpec("v0", "alias", ColumnType.STRING_ARRAY),
+            new DefaultDimensionSpec("quality", "quality")
+        )
+        .setLimitSpec(new DefaultLimitSpec(
+            ImmutableList.of(
+                new OrderByColumnSpec(
+                    "alias",
+                    OrderByColumnSpec.Direction.DESCENDING,
+                    StringComparators.LEXICOGRAPHIC
+                ),
+                new OrderByColumnSpec(
+                    "quality",
+                    OrderByColumnSpec.Direction.DESCENDING,
+                    StringComparators.LEXICOGRAPHIC
+                )
+            ),
+            Integer.MAX_VALUE - 1
+        ))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    Collections.reverse(expectedResults);
+
+    results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "multi-value-dims-groupby-arrays-descending");
+  }
+
+  @Test
+  public void testMultiValueDimensionAsStringArrayWithoutExpression()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
+    } else if (!vectorize) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage("Not supported for multi-value dimensions");
+    }
+
+    cannotVectorize();
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec("placementish", "alias", ColumnType.STRING_ARRAY)
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+  }
+
+  @Test
+  public void testSingleValueDimensionAsStringArrayWithoutExpression()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
+    } else if (!vectorize) {
+      // cannot add exact class cast message due to discrepancies between various JDK versions
+      expectedException.expect(RuntimeException.class);
+    }
+    cannotVectorize();
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec("placement", "alias", ColumnType.STRING_ARRAY)
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    List<ResultRow> expectedResults = ImmutableList.of(
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            ComparableStringArray.of("preferred"),
+            "rows",
+            26L,
+            "idx",
+            12446L
+        ));
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        results,
+        "single-value-dims-groupby-arrays-as-string-arrays"
+    );
+  }
+
+
+  @Test
+  public void testNumericDimAsStringArrayWithoutExpression()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
+    } else if (!vectorize) {
+      // cannot add exact class cast message due to discrepancies between various JDK versions
+      expectedException.expect(RuntimeException.class);
+    }
+
+    cannotVectorize();
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec("index", "alias", ColumnType.STRING_ARRAY)
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+  }
+
+
+  @Test
+  public void testMultiValueVirtualDimAsString()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
+    } else if (!vectorize) {
+      // cannot add exact class cast message due to discrepancies between various JDK versions
+      expectedException.expect(RuntimeException.class);
+    }
+
+    cannotVectorize();
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "v0",
+            "mv_to_array(placementish)",
+            ColumnType.STRING_ARRAY,
+            ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new DefaultDimensionSpec("v0", "alias", ColumnType.STRING)
+        )
+        .setDimensions(
+            new DefaultDimensionSpec("index", "alias", ColumnType.STRING_ARRAY)
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+  }
+
+  @Test
+  public void testExtractionStringSpecWithMultiValueVirtualDimAsInput()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality");
+    }
+    cannotVectorize();
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "v0",
+            "mv_to_array(placementish)",
+            ColumnType.STRING_ARRAY,
+            ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new ExtractionDimensionSpec(
+                "v0",
+                "alias",
+                ColumnType.STRING,
+                new SubstringDimExtractionFn(1, 1)
+            )
+        )
+
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            null,
+            "rows",
+            26L,
+            "idx",
+            12446L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            "r",
+            "rows",
+            26L,
+            "idx",
+            12446L
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        results,
+        "multi-value-extraction-spec-as-string-dim-groupby-arrays"
+    );
+  }
+
+
+  @Test
+  public void testExtractionStringArraySpecWithMultiValueVirtualDimAsInput()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
+    } else if (!vectorize) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage("Not supported for multi-value dimensions");
+    }
+
+    cannotVectorize();
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "v0",
+            "mv_to_array(placementish)",
+            ColumnType.STRING_ARRAY,
+            ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new ExtractionDimensionSpec("v0", "alias", ColumnType.STRING_ARRAY,
+                                        new SubstringDimExtractionFn(1, 1)
+            )
+        )
+
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+  }
+
+  @Test
+  public void testVirtualColumnNumericTypeAsStringArray()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
+    } else if (!vectorize) {
+      // cannot add exact class cast message due to discrepancies between various JDK versions
+      expectedException.expect(RuntimeException.class);
+    }
+
+    cannotVectorize();
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "v0",
+            "array(index)",
+            ColumnType.STRING_ARRAY,
+            ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new DefaultDimensionSpec("v0", "alias", ColumnType.STRING_ARRAY
+            )
+        )
+
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+  }
+
+  @Test
+  public void testNestedGroupByWithStringArray()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
+    }
+    cannotVectorize();
+    GroupByQuery inner = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "v0",
+            "mv_to_array(placementish)",
+            ColumnType.STRING_ARRAY,
+            ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new DefaultDimensionSpec("v0", "alias", ColumnType.STRING_ARRAY)
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    GroupByQuery outer = makeQueryBuilder()
+        .setDataSource(new QueryDataSource(inner))
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec("alias", "alias_outer", ColumnType.STRING_ARRAY
+            )
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("a", "preferred"), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("b", "preferred"), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("e", "preferred"), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("h", "preferred"), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("m", "preferred"), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("n", "preferred"), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("p", "preferred"), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("preferred", "t"), "rows", 1L)
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outer);
+    TestHelper.assertExpectedObjects(expectedResults, results, "multi-value-dim-nested-groupby-arrays");
+  }
+
+  @Test
+  public void testNestedGroupByWithLongArrays()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
+    }
+    cannotVectorize();
+    GroupByQuery inner = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "v0",
+            "array(1,2)",
+            ColumnType.LONG_ARRAY,
+            ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new DefaultDimensionSpec("v0", "alias", ColumnType.LONG_ARRAY)
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    GroupByQuery outer = makeQueryBuilder()
+        .setDataSource(new QueryDataSource(inner))
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec("alias", "alias_outer", ColumnType.LONG_ARRAY
+            )
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = ImmutableList.of(
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1L, 2L)),
+                "rows", 1L
+        ));
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outer);
+    TestHelper.assertExpectedObjects(expectedResults, results, "long-nested-groupby-arrays");
+  }
+
+  @Test
+  public void testGroupByWithLongArrays()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
+    }
+    cannotVectorize();
+    GroupByQuery outer = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "v0",
+            "array(index)",
+            ColumnType.LONG_ARRAY,
+            ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new DefaultDimensionSpec("v0", "alias_outer", ColumnType.LONG_ARRAY)
+        )
+        .setLimitSpec(new DefaultLimitSpec(
+            ImmutableList.of(new OrderByColumnSpec(
+                "alias_outer",
+                OrderByColumnSpec.Direction.ASCENDING,
+                StringComparators.NUMERIC
+            )),
+            Integer.MAX_VALUE
+        ))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(78.622547)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(97.387433)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(109.705815)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(110.931934)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(112.987027)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(113.446008)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(114.290141)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(118.57034)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(119.922742)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(120.134704)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(121.583581)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(126.411364)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(135.301506)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(135.885094)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(144.507368)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(147.425935)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(158.747224)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(166.016049)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1049.738585)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1144.342401)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1193.556278)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1234.247546)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1314.839715)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1321.375057)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1447.34116)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1522.043733)), "rows", 1L)
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outer);
+    TestHelper.assertExpectedObjects(expectedResults, results, "long-groupby-arrays");
+  }
+
+  @Test
+  public void testGroupByWithLongArraysDesc()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
+    }
+    cannotVectorize();
+    GroupByQuery outer = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "v0",
+            "array(index)",
+            ColumnType.LONG_ARRAY,
+            ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new DefaultDimensionSpec("v0", "alias_outer", ColumnType.LONG_ARRAY)
+        )
+        .setLimitSpec(new DefaultLimitSpec(
+            ImmutableList.of(new OrderByColumnSpec(
+                "alias_outer",
+                OrderByColumnSpec.Direction.DESCENDING,
+                StringComparators.NUMERIC
+            )),
+            Integer.MAX_VALUE - 1
+        ))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(78.622547)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(97.387433)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(109.705815)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(110.931934)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(112.987027)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(113.446008)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(114.290141)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(118.57034)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(119.922742)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(120.134704)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(121.583581)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(126.411364)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(135.301506)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(135.885094)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(144.507368)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(147.425935)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(158.747224)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(166.016049)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1049.738585)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1144.342401)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1193.556278)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1234.247546)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1314.839715)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1321.375057)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1447.34116)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1522.043733)), "rows", 1L)
+    );
+    // reversing list
+    Collections.reverse(expectedResults);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outer);
+    TestHelper.assertExpectedObjects(expectedResults, results, "long-groupby-arrays");
   }
 
   @Test
@@ -2599,8 +3445,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .setDimensions(new DefaultDimensionSpec("market", "market"))
         .setAggregatorSpecs(
-            new LongFirstAggregatorFactory("first", "index"),
-            new LongLastAggregatorFactory("last", "index")
+            new LongFirstAggregatorFactory("first", "index", null),
+            new LongLastAggregatorFactory("last", "index", null)
         )
         .setGranularity(QueryRunnerTestHelper.MONTH_GRAN)
         .build();
@@ -2692,8 +3538,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             QueryRunnerTestHelper.ROWS_COUNT,
             QueryRunnerTestHelper.INDEX_LONG_SUM,
             QueryRunnerTestHelper.QUALITY_CARDINALITY,
-            new LongFirstAggregatorFactory("first", "index"),
-            new LongLastAggregatorFactory("last", "index")
+            new LongFirstAggregatorFactory("first", "index", null),
+            new LongLastAggregatorFactory("last", "index", null)
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
@@ -3278,7 +4124,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "expr",
                 "index * 2 + indexMin / 10",
-                ValueType.FLOAT,
+                ColumnType.FLOAT,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -3488,7 +4334,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     ExpressionVirtualColumn expressionVirtualColumn = new ExpressionVirtualColumn(
         "expr",
         "index / 2 + indexMin",
-        ValueType.FLOAT,
+        ColumnType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
     List<AggregatorFactory> aggregatorSpecs2 = Arrays.asList(
@@ -4897,7 +5743,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     subquery = makeQueryBuilder(subquery)
         .setVirtualColumns(
-            new ExpressionVirtualColumn("expr", "-index + 100", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn("expr", "-index + 100", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
         )
         .setAggregatorSpecs(
             QueryRunnerTestHelper.ROWS_COUNT,
@@ -5035,6 +5881,33 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-different-intervals");
+  }
+
+  @Test
+  public void testDoubleMeanQuery()
+  {
+    GroupByQuery query = new GroupByQuery.Builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setGranularity(Granularities.ALL)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setAggregatorSpecs(
+            new DoubleMeanAggregatorFactory("meanOnDouble", "doubleNumericNull")
+        )
+        .build();
+
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(ISE.class);
+      expectedException.expectMessage("Unable to handle complex type");
+      GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    } else {
+      Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+      Row result = Iterables.getOnlyElement(results).toMapBasedRow(query);
+      if (NullHandling.replaceWithDefault()) {
+        Assert.assertEquals(39.2307d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
+      } else {
+        Assert.assertEquals(51.0d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
+      }
+    }
   }
 
   @Test
@@ -5965,7 +6838,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     final GroupByQuery query = makeQueryBuilder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setVirtualColumns(new ExpressionVirtualColumn("expr", "1", ValueType.FLOAT, TestExprMacroTable.INSTANCE))
+        .setVirtualColumns(new ExpressionVirtualColumn("expr", "1", ColumnType.FLOAT, TestExprMacroTable.INSTANCE))
         .setDimensions(new ArrayList<>()).setAggregatorSpecs(new LongSumAggregatorFactory("count", "expr"))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
@@ -6362,8 +7235,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("market", "market"))
         .setAggregatorSpecs(
             QueryRunnerTestHelper.ROWS_COUNT,
-            new LongFirstAggregatorFactory("innerfirst", "index"),
-            new LongLastAggregatorFactory("innerlast", "index")
+            new LongFirstAggregatorFactory("innerfirst", "index", null),
+            new LongLastAggregatorFactory("innerlast", "index", null)
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .overrideContext(ImmutableMap.of("finalize", true))
@@ -6374,8 +7247,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .setDimensions(Collections.emptyList())
         .setAggregatorSpecs(
-            new LongFirstAggregatorFactory("first", "innerfirst"),
-            new LongLastAggregatorFactory("last", "innerlast")
+            new LongFirstAggregatorFactory("first", "innerfirst", null),
+            new LongLastAggregatorFactory("last", "innerlast", null)
         )
         .setGranularity(QueryRunnerTestHelper.MONTH_GRAN)
         .build();
@@ -6401,7 +7274,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ValueType.STRING, TestExprMacroTable.INSTANCE))
+        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ColumnType.STRING, TestExprMacroTable.INSTANCE))
         .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("market", "market2"),
             new DefaultDimensionSpec("alias", "alias2")
@@ -6514,7 +7387,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ValueType.STRING, TestExprMacroTable.INSTANCE))
+        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ColumnType.STRING, TestExprMacroTable.INSTANCE))
         .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("quality", "quality2"),
             new DefaultDimensionSpec("market", "market2"),
@@ -6870,7 +7743,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ValueType.STRING, TestExprMacroTable.INSTANCE))
+        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ColumnType.STRING, TestExprMacroTable.INSTANCE))
         .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("quality", "quality"),
             new DefaultDimensionSpec("market", "market"),
@@ -6963,7 +7836,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(Lists.newArrayList(
-            new DefaultDimensionSpec("qualityLong", "ql", ValueType.LONG),
+            new DefaultDimensionSpec("qualityLong", "ql", ColumnType.LONG),
             new DefaultDimensionSpec("market", "market2")
         ))
         .setAggregatorSpecs(
@@ -8862,7 +9735,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setVirtualColumns(
-            new ExpressionVirtualColumn("v0", "concat(quality,market)", ValueType.STRING, TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn("v0", "concat(quality,market)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
         )
         .setAggregatorSpecs(
             QueryRunnerTestHelper.ROWS_COUNT,
@@ -8938,7 +9811,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG))
+        .setDimensions(new DefaultDimensionSpec("qualityLong", "ql_alias", ColumnType.LONG))
         .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .addOrderByColumn(new OrderByColumnSpec(
@@ -9018,7 +9891,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG))
+        .setDimensions(new DefaultDimensionSpec("qualityLong", "ql_alias", ColumnType.LONG))
         .setDimFilter(new InDimFilter("quality", Arrays.asList("entertainment", "technology"), null))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .addOrderByColumn(new OrderByColumnSpec(
@@ -9117,7 +9990,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("__time", "time_alias", ValueType.LONG))
+        .setDimensions(new DefaultDimensionSpec("__time", "time_alias", ColumnType.LONG))
         .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
@@ -9204,7 +10077,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("index", "index_alias", ValueType.FLOAT))
+        .setDimensions(new DefaultDimensionSpec("index", "index_alias", ColumnType.FLOAT))
         .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .addOrderByColumn(new OrderByColumnSpec(
@@ -9255,7 +10128,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("qualityFloat", "qf_alias", ValueType.FLOAT))
+        .setDimensions(new DefaultDimensionSpec("qualityFloat", "qf_alias", ColumnType.FLOAT))
         .setDimFilter(new InDimFilter("quality", Arrays.asList("entertainment", "technology"), null))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .addOrderByColumn(new OrderByColumnSpec(
@@ -9305,7 +10178,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("qualityDouble", "alias", ValueType.DOUBLE))
+        .setDimensions(new DefaultDimensionSpec("qualityDouble", "alias", ColumnType.DOUBLE))
         .setDimFilter(new InDimFilter("quality", Arrays.asList("entertainment", "technology"), null))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .addOrderByColumn(new OrderByColumnSpec(
@@ -9409,9 +10282,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
             new DefaultDimensionSpec("market", "alias"),
-            new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG),
-            new DefaultDimensionSpec("__time", "time_alias", ValueType.LONG),
-            new DefaultDimensionSpec("index", "index_alias", ValueType.FLOAT)
+            new DefaultDimensionSpec("qualityLong", "ql_alias", ColumnType.LONG),
+            new DefaultDimensionSpec("__time", "time_alias", ColumnType.LONG),
+            new DefaultDimensionSpec("index", "index_alias", ColumnType.FLOAT)
         ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setHavingSpec(
             new DimFilterHavingSpec(
@@ -9528,10 +10401,10 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
-            new DefaultDimensionSpec("time_alias", "time_alias2", ValueType.LONG),
-            new DefaultDimensionSpec("ql_alias", "ql_alias_long", ValueType.LONG),
-            new DefaultDimensionSpec("qf_alias", "qf_alias_float", ValueType.FLOAT),
-            new DefaultDimensionSpec("ql_alias", "ql_alias_float", ValueType.FLOAT)
+            new DefaultDimensionSpec("time_alias", "time_alias2", ColumnType.LONG),
+            new DefaultDimensionSpec("ql_alias", "ql_alias_long", ColumnType.LONG),
+            new DefaultDimensionSpec("qf_alias", "qf_alias_float", ColumnType.FLOAT),
+            new DefaultDimensionSpec("ql_alias", "ql_alias_float", ColumnType.FLOAT)
         ).setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
@@ -9574,12 +10447,12 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     // rows with `technology` have `170000` in the qualityNumericString field
     RegexFilteredDimensionSpec regexSpec = new RegexFilteredDimensionSpec(
-        new DefaultDimensionSpec("qualityNumericString", "ql", ValueType.LONG),
+        new DefaultDimensionSpec("qualityNumericString", "ql", ColumnType.LONG),
         "170000"
     );
 
     ListFilteredDimensionSpec listFilteredSpec = new ListFilteredDimensionSpec(
-        new DefaultDimensionSpec("qualityNumericString", "qf", ValueType.FLOAT),
+        new DefaultDimensionSpec("qualityNumericString", "qf", ColumnType.FLOAT),
         Sets.newHashSet("170000"),
         true
     );
@@ -9629,12 +10502,12 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     }
 
     RegexFilteredDimensionSpec regexSpec = new RegexFilteredDimensionSpec(
-        new DefaultDimensionSpec("qualityLong", "ql", ValueType.LONG),
+        new DefaultDimensionSpec("qualityLong", "ql", ColumnType.LONG),
         "1700"
     );
 
     ListFilteredDimensionSpec listFilteredSpec = new ListFilteredDimensionSpec(
-        new DefaultDimensionSpec("qualityFloat", "qf", ValueType.FLOAT),
+        new DefaultDimensionSpec("qualityFloat", "qf", ColumnType.FLOAT),
         Sets.newHashSet("17000.0"),
         true
     );
@@ -9701,8 +10574,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
             new DefaultDimensionSpec("quality", "alias"),
-            new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG),
-            new DefaultDimensionSpec("qualityFloat", "qf_alias", ValueType.FLOAT)
+            new DefaultDimensionSpec("qualityLong", "ql_alias", ColumnType.LONG),
+            new DefaultDimensionSpec("qualityFloat", "qf_alias", ColumnType.FLOAT)
         )
         .setDimFilter(
             new InDimFilter(
@@ -9718,8 +10591,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
-            new DefaultDimensionSpec("ql_alias", "quallong", ValueType.LONG),
-            new DefaultDimensionSpec("qf_alias", "qualfloat", ValueType.FLOAT)
+            new DefaultDimensionSpec("ql_alias", "quallong", ColumnType.LONG),
+            new DefaultDimensionSpec("qf_alias", "qualfloat", ColumnType.FLOAT)
         )
         .setDimFilter(
             new AndDimFilter(
@@ -9781,9 +10654,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
             new DefaultDimensionSpec("quality", "alias"),
-            new ExtractionDimensionSpec("qualityLong", "ql_alias", ValueType.LONG, extractionFn),
-            new ExtractionDimensionSpec("qualityFloat", "qf_alias", ValueType.FLOAT, extractionFn),
-            new ExtractionDimensionSpec("qualityDouble", "qd_alias", ValueType.DOUBLE, extractionFn)
+            new ExtractionDimensionSpec("qualityLong", "ql_alias", ColumnType.LONG, extractionFn),
+            new ExtractionDimensionSpec("qualityFloat", "qf_alias", ColumnType.FLOAT, extractionFn),
+            new ExtractionDimensionSpec("qualityDouble", "qd_alias", ColumnType.DOUBLE, extractionFn)
         )
         .setDimFilter(
             new InDimFilter(
@@ -9799,9 +10672,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
-            new DefaultDimensionSpec("ql_alias", "quallong", ValueType.LONG),
-            new DefaultDimensionSpec("qf_alias", "qualfloat", ValueType.FLOAT),
-            new DefaultDimensionSpec("qd_alias", "qualdouble", ValueType.DOUBLE)
+            new DefaultDimensionSpec("ql_alias", "quallong", ColumnType.LONG),
+            new DefaultDimensionSpec("qf_alias", "qualfloat", ColumnType.FLOAT),
+            new DefaultDimensionSpec("qd_alias", "qualdouble", ColumnType.DOUBLE)
         )
         .setAggregatorSpecs(
             new LongSumAggregatorFactory("ql_alias_sum", "ql_alias"),
@@ -9863,8 +10736,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
             new DefaultDimensionSpec("market", "alias"),
-            new DefaultDimensionSpec("__time", "time_alias", ValueType.LONG),
-            new DefaultDimensionSpec("index", "index_alias", ValueType.FLOAT)
+            new DefaultDimensionSpec("__time", "time_alias", ColumnType.LONG),
+            new DefaultDimensionSpec("index", "index_alias", ColumnType.FLOAT)
         ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
@@ -9874,7 +10747,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
             new DefaultDimensionSpec("alias", "market"),
-            new DefaultDimensionSpec("time_alias", "time_alias2", ValueType.LONG)
+            new DefaultDimensionSpec("time_alias", "time_alias2", ColumnType.LONG)
         )
         .setAggregatorSpecs(
             new LongMaxAggregatorFactory("time_alias_max", "time_alias"),
@@ -9957,7 +10830,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new ExtractionDimensionSpec(
             QueryRunnerTestHelper.QUALITY_DIMENSION,
             "alias",
-            ValueType.LONG,
+            ColumnType.LONG,
             strlenFn
         ))
         .setDimFilter(new SelectorDimFilter(QueryRunnerTestHelper.QUALITY_DIMENSION, "entertainment", null))
@@ -10080,7 +10953,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"), new ExtractionDimensionSpec(
             "qualityFloat",
             "qf_inner",
-            ValueType.FLOAT,
+            ColumnType.FLOAT,
             jsExtractionFn
         ))
         .setDimFilter(new SelectorDimFilter("quality", "technology", null))
@@ -10094,7 +10967,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("alias", "alias"), new ExtractionDimensionSpec(
             "qf_inner",
             "qf_outer",
-            ValueType.FLOAT,
+            ColumnType.FLOAT,
             jsExtractionFn
         )).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -10127,7 +11000,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             new ExtractionDimensionSpec(
                 ColumnHolder.TIME_COLUMN_NAME,
                 "time_day",
-                ValueType.LONG,
+                ColumnType.LONG,
                 new TimeFormatExtractionFn(null, null, null, Granularities.DAY, true)
             )
         )
@@ -10142,7 +11015,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("alias", "alias"), new ExtractionDimensionSpec(
             "time_day",
             "time_week",
-            ValueType.LONG,
+            ColumnType.LONG,
             new TimeFormatExtractionFn(null, null, null, Granularities.WEEK, true)
         )).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -10265,7 +11138,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN).setDimensions(
-            new ExtractionDimensionSpec("quality", "qualityLen", ValueType.LONG, StrlenExtractionFn.instance())
+            new ExtractionDimensionSpec("quality", "qualityLen", ColumnType.LONG, StrlenExtractionFn.instance())
         )
         .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .setLimitSpec(
@@ -10330,6 +11203,76 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
+  }
+
+  @Test
+  public void testMergeLimitPushDownResultsWithLongDimensionNotInLimitSpec()
+  {
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
+    if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
+      return;
+    }
+    GroupByQuery.Builder builder = makeQueryBuilder()
+            .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+            .setInterval("2011-04-02/2011-04-04")
+            .setDimensions(new ExtractionDimensionSpec("quality", "qualityLen", ColumnType.LONG, StrlenExtractionFn.instance()))
+            .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+            .setLimitSpec(
+                    new DefaultLimitSpec(
+                            Collections.emptyList(),
+                            20
+                    )
+            )
+            .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
+            .setGranularity(Granularities.ALL);
+
+    final GroupByQuery allGranQuery = builder.build();
+
+    QueryRunner mergedRunner = factory.getToolchest().mergeResults(
+        (queryPlus, responseContext) -> {
+          // simulate two daily segments
+          final QueryPlus<ResultRow> queryPlus1 = queryPlus.withQuery(
+                  queryPlus.getQuery().withQuerySegmentSpec(
+                          new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+                  )
+          );
+          final QueryPlus<ResultRow> queryPlus2 = queryPlus.withQuery(
+                  queryPlus.getQuery().withQuerySegmentSpec(
+                          new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+                  )
+          );
+
+          return factory.getToolchest().mergeResults(
+              (queryPlus3, responseContext1) -> new MergeSequence<>(
+                  queryPlus3.getQuery().getResultOrdering(),
+                  Sequences.simple(
+                      Arrays.asList(
+                          runner.run(queryPlus1, responseContext1),
+                          runner.run(queryPlus2, responseContext1)
+                      )
+                  )
+              )
+          ).run(queryPlus, responseContext);
+        }
+    );
+    Map<String, Object> context = new HashMap<>();
+    List<ResultRow> allGranExpectedResults = Arrays.asList(
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 4L, "rows", 2L),
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 6L, "rows", 4L),
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 7L, "rows", 6L),
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 8L, "rows", 2L),
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 9L, "rows", 6L),
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 10L, "rows", 4L),
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 13L, "rows", 2L)
+    );
+
+    TestHelper.assertExpectedObjects(
+            allGranExpectedResults,
+            mergedRunner.run(QueryPlus.wrap(allGranQuery)),
+            "merged"
+    );
   }
 
   @Test
@@ -10869,7 +11812,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "v",
                 "case_searched(idx > 1000, 1, 0)",
-                ValueType.LONG,
+                ColumnType.LONG,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -10948,7 +11891,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
             new DefaultDimensionSpec("quality", "alias"),
-            new ExtractionDimensionSpec("quality", "qualityLen", ValueType.LONG, StrlenExtractionFn.instance())
+            new ExtractionDimensionSpec("quality", "qualityLen", ColumnType.LONG, StrlenExtractionFn.instance())
         )
         .setDimFilter(new SelectorDimFilter("quality", "technology", null))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
@@ -10965,7 +11908,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         (query1, future) -> {
           return;
         },
-        ImmutableList.<QueryRunner<ResultRow>>of(runner, runner)
+        ImmutableList.of(runner, runner)
     );
 
     QueryRunner<ResultRow> mergingRunner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(ceqr));
@@ -11014,7 +11957,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
-            new DefaultDimensionSpec("longNumericNull", "nullable", ValueType.LONG)
+            new DefaultDimensionSpec("longNumericNull", "nullable", ColumnType.LONG)
         )
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -11055,7 +11998,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
-            new DefaultDimensionSpec("doubleNumericNull", "nullable", ValueType.DOUBLE)
+            new DefaultDimensionSpec("doubleNumericNull", "nullable", ColumnType.DOUBLE)
         )
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -11096,7 +12039,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
-            new DefaultDimensionSpec("doubleNumericNull", "nullable", ValueType.DOUBLE)
+            new DefaultDimensionSpec("doubleNumericNull", "nullable", ColumnType.DOUBLE)
         )
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -11138,7 +12081,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
-            new DefaultDimensionSpec("floatNumericNull", "nullable", ValueType.FLOAT)
+            new DefaultDimensionSpec("floatNumericNull", "nullable", ColumnType.FLOAT)
         )
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -11182,7 +12125,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "v",
                 "qualityDouble * qualityLong",
-                ValueType.LONG,
+                ColumnType.LONG,
                 TestExprMacroTable.INSTANCE
             ),
             new ExpressionVirtualColumn(
@@ -11193,7 +12136,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             )
         )
         .setDimensions(
-            new DefaultDimensionSpec("v", "v", ValueType.LONG)
+            new DefaultDimensionSpec("v", "v", ColumnType.LONG)
         )
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("twosum", null, "1 + two", TestExprMacroTable.INSTANCE))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -11206,6 +12149,41 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(query, "2011-04-01", "v", 14400000L, "rows", 2L, "twosum", 6L),
         makeRow(query, "2011-04-01", "v", 16900000L, "rows", 2L, "twosum", 6L),
         makeRow(query, "2011-04-01", "v", 19600000L, "rows", 6L, "twosum", 18L)
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+  @Test
+  public void testGroupByOnVirtualColumnTimeFloor()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+    }
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "v",
+                "timestamp_floor(__time, 'P1D')",
+                ColumnType.LONG,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setDimensions(
+            new DefaultDimensionSpec("v", "v", ColumnType.LONG)
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .setLimit(5)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "v", 1301616000000L, "rows", 13L), // 04-01
+        makeRow(query, "2011-04-01", "v", 1301702400000L, "rows", 13L)  // 04-02
     );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
@@ -11230,6 +12208,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 "0",
                 null,
                 false,
+                false,
+                false,
                 "__acc + 1",
                 "__acc + rows",
                 null,
@@ -11244,6 +12224,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 "0.0",
                 null,
                 null,
+                false,
+                false,
                 "__acc + index",
                 null,
                 null,
@@ -11444,6 +12426,95 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testGroupByWithExpressionAggregatorWithComplex()
+  {
+    cannotVectorize();
+    final GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .setDimensions(Collections.emptyList())
+        .setAggregatorSpecs(
+            new CardinalityAggregatorFactory(
+                "car",
+                ImmutableList.of(new DefaultDimensionSpec("quality", "quality")),
+                false
+            ),
+            new ExpressionLambdaAggregatorFactory(
+                "carExpr",
+                ImmutableSet.of("quality"),
+                null,
+                "hyper_unique()",
+                null,
+                null,
+                false,
+                false,
+                "hyper_unique_add(quality, __acc)",
+                "hyper_unique_add(carExpr, __acc)",
+                null,
+                "hyper_unique_estimate(o)",
+                null,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(query, "1970-01-01", "car", QueryRunnerTestHelper.UNIQUES_9, "carExpr", QueryRunnerTestHelper.UNIQUES_9)
+    );
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "subquery-cardinality");
+  }
+
+  @Test
+  public void testGroupByWithExpressionAggregatorWithComplexOnSubquery()
+  {
+    final GroupByQuery subquery = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .setDimensions(new DefaultDimensionSpec("market", "market"), new DefaultDimensionSpec("quality", "quality"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("index", "index"))
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    final GroupByQuery query = makeQueryBuilder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .setDimensions(Collections.emptyList())
+        .setAggregatorSpecs(
+            new CardinalityAggregatorFactory(
+                "car",
+                ImmutableList.of(new DefaultDimensionSpec("quality", "quality")),
+                false
+            ),
+            new ExpressionLambdaAggregatorFactory(
+                "carExpr",
+                ImmutableSet.of("quality"),
+                null,
+                "hyper_unique()",
+                null,
+                null,
+                false,
+                false,
+                "hyper_unique_add(quality, __acc)",
+                null,
+                null,
+                "hyper_unique_estimate(o)",
+                null,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(query, "1970-01-01", "car", QueryRunnerTestHelper.UNIQUES_9, "carExpr", QueryRunnerTestHelper.UNIQUES_9)
+    );
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "subquery-cardinality");
+  }
+
+  @Test
   public void testGroupByWithExpressionAggregatorWithArrays()
   {
     // expression agg not yet vectorized
@@ -11452,7 +12523,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     // array types don't work with group by v1
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(IllegalStateException.class);
-      expectedException.expectMessage("Unable to handle type[STRING_ARRAY] for AggregatorFactory[class org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory]");
+      expectedException.expectMessage("Unable to handle type[ARRAY<STRING>] for AggregatorFactory[class org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory]");
     }
 
     GroupByQuery query = makeQueryBuilder()
@@ -11466,6 +12537,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 null,
                 "0",
                 null,
+                false,
+                false,
                 false,
                 "__acc + 1",
                 "__acc + rows",
@@ -11481,6 +12554,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 "0.0",
                 null,
                 true,
+                false,
+                false,
                 "__acc + index",
                 null,
                 null,
@@ -11495,6 +12570,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 "[]",
                 null,
                 null,
+                true,
+                false,
                 "array_set_add(acc, market)",
                 "array_set_add_all(acc, array_agg_distinct)",
                 null,
@@ -11565,7 +12642,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "idx",
             2871.8866900000003d,
             "array_agg_distinct",
-            new String[] {"upfront", "spot", "total_market"}
+            new String[] {"spot", "total_market", "upfront"}
         ),
         makeRow(
             query,
@@ -11589,7 +12666,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "idx",
             2900.798647d,
             "array_agg_distinct",
-            new String[] {"upfront", "spot", "total_market"}
+            new String[] {"spot", "total_market", "upfront"}
         ),
         makeRow(
             query,
@@ -11674,7 +12751,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "idx",
             2448.830613d,
             "array_agg_distinct",
-            new String[] {"upfront", "spot", "total_market"}
+            new String[] {"spot", "total_market", "upfront"}
         ),
         makeRow(
             query,
@@ -11698,7 +12775,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "idx",
             2506.415148d,
             "array_agg_distinct",
-            new String[] {"upfront", "spot", "total_market"}
+            new String[] {"spot", "total_market", "upfront"}
         ),
         makeRow(
             query,
@@ -11739,7 +12816,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     // array types don't work with group by v1
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(IllegalStateException.class);
-      expectedException.expectMessage("Unable to handle type[STRING_ARRAY] for AggregatorFactory[class org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory]");
+      expectedException.expectMessage("Unable to handle type[ARRAY<STRING>] for AggregatorFactory[class org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory]");
     }
 
     GroupByQuery query = makeQueryBuilder()
@@ -11754,6 +12831,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 "[]",
                 null,
                 null,
+                true,
+                false,
                 "array_set_add(acc, placementish)",
                 "array_set_add_all(acc, array_agg_distinct)",
                 null,
@@ -11828,7 +12907,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "alias",
             "technology",
             "array_agg_distinct",
-            new String[] {"t", "preferred"}
+            new String[] {"preferred", "t"}
         ),
         makeRow(
             query,
@@ -11836,7 +12915,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "alias",
             "travel",
             "array_agg_distinct",
-            new String[] {"t", "preferred"}
+            new String[] {"preferred", "t"}
         ),
 
         makeRow(
@@ -11901,7 +12980,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "alias",
             "technology",
             "array_agg_distinct",
-            new String[] {"t", "preferred"}
+            new String[] {"preferred", "t"}
         ),
         makeRow(
             query,
@@ -11909,7 +12988,166 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "alias",
             "travel",
             "array_agg_distinct",
-            new String[] {"t", "preferred"}
+            new String[] {"preferred", "t"}
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+  @Test
+  public void testGroupByFloatMaxExpressionVsVirtualColumn()
+  {
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("nil", "nil", ColumnType.STRING))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "v0",
+                "\"floatNumericNull\"",
+                ColumnType.FLOAT,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setAggregatorSpecs(
+            new FloatMinAggregatorFactory(
+                "min",
+                "floatNumericNull"
+            ),
+            new FloatMinAggregatorFactory(
+                "minExpression",
+                null,
+                "\"floatNumericNull\"",
+                TestExprMacroTable.INSTANCE
+            ),
+            new FloatMinAggregatorFactory(
+                "minVc",
+                "v0"
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "nil",
+            null,
+            "min",
+            NullHandling.replaceWithDefault() ? 0.0 : 10.0,
+            "minExpression",
+            NullHandling.replaceWithDefault() ? 0.0 : 10.0,
+            "minVc",
+            NullHandling.replaceWithDefault() ? 0.0 : 10.0
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+  @Test
+  public void testGroupByFloatMinExpressionVsVirtualColumnWithNonFloatInputButMatchingVirtualColumnType()
+  {
+    // SQL should never plan anything like this, the virtual column would be inferred to be a string type, and
+    // would try to make a string min aggregator, which would throw an exception at the time of this comment since
+    // it doesn't exist...
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("nil", "nil", ColumnType.STRING))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "v0",
+                "\"placement\"",
+                ColumnType.FLOAT,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setAggregatorSpecs(
+            new FloatMinAggregatorFactory(
+                "minExpression",
+                null,
+                "\"placement\"",
+                TestExprMacroTable.INSTANCE
+            ),
+            new FloatMinAggregatorFactory(
+                "minVc",
+                "v0"
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "nil",
+            null,
+            "minExpression",
+            NullHandling.replaceWithDefault() ? Float.POSITIVE_INFINITY : null,
+            "minVc",
+            NullHandling.defaultFloatValue()
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+  @Test
+  public void testGroupByFloatMinExpressionVsVirtualColumnWithExplicitStringVirtualColumnTypedInput()
+  {
+    cannotVectorize();
+    // SQL should never plan anything like this, where the virtual column type mismatches the aggregator type
+    // but it still works ok
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("nil", "nil", ColumnType.STRING))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "v0",
+                "\"placement\"",
+                ColumnType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setAggregatorSpecs(
+            new FloatMinAggregatorFactory(
+                "min",
+                "placement"
+            ),
+            new FloatMinAggregatorFactory(
+                "minExpression",
+                null,
+                "\"placement\"",
+                TestExprMacroTable.INSTANCE
+            ),
+            new FloatMinAggregatorFactory(
+                "minVc",
+                "v0"
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "nil",
+            null,
+            "min",
+            Float.POSITIVE_INFINITY,
+            "minExpression",
+            NullHandling.replaceWithDefault() ? Float.POSITIVE_INFINITY : null,
+            "minVc",
+            NullHandling.replaceWithDefault() ? Float.POSITIVE_INFINITY : null
         )
     );
 

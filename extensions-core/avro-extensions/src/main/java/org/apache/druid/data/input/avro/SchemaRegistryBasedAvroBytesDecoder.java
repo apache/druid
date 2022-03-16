@@ -19,8 +19,10 @@
 
 package org.apache.druid.data.input.avro;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import io.confluent.kafka.schemaregistry.ParsedSchema;
 import io.confluent.kafka.schemaregistry.avro.AvroSchema;
@@ -32,8 +34,9 @@ import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DecoderFactory;
-import org.apache.druid.java.util.common.RE;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.utils.DynamicConfigProviderUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -48,16 +51,19 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
   private final String url;
   private final int capacity;
   private final List<String> urls;
-  private final Map<String, ?> config;
-  private final Map<String, String> headers;
+  private final Map<String, Object> config;
+  private final Map<String, Object> headers;
+  private final ObjectMapper jsonMapper;
+  public static final String DRUID_DYNAMIC_CONFIG_PROVIDER_KEY = "druid.dynamic.config.provider";
 
   @JsonCreator
   public SchemaRegistryBasedAvroBytesDecoder(
       @JsonProperty("url") @Deprecated String url,
       @JsonProperty("capacity") Integer capacity,
       @JsonProperty("urls") @Nullable List<String> urls,
-      @JsonProperty("config") @Nullable Map<String, ?> config,
-      @JsonProperty("headers") @Nullable Map<String, String> headers
+      @JsonProperty("config") @Nullable Map<String, Object> config,
+      @JsonProperty("headers") @Nullable Map<String, Object> headers,
+      @JacksonInject @Json ObjectMapper jsonMapper
   )
   {
     this.url = url;
@@ -65,10 +71,11 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
     this.urls = urls;
     this.config = config;
     this.headers = headers;
+    this.jsonMapper = jsonMapper;
     if (url != null && !url.isEmpty()) {
-      this.registry = new CachedSchemaRegistryClient(this.url, this.capacity, this.config, this.headers);
+      this.registry = new CachedSchemaRegistryClient(this.url, this.capacity, DynamicConfigProviderUtils.extraConfigAndSetObjectMap(config, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper), DynamicConfigProviderUtils.extraConfigAndSetStringMap(headers, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper));
     } else {
-      this.registry = new CachedSchemaRegistryClient(this.urls, this.capacity, this.config, this.headers);
+      this.registry = new CachedSchemaRegistryClient(this.urls, this.capacity, DynamicConfigProviderUtils.extraConfigAndSetObjectMap(config, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper), DynamicConfigProviderUtils.extraConfigAndSetStringMap(headers, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper));
     }
   }
 
@@ -91,13 +98,13 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
   }
 
   @JsonProperty
-  public Map<String, ?> getConfig()
+  public Map<String, Object> getConfig()
   {
     return config;
   }
 
   @JsonProperty
-  public Map<String, String> getHeaders()
+  public Map<String, Object> getHeaders()
   {
     return headers;
   }
@@ -112,6 +119,7 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
     this.config = null;
     this.headers = null;
     this.registry = registry;
+    this.jsonMapper = new ObjectMapper();
   }
 
   @Override
@@ -119,7 +127,7 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
   {
     int length = bytes.limit() - 1 - 4;
     if (length < 0) {
-      throw new ParseException("Failed to decode avro message, not enough bytes to decode (%s)", bytes.limit());
+      throw new ParseException(null, "Failed to decode avro message, not enough bytes to decode (%s)", bytes.limit());
     }
 
     bytes.get(); // ignore first \0 byte
@@ -132,17 +140,17 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
       schema = parsedSchema instanceof AvroSchema ? ((AvroSchema) parsedSchema).rawSchema() : null;
     }
     catch (IOException | RestClientException ex) {
-      throw new RE(ex, "Failed to get Avro schema: %s", id);
+      throw new ParseException(null, "Failed to get Avro schema: %s", id);
     }
     if (schema == null) {
-      throw new RE("Failed to find Avro schema: %s", id);
+      throw new ParseException(null, "Failed to find Avro schema: %s", id);
     }
     DatumReader<GenericRecord> reader = new GenericDatumReader<>(schema);
     try {
       return reader.read(null, DecoderFactory.get().binaryDecoder(bytes.array(), offset, length, null));
     }
     catch (Exception e) {
-      throw new ParseException(e, "Fail to decode Avro message for schema: %s!", id);
+      throw new ParseException(null, e, "Fail to decode Avro message for schema: %s!", id);
     }
   }
 
@@ -155,24 +163,17 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     SchemaRegistryBasedAvroBytesDecoder that = (SchemaRegistryBasedAvroBytesDecoder) o;
-
-    return Objects.equals(url, that.url) &&
-        Objects.equals(capacity, that.capacity) &&
-        Objects.equals(urls, that.urls) &&
-        Objects.equals(config, that.config) &&
-        Objects.equals(headers, that.headers);
+    return capacity == that.capacity
+           && Objects.equals(url, that.url)
+           && Objects.equals(urls, that.urls)
+           && Objects.equals(config, that.config)
+           && Objects.equals(headers, that.headers);
   }
 
   @Override
   public int hashCode()
   {
-    int result = url != null ? url.hashCode() : 0;
-    result = 31 * result + capacity;
-    result = 31 * result + (urls != null ? urls.hashCode() : 0);
-    result = 31 * result + (config != null ? config.hashCode() : 0);
-    result = 31 * result + (headers != null ? headers.hashCode() : 0);
-    return result;
+    return Objects.hash(registry, url, capacity, urls, config, headers, jsonMapper);
   }
 }

@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`more button matches snapshot (empty) 1`] = `
+exports[`MoreButton matches snapshot (empty) 1`] = `
 <span
   class="more-button bp3-popover2-target"
 >
@@ -33,7 +33,7 @@ exports[`more button matches snapshot (empty) 1`] = `
 </span>
 `;
 
-exports[`more button matches snapshot (full) 1`] = `
+exports[`MoreButton matches snapshot (full) 1`] = `
 <span
   class="more-button bp3-popover2-target"
 >

@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CSVParser;
 import org.apache.druid.java.util.common.parsers.DelimitedParser;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
@@ -64,6 +65,10 @@ import java.util.regex.PatternSyntaxException;
 @JsonTypeName("uri")
 public class UriExtractionNamespace implements ExtractionNamespace
 {
+  private static final Logger LOG = new Logger(UriExtractionNamespace.class);
+
+  long DEFAULT_MAX_HEAP_PERCENTAGE = 10;
+
   @JsonProperty
   private final URI uri;
   @JsonProperty
@@ -74,6 +79,8 @@ public class UriExtractionNamespace implements ExtractionNamespace
   private final String fileRegex;
   @JsonProperty
   private final Period pollPeriod;
+  @JsonProperty
+  private final Long maxHeapPercentage;
 
   @JsonCreator
   public UriExtractionNamespace(
@@ -89,7 +96,9 @@ public class UriExtractionNamespace implements ExtractionNamespace
           Period pollPeriod,
       @Deprecated
       @JsonProperty(value = "versionRegex", required = false)
-          String versionRegex
+          String versionRegex,
+      @JsonProperty(value = "maxHeapPercentage") @Nullable
+          Long maxHeapPercentage
   )
   {
     this.uri = uri;
@@ -98,7 +107,15 @@ public class UriExtractionNamespace implements ExtractionNamespace
       throw new IAE("Either uri xor uriPrefix required");
     }
     this.namespaceParseSpec = Preconditions.checkNotNull(namespaceParseSpec, "namespaceParseSpec");
-    this.pollPeriod = pollPeriod == null ? Period.ZERO : pollPeriod;
+    if (pollPeriod == null) {
+      // Warning because if UriExtractionNamespace is being used for lookups, any updates to the database will not
+      // be picked up after the node starts. So for use casses where nodes start at different times (like streaming
+      // ingestion with peons) there can be data inconsistencies across the cluster.
+      LOG.warn("No pollPeriod configured for UriExtractionNamespace - entries will be loaded only once at startup");
+      this.pollPeriod = Period.ZERO;
+    } else {
+      this.pollPeriod = pollPeriod;
+    }
     this.fileRegex = fileRegex == null ? versionRegex : fileRegex;
     if (fileRegex != null && versionRegex != null) {
       throw new IAE("Cannot specify both versionRegex and fileRegex. versionRegex is deprecated");
@@ -116,6 +133,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
         throw new IAE(ex, "Could not parse `fileRegex` [%s]", this.fileRegex);
       }
     }
+    this.maxHeapPercentage = maxHeapPercentage == null ? DEFAULT_MAX_HEAP_PERCENTAGE : maxHeapPercentage;
   }
 
   public String getFileRegex()
@@ -145,6 +163,12 @@ public class UriExtractionNamespace implements ExtractionNamespace
   }
 
   @Override
+  public long getMaxHeapPercentage()
+  {
+    return maxHeapPercentage;
+  }
+
+  @Override
   public String toString()
   {
     return "UriExtractionNamespace{" +
@@ -153,6 +177,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
            ", namespaceParseSpec=" + namespaceParseSpec +
            ", fileRegex='" + fileRegex + '\'' +
            ", pollPeriod=" + pollPeriod +
+           ", maxHeapPercentage=" + maxHeapPercentage +
            '}';
   }
 
@@ -180,7 +205,8 @@ public class UriExtractionNamespace implements ExtractionNamespace
     if (getFileRegex() != null ? !getFileRegex().equals(that.getFileRegex()) : that.getFileRegex() != null) {
       return false;
     }
-    return pollPeriod.equals(that.pollPeriod);
+    return pollPeriod.equals(that.pollPeriod) &&
+           Objects.equals(maxHeapPercentage, that.maxHeapPercentage);
 
   }
 
@@ -192,6 +218,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
     result = 31 * result + getNamespaceParseSpec().hashCode();
     result = 31 * result + (getFileRegex() != null ? getFileRegex().hashCode() : 0);
     result = 31 * result + pollPeriod.hashCode();
+    result = 31 * result * Objects.hashCode(maxHeapPercentage);
     return result;
   }
 

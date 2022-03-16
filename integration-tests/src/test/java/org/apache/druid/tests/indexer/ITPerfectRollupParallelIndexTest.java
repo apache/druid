@@ -36,7 +36,7 @@ import org.testng.annotations.Test;
 import java.io.Closeable;
 import java.util.function.Function;
 
-@Test(groups = TestNGGroup.PERFECT_ROLLUP_PARALLEL_BATCH_INDEX)
+@Test(groups = {TestNGGroup.PERFECT_ROLLUP_PARALLEL_BATCH_INDEX, TestNGGroup.SHUFFLE_DEEP_STORE})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITPerfectRollupParallelIndexTest extends AbstractITBatchIndexTest
 {

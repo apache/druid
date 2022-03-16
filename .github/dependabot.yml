@@ -12,3 +12,4 @@ updates:
       # pin Jetty dependencies to 9.4.x
       - dependency-name: "org.eclipse.jetty"
         versions: "[9.5,)"
+      - dependency-name: "org.apache.hadoop"

@@ -282,6 +282,10 @@
       "ingestion/data-management": {
         "title": "Data management"
       },
+      "ingestion/data-model": {
+        "title": "Druid data model",
+        "sidebar_label": "Data model"
+      },
       "ingestion/faq": {
         "title": "Ingestion troubleshooting FAQ",
         "sidebar_label": "Troubleshooting FAQ"
@@ -293,9 +297,21 @@
       "ingestion/index": {
         "title": "Ingestion"
       },
+      "ingestion/ingestion-spec": {
+        "title": "Ingestion spec reference",
+        "sidebar_label": "Ingestion spec"
+      },
       "ingestion/native-batch": {
         "title": "Native batch ingestion",
         "sidebar_label": "Native batch"
+      },
+      "ingestion/partitioning": {
+        "title": "Partitioning",
+        "sidebar_label": "Partitioning"
+      },
+      "ingestion/rollup": {
+        "title": "Data rollup",
+        "sidebar_label": "Data rollup"
       },
       "ingestion/schema-design": {
         "title": "Schema design tips"

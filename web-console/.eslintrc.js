@@ -20,7 +20,7 @@ module.exports = {
   env: {
     browser: true,
   },
-  extends: ['@awesome-code-style'],
+  extends: ['@awesome-code-style', '@awesome-code-style/eslint-config/react'],
   parserOptions: {
     project: 'tsconfig.json',
   },
@@ -35,5 +35,6 @@ module.exports = {
       'block',
       { pattern: 'Licensed to the Apache Software Foundation \\(ASF\\).+' },
     ],
+    'react/jsx-no-bind': [2, { allowArrowFunctions: true, allowFunctions: true }],
   },
 };

@@ -185,6 +185,6 @@ public class OrcStructJsonProvider implements JsonProvider
   @Override
   public Object unwrap(final Object o)
   {
-    throw new UnsupportedOperationException("Unused");
+    return o;
   }
 }

@@ -19,7 +19,9 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -115,6 +117,12 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   }
 
   @Override
+  public DimensionSchema getDimensionSchema(ColumnCapabilities capabilities)
+  {
+    return new StringDimensionSchema(dimensionName);
+  }
+
+  @Override
   public MultiValueHandling getMultivalueHandling()
   {
     return multiValueHandling;
@@ -139,9 +147,9 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   }
 
   @Override
-  public DimensionIndexer<Integer, int[], String> makeIndexer()
+  public DimensionIndexer<Integer, int[], String> makeIndexer(boolean useMaxMemoryEstimates)
   {
-    return new StringDimensionIndexer(multiValueHandling, hasBitmapIndexes, hasSpatialIndexes);
+    return new StringDimensionIndexer(multiValueHandling, hasBitmapIndexes, hasSpatialIndexes, useMaxMemoryEstimates);
   }
 
   @Override

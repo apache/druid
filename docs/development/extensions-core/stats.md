@@ -23,7 +23,7 @@ title: "Stats aggregator"
   -->
 
 
-This Apache Druid extension includes stat-related aggregators, including variance and standard deviations, etc. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-stats` as an extension.
+This Apache Druid extension includes stat-related aggregators, including variance and standard deviations, etc. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-stats` in the extensions load list.
 
 ## Variance aggregator
 
@@ -44,7 +44,7 @@ This algorithm was proven to be numerically stable by J.L. Barlow in
 "Error analysis of a pairwise summation algorithm to compute sample variance"
 Numer. Math, 58 (1991) pp. 583--590
 
-> As with all [aggregators](../../querying/sql.md#aggregation-functions), the order of operations across segments is
+> As with all [aggregators](../../querying/sql-aggregations.md), the order of operations across segments is
 > non-deterministic. This means that if this aggregator operates with an input type of "float" or "double", the result
 > of the aggregation may not be precisely the same across multiple runs of the query.
 >

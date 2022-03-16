@@ -28,7 +28,7 @@ import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 
@@ -46,9 +46,10 @@ public class ConstantValueMatcherFactory implements ColumnProcessorFactory<Value
   }
 
   @Override
-  public ValueType defaultType()
+  public ColumnType defaultType()
   {
-    return ValueType.COMPLEX;
+    // todo: ??
+    return ColumnType.UNKNOWN_COMPLEX;
   }
 
   @Override

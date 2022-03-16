@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`form group with info matches snapshot 1`] = `
+exports[`FormGroupWithInfo matches snapshot 1`] = `
 <div
   class="bp3-form-group form-group-with-info"
 >
@@ -13,7 +13,7 @@ exports[`form group with info matches snapshot 1`] = `
       class="bp3-text-muted"
     >
       <span
-        class="bp3-popover2-target"
+        class="info-popover bp3-popover2-target"
       >
         <span
           class="bp3-icon bp3-icon-info-sign"

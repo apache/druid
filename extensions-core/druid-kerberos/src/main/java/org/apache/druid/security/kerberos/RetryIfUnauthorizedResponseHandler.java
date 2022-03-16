@@ -39,6 +39,7 @@ public class RetryIfUnauthorizedResponseHandler<Intermediate, Final>
   }
 
   @Override
+  @SuppressWarnings("ReturnValueIgnored")
   public ClientResponse<RetryResponseHolder<Intermediate>> handleResponse(
       HttpResponse httpResponse,
       TrafficCop trafficCop
@@ -55,6 +56,7 @@ public class RetryIfUnauthorizedResponseHandler<Intermediate, Final>
   }
 
   @Override
+  @SuppressWarnings("ReturnValueIgnored")
   public ClientResponse<RetryResponseHolder<Intermediate>> handleChunk(
       ClientResponse<RetryResponseHolder<Intermediate>> clientResponse,
       HttpChunk httpChunk,

@@ -25,7 +25,7 @@ title: "Segment Size Optimization"
 
 In Apache Druid, it's important to optimize the segment size because
 
-  1. Druid stores data in segments. If you're using the [best-effort roll-up](../ingestion/index.md#rollup) mode,
+  1. Druid stores data in segments. If you're using the [best-effort roll-up](../ingestion/rollup.md) mode,
   increasing the segment size might introduce further aggregation which reduces the dataSource size.
   2. When a query is submitted, that query is distributed to all Historicals and realtime tasks
   which hold the input segments of the query. Each process and task picks a thread from its own processing thread pool
@@ -59,7 +59,7 @@ You may need to consider the followings to optimize your segments.
 > you may need to find the optimal settings for your workload.
 
 There might be several ways to check if the compaction is necessary. One way
-is using the [System Schema](../querying/sql.md#system-schema). The
+is using the [System Schema](../querying/sql-metadata-tables.md#system-schema). The
 system schema provides several tables about the current system status including the `segments` table.
 By running the below query, you can get the average number of rows and average size for published segments.
 

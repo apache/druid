@@ -26,8 +26,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.utils.CompressionUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -41,7 +42,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URI;
 import java.nio.file.Files;
 import java.util.zip.GZIPOutputStream;
 
@@ -50,11 +50,10 @@ import java.util.zip.GZIPOutputStream;
  */
 public class HdfsDataSegmentPullerTest
 {
-  private static MiniDFSCluster miniCluster;
+  private static FileSystem fileSystem;
   private static File hdfsTmpDir;
-  private static URI uriBase;
-  private static Path filePath = new Path("/tmp/foo");
-  private static Path perTestPath = new Path("/tmp/tmp2");
+  private static Path filePath = new Path("tmp/foo");
+  private static Path perTestPath = new Path("tmp/tmp2");
   private static String pathContents = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum";
   private static byte[] pathByteContents = StringUtils.toUtf8(pathContents);
   private static Configuration conf;
@@ -67,15 +66,15 @@ public class HdfsDataSegmentPullerTest
       throw new IOE("Unable to delete hdfsTmpDir [%s]", hdfsTmpDir.getAbsolutePath());
     }
     conf = new Configuration(true);
-    conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, hdfsTmpDir.getAbsolutePath());
-    miniCluster = new MiniDFSCluster.Builder(conf).build();
-    uriBase = miniCluster.getURI(0);
+    fileSystem = new LocalFileSystem();
+    fileSystem.initialize(hdfsTmpDir.toURI(), conf);
+    fileSystem.setWorkingDirectory(new Path(hdfsTmpDir.toURI()));
 
     final File tmpFile = File.createTempFile("hdfsHandlerTest", ".data");
     tmpFile.delete();
     try {
       Files.copy(new ByteArrayInputStream(pathByteContents), tmpFile.toPath());
-      try (OutputStream stream = miniCluster.getFileSystem().create(filePath)) {
+      try (OutputStream stream = fileSystem.create(filePath)) {
         Files.copy(tmpFile.toPath(), stream);
       }
     }
@@ -87,10 +86,8 @@ public class HdfsDataSegmentPullerTest
   @AfterClass
   public static void tearDownStatic() throws IOException
   {
-    if (miniCluster != null) {
-      miniCluster.shutdown(true);
-    }
     FileUtils.deleteDirectory(hdfsTmpDir);
+    fileSystem.close();
   }
 
 
@@ -105,7 +102,7 @@ public class HdfsDataSegmentPullerTest
   @After
   public void tearDown() throws IOException
   {
-    miniCluster.getFileSystem().delete(perTestPath, true);
+    fileSystem.delete(perTestPath, true);
   }
 
   @Test
@@ -118,8 +115,6 @@ public class HdfsDataSegmentPullerTest
 
     final File outTmpDir = FileUtils.createTempDir();
 
-    final URI uri = URI.create(uriBase.toString() + zipPath);
-
     try (final OutputStream stream = new FileOutputStream(tmpFile)) {
       ByteStreams.copy(new ByteArrayInputStream(pathByteContents), stream);
     }
@@ -128,12 +123,12 @@ public class HdfsDataSegmentPullerTest
     final File outFile = new File(outTmpDir, tmpFile.getName());
     outFile.delete();
 
-    try (final OutputStream stream = miniCluster.getFileSystem().create(zipPath)) {
+    try (final OutputStream stream = fileSystem.create(zipPath)) {
       CompressionUtils.zip(tmpDir, stream);
     }
     try {
       Assert.assertFalse(outFile.exists());
-      puller.getSegmentFiles(new Path(uri), outTmpDir);
+      puller.getSegmentFiles(fileSystem.makeQualified(zipPath), outTmpDir);
       Assert.assertTrue(outFile.exists());
 
       Assert.assertArrayEquals(pathByteContents, Files.readAllBytes(outFile.toPath()));
@@ -163,16 +158,14 @@ public class HdfsDataSegmentPullerTest
     final File outFile = new File(outTmpDir, "testZip");
     outFile.delete();
 
-    final URI uri = URI.create(uriBase.toString() + zipPath);
-
-    try (final OutputStream outputStream = miniCluster.getFileSystem().create(zipPath);
+    try (final OutputStream outputStream = fileSystem.create(zipPath);
          final OutputStream gzStream = new GZIPOutputStream(outputStream);
          final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
       ByteStreams.copy(inputStream, gzStream);
     }
     try {
       Assert.assertFalse(outFile.exists());
-      puller.getSegmentFiles(new Path(uri), outTmpDir);
+      puller.getSegmentFiles(fileSystem.makeQualified(zipPath), outTmpDir);
       Assert.assertTrue(outFile.exists());
 
       Assert.assertArrayEquals(pathByteContents, Files.readAllBytes(outFile.toPath()));
@@ -197,15 +190,13 @@ public class HdfsDataSegmentPullerTest
     final File outFile = new File(outTmpDir, "test.txt");
     outFile.delete();
 
-    final URI uri = URI.create(uriBase.toString() + perTestPath);
-
-    try (final OutputStream outputStream = miniCluster.getFileSystem().create(zipPath);
+    try (final OutputStream outputStream = fileSystem.create(zipPath);
          final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
       ByteStreams.copy(inputStream, outputStream);
     }
     try {
       Assert.assertFalse(outFile.exists());
-      puller.getSegmentFiles(new Path(uri), outTmpDir);
+      puller.getSegmentFiles(fileSystem.makeQualified(perTestPath), outTmpDir);
       Assert.assertTrue(outFile.exists());
 
       Assert.assertArrayEquals(pathByteContents, Files.readAllBytes(outFile.toPath()));

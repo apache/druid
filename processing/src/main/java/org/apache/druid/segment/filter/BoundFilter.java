@@ -22,11 +22,9 @@ package org.apache.druid.segment.filter;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
-import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.BitmapIndexSelector;
@@ -45,7 +43,6 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -102,8 +99,12 @@ public class BoundFilter implements Filter
       }
 
       return Filters.estimateSelectivity(
-          bitmapIndex,
-          getBitmapIndexList(boundDimFilter, bitmapIndex),
+          bitmapIndex.getBitmapsInRange(
+              boundDimFilter.getLower(),
+              boundDimFilter.isLowerStrict(),
+              boundDimFilter.getUpper(),
+              boundDimFilter.isUpperStrict()
+          ).iterator(),
           indexSelector.getNumRows()
       );
     } else {
@@ -200,60 +201,17 @@ public class BoundFilter implements Filter
     );
   }
 
-  private static Pair<Integer, Integer> getStartEndIndexes(
-      final BoundDimFilter boundDimFilter,
-      final BitmapIndex bitmapIndex
-  )
-  {
-    final int startIndex; // inclusive
-    int endIndex; // exclusive
-
-    if (!boundDimFilter.hasLowerBound()) {
-      startIndex = 0;
-    } else {
-      final int found = bitmapIndex.getIndex(NullHandling.emptyToNullIfNeeded(boundDimFilter.getLower()));
-      if (found >= 0) {
-        startIndex = boundDimFilter.isLowerStrict() ? found + 1 : found;
-      } else {
-        startIndex = -(found + 1);
-      }
-    }
-
-    if (!boundDimFilter.hasUpperBound()) {
-      endIndex = bitmapIndex.getCardinality();
-    } else {
-      final int found = bitmapIndex.getIndex(NullHandling.emptyToNullIfNeeded(boundDimFilter.getUpper()));
-      if (found >= 0) {
-        endIndex = boundDimFilter.isUpperStrict() ? found : found + 1;
-      } else {
-        endIndex = -(found + 1);
-      }
-    }
-
-    endIndex = startIndex > endIndex ? startIndex : endIndex;
-
-    return new Pair<>(startIndex, endIndex);
-  }
-
   private static Iterable<ImmutableBitmap> getBitmapIterator(
       final BoundDimFilter boundDimFilter,
       final BitmapIndex bitmapIndex
   )
   {
-    return Filters.bitmapsFromIndexes(getBitmapIndexList(boundDimFilter, bitmapIndex), bitmapIndex);
-  }
-
-  private static IntList getBitmapIndexList(
-      final BoundDimFilter boundDimFilter,
-      final BitmapIndex bitmapIndex
-  )
-  {
-    // search for start, end indexes in the bitmaps; then include all bitmaps between those points
-    final Pair<Integer, Integer> indexes = getStartEndIndexes(boundDimFilter, bitmapIndex);
-    final int startIndex = indexes.lhs;
-    final int endIndex = indexes.rhs;
-
-    return IntListUtils.fromTo(startIndex, endIndex);
+    return bitmapIndex.getBitmapsInRange(
+        boundDimFilter.getLower(),
+        boundDimFilter.isLowerStrict(),
+        boundDimFilter.getUpper(),
+        boundDimFilter.isUpperStrict()
+    );
   }
 
   private DruidPredicateFactory getPredicateFactory()

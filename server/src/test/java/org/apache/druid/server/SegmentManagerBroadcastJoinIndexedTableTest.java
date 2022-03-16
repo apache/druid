@@ -338,7 +338,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     );
     final String storageDir = DataSegmentPusher.getDefaultStorageDir(tmpSegment, false);
     final File segmentDir = new File(segmentDeepStorageDir, storageDir);
-    org.apache.commons.io.FileUtils.forceMkdir(segmentDir);
+    FileUtils.mkdirp(segmentDir);
 
     IndexMerger indexMerger =
         new IndexMergerV9(objectMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());

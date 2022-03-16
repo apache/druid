@@ -24,8 +24,8 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Exprs;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
-import org.apache.druid.query.expression.ExprUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -74,12 +74,12 @@ public class JoinConditionAnalysis
     this.nonEquiConditions = Collections.unmodifiableList(nonEquiConditions);
     // if any nonEquiCondition is an expression and it evaluates to false
     isAlwaysFalse = nonEquiConditions.stream()
-                                     .anyMatch(expr -> expr.isLiteral() && !expr.eval(ExprUtils.nilBindings())
+                                     .anyMatch(expr -> expr.isLiteral() && !expr.eval(InputBindings.nilBindings())
                                                                                 .asBoolean());
     // if there are no equiConditions and all nonEquiConditions are literals and the evaluate to true
     isAlwaysTrue = equiConditions.isEmpty() && nonEquiConditions.stream()
                                                                 .allMatch(expr -> expr.isLiteral() && expr.eval(
-                                                                    ExprUtils.nilBindings()).asBoolean());
+                                                                    InputBindings.nilBindings()).asBoolean());
     canHashJoin = nonEquiConditions.stream().allMatch(Expr::isLiteral);
     rightKeyColumns = getEquiConditions().stream().map(Equality::getRightColumn).collect(Collectors.toSet());
     requiredColumns = computeRequiredColumns(rightPrefix, equiConditions, nonEquiConditions);

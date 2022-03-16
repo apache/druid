@@ -25,7 +25,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 /**
  */
@@ -36,13 +36,13 @@ public class ExtractionDimensionSpec implements DimensionSpec
   private final String dimension;
   private final ExtractionFn extractionFn;
   private final String outputName;
-  private final ValueType outputType;
+  private final ColumnType outputType;
 
   @JsonCreator
   public ExtractionDimensionSpec(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("outputName") String outputName,
-      @JsonProperty("outputType") ValueType outputType,
+      @JsonProperty("outputType") ColumnType outputType,
       @JsonProperty("extractionFn") ExtractionFn extractionFn,
       // for backwards compatibility
       @Deprecated @JsonProperty("dimExtractionFn") ExtractionFn dimExtractionFn
@@ -53,7 +53,7 @@ public class ExtractionDimensionSpec implements DimensionSpec
 
     this.dimension = dimension;
     this.extractionFn = extractionFn != null ? extractionFn : dimExtractionFn;
-    this.outputType = outputType == null ? ValueType.STRING : outputType;
+    this.outputType = outputType == null ? ColumnType.STRING : outputType;
 
     // Do null check for backwards compatibility
     this.outputName = outputName == null ? dimension : outputName;
@@ -64,7 +64,7 @@ public class ExtractionDimensionSpec implements DimensionSpec
     this(dimension, outputName, null, extractionFn, null);
   }
 
-  public ExtractionDimensionSpec(String dimension, String outputName, ValueType outputType, ExtractionFn extractionFn)
+  public ExtractionDimensionSpec(String dimension, String outputName, ColumnType outputType, ExtractionFn extractionFn)
   {
     this(dimension, outputName, outputType, extractionFn, null);
   }
@@ -85,7 +85,7 @@ public class ExtractionDimensionSpec implements DimensionSpec
 
   @Override
   @JsonProperty
-  public ValueType getOutputType()
+  public ColumnType getOutputType()
   {
     return outputType;
   }

@@ -23,13 +23,12 @@ title: "Bloom Filter"
   -->
 
 
-This Apache Druid extension adds the ability to both construct bloom filters from query results, and filter query results by testing
-against a bloom filter. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-bloom-filter` as an
-extension.
+To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `druid-bloom-filter` in the extensions load list.
 
-A Bloom filter is a probabilistic data structure for performing a set membership check. A bloom filter is a good candidate
-to use with Druid for cases where an explicit filter is impossible, e.g. filtering a query against a set of millions of
- values.
+This extension adds the ability to both construct bloom filters from query results, and filter query results by testing
+against a bloom filter. A Bloom filter is a probabilistic data structure for performing a set membership check. A bloom
+filter is a good candidate to use with Druid for cases where an explicit filter is impossible, e.g. filtering a query
+against a set of millions of values.
 
 Following are some characteristics of Bloom filters:
 

@@ -78,7 +78,7 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
   public void testGetBitmapIndex() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex<?> incrementalIndex = indexCreator.createIndex("rollup");
+    IncrementalIndex incrementalIndex = indexCreator.createIndex("rollup");
     IncrementalIndexTest.populateIndex(timestamp, incrementalIndex);
     IndexableAdapter adapter = new IncrementalIndexAdapter(
         incrementalIndex.getInterval(),
@@ -98,7 +98,7 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
   public void testGetRowsIterable() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex<?> toPersist1 = indexCreator.createIndex("rollup");
+    IncrementalIndex toPersist1 = indexCreator.createIndex("rollup");
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
     final IndexableAdapter incrementalAdapter = new IncrementalIndexAdapter(
@@ -122,7 +122,7 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
   public void testGetRowsIterableNoRollup() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex<?> toPersist1 = indexCreator.createIndex("plain");
+    IncrementalIndex toPersist1 = indexCreator.createIndex("plain");
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);

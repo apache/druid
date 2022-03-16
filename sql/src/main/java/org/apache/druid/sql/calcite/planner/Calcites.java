@@ -29,7 +29,10 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlCollation;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlOperatorBinding;
+import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimeString;
@@ -38,9 +41,12 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Days;
@@ -81,6 +87,11 @@ public class Calcites
   private static final Charset DEFAULT_CHARSET = Charset.forName(ConversionUtil.NATIVE_UTF16_CHARSET_NAME);
 
   private static final Pattern TRAILING_ZEROS = Pattern.compile("\\.?0+$");
+
+  public static final SqlReturnTypeInference
+      ARG0_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE = new Arg0NullableArrayTypeInference();
+  public static final SqlReturnTypeInference
+      ARG1_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE = new Arg1NullableArrayTypeInference();
 
   private Calcites()
   {
@@ -126,18 +137,17 @@ public class Calcites
   }
 
   /**
-   * Convert {@link RelDataType} to the most appropriate {@link ValueType}, coercing all ARRAY types to STRING (until
-   * the time is right and we are more comfortable handling Druid ARRAY types in all parts of the engine).
-   *
-   * Callers who are not scared of ARRAY types should isntead call {@link #getValueTypeForRelDataTypeFull(RelDataType)},
-   * which returns the most accurate conversion of {@link RelDataType} to {@link ValueType}.
+   * Convert {@link RelDataType} to the most appropriate {@link ValueType}
+   * Caller who want to coerce all ARRAY types to STRING can set `druid.expressions.allowArrayToStringCast`
+   * runtime property in {@link org.apache.druid.math.expr.ExpressionProcessingConfig}
    */
   @Nullable
-  public static ValueType getValueTypeForRelDataType(final RelDataType type)
+  public static ColumnType getColumnTypeForRelDataType(final RelDataType type)
   {
-    ValueType valueType = getValueTypeForRelDataTypeFull(type);
-    if (ValueType.isArray(valueType)) {
-      return ValueType.STRING;
+    ColumnType valueType = getValueTypeForRelDataTypeFull(type);
+    // coerce array to multi value string
+    if (ExpressionProcessing.processArraysAsMultiValueStrings() && valueType != null && valueType.isArray()) {
+      return ColumnType.STRING;
     }
     return valueType;
   }
@@ -146,28 +156,28 @@ public class Calcites
    * Convert {@link RelDataType} to the most appropriate {@link ValueType}
    */
   @Nullable
-  public static ValueType getValueTypeForRelDataTypeFull(final RelDataType type)
+  public static ColumnType getValueTypeForRelDataTypeFull(final RelDataType type)
   {
     final SqlTypeName sqlTypeName = type.getSqlTypeName();
     if (SqlTypeName.FLOAT == sqlTypeName) {
-      return ValueType.FLOAT;
+      return ColumnType.FLOAT;
     } else if (isDoubleType(sqlTypeName)) {
-      return ValueType.DOUBLE;
+      return ColumnType.DOUBLE;
     } else if (isLongType(sqlTypeName)) {
-      return ValueType.LONG;
+      return ColumnType.LONG;
     } else if (SqlTypeName.CHAR_TYPES.contains(sqlTypeName)) {
-      return ValueType.STRING;
+      return ColumnType.STRING;
     } else if (SqlTypeName.OTHER == sqlTypeName) {
-      return ValueType.COMPLEX;
+      if (type instanceof RowSignatures.ComplexSqlType) {
+        return ColumnType.ofComplex(((RowSignatures.ComplexSqlType) type).getComplexTypeName());
+      }
+      return ColumnType.UNKNOWN_COMPLEX;
     } else if (sqlTypeName == SqlTypeName.ARRAY) {
-      SqlTypeName componentType = type.getComponentType().getSqlTypeName();
-      if (isDoubleType(componentType)) {
-        return ValueType.DOUBLE_ARRAY;
+      ColumnType elementType = getValueTypeForRelDataTypeFull(type.getComponentType());
+      if (elementType != null) {
+        return ColumnType.ofArray(elementType);
       }
-      if (isLongType(componentType)) {
-        return ValueType.LONG_ARRAY;
-      }
-      return ValueType.STRING_ARRAY;
+      return null;
     } else {
       return null;
     }
@@ -187,15 +197,15 @@ public class Calcites
 
   public static StringComparator getStringComparatorForRelDataType(RelDataType dataType)
   {
-    final ValueType valueType = getValueTypeForRelDataType(dataType);
+    final ColumnType valueType = getColumnTypeForRelDataType(dataType);
     return getStringComparatorForValueType(valueType);
   }
 
-  public static StringComparator getStringComparatorForValueType(ValueType valueType)
+  public static StringComparator getStringComparatorForValueType(ColumnType valueType)
   {
-    if (ValueType.isNumeric(valueType)) {
+    if (valueType.isNumeric()) {
       return StringComparators.NUMERIC;
-    } else if (ValueType.STRING == valueType) {
+    } else if (valueType.is(ValueType.STRING)) {
       return StringComparators.LEXICOGRAPHIC;
     } else {
       throw new ISE("Unrecognized valueType[%s]", valueType);
@@ -238,7 +248,6 @@ public class Calcites
       default:
         dataType = typeFactory.createSqlType(typeName);
     }
-
     return typeFactory.createTypeWithNullability(dataType, nullable);
   }
 
@@ -252,6 +261,7 @@ public class Calcites
       final boolean nullable
   )
   {
+
 
     final RelDataType dataType = typeFactory.createArrayType(
         createSqlTypeWithNullability(typeFactory, elementTypeName, nullable),
@@ -462,6 +472,40 @@ public class Calcites
         return Timestamp.class;
       default:
         return Object.class;
+    }
+  }
+
+  public static class Arg0NullableArrayTypeInference implements SqlReturnTypeInference
+  {
+    @Override
+    public RelDataType inferReturnType(SqlOperatorBinding opBinding)
+    {
+      RelDataType type = opBinding.getOperandType(0);
+      if (SqlTypeUtil.isArray(type)) {
+        return type;
+      }
+      return Calcites.createSqlArrayTypeWithNullability(
+          opBinding.getTypeFactory(),
+          type.getSqlTypeName(),
+          true
+      );
+    }
+  }
+
+  public static class Arg1NullableArrayTypeInference implements SqlReturnTypeInference
+  {
+    @Override
+    public RelDataType inferReturnType(SqlOperatorBinding opBinding)
+    {
+      RelDataType type = opBinding.getOperandType(1);
+      if (SqlTypeUtil.isArray(type)) {
+        return type;
+      }
+      return Calcites.createSqlArrayTypeWithNullability(
+          opBinding.getTypeFactory(),
+          type.getSqlTypeName(),
+          true
+      );
     }
   }
 }

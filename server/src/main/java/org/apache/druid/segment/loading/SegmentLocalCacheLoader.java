@@ -21,6 +21,7 @@ package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
@@ -28,13 +29,14 @@ import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.inject.Inject;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
 public class SegmentLocalCacheLoader implements SegmentLoader
 {
+  private static final EmittingLogger log = new EmittingLogger(SegmentLocalCacheLoader.class);
+
   private final SegmentCacheManager cacheManager;
   private final IndexIO indexIO;
   private final ObjectMapper jsonMapper;
@@ -48,7 +50,8 @@ public class SegmentLocalCacheLoader implements SegmentLoader
   }
 
   @Override
-  public ReferenceCountingSegment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
+  public ReferenceCountingSegment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
+      throws SegmentLoadingException
   {
     final File segmentFiles = cacheManager.getSegmentFiles(segment);
     File factoryJson = new File(segmentFiles, "factory.json");
@@ -66,6 +69,7 @@ public class SegmentLocalCacheLoader implements SegmentLoader
     }
 
     Segment segmentObject = factory.factorize(segment, segmentFiles, lazy, loadFailed);
+
     return ReferenceCountingSegment.wrapSegment(segmentObject, segment.getShardSpec());
   }
 

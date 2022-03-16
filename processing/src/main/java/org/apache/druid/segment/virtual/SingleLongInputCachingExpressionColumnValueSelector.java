@@ -24,6 +24,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -41,7 +42,7 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
 
   private final ColumnValueSelector selector;
   private final Expr expression;
-  private final SingleInputBindings bindings = new SingleInputBindings();
+  private final SingleInputBindings bindings = new SingleInputBindings(ExpressionType.LONG);
 
   @Nullable
   private final LruEvalCache lruEvalCache;

@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`run button matches snapshot loading state 1`] = `
+exports[`RunButton matches snapshot loading state 1`] = `
 <div
   class="bp3-button-group run-button"
 >
@@ -66,7 +66,7 @@ exports[`run button matches snapshot loading state 1`] = `
 </div>
 `;
 
-exports[`run button matches snapshot non-loading state 1`] = `
+exports[`RunButton matches snapshot non-loading state 1`] = `
 <div
   class="bp3-button-group run-button"
 >

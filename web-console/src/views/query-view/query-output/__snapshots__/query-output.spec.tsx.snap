@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`query output matches snapshot 1`] = `
+exports[`QueryOutput matches snapshot 1`] = `
 <div
   class="query-output"
 >
@@ -1235,100 +1235,235 @@ exports[`query output matches snapshot 1`] = `
             </div>
           </div>
         </div>
-      </div>
-    </div>
-    <div
-      class="pagination-bottom"
-    >
-      <div
-        class="-pagination"
-      >
         <div
-          class="-previous"
+          class="rt-tr-group"
+          role="rowgroup"
         >
-          <button
-            class="-btn"
-            disabled=""
-            type="button"
+          <div
+            class="rt-tr -padRow -odd"
+            role="row"
           >
-            Previous
-          </button>
-        </div>
-        <div
-          class="-center"
-        >
-          <span
-            class="-pageInfo"
-          >
-            Page
-             
             <div
-              class="-pageJump"
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
             >
-              <input
-                aria-label="jump to page"
-                type="number"
-                value="1"
-              />
+              <span>
+                 
+              </span>
             </div>
-             
-            of
-             
-            <span
-              class="-totalPages"
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
             >
-              1
-            </span>
-          </span>
-          <span
-            class="select-wrap -pageSizeOptions"
-          >
-            <select
-              aria-label="rows per page"
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
             >
-              <option
-                value="5"
-              >
-                5 rows
-              </option>
-              <option
-                value="10"
-              >
-                10 rows
-              </option>
-              <option
-                value="20"
-              >
-                20 rows
-              </option>
-              <option
-                value="25"
-              >
-                25 rows
-              </option>
-              <option
-                value="50"
-              >
-                50 rows
-              </option>
-              <option
-                value="100"
-              >
-                100 rows
-              </option>
-            </select>
-          </span>
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+          </div>
         </div>
         <div
-          class="-next"
+          class="rt-tr-group"
+          role="rowgroup"
         >
-          <button
-            class="-btn"
-            disabled=""
-            type="button"
+          <div
+            class="rt-tr -padRow -even"
+            role="row"
           >
-            Next
-          </button>
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -padRow -odd"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -padRow -even"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -padRow -odd"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

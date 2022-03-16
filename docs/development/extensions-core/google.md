@@ -28,7 +28,7 @@ This extension allows you to do 2 things:
 * [Ingest data](#reading-data-from-google-cloud-storage) from files stored in Google Cloud Storage.
 * Write segments to [deep storage](#deep-storage) in GCS.
 
-To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-google-extensions` extension.
+To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `druid-google-extensions` in the extensions load list.
 
 ### Required Configuration
 
@@ -36,11 +36,11 @@ To configure connectivity to google cloud, run druid processes with `GOOGLE_APPL
 
 ### Reading data from Google Cloud Storage
 
-The [Google Cloud Storage input source](../../ingestion/native-batch.md#google-cloud-storage-input-source) is supported by the [Parallel task](../../ingestion/native-batch.md#parallel-task)
+The [Google Cloud Storage input source](../../ingestion/native-batch-input-source.md) is supported by the [Parallel task](../../ingestion/native-batch.md)
 to read objects directly from Google Cloud Storage. If you use the [Hadoop task](../../ingestion/hadoop.md),
 you can read data from Google Cloud Storage by specifying the paths in your [`inputSpec`](../../ingestion/hadoop.md#inputspec).
 
-Objects can also be read directly from Google Cloud Storage via the [StaticGoogleBlobStoreFirehose](../../ingestion/native-batch.md#staticgoogleblobstorefirehose)
+Objects can also be read directly from Google Cloud Storage via the [StaticGoogleBlobStoreFirehose](../../ingestion/native-batch-firehose.md#staticgoogleblobstorefirehose)
 
 ### Deep Storage
 

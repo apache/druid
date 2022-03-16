@@ -27,7 +27,6 @@ import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -116,11 +115,10 @@ public class GroupingSqlAggregator implements SqlAggregator
       return expression.getDirectColumn();
     }
 
-    VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-        plannerContext,
+    String virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
         expression,
         node.getType()
     );
-    return virtualColumn.getOutputName();
+    return virtualColumn;
   }
 }

@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.worker.shuffle;
 
-import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
 
@@ -64,9 +63,7 @@ public class ShuffleDataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment push(File file, DataSegment segment, boolean useUniquePath) throws IOException
   {
-    final long unzippedSize = intermediaryDataManager.addSegment(supervisorTaskId, subTaskId, segment, file);
-    return segment.withSize(unzippedSize)
-                  .withBinaryVersion(SegmentUtils.getVersionFromDir(file));
+    return intermediaryDataManager.addSegment(supervisorTaskId, subTaskId, segment, file);
   }
 
   @Override

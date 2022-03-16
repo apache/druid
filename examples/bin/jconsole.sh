@@ -45,7 +45,7 @@ wait
 
 WHEREAMI="$(dirname "$0")"
 WHEREAMI="$(cd "$WHEREAMI" && pwd)"
-JAVA_BIN_DIR="$(source "$WHEREAMI"/java-util && get_java_bin_dir)"
+JAVA_BIN_DIR="$(. /"$WHEREAMI"/java-util && get_java_bin_dir)"
 if [ -z "$JAVA_BIN_DIR" ]; then
   >&2 echo "Could not find java - please run $WHEREAMI/verify-java to confirm it is installed."
   exit 1

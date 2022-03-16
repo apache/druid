@@ -33,7 +33,6 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -257,34 +256,26 @@ public class IndexIOTest extends InitializedNullHandlingTest
     this.exception = exception;
   }
 
-  final IncrementalIndex<Aggregator> incrementalIndex1 = new OnheapIncrementalIndex.Builder()
+  final IncrementalIndex incrementalIndex1 = new OnheapIncrementalIndex.Builder()
       .setIndexSchema(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
               .withMetrics(new CountAggregatorFactory("count"))
               .withDimensionsSpec(
-                  new DimensionsSpec(
-                      DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")),
-                      null,
-                      null
-                  )
+                  new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")))
               )
               .build()
       )
       .setMaxRowCount(1000000)
       .build();
 
-  final IncrementalIndex<Aggregator> incrementalIndex2 = new OnheapIncrementalIndex.Builder()
+  final IncrementalIndex incrementalIndex2 = new OnheapIncrementalIndex.Builder()
       .setIndexSchema(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
               .withMetrics(new CountAggregatorFactory("count"))
               .withDimensionsSpec(
-                  new DimensionsSpec(
-                      DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")),
-                      null,
-                      null
-                  )
+                  new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")))
               )
               .build()
       )
@@ -361,7 +352,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
       queryableIndex.getDimensionHandlers();
       List<String> columnNames = queryableIndex.getColumnNames();
       for (String columnName : columnNames) {
-        queryableIndex.getColumnHolder(columnName).toString();
+        Assert.assertNotNull(queryableIndex.getColumnHolder(columnName).toString());
       }
     }
     catch (Exception ex) {

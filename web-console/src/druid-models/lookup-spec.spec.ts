@@ -342,6 +342,7 @@ describe('lookup-spec', () => {
                 format: 'csv',
                 columns: ['key', 'value'],
               },
+              pollPeriod: 'PT1H',
             },
           }),
         ).toBe(false);
@@ -359,6 +360,7 @@ describe('lookup-spec', () => {
                 format: 'csv',
                 hasHeaderRow: true,
               },
+              pollPeriod: 'PT1H',
             },
           }),
         ).toBe(false);
@@ -376,6 +378,7 @@ describe('lookup-spec', () => {
                 format: 'tsv',
                 columns: ['key', 'value'],
               },
+              pollPeriod: 'PT1H',
             },
           }),
         ).toBe(false);
@@ -394,6 +397,7 @@ describe('lookup-spec', () => {
                 valueFieldName: 'value',
                 keyFieldName: 'value',
               },
+              pollPeriod: 'PT1H',
             },
           }),
         ).toBe(false);
@@ -416,7 +420,7 @@ describe('lookup-spec', () => {
               table: 'some_lookup_table',
               keyColumn: 'the_old_dim_value',
               valueColumn: 'the_new_dim_value',
-              pollPeriod: 600000,
+              pollPeriod: 'PT1H',
             },
           }),
         ).toBe(false);

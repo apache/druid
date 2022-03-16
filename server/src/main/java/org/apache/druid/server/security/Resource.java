@@ -22,17 +22,19 @@ package org.apache.druid.server.security;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 public class Resource
 {
   public static final Resource STATE_RESOURCE = new Resource("STATE", ResourceType.STATE);
 
   private final String name;
-  private final ResourceType type;
+  private final String type;
 
   @JsonCreator
   public Resource(
       @JsonProperty("name") String name,
-      @JsonProperty("type") ResourceType type
+      @JsonProperty("type") String type
   )
   {
     this.name = name;
@@ -46,7 +48,7 @@ public class Resource
   }
 
   @JsonProperty
-  public ResourceType getType()
+  public String getType()
   {
     return type;
   }
@@ -66,16 +68,14 @@ public class Resource
     if (!name.equals(resource.name)) {
       return false;
     }
-    return type == resource.type;
+    return Objects.equals(type, resource.type);
 
   }
 
   @Override
   public int hashCode()
   {
-    int result = name.hashCode();
-    result = 31 * result + type.hashCode();
-    return result;
+    return Objects.hash(name, type);
   }
 
   @Override

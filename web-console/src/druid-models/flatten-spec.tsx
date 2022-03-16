@@ -20,7 +20,7 @@ import React from 'react';
 
 import { ExternalLink, Field } from '../components';
 import { getLink } from '../links';
-import { oneOf } from '../utils';
+import { typeIs } from '../utils';
 
 export interface FlattenSpec {
   useFieldDiscovery?: boolean;
@@ -50,7 +50,7 @@ export const FLATTEN_FIELD_FIELDS: Field<FlattenField>[] = [
     name: 'expr',
     type: 'string',
     placeholder: '$.thing',
-    defined: (flattenField: FlattenField) => oneOf(flattenField.type, 'path', 'jq'),
+    defined: typeIs('path', 'jq'),
     required: true,
     info: (
       <>
@@ -82,13 +82,15 @@ export function computeFlattenExprsForData(
   data: Record<string, any>[],
   exprType: ExprType,
   arrayHandling: ArrayHandling,
+  includeTopLevel = false,
 ): string[] {
   const seenPaths: Record<string, boolean> = {};
   for (const datum of data) {
+    if (!datum || typeof datum !== 'object') continue;
     const datumKeys = Object.keys(datum);
     for (const datumKey of datumKeys) {
       const datumValue = datum[datumKey];
-      if (isNested(datumValue)) {
+      if (includeTopLevel || isNested(datumValue)) {
         addPath(
           seenPaths,
           exprType === 'path' ? `$.${datumKey}` : `.${datumKey}`,

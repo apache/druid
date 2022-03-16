@@ -40,19 +40,13 @@ export class BarGroup extends React.Component<BarGroupProps> {
   }
 
   render(): JSX.Element[] | null {
-    const {
-      dataToRender,
-      changeActiveDatasource,
-      xScale,
-      yScale,
-      onHoverBar,
-      barWidth,
-    } = this.props;
+    const { dataToRender, changeActiveDatasource, xScale, yScale, onHoverBar, barWidth } =
+      this.props;
     if (dataToRender === undefined) return null;
 
     return dataToRender.map((entry: BarUnitData, i: number) => {
       const y0 = yScale(entry.y0 || 0) || 0;
-      const x = xScale(new Date(entry.x + 'Z'));
+      const x = xScale(new Date(entry.x + 'T00:00:00Z'));
       const y = yScale((entry.y0 || 0) + entry.y) || 0;
       const height = Math.max(y0 - y, 0);
       const barInfo: HoveredBarInfo = {

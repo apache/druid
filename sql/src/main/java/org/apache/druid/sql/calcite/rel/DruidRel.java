@@ -30,12 +30,12 @@ import java.util.Set;
 
 public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
 {
-  private final QueryMaker queryMaker;
+  private final PlannerContext plannerContext;
 
-  protected DruidRel(RelOptCluster cluster, RelTraitSet traitSet, QueryMaker queryMaker)
+  protected DruidRel(RelOptCluster cluster, RelTraitSet traitSet, PlannerContext plannerContext)
   {
     super(cluster, traitSet);
-    this.queryMaker = queryMaker;
+    this.plannerContext = plannerContext;
   }
 
   /**
@@ -45,7 +45,14 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
   @Nullable
   public abstract PartialDruidQuery getPartialDruidQuery();
 
-  public abstract Sequence<Object[]> runQuery();
+  public Sequence<Object[]> runQuery()
+  {
+    // runQuery doesn't need to finalize aggregations, because the fact that runQuery is happening suggests this
+    // is the outermost query, and it will actually get run as a native query. Druid's native query layer will
+    // finalize aggregations for the outermost query even if we don't explicitly ask it to.
+
+    return getPlannerContext().getQueryMaker().runQuery(toDruidQuery(false));
+  }
 
   public abstract T withPartialQuery(PartialDruidQuery newQueryBuilder);
 
@@ -83,14 +90,9 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
    */
   public abstract DruidQuery toDruidQueryForExplaining();
 
-  public QueryMaker getQueryMaker()
-  {
-    return queryMaker;
-  }
-
   public PlannerContext getPlannerContext()
   {
-    return queryMaker.getPlannerContext();
+    return plannerContext;
   }
 
   public abstract T asDruidConvention();

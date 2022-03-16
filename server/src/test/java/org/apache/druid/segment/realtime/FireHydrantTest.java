@@ -212,6 +212,7 @@ public class FireHydrantTest extends InitializedNullHandlingTest
   }
 
   @Test
+  @SuppressWarnings("ReturnValueIgnored")
   public void testToStringWhenSwappedWithNull()
   {
     hydrant.swapSegment(null);

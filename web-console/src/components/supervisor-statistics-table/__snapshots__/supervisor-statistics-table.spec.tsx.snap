@@ -96,7 +96,7 @@ exports[`SupervisorStatisticsTable matches snapshot on error 1`] = `
       defaultFilterMethod={[Function]}
       defaultFiltered={Array []}
       defaultPage={0}
-      defaultPageSize={6}
+      defaultPageSize={25}
       defaultResized={Array []}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
@@ -147,9 +147,6 @@ exports[`SupervisorStatisticsTable matches snapshot on error 1`] = `
       pageJumpText="jump to page"
       pageSizeOptions={
         Array [
-          5,
-          10,
-          20,
           25,
           50,
           100,
@@ -273,7 +270,7 @@ exports[`SupervisorStatisticsTable matches snapshot on init 1`] = `
       defaultFilterMethod={[Function]}
       defaultFiltered={Array []}
       defaultPage={0}
-      defaultPageSize={6}
+      defaultPageSize={25}
       defaultResized={Array []}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
@@ -324,9 +321,6 @@ exports[`SupervisorStatisticsTable matches snapshot on init 1`] = `
       pageJumpText="jump to page"
       pageSizeOptions={
         Array [
-          5,
-          10,
-          20,
           25,
           50,
           100,
@@ -476,7 +470,7 @@ exports[`SupervisorStatisticsTable matches snapshot on no data 1`] = `
       defaultFilterMethod={[Function]}
       defaultFiltered={Array []}
       defaultPage={0}
-      defaultPageSize={6}
+      defaultPageSize={25}
       defaultResized={Array []}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
@@ -527,9 +521,6 @@ exports[`SupervisorStatisticsTable matches snapshot on no data 1`] = `
       pageJumpText="jump to page"
       pageSizeOptions={
         Array [
-          5,
-          10,
-          20,
           25,
           50,
           100,
@@ -709,7 +700,7 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
       defaultFilterMethod={[Function]}
       defaultFiltered={Array []}
       defaultPage={0}
-      defaultPageSize={6}
+      defaultPageSize={25}
       defaultResized={Array []}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
@@ -760,9 +751,6 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
       pageJumpText="jump to page"
       pageSizeOptions={
         Array [
-          5,
-          10,
-          20,
           25,
           50,
           100,

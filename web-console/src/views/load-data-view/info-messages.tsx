@@ -27,7 +27,7 @@ import { LearnMore } from './learn-more/learn-more';
 
 export interface ConnectMessageProps {
   inlineMode: boolean;
-  spec: IngestionSpec;
+  spec: Partial<IngestionSpec>;
 }
 
 export const ConnectMessage = React.memo(function ConnectMessage(props: ConnectMessageProps) {
