@@ -326,11 +326,6 @@
      <packageUrl regex="true">^pkg:maven/org\.apache\.hadoop/hadoop\-.*@.*$</packageUrl>
      <cve>CVE-2018-11765</cve>
      <cve>CVE-2020-9492</cve>
-     <cve>CVE-2021-31684</cve>
-     <cve>CVE-2021-35517</cve>
-     <cve>CVE-2021-35516</cve>
-     <cve>CVE-2021-35515</cve>
-     <cve>CVE-2021-36090</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -338,6 +333,11 @@
      ]]></notes>
     <cve>CVE-2018-11765</cve>
     <cve>CVE-2020-9492</cve>
+    <cve>CVE-2021-31684</cve>
+    <cve>CVE-2021-35517</cve>
+    <cve>CVE-2021-35516</cve>
+    <cve>CVE-2021-35515</cve>
+    <cve>CVE-2021-36090</cve>
   </suppress>
   <suppress>
     <!-- The CVE is not applicable to kafka-clients. -->
