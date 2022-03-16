@@ -690,7 +690,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   {
     updateCompactionTaskSlot(1, 1, null);
     final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
-    Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.MONTH, Granularities.DAY, false, ImmutableList.of(new Interval("2013-08-31/2013-09-02", chrono))));
+    Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.WEEK, Granularities.DAY, false, ImmutableList.of(new Interval("2013-08-31/2013-09-02", chrono))));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       Map<String, Object> expectedResult = ImmutableMap.of(
@@ -702,14 +702,14 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       submitCompactionConfig(
           MAX_ROWS_PER_SEGMENT_COMPACTED,
           NO_SKIP_OFFSET,
-          new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null),
+          new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null),
           false
       );
-      // Before compaction, we have segments with the interval 2013-08-01/2013-09-01 and 2013-09-01/2013-10-01
-      // We will compact the latest segment, 2013-09-01/2013-10-01, to YEAR.
-      // Although the segments before compaction only cover 2013-08-01 to 2013-10-01,
-      // we expect the compaction task's interval to align with the YEAR segmentGranularity (2013-01-01 to 2014-01-01)
-      forceTriggerAutoCompaction(1);
+      // Before compaction, we have segments with the interval 2013-08-26T00:00:00.000Z/2013-09-02T00:00:00.000Z
+      // We will compact the latest segment to MONTH.
+      // Although the segments before compaction only cover 2013-08-26 to 2013-09-02,
+      // we expect the compaction task's interval to align with the MONTH segmentGranularity (2013-08-01 to 2013-10-01)
+      forceTriggerAutoCompaction(2);
       // Make sure that no data is lost after compaction
       expectedResult = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
@@ -717,7 +717,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
       verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
-      verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
+      verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
       List<TaskResponseObject> tasks = indexer.getCompleteTasksForDataSource(fullDatasourceName);
       TaskResponseObject compactTask = null;
       for (TaskResponseObject task : tasks) {

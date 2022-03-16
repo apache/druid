@@ -45,7 +45,7 @@ public class ClientCompactionIntervalSpec
   @Nullable
   private final String sha256OfSortedSegmentIds;
 
-  public static ClientCompactionIntervalSpec fromSegments(List<DataSegment> segments, Granularity segmentGranularity)
+  public static ClientCompactionIntervalSpec fromSegments(List<DataSegment> segments, @Nullable Granularity segmentGranularity)
   {
     Interval interval = JodaUtils.umbrellaInterval(segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()));
     if (segmentGranularity != null) {
@@ -57,11 +57,14 @@ public class ClientCompactionIntervalSpec
       // the compaction task, a new segment outside of the interval (i.e. 2015-02-11/2015-02-12) got created will be lost as it is
       // overshadowed by the compacted segment (compacted segment has interval 2015-01-01/2016-01-01.
       // Hence, in this case, we must adjust the compaction task interval to 2015-01-01/2016-01-01.
-      // - The umbrella interval of the segments is 2015-02-01/2015-03-01 but configured segmentGranularity is MONTH,
-      // if the compaction task's interval is 2015-02-01/2015-03-01 then compacted segments created will be
+      // - The segment to be compacted has MONTH segmentGranularity with the interval 2015-02-01/2015-03-01 but configured
+      // segmentGranularity is WEEK. If the compaction task's interval is 2015-02-01/2015-03-01 then compacted segments created will be
       // 2015-01-26/2015-02-02, 2015-02-02/2015-02-09, 2015-02-09/2015-02-16, 2015-02-16/2015-02-23, 2015-02-23/2015-03-02.
-      // The compacted segment would cause existing data from 2015-01-26 to 2015-02-01 and 2015-03-01 to 2015-03-02 to be lost.
-      //  Hence, in this case, we must adjust the compaction task interval to 2015-01-26/2015-03-02
+      // This is because Druid's WEEK segments alway start and end on Monday. In the above example, 2015-01-26 and 2015-03-02
+      // are Mondays but 2015-02-01 and 2015-03-01 are not. Hence, the WEEK segments have to start and end on 2015-01-26 and 2015-03-02.
+      // If the compaction task's interval is 2015-02-01/2015-03-01, then the compacted segment would cause existing data
+      // from 2015-01-26 to 2015-02-01 and 2015-03-01 to 2015-03-02 to be lost. Hence, in this case,
+      // we must adjust the compaction task interval to 2015-01-26/2015-03-02
       interval = JodaUtils.umbrellaInterval(segmentGranularity.getIterable(interval));
     }
     return new ClientCompactionIntervalSpec(

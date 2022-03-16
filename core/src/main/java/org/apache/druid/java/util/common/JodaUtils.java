@@ -22,10 +22,13 @@ package org.apache.druid.java.util.common;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
+import org.apache.commons.lang.ObjectUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeComparator;
 import org.joda.time.Interval;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -182,16 +185,15 @@ public class JodaUtils
 
   public static Interval umbrellaInterval(Iterable<Interval> intervals)
   {
-    ArrayList<DateTime> startDates = new ArrayList<>();
-    ArrayList<DateTime> endDates = new ArrayList<>();
+    DateTimeComparator dateTimeComp = DateTimeComparator.getInstance();
+
+    DateTime minStart = new DateTime(Long.MAX_VALUE);
+    DateTime maxEnd = new DateTime(Long.MIN_VALUE);
 
     for (Interval interval : intervals) {
-      startDates.add(interval.getStart());
-      endDates.add(interval.getEnd());
+      minStart = Collections.min(ImmutableList.of(minStart, interval.getStart()), dateTimeComp);
+      maxEnd = Collections.max(ImmutableList.of(maxEnd, interval.getEnd()), dateTimeComp);
     }
-
-    DateTime minStart = minDateTime(startDates.toArray(new DateTime[0]));
-    DateTime maxEnd = maxDateTime(endDates.toArray(new DateTime[0]));
 
     if (minStart == null || maxEnd == null) {
       throw new IllegalArgumentException("Empty list of intervals");
