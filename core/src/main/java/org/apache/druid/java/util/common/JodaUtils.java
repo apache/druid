@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeComparator;
 import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -185,17 +186,18 @@ public class JodaUtils
 
   public static Interval umbrellaInterval(Iterable<Interval> intervals)
   {
+    boolean emptyIntervals = true;
     DateTimeComparator dateTimeComp = DateTimeComparator.getInstance();
-
-    DateTime minStart = new DateTime(Long.MAX_VALUE);
-    DateTime maxEnd = new DateTime(Long.MIN_VALUE);
+    DateTime minStart = new DateTime(Long.MAX_VALUE, ISOChronology.getInstanceUTC());
+    DateTime maxEnd = new DateTime(Long.MIN_VALUE, ISOChronology.getInstanceUTC());
 
     for (Interval interval : intervals) {
+      emptyIntervals = false;
       minStart = Collections.min(ImmutableList.of(minStart, interval.getStart()), dateTimeComp);
       maxEnd = Collections.max(ImmutableList.of(maxEnd, interval.getEnd()), dateTimeComp);
     }
 
-    if (minStart == null || maxEnd == null) {
+    if (emptyIntervals) {
       throw new IllegalArgumentException("Empty list of intervals");
     }
     return new Interval(minStart, maxEnd);
