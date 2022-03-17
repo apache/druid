@@ -143,19 +143,19 @@ the 'column data' is an array of values. Additionally, a row with *n*
 values in 'column data' will have *n* non-zero valued entries in
 bitmaps.
 
-## SQL Compatible Null Handling
+## SQL compatible null handling
 By default, Druid string dimension columns use the values `''` and `null` interchangeably and numeric and metric columns can not represent `null` at all, instead coercing nulls to `0`. However, Druid also provides a SQL compatible null handling mode, which must be enabled at the system level, through `druid.generic.useDefaultValueForNull`. This setting, when set to `false`, will allow Druid to _at ingestion time_ create segments whose string columns can distinguish `''` from `null`, and numeric columns which can represent `null` valued rows instead of `0`.
 
 String dimension columns contain no additional column structures in this mode, instead just reserving an additional dictionary entry for the `null` value. Numeric columns however will be stored in the segment with an additional bitmap whose set bits indicate `null` valued rows. In addition to slightly increased segment sizes, SQL compatible null handling can incur a performance cost at query time as well, due to the need to check the null bitmap. This performance cost only occurs for columns that actually contain nulls.
 
-## Naming Convention
+## Naming convention
 
 Identifiers for segments are typically constructed using the segment datasource, interval start time (in ISO 8601 format), interval end time (in ISO 8601 format), and a version. If data is additionally sharded beyond a time range, the segment identifier will also contain a partition number.
 
 An example segment identifier may be:
 datasource_intervalStart_intervalEnd_version_partitionNum
 
-## Segment Components
+## Segment components
 
 Behind the scenes, a segment is comprised of several files, listed below.
 
@@ -189,9 +189,7 @@ A ColumnDescriptor is essentially an object that allows us to use Jackson's poly
 ### Compression
 Druid compresses blocks of values for string, long, float, and double columns, using [LZ4](https://github.com/lz4/lz4-java) by default, and bitmaps for string columns and numeric null values are compressed using [Roaring](https://github.com/RoaringBitmap/RoaringBitmap). We recommend sticking with these defaults unless experimental verification with your own data and query patterns suggest that non-default options will perform better in your specific case. For example, for bitmap in string columns, the differences between using Roaring and CONCISE are most pronounced for high cardinality columns. In this case, Roaring is substantially faster on filters that match a lot of values, but in some cases CONCISE can have a lower footprint due to the overhead of the Roaring format (but is still slower when lots of values are matched). Currently, compression is configured on at the segment level rather than individual columns, see [IndexSpec](../ingestion/ingestion-spec.md#indexspec) for more details.
 
-## Sharding Data to Create Segments
-
-### Sharding
+## Sharding data to create segments
 
 Multiple segments may exist for the same interval of time for the same datasource. These segments form a `block` for an interval.
 Depending on the type of `shardSpec` that is used to shard the data, Druid queries may only complete if a `block` is complete. That is to say, if a block consists of 3 segments, such as:
@@ -209,7 +207,7 @@ For example, if your real-time ingestion creates 3 segments that were sharded wi
 
 ## Schema changes
 
-## Replacing segments
+### Replacing segments
 
 Druid uniquely
 identifies segments using the datasource, interval, version, and partition number. The partition number is only visible in the segment id if
@@ -257,7 +255,7 @@ foo_2015-01-03/2015-01-04_v1_2
 
 In this case, queries may hit a mixture of `v1` and `v2` segments.
 
-## Different schemas among segments
+### Different schemas among segments
 
 Druid segments for the same datasource may have different schemas. If a string column (dimension) exists in one segment but not
 another, queries that involve both segments still work. Queries for the segment missing the dimension will behave as if the dimension has only null values.
