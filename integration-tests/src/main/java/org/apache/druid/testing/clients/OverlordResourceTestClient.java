@@ -144,6 +144,11 @@ public class OverlordResourceTestClient
     }
   }
 
+  public List<TaskResponseObject> getAllTasks()
+  {
+    return getTasks("tasks");
+  }
+
   public List<TaskResponseObject> getRunningTasks()
   {
     return getTasks("runningTasks");

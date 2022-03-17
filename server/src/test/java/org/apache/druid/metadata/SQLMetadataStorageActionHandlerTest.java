@@ -31,6 +31,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
+import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -135,7 +137,7 @@ public class SQLMetadataStorageActionHandlerTest
 
     Assert.assertEquals(
         ImmutableList.of(Pair.of(entry, status1)),
-        handler.getActiveTaskInfo(null).stream()
+        handler.getTaskInfos(ActiveTaskLookup.getInstance(), null).stream()
                .map(taskInfo -> Pair.of(taskInfo.getTask(), taskInfo.getStatus()))
                .collect(Collectors.toList())
     );
@@ -144,14 +146,14 @@ public class SQLMetadataStorageActionHandlerTest
 
     Assert.assertEquals(
         ImmutableList.of(Pair.of(entry, status2)),
-        handler.getActiveTaskInfo(null).stream()
+        handler.getTaskInfos(ActiveTaskLookup.getInstance(), null).stream()
                .map(taskInfo -> Pair.of(taskInfo.getTask(), taskInfo.getStatus()))
                .collect(Collectors.toList())
     );
 
     Assert.assertEquals(
         ImmutableList.of(),
-        handler.getCompletedTaskInfo(DateTimes.of("2014-01-01"), null, null)
+        handler.getTaskInfos(CompleteTaskLookup.withTasksCreatedPriorTo(null, DateTimes.of("2014-01-01")), null)
     );
 
     Assert.assertTrue(handler.setStatus(entryId, false, status1));
@@ -176,12 +178,12 @@ public class SQLMetadataStorageActionHandlerTest
 
     Assert.assertEquals(
         ImmutableList.of(),
-        handler.getCompletedTaskInfo(DateTimes.of("2014-01-03"), null, null)
+        handler.getTaskInfos(CompleteTaskLookup.withTasksCreatedPriorTo(null, DateTimes.of("2014-01-03")), null)
     );
 
     Assert.assertEquals(
         ImmutableList.of(status1),
-        handler.getCompletedTaskInfo(DateTimes.of("2014-01-01"), null, null)
+        handler.getTaskInfos(CompleteTaskLookup.withTasksCreatedPriorTo(null, DateTimes.of("2014-01-01")), null)
                .stream()
                .map(TaskInfo::getStatus)
                .collect(Collectors.toList())
@@ -199,9 +201,11 @@ public class SQLMetadataStorageActionHandlerTest
       handler.insert(entryId, DateTimes.of(StringUtils.format("2014-01-%02d", i)), "test", entry, false, status);
     }
 
-    final List<TaskInfo<Map<String, Integer>, Map<String, Integer>>> statuses = handler.getCompletedTaskInfo(
-        DateTimes.of("2014-01-01"),
-        7,
+    final List<TaskInfo<Map<String, Integer>, Map<String, Integer>>> statuses = handler.getTaskInfos(
+        CompleteTaskLookup.withTasksCreatedPriorTo(
+            7,
+            DateTimes.of("2014-01-01")
+        ),
         null
     );
     Assert.assertEquals(7, statuses.size());
@@ -222,9 +226,11 @@ public class SQLMetadataStorageActionHandlerTest
       handler.insert(entryId, DateTimes.of(StringUtils.format("2014-01-%02d", i)), "test", entry, false, status);
     }
 
-    final List<TaskInfo<Map<String, Integer>, Map<String, Integer>>> statuses = handler.getCompletedTaskInfo(
-        DateTimes.of("2014-01-01"),
-        10,
+    final List<TaskInfo<Map<String, Integer>, Map<String, Integer>>> statuses = handler.getTaskInfos(
+        CompleteTaskLookup.withTasksCreatedPriorTo(
+            10,
+            DateTimes.of("2014-01-01")
+        ),
         null
     );
     Assert.assertEquals(5, statuses.size());
@@ -409,14 +415,15 @@ public class SQLMetadataStorageActionHandlerTest
 
     Assert.assertEquals(
         ImmutableList.of(entryId2),
-        handler.getActiveTaskInfo(null).stream()
+        handler.getTaskInfos(ActiveTaskLookup.getInstance(), null).stream()
                .map(taskInfo -> taskInfo.getId())
                .collect(Collectors.toList())
     );
 
     Assert.assertEquals(
         ImmutableList.of(entryId3, entryId1),
-        handler.getCompletedTaskInfo(DateTimes.of("2014-01-01"), null, null).stream()
+        handler.getTaskInfos(CompleteTaskLookup.withTasksCreatedPriorTo(null, DateTimes.of("2014-01-01")), null)
+               .stream()
                .map(taskInfo -> taskInfo.getId())
                .collect(Collectors.toList())
 
@@ -426,13 +433,14 @@ public class SQLMetadataStorageActionHandlerTest
     // active task not removed.
     Assert.assertEquals(
         ImmutableList.of(entryId2),
-        handler.getActiveTaskInfo(null).stream()
+        handler.getTaskInfos(ActiveTaskLookup.getInstance(), null).stream()
                .map(taskInfo -> taskInfo.getId())
                .collect(Collectors.toList())
     );
     Assert.assertEquals(
         ImmutableList.of(entryId3),
-        handler.getCompletedTaskInfo(DateTimes.of("2014-01-01"), null, null).stream()
+        handler.getTaskInfos(CompleteTaskLookup.withTasksCreatedPriorTo(null, DateTimes.of("2014-01-01")), null)
+               .stream()
                .map(taskInfo -> taskInfo.getId())
                .collect(Collectors.toList())
 

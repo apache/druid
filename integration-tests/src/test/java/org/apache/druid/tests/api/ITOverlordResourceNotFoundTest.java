@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.tests.query;
+package org.apache.druid.tests.api;
 
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
@@ -32,7 +32,7 @@ import java.util.function.Consumer;
 
 @Test(groups = TestNGGroup.HTTP_ENDPOINT)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITOverlordResourceTest
+public class ITOverlordResourceNotFoundTest
 {
   @Inject
   protected OverlordResourceTestClient indexer;
