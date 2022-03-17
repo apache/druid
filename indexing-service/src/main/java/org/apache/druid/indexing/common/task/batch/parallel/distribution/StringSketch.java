@@ -33,7 +33,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.quantiles.ItemsSketch;
-import org.apache.datasketches.quantiles.ItemsSketchIterator;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 
