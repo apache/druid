@@ -1835,6 +1835,8 @@
                                 <exclude>.editorconfig</exclude>
                                 <exclude>**/hadoop.indexer.libs.version</exclude>
                                 <exclude>**/codegen/**</exclude>
+                                <exclude>website/target/**</exclude>
+                                <exclude>website/node_modules/**</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
