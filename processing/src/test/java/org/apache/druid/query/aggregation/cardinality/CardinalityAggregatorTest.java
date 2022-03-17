@@ -49,6 +49,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -59,7 +60,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class CardinalityAggregatorTest
+public class CardinalityAggregatorTest extends InitializedNullHandlingTest
 {
   public static class TestDimensionSelector extends AbstractDimensionSelector
   {
@@ -224,6 +225,11 @@ public class CardinalityAggregatorTest
       new String[]{"x", "y"},
       new String[]{"x", "y", "a"}
   );
+
+  public Object[] countNulls()
+  {
+    return Lists.newArrayList(true, false).toArray();
+  }
 
   private static List<String[]> dimensionValues(Object... values)
   {
@@ -405,8 +411,27 @@ public class CardinalityAggregatorTest
     for (int i = 0; i < VALUES1.size(); ++i) {
       aggregate(selectorList, agg);
     }
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 7.0 : 6.0, (Double) valueAggregatorFactory.finalizeComputation(agg.get()), 0.05);
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 7L : 6L, rowAggregatorFactoryRounded.finalizeComputation(agg.get()));
+    if (NullHandling.ignoreNullsForStringCardinality()) {
+      Assert.assertEquals(
+          NullHandling.replaceWithDefault() ? 6.0 : 6.0,
+          (Double) valueAggregatorFactory.finalizeComputation(agg.get()),
+          0.05
+      );
+      Assert.assertEquals(
+          NullHandling.replaceWithDefault() ? 6L : 6L,
+          rowAggregatorFactoryRounded.finalizeComputation(agg.get())
+      );
+    } else {
+      Assert.assertEquals(
+          NullHandling.replaceWithDefault() ? 7.0 : 6.0,
+          (Double) valueAggregatorFactory.finalizeComputation(agg.get()),
+          0.05
+      );
+      Assert.assertEquals(
+          NullHandling.replaceWithDefault() ? 7L : 6L,
+          rowAggregatorFactoryRounded.finalizeComputation(agg.get())
+      );
+    }
   }
 
   @Test
@@ -449,8 +474,27 @@ public class CardinalityAggregatorTest
     for (int i = 0; i < VALUES1.size(); ++i) {
       bufferAggregate(selectorList, agg, buf, pos);
     }
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 7.0 : 6.0, (Double) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos)), 0.05);
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 7L : 6L, rowAggregatorFactoryRounded.finalizeComputation(agg.get(buf, pos)));
+    if (NullHandling.ignoreNullsForStringCardinality()) {
+      Assert.assertEquals(
+          NullHandling.replaceWithDefault() ? 6.0 : 6.0,
+          (Double) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos)),
+          0.05
+      );
+      Assert.assertEquals(
+          NullHandling.replaceWithDefault() ? 6L : 6L,
+          rowAggregatorFactoryRounded.finalizeComputation(agg.get(buf, pos))
+      );
+    } else {
+      Assert.assertEquals(
+          NullHandling.replaceWithDefault() ? 7.0 : 6.0,
+          (Double) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos)),
+          0.05
+      );
+      Assert.assertEquals(
+          NullHandling.replaceWithDefault() ? 7L : 6L,
+          rowAggregatorFactoryRounded.finalizeComputation(agg.get(buf, pos))
+      );
+    }
   }
 
   @Test
@@ -528,20 +572,52 @@ public class CardinalityAggregatorTest
     for (int i = 0; i < VALUES2.size(); ++i) {
       aggregate(selector2, agg2);
     }
+    if (NullHandling.ignoreNullsForStringCardinality()) {
+      Assert.assertEquals(
+          NullHandling.replaceWithDefault() ? 3.0 : 3.0,
+          (Double) valueAggregatorFactory.finalizeComputation(agg1.get()),
+          0.05
+      );
+      Assert.assertEquals(
+          NullHandling.replaceWithDefault() ? 6.0 : 6.0,
+          (Double) valueAggregatorFactory.finalizeComputation(agg2.get()),
+          0.05
+      );
+      Assert.assertEquals(
+          NullHandling.replaceWithDefault() ? 6.0 : 6.0,
+          (Double) rowAggregatorFactory.finalizeComputation(
+              rowAggregatorFactory.combine(
+                  agg1.get(),
+                  agg2.get()
+              )
+          ),
+          0.05
+      );
+    } else {
+      Assert.assertEquals(
+          NullHandling.replaceWithDefault() ? 4.0 : 3.0,
+          (Double) valueAggregatorFactory.finalizeComputation(agg1.get()),
+          0.05
+      );
+      Assert.assertEquals(
+          NullHandling.replaceWithDefault() ? 7.0 : 6.0,
+          (Double) valueAggregatorFactory.finalizeComputation(agg2.get()),
+          0.05
+      );
+      Assert.assertEquals(
+          NullHandling.replaceWithDefault() ? 7.0 : 6.0,
+          (Double) rowAggregatorFactory.finalizeComputation(
+              rowAggregatorFactory.combine(
+                  agg1.get(),
+                  agg2.get()
+              )
+          ),
+          0.05
+      );
+    }
 
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 4.0 : 3.0, (Double) valueAggregatorFactory.finalizeComputation(agg1.get()), 0.05);
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 7.0 : 6.0, (Double) valueAggregatorFactory.finalizeComputation(agg2.get()), 0.05);
 
-    Assert.assertEquals(
-        NullHandling.replaceWithDefault() ? 7.0 : 6.0,
-        (Double) rowAggregatorFactory.finalizeComputation(
-            rowAggregatorFactory.combine(
-                agg1.get(),
-                agg2.get()
-            )
-        ),
-        0.05
-    );
+
   }
 
   @Test
