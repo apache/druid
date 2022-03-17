@@ -58,7 +58,7 @@ public class NullHandling
   @VisibleForTesting
   public static void initializeForTests()
   {
-    INSTANCE = new NullValueHandlingConfig(null);
+    INSTANCE = new NullValueHandlingConfig(null, null);
   }
 
   /**
@@ -71,6 +71,18 @@ public class NullHandling
       throw new IllegalStateException("NullHandling module not initialized, call NullHandling.initializeForTests()");
     }
     return INSTANCE.isUseDefaultValuesForNull();
+  }
+
+  /**
+   * whether nulls should be counted during String cardinality
+   */
+  public static boolean ignoreNullsForStringCardinality()
+  {
+    // this should only be null in a unit test context, in production this will be injected by the null handling module
+    if (INSTANCE == null) {
+      throw new IllegalStateException("NullHandling module not initialized, call NullHandling.initializeForTests()");
+    }
+    return INSTANCE.isIgnoreNullsForStringCardinality();
   }
 
   public static boolean sqlCompatible()

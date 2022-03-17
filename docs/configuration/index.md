@@ -750,6 +750,7 @@ Prior to version 0.13.0, Druid string columns treated `''` and `null` values as 
 |Property|Description|Default|
 |---|---|---|
 |`druid.generic.useDefaultValueForNull`|When set to `true`, `null` values will be stored as `''` for string columns and `0` for numeric columns. Set to `false` to store and query data in SQL compatible mode.|`true`|
+|`druid.generic.ignoreNullsForStringCardinality`|When set to `true`, `null` values will be ignored for cardinality aggregation over string columns. Set to `false` to include `null` values while estimating cardinality of string columns|`false`|
 
 This mode does have a storage size and query performance cost, see [segment documentation](../design/segments.md#sql-compatible-null-handling) for more details.
 
