@@ -105,22 +105,31 @@ public class S3InputSource extends CloudObjectInputSource
     this.s3ClientSupplier = Suppliers.memoize(
         () -> {
           if (s3ClientBuilder != null && s3InputSourceConfig != null) {
-            if (s3InputSourceConfig.isCredentialsConfigured()) {
-              if (s3InputSourceConfig.getAssumeRoleArn() == null) {
-                s3ClientBuilder
-                    .getAmazonS3ClientBuilder()
-                    .withCredentials(createStaticCredentialsProvider(s3InputSourceConfig));
-              } else {
-                applyAssumeRole(
-                    s3ClientBuilder,
-                    s3InputSourceConfig,
-                    createStaticCredentialsProvider(s3InputSourceConfig)
-                );
-              }
-            } else {
+            // Each of these if statements will manipulate s3ClientBuilder if the condition is fulfilled.
+
+            // If both static key-pair and assume role ARN are defined, use the static key-pair to assume role.
+            if (s3InputSourceConfig.isCredentialsConfigured() && s3InputSourceConfig.isAssumeRoleArnConfigured()) {
+              applyAssumeRole(
+                s3ClientBuilder,
+                s3InputSourceConfig,
+                createStaticCredentialsProvider(s3InputSourceConfig)
+              );
+
+            // If only static key-pair is defined, build the S3 client with the static key-pair
+            } else if (s3InputSourceConfig.isCredentialsConfigured() && !s3InputSourceConfig.isAssumeRoleArnConfigured()) {
+              s3ClientBuilder.getAmazonS3ClientBuilder().withCredentials(createStaticCredentialsProvider(s3InputSourceConfig));
+
+            // If assume role ARN is defined, static key-pair is undefined, and WebIdentityToken file from the environment variable is undefined.
+            } else if (s3InputSourceConfig.isAssumeRoleArnConfigured() && !s3InputSourceConfig.isCredentialsConfigured() && !s3InputSourceConfig.isWebIdentityTokenEnvConfigured()) {
               applyAssumeRole(s3ClientBuilder, s3InputSourceConfig, awsCredentialsProvider);
             }
+
+            // Actually build the ServerSideEncryptingAmazonS3 object.
             return s3ClientBuilder.build();
+
+          } else if (s3ClientBuilder != null) {
+            return s3ClientBuilder.build();
+
           } else {
             return s3Client;
           }
@@ -166,15 +175,21 @@ public class S3InputSource extends CloudObjectInputSource
       AWSCredentialsProvider awsCredentialsProvider
   )
   {
-    String assumeRoleArn = s3InputSourceConfig.getAssumeRoleArn();
-    if (assumeRoleArn != null) {
+    // Do not run if WebIdentityToken file and assumeRole ARN are detected from the environment variable,
+    // we want the default s3ClientBuilder behavior for ServiceAccount + eks.amazonaws.com/role-arn annotation to work.
+    if (s3InputSourceConfig.isWebIdentityTokenEnvConfigured() && s3InputSourceConfig.isAssumeRoleArnEnvConfigured()) {
+      return;
+    }
+
+    if (s3InputSourceConfig.isAssumeRoleArnConfigured()) {
       String roleSessionName = StringUtils.format("druid-s3-input-source-%s", UUID.randomUUID().toString());
       AWSSecurityTokenService securityTokenService = AWSSecurityTokenServiceClientBuilder.standard()
                                                                           .withCredentials(awsCredentialsProvider)
                                                                           .build();
+
       STSAssumeRoleSessionCredentialsProvider.Builder roleCredentialsProviderBuilder;
       roleCredentialsProviderBuilder = new STSAssumeRoleSessionCredentialsProvider
-          .Builder(assumeRoleArn, roleSessionName).withStsClient(securityTokenService);
+          .Builder(s3InputSourceConfig.getAssumeRoleArn(), roleSessionName).withStsClient(securityTokenService);
 
       if (s3InputSourceConfig.getAssumeRoleExternalId() != null) {
         roleCredentialsProviderBuilder.withExternalId(s3InputSourceConfig.getAssumeRoleExternalId());

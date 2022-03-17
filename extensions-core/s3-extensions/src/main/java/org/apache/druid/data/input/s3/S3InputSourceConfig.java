@@ -28,6 +28,9 @@ import org.apache.druid.metadata.PasswordProvider;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
+import static com.amazonaws.SDKGlobalConfiguration.AWS_ROLE_ARN_ENV_VAR;
+import static com.amazonaws.SDKGlobalConfiguration.AWS_WEB_IDENTITY_ENV_VAR;
+
 /**
  * Contains properties for s3 input source.
  * Properties can be specified by ingestionSpec which will override system default.
@@ -88,6 +91,24 @@ public class S3InputSourceConfig
   {
     return accessKeyId != null &&
            secretAccessKey != null;
+  }
+
+  @JsonIgnore
+  public boolean isAssumeRoleArnConfigured()
+  {
+    return assumeRoleArn != null && !assumeRoleArn.trim().isEmpty();
+  }
+
+  @JsonIgnore
+  public boolean isAssumeRoleArnEnvConfigured()
+  {
+    return !System.getenv(AWS_ROLE_ARN_ENV_VAR).trim().isEmpty();
+  }
+
+  @JsonIgnore
+  public boolean isWebIdentityTokenEnvConfigured()
+  {
+    return !System.getenv(AWS_WEB_IDENTITY_ENV_VAR).trim().isEmpty();
   }
 
   @Override
