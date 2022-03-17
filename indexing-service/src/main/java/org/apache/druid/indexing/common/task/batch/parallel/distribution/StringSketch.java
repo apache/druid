@@ -133,27 +133,6 @@ public class StringSketch implements StringDistribution
   }
 
   @Override
-  public long sizeInBytes()
-  {
-    // Size = 16L (object overhead) + 8L (sketch ref) + sketch size
-    long bytes = 16L + 8L;
-
-    // Sketch size = 16L (object overhead) + 3 ints + 4 refs + 1 long
-    // + size of entries
-    bytes += 16L + 3 * Integer.BYTES + 4 * Long.BYTES + Long.BYTES;
-
-    // Add size of entries
-    final ItemsSketchIterator<StringTuple> iterator = delegate.iterator();
-    while (iterator.next()) {
-      StringTuple value = iterator.getValue();
-      bytes += Long.BYTES;
-      bytes += value == null ? 0 : value.sizeInBytes();
-    }
-
-    return bytes;
-  }
-
-  @Override
   public String toString()
   {
     return "StringSketch{" +

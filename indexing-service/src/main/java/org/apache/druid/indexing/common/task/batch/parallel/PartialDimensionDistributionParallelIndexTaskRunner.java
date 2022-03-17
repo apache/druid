@@ -20,22 +20,29 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistributionMerger;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketchMerger;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.utils.CollectionUtils;
-import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.timeline.partition.PartitionBoundaries;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * {@link ParallelIndexTaskRunner} for the phase to determine distribution of dimension values in
@@ -48,9 +55,9 @@ class PartialDimensionDistributionParallelIndexTaskRunner
   private static final String PHASE_NAME = "partial dimension distribution";
 
   private final ExecutorService executor = Execs.singleThreaded("DimDistributionMerger-%s");
-  private final ConcurrentHashMap<Interval, StringDistributionMerger> intervalToDistributionMerger
-      = new ConcurrentHashMap<>();
-  private final AtomicLong totalSketchHeapSize = new AtomicLong();
+  private final ConcurrentHashMap<Interval, Set<String>> intervalToTaskIds = new ConcurrentHashMap<>();
+
+  private final File tempDistributionsDir;
 
   PartialDimensionDistributionParallelIndexTaskRunner(
       TaskToolbox toolbox,
@@ -69,6 +76,7 @@ class PartialDimensionDistributionParallelIndexTaskRunner
         ingestionSchema,
         context
     );
+    this.tempDistributionsDir = createDistributionsDir();
   }
 
   @Override
@@ -80,30 +88,57 @@ class PartialDimensionDistributionParallelIndexTaskRunner
   @Override
   public void collectReport(DimensionDistributionReport report)
   {
-    // TODO: keep an md5 hash of the report to implement the same validation as in taskMonitor
+    // TODO:
+    //  - keep an md5 hash of the report to implement the same validation as in taskMonitor
+    //  or if a task sends its reports multiple times, should we just ignore it?
 
     // Send an empty report to TaskMonitor
     super.collectReport(new DimensionDistributionReport(report.getTaskId(), null));
 
-    // Update the distributions in a separate thread to unblock HTTP requests
+    // Extract the distributions in a separate thread to unblock HTTP requests
     if (executor.isShutdown()) {
       // this should never happen
-      throw new ISE("Executor is already shutdown. Cannot merge more reports.");
+      throw new ISE("Executor is already shutdown. Cannot process more reports.");
     }
     executor.submit(() -> extractDistributionsFromReport(report));
   }
 
   /**
-   * Map from an Interval to StringDistribution obtained by merging all the
-   * StringDistributions reported by different sub-tasks for that Interval.
+   * Map from an interval to PartitionBoundaries calculated by applying the target
+   * row size on the final StringDistribution. The final distribution for an
+   * interval is obtained by merging the distributions reported by all the
+   * sub-tasks for that interval.
    */
-  public Map<Interval, StringDistribution> getIntervalToDistribution()
+  public Map<Interval, PartitionBoundaries> getIntervalToPartitionBoundaries(
+      DimensionRangePartitionsSpec partitionsSpec
+  )
   {
-    waitForDistributionsToMerge();
-    return CollectionUtils.mapValues(
-        intervalToDistributionMerger,
-        StringDistributionMerger::getResult
+    waitToProcessPendingReports();
+
+    final Map<Interval, PartitionBoundaries> intervalToPartitions = new HashMap<>();
+    intervalToTaskIds.forEach(
+        (interval, subTaskIds) -> {
+          final File intervalDir = getIntervalDistributionDir(interval);
+          final StringDistributionMerger merger = new StringSketchMerger();
+          subTaskIds
+              .stream()
+              .map(subTaskId -> readDistributionFromFile(intervalDir, subTaskId))
+              .forEach(merger::merge);
+          final StringDistribution mergedDistribution = merger.getResult();
+
+          final PartitionBoundaries partitions;
+          Integer targetRowsPerSegment = partitionsSpec.getTargetRowsPerSegment();
+          if (targetRowsPerSegment == null) {
+            partitions = mergedDistribution.getEvenPartitionsByMaxSize(partitionsSpec.getMaxRowsPerSegment());
+          } else {
+            partitions = mergedDistribution.getEvenPartitionsByTargetSize(targetRowsPerSegment);
+          }
+
+          intervalToPartitions.put(interval, partitions);
+        }
     );
+
+    return intervalToPartitions;
   }
 
   /**
@@ -112,53 +147,38 @@ class PartialDimensionDistributionParallelIndexTaskRunner
    */
   private void extractDistributionsFromReport(DimensionDistributionReport report)
   {
-    log.debug("Started merging distributions from Task ID [%s]", report.getTaskId());
+    log.debug("Started writing distributions from Task ID [%s]", report.getTaskId());
     report.getIntervalToDistribution().forEach(
-        (interval, distribution) -> intervalToDistributionMerger.compute(interval, (i, existingMerger) -> {
-          final long oldSketchSize;
-          final StringDistributionMerger merger;
-          if (existingMerger == null) {
-            merger = new StringSketchMerger();
-            oldSketchSize = 0L;
-          } else {
-            merger = existingMerger;
-            oldSketchSize = existingMerger.getResult().sizeInBytes();
+        (interval, distribution) -> {
+          Set<String> taskIds = intervalToTaskIds.computeIfAbsent(interval, i -> new HashSet<>());
+          if (!taskIds.contains(report.getTaskId())) {
+            writeDistributionToFile(interval, report.getTaskId(), distribution);
           }
-
-          merger.merge(distribution);
-
-          final long newSketchSize = merger.getResult().sizeInBytes();
-          totalSketchHeapSize.addAndGet(newSketchSize - oldSketchSize);
-
-          return merger;
-        })
+        }
     );
 
-    log.debug("Finished merging distributions from Task ID [%s]", report.getTaskId());
-    validateSketchesHeapSize();
+    log.debug("Finished writing distributions from Task ID [%s]", report.getTaskId());
   }
 
-  /**
-   * Validates the total heap size of all the distribution sketches. The task is
-   * failed if the total size exceeds the threshold.
-   */
-  private void validateSketchesHeapSize()
+  private void writeDistributionToFile(
+      Interval interval,
+      String subTaskId,
+      StringDistribution distribution
+  )
   {
-    // TODO: finalize the correct value of maxSketchHeapSize to use here
-    final long maxSketchHeapSize = JvmUtils.getRuntimeInfo().getTotalHeapSizeBytes() / 6L;
-    if (totalSketchHeapSize.get() > maxSketchHeapSize) {
-      final String errorMsg = String.format(
-          "Too many interval distributions to process [%s]. Estimated Size [%s], Max Heap Size [%s].\n"
-          + "Try one of the following:\n"
-          + "(1) Increase the task JVM heap size.\n"
-          + "(2) Reduce time range of input dataset.\n"
-          + "(3) Use a coarser segment granularity.",
-          intervalToDistributionMerger.size(),
-          totalSketchHeapSize.get(),
-          maxSketchHeapSize
-      );
-      log.error(errorMsg);
+    try {
+      File intervalDir = getIntervalDistributionDir(interval);
+      FileUtils.mkdirp(intervalDir);
 
+      File distributionJsonFile = getDistributionJsonFile(intervalDir, subTaskId);
+      getToolbox().getJsonMapper().writeValue(distributionJsonFile, distribution);
+    }
+    catch (IOException e) {
+      String errorMsg = StringUtils.format(
+          "Exception while writing distribution file for Interval [%s], Task ID [%s]",
+          interval,
+          subTaskId
+      );
       // This code can be executed in two cases:
       // Case 1: There are sub-tasks pending execution
       //   Calling stopGracefully() fails this phase and the supervisor task.
@@ -167,27 +187,73 @@ class PartialDimensionDistributionParallelIndexTaskRunner
       //   have been received and process is still running fine.
       // TODO: include the correct error message in the task status
       stopGracefully(errorMsg);
+      throw new ISE(e, errorMsg);
     }
   }
 
-  /**
-   * Waits for distributions from pending reports (if any) to be merged.
-   */
-  private void waitForDistributionsToMerge()
+  private StringDistribution readDistributionFromFile(File intervalDir, String subTaskId)
   {
-    log.info("Waiting for distributions to be merged");
+    try {
+      File distributionJsonFile = getDistributionJsonFile(intervalDir, subTaskId);
+      return getToolbox().getJsonMapper().readValue(distributionJsonFile, StringDistribution.class);
+    }
+    catch (IOException e) {
+      throw new ISE(e, "Error while reading distribution for Interval [%s], Task ID [%s]",
+                    intervalDir.getName(), subTaskId
+      );
+    }
+  }
+
+  private File getIntervalDistributionDir(Interval interval)
+  {
+    return new File(tempDistributionsDir, toIntervalString(interval));
+  }
+
+  private File getDistributionJsonFile(File intervalDir, String subTaskId)
+  {
+    return new File(intervalDir, subTaskId);
+  }
+
+  /**
+   * Waits for distributions from pending reports (if any) to be extracted.
+   */
+  private void waitToProcessPendingReports()
+  {
+    log.info("Waiting to extract distributions from sub-task reports.");
     try {
       executor.shutdown();
       executor.awaitTermination(10, TimeUnit.SECONDS);
     }
     catch (InterruptedException e) {
-      throw new ISE(e, "Interrupted while waiting for distributions to merge");
+      throw new ISE(e, "Interrupted while waiting to extract distributions.");
     }
     finally {
       if (!executor.isTerminated()) {
-        log.error("Executor was not terminated. There are pending distributions to be merged.");
+        log.error("Executor was not terminated."
+                  + " There are pending distribution reports to be processed.");
       }
     }
+  }
+
+  private File createDistributionsDir()
+  {
+    File taskTempDir = getToolbox().getConfig().getTaskTempDir(getTaskId());
+    File distributionsDir = new File(taskTempDir, "dimension_distributions");
+    try {
+      FileUtils.mkdirp(distributionsDir);
+      return distributionsDir;
+    }
+    catch (IOException e) {
+      throw new ISE(e, "Could not create temp dir");
+    }
+  }
+
+  private String toIntervalString(Interval interval)
+  {
+    return
+        new DateTime(interval.getStartMillis(), interval.getChronology())
+        + "_"
+        + new DateTime(interval.getEndMillis(), interval.getChronology());
   }
 
   @Override

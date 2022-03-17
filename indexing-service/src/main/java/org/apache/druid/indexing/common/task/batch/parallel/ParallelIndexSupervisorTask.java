@@ -55,7 +55,6 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -795,13 +794,13 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       return TaskStatus.failure(getId(), errMsg);
     }
 
-    Map<Interval, PartitionBoundaries> intervalToPartitions = CollectionUtils.mapValues(
-        distributionRunner.getIntervalToDistribution(),
-        this::determineRangePartition
-    );
+    Map<Interval, PartitionBoundaries> intervalToPartitions =
+        distributionRunner.getIntervalToPartitionBoundaries(
+            (DimensionRangePartitionsSpec) ingestionSchema.getTuningConfig().getPartitionsSpec()
+        );
 
     if (intervalToPartitions.isEmpty()) {
-      String msg = "No valid rows for single dimension partitioning."
+      String msg = "No valid rows for range partitioning."
                    + " All rows may have invalid timestamps or multiple dimension values.";
       LOG.warn(msg);
       return TaskStatus.success(getId(), msg);
@@ -907,22 +906,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           }
         }
     );
-  }
-
-  private PartitionBoundaries determineRangePartition(StringDistribution mergedDistribution)
-  {
-    DimensionRangePartitionsSpec partitionsSpec =
-        (DimensionRangePartitionsSpec) ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec();
-
-    final PartitionBoundaries partitions;
-    Integer targetRowsPerSegment = partitionsSpec.getTargetRowsPerSegment();
-    if (targetRowsPerSegment == null) {
-      partitions = mergedDistribution.getEvenPartitionsByMaxSize(partitionsSpec.getMaxRowsPerSegment());
-    } else {
-      partitions = mergedDistribution.getEvenPartitionsByTargetSize(targetRowsPerSegment);
-    }
-
-    return partitions;
   }
 
   /**
