@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
@@ -220,21 +221,18 @@ public class ForkingTaskRunner
                         }
 
                         // Override task specific javaOptsArray
-                        Object taskJavaOptsArray = task.getContextValue(
-                            ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY
-                        );
-                        if (taskJavaOptsArray != null) {
-                          if (taskJavaOptsArray instanceof List) {
-                            for (Object javaOpt : (List<?>) taskJavaOptsArray) {
-                              if (javaOpt instanceof String) {
-                                command.add((String) javaOpt);
-                              } else {
-                                LOGGER.warn("%s in javaOptsArray in task context is not a String", javaOpt);
-                              }
-                            }
-                          } else {
-                            LOGGER.warn("javaOptsArray in task context must be a list");
-                          }
+                        try {
+                          List<String> taskJavaOptsArray = jsonMapper.convertValue(
+                              task.getContextValue(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY),
+                              new TypeReference<List<String>>() {}
+                          );
+                          Iterables.addAll(command, taskJavaOptsArray);
+                        }
+                        catch (Exception e) {
+                          throw new IllegalArgumentException(
+                              "javaOptsArray in context of task: " + task + " must be an array of strings.",
+                              e
+                          );
                         }
 
                         for (String propName : props.stringPropertyNames()) {
