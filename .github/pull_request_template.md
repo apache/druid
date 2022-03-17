@@ -11,7 +11,7 @@ https://github.com/apache/druid/blob/master/dev/committer-instructions.md#pr-and
 
 ### Description
 
-<!-- Describe the goal of this PR, what problem are you fixing. If there is a corresponding issue (referenced above), it's not necessary to repeat the description here, however, you may choose to keep one summary sentence. -->
+Describe the goal of this PR, what problem are you fixing. If there is a corresponding issue (referenced above), it's not necessary to repeat the description here, however, you may choose to keep one summary sentence. Focus on "User Experience", describe how users will interact with the changes you're submitting. It's important to get the user experience right, because if we release a feature with poor UX, then it's hard to change later without breaking compatibility. We'd like the master branch to be releasable at all times, which means we should figure UX out before committing a patch.
 
 <!-- Describe your patch: what did you change in code? How did you fix the problem? -->
 
@@ -33,7 +33,12 @@ In each section, please describe design decisions made, including:
 
 <!-- It's good to describe an alternative design (or mention an alternative name) for every design (or naming) decision point and compare the alternatives with the designs that you've implemented (or the names you've chosen) to highlight the advantages of the chosen designs and names. -->
 
-<!-- If there was a discussion of the design of the feature implemented in this PR elsewhere (e. g. a "Proposal" issue, any other issue, or a thread in the development mailing list), link to that discussion from this PR description and explain what have changed in your final design compared to your original proposal or the consensus version in the end of the discussion. If something hasn't changed since the original discussion, you can omit a detailed discussion of those aspects of the design here, perhaps apart from brief mentioning for the sake of readability of this PR description. -->
+<!-- If there was a discussion of the design of the feature implemented in this PR elsewhere (e. g. a "Proposal" issue, any other issue, or a thread in the development mailing list), link to that discussion from this PR description and explain what have changed in your final design compared to your original proposal or the consensus version in the end of the discussion. If something hasn't changed since the original discussion, you can omit a detailed discussion of those aspects of the design here, perhaps apart from brief mentioning for the sake of readability of this PR description. 
+-->
+
+It's important to get tests right too because they ensure high quality releases, and they also ensure that future changes can be made with low
+risk. Make reviewer's life easier by adding good testing of the new stuff and writing out (in natural language) why you think your tests cover all the important cases. These natural language descriptions are *very helpful* for reviewers, especially when they add context to the patch. Don't make reviewers reverse-engineer your code to guess what you were thinking.
+
 
 <!-- Some of the aspects mentioned above may be omitted for simple and small changes. -->
 
@@ -46,7 +51,9 @@ In each section, please describe design decisions made, including:
 
 <hr>
 
-<!-- Check the items by putting "x" in the brackets for the done things. Not all of these items apply to every PR. Remove the items which are not done or not relevant to the PR. None of the items from the checklist below are strictly necessary, but it would be very helpful if you at least self-review the PR. -->
+<!-- Check the items by putting "x" in the brackets for the done things. Not all of these items apply to every PR. Remove the items which are not done or not relevant to the PR. None of the items from the checklist below are strictly necessary, but it would be very helpful if you at least self-review the PR. 
+Regarding Tests: 
+-->
 
 This PR has:
 - [ ] been self-reviewed.
