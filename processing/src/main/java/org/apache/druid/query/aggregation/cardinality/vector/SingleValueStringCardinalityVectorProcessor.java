@@ -80,16 +80,27 @@ public class SingleValueStringCardinalityVectorProcessor implements CardinalityV
 
     try {
       final int[] vector = selector.getRowVector();
-
-      for (int i = 0; i < numRows; i++) {
-        final String s = selector.lookupName(vector[rows != null ? rows[i] : i]);
-
-        if (s != null) {
-          final int position = positions[i] + positionOffset;
-          buf.limit(position + HyperLogLogCollector.getLatestNumBytesForDenseStorage());
-          buf.position(position);
-          final HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buf);
-          StringCardinalityAggregatorColumnSelectorStrategy.addStringToCollector(collector, s);
+      if (NullHandling.ignoreNullsForStringCardinality()) {
+        for (int i = 0; i < numRows; i++) {
+          final String s = selector.lookupName(vector[rows != null ? rows[i] : i]);
+          if (s != null) {
+            final int position = positions[i] + positionOffset;
+            buf.limit(position + HyperLogLogCollector.getLatestNumBytesForDenseStorage());
+            buf.position(position);
+            final HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buf);
+            StringCardinalityAggregatorColumnSelectorStrategy.addStringToCollector(collector, s);
+          }
+        }
+      } else {
+        for (int i = 0; i < numRows; i++) {
+          final String s = selector.lookupName(vector[rows != null ? rows[i] : i]);
+          if (NullHandling.replaceWithDefault() || s != null) {
+            final int position = positions[i] + positionOffset;
+            buf.limit(position + HyperLogLogCollector.getLatestNumBytesForDenseStorage());
+            buf.position(position);
+            final HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buf);
+            StringCardinalityAggregatorColumnSelectorStrategy.addStringToCollector(collector, s);
+          }
         }
       }
     }
