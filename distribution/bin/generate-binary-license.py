@@ -102,7 +102,7 @@ def print_license(license):
                     license_phrase += "see {}".format(each_file)
                 else:
                     license_phrase += ", {}".format(each_file)
-    
+
     license_phrase += "."
 
     print_license_phrase(license_phrase)
@@ -133,11 +133,11 @@ def print_license_name_underbar(license_name):
 
 def generate_license(apache_license_v2, license_yaml):
     print_log_to_stderr("=== Generating the contents of LICENSE.BINARY file ===\n")
-    
+
     # Print Apache license first.
     print_outfile(apache_license_v2)
     with open(license_yaml, encoding='utf-8') as registry_file:
-        licenses_list = list(yaml.load_all(registry_file))
+        licenses_list = list(yaml.load_all(registry_file, Loader=yaml.Loader))
 
     # Group licenses by license_name, license_category, and then module.
     licenses_map = {}
@@ -172,7 +172,7 @@ if __name__ == "__main__":
         parser.add_argument('license_yaml', metavar='<path to license.yaml>', type=str)
         parser.add_argument('out_path', metavar='<path to output file>', type=str)
         args = parser.parse_args()
-        
+
         with open(args.apache_license, encoding="ascii") as apache_license_file:
             apache_license_v2 = apache_license_file.read()
         license_yaml = args.license_yaml
