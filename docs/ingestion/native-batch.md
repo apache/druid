@@ -355,8 +355,8 @@ For Broker-level segment pruning to be effective, you must include the `partitio
 `WHERE` clause at query time, using a filter that supports pruning. Filters that support pruning
 include:
 
-- Equality on like-typed columns, like `x = 'foo'` and `x IN ('foo', 'bar')` where `x` is a string;
-  or `x = 3` and `x IN (2, 3)` where `x` is numeric.
+- Equality on literals that match the type of the column, like `x = 'foo'` and `x IN ('foo', 'bar')`
+  where `x` is a string; or `x = 3` and `x IN (2, 3)` where `x` is numeric.
 - Comparison between string columns and string literals, like `x < 'foo'` or other comparisons
   involving `<`, `>`, `<=`, or `>=`. Comparisons involving numbers do not support pruning.
 
@@ -418,8 +418,8 @@ For Broker-level segment pruning to be effective, you must include a set of `par
 starting from the left, in the `WHERE` clause at query time using filters that support pruning.
 Filters that support pruning include:
 
-- Equality on like-typed columns, like `x = 'foo'` and `x IN ('foo', 'bar')` where `x` is a string;
-  or `x = 3` and `x IN (2, 3)` where `x` is numeric.
+- Equality on literals that match the type of the column, like `x = 'foo'` and `x IN ('foo', 'bar')`
+  where `x` is a string; or `x = 3` and `x IN (2, 3)` where `x` is numeric.
 - Comparison between string columns and string literals, like `x < 'foo'` or other comparisons
   involving `<`, `>`, `<=`, or `>=`. Comparisons involving numbers do not support pruning.
 
