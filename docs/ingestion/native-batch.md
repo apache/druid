@@ -345,10 +345,22 @@ The Parallel task will use one subtask when you set `maxNumConcurrentSubTasks` t
 
 When you use this technique to partition your data, segment sizes may be unequally distributed if the data in your `partitionDimension` is also unequally distributed.  Therefore, to avoid imbalance in data layout, review the distribution of values in your source data before deciding on a partitioning strategy.
 
-For segment pruning to be effective and translate into better query performance, you must use
-the `partitionDimension` at query time.  You can concatenate values from multiple
-dimensions into a new dimension to use as the `partitionDimension`. In this case, you
-must use that new dimension in your native filter `WHERE` clause.
+Range partitioning has several benefits:
+
+1. Lower storage footprint due to combining similar data into the same segments, which improves compressibility.
+2. Better query performance due to Broker-level segment pruning, which removes segments from
+   consideration when they cannot possibly contain data matching the query filter.
+
+For Broker-level segment pruning to be effective, you must include the `partitionDimension` in the
+`WHERE` clause at query time, using a filter that supports pruning. Filters that support pruning
+include:
+
+- Equality, like `x = 'foo'` or `x IN ('foo', 'bar')`
+- Comparison on strings, like `x < 'foo'` or other comparisons involving `<`, `>`, `<=`, or `>=`.
+  Comparisons on numbers do not support pruning.
+
+Range partitioning is not possible on multi-value dimensions. If the provided
+`partitionDimension` is multi-value, your ingestion job will report an error.
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
@@ -387,19 +399,43 @@ them to create the final segments. Finally, they push the final segments to the 
 > the task may fail if the input changes in between the two passes.
 
 #### Multi-dimension range partitioning
-> Multiple dimension (multi-dimension) range partitioning is an experimental feature. Multi-dimension range partitioning is currently not supported in the sequential mode of the Parallel task.
 
-When you use multi-dimension partitioning for your data, Druid is able to distribute segment sizes more evenly than with single dimension partitioning.
+> Multiple dimension (multi-dimension) range partitioning is an experimental feature.
+> Multi-dimension range partitioning is currently not supported in the sequential mode of the
+> Parallel task.
 
-For segment pruning to be effective and translate into better query performance, you must include the first of your `partitionDimensions` in the `WHERE` clause at query time. For example, given the following `partitionDimensions`:
-```
- "partitionsSpec": {
-        "type": "range",
-        "partitionDimensions":["coutryName","cityName"],
-        "targetRowsPerSegment" : 5000
+When you use multi-dimension range partitioning for your data, Druid is able to distribute segment
+sizes more evenly than with single dimension partitioning.
+
+Range partitioning has several benefits:
+
+1. Lower storage footprint due to combining similar data into the same segments, which improves compressibility.
+2. Better query performance due to Broker-level segment pruning, which removes segments from
+   consideration when they cannot possibly contain data matching the query filter.
+
+For Broker-level segment pruning to be effective, you must include a set of `partitionDimensions`,
+starting from the left, in the `WHERE` clause at query time using filters that support pruning.
+Filters that support pruning include:
+
+- Equality, like `x = 'foo'` or `x IN ('foo', 'bar')`
+- Comparison on strings, like `x < 'foo'` or other comparisons involving `<`, `>`, `<=`, or `>=`.
+  Comparisons on numbers do not support pruning.
+
+For example, given the following `partitionDimensions`:
+
+```json
+"partitionsSpec": {
+  "type": "range",
+  "partitionDimensions": ["coutryName", "cityName"],
+  "targetRowsPerSegment": 5000
 }
 ```
-Use "countryName" or both "countryName" and "cityName" in the `WHERE` clause of your query to take advantage of the performance benefits from multi-dimension partitioning.
+
+Queries using filters that support pruning on "countryName" by itself, or on both "countryName" and
+"cityName", will be able to take advantage of Broker-level pruning.
+
+Range partitioning is not possible on multi-value dimensions. If one of the provided
+`partitionDimensions` is multi-value, your ingestion job will report an error.
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
