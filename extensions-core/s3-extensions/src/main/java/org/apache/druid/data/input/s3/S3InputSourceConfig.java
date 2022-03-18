@@ -19,8 +19,7 @@
 
 package org.apache.druid.data.input.s3;
 
-import com.amazonaws.SDKGlobalConfiguration.AWS_ROLE_ARN_ENV_VAR;
-import com.amazonaws.SDKGlobalConfiguration.AWS_WEB_IDENTITY_ENV_VAR;
+import com.amazonaws.SDKGlobalConfiguration;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -101,13 +100,13 @@ public class S3InputSourceConfig
   @JsonIgnore
   public boolean isAssumeRoleArnEnvConfigured()
   {
-    return !System.getenv(AWS_ROLE_ARN_ENV_VAR).trim().isEmpty();
+    return !System.getenv(SDKGlobalConfiguration.AWS_ROLE_ARN_ENV_VAR).trim().isEmpty();
   }
 
   @JsonIgnore
   public boolean isWebIdentityTokenEnvConfigured()
   {
-    return !System.getenv(AWS_WEB_IDENTITY_ENV_VAR).trim().isEmpty();
+    return !System.getenv(SDKGlobalConfiguration.AWS_WEB_IDENTITY_ENV_VAR).trim().isEmpty();
   }
 
   @Override
