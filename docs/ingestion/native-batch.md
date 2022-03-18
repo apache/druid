@@ -355,9 +355,10 @@ For Broker-level segment pruning to be effective, you must include the `partitio
 `WHERE` clause at query time, using a filter that supports pruning. Filters that support pruning
 include:
 
-- Equality, like `x = 'foo'` or `x IN ('foo', 'bar')`
-- Comparison on strings, like `x < 'foo'` or other comparisons involving `<`, `>`, `<=`, or `>=`.
-  Comparisons on numbers do not support pruning.
+- Equality on like-typed columns, like `x = 'foo'` and `x IN ('foo', 'bar')` where `x` is a string;
+  or `x = 3` and `x IN (2, 3)` where `x` is numeric.
+- Comparison between string columns and string literals, like `x < 'foo'` or other comparisons
+  involving `<`, `>`, `<=`, or `>=`. Comparisons involving numbers do not support pruning.
 
 Range partitioning is not possible on multi-value dimensions. If the provided
 `partitionDimension` is multi-value, your ingestion job will report an error.
