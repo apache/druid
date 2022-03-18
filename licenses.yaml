@@ -793,7 +793,7 @@ name: com.nimbusds lang-tag
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 1.5
+version: 1.6
 libraries:
   - com.nimbusds: lang-tag
 
