@@ -40,7 +40,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -54,8 +53,8 @@ class PartialDimensionDistributionParallelIndexTaskRunner
   private static final Logger log = new Logger(PartialDimensionDistributionParallelIndexTaskRunner.class);
   private static final String PHASE_NAME = "partial dimension distribution";
 
-  private final ExecutorService executor = Execs.singleThreaded("DimDistributionMerger-%s");
-  private final ConcurrentHashMap<Interval, Set<String>> intervalToTaskIds = new ConcurrentHashMap<>();
+  private final ExecutorService executor = Execs.singleThreaded("DimDistributionWriter-%s");
+  private final Map<Interval, Set<String>> intervalToTaskIds = new HashMap<>();
 
   private final File tempDistributionsDir;
 
@@ -88,10 +87,6 @@ class PartialDimensionDistributionParallelIndexTaskRunner
   @Override
   public void collectReport(DimensionDistributionReport report)
   {
-    // TODO:
-    //  - keep an md5 hash of the report to implement the same validation as in taskMonitor
-    //  or if a task sends its reports multiple times, should we just ignore it?
-
     // Send an empty report to TaskMonitor
     super.collectReport(new DimensionDistributionReport(report.getTaskId(), null));
 
@@ -114,6 +109,11 @@ class PartialDimensionDistributionParallelIndexTaskRunner
   )
   {
     waitToProcessPendingReports();
+
+    // Do not proceed if a shutdown has been requested
+    if (getStopReason() != null) {
+      throw new ISE("DimensionDistributionPhaseRunner has been stopped. %s", getStopReason());
+    }
 
     final Map<Interval, PartitionBoundaries> intervalToPartitions = new HashMap<>();
     intervalToTaskIds.forEach(
@@ -142,17 +142,22 @@ class PartialDimensionDistributionParallelIndexTaskRunner
   }
 
   /**
-   * Extracts the distributions from the given report and merges them to the
-   * distributions in memory.
+   * Extracts the distributions from the given report and writes them to the task
+   * temp directory.
+   * <p>
+   * This method is not thread-safe as the reports are processed by a single-threaded executor.
    */
   private void extractDistributionsFromReport(DimensionDistributionReport report)
   {
     log.debug("Started writing distributions from Task ID [%s]", report.getTaskId());
+
     report.getIntervalToDistribution().forEach(
         (interval, distribution) -> {
           Set<String> taskIds = intervalToTaskIds.computeIfAbsent(interval, i -> new HashSet<>());
-          if (!taskIds.contains(report.getTaskId())) {
-            writeDistributionToFile(interval, report.getTaskId(), distribution);
+          final String subTaskId = report.getTaskId();
+          if (!taskIds.contains(subTaskId)) {
+            writeDistributionToFile(interval, subTaskId, distribution);
+            taskIds.add(subTaskId);
           }
         }
     );
@@ -160,6 +165,12 @@ class PartialDimensionDistributionParallelIndexTaskRunner
     log.debug("Finished writing distributions from Task ID [%s]", report.getTaskId());
   }
 
+  /**
+   * Writes the given distribution to the task temp directory.
+   * <p>
+   * If this operation fails, it requests a graceful shutdown of the runner via
+   * {@link #stopGracefully(String)}.
+   */
   private void writeDistributionToFile(
       Interval interval,
       String subTaskId,
@@ -179,13 +190,6 @@ class PartialDimensionDistributionParallelIndexTaskRunner
           interval,
           subTaskId
       );
-      // This code can be executed in two cases:
-      // Case 1: There are sub-tasks pending execution
-      //   Calling stopGracefully() fails this phase and the supervisor task.
-      // Case 2: All sub-tasks have finished
-      //   Calling stopGracefully() has no effect. This is okay as all task reports
-      //   have been received and process is still running fine.
-      // TODO: include the correct error message in the task status
       stopGracefully(errorMsg);
       throw new ISE(e, errorMsg);
     }
@@ -222,7 +226,7 @@ class PartialDimensionDistributionParallelIndexTaskRunner
     log.info("Waiting to extract distributions from sub-task reports.");
     try {
       executor.shutdown();
-      executor.awaitTermination(10, TimeUnit.SECONDS);
+      executor.awaitTermination(60, TimeUnit.SECONDS);
     }
     catch (InterruptedException e) {
       throw new ISE(e, "Interrupted while waiting to extract distributions.");

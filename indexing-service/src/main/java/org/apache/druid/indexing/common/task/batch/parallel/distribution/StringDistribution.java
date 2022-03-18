@@ -65,5 +65,4 @@ public interface StringDistribution
    * sorted elements.
    */
   PartitionBoundaries getEvenPartitionsByTargetSize(int targetSize);
-
 }

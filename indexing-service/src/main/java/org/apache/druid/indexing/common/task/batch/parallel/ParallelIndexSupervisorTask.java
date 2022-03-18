@@ -796,7 +796,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     Map<Interval, PartitionBoundaries> intervalToPartitions =
         distributionRunner.getIntervalToPartitionBoundaries(
-            (DimensionRangePartitionsSpec) ingestionSchema.getTuningConfig().getPartitionsSpec()
+            (DimensionRangePartitionsSpec) ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec()
         );
 
     if (intervalToPartitions.isEmpty()) {
