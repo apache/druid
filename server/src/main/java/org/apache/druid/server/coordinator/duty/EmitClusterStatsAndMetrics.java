@@ -72,6 +72,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     emitter.emit(
         new ServiceMetricEvent.Builder()
             .setDimension(DruidMetrics.TIER, tier)
+            .setDimension(DruidMetrics.DUTY_GROUP, groupName)
             .build(metricName, value)
     );
   }
@@ -86,6 +87,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     emitter.emit(
         new ServiceMetricEvent.Builder()
             .setDimension(DruidMetrics.TIER, tier)
+            .setDimension(DruidMetrics.DUTY_GROUP, groupName)
             .build(metricName, value)
     );
   }
@@ -115,6 +117,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     emitter.emit(
         new ServiceMetricEvent.Builder()
             .setDimension(DruidMetrics.DUTY, duty)
+            .setDimension(DruidMetrics.DUTY_GROUP, groupName)
             .build(metricName, value)
     );
   }
@@ -213,7 +216,9 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     );
 
     emitter.emit(
-        new ServiceMetricEvent.Builder().build(
+        new ServiceMetricEvent.Builder()
+            .setDimension(DruidMetrics.DUTY_GROUP, groupName)
+            .build(
             "segment/overShadowed/count",
             stats.getGlobalStat("overShadowedCount")
         )
@@ -292,24 +297,28 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
         .forEach((final String serverName, final LoadQueuePeon queuePeon) -> {
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.SERVER, serverName).build(
                   "segment/loadQueue/size", queuePeon.getLoadQueueSize()
               )
           );
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.SERVER, serverName).build(
                   "segment/loadQueue/failed", queuePeon.getAndResetFailedAssignCount()
               )
           );
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.SERVER, serverName).build(
                   "segment/loadQueue/count", queuePeon.getSegmentsToLoad().size()
               )
           );
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.SERVER, serverName).build(
                   "segment/dropQueue/count", queuePeon.getSegmentsToDrop().size()
               )
@@ -322,6 +331,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
           final int numUnavailableUsedSegmentsInDataSource = entry.getIntValue();
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.DATASOURCE, dataSource).build(
                   "segment/unavailable/count", numUnavailableUsedSegmentsInDataSource
               )
@@ -337,6 +347,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
 
             emitter.emit(
                 new ServiceMetricEvent.Builder()
+                    .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                     .setDimension(DruidMetrics.TIER, tier)
                     .setDimension(DruidMetrics.DATASOURCE, dataSource).build(
                     "segment/underReplicated/count", underReplicationCount
@@ -356,11 +367,13 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
               .sum();
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
                   .build("segment/size", totalSizeOfUsedSegments)
           );
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
                   .build("segment/count", dataSourceWithUsedSegments.getNumObjects())
           );
@@ -371,21 +384,27 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
   private void emitStatsForCompactSegments(DruidCluster cluster, CoordinatorStats stats, ServiceEmitter emitter)
   {
     emitter.emit(
-        new ServiceMetricEvent.Builder().build(
+        new ServiceMetricEvent.Builder()
+            .setDimension(DruidMetrics.DUTY_GROUP, groupName)
+            .build(
             "compact/task/count",
             stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
         )
     );
 
     emitter.emit(
-        new ServiceMetricEvent.Builder().build(
+        new ServiceMetricEvent.Builder()
+            .setDimension(DruidMetrics.DUTY_GROUP, groupName)
+            .build(
             "compactTask/maxSlot/count",
             stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT)
         )
     );
 
     emitter.emit(
-        new ServiceMetricEvent.Builder().build(
+        new ServiceMetricEvent.Builder()
+            .setDimension(DruidMetrics.DUTY_GROUP, groupName)
+            .build(
             "compactTask/availableSlot/count",
             stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT)
         )
@@ -396,6 +415,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
         (final String dataSource, final long count) -> {
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
                   .build("segment/waitCompact/bytes", count)
           );
@@ -407,6 +427,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
         (final String dataSource, final long count) -> {
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
                   .build("segment/waitCompact/count", count)
           );
@@ -418,6 +439,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
         (final String dataSource, final long count) -> {
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
                   .build("interval/waitCompact/count", count)
           );
@@ -429,6 +451,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
         (final String dataSource, final long count) -> {
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
                   .build("segment/skipCompact/bytes", count)
           );
@@ -440,6 +463,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
         (final String dataSource, final long count) -> {
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
                   .build("segment/skipCompact/count", count)
           );
@@ -451,6 +475,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
         (final String dataSource, final long count) -> {
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
                   .build("interval/skipCompact/count", count)
           );
@@ -462,6 +487,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
         (final String dataSource, final long count) -> {
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
                   .build("segment/compacted/bytes", count)
           );
@@ -473,6 +499,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
         (final String dataSource, final long count) -> {
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
                   .build("segment/compacted/count", count)
           );
@@ -484,6 +511,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
         (final String dataSource, final long count) -> {
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
                   .build("interval/compacted/count", count)
           );

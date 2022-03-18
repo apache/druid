@@ -57,7 +57,9 @@ import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
+import org.apache.druid.server.coordinator.duty.EmitClusterStatsAndMetrics;
 import org.apache.druid.server.coordinator.duty.KillSupervisorsCustomDuty;
+import org.apache.druid.server.coordinator.duty.LogUsedSegments;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
@@ -75,6 +77,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -85,6 +88,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -1131,6 +1135,34 @@ public class DruidCoordinatorTest extends CuratorTestBase
     latch1.await();
     // Wait until group 2 duty ran for latch2 to countdown
     latch2.await();
+  }
+
+  @Test
+  public void testEmitClusterStatsAndMetricsAddedWhenNotInDutyList()
+  {
+    DruidCoordinator.DutiesRunnable dutyRunnable = coordinator.new DutiesRunnable(ImmutableList.of(new LogUsedSegments()), 0, "TEST");
+    List<? extends CoordinatorDuty> duties = dutyRunnable.getDuties();
+    int emitDutyFound = 0;
+    for (CoordinatorDuty duty : duties) {
+      if (duty instanceof EmitClusterStatsAndMetrics) {
+        emitDutyFound++;
+      }
+    }
+    Assert.assertEquals(1, emitDutyFound);
+  }
+
+  @Test
+  public void testEmitClusterStatsAndMetricsNotAddedAgainWhenInDutyList()
+  {
+    DruidCoordinator.DutiesRunnable dutyRunnable = coordinator.new DutiesRunnable(ImmutableList.of(new LogUsedSegments(), new EmitClusterStatsAndMetrics(coordinator, "TEST", ImmutableList.of(new LogUsedSegments()))), 0, "TEST");
+    List<? extends CoordinatorDuty> duties = dutyRunnable.getDuties();
+    int emitDutyFound = 0;
+    for (CoordinatorDuty duty : duties) {
+      if (duty instanceof EmitClusterStatsAndMetrics) {
+        emitDutyFound++;
+      }
+    }
+    Assert.assertEquals(1, emitDutyFound);
   }
 
   private CountDownLatch createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(int latchCount,

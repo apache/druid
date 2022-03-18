@@ -964,6 +964,12 @@ public class DruidCoordinator
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
       }
     }
+
+    @VisibleForTesting
+    public List<? extends CoordinatorDuty> getDuties()
+    {
+      return duties;
+    }
   }
 
   /**
