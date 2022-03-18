@@ -21,6 +21,7 @@ package org.apache.druid.data.input.s3;
 
 import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.SDKGlobalConfiguration;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
@@ -220,6 +221,61 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     // This is to force the s3ClientSupplier to initialize the ServerSideEncryptingAmazonS3
     serdeWithPrefixes.createEntity(new CloudObjectLocation("bucket", "path"));
     Assert.assertEquals(withPrefixes, serdeWithPrefixes);
+    EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+  }
+
+  @Test
+  public void testSerdeWithCloudConfigPropertiesWithIdentityFileConfigured() throws Exception
+  {
+    EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getAmazonS3ClientBuilder())
+            .andStubReturn(AMAZON_S3_CLIENT_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
+            .andReturn(SERVICE);
+    EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+
+    // Mock setting the AWS's environment variables.
+    String oldRoleARN = System.getProperty(SDKGlobalConfiguration.AWS_ROLE_ARN_ENV_VAR);
+    if(oldRoleARN == "") {
+        System.setProperty(SDKGlobalConfiguration.AWS_ROLE_ARN_ENV_VAR, "mockROLEARN");
+    }
+
+    String oldIdentityFile = System.getProperty(SDKGlobalConfiguration.AWS_WEB_IDENTITY_ENV_VAR);
+    if(oldIdentityFile == "") {
+        System.setProperty(SDKGlobalConfiguration.AWS_WEB_IDENTITY_ENV_VAR, "mockIdentityFile");
+    }
+
+    S3InputSourceConfig cloudConfigProperties = new S3InputSourceConfig(
+        null,
+        null,
+        null,
+        null
+    );
+
+    final S3InputSource withPrefixes = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        null,
+        EXPECTED_LOCATION,
+        cloudConfigProperties
+    );
+    final S3InputSource serdeWithPrefixes =
+        MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
+
+    // This is to force the s3ClientSupplier to initialize the ServerSideEncryptingAmazonS3
+    serdeWithPrefixes.createEntity(new CloudObjectLocation("bucket", "path"));
+
+    Assert.assertEquals(withPrefixes, serdeWithPrefixes);
+
+    if(oldRoleARN == "") {
+        System.clearProperty(SDKGlobalConfiguration.AWS_ROLE_ARN_ENV_VAR);
+    }
+    if(oldIdentityFile == "") {
+        System.clearProperty(SDKGlobalConfiguration.AWS_WEB_IDENTITY_ENV_VAR);
+    }
+
     EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
   }
 
