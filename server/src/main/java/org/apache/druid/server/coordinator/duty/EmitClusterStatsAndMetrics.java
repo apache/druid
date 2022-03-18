@@ -36,6 +36,10 @@ import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
+import java.util.List;
+
+import static org.apache.druid.server.coordinator.DruidCoordinator.HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP;
+
 /**
  * Emits stats of the cluster and metrics of the coordination (including segment balancing) process.
  */
@@ -48,10 +52,14 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
   public static final String MAX_REPLICATION_FACTOR = "maxReplicationFactor";
 
   private final DruidCoordinator coordinator;
+  private final String groupName;
+  private final List<? extends CoordinatorDuty> dutyList;
 
-  public EmitClusterStatsAndMetrics(DruidCoordinator coordinator)
+  public EmitClusterStatsAndMetrics(DruidCoordinator coordinator, String groupName, List<? extends CoordinatorDuty> duties)
   {
     this.coordinator = coordinator;
+    this.groupName = groupName;
+    this.dutyList = duties;
   }
 
   private void emitTieredStat(
@@ -133,6 +141,21 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     CoordinatorStats stats = params.getCoordinatorStats();
     ServiceEmitter emitter = params.getEmitter();
 
+    if (DruidCoordinator.HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP.equals(groupName)) {
+      emitStatsForHistoricalManagementDuties(cluster, stats, emitter, params);
+    }
+    if (dutyList.stream().anyMatch(duty -> duty instanceof CompactSegments)) {
+      emitStatsForCompactSegments(cluster, stats, emitter);
+    }
+
+    // Emit coordinator runtime stats
+    emitDutyStats(emitter, "coordinator/time", stats, "runtime");
+
+    return params;
+  }
+
+  private void emitStatsForHistoricalManagementDuties(DruidCluster cluster, CoordinatorStats stats, ServiceEmitter emitter, DruidCoordinatorRuntimeParams params)
+  {
     stats.forEachTieredStat(
         "assignedCount",
         (final String tier, final long count) -> {
@@ -323,6 +346,30 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
         }
     );
 
+    // Emit segment metrics
+    params.getUsedSegmentsTimelinesPerDataSource().forEach(
+        (String dataSource, VersionedIntervalTimeline<String, DataSegment> dataSourceWithUsedSegments) -> {
+          long totalSizeOfUsedSegments = dataSourceWithUsedSegments
+              .iterateAllObjects()
+              .stream()
+              .mapToLong(DataSegment::getSize)
+              .sum();
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("segment/size", totalSizeOfUsedSegments)
+          );
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("segment/count", dataSourceWithUsedSegments.getNumObjects())
+          );
+        }
+    );
+  }
+
+  private void emitStatsForCompactSegments(DruidCluster cluster, CoordinatorStats stats, ServiceEmitter emitter)
+  {
     emitter.emit(
         new ServiceMetricEvent.Builder().build(
             "compact/task/count",
@@ -442,31 +489,5 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
           );
         }
     );
-
-    // Emit segment metrics
-    params.getUsedSegmentsTimelinesPerDataSource().forEach(
-        (String dataSource, VersionedIntervalTimeline<String, DataSegment> dataSourceWithUsedSegments) -> {
-          long totalSizeOfUsedSegments = dataSourceWithUsedSegments
-              .iterateAllObjects()
-              .stream()
-              .mapToLong(DataSegment::getSize)
-              .sum();
-          emitter.emit(
-              new ServiceMetricEvent.Builder()
-                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("segment/size", totalSizeOfUsedSegments)
-          );
-          emitter.emit(
-              new ServiceMetricEvent.Builder()
-                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("segment/count", dataSourceWithUsedSegments.getNumObjects())
-          );
-        }
-    );
-
-    // Emit coordinator runtime stats
-    emitDutyStats(emitter, "coordinator/time", stats, "runtime");
-
-    return params;
   }
 }

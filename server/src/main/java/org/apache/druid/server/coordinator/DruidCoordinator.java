@@ -169,7 +169,7 @@ public class DruidCoordinator
   private int cachedBalancerThreadNumber;
   private ListeningExecutorService balancerExec;
 
-  private static final String HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP = "HistoricalManagementDuties";
+  public static final String HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP = "HistoricalManagementDuties";
   private static final String METADATA_STORE_MANAGEMENT_DUTIES_DUTY_GROUP = "MetadataStoreManagementDuties";
   private static final String INDEXING_SERVICE_DUTIES_DUTY_GROUP = "IndexingServiceDuties";
   private static final String COMPACT_SEGMENTS_DUTIES_DUTY_GROUP = "CompactSegmentsDuties";
@@ -765,8 +765,7 @@ public class DruidCoordinator
         new RunRules(DruidCoordinator.this),
         new UnloadUnusedSegments(),
         new MarkAsUnusedOvershadowedSegments(DruidCoordinator.this),
-        new BalanceSegments(DruidCoordinator.this),
-        new EmitClusterStatsAndMetrics(DruidCoordinator.this)
+        new BalanceSegments(DruidCoordinator.this)
     );
   }
 
@@ -841,7 +840,14 @@ public class DruidCoordinator
 
     protected DutiesRunnable(List<? extends CoordinatorDuty> duties, final int startingLeaderCounter, String alias)
     {
-      this.duties = duties;
+      if (duties.stream().noneMatch(duty -> duty instanceof EmitClusterStatsAndMetrics)) {
+        List<CoordinatorDuty> allDuties = new ArrayList<>(duties);
+        allDuties.add(new EmitClusterStatsAndMetrics(DruidCoordinator.this, alias, duties));
+        this.duties = allDuties;
+      } else {
+        this.duties = duties;
+      }
+      //Auto add emit
       this.startingLeaderCounter = startingLeaderCounter;
       this.dutiesRunnableAlias = alias;
     }
