@@ -3907,10 +3907,9 @@ libraries:
 name: JCL 1.2 Implemented Over SLF4J
 license_category: binary
 module: java-core
-license_name: MIT License
-version: 1.7.12
+license_name: Apache License version 2.0
+version: 1.7.36
 copyright: QOS.ch
-license_file_path: licenses/bin/jcl-over-slf4j.MIT
 libraries:
   - org.slf4j: jcl-over-slf4j
 
@@ -3920,7 +3919,7 @@ name: SLF4J API
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 1.7.25
+version: 1.7.36
 copyright: QOS.ch
 license_file_path: licenses/bin/slf4j.MIT
 libraries:
