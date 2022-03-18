@@ -417,9 +417,10 @@ For Broker-level segment pruning to be effective, you must include a set of `par
 starting from the left, in the `WHERE` clause at query time using filters that support pruning.
 Filters that support pruning include:
 
-- Equality, like `x = 'foo'` or `x IN ('foo', 'bar')`
-- Comparison on strings, like `x < 'foo'` or other comparisons involving `<`, `>`, `<=`, or `>=`.
-  Comparisons on numbers do not support pruning.
+- Equality on like-typed columns, like `x = 'foo'` and `x IN ('foo', 'bar')` where `x` is a string;
+  or `x = 3` and `x IN (2, 3)` where `x` is numeric.
+- Comparison between string columns and string literals, like `x < 'foo'` or other comparisons
+  involving `<`, `>`, `<=`, or `>=`. Comparisons involving numbers do not support pruning.
 
 For example, given the following `partitionDimensions`:
 
