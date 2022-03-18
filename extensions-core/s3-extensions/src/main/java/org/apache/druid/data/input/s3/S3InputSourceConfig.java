@@ -19,6 +19,8 @@
 
 package org.apache.druid.data.input.s3;
 
+import com.amazonaws.SDKGlobalConfiguration.AWS_ROLE_ARN_ENV_VAR;
+import com.amazonaws.SDKGlobalConfiguration.AWS_WEB_IDENTITY_ENV_VAR;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -27,9 +29,6 @@ import org.apache.druid.metadata.PasswordProvider;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
-
-import static com.amazonaws.SDKGlobalConfiguration.AWS_ROLE_ARN_ENV_VAR;
-import static com.amazonaws.SDKGlobalConfiguration.AWS_WEB_IDENTITY_ENV_VAR;
 
 /**
  * Contains properties for s3 input source.

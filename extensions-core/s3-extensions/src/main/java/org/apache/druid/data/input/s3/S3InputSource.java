@@ -110,9 +110,9 @@ public class S3InputSource extends CloudObjectInputSource
             // If both static key-pair and assume role ARN are defined, use the static key-pair to assume role.
             if (s3InputSourceConfig.isCredentialsConfigured() && s3InputSourceConfig.isAssumeRoleArnConfigured()) {
               applyAssumeRole(
-                s3ClientBuilder,
-                s3InputSourceConfig,
-                createStaticCredentialsProvider(s3InputSourceConfig)
+                  s3ClientBuilder,
+                  s3InputSourceConfig,
+                  createStaticCredentialsProvider(s3InputSourceConfig)
               );
 
             // If only static key-pair is defined, build the S3 client with the static key-pair
