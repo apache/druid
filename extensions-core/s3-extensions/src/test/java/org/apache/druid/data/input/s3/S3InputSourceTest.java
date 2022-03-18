@@ -236,12 +236,12 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     // Mock setting the AWS's environment variables.
     String oldRoleARN = System.getProperty(SDKGlobalConfiguration.AWS_ROLE_ARN_ENV_VAR);
-    if(oldRoleARN == "") {
+    if(oldRoleARN.equals("")) {
         System.setProperty(SDKGlobalConfiguration.AWS_ROLE_ARN_ENV_VAR, "mockROLEARN");
     }
 
     String oldIdentityFile = System.getProperty(SDKGlobalConfiguration.AWS_WEB_IDENTITY_ENV_VAR);
-    if(oldIdentityFile == "") {
+    if(oldIdentityFile.equals("")) {
         System.setProperty(SDKGlobalConfiguration.AWS_WEB_IDENTITY_ENV_VAR, "mockIdentityFile");
     }
 
@@ -269,10 +269,10 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(withPrefixes, serdeWithPrefixes);
 
-    if(oldRoleARN == "") {
+    if(oldRoleARN.equals("")) {
         System.clearProperty(SDKGlobalConfiguration.AWS_ROLE_ARN_ENV_VAR);
     }
-    if(oldIdentityFile == "") {
+    if(oldIdentityFile.equals("")) {
         System.clearProperty(SDKGlobalConfiguration.AWS_WEB_IDENTITY_ENV_VAR);
     }
 
