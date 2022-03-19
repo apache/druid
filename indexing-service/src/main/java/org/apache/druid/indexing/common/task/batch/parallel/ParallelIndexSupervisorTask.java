@@ -794,7 +794,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       return TaskStatus.failure(getId(), errMsg);
     }
 
-    Map<Interval, PartitionBoundaries> intervalToPartitions =
+    final Map<Interval, PartitionBoundaries> intervalToPartitions =
         distributionRunner.getIntervalToPartitionBoundaries(
             (DimensionRangePartitionsSpec) ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec()
         );
