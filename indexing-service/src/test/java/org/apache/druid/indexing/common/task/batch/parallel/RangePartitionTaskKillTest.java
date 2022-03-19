@@ -141,7 +141,7 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
     );
   }
 
-  @Test//(timeout = 5000L)
+  @Test(timeout = 5000L)
   public void failsSecondPhase() throws Exception
   {
     int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;

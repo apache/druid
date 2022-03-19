@@ -794,16 +794,26 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       return TaskStatus.failure(getId(), errMsg);
     }
 
-    final Map<Interval, PartitionBoundaries> intervalToPartitions =
-        distributionRunner.getIntervalToPartitionBoundaries(
-            (DimensionRangePartitionsSpec) ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec()
-        );
-
-    if (intervalToPartitions.isEmpty()) {
-      String msg = "No valid rows for range partitioning."
-                   + " All rows may have invalid timestamps or multiple dimension values.";
-      LOG.warn(msg);
-      return TaskStatus.success(getId(), msg);
+    // Get the partition boundaries for each interval
+    final Map<Interval, PartitionBoundaries> intervalToPartitions;
+    try {
+      intervalToPartitions = distributionRunner.getIntervalToPartitionBoundaries(
+          (DimensionRangePartitionsSpec) ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec()
+      );
+      if (intervalToPartitions.isEmpty()) {
+        String msg = "No valid rows for range partitioning."
+                     + " All rows may have invalid timestamps or multiple dimension values.";
+        LOG.warn(msg);
+        return TaskStatus.success(getId(), msg);
+      }
+    }
+    catch (Exception e) {
+      String errorMsg = "Error creating partition boundaries.";
+      if (distributionRunner.getStopReason() != null) {
+        errorMsg += " " + distributionRunner.getStopReason();
+      }
+      LOG.error(e, errorMsg);
+      return TaskStatus.failure(getId(), errorMsg);
     }
 
     ingestionSchemaToUse = rewriteIngestionSpecWithIntervalsIfMissing(
