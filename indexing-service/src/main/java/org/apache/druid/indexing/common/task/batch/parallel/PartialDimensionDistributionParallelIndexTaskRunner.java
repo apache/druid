@@ -115,6 +115,8 @@ class PartialDimensionDistributionParallelIndexTaskRunner
       throw new ISE("DimensionDistributionPhaseRunner has been stopped. %s", getStopReason());
     }
 
+    // Merge distributions only from succeeded sub-tasks
+    final Set<String> succeededTaskIds = super.getReports().keySet();
     final Map<Interval, PartitionBoundaries> intervalToPartitions = new HashMap<>();
     intervalToTaskIds.forEach(
         (interval, subTaskIds) -> {
@@ -122,6 +124,7 @@ class PartialDimensionDistributionParallelIndexTaskRunner
           final StringDistributionMerger merger = new StringSketchMerger();
           subTaskIds
               .stream()
+              .filter(succeededTaskIds::contains)
               .map(subTaskId -> readDistributionFromFile(intervalDir, subTaskId))
               .forEach(merger::merge);
           final StringDistribution mergedDistribution = merger.getResult();
@@ -151,6 +154,9 @@ class PartialDimensionDistributionParallelIndexTaskRunner
   {
     log.debug("Started writing distributions from Task ID [%s]", report.getTaskId());
 
+    if (report.getIntervalToDistribution() == null) {
+      return;
+    }
     report.getIntervalToDistribution().forEach(
         (interval, distribution) -> {
           Set<String> taskIds = intervalToTaskIds.computeIfAbsent(interval, i -> new HashSet<>());
