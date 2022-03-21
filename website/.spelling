@@ -294,6 +294,7 @@ influxdb
 ingestionSpec
 injective
 inlined
+inSubQueryThreshold
 interruptible
 jackson-jq
 javadoc
