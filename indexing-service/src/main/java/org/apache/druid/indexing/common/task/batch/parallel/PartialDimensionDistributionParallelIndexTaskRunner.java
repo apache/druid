@@ -161,11 +161,11 @@ class PartialDimensionDistributionParallelIndexTaskRunner
   private void extractDistributionsFromReport(DimensionDistributionReport report)
   {
     try {
-      log.debug("Started writing distributions from Task ID [%s]", report.getTaskId());
+      log.debug("Started writing distributions from task [%s]", report.getTaskId());
 
       final Map<Interval, StringDistribution> distributions = report.getIntervalToDistribution();
       if (distributions == null || distributions.isEmpty()) {
-        log.debug("No dimension distribution found in Task ID [%s]", report.getTaskId());
+        log.debug("No dimension distribution received from task [%s]", report.getTaskId());
         return;
       }
       distributions.forEach(
@@ -179,7 +179,7 @@ class PartialDimensionDistributionParallelIndexTaskRunner
           }
       );
 
-      log.debug("Finished writing distributions from Task ID [%s]", report.getTaskId());
+      log.debug("Finished writing distributions from task [%s]", report.getTaskId());
     }
     finally {
       allReportsProcessedPhaser.arriveAndDeregister();
@@ -207,7 +207,7 @@ class PartialDimensionDistributionParallelIndexTaskRunner
     }
     catch (IOException e) {
       String errorMsg = StringUtils.format(
-          "Exception while writing distribution file for Interval [%s], Task ID [%s]",
+          "Exception while writing distribution file for interval [%s], task [%s]",
           interval,
           subTaskId
       );
@@ -223,7 +223,7 @@ class PartialDimensionDistributionParallelIndexTaskRunner
       return getToolbox().getJsonMapper().readValue(distributionJsonFile, StringDistribution.class);
     }
     catch (IOException e) {
-      throw new ISE(e, "Error while reading distribution for Interval [%s], Task ID [%s]",
+      throw new ISE(e, "Error while reading distribution for interval [%s], task [%s]",
                     intervalDir.getName(), subTaskId
       );
     }
