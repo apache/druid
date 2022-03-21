@@ -61,6 +61,12 @@ public class NullHandling
     INSTANCE = new NullValueHandlingConfig(null, null);
   }
 
+  @VisibleForTesting
+  public static void initializeForTestsWithValues(Boolean useDefForNull, Boolean ignoreNullForString)
+  {
+    INSTANCE = new NullValueHandlingConfig(useDefForNull, ignoreNullForString);
+  }
+
   /**
    * whether nulls should be replaced with default value.
    */

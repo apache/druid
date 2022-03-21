@@ -39,7 +39,8 @@ public class StringCardinalityAggregatorColumnSelectorStrategy implements Cardin
     // SQL standard spec does not count null values,
     // Skip counting null values when we are not replacing null with default value.
     // A special value for null in case null handling is configured to use empty string for null.
-    if (NullHandling.replaceWithDefault() || s != null) {
+    // check if nulls are to be ignored
+    if ((NullHandling.replaceWithDefault() && !NullHandling.ignoreNullsForStringCardinality()) || s != null) {
       collector.add(CardinalityAggregator.HASH_FUNCTION.hashUnencodedChars(nullToSpecial(s)).asBytes());
     }
   }
@@ -52,7 +53,7 @@ public class StringCardinalityAggregatorColumnSelectorStrategy implements Cardin
     // nothing to add to hasher if size == 0, only handle size == 1 and size != 0 cases.
     if (size == 1) {
       final String value = dimSelector.lookupName(row.get(0));
-      if (NullHandling.replaceWithDefault() || value != null) {
+      if ((NullHandling.replaceWithDefault() && !NullHandling.ignoreNullsForStringCardinality()) || value != null) {
         hasher.putUnencodedChars(nullToSpecial(value));
       }
     } else if (size != 0) {
@@ -71,7 +72,7 @@ public class StringCardinalityAggregatorColumnSelectorStrategy implements Cardin
       // SQL standard spec does not count null values,
       // Skip counting null values when we are not replacing null with default value.
       // A special value for null in case null handling is configured to use empty string for null.
-      if (NullHandling.replaceWithDefault() || hasNonNullValue) {
+      if ((NullHandling.replaceWithDefault() && !NullHandling.ignoreNullsForStringCardinality()) || hasNonNullValue) {
         // Values need to be sorted to ensure consistent multi-value ordering across different segments
         Arrays.sort(values);
         for (int i = 0; i < size; ++i) {
@@ -88,24 +89,11 @@ public class StringCardinalityAggregatorColumnSelectorStrategy implements Cardin
   public void hashValues(DimensionSelector dimSelector, HyperLogLogCollector collector)
   {
     IndexedInts row = dimSelector.getRow();
-    if (NullHandling.ignoreNullsForStringCardinality()) {
-      //check and do not count nulls for Strings
-      for (int i = 0, rowSize = row.size(); i < rowSize; i++) {
-        int index = row.get(i);
-        final String value = dimSelector.lookupName(index);
-        if (value != null) {
-          addStringToCollector(collector, value);
-        }
-      }
-    } else {
-      //count everything
-      for (int i = 0, rowSize = row.size(); i < rowSize; i++) {
-        int index = row.get(i);
-        final String value = dimSelector.lookupName(index);
-        addStringToCollector(collector, value);
-      }
+    for (int i = 0, rowSize = row.size(); i < rowSize; i++) {
+      int index = row.get(i);
+      final String value = dimSelector.lookupName(index);
+      addStringToCollector(collector, value);
     }
-
   }
 
   private static String nullToSpecial(String value)

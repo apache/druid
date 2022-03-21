@@ -51,18 +51,10 @@ public class SingleValueStringCardinalityVectorProcessor implements CardinalityV
 
       final HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buf);
 
-      if (NullHandling.ignoreNullsForStringCardinality()) {
-        for (int i = startRow; i < endRow; i++) {
-          final String value = selector.lookupName(vector[i]);
-          if (value != null) {
-            StringCardinalityAggregatorColumnSelectorStrategy.addStringToCollector(collector, value);
-          }
-        }
-      } else {
-        for (int i = startRow; i < endRow; i++) {
-          final String value = selector.lookupName(vector[i]);
-          StringCardinalityAggregatorColumnSelectorStrategy.addStringToCollector(collector, value);
-        }
+
+      for (int i = startRow; i < endRow; i++) {
+        final String value = selector.lookupName(vector[i]);
+        StringCardinalityAggregatorColumnSelectorStrategy.addStringToCollector(collector, value);
       }
     }
     finally {
@@ -80,27 +72,15 @@ public class SingleValueStringCardinalityVectorProcessor implements CardinalityV
 
     try {
       final int[] vector = selector.getRowVector();
-      if (NullHandling.ignoreNullsForStringCardinality()) {
-        for (int i = 0; i < numRows; i++) {
-          final String s = selector.lookupName(vector[rows != null ? rows[i] : i]);
-          if (s != null) {
-            final int position = positions[i] + positionOffset;
-            buf.limit(position + HyperLogLogCollector.getLatestNumBytesForDenseStorage());
-            buf.position(position);
-            final HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buf);
-            StringCardinalityAggregatorColumnSelectorStrategy.addStringToCollector(collector, s);
-          }
-        }
-      } else {
-        for (int i = 0; i < numRows; i++) {
-          final String s = selector.lookupName(vector[rows != null ? rows[i] : i]);
-          if (NullHandling.replaceWithDefault() || s != null) {
-            final int position = positions[i] + positionOffset;
-            buf.limit(position + HyperLogLogCollector.getLatestNumBytesForDenseStorage());
-            buf.position(position);
-            final HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buf);
-            StringCardinalityAggregatorColumnSelectorStrategy.addStringToCollector(collector, s);
-          }
+
+      for (int i = 0; i < numRows; i++) {
+        final String s = selector.lookupName(vector[rows != null ? rows[i] : i]);
+        if (NullHandling.replaceWithDefault() || s != null) {
+          final int position = positions[i] + positionOffset;
+          buf.limit(position + HyperLogLogCollector.getLatestNumBytesForDenseStorage());
+          buf.position(position);
+          final HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buf);
+          StringCardinalityAggregatorColumnSelectorStrategy.addStringToCollector(collector, s);
         }
       }
     }
