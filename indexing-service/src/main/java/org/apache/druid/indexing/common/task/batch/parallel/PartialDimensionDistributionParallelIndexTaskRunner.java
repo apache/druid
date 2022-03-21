@@ -41,7 +41,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Phaser;
 
 /**
  * {@link ParallelIndexTaskRunner} for the phase to determine distribution of dimension values in
@@ -54,8 +54,13 @@ class PartialDimensionDistributionParallelIndexTaskRunner
   private static final String PHASE_NAME = "partial dimension distribution";
 
   private final ExecutorService executor = Execs.singleThreaded("DimDistributionWriter-%s");
-  private final Map<Interval, Set<String>> intervalToTaskIds = new HashMap<>();
 
+  /**
+   * Phaser to await the processing of all reports submitted to the {@link #executor}.
+   */
+  private final Phaser allReportsProcessedPhaser = new Phaser(1);
+
+  private final Map<Interval, Set<String>> intervalToTaskIds = new HashMap<>();
   private final File tempDistributionsDir;
 
   PartialDimensionDistributionParallelIndexTaskRunner(
@@ -95,6 +100,8 @@ class PartialDimensionDistributionParallelIndexTaskRunner
       // this should never happen
       throw new ISE("Executor is already shutdown. Cannot process more reports.");
     }
+
+    allReportsProcessedPhaser.register();
     executor.submit(() -> extractDistributionsFromReport(report));
   }
 
@@ -141,6 +148,7 @@ class PartialDimensionDistributionParallelIndexTaskRunner
         }
     );
 
+    cleanupDistributionsDir();
     return intervalToPartitions;
   }
 
@@ -152,23 +160,30 @@ class PartialDimensionDistributionParallelIndexTaskRunner
    */
   private void extractDistributionsFromReport(DimensionDistributionReport report)
   {
-    log.debug("Started writing distributions from Task ID [%s]", report.getTaskId());
+    try {
+      log.debug("Started writing distributions from Task ID [%s]", report.getTaskId());
 
-    if (report.getIntervalToDistribution() == null) {
-      return;
-    }
-    report.getIntervalToDistribution().forEach(
-        (interval, distribution) -> {
-          Set<String> taskIds = intervalToTaskIds.computeIfAbsent(interval, i -> new HashSet<>());
-          final String subTaskId = report.getTaskId();
-          if (!taskIds.contains(subTaskId)) {
-            writeDistributionToFile(interval, subTaskId, distribution);
-            taskIds.add(subTaskId);
+      final Map<Interval, StringDistribution> distributions = report.getIntervalToDistribution();
+      if (distributions == null || distributions.isEmpty()) {
+        log.debug("No dimension distribution found in Task ID [%s]", report.getTaskId());
+        return;
+      }
+      distributions.forEach(
+          (interval, distribution) -> {
+            Set<String> taskIds = intervalToTaskIds.computeIfAbsent(interval, i -> new HashSet<>());
+            final String subTaskId = report.getTaskId();
+            if (!taskIds.contains(subTaskId)) {
+              writeDistributionToFile(interval, subTaskId, distribution);
+              taskIds.add(subTaskId);
+            }
           }
-        }
-    );
+      );
 
-    log.debug("Finished writing distributions from Task ID [%s]", report.getTaskId());
+      log.debug("Finished writing distributions from Task ID [%s]", report.getTaskId());
+    }
+    finally {
+      allReportsProcessedPhaser.arriveAndDeregister();
+    }
   }
 
   /**
@@ -231,17 +246,11 @@ class PartialDimensionDistributionParallelIndexTaskRunner
   {
     log.info("Waiting to extract distributions from sub-task reports.");
     try {
-      executor.shutdown();
-      executor.awaitTermination(60, TimeUnit.SECONDS);
+      allReportsProcessedPhaser.arriveAndAwaitAdvance();
+      executor.shutdownNow();
     }
-    catch (InterruptedException e) {
-      throw new ISE(e, "Interrupted while waiting to extract distributions.");
-    }
-    finally {
-      if (!executor.isTerminated()) {
-        log.error("Executor was not terminated."
-                  + " There are pending distribution reports to be processed.");
-      }
+    catch (Exception e) {
+      throw new ISE(e, "Exception while waiting to extract distributions.");
     }
   }
 
@@ -254,7 +263,17 @@ class PartialDimensionDistributionParallelIndexTaskRunner
       return distributionsDir;
     }
     catch (IOException e) {
-      throw new ISE(e, "Could not create temp dir");
+      throw new ISE(e, "Could not create temp distribution directory.");
+    }
+  }
+
+  private void cleanupDistributionsDir()
+  {
+    try {
+      FileUtils.deleteDirectory(tempDistributionsDir);
+    }
+    catch (IOException e) {
+      log.warn(e, "Could not delete temp distribution directory.");
     }
   }
 
