@@ -264,6 +264,7 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
     // Here, we simply make sure the current report is exactly the same as the previous one.
     reportsMap.compute(report.getTaskId(), (taskId, prevReport) -> {
       if (prevReport != null) {
+        log.warn("Received duplicate report for task [%s]", taskId);
         Preconditions.checkState(
             prevReport.equals(report),
             "task[%s] sent two or more reports and previous report[%s] is different from the current one[%s]",
