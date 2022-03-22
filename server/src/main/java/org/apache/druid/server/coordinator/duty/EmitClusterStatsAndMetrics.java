@@ -36,8 +36,6 @@ import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
-import java.util.List;
-
 /**
  * Emits stats of the cluster and metrics of the coordination (including segment balancing) process.
  */
@@ -51,13 +49,13 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
 
   private final DruidCoordinator coordinator;
   private final String groupName;
-  private final List<? extends CoordinatorDuty> dutyList;
+  private final boolean isContainCompactSegmentDuty;
 
-  public EmitClusterStatsAndMetrics(DruidCoordinator coordinator, String groupName, List<? extends CoordinatorDuty> duties)
+  public EmitClusterStatsAndMetrics(DruidCoordinator coordinator, String groupName, boolean isContainCompactSegmentDuty)
   {
     this.coordinator = coordinator;
     this.groupName = groupName;
-    this.dutyList = duties;
+    this.isContainCompactSegmentDuty = isContainCompactSegmentDuty;
   }
 
   private void emitTieredStat(
@@ -145,7 +143,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     if (DruidCoordinator.HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP.equals(groupName)) {
       emitStatsForHistoricalManagementDuties(cluster, stats, emitter, params);
     }
-    if (dutyList.stream().anyMatch(duty -> duty instanceof CompactSegments)) {
+    if (isContainCompactSegmentDuty) {
       emitStatsForCompactSegments(cluster, stats, emitter);
     }
 

@@ -19,8 +19,6 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import org.apache.druid.client.indexing.IndexingServiceClient;
@@ -58,11 +56,6 @@ public class EmitClusterStatsAndMetricsTest
   DruidCluster mockDruidCluster;
   @Mock
   MetadataRuleManager mockMetadataRuleManager;
-  @Mock
-  DruidCoordinatorConfig mockConfig;
-  @Mock
-  IndexingServiceClient mockIndexingServiceClient;
-
 
   @Test
   public void testRunOnlyEmitStatsForHistoricalDuties()
@@ -74,7 +67,7 @@ public class EmitClusterStatsAndMetricsTest
     Mockito.when(mockDruidCoordinatorRuntimeParams.getDatabaseRuleManager()).thenReturn(mockMetadataRuleManager);
     Mockito.when(mockDruidCoordinator.computeNumsUnavailableUsedSegmentsPerDataSource()).thenReturn(Object2IntMaps.emptyMap());
     Mockito.when(mockDruidCoordinator.computeUnderReplicationCountsPerDataSourcePerTier()).thenReturn(ImmutableMap.of());
-    CoordinatorDuty duty = new EmitClusterStatsAndMetrics(mockDruidCoordinator, DruidCoordinator.HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP, ImmutableList.of());
+    CoordinatorDuty duty = new EmitClusterStatsAndMetrics(mockDruidCoordinator, DruidCoordinator.HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP, false);
     duty.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verify(mockServiceEmitter, Mockito.atLeastOnce()).emit(argumentCaptor.capture());
     List<ServiceEventBuilder> emittedEvents = argumentCaptor.getAllValues();
@@ -104,7 +97,7 @@ public class EmitClusterStatsAndMetricsTest
     Mockito.when(mockDruidCoordinatorRuntimeParams.getEmitter()).thenReturn(mockServiceEmitter);
     Mockito.when(mockDruidCoordinatorRuntimeParams.getCoordinatorStats()).thenReturn(mockCoordinatorStats);
     Mockito.when(mockDruidCoordinatorRuntimeParams.getDruidCluster()).thenReturn(mockDruidCluster);
-    CoordinatorDuty duty = new EmitClusterStatsAndMetrics(mockDruidCoordinator, groupName, ImmutableList.of(new CompactSegments(mockConfig, new ObjectMapper(), mockIndexingServiceClient)));
+    CoordinatorDuty duty = new EmitClusterStatsAndMetrics(mockDruidCoordinator, groupName, true);
     duty.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verify(mockServiceEmitter, Mockito.atLeastOnce()).emit(argumentCaptor.capture());
     List<ServiceEventBuilder> emittedEvents = argumentCaptor.getAllValues();

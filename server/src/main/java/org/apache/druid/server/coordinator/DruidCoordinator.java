@@ -840,14 +840,17 @@ public class DruidCoordinator
 
     protected DutiesRunnable(List<? extends CoordinatorDuty> duties, final int startingLeaderCounter, String alias)
     {
+      // Automatically add EmitClusterStatsAndMetrics duty to the group if it does not already exists
+      // This is to avoid human coding error (forgetting to add the EmitClusterStatsAndMetrics duty to the group)
+      // causing metrics from the duties to not being emitted.
       if (duties.stream().noneMatch(duty -> duty instanceof EmitClusterStatsAndMetrics)) {
+        boolean isContainCompactSegmentDuty = duties.stream().anyMatch(duty -> duty instanceof CompactSegments);
         List<CoordinatorDuty> allDuties = new ArrayList<>(duties);
-        allDuties.add(new EmitClusterStatsAndMetrics(DruidCoordinator.this, alias, duties));
+        allDuties.add(new EmitClusterStatsAndMetrics(DruidCoordinator.this, alias, isContainCompactSegmentDuty));
         this.duties = allDuties;
       } else {
         this.duties = duties;
       }
-      //Auto add emit
       this.startingLeaderCounter = startingLeaderCounter;
       this.dutiesRunnableAlias = alias;
     }
