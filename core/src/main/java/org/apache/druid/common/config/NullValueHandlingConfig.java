@@ -55,7 +55,11 @@ public class NullValueHandlingConfig
           "false"
       ));
     } else {
-      this.ignoreNullsForStringCardinality = ignoreNullsForStringCardinality;
+      if (this.useDefaultValuesForNull) {
+        this.ignoreNullsForStringCardinality = ignoreNullsForStringCardinality;
+      } else {
+        this.ignoreNullsForStringCardinality = false;
+      }
     }
   }
 

@@ -53,7 +53,7 @@ public class StringCardinalityAggregatorColumnSelectorStrategy implements Cardin
     // nothing to add to hasher if size == 0, only handle size == 1 and size != 0 cases.
     if (size == 1) {
       final String value = dimSelector.lookupName(row.get(0));
-      if ((NullHandling.replaceWithDefault() && !NullHandling.ignoreNullsForStringCardinality()) || value != null) {
+      if (NullHandling.replaceWithDefault() || value != null) {
         hasher.putUnencodedChars(nullToSpecial(value));
       }
     } else if (size != 0) {
@@ -72,7 +72,7 @@ public class StringCardinalityAggregatorColumnSelectorStrategy implements Cardin
       // SQL standard spec does not count null values,
       // Skip counting null values when we are not replacing null with default value.
       // A special value for null in case null handling is configured to use empty string for null.
-      if ((NullHandling.replaceWithDefault() && !NullHandling.ignoreNullsForStringCardinality()) || hasNonNullValue) {
+      if (NullHandling.replaceWithDefault() || hasNonNullValue) {
         // Values need to be sorted to ensure consistent multi-value ordering across different segments
         Arrays.sort(values);
         for (int i = 0; i < size; ++i) {

@@ -225,11 +225,6 @@ public class CardinalityAggregatorTest
       new String[]{"x", "y", "a"}
   );
 
-  public Object[] countNulls()
-  {
-    return Lists.newArrayList(true, false).toArray();
-  }
-
   private static List<String[]> dimensionValues(Object... values)
   {
     return Lists.transform(
@@ -671,26 +666,19 @@ public class CardinalityAggregatorTest
 
   //ignoreNullsForStringCardinality tests
   @Test
-  public void testBufferAggregateRowsIgnoreNulls()
+  public void testAggregateRowsIgnoreNulls()
   {
     NullHandling.initializeForTestsWithValues(null, true);
-    CardinalityBufferAggregator agg = new CardinalityBufferAggregator(
-        dimInfoList.toArray(new ColumnSelectorPlus[0]),
+    CardinalityAggregator agg = new CardinalityAggregator(
+        dimInfoList,
         true
     );
 
-    int maxSize = rowAggregatorFactory.getMaxIntermediateSizeWithNulls();
-    ByteBuffer buf = ByteBuffer.allocate(maxSize + 64);
-    int pos = 10;
-    buf.limit(pos + maxSize);
-
-    agg.init(buf, pos);
-
     for (int i = 0; i < VALUES1.size(); ++i) {
-      bufferAggregate(selectorList, agg, buf, pos);
+      aggregate(selectorList, agg);
     }
-    Assert.assertEquals(7.0, (Double) rowAggregatorFactory.finalizeComputation(agg.get(buf, pos)), 0.05);
-    Assert.assertEquals(7L, rowAggregatorFactoryRounded.finalizeComputation(agg.get(buf, pos)));
+    Assert.assertEquals(9.0, (Double) rowAggregatorFactory.finalizeComputation(agg.get()), 0.05);
+    Assert.assertEquals(9L, rowAggregatorFactoryRounded.finalizeComputation(agg.get()));
   }
 
   @Test
@@ -705,6 +693,7 @@ public class CardinalityAggregatorTest
     for (int i = 0; i < VALUES1.size(); ++i) {
       aggregate(selectorList, agg);
     }
+    //setting is not applied when druid.generic.useDefaultValueForNull=false
     Assert.assertEquals(
         NullHandling.replaceWithDefault() ? 6.0 : 6.0,
         (Double) valueAggregatorFactory.finalizeComputation(agg.get()),
