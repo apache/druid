@@ -13850,4 +13850,39 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "Possible error: SQL requires 'UNION' but only 'UNION ALL' is supported."
     );
   }
+
+  @Test
+  public void testPlanWithInFilterLessThanInSubQueryThreshold() throws Exception
+  {
+    String query = "SELECT l1 FROM numfoo WHERE l1 IN (4842, 4844, 4845, 14905, 4853, 29064)";
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        query,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .columns("l1")
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .legacy(false)
+                  .filters(
+                      in(
+                          "l1",
+                          ImmutableList.of("4842", "4844", "4845", "14905", "4853", "29064"),
+                          null
+                      )
+                  )
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .build()
+        ),
+        (sql, result) -> {
+          // Ignore the results, only need to check that the type of query is a filter.
+        },
+        null
+    );
+  }
 }
