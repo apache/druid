@@ -353,4 +353,76 @@ public class ForkingTaskRunnerTest
     Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
     Assert.assertEquals("task failure test", status.getErrorMsg());
   }
+
+  @Test
+  public void testJavaOptsAndJavaOptsArrayOverride() throws ExecutionException, InterruptedException
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    String javaOpts = "-Xmx1g -Xms1g";
+    List<String> javaOptsArray = ImmutableList.of("-Xmx10g", "-Xms10g");
+    Task task = NoopTask.withJavaOptsContext(javaOpts, javaOptsArray);
+    ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
+        new ForkingTaskRunnerConfig(),
+        new TaskConfig(
+            null,
+            null,
+            null,
+            null,
+            ImmutableList.of(),
+            false,
+            new Period("PT0S"),
+            new Period("PT10S"),
+            ImmutableList.of(),
+            false,
+            false,
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        ),
+        new WorkerConfig(),
+        new Properties(),
+        new NoopTaskLogs(),
+        mapper,
+        new DruidNode("middleManager", "host", false, 8091, null, true, false),
+        new StartupLoggingConfig()
+    )
+    {
+      @Override
+      ProcessHolder runTaskProcess(List<String> command, File logFile, TaskLocation taskLocation) throws IOException
+      {
+        ProcessHolder processHolder = Mockito.mock(ProcessHolder.class);
+        Mockito.doNothing().when(processHolder).registerWithCloser(ArgumentMatchers.any());
+        Mockito.doNothing().when(processHolder).shutdown();
+
+        int xmxJavaOptsIndex = 0;
+        int xmxJavaOptsArrayIndex = 0;
+        String statusPath = "status.json";
+        for (int i = 0; i < command.size(); i++) {
+          if (command.get(i).endsWith("status.json")) {
+            statusPath = command.get(i);
+          }
+
+          if ("-Xmx1g".equals(command.get(i))) {
+            xmxJavaOptsIndex = i;
+          }
+          if ("-Xmx10g".equals(command.get(i))) {
+            xmxJavaOptsArrayIndex = i;
+          }
+        }
+        if (0 < xmxJavaOptsIndex && xmxJavaOptsIndex < xmxJavaOptsArrayIndex) {
+          mapper.writeValue(new File(statusPath), TaskStatus.failure(task.getId(), "javaOpts and javaOptsArray context override work as expected"));
+        }
+
+        return processHolder;
+      }
+
+      @Override
+      int waitForTaskProcessToComplete(Task task, ProcessHolder processHolder, File logFile, File reportsFile)
+      {
+        return 0;
+      }
+    };
+
+    final TaskStatus status = forkingTaskRunner.run(task).get();
+    Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
+    Assert.assertEquals("javaOpts and javaOptsArray context override work as expected", status.getErrorMsg());
+  }
 }

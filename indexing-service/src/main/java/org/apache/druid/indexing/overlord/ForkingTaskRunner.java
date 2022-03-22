@@ -226,7 +226,9 @@ public class ForkingTaskRunner
                               task.getContextValue(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY),
                               new TypeReference<List<String>>() {}
                           );
-                          Iterables.addAll(command, taskJavaOptsArray);
+                          if (taskJavaOptsArray != null) {
+                            Iterables.addAll(command, taskJavaOptsArray);
+                          }
                         }
                         catch (Exception e) {
                           throw new IllegalArgumentException(
