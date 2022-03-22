@@ -232,7 +232,7 @@ public class ForkingTaskRunner
                         }
                         catch (Exception e) {
                           throw new IllegalArgumentException(
-                              "javaOptsArray in context of task: " + task + " must be an array of strings.",
+                              "javaOptsArray in context of task: " + task.getId() + " must be an array of strings.",
                               e
                           );
                         }

@@ -178,9 +178,9 @@ public class NoopTask extends AbstractTask
     return new NoopTask(null, groupId, null, 0, 0, null, null, null);
   }
 
-  public static NoopTask withJavaOptsContext(String javaOpts, List<String> javaOptsArray)
+  public NoopTask withJavaOptsContext(String javaOpts, List<String> javaOptsArray)
   {
-    Map<String, Object> context = new HashMap<>();
+    Map<String, Object> context = new HashMap<>(getContext());
     context.put(ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY, javaOpts);
     context.put(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY, javaOptsArray);
     return new NoopTask(null, null, null, 0, 0, null, null, context);

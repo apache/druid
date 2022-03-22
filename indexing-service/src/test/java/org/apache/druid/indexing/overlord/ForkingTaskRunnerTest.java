@@ -360,7 +360,7 @@ public class ForkingTaskRunnerTest
     ObjectMapper mapper = new DefaultObjectMapper();
     String javaOpts = "-Xmx1g -Xms1g";
     List<String> javaOptsArray = ImmutableList.of("-Xmx10g", "-Xms10g");
-    Task task = NoopTask.withJavaOptsContext(javaOpts, javaOptsArray);
+    Task task = NoopTask.create().withJavaOptsContext(javaOpts, javaOptsArray);
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
         new ForkingTaskRunnerConfig(),
         new TaskConfig(
@@ -408,7 +408,9 @@ public class ForkingTaskRunnerTest
           }
         }
         if (0 < xmxJavaOptsIndex && xmxJavaOptsIndex < xmxJavaOptsArrayIndex) {
-          mapper.writeValue(new File(statusPath), TaskStatus.failure(task.getId(), "javaOpts and javaOptsArray context override work as expected"));
+          mapper.writeValue(new File(statusPath), TaskStatus.success(task.getId()));
+        } else {
+          mapper.writeValue(new File(statusPath), TaskStatus.failure(task.getId(), "javaOpts or javaOptsArray override failed"));
         }
 
         return processHolder;
@@ -422,7 +424,6 @@ public class ForkingTaskRunnerTest
     };
 
     final TaskStatus status = forkingTaskRunner.run(task).get();
-    Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
-    Assert.assertEquals("javaOpts and javaOptsArray context override work as expected", status.getErrorMsg());
+    Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
   }
 }
