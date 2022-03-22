@@ -476,3 +476,39 @@ export function twoLines(line1: string, line2: string) {
     </>
   );
 }
+
+export function parseCsvLine(line: string): string[] {
+  line = ',' + line.replace(/\r?\n?$/, ''); // remove trailing new lines
+  const parts: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = /^,(?:"([^"]*(?:""[^"]*)*)"|([^,\r\n]*))/m.exec(line))) {
+    parts.push(typeof m[1] === 'string' ? m[1].replace(/""/g, '"') : m[2]);
+    line = line.substr(m[0].length);
+  }
+  return parts;
+}
+
+// From: https://en.wikipedia.org/wiki/Jenkins_hash_function
+export function hashJoaat(str: string): number {
+  let hash = 0;
+  const n = str.length;
+  for (let i = 0; i < n; i++) {
+    hash += str.charCodeAt(i);
+    // eslint-disable-next-line no-bitwise
+    hash += hash << 10;
+    // eslint-disable-next-line no-bitwise
+    hash ^= hash >> 6;
+  }
+  // eslint-disable-next-line no-bitwise
+  hash += hash << 3;
+  // eslint-disable-next-line no-bitwise
+  hash ^= hash >> 11;
+  // eslint-disable-next-line no-bitwise
+  hash += hash << 15;
+  // eslint-disable-next-line no-bitwise
+  return (hash & 4294967295) >>> 0;
+}
+
+export function objectHash(obj: any): string {
+  return hashJoaat(JSONBig.stringify(obj)).toString(16).padStart(8);
+}

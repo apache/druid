@@ -17,6 +17,7 @@
  */
 
 import { Code } from '@blueprintjs/core';
+import { range } from 'd3-array';
 import React from 'react';
 
 import { AutoForm, ExternalLink, Field } from '../components';
@@ -32,6 +33,7 @@ import {
   EMPTY_OBJECT,
   filterMap,
   oneOf,
+  parseCsvLine,
   typeIs,
 } from '../utils';
 import { SampleHeaderAndRows } from '../utils/sampler';
@@ -2162,6 +2164,10 @@ export function fillInputFormatIfNeeded(
   return deepSet(spec, 'spec.ioConfig.inputFormat', guessInputFormat(sampleData));
 }
 
+function noNumbers(xs: string[]): boolean {
+  return xs.every(x => isNaN(Number(x)));
+}
+
 export function guessInputFormat(sampleData: string[]): InputFormat {
   let sampleDatum = sampleData[0];
   if (sampleDatum) {
@@ -2171,68 +2177,114 @@ export function guessInputFormat(sampleData: string[]): InputFormat {
 
     // Parquet 4 byte magic header: https://github.com/apache/parquet-format#file-format
     if (sampleDatum.startsWith('PAR1')) {
-      return inputFormatFromType('parquet');
+      return inputFormatFromType({ type: 'parquet' });
     }
     // ORC 3 byte magic header: https://orc.apache.org/specification/ORCv1/
     if (sampleDatum.startsWith('ORC')) {
-      return inputFormatFromType('orc');
+      return inputFormatFromType({ type: 'orc' });
     }
     // Avro OCF 4 byte magic header: https://avro.apache.org/docs/current/spec.html#Object+Container+Files
-    if (sampleDatum.startsWith('Obj') && sampleDatum.charCodeAt(3) === 1) {
-      return inputFormatFromType('avro_ocf');
+    if (sampleDatum.startsWith('Obj\x01')) {
+      return inputFormatFromType({ type: 'avro_ocf' });
     }
 
     // After checking for magic byte sequences perform heuristics to deduce string formats
 
     // If the string starts and ends with curly braces assume JSON
     if (sampleDatum.startsWith('{') && sampleDatum.endsWith('}')) {
-      return inputFormatFromType('json');
+      return inputFormatFromType({ type: 'json' });
     }
+
     // Contains more than 3 tabs assume TSV
-    if (sampleDatum.split('\t').length > 3) {
-      return inputFormatFromType('tsv', !/\t\d+\t/.test(sampleDatum));
+    const lineAsTsv = sampleDatum.split('\t');
+    if (lineAsTsv.length > 3) {
+      return inputFormatFromType({
+        type: 'tsv',
+        findColumnsFromHeader: noNumbers(lineAsTsv),
+        numColumns: lineAsTsv.length,
+      });
     }
-    // Contains more than 3 commas assume CSV
-    if (sampleDatum.split(',').length > 3) {
-      return inputFormatFromType('csv', !/,\d+,/.test(sampleDatum));
+
+    // Contains more than fields if parsed as CSV line
+    const lineAsCsv = parseCsvLine(sampleDatum);
+    if (lineAsCsv.length > 3) {
+      return inputFormatFromType({
+        type: 'csv',
+        findColumnsFromHeader: noNumbers(lineAsCsv),
+        numColumns: lineAsCsv.length,
+      });
     }
+
     // Contains more than 3 semicolons assume semicolon separated
-    if (sampleDatum.split(';').length > 3) {
-      return inputFormatFromType('tsv', !/;\d+;/.test(sampleDatum), ';');
+    const lineAsTsvSemicolon = sampleDatum.split(';');
+    if (lineAsTsvSemicolon.length > 3) {
+      return inputFormatFromType({
+        type: 'tsv',
+        delimiter: ';',
+        findColumnsFromHeader: noNumbers(lineAsTsvSemicolon),
+        numColumns: lineAsTsvSemicolon.length,
+      });
     }
+
     // Contains more than 3 pipes assume pipe separated
-    if (sampleDatum.split('|').length > 3) {
-      return inputFormatFromType('tsv', !/\|\d+\|/.test(sampleDatum), '|');
+    const lineAsTsvPipe = sampleDatum.split('|');
+    if (lineAsTsvPipe.length > 3) {
+      return inputFormatFromType({
+        type: 'tsv',
+        delimiter: '|',
+        findColumnsFromHeader: noNumbers(lineAsTsvPipe),
+        numColumns: lineAsTsvPipe.length,
+      });
     }
   }
 
-  return inputFormatFromType('regex');
+  return inputFormatFromType({ type: 'regex' });
 }
 
-function inputFormatFromType(
-  type: string,
-  findColumnsFromHeader?: boolean,
-  delimiter?: string,
-): InputFormat {
+interface InputFormatFromTypeOptions {
+  type: string;
+  delimiter?: string;
+  findColumnsFromHeader?: boolean;
+  numColumns?: number;
+}
+
+function inputFormatFromType(options: InputFormatFromTypeOptions): InputFormat {
+  const { type, delimiter, findColumnsFromHeader, numColumns } = options;
+
   let inputFormat: InputFormat = { type };
 
   if (type === 'regex') {
-    inputFormat = deepSet(inputFormat, 'pattern', '(.*)');
-    inputFormat = deepSet(inputFormat, 'columns', ['column1']);
-  }
+    inputFormat = deepSet(inputFormat, 'pattern', '([\\s\\S]*)');
+    inputFormat = deepSet(inputFormat, 'columns', ['line']);
+  } else {
+    if (typeof findColumnsFromHeader === 'boolean') {
+      inputFormat = deepSet(inputFormat, 'findColumnsFromHeader', findColumnsFromHeader);
 
-  if (typeof findColumnsFromHeader === 'boolean') {
-    inputFormat = deepSet(inputFormat, 'findColumnsFromHeader', findColumnsFromHeader);
-  }
+      if (!findColumnsFromHeader && numColumns) {
+        inputFormat = deepSet(
+          inputFormat,
+          'columns',
+          range(0, numColumns).map(c => `column${c + 1}`),
+        );
+      }
+    }
 
-  if (delimiter) {
-    inputFormat = deepSet(inputFormat, 'delimiter', delimiter);
+    if (delimiter) {
+      inputFormat = deepSet(inputFormat, 'delimiter', delimiter);
+    }
   }
 
   return inputFormat;
 }
 
 // ------------------------
+
+export function guessIsArrayFromHeaderAndRows(
+  headerAndRows: SampleHeaderAndRows,
+  column: string,
+): boolean {
+  return headerAndRows.rows.some(r => Array.isArray(r.input?.[column]));
+}
 
 export function guessColumnTypeFromInput(
   sampleValues: any[],

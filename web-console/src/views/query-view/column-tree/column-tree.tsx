@@ -41,10 +41,6 @@ import './column-tree.scss';
 
 const COUNT_STAR = SqlFunction.COUNT_STAR.as('Count');
 
-function caseInsensitiveCompare(a: any, b: any): number {
-  return String(a).toLowerCase().localeCompare(String(b).toLowerCase());
-}
-
 function getCountExpression(columnNames: string[]): SqlExpression {
   for (const columnName of columnNames) {
     if (columnName === 'count' || columnName === '__count') {
@@ -234,7 +230,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                     .changeSelectExpressions(
                                       metadata
                                         .map(child => child.COLUMN_NAME)
-                                        .sort(caseInsensitiveCompare)
                                         .map(columnName => SqlRef.column(columnName)),
                                     )
                                     .changeWhereExpression(getWhere()),
@@ -376,48 +371,38 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                   {tableName}
                 </Popover2>
               ),
-              childNodes: metadata
-                .map(
-                  (columnData): TreeNodeInfo => ({
-                    id: columnData.COLUMN_NAME,
-                    icon: dataTypeToIcon(columnData.DATA_TYPE),
-                    label: (
-                      <Popover2
-                        position={Position.RIGHT}
-                        autoFocus={false}
-                        content={
-                          <Deferred
-                            content={() => {
-                              const parsedQuery = props.getParsedQuery();
-                              return (
-                                <Menu>
-                                  <MenuItem
-                                    icon={IconNames.FULLSCREEN}
-                                    text={`Show: ${columnData.COLUMN_NAME}`}
-                                    onClick={() => {
-                                      handleColumnShow({
-                                        columnSchema: schemaName,
-                                        columnTable: tableName,
-                                        columnName: columnData.COLUMN_NAME,
-                                        columnType: columnData.DATA_TYPE,
-                                        parsedQuery,
-                                        defaultWhere,
-                                        onQueryChange: onQueryChange,
-                                      });
-                                    }}
-                                  />
-                                  {parsedQuery &&
-                                    oneOf(columnData.DATA_TYPE, 'BIGINT', 'FLOAT', 'DOUBLE') && (
-                                      <NumberMenuItems
-                                        table={tableName}
-                                        schema={schemaName}
-                                        columnName={columnData.COLUMN_NAME}
-                                        parsedQuery={parsedQuery}
-                                        onQueryChange={onQueryChange}
-                                      />
-                                    )}
-                                  {parsedQuery && columnData.DATA_TYPE === 'VARCHAR' && (
-                                    <StringMenuItems
+              childNodes: metadata.map(
+                (columnData): TreeNodeInfo => ({
+                  id: columnData.COLUMN_NAME,
+                  icon: dataTypeToIcon(columnData.DATA_TYPE),
+                  label: (
+                    <Popover2
+                      position={Position.RIGHT}
+                      autoFocus={false}
+                      content={
+                        <Deferred
+                          content={() => {
+                            const parsedQuery = props.getParsedQuery();
+                            return (
+                              <Menu>
+                                <MenuItem
+                                  icon={IconNames.FULLSCREEN}
+                                  text={`Show: ${columnData.COLUMN_NAME}`}
+                                  onClick={() => {
+                                    handleColumnShow({
+                                      columnSchema: schemaName,
+                                      columnTable: tableName,
+                                      columnName: columnData.COLUMN_NAME,
+                                      columnType: columnData.DATA_TYPE,
+                                      parsedQuery,
+                                      defaultWhere,
+                                      onQueryChange: onQueryChange,
+                                    });
+                                  }}
+                                />
+                                {parsedQuery &&
+                                  oneOf(columnData.DATA_TYPE, 'BIGINT', 'FLOAT', 'DOUBLE') && (
+                                    <NumberMenuItems
                                       table={tableName}
                                       schema={schemaName}
                                       columnName={columnData.COLUMN_NAME}
@@ -425,37 +410,45 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                       onQueryChange={onQueryChange}
                                     />
                                   )}
-                                  {parsedQuery && columnData.DATA_TYPE === 'TIMESTAMP' && (
-                                    <TimeMenuItems
-                                      table={tableName}
-                                      schema={schemaName}
-                                      columnName={columnData.COLUMN_NAME}
-                                      parsedQuery={parsedQuery}
-                                      onQueryChange={onQueryChange}
-                                    />
-                                  )}
-                                  <MenuItem
-                                    icon={IconNames.CLIPBOARD}
-                                    text={`Copy: ${columnData.COLUMN_NAME}`}
-                                    onClick={() => {
-                                      copyAndAlert(
-                                        columnData.COLUMN_NAME,
-                                        `${columnData.COLUMN_NAME} query copied to clipboard`,
-                                      );
-                                    }}
+                                {parsedQuery && columnData.DATA_TYPE === 'VARCHAR' && (
+                                  <StringMenuItems
+                                    table={tableName}
+                                    schema={schemaName}
+                                    columnName={columnData.COLUMN_NAME}
+                                    parsedQuery={parsedQuery}
+                                    onQueryChange={onQueryChange}
                                   />
-                                </Menu>
-                              );
-                            }}
-                          />
-                        }
-                      >
-                        {columnData.COLUMN_NAME}
-                      </Popover2>
-                    ),
-                  }),
-                )
-                .sort((a, b) => caseInsensitiveCompare(a.id, b.id)),
+                                )}
+                                {parsedQuery && columnData.DATA_TYPE === 'TIMESTAMP' && (
+                                  <TimeMenuItems
+                                    table={tableName}
+                                    schema={schemaName}
+                                    columnName={columnData.COLUMN_NAME}
+                                    parsedQuery={parsedQuery}
+                                    onQueryChange={onQueryChange}
+                                  />
+                                )}
+                                <MenuItem
+                                  icon={IconNames.CLIPBOARD}
+                                  text={`Copy: ${columnData.COLUMN_NAME}`}
+                                  onClick={() => {
+                                    copyAndAlert(
+                                      columnData.COLUMN_NAME,
+                                      `${columnData.COLUMN_NAME} query copied to clipboard`,
+                                    );
+                                  }}
+                                />
+                              </Menu>
+                            );
+                          }}
+                        />
+                      }
+                    >
+                      {columnData.COLUMN_NAME}
+                    </Popover2>
+                  ),
+                }),
+              ),
             }),
           ),
         }),

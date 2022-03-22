@@ -30,6 +30,15 @@ $druid-brand: #2ceefb;
 $druid-brand2: #00b6bf;
 $druid-brand-background: #1c1c26;
 
+@mixin card-background {
+  background: $white;
+  border-radius: $pt-border-radius;
+
+  .bp3-dark & {
+    background: $dark-gray3;
+  }
+}
+
 @mixin card-like {
   background: $white;
   border-radius: $pt-border-radius;

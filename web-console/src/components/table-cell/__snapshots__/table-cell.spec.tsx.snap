@@ -1,5 +1,23 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`TableCell matches snapshot Date (invalid) 1`] = `
+<span
+  class="table-cell timestamp"
+  title="NaN"
+>
+  Unusable date
+</span>
+`;
+
+exports[`TableCell matches snapshot Date 1`] = `
+<span
+  class="table-cell timestamp"
+  title="1645664523000"
+>
+  2022-02-24T01:02:03.000Z
+</span>
+`;
+
 exports[`TableCell matches snapshot array long 1`] = `
 <span
   class="table-cell truncated"
