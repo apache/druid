@@ -38,8 +38,6 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 
 import java.util.List;
 
-import static org.apache.druid.server.coordinator.DruidCoordinator.HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP;
-
 /**
  * Emits stats of the cluster and metrics of the coordination (including segment balancing) process.
  */
