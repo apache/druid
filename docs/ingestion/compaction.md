@@ -61,13 +61,13 @@ If an ingestion task needs to write data to a segment for a time interval locked
 
 ### Segment granularity handling
 
-Unless you modify the segment granularity in the [granularity spec](#compaction-granularity-spec), Druid attempts to retain the granularity for the compacted segments. When segments have different segment granularities with no overlap in interval Druid creates a separate compaction task for each to retain the segment granularity in the compacted segment.
+Unless you modify the segment granularity in [`granularitySpec`](#compaction-granularity-spec), Druid attempts to retain the granularity for the compacted segments. When segments have different segment granularities with no overlap in interval Druid creates a separate compaction task for each to retain the segment granularity in the compacted segment.
 
 If segments have different segment granularities before compaction but there is some overlap in interval, Druid attempts find start and end of the overlapping interval and uses the closest segment granularity level for the compacted segment. For example consider two overlapping segments: segment "A" for the interval 01/01/2021-01/02/2021 with day granularity and segment "B" for the interval 01/01/2021-02/01/2021. Druid attempts to combine and compacted the overlapped segments. In this example, the earliest start time for the two segments above is 01/01/2020 and the latest end time of the two segments above is 02/01/2020. Druid compacts the segments together even though they have different segment granularity. Druid uses month segment granularity for the newly compacted segment even though segment A's original segment granularity was DAY.
 
 ### Query granularity handling
 
-Unless you modify the query granularity in the [granularity spec](#compaction-granularity-spec), Druid retains the query granularity for the compacted segments. If segments have different query granularities before compaction, Druid chooses the finest level of granularity for the resulting compacted segment. For example if a compaction task combines two segments, one with day query granularity and one with minute query granularity, the resulting segment uses minute query granularity.
+Unless you modify the query granularity in the [`granularitySpec`](#compaction-granularity-spec), Druid retains the query granularity for the compacted segments. If segments have different query granularities before compaction, Druid chooses the finest level of granularity for the resulting compacted segment. For example if a compaction task combines two segments, one with day query granularity and one with minute query granularity, the resulting segment uses minute query granularity.
 
 > In Apache Druid 0.21.0 and prior, Druid sets the granularity for compacted segments to the default granularity of `NONE` regardless of the query granularity of the original segments.
 
@@ -115,11 +115,11 @@ To perform a manual compaction, you submit a compaction task. Compaction tasks m
 |`segmentGranularity`|When set, the compaction task changes the segment granularity for the given interval.  Deprecated. Use `granularitySpec`. |No.|
 |`tuningConfig`|[Parallel indexing task tuningConfig](native-batch.md#tuningconfig). `awaitSegmentAvailabilityTimeoutMillis` in the tuning config is not currently supported for compaction tasks. Do not set it to a non-zero value.|No|
 |`context`|[Task context](./tasks.md#context)|No|
-|`granularitySpec`|Custom `granularitySpec`. The compaction task uses the specified `granularitySpec` rather than generating one. See [Compaction granularitySpec](#compaction-granularity-spec) for details.|No|
+|`granularitySpec`|Custom `granularitySpec`. The compaction task uses the specified `granularitySpec` rather than generating one. See [Compaction `granularitySpec`](#compaction-granularity-spec) for details.|No|
 
 > Note: Use `granularitySpec` over `segmentGranularity` and only set one of these values. If you specify different values for these in the same compaction spec, the task fails.
 
-To control the number of result segments per time chunk, you can set [maxRowsPerSegment](../configuration/index.md#compaction-dynamic-configuration) or [numShards](../ingestion/native-batch.md#tuningconfig).
+To control the number of result segments per time chunk, you can set [`maxRowsPerSegment`](../configuration/index.md#compaction-dynamic-configuration) or [`numShards`](../ingestion/native-batch.md#tuningconfig).
 
 > You can run multiple compaction tasks in parallel. For example, if you want to compact the data for a year, you are not limited to running a single task for the entire year. You can run 12 compaction tasks with month-long intervals.
 
@@ -133,6 +133,7 @@ Note that the metadata between input segments and the resulting compacted segmen
 
 
 ### Example compaction task
+
 The following JSON illustrates a compaction task to compact _all segments_ within the interval `2020-01-01/2021-01-01` and create new segments:
 
 ```json
@@ -152,6 +153,9 @@ The following JSON illustrates a compaction task to compact _all segments_ withi
   }
 }
 ```
+
+`granularitySpec` is an optional field.
+If you don't specify `granularitySpec`, Druid retains the original segment and query granularities when compaction is complete.
 
 ### Compaction I/O configuration
 
