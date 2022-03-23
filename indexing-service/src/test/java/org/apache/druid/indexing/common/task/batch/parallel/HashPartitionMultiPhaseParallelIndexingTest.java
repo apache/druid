@@ -87,6 +87,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
       0
   );
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2017-12/P1M");
+  private static final String INPUT_FILTER = "test_*";
 
   @Parameterized.Parameters(
       name = "lockGranularity={0}, useInputFormatApi={1}, maxNumConcurrentSubTasks={2}, intervalToIndex={3}, numShards={4}"
@@ -342,7 +343,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
           null,
           intervalToIndex,
           inputDirectory,
-          "test_*",
+          INPUT_FILTER,
           partitionsSpec,
           maxNumConcurrentSubTasks,
           appendToExisting,
@@ -356,7 +357,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
           PARSE_SPEC,
           intervalToIndex,
           inputDirectory,
-          "test_*",
+          INPUT_FILTER,
           partitionsSpec,
           maxNumConcurrentSubTasks,
           appendToExisting,

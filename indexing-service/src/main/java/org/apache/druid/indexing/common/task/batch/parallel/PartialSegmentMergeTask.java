@@ -341,7 +341,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
               indexesToMerge,
               dataSchema.getGranularitySpec().isRollup(),
               dataSchema.getAggregators(),
-              null,
+              dataSchema.getDimensionsSpec(),
               outDir,
               tuningConfig.getIndexSpec(),
               tuningConfig.getIndexSpecForIntermediatePersists(),
