@@ -105,7 +105,7 @@ public final class BitmapIndexes
       public ImmutableBitmap getBitmapForValue(@Nullable String value)
       {
         if (NullHandling.isNullOrEquivalent(value)) {
-          return bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), rowCountSupplier.getAsInt());
+          return nullBitmapSupplier.get();
         } else {
           return bitmapFactory.makeEmptyImmutableBitmap();
         }

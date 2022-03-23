@@ -952,15 +952,7 @@ public class IndexMergerV9 implements IndexMerger
       return merged;
     }
 
-    if (!Objects.equals(merged.getType(), otherSnapshot.getType())
-        || !Objects.equals(merged.getComplexTypeName(), otherSnapshot.getComplexTypeName())
-        || !Objects.equals(merged.getElementType(), otherSnapshot.getElementType())) {
-      throw new ISE(
-          "Cannot merge columns of type[%s] and [%s]",
-          merged.getType(),
-          otherSnapshot.getType()
-      );
-    }
+    throwIfTypeNotMatchToMerge(merged, otherSnapshot);
 
     merged.setDictionaryEncoded(merged.isDictionaryEncoded().or(otherSnapshot.isDictionaryEncoded()).isTrue());
     merged.setHasMultipleValues(merged.hasMultipleValues().or(otherSnapshot.hasMultipleValues()).isTrue());
@@ -988,6 +980,26 @@ public class IndexMergerV9 implements IndexMerger
     merged.setFilterable(merged.isFilterable() && otherSnapshot.isFilterable());
 
     return merged;
+  }
+
+  private static void throwIfTypeNotMatchToMerge(ColumnCapabilitiesImpl c1, ColumnCapabilitiesImpl c2)
+  {
+    if (!Objects.equals(c1.getType(), c2.getType())
+        || !Objects.equals(c1.getElementType(), c2.getElementType())) {
+      final String mergedType = c1.getType() == null ? null : c1.asTypeString();
+      final String otherType = c2.getType() == null ? null : c2.asTypeString();
+      throw new ISE(
+          "Cannot merge columns of type[%s] and [%s]",
+          mergedType,
+          otherType
+      );
+    } else if (!Objects.equals(c1.getComplexTypeName(), c2.getComplexTypeName())) {
+      throw new ISE(
+          "Cannot merge columns of type[%s] and [%s]",
+          c1.getComplexTypeName(),
+          c2.getComplexTypeName()
+      );
+    }
   }
 
   @Override
