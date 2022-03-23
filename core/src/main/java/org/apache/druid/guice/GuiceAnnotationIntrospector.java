@@ -58,9 +58,9 @@ public class GuiceAnnotationIntrospector extends NopAnnotationIntrospector
       if (m instanceof AnnotatedMethod) {
         throw new IAE("Annotated methods don't work very well yet...");
       }
-      return Key.get(m.getGenericType());
+      return Key.get(m.getRawType());
     }
-    return Key.get(m.getGenericType(), guiceAnnotation);
+    return Key.get(m.getRawType(), guiceAnnotation);
   }
 
   /**
