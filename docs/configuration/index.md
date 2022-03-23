@@ -396,7 +396,7 @@ You can override cluster-wide configuration by amending the `runtime.properties`
 
 There are several emitters available:
 
-- `noop` (default): disables metric emission.
+- `noop` (default) disables metric emission.
 - [`logging`](#logging-emitter-module) emits logs using Log4j2.
 - [`http`](#http-emitter-module) sends `POST` requests of JSON events.
 - [`parametrized`](#parametrized-http-emitter-module) operates like the `http` emitter but fine-tunes the recipient URL based on the event feed.
