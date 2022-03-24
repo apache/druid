@@ -23,7 +23,7 @@ title: "Segments"
   -->
 
 
-Apache Druid stores its index in *segment files*, which it partitions by
+Apache Druid stores its index in *segment files* partitioned by
 time. In a basic setup, Druid creates one segment file for each time
 interval, where the time interval is configurable in the
 `segmentGranularity` parameter of the
