@@ -21,9 +21,7 @@ package org.apache.druid.tests.indexer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
-import org.apache.druid.common.config.NullHandling;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -51,6 +49,18 @@ import java.util.stream.Collectors;
 public class ITNilColumnTest extends AbstractKafkaIndexingServiceTest
 {
   private static final Logger LOG = new Logger(ITNilColumnTest.class);
+  private static final String NIL_DIM1 = "nilDim1";
+  private static final String NIL_DIM2 = "nilDim2";
+
+  private final List<String> dimensions;
+
+  public ITNilColumnTest()
+  {
+    this.dimensions = new ArrayList<>(DEFAULT_DIMENSIONS.size() + 2);
+    dimensions.add(NIL_DIM1);
+    dimensions.addAll(DEFAULT_DIMENSIONS);
+    dimensions.add(NIL_DIM2);
+  }
 
   @Override
   public String getTestNamePrefix()
@@ -67,10 +77,6 @@ public class ITNilColumnTest extends AbstractKafkaIndexingServiceTest
   @Test
   public void testQueryNilColumnBeforeAndAfterPublishingSegments() throws Exception
   {
-    final List<String> dimensions = new ArrayList<>(DEFAULT_DIMENSIONS.size() + 2);
-    dimensions.add("nilDim1");
-    dimensions.addAll(DEFAULT_DIMENSIONS);
-    dimensions.add("nilDim2");
     final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig(
         INPUT_FORMAT,
         getResourceAsString(JSON_INPUT_FORMAT_PATH),
@@ -110,24 +116,10 @@ public class ITNilColumnTest extends AbstractKafkaIndexingServiceTest
       // Since maxRowsInMemory is set to 500,000, every row should be in incrementalIndex.
       // So, let's test if SQL finds nil dimensions from incrementalIndexes.
       dataLoaderHelper.waitUntilDatasourceIsReady(generatedTestConfig.getFullDatasourceName());
-      final SqlQueryWithResults queryWithResults = new SqlQueryWithResults(
-          new SqlQuery(
-              StringUtils.format(
-                  "SELECT nilDim1, nilDim2 FROM \"%s\" LIMIT 1",
-                  generatedTestConfig.getFullDatasourceName()
-              ),
-              null,
-              false,
-              false,
-              false,
-              null,
-              null
-          ),
-          ImmutableList.of(
-              Maps.asMap(ImmutableSet.of("nilDim1", "nilDim2"), k -> NullHandling.defaultStringValue())
-          )
-      );
-      sqlQueryHelper.testQueriesFromString(jsonMapper.writeValueAsString(ImmutableList.of(queryWithResults)));
+      final List<SqlQueryWithResults> queryWithResults = getQueryWithResults(generatedTestConfig);
+      sqlQueryHelper.testQueriesFromString(jsonMapper.writeValueAsString(queryWithResults));
+      final List<SqlQueryWithResults> metadataQueryWithResults = getMetadataQueryWithResults(generatedTestConfig);
+      sqlQueryHelper.testQueriesFromString(jsonMapper.writeValueAsString(metadataQueryWithResults));
 
       // Suspend the supervisor
       indexer.terminateSupervisor(generatedTestConfig.getSupervisorId());
@@ -157,7 +149,77 @@ public class ITNilColumnTest extends AbstractKafkaIndexingServiceTest
       dataLoaderHelper.waitUntilDatasourceIsReady(generatedTestConfig.getFullDatasourceName());
       verifyIngestedData(generatedTestConfig, numWritten);
 
-      sqlQueryHelper.testQueriesFromString(jsonMapper.writeValueAsString(ImmutableList.of(queryWithResults)));
+      sqlQueryHelper.testQueriesFromString(jsonMapper.writeValueAsString(queryWithResults));
+      sqlQueryHelper.testQueriesFromString(jsonMapper.writeValueAsString(metadataQueryWithResults));
     }
+  }
+
+  private static List<SqlQueryWithResults> getQueryWithResults(GeneratedTestConfig generatedTestConfig)
+  {
+    return ImmutableList.of(
+        new SqlQueryWithResults(
+            new SqlQuery(
+                StringUtils.format(
+                    "SELECT count(*) FROM \"%s\" WHERE %s IS NOT NULL OR %s IS NOT NULL",
+                    generatedTestConfig.getFullDatasourceName(),
+                    NIL_DIM1,
+                    NIL_DIM2
+                ),
+                null,
+                false,
+                false,
+                false,
+                null,
+                null
+            ),
+            ImmutableList.of(ImmutableMap.of("EXPR$0", 0))
+        )
+    );
+  }
+
+  private List<SqlQueryWithResults> getMetadataQueryWithResults(GeneratedTestConfig generatedTestConfig)
+  {
+    return ImmutableList.of(
+        new SqlQueryWithResults(
+            new SqlQuery(
+                StringUtils.format(
+                    "SELECT COLUMN_NAME, ORDINAL_POSITION, IS_NULLABLE, DATA_TYPE"
+                    + " FROM INFORMATION_SCHEMA.COLUMNS"
+                    + " WHERE TABLE_NAME = '%s' AND COLUMN_NAME IN ('%s', '%s')",
+                    generatedTestConfig.getFullDatasourceName(),
+                    NIL_DIM1,
+                    NIL_DIM2
+                ),
+                null,
+                false,
+                false,
+                false,
+                null,
+                null
+            ),
+            ImmutableList.of(
+                ImmutableMap.of(
+                    "COLUMN_NAME",
+                    NIL_DIM1,
+                    "ORDINAL_POSITION",
+                    0,
+                    "IS_NULLABLE",
+                    true,
+                    "DATA_TYPE",
+                    "STRING"
+                ),
+                ImmutableMap.of(
+                    "COLUMN_NAME",
+                    NIL_DIM2,
+                    "ORDINAL_POSITION",
+                    dimensions.size() - 1, // the last dimension
+                    "IS_NULLABLE",
+                    true,
+                    "DATA_TYPE",
+                    "STRING"
+                )
+            )
+        )
+    );
   }
 }
