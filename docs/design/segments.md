@@ -176,7 +176,7 @@ Each column is stored as two parts:
 A ColumnDescriptor is an object that allows the use of Jackson's polymorphic deserialization to add new and interesting methods of serialization with minimal impact to the code. It consists of some metadata about the column (for example: type, whether it's multi-value) and a list of serialization/deserialization logic that can deserialize the rest of the binary.
 
 ## Compression
-Druid uses LZ4 by default to compress blocks of values for string, long, float, and double columns. Druid using Roaring to compress bitmaps for string columns and numeric null values. We recommend that you use these defaults unless you've experimented with your data and query patterns suggest that non-default options will perform better in your specific case. 
+Druid uses LZ4 by default to compress blocks of values for string, long, float, and double columns. Druid uses Roaring to compress bitmaps for string columns and numeric null values. We recommend that you use these defaults unless you've experimented with your data and query patterns suggest that non-default options will perform better in your specific case. 
 
 For bitmap in string columns, the differences between using Roaring and Concise are most pronounced for high cardinality columns. In this case, Roaring is substantially faster on filters that match a lot of values, but in some cases Concise can have a lower footprint due to the overhead of the Roaring format (but is still slower when a lot of values are matched). You configure compression at the segment level, not for individual columns. See [IndexSpec](../ingestion/ingestion-spec.md#indexspec) for more details.
 
