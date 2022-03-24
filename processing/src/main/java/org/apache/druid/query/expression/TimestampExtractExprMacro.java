@@ -160,8 +160,7 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new TimestampExtractExpr(newArg));
+        return shuttle.visit(apply(shuttle.visitAll(args)));
       }
 
       @Nullable

@@ -203,7 +203,8 @@ public class ForkingTaskRunnerTest
             ImmutableList.of(),
             false,
             false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+            null
         ),
         new WorkerConfig(),
         new Properties(),
@@ -257,7 +258,8 @@ public class ForkingTaskRunnerTest
             ImmutableList.of(),
             false,
             false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+            null
         ),
         new WorkerConfig(),
         new Properties(),
@@ -315,7 +317,8 @@ public class ForkingTaskRunnerTest
             ImmutableList.of(),
             false,
             false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+            null
         ),
         new WorkerConfig(),
         new Properties(),

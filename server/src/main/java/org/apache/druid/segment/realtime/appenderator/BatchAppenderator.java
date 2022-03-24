@@ -115,6 +115,7 @@ public class BatchAppenderator implements Appenderator
   private final IndexMerger indexMerger;
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
+  private final boolean useMaxMemoryEstimates;
 
   private volatile ListeningExecutorService persistExecutor = null;
   private volatile ListeningExecutorService pushExecutor = null;
@@ -160,7 +161,8 @@ public class BatchAppenderator implements Appenderator
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   )
   {
     this.myId = id;
@@ -177,6 +179,7 @@ public class BatchAppenderator implements Appenderator
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
     maxPendingPersists = tuningConfig.getMaxPendingPersists();
+    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
   }
 
   @Override
@@ -465,6 +468,7 @@ public class BatchAppenderator implements Appenderator
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
+          useMaxMemoryEstimates,
           null
       );
       bytesCurrentlyInMemory += calculateSinkMemoryInUsed();
@@ -733,8 +737,6 @@ public class BatchAppenderator implements Appenderator
       final Sink sink
   )
   {
-
-
     // Use a descriptor file to indicate that pushing has completed.
     final File persistDir = computePersistDir(identifier);
     final File mergedTarget = new File(persistDir, "merged");
@@ -1032,6 +1034,7 @@ public class BatchAppenderator implements Appenderator
         tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
         maxBytesTuningConfig,
+        useMaxMemoryEstimates,
         null,
         hydrants
     );

@@ -27,10 +27,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
-import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -38,7 +36,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.HashMap;
 
 
 @RunWith(JUnitParamsRunner.class)
@@ -47,23 +44,10 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
   private final String prefix = "druid";
   private final WhiteListBasedDruidToTimelineEventConverter defaultWhiteListBasedDruidToTimelineEventConverter =
       new WhiteListBasedDruidToTimelineEventConverter(prefix, "druid", null, new DefaultObjectMapper());
-  private ServiceMetricEvent event;
   private final DateTime createdTime = DateTimes.nowUtc();
   private final String hostname = "testHost:8080";
   private final String serviceName = "historical";
   private final String defaultNamespace = prefix + "." + serviceName;
-
-  @Before
-  public void setUp()
-  {
-    event = EasyMock.createMock(ServiceMetricEvent.class);
-    EasyMock.expect(event.getHost()).andReturn(hostname).anyTimes();
-    EasyMock.expect(event.getService()).andReturn(serviceName).anyTimes();
-    EasyMock.expect(event.getCreatedTime()).andReturn(createdTime).anyTimes();
-    EasyMock.expect(event.getUserDims()).andReturn(new HashMap<>()).anyTimes();
-    EasyMock.expect(event.getValue()).andReturn(10).anyTimes();
-    EasyMock.expect(event.getFeed()).andReturn("metrics").anyTimes();
-  }
 
   @Test
   @Parameters(
@@ -90,8 +74,12 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
   )
   public void testDefaultIsInWhiteList(String key, boolean expectedValue)
   {
-    EasyMock.expect(event.getMetric()).andReturn(key).anyTimes();
-    EasyMock.replay(event);
+    ServiceMetricEvent event = ServiceMetricEvent
+        .builder()
+        .setFeed("metrics")
+        .build(createdTime, key, 10)
+        .build(serviceName, hostname);
+
     boolean isIn = defaultWhiteListBasedDruidToTimelineEventConverter.druidEventToTimelineMetric(event) != null;
     Assert.assertEquals(expectedValue, isIn);
   }

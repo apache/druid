@@ -15,7 +15,7 @@ exports[`QueryInput matches snapshot 1`] = `
     class="ace-container"
   >
     <div
-      class=" ace_editor ace-tm ace_focus"
+      class=" ace_editor ace_hidpi ace-tm no-background placeholder-padding ace_focus"
       id="ace-editor"
       style="width: 100%; height: 200px; font-size: 13px;"
     >
@@ -24,7 +24,7 @@ exports[`QueryInput matches snapshot 1`] = `
         autocorrect="off"
         class="ace_text-input"
         spellcheck="false"
-        style="opacity: 0; position: fixed; top: 0px;"
+        style="opacity: 0; font-size: 1px; position: fixed; top: 0px;"
         wrap="off"
       />
       <div
@@ -33,13 +33,12 @@ exports[`QueryInput matches snapshot 1`] = `
       >
         <div
           class="ace_layer ace_gutter-layer ace_folding-enabled"
-        />
-        <div
-          class="ace_gutter-active-line"
+          style="height: 1000000px;"
         />
       </div>
       <div
         class="ace_scroller"
+        style="line-height: 0px;"
       >
         <div
           class="ace_content"
@@ -57,7 +56,7 @@ exports[`QueryInput matches snapshot 1`] = `
           />
           <div
             class="ace_layer ace_text-layer"
-            style="padding: 0px 10px;"
+            style="height: 1000000px; margin: 0px 10px;"
           />
           <div
             class="ace_layer ace_marker-layer"
@@ -67,6 +66,7 @@ exports[`QueryInput matches snapshot 1`] = `
           >
             <div
               class="ace_cursor"
+              style="animation-duration: 1000ms;"
             />
           </div>
         </div>
@@ -78,7 +78,9 @@ exports[`QueryInput matches snapshot 1`] = `
         <div
           class="ace_scrollbar-inner"
           style="width: 20px;"
-        />
+        >
+           
+        </div>
       </div>
       <div
         class="ace_scrollbar ace_scrollbar-h"
@@ -87,7 +89,9 @@ exports[`QueryInput matches snapshot 1`] = `
         <div
           class="ace_scrollbar-inner"
           style="height: 20px;"
-        />
+        >
+           
+        </div>
       </div>
       <div
         style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: hidden;"
@@ -98,7 +102,7 @@ exports[`QueryInput matches snapshot 1`] = `
         <div
           style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
         >
-          XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+          XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
         </div>
       </div>
     </div>

@@ -125,7 +125,7 @@ public abstract class SeekableStreamSupervisorIOConfig
 
   @Nullable
   @JsonProperty
-  public AutoScalerConfig getAutoscalerConfig()
+  public AutoScalerConfig getAutoScalerConfig()
   {
     return autoScalerConfig;
   }

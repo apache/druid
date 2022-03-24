@@ -68,6 +68,7 @@ import {
   QueryState,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+  twoLines,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { Rule, RuleUtil } from '../../utils/load-rule';
@@ -138,16 +139,6 @@ const formatTotalRows = formatInteger;
 const formatAvgRowSize = formatInteger;
 const formatReplicatedSize = formatBytes;
 const formatLeftToBeCompacted = formatBytes;
-
-function twoLines(line1: string, line2: string) {
-  return (
-    <>
-      {line1}
-      <br />
-      {line2}
-    </>
-  );
-}
 
 function progress(done: number, awaiting: number): number {
   const d = done + awaiting;
@@ -398,36 +389,34 @@ ORDER BY 1`;
           );
           const loadstatusResp = await Api.instance.get('/druid/coordinator/v1/loadstatus?simple');
           const loadstatus = loadstatusResp.data;
-          datasources = datasourcesResp.data.map(
-            (d: any): DatasourceQueryResultRow => {
-              const totalDataSize = deepGet(d, 'properties.segments.size') || -1;
-              const segmentsToLoad = Number(loadstatus[d.name] || 0);
-              const availableSegments = Number(deepGet(d, 'properties.segments.count'));
-              const numSegments = availableSegments + segmentsToLoad;
-              return {
-                datasource: d.name,
-                num_segments: numSegments,
-                num_segments_to_load: segmentsToLoad,
-                num_segments_to_drop: 0,
-                minute_aligned_segments: -1,
-                hour_aligned_segments: -1,
-                day_aligned_segments: -1,
-                month_aligned_segments: -1,
-                year_aligned_segments: -1,
-                all_granularity_segments: -1,
-                replicated_size: -1,
-                total_data_size: totalDataSize,
-                min_segment_rows: -1,
-                avg_segment_rows: -1,
-                max_segment_rows: -1,
-                min_segment_size: -1,
-                avg_segment_size: -1,
-                max_segment_size: -1,
-                total_rows: -1,
-                avg_row_size: -1,
-              };
-            },
-          );
+          datasources = datasourcesResp.data.map((d: any): DatasourceQueryResultRow => {
+            const totalDataSize = deepGet(d, 'properties.segments.size') || -1;
+            const segmentsToLoad = Number(loadstatus[d.name] || 0);
+            const availableSegments = Number(deepGet(d, 'properties.segments.count'));
+            const numSegments = availableSegments + segmentsToLoad;
+            return {
+              datasource: d.name,
+              num_segments: numSegments,
+              num_segments_to_load: segmentsToLoad,
+              num_segments_to_drop: 0,
+              minute_aligned_segments: -1,
+              hour_aligned_segments: -1,
+              day_aligned_segments: -1,
+              month_aligned_segments: -1,
+              year_aligned_segments: -1,
+              all_granularity_segments: -1,
+              replicated_size: -1,
+              total_data_size: totalDataSize,
+              min_segment_rows: -1,
+              avg_segment_rows: -1,
+              max_segment_rows: -1,
+              min_segment_size: -1,
+              avg_segment_size: -1,
+              max_segment_size: -1,
+              total_rows: -1,
+              avg_row_size: -1,
+            };
+          });
         } else {
           throw new Error(`must have SQL or coordinator access`);
         }
@@ -978,12 +967,8 @@ ORDER BY 1`;
 
   renderDatasourceTable() {
     const { goToSegments, capabilities } = this.props;
-    const {
-      datasourcesAndDefaultRulesState,
-      datasourceFilter,
-      showUnused,
-      visibleColumns,
-    } = this.state;
+    const { datasourcesAndDefaultRulesState, datasourceFilter, showUnused, visibleColumns } =
+      this.state;
 
     let { datasources, defaultRules } = datasourcesAndDefaultRulesState.data
       ? datasourcesAndDefaultRulesState.data

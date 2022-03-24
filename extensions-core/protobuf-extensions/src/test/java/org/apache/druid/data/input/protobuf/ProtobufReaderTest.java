@@ -28,6 +28,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 import org.junit.Before;
@@ -51,12 +52,14 @@ public class ProtobufReaderTest
   public void setUp()
   {
     TimestampSpec timestampSpec = new TimestampSpec("timestamp", "iso", null);
-    DimensionsSpec dimensionsSpec = new DimensionsSpec(Lists.newArrayList(
-        new StringDimensionSchema("event"),
-        new StringDimensionSchema("id"),
-        new StringDimensionSchema("someOtherId"),
-        new StringDimensionSchema("isValid")
-    ), null, null);
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Lists.newArrayList(
+            new StringDimensionSchema("event"),
+            new StringDimensionSchema("id"),
+            new StringDimensionSchema("someOtherId"),
+            new StringDimensionSchema("isValid")
+        )
+    );
     flattenSpec = new JSONPathSpec(
         true,
         Lists.newArrayList(
@@ -111,6 +114,29 @@ public class ProtobufReaderTest
   public void testParseFlatDataWithComplexTimestamp() throws Exception
   {
     ProtobufReader reader = new ProtobufReader(inputRowSchemaWithComplexTimestamp, null, decoder, null);
+
+    //create binary of proto test event
+    DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
+    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildFlatDataWithComplexTimestamp(dateTime);
+
+    ByteBuffer buffer = ProtobufInputRowParserTest.toByteBuffer(event);
+
+    InputRow row = reader.parseInputRows(decoder.parse(buffer)).get(0);
+
+    ProtobufInputRowParserTest.verifyFlatDataWithComplexTimestamp(row, dateTime);
+  }
+
+  @Test
+  public void testParseFlatDataWithComplexTimestampWithDefaultFlattenSpec() throws Exception
+  {
+    expectedException.expect(ParseException.class);
+    expectedException.expectMessage("is unparseable!");
+    ProtobufReader reader = new ProtobufReader(
+        inputRowSchemaWithComplexTimestamp,
+        null,
+        decoder,
+        JSONPathSpec.DEFAULT
+    );
 
     //create binary of proto test event
     DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());

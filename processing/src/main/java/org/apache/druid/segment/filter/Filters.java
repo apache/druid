@@ -45,6 +45,7 @@ import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.filter.cnf.CalciteCnfHelper;
 import org.apache.druid.segment.filter.cnf.HiveCnfHelper;
 import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
@@ -246,6 +247,7 @@ public class Filters
     // Missing dimension -> match all rows if the predicate matches null; match no rows otherwise
     try (final CloseableIndexed<String> dimValues = selector.getDimensionValues(dimension)) {
       if (dimValues == null || dimValues.size() == 0) {
+
         return ImmutableList.of(predicate.apply(null) ? allTrue(selector) : allFalse(selector));
       }
 
@@ -433,10 +435,15 @@ public class Filters
       return null;
     }
     boolean useCNF = query.getContextBoolean(QueryContexts.USE_FILTER_CNF_KEY, QueryContexts.DEFAULT_USE_FILTER_CNF);
-    return useCNF ? Filters.toCnf(filter) : filter;
+    try {
+      return useCNF ? Filters.toCnf(filter) : filter;
+    }
+    catch (CNFFilterExplosionException cnfFilterExplosionException) {
+      return filter; // cannot convert to CNF, return the filter as is
+    }
   }
 
-  public static Filter toCnf(Filter current)
+  public static Filter toCnf(Filter current) throws CNFFilterExplosionException
   {
     // Push down NOT filters to leaves if possible to remove NOT on NOT filters and reduce hierarchy.
     // ex) ~(a OR ~b) => ~a AND b
@@ -578,7 +585,7 @@ public class Filters
    *
    * @return The normalized or clauses for the provided filter.
    */
-  public static List<Filter> toNormalizedOrClauses(Filter filter)
+  public static List<Filter> toNormalizedOrClauses(Filter filter) throws CNFFilterExplosionException
   {
     Filter normalizedFilter = Filters.toCnf(filter);
 

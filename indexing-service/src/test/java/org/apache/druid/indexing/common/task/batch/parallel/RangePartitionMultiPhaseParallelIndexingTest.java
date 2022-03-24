@@ -29,7 +29,9 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
@@ -38,9 +40,13 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.scan.ScanResultValue;
+import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -190,6 +196,40 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     return intervalToDims;
   }
 
+
+  private static SetMultimap<Interval, List<Object>> createInputFilesForReplace(File inputDir, boolean useMultivalueDim)
+      throws IOException
+  {
+    SetMultimap<Interval, List<Object>> intervalToDims = HashMultimap.create();
+
+    Set<Integer> fileIds = new HashSet<>();
+    fileIds.add(1);
+    fileIds.add(7);
+    fileIds.add(9);
+    for (Integer fileIndex : fileIds) {
+      Path path = new File(inputDir, TEST_FILE_NAME_PREFIX + fileIndex).toPath();
+      try (final Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
+        for (int i = 11; i < 2 * (NUM_ROW / DIM_FILE_CARDINALITY); i++) {
+          for (int d = 0; d < DIM_FILE_CARDINALITY; d++) {
+            int rowIndex = i * DIM_FILE_CARDINALITY + d;
+            String dim1Value = createDim1Value(rowIndex, fileIndex, useMultivalueDim);
+
+            // This is the original row
+            writeRow(writer, i + d, dim1Value, fileIndex, intervalToDims);
+
+            // This row should get rolled up with original row
+            writeRow(writer, i + d, dim1Value, fileIndex, intervalToDims);
+
+            // This row should not get rolled up with original row
+            writeRow(writer, i + d, dim1Value, fileIndex + NUM_FILE, intervalToDims);
+          }
+        }
+      }
+    }
+
+    return intervalToDims;
+  }
+
   @Nullable
   private static String createDim1Value(int rowIndex, int fileIndex, boolean useMultivalueDim)
   {
@@ -221,23 +261,62 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     intervalToDims.put(interval, Arrays.asList(dim1Value, dim2Value));
   }
 
+  // The next test also verifies replace functionality. Now, they are together to save on test execution time
+  // due to Travis CI 10 minute default running time (with no output) -- having it separate made it
+  // last longer. At some point we should really simplify this file, so it runs faster (splitting, etc.)
   @Test
   public void createsCorrectRangePartitions() throws Exception
   {
     int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
-    final Set<DataSegment> publishedSegments = runTestTask(
+
+    // verify dropExisting false
+    final Set<DataSegment> publishedSegments = runTask(runTestTask(
         new DimensionRangePartitionsSpec(
             targetRowsPerSegment,
             null,
             Collections.singletonList(DIM1),
             false
         ),
-        useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS,
+        inputDir,
+        false,
         false
-    );
+    ), useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS);
 
     if (!useMultivalueDim) {
       assertRangePartitions(publishedSegments);
+    }
+
+    // verify dropExisting true
+    if (intervalToIndex == null) {
+      // dropExisting requires intervals
+      return;
+    }
+
+    File inputDirectory = temporaryFolder.newFolder("dataReplace");
+    createInputFilesForReplace(inputDirectory, useMultivalueDim);
+
+    final Set<DataSegment> publishedSegmentsAfterReplace = runTask(runTestTask(
+        new DimensionRangePartitionsSpec(
+            targetRowsPerSegment,
+            null,
+            Collections.singletonList(DIM1),
+            false
+        ),
+        inputDirectory,
+        false,
+        true
+    ), useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS);
+
+    int tombstones = 0;
+    for (DataSegment ds : publishedSegmentsAfterReplace) {
+      if (ds.isTombstone()) {
+        tombstones++;
+      }
+    }
+
+    if (!useMultivalueDim) {
+      Assert.assertEquals(11, tombstones);
+      Assert.assertEquals(10, publishedSegmentsAfterReplace.size() - tombstones);
     }
   }
 
@@ -250,32 +329,35 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     final int targetRowsPerSegment = NUM_ROW / DIM_FILE_CARDINALITY / NUM_PARTITION;
     final Set<DataSegment> publishedSegments = new HashSet<>();
     publishedSegments.addAll(
-        runTestTask(
+        runTask(runTestTask(
             new SingleDimensionPartitionsSpec(
                 targetRowsPerSegment,
                 null,
                 DIM1,
                 false
             ),
-            TaskState.SUCCESS,
+            inputDir,
+            false,
             false
-        )
+        ), TaskState.SUCCESS)
     );
     // Append
     publishedSegments.addAll(
-        runTestTask(
+        runTask(runTestTask(
             new DynamicPartitionsSpec(5, null),
-            TaskState.SUCCESS,
-            true
-        )
+            inputDir,
+            true,
+            false
+        ), TaskState.SUCCESS)
     );
     // And append again
     publishedSegments.addAll(
-        runTestTask(
+        runTask(runTestTask(
             new DynamicPartitionsSpec(10, null),
-            TaskState.SUCCESS,
-            true
-        )
+            inputDir,
+            true,
+            false
+        ), TaskState.SUCCESS)
     );
 
     final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
@@ -306,39 +388,156 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     }
   }
 
-  private Set<DataSegment> runTestTask(
+  @Test
+  public void testIngestNullColumn()
+  {
+    // storeEmptyColumns flag should do nothing with using inputFormat or multiValueDim
+    if (!isUseInputFormatApi() || useMultivalueDim) {
+      return;
+    }
+    int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
+    final List<DimensionSchema> dimensionSchemas = DimensionsSpec.getDefaultSchemas(
+        Arrays.asList("ts", "unknownDim")
+    );
+    ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTask(
+        null,
+        null,
+        null,
+        new ParallelIndexIngestionSpec(
+            new DataSchema(
+                DATASOURCE,
+                TIMESTAMP_SPEC,
+                DIMENSIONS_SPEC.withDimensions(dimensionSchemas),
+                DEFAULT_METRICS_SPEC,
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    intervalToIndex == null ? null : Collections.singletonList(intervalToIndex)
+                ),
+                null
+            ),
+            new ParallelIndexIOConfig(
+                null,
+                new LocalInputSource(inputDir, TEST_FILE_NAME_PREFIX + "*"),
+                DEFAULT_INPUT_FORMAT,
+                false,
+                null
+            ),
+            newTuningConfig(
+                new DimensionRangePartitionsSpec(
+                    targetRowsPerSegment,
+                    null,
+                    Collections.singletonList("unknownDim"),
+                    false
+                ),
+                maxNumConcurrentSubTasks,
+                true
+            )
+        ),
+        null
+    );
+
+    Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
+
+    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    for (DataSegment segment : segments) {
+      for (int i = 0; i < dimensionSchemas.size(); i++) {
+        Assert.assertEquals(dimensionSchemas.get(i).getName(), segment.getDimensions().get(i));
+      }
+    }
+  }
+
+  @Test
+  public void testIngestNullColumn_storeEmptyColumnsOff_shouldNotStoreEmptyColumns()
+  {
+    // storeEmptyColumns flag should do nothing with using inputFormat or multiValueDim
+    if (!isUseInputFormatApi() || useMultivalueDim) {
+      return;
+    }
+    int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
+    ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTask(
+        null,
+        null,
+        null,
+        new ParallelIndexIngestionSpec(
+            new DataSchema(
+                DATASOURCE,
+                TIMESTAMP_SPEC,
+                DIMENSIONS_SPEC.withDimensions(
+                    DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "unknownDim"))
+                ),
+                DEFAULT_METRICS_SPEC,
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    intervalToIndex == null ? null : Collections.singletonList(intervalToIndex)
+                ),
+                null
+            ),
+            new ParallelIndexIOConfig(
+                null,
+                new LocalInputSource(inputDir, TEST_FILE_NAME_PREFIX + "*"),
+                DEFAULT_INPUT_FORMAT,
+                false,
+                null
+            ),
+            newTuningConfig(
+                new DimensionRangePartitionsSpec(
+                    targetRowsPerSegment,
+                    null,
+                    Collections.singletonList("unknownDim"),
+                    false
+                ),
+                maxNumConcurrentSubTasks,
+                true
+            )
+        ),
+        null
+    );
+
+    task.addToContext(Tasks.STORE_EMPTY_COLUMNS_KEY, false);
+    Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
+
+    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    for (DataSegment segment : segments) {
+      Assert.assertFalse(segment.getDimensions().contains("unknownDim"));
+    }
+  }
+
+  private ParallelIndexSupervisorTask runTestTask(
       PartitionsSpec partitionsSpec,
-      TaskState expectedTaskState,
-      boolean appendToExisting
+      File inputDirectory,
+      boolean appendToExisting,
+      boolean dropExisting
   )
   {
     if (isUseInputFormatApi()) {
-      return runTestTask(
+      return createTask(
           TIMESTAMP_SPEC,
           DIMENSIONS_SPEC,
           INPUT_FORMAT,
           null,
           intervalToIndex,
-          inputDir,
+          inputDirectory,
           TEST_FILE_NAME_PREFIX + "*",
           partitionsSpec,
           maxNumConcurrentSubTasks,
-          expectedTaskState,
-          appendToExisting
+          appendToExisting,
+          dropExisting
       );
     } else {
-      return runTestTask(
+      return createTask(
           null,
           null,
           null,
           PARSE_SPEC,
           intervalToIndex,
-          inputDir,
+          inputDirectory,
           TEST_FILE_NAME_PREFIX + "*",
           partitionsSpec,
           maxNumConcurrentSubTasks,
-          expectedTaskState,
-          appendToExisting
+          appendToExisting,
+          dropExisting
       );
     }
   }

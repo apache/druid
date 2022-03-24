@@ -448,12 +448,8 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   }
 
   render(): JSX.Element {
-    const {
-      lookupEntriesAndTiersState,
-      visibleColumns,
-      lookupTableActionDialogId,
-      actions,
-    } = this.state;
+    const { lookupEntriesAndTiersState, visibleColumns, lookupTableActionDialogId, actions } =
+      this.state;
 
     return (
       <div className="lookups-view app-view">

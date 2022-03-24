@@ -37,7 +37,7 @@ RUN ssh-keygen -q -N "" -t rsa -f /root/.ssh/id_rsa
 RUN cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
 
 # zulu java 8
-COPY ../../hadoop/docker/setup-zulu-repo.sh /root/setup-zulu-repo.sh
+COPY setup-zulu-repo.sh /root/setup-zulu-repo.sh
 RUN /root/setup-zulu-repo.sh
 RUN yum install -y zulu-8
 
@@ -73,15 +73,15 @@ RUN mkdir $HADOOP_HOME/input
 RUN cp $HADOOP_HOME/etc/hadoop/*.xml $HADOOP_HOME/input
 
 # pseudo distributed
-ADD ../../hadoop/docker/core-site.xml.template $HADOOP_HOME/etc/hadoop/core-site.xml.template
+ADD core-site.xml.template $HADOOP_HOME/etc/hadoop/core-site.xml.template
 RUN sed s/HOSTNAME/localhost/ /usr/local/hadoop/etc/hadoop/core-site.xml.template > /usr/local/hadoop/etc/hadoop/core-site.xml
-ADD ../../hadoop/docker/hdfs-site.xml $HADOOP_HOME/etc/hadoop/hdfs-site.xml
-ADD ../../hadoop/docker/mapred-site.xml $HADOOP_HOME/etc/hadoop/mapred-site.xml
-ADD ../../hadoop/docker/yarn-site.xml $HADOOP_HOME/etc/hadoop/yarn-site.xml
+ADD hdfs-site.xml $HADOOP_HOME/etc/hadoop/hdfs-site.xml
+ADD mapred-site.xml $HADOOP_HOME/etc/hadoop/mapred-site.xml
+ADD yarn-site.xml $HADOOP_HOME/etc/hadoop/yarn-site.xml
 
 RUN $HADOOP_HOME/bin/hdfs namenode -format
 
-ADD ../../hadoop/docker/ssh_config /root/.ssh/config
+ADD ssh_config /root/.ssh/config
 RUN chmod 600 /root/.ssh/config
 RUN chown root:root /root/.ssh/config
 

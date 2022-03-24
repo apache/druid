@@ -53,4 +53,10 @@ public class ParallelIndexIOConfig extends IndexIOConfig
   {
     this(firehoseFactory, null, null, appendToExisting, null);
   }
+
+  @Deprecated
+  public ParallelIndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting, boolean dropExisting)
+  {
+    this(firehoseFactory, null, null, appendToExisting, dropExisting);
+  }
 }

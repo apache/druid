@@ -209,7 +209,7 @@ public class SegmentAnalyzer
           String value = bitmapIndex.getValue(i);
           if (value != null) {
             size += StringUtils.estimatedBinaryLengthAsUTF8(value) *
-                    ((long) bitmapIndex.getBitmap(bitmapIndex.getIndex(value)).size());
+                    ((long) bitmapIndex.getBitmapForValue(value).size());
           }
         }
       }

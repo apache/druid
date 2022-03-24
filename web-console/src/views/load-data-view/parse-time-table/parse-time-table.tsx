@@ -35,12 +35,12 @@ import {
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../../utils';
-import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
+import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './parse-time-table.scss';
 
 export function parseTimeTableSelectedColumnName(
-  sampleData: HeaderAndRows,
+  sampleData: SampleHeaderAndRows,
   timestampSpec: TimestampSpec | undefined,
 ): string | undefined {
   if (!timestampSpec) return;
@@ -51,7 +51,7 @@ export function parseTimeTableSelectedColumnName(
 
 export interface ParseTimeTableProps {
   sampleBundle: {
-    headerAndRows: HeaderAndRows;
+    headerAndRows: SampleHeaderAndRows;
     spec: Partial<IngestionSpec>;
   };
   columnFilter: string;

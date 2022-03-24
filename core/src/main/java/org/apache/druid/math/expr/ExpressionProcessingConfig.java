@@ -28,6 +28,12 @@ public class ExpressionProcessingConfig
 {
   public static final String NESTED_ARRAYS_CONFIG_STRING = "druid.expressions.allowNestedArrays";
   public static final String NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING = "druid.expressions.useStrictBooleans";
+  // Coerce arrays to multi value strings
+  public static final String PROCESS_ARRAYS_AS_MULTIVALUE_STRINGS_CONFIG_STRING =
+      "druid.expressions.processArraysAsMultiValueStrings";
+  // Coerce 'null', '[]', and '[null]' into '[null]' for backwards compat with 0.22 and earlier
+  public static final String HOMOGENIZE_NULL_MULTIVALUE_STRING_ARRAYS =
+      "druid.expressions.homogenizeNullMultiValueStringArrays";
 
   @JsonProperty("allowNestedArrays")
   private final boolean allowNestedArrays;
@@ -35,22 +41,30 @@ public class ExpressionProcessingConfig
   @JsonProperty("useStrictBooleans")
   private final boolean useStrictBooleans;
 
+  @JsonProperty("processArraysAsMultiValueStrings")
+  private final boolean processArraysAsMultiValueStrings;
+
+  @JsonProperty("homogenizeNullMultiValueStringArrays")
+  private final boolean homogenizeNullMultiValueStringArrays;
+
   @JsonCreator
   public ExpressionProcessingConfig(
       @JsonProperty("allowNestedArrays") @Nullable Boolean allowNestedArrays,
-      @JsonProperty("useStrictBooleans") @Nullable Boolean useStrictBooleans
+      @JsonProperty("useStrictBooleans") @Nullable Boolean useStrictBooleans,
+      @JsonProperty("processArraysAsMultiValueStrings") @Nullable Boolean processArraysAsMultiValueStrings,
+      @JsonProperty("homogenizeNullMultiValueStringArrays") @Nullable Boolean homogenizeNullMultiValueStringArrays
   )
   {
-    this.allowNestedArrays = allowNestedArrays == null
-                             ? Boolean.valueOf(System.getProperty(NESTED_ARRAYS_CONFIG_STRING, "false"))
-                             : allowNestedArrays;
-    if (useStrictBooleans == null) {
-      this.useStrictBooleans = Boolean.parseBoolean(
-          System.getProperty(NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING, "false")
-      );
-    } else {
-      this.useStrictBooleans = useStrictBooleans;
-    }
+    this.allowNestedArrays = getWithPropertyFallbackFalse(allowNestedArrays, NESTED_ARRAYS_CONFIG_STRING);
+    this.useStrictBooleans = getWithPropertyFallbackFalse(useStrictBooleans, NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING);
+    this.processArraysAsMultiValueStrings = getWithPropertyFallbackFalse(
+        processArraysAsMultiValueStrings,
+        PROCESS_ARRAYS_AS_MULTIVALUE_STRINGS_CONFIG_STRING
+    );
+    this.homogenizeNullMultiValueStringArrays = getWithPropertyFallbackFalse(
+        homogenizeNullMultiValueStringArrays,
+        HOMOGENIZE_NULL_MULTIVALUE_STRING_ARRAYS
+    );
   }
 
   public boolean allowNestedArrays()
@@ -61,5 +75,20 @@ public class ExpressionProcessingConfig
   public boolean isUseStrictBooleans()
   {
     return useStrictBooleans;
+  }
+
+  public boolean processArraysAsMultiValueStrings()
+  {
+    return processArraysAsMultiValueStrings;
+  }
+
+  public boolean isHomogenizeNullMultiValueStringArrays()
+  {
+    return homogenizeNullMultiValueStringArrays;
+  }
+
+  private static boolean getWithPropertyFallbackFalse(@Nullable Boolean value, String property)
+  {
+    return value != null ? value : Boolean.valueOf(System.getProperty(property, "false"));
   }
 }

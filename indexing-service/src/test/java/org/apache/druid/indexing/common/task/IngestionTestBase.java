@@ -57,7 +57,7 @@ import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -216,9 +216,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return testUtils.getTestIndexIO();
   }
 
-  public IndexMergerV9 getIndexMerger()
+  public IndexMergerV9Factory getIndexMergerV9Factory()
   {
-    return testUtils.getTestIndexMergerV9();
+    return testUtils.getIndexMergerV9Factory();
   }
 
   public class TestLocalTaskActionClientFactory implements TaskActionClientFactory
@@ -315,8 +315,21 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         );
 
         final TaskToolbox box = new TaskToolbox(
-            new TaskConfig(null, null, null, null, null, false, null, null, null, false, false,
-                           TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()),
+            new TaskConfig(
+                null,
+                null,
+                null,
+                null,
+                null,
+                false,
+                null,
+                null,
+                null,
+                false,
+                false,
+                TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+                null
+            ),
             new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
             taskActionClient,
             null,
@@ -338,7 +351,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             null,
             null,
             null,
-            getIndexMerger(),
+            testUtils.getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)),
             null,
             null,
             null,

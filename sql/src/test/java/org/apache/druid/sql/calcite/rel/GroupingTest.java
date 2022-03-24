@@ -19,7 +19,11 @@
 
 package org.apache.druid.sql.calcite.rel;
 
+import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.junit.Test;
 
 public class GroupingTest
@@ -30,6 +34,18 @@ public class GroupingTest
     EqualsVerifier.forClass(Grouping.class)
                   .usingGetClass()
                   .withNonnullFields("dimensions", "subtotals", "aggregations", "outputRowSignature")
+                  .withPrefabValues(
+                      DruidExpression.class,
+                      DruidExpression.ofLiteral(ColumnType.LONG, "100"),
+                      DruidExpression.ofExpression(
+                          ColumnType.LONG,
+                          (args) -> StringUtils.format("%s + %s", args.get(0), args.get(1)),
+                          ImmutableList.of(
+                              DruidExpression.ofLiteral(ColumnType.LONG, "100"),
+                              DruidExpression.ofLiteral(ColumnType.LONG, "200")
+                          )
+                      )
+                  )
                   .verify();
   }
 }

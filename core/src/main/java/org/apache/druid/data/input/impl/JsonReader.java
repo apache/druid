@@ -91,6 +91,12 @@ public class JsonReader extends IntermediateRowParsingReader<String>
   }
 
   @Override
+  protected InputEntity source()
+  {
+    return source;
+  }
+
+  @Override
   protected List<InputRow> parseInputRows(String intermediateRow) throws IOException, ParseException
   {
     final List<InputRow> inputRows;

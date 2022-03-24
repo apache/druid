@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
@@ -111,7 +112,7 @@ public class ArrayWriter implements ResultFormat.Writer
     if (includeTypes) {
       jsonGenerator.writeStartArray();
       for (int i = 0; i < signature.size(); i++) {
-        jsonGenerator.writeString(signature.getColumnType(i).get().asTypeString());
+        jsonGenerator.writeString(signature.getColumnType(i).map(TypeSignature::asTypeString).orElse(null));
       }
       jsonGenerator.writeEndArray();
     }

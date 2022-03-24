@@ -21,9 +21,9 @@ import React from 'react';
 
 import { ShowHistory } from './show-history';
 
-describe('show history', () => {
+describe('ShowHistory', () => {
   it('matches snapshot', () => {
-    const showJson = <ShowHistory endpoint="test" downloadFilename="test" />;
+    const showJson = <ShowHistory endpoint="test" downloadFilenamePrefix="test" />;
     const { container } = render(showJson);
     expect(container.firstChild).toMatchSnapshot();
   });

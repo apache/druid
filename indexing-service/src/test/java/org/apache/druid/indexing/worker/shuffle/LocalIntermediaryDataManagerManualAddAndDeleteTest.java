@@ -80,7 +80,8 @@ public class LocalIntermediaryDataManagerManualAddAndDeleteTest
         ImmutableList.of(new StorageLocationConfig(intermediarySegmentsLocation, 1200L, null)),
         false,
         false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null
     );
     final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient();
     intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);

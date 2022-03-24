@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`form group with info matches snapshot 1`] = `
+exports[`FormGroupWithInfo matches snapshot 1`] = `
 <div
   class="bp3-form-group form-group-with-info"
 >

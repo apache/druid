@@ -82,21 +82,16 @@ public class NamespaceExtractionCacheManagersTest
     try {
       for (int i = 0; i < concurrentThreads; ++i) {
         futures.add(service.submit(
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                try {
-                  thunder.await();
-                }
-                catch (InterruptedException e) {
-                  throw new RuntimeException(e);
-                }
-                for (int i = 0; i < 1000; ++i) {
-                  CacheHandler cacheHandler = manager.createCache();
-                  cacheHandler.close();
-                }
+            () -> {
+              try {
+                thunder.await();
+              }
+              catch (InterruptedException e) {
+                throw new RuntimeException(e);
+              }
+              for (int i1 = 0; i1 < 1000; ++i1) {
+                CacheHandler cacheHandler = manager.createCache();
+                cacheHandler.close();
               }
             }
         ));

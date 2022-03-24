@@ -40,7 +40,7 @@ import {
 import { Api } from '../singletons';
 
 import { getDruidErrorMessage, queryDruidRune } from './druid-query';
-import { arrangeWithPrefixSuffix, EMPTY_ARRAY, filterMap, oneOf } from './general';
+import { arrangeWithPrefixSuffix, EMPTY_ARRAY, filterMap } from './general';
 import { deepGet, deepSet } from './object-change';
 
 const SAMPLER_URL = `/druid/indexer/v1/sampler`;
@@ -65,7 +65,6 @@ export interface SampleResponse {
 export type CacheRows = Record<string, any>[];
 
 export interface SampleResponseWithExtraInfo extends SampleResponse {
-  queryGranularity?: any;
   rollup?: boolean;
   columns?: Record<string, any>;
   aggregators?: Record<string, any>;
@@ -78,7 +77,7 @@ export interface SampleEntry {
   error?: string;
 }
 
-export interface HeaderAndRows {
+export interface SampleHeaderAndRows {
   header: string[];
   rows: SampleEntry[];
 }
@@ -164,12 +163,12 @@ export interface HeaderAndRowsFromSampleResponseOptions extends HeaderFromSample
 
 export function headerAndRowsFromSampleResponse(
   options: HeaderAndRowsFromSampleResponseOptions,
-): HeaderAndRows {
+): SampleHeaderAndRows {
   const { sampleResponse, parsedOnly } = options;
 
   return {
     header: headerFromSampleResponse(options),
-    rows: parsedOnly ? sampleResponse.data.filter((d: any) => d.parsed) : sampleResponse.data,
+    rows: parsedOnly ? sampleResponse.data.filter(d => d.parsed) : sampleResponse.data,
   };
 }
 
@@ -236,26 +235,6 @@ function fixSamplerTypes(sampleSpec: SampleSpec): SampleSpec {
   return sampleSpec;
 }
 
-function cleanupQueryGranularity(queryGranularity: any): any {
-  let queryGranularityType = deepGet(queryGranularity, 'type');
-  if (typeof queryGranularityType !== 'string') return queryGranularity;
-  queryGranularityType = queryGranularityType.toUpperCase();
-
-  const knownGranularity = oneOf(
-    queryGranularityType,
-    'NONE',
-    'SECOND',
-    'MINUTE',
-    'HOUR',
-    'DAY',
-    'WEEK',
-    'MONTH',
-    'YEAR',
-  );
-
-  return knownGranularity ? queryGranularityType : queryGranularity;
-}
-
 export async function sampleForConnect(
   spec: Partial<IngestionSpec>,
   sampleStrategy: SampleStrategy,
@@ -271,7 +250,7 @@ export async function sampleForConnect(
   if (!reingestMode) {
     ioConfig = deepSet(ioConfig, 'inputFormat', {
       type: 'regex',
-      pattern: '(.*)',
+      pattern: '([\\s\\S]*)', // Match the entire line, every single character
       listDelimiter: '56616469-6de2-9da4-efb8-8f416e6e6965', // Just a UUID to disable the list delimiter, let's hope we do not see this UUID in the data
       columns: ['raw'],
     });
@@ -305,14 +284,11 @@ export async function sampleForConnect(
       intervals: [deepGet(ioConfig, 'inputSource.interval')],
       merge: true,
       lenientAggregatorMerge: true,
-      analysisTypes: ['timestampSpec', 'queryGranularity', 'aggregators', 'rollup'],
+      analysisTypes: ['aggregators', 'rollup'],
     });
 
     if (Array.isArray(segmentMetadataResponse) && segmentMetadataResponse.length === 1) {
       const segmentMetadataResponse0 = segmentMetadataResponse[0];
-      samplerResponse.queryGranularity = cleanupQueryGranularity(
-        segmentMetadataResponse0.queryGranularity,
-      );
       samplerResponse.rollup = segmentMetadataResponse0.rollup;
       samplerResponse.columns = segmentMetadataResponse0.columns;
       samplerResponse.aggregators = segmentMetadataResponse0.aggregators;

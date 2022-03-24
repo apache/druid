@@ -103,7 +103,7 @@ Druid routers for security group integration test (permissive tls, no client aut
 
    - To start Druid cluster with override configs
      ```bash
-     OVERRIDE_ENV=<PATH_TO_ENV> docker-compose -f docker-compose.override-env.yml up
+     OVERRIDE_ENV=<PATH_TO_ENV> docker-compose -f docker-compose.yml up
      ```
    
    - To start tests against Hadoop
@@ -127,31 +127,30 @@ Druid routers for security group integration test (permissive tls, no client aut
 
 - docker-compose.base.yml
 
-  Base file that defines all containers for integration test
+  Base file that defines all containers for integration testing
 
 - docker-compose.yml
 
-  Defines Druid cluster with default configuration that is used for running integration tests.
+  Defines a Druid cluster with default configuration that is used for running integration tests.
 
   ```bash
   docker-compose -f docker-compose.yml up
-  // DRUID_INTEGRATION_TEST_GROUP - this variable is used in Druid docker container for "security" and "query" test group. Use next docker-compose if you want to run security/query tests.
-  DRUID_INTEGRATION_TEST_GROUP=security docker-compose -f docker-compose.yml up
+  # DRUID_INTEGRATION_TEST_GROUP - an environment variable that specifies the integration test group to run.
+  DRUID_INTEGRATION_TEST_GROUP=batch-index docker-compose -f docker-compose.yml up
   ```
 
-- docker-compose.override-env.yml
-
-  Defines Druid cluster with default configuration plus any additional and/or overriden configurations from override-env file.
+  You can change the default configuration using a custom configuration file. The settings in the file will override
+  the default settings if they conflict. They will be appended to the default configuration otherwise.
 
   ```bash
-  // OVERRIDE_ENV - variable that must contains path to Druid configuration file
-  OVERRIDE_ENV=./environment-configs/override-examples/s3 docker-compose -f docker-compose.override-env.yml up
+  # OVERRIDE_ENV - an environment variable that specifies the custom configuration file path.
+  OVERRIDE_ENV=./environment-configs/test-groups/prepopulated-data DRUID_INTEGRATION_TEST_GROUP=query docker-compose -f docker-compose.yml up
   ```
 
 - docker-compose.security.yml
 
   Defines three additional Druid router services with permissive tls, no client auth tls, and custom check tls respectively.
-This is meant to be use together with docker-compose.yml or docker-compose.override-env.yml and is only needed for the "security" group integration test.
+  This is meant to be used together with docker-compose.yml and is only needed for the "security" group integration test.
 
   ```bash
   docker-compose -f docker-compose.yml -f docker-compose.security.yml up

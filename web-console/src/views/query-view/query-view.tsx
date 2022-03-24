@@ -114,6 +114,11 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     return queryString.trim().startsWith('{');
   }
 
+  static isSql(query: any): boolean {
+    if (typeof query === 'string') return true;
+    return typeof query.query === 'string';
+  }
+
   static validRune(queryString: string): boolean {
     try {
       Hjson.parse(queryString);
@@ -204,20 +209,20 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         cancelToken,
       ): Promise<QueryResult> => {
         const { queryString, queryContext, wrapQueryLimit } = queryWithContext;
-        const isSql = !QueryView.isJsonLike(queryString);
-        const query = isSql ? queryString : Hjson.parse(queryString);
-        const context = { ...queryContext, ...(mandatoryQueryContext || {}) };
+        const query = QueryView.isJsonLike(queryString) ? Hjson.parse(queryString) : queryString;
+        const isSql = QueryView.isSql(query);
+        const extraQueryContext = { ...queryContext, ...(mandatoryQueryContext || {}) };
 
-        if (typeof wrapQueryLimit !== 'undefined') {
-          context.sqlOuterLimit = wrapQueryLimit + 1;
+        if (isSql && typeof wrapQueryLimit !== 'undefined') {
+          extraQueryContext.sqlOuterLimit = wrapQueryLimit + 1;
         }
 
         const queryIdKey = isSql ? 'sqlQueryId' : 'queryId';
-        // Look for the queryId in the JSON itself (if native) or in the context object.
-        let cancelQueryId = (isSql ? undefined : query.context?.queryId) || context[queryIdKey];
+        // Look for an existing queryId in the JSON itself or in the extra context object.
+        let cancelQueryId = query.context?.[queryIdKey] || extraQueryContext[queryIdKey];
         if (!cancelQueryId) {
-          // If the queryId (sqlQueryId) is not explicitly set on the context generate one so it is possible to cancel the query.
-          cancelQueryId = context[queryIdKey] = uuidv4();
+          // If the queryId (sqlQueryId) is not explicitly set on the context generate one thus making it possible to cancel the query.
+          cancelQueryId = extraQueryContext[queryIdKey] = uuidv4();
         }
 
         void cancelToken.promise
@@ -231,7 +236,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         try {
           return await queryRunner.runQuery({
             query,
-            extraQueryContext: context,
+            extraQueryContext,
             cancelToken,
           });
         } catch (e) {

@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`rule editor matches snapshot no tier in rule 1`] = `
+exports[`RuleEditor matches snapshot no tier in rule 1`] = `
 <div
   class="rule-editor"
 >
@@ -214,7 +214,7 @@ exports[`rule editor matches snapshot no tier in rule 1`] = `
 </div>
 `;
 
-exports[`rule editor matches snapshot with broadcast rule 1`] = `
+exports[`RuleEditor matches snapshot with broadcast rule 1`] = `
 <div
   class="rule-editor"
 >
@@ -393,7 +393,7 @@ exports[`rule editor matches snapshot with broadcast rule 1`] = `
 </div>
 `;
 
-exports[`rule editor matches snapshot with existing tier and non existing tier in rule 1`] = `
+exports[`RuleEditor matches snapshot with existing tier and non existing tier in rule 1`] = `
 <div
   class="rule-editor"
 >
@@ -935,7 +935,7 @@ exports[`rule editor matches snapshot with existing tier and non existing tier i
 </div>
 `;
 
-exports[`rule editor matches snapshot with existing tier in rule 1`] = `
+exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
 <div
   class="rule-editor"
 >
@@ -1319,7 +1319,7 @@ exports[`rule editor matches snapshot with existing tier in rule 1`] = `
 </div>
 `;
 
-exports[`rule editor matches snapshot with non existing tier in rule 1`] = `
+exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
 <div
   class="rule-editor"
 >

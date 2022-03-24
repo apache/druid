@@ -25,11 +25,7 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Multimap;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.Union;
 import org.apache.datasketches.memory.Memory;
@@ -57,16 +53,15 @@ import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistributionMerger;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketchMerger;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
@@ -105,14 +100,17 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.BiFunction;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -174,6 +172,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @MonotonicNonNull
   private volatile TaskToolbox toolbox;
 
+  /**
+   * Row stats for index generate phase of parallel indexing. This variable is
+   * lazily initialized in {@link #runTask}.
+   * Volatile since HTTP API calls can use this variable while this task is running.
+   */
+  @MonotonicNonNull
+  private volatile Pair<Map<String, Object>, Map<String, Object>> indexGenerateRowStats;
+
   private IngestionState ingestionState;
 
   @JsonCreator
@@ -202,11 +208,17 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         groupId,
         taskResource,
         ingestionSchema.getDataSchema().getDataSource(),
-        context
+        context,
+        ingestionSchema.getTuningConfig().getMaxAllowedLockCount()
     );
 
     this.ingestionSchema = ingestionSchema;
     this.baseSubtaskSpecName = baseSubtaskSpecName == null ? getId() : baseSubtaskSpecName;
+
+    if (ingestionSchema.getIOConfig().isDropExisting() &&
+        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals().isEmpty()) {
+      throw new ISE("GranularitySpec's intervals cannot be empty when setting dropExisting to true.");
+    }
 
     if (isGuaranteedRollup(ingestionSchema.getIOConfig(), ingestionSchema.getTuningConfig())) {
       checkPartitionsSpecForForceGuaranteedRollup(ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec());
@@ -503,7 +515,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (isParallelMode()) {
       currentSubTaskHolder = new CurrentSubTaskHolder((currentRunnerObject, taskConfig) -> {
         final ParallelIndexTaskRunner runner = (ParallelIndexTaskRunner) currentRunnerObject;
-        runner.stopGracefully();
+        runner.stopGracefully(null);
       });
     } else {
       currentSubTaskHolder = new CurrentSubTaskHolder((taskObject, taskConfig) -> {
@@ -581,10 +593,15 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     } else {
       // there is only success or failure after running....
       Preconditions.checkState(state.isFailure(), "Unrecognized state after task is complete[%s]", state);
-      final String errorMessage = StringUtils.format(
-          TASK_PHASE_FAILURE_MSG,
-          parallelSinglePhaseRunner.getName()
-      );
+      final String errorMessage;
+      if (parallelSinglePhaseRunner.getStopReason() != null) {
+        errorMessage = parallelSinglePhaseRunner.getStopReason();
+      } else {
+        errorMessage = StringUtils.format(
+            TASK_PHASE_FAILURE_MSG,
+            parallelSinglePhaseRunner.getName()
+        );
+      }
       taskStatus = TaskStatus.failure(getId(), errorMessage);
     }
     toolbox.getTaskReportFileWriter().write(
@@ -718,11 +735,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       );
       return TaskStatus.failure(getId(), errMsg);
     }
+    indexGenerateRowStats = doGetRowStatsAndUnparseableEventsParallelMultiPhase(indexingRunner, true);
 
     // 2. Partial segment merge phase
     // partition (interval, partitionId) -> partition locations
-    Map<Pair<Interval, Integer>, List<PartitionLocation>> partitionToLocations =
-        groupGenericPartitionLocationsPerPartition(indexingRunner.getReports());
+    Map<Partition, List<PartitionLocation>> partitionToLocations =
+        getPartitionToLocations(indexingRunner.getReports());
     final List<PartialSegmentMergeIOConfig> ioConfigs = createGenericMergeIOConfigs(
         ingestionSchema.getTuningConfig().getTotalNumMergeTasks(),
         partitionToLocations
@@ -763,7 +781,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   TaskStatus runRangePartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
   {
     ParallelIndexIngestionSpec ingestionSchemaToUse = ingestionSchema;
-    ParallelIndexTaskRunner<PartialDimensionDistributionTask, DimensionDistributionReport> distributionRunner =
+    PartialDimensionDistributionParallelIndexTaskRunner distributionRunner =
+        (PartialDimensionDistributionParallelIndexTaskRunner)
         createRunner(
             toolbox,
             this::createPartialDimensionDistributionRunner
@@ -775,14 +794,26 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       return TaskStatus.failure(getId(), errMsg);
     }
 
-    Map<Interval, PartitionBoundaries> intervalToPartitions =
-        determineAllRangePartitions(distributionRunner.getReports().values());
-
-    if (intervalToPartitions.isEmpty()) {
-      String msg = "No valid rows for single dimension partitioning."
-                   + " All rows may have invalid timestamps or multiple dimension values.";
-      LOG.warn(msg);
-      return TaskStatus.success(getId(), msg);
+    // Get the partition boundaries for each interval
+    final Map<Interval, PartitionBoundaries> intervalToPartitions;
+    try {
+      intervalToPartitions = distributionRunner.getIntervalToPartitionBoundaries(
+          (DimensionRangePartitionsSpec) ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec()
+      );
+      if (intervalToPartitions.isEmpty()) {
+        String msg = "No valid rows for range partitioning."
+                     + " All rows may have invalid timestamps or multiple dimension values.";
+        LOG.warn(msg);
+        return TaskStatus.success(getId(), msg);
+      }
+    }
+    catch (Exception e) {
+      String errorMsg = "Error creating partition boundaries.";
+      if (distributionRunner.getStopReason() != null) {
+        errorMsg += " " + distributionRunner.getStopReason();
+      }
+      LOG.error(e, errorMsg);
+      return TaskStatus.failure(getId(), errorMsg);
     }
 
     ingestionSchemaToUse = rewriteIngestionSpecWithIntervalsIfMissing(
@@ -806,9 +837,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       return TaskStatus.failure(getId(), errMsg);
     }
 
+    indexGenerateRowStats = doGetRowStatsAndUnparseableEventsParallelMultiPhase(indexingRunner, true);
+
     // partition (interval, partitionId) -> partition locations
-    Map<Pair<Interval, Integer>, List<PartitionLocation>> partitionToLocations =
-        groupGenericPartitionLocationsPerPartition(indexingRunner.getReports());
+    Map<Partition, List<PartitionLocation>> partitionToLocations =
+        getPartitionToLocations(indexingRunner.getReports());
     final List<PartialSegmentMergeIOConfig> ioConfigs = createGenericMergeIOConfigs(
         ingestionSchema.getTuningConfig().getTotalNumMergeTasks(),
         partitionToLocations
@@ -885,81 +918,58 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     );
   }
 
-  private Map<Interval, PartitionBoundaries> determineAllRangePartitions(Collection<DimensionDistributionReport> reports)
-  {
-    Multimap<Interval, StringDistribution> intervalToDistributions = ArrayListMultimap.create();
-    reports.forEach(report -> {
-      Map<Interval, StringDistribution> intervalToDistribution = report.getIntervalToDistribution();
-      intervalToDistribution.forEach(intervalToDistributions::put);
-    });
-
-    return CollectionUtils.mapValues(intervalToDistributions.asMap(), this::determineRangePartition);
-  }
-
-  private PartitionBoundaries determineRangePartition(Collection<StringDistribution> distributions)
-  {
-    StringDistributionMerger distributionMerger = new StringSketchMerger();
-    distributions.forEach(distributionMerger::merge);
-    StringDistribution mergedDistribution = distributionMerger.getResult();
-
-    DimensionRangePartitionsSpec partitionsSpec =
-        (DimensionRangePartitionsSpec) ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec();
-
-    final PartitionBoundaries partitions;
-    Integer targetRowsPerSegment = partitionsSpec.getTargetRowsPerSegment();
-    if (targetRowsPerSegment == null) {
-      partitions = mergedDistribution.getEvenPartitionsByMaxSize(partitionsSpec.getMaxRowsPerSegment());
-    } else {
-      partitions = mergedDistribution.getEvenPartitionsByTargetSize(targetRowsPerSegment);
-    }
-
-    return partitions;
-  }
-
-  private static Map<Pair<Interval, Integer>, List<PartitionLocation>> groupGenericPartitionLocationsPerPartition(
+  /**
+   * Creates a map from partition (interval + bucketId) to the corresponding
+   * PartitionLocations. Note that the bucketId maybe different from the final
+   * partitionId (refer to {@link BuildingShardSpec} for more details).
+   */
+  static Map<Partition, List<PartitionLocation>> getPartitionToLocations(
       Map<String, GeneratedPartitionsReport> subTaskIdToReport
   )
   {
-    final Map<Pair<Interval, Integer>, BuildingShardSpec<?>> intervalAndIntegerToShardSpec = new HashMap<>();
-    final Object2IntMap<Interval> intervalToNextPartitionId = new Object2IntOpenHashMap<>();
-    final BiFunction<String, PartitionStat, PartitionLocation> createPartitionLocationFunction =
-        (subtaskId, partitionStat) -> {
-          final BuildingShardSpec<?> shardSpec = intervalAndIntegerToShardSpec.computeIfAbsent(
-              Pair.of(partitionStat.getInterval(), partitionStat.getBucketId()),
-              key -> {
-                // Lazily determine the partitionId to create packed partitionIds for the core partitions.
-                // See the Javadoc of BucketNumberedShardSpec for details.
-                final int partitionId = intervalToNextPartitionId.computeInt(
-                    partitionStat.getInterval(),
-                    ((interval, nextPartitionId) -> nextPartitionId == null ? 0 : nextPartitionId + 1)
-                );
-                return partitionStat.getSecondaryPartition().convert(partitionId);
-              }
-          );
-          return partitionStat.toPartitionLocation(subtaskId, shardSpec);
-        };
+    // Create a map from partition to list of reports (PartitionStat and subTaskId)
+    final Map<Partition, List<PartitionReport>> partitionToReports = new TreeMap<>(
+        // Sort by (interval, bucketId) to maintain order of partitionIds within interval
+        Comparator
+            .comparingLong((Partition partition) -> partition.getInterval().getStartMillis())
+            .thenComparingLong(partition -> partition.getInterval().getEndMillis())
+            .thenComparingInt(Partition::getBucketId)
+    );
+    subTaskIdToReport.forEach(
+        (subTaskId, report) -> report.getPartitionStats().forEach(
+            partitionStat -> partitionToReports
+                .computeIfAbsent(Partition.fromStat(partitionStat), p -> new ArrayList<>())
+                .add(new PartitionReport(subTaskId, partitionStat))
+        )
+    );
 
-    return groupPartitionLocationsPerPartition(subTaskIdToReport, createPartitionLocationFunction);
-  }
+    final Map<Partition, List<PartitionLocation>> partitionToLocations = new HashMap<>();
 
-  private static <L extends PartitionLocation>
-      Map<Pair<Interval, Integer>, List<L>> groupPartitionLocationsPerPartition(
-      Map<String, ? extends GeneratedPartitionsReport> subTaskIdToReport,
-      BiFunction<String, PartitionStat, L> createPartitionLocationFunction
-  )
-  {
-    // partition (interval, partitionId) -> partition locations
-    final Map<Pair<Interval, Integer>, List<L>> partitionToLocations = new HashMap<>();
-    for (Entry<String, ? extends GeneratedPartitionsReport> entry : subTaskIdToReport.entrySet()) {
-      final String subTaskId = entry.getKey();
-      final GeneratedPartitionsReport report = entry.getValue();
-      for (PartitionStat partitionStat : report.getPartitionStats()) {
-        final List<L> locationsOfSamePartition = partitionToLocations.computeIfAbsent(
-            Pair.of(partitionStat.getInterval(), partitionStat.getBucketId()),
-            k -> new ArrayList<>()
-        );
-        locationsOfSamePartition.add(createPartitionLocationFunction.apply(subTaskId, partitionStat));
+    Interval prevInterval = null;
+    final AtomicInteger partitionId = new AtomicInteger(0);
+    for (Entry<Partition, List<PartitionReport>> entry : partitionToReports.entrySet()) {
+      final Partition partition = entry.getKey();
+
+      // Reset the partitionId if this is a new interval
+      Interval interval = partition.getInterval();
+      if (!interval.equals(prevInterval)) {
+        partitionId.set(0);
+        prevInterval = interval;
       }
+
+      // Use any PartitionStat of this partition to create a shard spec
+      final List<PartitionReport> reportsOfPartition = entry.getValue();
+      final BuildingShardSpec<?> shardSpec = reportsOfPartition
+          .get(0).getPartitionStat().getSecondaryPartition()
+          .convert(partitionId.getAndIncrement());
+
+      // Create a PartitionLocation for each PartitionStat
+      List<PartitionLocation> locationsOfPartition = reportsOfPartition
+          .stream()
+          .map(report -> report.getPartitionStat().toPartitionLocation(report.getSubTaskId(), shardSpec))
+          .collect(Collectors.toList());
+
+      partitionToLocations.put(partition, locationsOfPartition);
     }
 
     return partitionToLocations;
@@ -967,7 +977,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private static List<PartialSegmentMergeIOConfig> createGenericMergeIOConfigs(
       int totalNumMergeTasks,
-      Map<Pair<Interval, Integer>, List<PartitionLocation>> partitionToLocations
+      Map<Partition, List<PartitionLocation>> partitionToLocations
   )
   {
     return createMergeIOConfigs(
@@ -980,7 +990,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @VisibleForTesting
   static <M extends PartialSegmentMergeIOConfig, L extends PartitionLocation> List<M> createMergeIOConfigs(
       int totalNumMergeTasks,
-      Map<Pair<Interval, Integer>, List<L>> partitionToLocations,
+      Map<Partition, List<L>> partitionToLocations,
       Function<List<L>, M> createPartialSegmentMergeIOConfig
   )
   {
@@ -994,7 +1004,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     // Randomly shuffle partitionIds to evenly distribute partitions of potentially different sizes
     // This will be improved once we collect partition stats properly.
     // See PartitionStat in GeneratedPartitionsReport.
-    final List<Pair<Interval, Integer>> partitions = new ArrayList<>(partitionToLocations.keySet());
+    final List<Partition> partitions = new ArrayList<>(partitionToLocations.keySet());
     Collections.shuffle(partitions, ThreadLocalRandom.current());
 
     final List<M> assignedPartitionLocations = new ArrayList<>(numMergeTasks);
@@ -1003,7 +1013,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       final List<L> assignedToSameTask = partitions
           .subList(partitionBoundaries.lhs, partitionBoundaries.rhs)
           .stream()
-          .flatMap(intervalAndPartitionId -> partitionToLocations.get(intervalAndPartitionId).stream())
+          .flatMap(partition -> partitionToLocations.get(partition).stream())
           .collect(Collectors.toList());
       assignedPartitionLocations.add(createPartialSegmentMergeIOConfig.apply(assignedToSameTask));
     }
@@ -1056,9 +1066,29 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         ingestionSchema
     );
 
-    Set<DataSegment> segmentsFoundForDrop = null;
+    Set<DataSegment> tombStones;
     if (ingestionSchema.getIOConfig().isDropExisting()) {
-      segmentsFoundForDrop = getUsedSegmentsWithinInterval(toolbox, getDataSource(), ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals());
+      TombstoneHelper tombstoneHelper = new TombstoneHelper(
+          newSegments,
+          ingestionSchema.getDataSchema(),
+          toolbox.getTaskActionClient()
+      );
+      List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals();
+      if (!tombstoneIntervals.isEmpty()) {
+
+        Map<Interval, SegmentIdWithShardSpec> tombstonesAnShards = new HashMap<>();
+        for (Interval interval : tombstoneIntervals) {
+          SegmentIdWithShardSpec segmentIdWithShardSpec = allocateNewSegmentForTombstone(
+              ingestionSchema,
+              interval.getStart(),
+              toolbox
+          );
+          tombstonesAnShards.put(interval, segmentIdWithShardSpec);
+        }
+        tombStones = tombstoneHelper.computeTombstones(tombstonesAnShards);
+        newSegments.addAll(tombStones);
+        LOG.debugSegments(tombStones, "To publish tombstones");
+      }
     }
 
     final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
@@ -1067,7 +1097,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         );
     final boolean published =
         newSegments.isEmpty()
-        || publisher.publishSegments(oldSegments, segmentsFoundForDrop, newSegments, annotateFunction, null).isSuccess();
+        || publisher.publishSegments(oldSegments,
+                                     Collections.emptySet(),
+                                     newSegments, annotateFunction,
+                                     null).isSuccess();
 
     if (published) {
       LOG.info("Published [%d] segments", newSegments.size());
@@ -1089,7 +1122,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             getIngestionSchema().getIOConfig(),
             convertToIndexTuningConfig(getIngestionSchema().getTuningConfig())
         ),
-        getContext()
+        getContext(),
+        getIngestionSchema().getTuningConfig().getMaxAllowedLockCount()
     );
 
     if (currentSubTaskHolder.setTask(sequentialIndexTask)
@@ -1220,6 +1254,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
       return Response.ok(toolbox.getJsonMapper().writeValueAsBytes(segmentIdentifier)).build();
     }
+    catch (MaxAllowedLocksExceededException malee) {
+      getCurrentRunner().stopGracefully(malee.getMessage());
+      return Response.status(Response.Status.BAD_REQUEST).entity(malee.getMessage()).build();
+    }
     catch (IOException | IllegalStateException e) {
       return Response.serverError().entity(Throwables.getStackTraceAsString(e)).build();
     }
@@ -1228,15 +1266,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
   }
 
-  @Nullable
-  public static String findVersion(Map<Interval, String> versions, Interval interval)
-  {
-    return versions.entrySet().stream()
-                   .filter(entry -> entry.getKey().contains(interval))
-                   .map(Entry::getValue)
-                   .findFirst()
-                   .orElse(null);
-  }
 
   static InputFormat getInputFormat(ParallelIndexIngestionSpec ingestionSchema)
   {
@@ -1456,10 +1485,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       boolean includeUnparseable
   )
   {
-    long processed = 0L;
-    long processedWithError = 0L;
-    long thrownAway = 0L;
-    long unparseable = 0L;
+    final MutableRowIngestionMeters buildSegmentsRowStats = new MutableRowIngestionMeters();
 
     List<ParseExceptionReport> unparseableEvents = new ArrayList<>();
 
@@ -1471,28 +1497,67 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         LOG.warn("Got an empty task report from subtask: " + pushedSegmentsReport.getTaskId());
         continue;
       }
-      IngestionStatsAndErrorsTaskReport ingestionStatsAndErrorsReport = (IngestionStatsAndErrorsTaskReport) taskReport.get(
-          IngestionStatsAndErrorsTaskReport.REPORT_KEY);
-      IngestionStatsAndErrorsTaskReportData reportData =
-          (IngestionStatsAndErrorsTaskReportData) ingestionStatsAndErrorsReport.getPayload();
-      RowIngestionMetersTotals totals = getTotalsFromBuildSegmentsRowStats(
-          reportData.getRowStats().get(RowIngestionMeters.BUILD_SEGMENTS)
-      );
+      RowIngestionMetersTotals rowIngestionMetersTotals =
+          getBuildSegmentsStatsFromTaskReport(taskReport, includeUnparseable, unparseableEvents);
 
-      if (includeUnparseable) {
-        List<ParseExceptionReport> taskUnparsebleEvents = (List<ParseExceptionReport>) reportData.getUnparseableEvents()
-                                                                                   .get(RowIngestionMeters.BUILD_SEGMENTS);
-        unparseableEvents.addAll(taskUnparsebleEvents);
-      }
-
-      processed += totals.getProcessed();
-      processedWithError += totals.getProcessedWithError();
-      thrownAway += totals.getThrownAway();
-      unparseable += totals.getUnparseable();
+      buildSegmentsRowStats.addRowIngestionMetersTotals(rowIngestionMetersTotals);
     }
 
-    // Get stats from running tasks
-    Set<String> runningTaskIds = parallelSinglePhaseRunner.getRunningTaskIds();
+    RowIngestionMetersTotals rowStatsForRunningTasks = getRowStatsAndUnparseableEventsForRunningTasks(
+        parallelSinglePhaseRunner.getRunningTaskIds(),
+        unparseableEvents,
+        includeUnparseable
+    );
+    buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForRunningTasks);
+
+    return createStatsAndErrorsReport(buildSegmentsRowStats.getTotals(), unparseableEvents);
+  }
+
+  private Pair<Map<String, Object>, Map<String, Object>> doGetRowStatsAndUnparseableEventsParallelMultiPhase(
+      ParallelIndexTaskRunner<?, ?> currentRunner,
+      boolean includeUnparseable
+  )
+  {
+    if (indexGenerateRowStats != null) {
+      return Pair.of(indexGenerateRowStats.lhs, includeUnparseable ? indexGenerateRowStats.rhs : ImmutableMap.of());
+    } else if (!currentRunner.getName().equals("partial segment generation")) {
+      return Pair.of(ImmutableMap.of(), ImmutableMap.of());
+    } else {
+      Map<String, GeneratedPartitionsReport> completedSubtaskReports =
+          (Map<String, GeneratedPartitionsReport>) currentRunner.getReports();
+
+      final MutableRowIngestionMeters buildSegmentsRowStats = new MutableRowIngestionMeters();
+      final List<ParseExceptionReport> unparseableEvents = new ArrayList<>();
+      for (GeneratedPartitionsReport generatedPartitionsReport : completedSubtaskReports.values()) {
+        Map<String, TaskReport> taskReport = generatedPartitionsReport.getTaskReport();
+        if (taskReport == null || taskReport.isEmpty()) {
+          LOG.warn("Got an empty task report from subtask: " + generatedPartitionsReport.getTaskId());
+          continue;
+        }
+        RowIngestionMetersTotals rowStatsForCompletedTask =
+            getBuildSegmentsStatsFromTaskReport(taskReport, true, unparseableEvents);
+
+        buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForCompletedTask);
+      }
+
+      RowIngestionMetersTotals rowStatsForRunningTasks = getRowStatsAndUnparseableEventsForRunningTasks(
+          currentRunner.getRunningTaskIds(),
+          unparseableEvents,
+          includeUnparseable
+      );
+      buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForRunningTasks);
+
+      return createStatsAndErrorsReport(buildSegmentsRowStats.getTotals(), unparseableEvents);
+    }
+  }
+
+  private RowIngestionMetersTotals getRowStatsAndUnparseableEventsForRunningTasks(
+      Set<String> runningTaskIds,
+      List<ParseExceptionReport> unparseableEvents,
+      boolean includeUnparseable
+  )
+  {
+    final MutableRowIngestionMeters buildSegmentsRowStats = new MutableRowIngestionMeters();
     for (String runningTaskId : runningTaskIds) {
       try {
         Map<String, Object> report = toolbox.getIndexingServiceClient().getTaskReport(runningTaskId);
@@ -1500,6 +1565,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           // task does not have a running report yet
           continue;
         }
+
         Map<String, Object> ingestionStatsAndErrors = (Map<String, Object>) report.get("ingestionStatsAndErrors");
         Map<String, Object> payload = (Map<String, Object>) ingestionStatsAndErrors.get("payload");
         Map<String, Object> rowStats = (Map<String, Object>) payload.get("rowStats");
@@ -1508,31 +1574,51 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
         if (includeUnparseable) {
           Map<String, Object> taskUnparseableEvents = (Map<String, Object>) payload.get("unparseableEvents");
-          List<ParseExceptionReport> buildSegmentsUnparseableEvents = (List<ParseExceptionReport>) taskUnparseableEvents.get(
-              RowIngestionMeters.BUILD_SEGMENTS
-          );
+          List<ParseExceptionReport> buildSegmentsUnparseableEvents = (List<ParseExceptionReport>)
+              taskUnparseableEvents.get(RowIngestionMeters.BUILD_SEGMENTS);
           unparseableEvents.addAll(buildSegmentsUnparseableEvents);
         }
 
-        processed += ((Number) buildSegments.get("processed")).longValue();
-        processedWithError += ((Number) buildSegments.get("processedWithError")).longValue();
-        thrownAway += ((Number) buildSegments.get("thrownAway")).longValue();
-        unparseable += ((Number) buildSegments.get("unparseable")).longValue();
+        buildSegmentsRowStats.addRowIngestionMetersTotals(getTotalsFromBuildSegmentsRowStats(buildSegments));
       }
       catch (Exception e) {
         LOG.warn(e, "Encountered exception when getting live subtask report for task: " + runningTaskId);
       }
     }
+    return buildSegmentsRowStats.getTotals();
+  }
 
+  private Pair<Map<String, Object>, Map<String, Object>> createStatsAndErrorsReport(
+      RowIngestionMetersTotals rowStats,
+      List<ParseExceptionReport> unparseableEvents
+  )
+  {
     Map<String, Object> rowStatsMap = new HashMap<>();
     Map<String, Object> totalsMap = new HashMap<>();
-    totalsMap.put(
-        RowIngestionMeters.BUILD_SEGMENTS,
-        new RowIngestionMetersTotals(processed, processedWithError, thrownAway, unparseable)
-    );
+    totalsMap.put(RowIngestionMeters.BUILD_SEGMENTS, rowStats);
     rowStatsMap.put("totals", totalsMap);
 
     return Pair.of(rowStatsMap, ImmutableMap.of(RowIngestionMeters.BUILD_SEGMENTS, unparseableEvents));
+  }
+
+  private RowIngestionMetersTotals getBuildSegmentsStatsFromTaskReport(
+      Map<String, TaskReport> taskReport,
+      boolean includeUnparseable,
+      List<ParseExceptionReport> unparseableEvents)
+  {
+    IngestionStatsAndErrorsTaskReport ingestionStatsAndErrorsReport = (IngestionStatsAndErrorsTaskReport) taskReport.get(
+        IngestionStatsAndErrorsTaskReport.REPORT_KEY);
+    IngestionStatsAndErrorsTaskReportData reportData =
+        (IngestionStatsAndErrorsTaskReportData) ingestionStatsAndErrorsReport.getPayload();
+    RowIngestionMetersTotals totals = getTotalsFromBuildSegmentsRowStats(
+        reportData.getRowStats().get(RowIngestionMeters.BUILD_SEGMENTS)
+    );
+    if (includeUnparseable) {
+      List<ParseExceptionReport> taskUnparsebleEvents = (List<ParseExceptionReport>) reportData.getUnparseableEvents()
+                                                                    .get(RowIngestionMeters.BUILD_SEGMENTS);
+      unparseableEvents.addAll(taskUnparsebleEvents);
+    }
+    return totals;
   }
 
   private Pair<Map<String, Object>, Map<String, Object>> doGetRowStatsAndUnparseableEvents(String full, boolean includeUnparseable)
@@ -1548,8 +1634,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     if (isParallelMode()) {
       if (isGuaranteedRollup(ingestionSchema.getIOConfig(), ingestionSchema.getTuningConfig())) {
-        // multiphase is not supported yet
-        return Pair.of(ImmutableMap.of(), ImmutableMap.of());
+        return doGetRowStatsAndUnparseableEventsParallelMultiPhase(
+            (ParallelIndexTaskRunner<?, ?>) currentRunner,
+            includeUnparseable
+        );
       } else {
         return doGetRowStatsAndUnparseableEventsParallelSinglePhase(
             (SinglePhaseParallelIndexTaskRunner) currentRunner,
@@ -1619,4 +1707,91 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     return Response.ok(doGetLiveReports(full)).build();
   }
+
+  /**
+   * Represents a partition uniquely identified by an Interval and a bucketId.
+   *
+   * @see org.apache.druid.timeline.partition.BucketNumberedShardSpec
+   */
+  static class Partition
+  {
+    final Interval interval;
+    final int bucketId;
+
+    private static Partition fromStat(PartitionStat partitionStat)
+    {
+      return new Partition(partitionStat.getInterval(), partitionStat.getBucketId());
+    }
+
+    Partition(Interval interval, int bucketId)
+    {
+      this.interval = interval;
+      this.bucketId = bucketId;
+    }
+
+    public int getBucketId()
+    {
+      return bucketId;
+    }
+
+    public Interval getInterval()
+    {
+      return interval;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      Partition that = (Partition) o;
+      return getBucketId() == that.getBucketId()
+             && Objects.equals(getInterval(), that.getInterval());
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(getInterval(), getBucketId());
+    }
+
+    @Override
+    public String toString()
+    {
+      return "Partition{" +
+             "interval=" + interval +
+             ", bucketId=" + bucketId +
+             '}';
+    }
+  }
+
+  /**
+   * Encapsulates a {@link PartitionStat} and the subTaskId that generated it.
+   */
+  private static class PartitionReport
+  {
+    private final PartitionStat partitionStat;
+    private final String subTaskId;
+
+    PartitionReport(String subTaskId, PartitionStat partitionStat)
+    {
+      this.subTaskId = subTaskId;
+      this.partitionStat = partitionStat;
+    }
+
+    String getSubTaskId()
+    {
+      return subTaskId;
+    }
+
+    PartitionStat getPartitionStat()
+    {
+      return partitionStat;
+    }
+  }
+
 }

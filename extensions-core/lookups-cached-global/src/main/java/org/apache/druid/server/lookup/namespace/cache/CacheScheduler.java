@@ -145,7 +145,7 @@ public final class CacheScheduler
   {
     private final T namespace;
     private final String asString;
-    private final AtomicReference<CacheState> cacheStateHolder = new AtomicReference<CacheState>(NoCache.CACHE_NOT_INITIALIZED);
+    private final AtomicReference<CacheState> cacheStateHolder = new AtomicReference<>(NoCache.CACHE_NOT_INITIALIZED);
     private final Future<?> updaterFuture;
     private final Cleaners.Cleanable entryCleanable;
     private final CacheGenerator<T> cacheGenerator;
@@ -169,27 +169,13 @@ public final class CacheScheduler
 
     private Cleaners.Cleanable createCleaner(Entry<T> entry)
     {
-      return Cleaners.register(entry, new Runnable()
-      {
-        @Override
-        public void run()
-        {
-          closeFromCleaner();
-        }
-      });
+      return Cleaners.register(entry, this::closeFromCleaner);
     }
 
     private Future<?> schedule(final T namespace)
     {
       final long updateMs = namespace.getPollMs();
-      Runnable command = new Runnable()
-      {
-        @Override
-        public void run()
-        {
-          updateCache();
-        }
-      };
+      Runnable command = this::updateCache;
       if (updateMs > 0) {
         return cacheManager.scheduledExecutorService().scheduleAtFixedRate(command, 0, updateMs, TimeUnit.MILLISECONDS);
       } else {
@@ -224,12 +210,20 @@ public final class CacheScheduler
     private void tryUpdateCache(String currentVersion) throws Exception
     {
       boolean updatedCacheSuccessfully = false;
-      VersionedCache newVersionedCache = null;
+      CacheHandler newCache = null;
       try {
-        newVersionedCache = cacheGenerator.generateCache(namespace, this, currentVersion, CacheScheduler.this
+        updatesStarted.incrementAndGet();
+        newCache = CacheScheduler.this.cacheManager.allocateCache();
+        final String newVersion = cacheGenerator.generateCache(
+            namespace,
+            this,
+            currentVersion,
+            newCache
         );
-        if (newVersionedCache != null) {
-          CacheState previousCacheState = swapCacheState(newVersionedCache);
+        if (newVersion != null) {
+          newCache = cacheManager.attachCache(newCache);
+          final VersionedCache newVersionedCache = new VersionedCache(String.valueOf(this), newVersion, newCache);
+          final CacheState previousCacheState = swapCacheState(newVersionedCache);
           if (previousCacheState != NoCache.ENTRY_CLOSED) {
             updatedCacheSuccessfully = true;
             if (previousCacheState instanceof VersionedCache) {
@@ -246,8 +240,8 @@ public final class CacheScheduler
       }
       catch (Throwable t) {
         try {
-          if (newVersionedCache != null && !updatedCacheSuccessfully) {
-            newVersionedCache.close();
+          if (newCache != null && !updatedCacheSuccessfully) {
+            newCache.close();
           }
           log.error(t, "Failed to update %s", this);
         }
@@ -381,16 +375,16 @@ public final class CacheScheduler
     ENTRY_CLOSED
   }
 
-  public final class VersionedCache implements CacheState, AutoCloseable
+  public static final class VersionedCache implements CacheState, AutoCloseable
   {
     final String entryId;
     final CacheHandler cacheHandler;
     final String version;
 
-    private VersionedCache(String entryId, String version)
+    private VersionedCache(String entryId, String version, CacheHandler cache)
     {
       this.entryId = entryId;
-      this.cacheHandler = cacheManager.createCache();
+      this.cacheHandler = cache;
       this.version = version;
     }
 
@@ -456,20 +450,6 @@ public final class CacheScheduler
         1,
         10, TimeUnit.MINUTES
     );
-  }
-
-  /**
-   * This method should be used from {@link CacheGenerator#generateCache} implementations, to obtain a {@link
-   * VersionedCache} to be returned.
-   *
-   * @param entryId an object uniquely corresponding to the {@link CacheScheduler.Entry}, for which VersionedCache is
-   *                created
-   * @param version version, associated with the cache
-   */
-  public VersionedCache createVersionedCache(@Nullable EntryImpl<? extends ExtractionNamespace> entryId, String version)
-  {
-    updatesStarted.incrementAndGet();
-    return new VersionedCache(String.valueOf(entryId), version);
   }
 
   @VisibleForTesting

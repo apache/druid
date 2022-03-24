@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`about dialog matches snapshot 1`] = `
+exports[`AboutDialog matches snapshot 1`] = `
 <div
   class="bp3-portal"
 >

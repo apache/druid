@@ -79,9 +79,7 @@ public class SqlInputSourceTest
   private static final InputRowSchema INPUT_ROW_SCHEMA = new InputRowSchema(
       new TimestampSpec("timestamp", "auto", null),
       new DimensionsSpec(
-          DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b")),
-          new ArrayList<>(),
-          new ArrayList<>()
+          DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b"))
       ),
       ColumnsFilter.all()
   );

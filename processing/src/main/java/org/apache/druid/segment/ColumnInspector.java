@@ -37,6 +37,15 @@ public interface ColumnInspector extends Expr.InputBindingInspector
   @Nullable
   ColumnCapabilities getColumnCapabilities(String column);
 
+  default ColumnCapabilities getColumnCapabilitiesWithDefault(String column, ColumnCapabilities defaultCapabilites)
+  {
+    final ColumnCapabilities capabilities = getColumnCapabilities(column);
+    if (capabilities != null) {
+      return capabilities;
+    }
+    return defaultCapabilites;
+  }
+
   @Nullable
   @Override
   default ExpressionType getType(String name)

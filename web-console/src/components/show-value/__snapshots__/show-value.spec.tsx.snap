@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`rule editor matches snapshot 1`] = `
+exports[`ShowValue matches snapshot 1`] = `
 <div
   class="show-json"
 >
@@ -20,16 +20,6 @@ exports[`rule editor matches snapshot 1`] = `
           Save
         </span>
       </button>
-      <button
-        class="bp3-button bp3-minimal"
-        type="button"
-      >
-        <span
-          class="bp3-button-text"
-        >
-          View raw
-        </span>
-      </button>
     </div>
   </div>
   <div
@@ -38,7 +28,9 @@ exports[`rule editor matches snapshot 1`] = `
     <textarea
       class="bp3-input"
       readonly=""
-    />
+    >
+      { hello: 'world' }
+    </textarea>
   </div>
 </div>
 `;

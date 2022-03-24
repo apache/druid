@@ -36,7 +36,6 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class HyperUniqueExpressions
 {
@@ -205,8 +204,7 @@ public class HyperUniqueExpressions
         @Override
         public Expr visit(Shuttle shuttle)
         {
-          List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-          return shuttle.visit(new HllExpr(newArgs));
+          return shuttle.visit(apply(shuttle.visitAll(args)));
         }
 
         @Nullable
@@ -262,8 +260,7 @@ public class HyperUniqueExpressions
         @Override
         public Expr visit(Shuttle shuttle)
         {
-          Expr newArg = arg.visit(shuttle);
-          return shuttle.visit(new HllExpr(newArg));
+          return shuttle.visit(apply(shuttle.visitAll(args)));
         }
 
         @Nullable
@@ -316,8 +313,7 @@ public class HyperUniqueExpressions
         @Override
         public Expr visit(Shuttle shuttle)
         {
-          Expr newArg = arg.visit(shuttle);
-          return shuttle.visit(new HllExpr(newArg));
+          return shuttle.visit(apply(shuttle.visitAll(args)));
         }
 
         @Nullable

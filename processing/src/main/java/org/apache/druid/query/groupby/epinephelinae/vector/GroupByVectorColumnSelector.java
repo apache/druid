@@ -26,7 +26,14 @@ import org.apache.druid.query.groupby.ResultRow;
 /**
  * Column processor for groupBy dimensions.
  *
+ * Processors may have internal state, such as the dictionary maintained by
+ * {@link DictionaryBuildingSingleValueStringGroupByVectorColumnSelector}. Callers should assume that the internal
+ * state footprint starts out empty (zero bytes) and is also reset to zero on each call to {@link #reset()}. Each call
+ * to {@link #writeKeys} returns the incremental increase in internal state footprint that happened as a result
+ * of that particular call.
+ *
  * @see GroupByVectorColumnProcessorFactory
+ * @see org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy the nonvectorized version
  */
 public interface GroupByVectorColumnSelector
 {
@@ -44,10 +51,13 @@ public interface GroupByVectorColumnSelector
    * @param keyOffset starting position for the first key part within keySpace
    * @param startRow  starting row (inclusive) within the current vector
    * @param endRow    ending row (exclusive) within the current vector
+   *
+   * @return estimated increase in internal state footprint, in bytes, as a result of this operation. May be zero if
+   * memory did not increase as a result of this operation. Will not be negative.
    */
   // False positive unused inspection warning for "keySize": https://youtrack.jetbrains.com/issue/IDEA-231034
   @SuppressWarnings("unused")
-  void writeKeys(WritableMemory keySpace, int keySize, int keyOffset, int startRow, int endRow);
+  int writeKeys(WritableMemory keySpace, int keySize, int keyOffset, int startRow, int endRow);
 
   /**
    * Write key parts for this column into a particular result row.
@@ -63,4 +73,12 @@ public interface GroupByVectorColumnSelector
       ResultRow resultRow,
       int resultRowPosition
   );
+
+  /**
+   * Reset any internal state held by this selector.
+   *
+   * After this method is called, any memory previously written by {@link #writeKeys} must be considered unreadable.
+   * Calling {@link #writeKeyToResultRow} on that memory has undefined behavior.
+   */
+  void reset();
 }

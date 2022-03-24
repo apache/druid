@@ -209,4 +209,11 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   {
     return segment.get().getAtomicUpdateGroupSize();
   }
+
+  @Override
+  public boolean hasData()
+  {
+    return segment.get().hasData();
+  }
+
 }

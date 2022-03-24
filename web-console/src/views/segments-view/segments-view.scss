@@ -31,6 +31,17 @@
     .-totalPages {
       display: none;
     }
+
+    .range-detail {
+      cursor: default;
+
+      .range-label {
+        display: inline-block;
+        width: 35px;
+        text-align: right;
+        margin-right: 5px;
+      }
+    }
   }
 
   &.show-segment-timeline {

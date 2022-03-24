@@ -106,7 +106,7 @@ public class MaterializedViewSupervisorTest
     objectMapper.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
     spec = new MaterializedViewSupervisorSpec(
         "base",
-        new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("dim")), null, null),
+        new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("dim"))),
         new AggregatorFactory[]{new LongSumAggregatorFactory("m1", "m1")},
         HadoopTuningConfig.makeDefaultTuningConfig(),
         null,
@@ -352,7 +352,7 @@ public class MaterializedViewSupervisorTest
   {
     MaterializedViewSupervisorSpec suspended = new MaterializedViewSupervisorSpec(
         "base",
-        new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("dim")), null, null),
+        new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("dim"))),
         new AggregatorFactory[]{new LongSumAggregatorFactory("m1", "m1")},
         HadoopTuningConfig.makeDefaultTuningConfig(),
         null,

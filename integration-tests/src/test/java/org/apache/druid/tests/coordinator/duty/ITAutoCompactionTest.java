@@ -25,16 +25,24 @@ import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.indexing.common.task.CompactionIntervalSpec;
+import org.apache.druid.indexing.common.task.CompactionTask;
+import org.apache.druid.indexing.overlord.http.TaskPayloadResponse;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -98,7 +106,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   public void setup() throws Exception
   {
     // Set comapction slot to 5
-    updateCompactionTaskSlot(0.5, 10);
+    updateCompactionTaskSlot(0.5, 10, null);
     fullDatasourceName = "wikipedia_index_test_" + UUID.randomUUID() + config.getExtraDatasourceNameSuffix();
   }
 
@@ -123,7 +131,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
           0,
-          14370,
+          14906,
           0,
           0,
           2,
@@ -141,7 +149,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
           0,
-          22568,
+          23372,
           0,
           0,
           3,
@@ -180,7 +188,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       LOG.info("Auto compaction test with hash partitioning");
 
       final HashedPartitionsSpec hashedPartitionsSpec = new HashedPartitionsSpec(null, 3, null);
-      submitCompactionConfig(hashedPartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, false);
+      submitCompactionConfig(hashedPartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false);
       // 2 segments published per day after compaction.
       forceTriggerAutoCompaction(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -195,7 +203,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           "city",
           false
       );
-      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, false);
+      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false);
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(rangePartitionsSpec, 2);
@@ -231,7 +239,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   public void testAutoCompactionDutyCanUpdateTaskSlots() throws Exception
   {
     // Set compactionTaskSlotRatio to 0 to prevent any compaction
-    updateCompactionTaskSlot(0, 0);
+    updateCompactionTaskSlot(0, 0, null);
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
@@ -248,7 +256,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       checkCompactionIntervals(intervalsBeforeCompaction);
       Assert.assertNull(compactionResource.getCompactionStatus(fullDatasourceName));
       // Update compaction slots to be 1
-      updateCompactionTaskSlot(1, 1);
+      updateCompactionTaskSlot(1, 1, null);
       // One day compacted (1 new segment) and one day remains uncompacted. (3 total)
       forceTriggerAutoCompaction(3);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -257,8 +265,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       getAndAssertCompactionStatus(
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
-          14370,
-          14369,
+          14906,
+          14905,
           0,
           2,
           2,
@@ -266,7 +274,10 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           1,
           1,
           0);
-      Assert.assertEquals(compactionResource.getCompactionProgress(fullDatasourceName).get("remainingSegmentSize"), "14370");
+      Assert.assertEquals(
+          "14906",
+          compactionResource.getCompactionProgress(fullDatasourceName).get("remainingSegmentSize")
+      );
       // Run compaction again to compact the remaining day
       // Remaining day compacted (1 new segment). Now both days compacted (2 total)
       forceTriggerAutoCompaction(2);
@@ -277,7 +288,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
           0,
-          22568,
+          23372,
           0,
           0,
           3,
@@ -323,17 +334,22 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       LOG.info("Auto compaction test with DAY segment granularity");
 
       // Since dropExisting is set to true...
-      // The earlier segment with YEAR granularity will be dropped post-compaction
-      // Hence, we will only have 2013-08-31 to 2013-09-01 and 2013-09-01 to 2013-09-02.
+      // The earlier segment with YEAR granularity will be completely covered, overshadowed, by the
+      // new DAY segments for data and tombstones for days with no data
+      // Hence, we will only have 2013-08-31 to 2013-09-01 and 2013-09-01 to 2013-09-02
+      // plus 363 tombstones
+      final List<String> intervalsAfterYEARCompactionButBeforeDAYCompaction =
+          coordinator.getSegmentIntervals(fullDatasourceName);
       expectedIntervalAfterCompaction = new ArrayList<>();
-      for (String interval : intervalsBeforeCompaction) {
+      for (String interval : intervalsAfterYEARCompactionButBeforeDAYCompaction) {
         for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }
-      forceTriggerAutoCompaction(2);
+      forceTriggerAutoCompaction(365);
       verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifySegmentsCompacted(2, 1000);
+      verifyTombstones(363);
+      verifySegmentsCompacted(365, 1000);
       checkCompactionIntervals(expectedIntervalAfterCompaction);
     }
   }
@@ -509,7 +525,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), true);
 
       List<String> expectedIntervalAfterCompaction = new ArrayList<>();
-      // We wil have one segment with interval of 2013-01-01/2014-01-01 (compacted with YEAR)
+      // We will still have one visible segment with interval of 2013-01-01/2014-01-01 (compacted with YEAR)
+      // and four overshadowed segments
       for (String interval : intervalsBeforeCompaction) {
         for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
@@ -531,22 +548,27 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       checkCompactionIntervals(expectedIntervalAfterCompaction);
 
       newGranularity = Granularities.MONTH;
-      // Set dropExisting to true
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), true);
+      final List<String> intervalsAfterYEARButBeforeMONTHCompaction =
+          coordinator.getSegmentIntervals(fullDatasourceName);
       // Since dropExisting is set to true...
       // This will submit a single compaction task for interval of 2013-01-01/2014-01-01 with MONTH granularity
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), true);
+      // verify:
       expectedIntervalAfterCompaction = new ArrayList<>();
-      // The previous segment with interval of 2013-01-01/2014-01-01 (compacted with YEAR) will be dropped
-      // We will only have one segments with interval of 2013-09-01/2013-10-01 (compacted with MONTH)
-      // and one segments with interval of 2013-10-01/2013-11-01 (compacted with MONTH)
-      for (String interval : intervalsBeforeCompaction) {
+      // The previous segment with interval of 2013-01-01/2014-01-01 (compacted with YEAR) will be
+      // completely overshadowed by a combination of tombstones and segments with data.
+      // We will only have one segment with interval of 2013-08-01/2013-09-01 (compacted with MONTH)
+      // and one segment with interval of 2013-09-01/2013-10-01 (compacted with MONTH)
+      // plus ten tombstones for the remaining months, thus expecting 12 intervals...
+      for (String interval : intervalsAfterYEARButBeforeMONTHCompaction) {
         for (Interval newinterval : Granularities.MONTH.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }
-      forceTriggerAutoCompaction(2);
+      forceTriggerAutoCompaction(12);
       verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
+      verifyTombstones(10);
+      verifySegmentsCompacted(12, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(expectedIntervalAfterCompaction);
     }
   }
@@ -617,6 +639,103 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test
+  public void testAutoCompactionDutyWithSegmentGranularityFinerAndNotAlignWithSegment() throws Exception
+  {
+    updateCompactionTaskSlot(1, 1, null);
+    final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
+    Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.MONTH, Granularities.DAY, false, ImmutableList.of(new Interval("2013-08-31/2013-09-02", chrono))));
+    loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
+          "%%EXPECTED_COUNT_RESULT%%", 2,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      submitCompactionConfig(
+          MAX_ROWS_PER_SEGMENT_COMPACTED,
+          NO_SKIP_OFFSET,
+          new UserCompactionTaskGranularityConfig(Granularities.WEEK, null, null),
+          false
+      );
+      // Before compaction, we have segments with the interval 2013-08-01/2013-09-01 and 2013-09-01/2013-10-01
+      // We will compact the latest segment, 2013-09-01/2013-10-01, to WEEK.
+      // Since the start of the week does not align with 2013-09-01 or 2013-10-01, we expect the compaction task's
+      // interval to be adjusted so that the compacted WEEK segments does not unintentionally remove data of the
+      // non compacted 2013-08-01/2013-09-01 segment.
+      // Note that the compacted WEEK segment does not fully cover the original MONTH segment as the MONTH segment
+      // does not have data on every week on the month
+      forceTriggerAutoCompaction(3);
+      // Make sure that no data is lost after compaction
+      expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
+          "%%EXPECTED_COUNT_RESULT%%", 2,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
+      List<TaskResponseObject> tasks = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      TaskResponseObject compactTask = null;
+      for (TaskResponseObject task : tasks) {
+        if (task.getType().equals("compact")) {
+          compactTask = task;
+        }
+      }
+      Assert.assertNotNull(compactTask);
+      TaskPayloadResponse task = indexer.getTaskPayload(compactTask.getId());
+      // Verify that compaction task interval is adjusted to align with segmentGranularity
+      Assert.assertEquals(Intervals.of("2013-08-26T00:00:00.000Z/2013-10-07T00:00:00.000Z"), ((CompactionIntervalSpec) ((CompactionTask) task.getPayload()).getIoConfig().getInputSpec()).getInterval());
+    }
+  }
+
+  @Test
+  public void testAutoCompactionDutyWithSegmentGranularityCoarserAndNotAlignWithSegment() throws Exception
+  {
+    updateCompactionTaskSlot(1, 1, null);
+    final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
+    Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.WEEK, Granularities.DAY, false, ImmutableList.of(new Interval("2013-08-31/2013-09-02", chrono))));
+    loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
+          "%%EXPECTED_COUNT_RESULT%%", 2,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      submitCompactionConfig(
+          MAX_ROWS_PER_SEGMENT_COMPACTED,
+          NO_SKIP_OFFSET,
+          new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null),
+          false
+      );
+      // Before compaction, we have segments with the interval 2013-08-26T00:00:00.000Z/2013-09-02T00:00:00.000Z
+      // We will compact the latest segment to MONTH.
+      // Although the segments before compaction only cover 2013-08-26 to 2013-09-02,
+      // we expect the compaction task's interval to align with the MONTH segmentGranularity (2013-08-01 to 2013-10-01)
+      forceTriggerAutoCompaction(2);
+      // Make sure that no data is lost after compaction
+      expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
+          "%%EXPECTED_COUNT_RESULT%%", 2,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
+      List<TaskResponseObject> tasks = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      TaskResponseObject compactTask = null;
+      for (TaskResponseObject task : tasks) {
+        if (task.getType().equals("compact")) {
+          compactTask = task;
+        }
+      }
+      Assert.assertNotNull(compactTask);
+      TaskPayloadResponse task = indexer.getTaskPayload(compactTask.getId());
+      // Verify that compaction task interval is adjusted to align with segmentGranularity
+      Assert.assertEquals(Intervals.of("2013-08-01T00:00:00.000Z/2013-10-01T00:00:00.000Z"), ((CompactionIntervalSpec) ((CompactionTask) task.getPayload()).getIoConfig().getInputSpec()).getInterval());
+    }
+  }
+
+  @Test
   public void testAutoCompactionDutyWithRollup() throws Exception
   {
     final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
@@ -624,6 +743,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
@@ -636,6 +756,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       );
       forceTriggerAutoCompaction(2);
       expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(516.0))))
       );
@@ -658,6 +779,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
@@ -670,6 +792,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       );
       forceTriggerAutoCompaction(2);
       expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(516.0))))
       );
@@ -698,6 +821,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       // Result is not rollup
       Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
@@ -710,12 +834,14 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           null,
           new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("language"))),
           null,
+          null,
           false
       );
       forceTriggerAutoCompaction(2);
 
       // Result should rollup on language dimension
       expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(516.0))))
       );
@@ -743,6 +869,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // Result is not rollup
       // For dim "page", result has values "Gypsy Danger" and "Striker Eureka"
       Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
@@ -755,12 +882,14 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           null,
           null,
           new UserCompactionTaskTransformConfig(new SelectorDimFilter("page", "Striker Eureka", null)),
+          null,
           false
       );
       forceTriggerAutoCompaction(2);
 
       // For dim "page", result should only contain value "Striker Eureka"
       expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(459.0))))
       );
@@ -773,6 +902,133 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
       Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
     }
+  }
+
+  @Test
+  public void testAutoCompactionDutyWithMetricsSpec() throws Exception
+  {
+    loadData(INDEX_TASK_WITH_DIMENSION_SPEC);
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+      intervalsBeforeCompaction.sort(null);
+      // 4 segments across 2 days (4 total)...
+      verifySegmentsCount(4);
+
+      // For dim "page", result has values "Gypsy Danger" and "Striker Eureka"
+      Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
+          "%%EXPECTED_COUNT_RESULT%%", 2,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+
+      // Compact and add longSum and doubleSum metrics
+      submitCompactionConfig(
+          MAX_ROWS_PER_SEGMENT_COMPACTED,
+          NO_SKIP_OFFSET,
+          null,
+          null,
+          null,
+          new AggregatorFactory[] {new DoubleSumAggregatorFactory("double_sum_added", "added"), new LongSumAggregatorFactory("long_sum_added", "added")},
+          false
+      );
+      forceTriggerAutoCompaction(2);
+
+      // Result should be the same with the addition of new metrics, "double_sum_added" and "long_sum_added".
+      // These new metrics should have the same value as the input field "added"
+      expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "double_sum_added",
+          "%%EXPECTED_COUNT_RESULT%%", 2,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+
+      expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "long_sum_added",
+          "%%EXPECTED_COUNT_RESULT%%", 2,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57), ImmutableList.of(459))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+
+      verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
+
+      List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      // Verify compacted segments does not get compacted again
+      forceTriggerAutoCompaction(2);
+      List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
+    }
+  }
+
+  @Test
+  public void testAutoCompactionDutyWithOverlappingInterval() throws Exception
+  {
+    final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
+    Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.WEEK, Granularities.NONE, false, ImmutableList.of(new Interval("2013-08-31/2013-09-02", chrono))));
+    // Create WEEK segment with 2013-08-26 to 2013-09-02
+    loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
+    specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.MONTH, Granularities.NONE, false, ImmutableList.of(new Interval("2013-09-01/2013-09-02", chrono))));
+    // Create MONTH segment with 2013-09-01 to 2013-10-01
+    loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
+
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      verifySegmentsCount(2);
+
+      // Result is not rollup
+      // For dim "page", result has values "Gypsy Danger" and "Striker Eureka"
+      Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
+          "%%EXPECTED_COUNT_RESULT%%", 2,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+
+      submitCompactionConfig(
+          MAX_ROWS_PER_SEGMENT_COMPACTED,
+          NO_SKIP_OFFSET,
+          null,
+          null,
+          null,
+          null,
+          false
+      );
+      // Compact the MONTH segment
+      forceTriggerAutoCompaction(2);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+
+      // Compact the WEEK segment
+      forceTriggerAutoCompaction(2);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+
+      // Verify all task succeed
+      List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      for (TaskResponseObject taskResponseObject : compactTasksBefore) {
+        Assert.assertEquals(TaskState.SUCCESS, taskResponseObject.getStatus());
+      }
+
+      // Verify compacted segments does not get compacted again
+      forceTriggerAutoCompaction(2);
+      List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
+    }
+  }
+
+  @Test
+  public void testUpdateCompactionTaskSlotWithUseAutoScaleSlots() throws Exception
+  {
+    // First try update without useAutoScaleSlots
+    updateCompactionTaskSlot(3, 5, null);
+    CoordinatorCompactionConfig coordinatorCompactionConfig = compactionResource.getCoordinatorCompactionConfigs();
+    // Should be default value which is false
+    Assert.assertFalse(coordinatorCompactionConfig.isUseAutoScaleSlots());
+    // Now try update from default value to useAutoScaleSlots=true
+    updateCompactionTaskSlot(3, 5, true);
+    coordinatorCompactionConfig = compactionResource.getCoordinatorCompactionConfigs();
+    Assert.assertTrue(coordinatorCompactionConfig.isUseAutoScaleSlots());
+    // Now try update from useAutoScaleSlots=true to useAutoScaleSlots=false
+    updateCompactionTaskSlot(3, 5, false);
+    coordinatorCompactionConfig = compactionResource.getCoordinatorCompactionConfigs();
+    Assert.assertFalse(coordinatorCompactionConfig.isUseAutoScaleSlots());
   }
 
   private void loadData(String indexTask) throws Exception
@@ -811,7 +1067,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     verifyQuery(queryResource, ImmutableMap.of());
   }
 
-  private void verifyQuery(String queryResource, Map<String, Object> expectedResults) throws Exception
+  private void verifyQuery(String queryResource, Map<String, Object> keyValueToReplace) throws Exception
   {
     String queryResponseTemplate;
     try {
@@ -826,7 +1082,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         "%%DATASOURCE%%",
         fullDatasourceName
     );
-    for (Map.Entry<String, Object> entry : expectedResults.entrySet()) {
+    for (Map.Entry<String, Object> entry : keyValueToReplace.entrySet()) {
       queryResponseTemplate = StringUtils.replace(
           queryResponseTemplate,
           entry.getKey(),
@@ -848,12 +1104,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
   private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, UserCompactionTaskGranularityConfig granularitySpec, boolean dropExisting) throws Exception
   {
-    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, granularitySpec, null, null, dropExisting);
+    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, granularitySpec, null, null, null, dropExisting);
   }
 
-  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, UserCompactionTaskGranularityConfig granularitySpec, UserCompactionTaskDimensionsConfig dimensionsSpec, UserCompactionTaskTransformConfig transformSpec, boolean dropExisting) throws Exception
+  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, UserCompactionTaskGranularityConfig granularitySpec, UserCompactionTaskDimensionsConfig dimensionsSpec, UserCompactionTaskTransformConfig transformSpec, AggregatorFactory[] metricsSpec, boolean dropExisting) throws Exception
   {
-    submitCompactionConfig(new DynamicPartitionsSpec(maxRowsPerSegment, null), skipOffsetFromLatest, 1, granularitySpec, dimensionsSpec, transformSpec, dropExisting);
+    submitCompactionConfig(new DynamicPartitionsSpec(maxRowsPerSegment, null), skipOffsetFromLatest, 1, granularitySpec, dimensionsSpec, transformSpec, metricsSpec, dropExisting);
   }
 
   private void submitCompactionConfig(
@@ -863,6 +1119,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       UserCompactionTaskGranularityConfig granularitySpec,
       UserCompactionTaskDimensionsConfig dimensionsSpec,
       UserCompactionTaskTransformConfig transformSpec,
+      AggregatorFactory[] metricsSpec,
       boolean dropExisting
   ) throws Exception
   {
@@ -893,6 +1150,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         ),
         granularitySpec,
         dimensionsSpec,
+        metricsSpec,
         transformSpec,
         !dropExisting ? null : new UserCompactionTaskIOConfig(true),
         null
@@ -982,6 +1240,18 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     );
   }
 
+  private void verifyTombstones(int expectedCompactedTombstoneCount)
+  {
+    List<DataSegment> segments = coordinator.getFullSegmentsMetadata(fullDatasourceName);
+    int actualTombstoneCount = 0;
+    for (DataSegment segment : segments) {
+      if (segment.isTombstone()) {
+        actualTombstoneCount++;
+      }
+    }
+    Assert.assertEquals(actualTombstoneCount, expectedCompactedTombstoneCount);
+  }
+
   private void verifySegmentsCompacted(PartitionsSpec partitionsSpec, int expectedCompactedSegmentCount)
   {
     List<DataSegment> segments = coordinator.getFullSegmentsMetadata(fullDatasourceName);
@@ -999,13 +1269,16 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
-  private void updateCompactionTaskSlot(double compactionTaskSlotRatio, int maxCompactionTaskSlots) throws Exception
+  private void updateCompactionTaskSlot(double compactionTaskSlotRatio, int maxCompactionTaskSlots, Boolean useAutoScaleSlots) throws Exception
   {
-    compactionResource.updateCompactionTaskSlot(compactionTaskSlotRatio, maxCompactionTaskSlots);
+    compactionResource.updateCompactionTaskSlot(compactionTaskSlotRatio, maxCompactionTaskSlots, useAutoScaleSlots);
     // Verify that the compaction config is updated correctly.
     CoordinatorCompactionConfig coordinatorCompactionConfig = compactionResource.getCoordinatorCompactionConfigs();
     Assert.assertEquals(coordinatorCompactionConfig.getCompactionTaskSlotRatio(), compactionTaskSlotRatio);
     Assert.assertEquals(coordinatorCompactionConfig.getMaxCompactionTaskSlots(), maxCompactionTaskSlots);
+    if (useAutoScaleSlots != null) {
+      Assert.assertEquals(coordinatorCompactionConfig.isUseAutoScaleSlots(), useAutoScaleSlots.booleanValue());
+    }
   }
 
   private void getAndAssertCompactionStatus(

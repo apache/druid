@@ -1,0 +1,88 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`SuggestionMenu matches snapshot 1`] = `
+<ul
+  class="bp3-menu suggestion-menu"
+>
+  <li
+    class=""
+  >
+    <a
+      class="bp3-menu-item bp3-popover-dismiss"
+    >
+      <div
+        class="bp3-text-overflow-ellipsis bp3-fill"
+      >
+        dog
+      </div>
+    </a>
+  </li>
+  <li
+    class=""
+  >
+    <a
+      class="bp3-menu-item bp3-popover-dismiss"
+    >
+      <div
+        class="bp3-text-overflow-ellipsis bp3-fill"
+      >
+        cat
+      </div>
+    </a>
+  </li>
+  <li
+    class=""
+  >
+    <a
+      class="bp3-menu-item bp3-popover-dismiss"
+    >
+      <div
+        class="bp3-text-overflow-ellipsis bp3-fill"
+      >
+        skunk
+      </div>
+    </a>
+  </li>
+  <li
+    class="bp3-submenu"
+  >
+    <span
+      class="bp3-popover-wrapper"
+    >
+      <span
+        class="bp3-popover-target"
+      >
+        <a
+          class="bp3-menu-item"
+          tabindex="0"
+        >
+          <div
+            class="bp3-text-overflow-ellipsis bp3-fill"
+          >
+            Fruit
+          </div>
+          <span
+            class="bp3-icon bp3-icon-caret-right"
+            icon="caret-right"
+          >
+            <svg
+              data-icon="caret-right"
+              height="16"
+              viewBox="0 0 16 16"
+              width="16"
+            >
+              <desc>
+                caret-right
+              </desc>
+              <path
+                d="M11 8c0-.15-.07-.28-.17-.37l-4-3.5A.495.495 0 006 4.5v7a.495.495 0 00.83.37l4-3.5c.1-.09.17-.22.17-.37z"
+                fill-rule="evenodd"
+              />
+            </svg>
+          </span>
+        </a>
+      </span>
+    </span>
+  </li>
+</ul>
+`;

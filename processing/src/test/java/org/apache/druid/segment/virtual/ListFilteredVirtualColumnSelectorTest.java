@@ -36,6 +36,7 @@ import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -172,6 +173,13 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
     BitmapFactory bitmapFactory = EasyMock.createMock(BitmapFactory.class);
 
     EasyMock.expect(selector.getColumnHolder(COLUMN_NAME)).andReturn(holder).atLeastOnce();
+    EasyMock.expect(selector.getColumnCapabilities(COLUMN_NAME))
+            .andReturn(new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
+                                                   .setDictionaryEncoded(true)
+                                                   .setDictionaryValuesUnique(true)
+                                                   .setDictionaryValuesSorted(true)
+                                                   .setHasBitmapIndexes(true)
+            ).anyTimes();
 
     EasyMock.expect(holder.getBitmapIndex()).andReturn(index).atLeastOnce();
 
@@ -227,7 +235,13 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
     BitmapFactory bitmapFactory = EasyMock.createMock(BitmapFactory.class);
 
     EasyMock.expect(selector.getColumnHolder(COLUMN_NAME)).andReturn(holder).atLeastOnce();
-
+    EasyMock.expect(selector.getColumnCapabilities(COLUMN_NAME))
+            .andReturn(new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
+                                                   .setDictionaryEncoded(true)
+                                                   .setDictionaryValuesUnique(true)
+                                                   .setDictionaryValuesSorted(true)
+                                                   .setHasBitmapIndexes(true)
+            ).anyTimes();
     EasyMock.expect(holder.getBitmapIndex()).andReturn(index).atLeastOnce();
 
     EasyMock.expect(index.getCardinality()).andReturn(3).atLeastOnce();

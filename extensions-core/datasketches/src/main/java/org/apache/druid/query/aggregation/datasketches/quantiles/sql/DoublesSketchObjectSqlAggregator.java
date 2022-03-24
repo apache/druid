@@ -35,7 +35,6 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -117,14 +116,13 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
           DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.getQueryContext())
       );
     } else {
-      VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-          plannerContext,
+      String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           input,
           ColumnType.FLOAT
       );
       aggregatorFactory = new DoublesSketchAggregatorFactory(
           histogramName,
-          virtualColumn.getOutputName(),
+          virtualColumnName,
           k,
           DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.getQueryContext())
       );
