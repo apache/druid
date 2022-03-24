@@ -572,10 +572,22 @@ describe('ingestion-spec', () => {
     });
 
     it('works for TSV (no header)', () => {
-      expect(guessInputFormat(['A\tB\t1\t2'])).toEqual({
+      expect(guessInputFormat(['A\tB\t1\t2\t3\t4\t5\t6\t7\t8\t9'])).toEqual({
         type: 'tsv',
         findColumnsFromHeader: false,
-        columns: ['column1', 'column2', 'column3', 'column4'],
+        columns: [
+          'column01',
+          'column02',
+          'column03',
+          'column04',
+          'column05',
+          'column06',
+          'column07',
+          'column08',
+          'column09',
+          'column10',
+          'column11',
+        ],
       });
     });
 

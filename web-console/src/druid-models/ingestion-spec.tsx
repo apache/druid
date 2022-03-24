@@ -2261,10 +2261,11 @@ function inputFormatFromType(options: InputFormatFromTypeOptions): InputFormat {
       inputFormat = deepSet(inputFormat, 'findColumnsFromHeader', findColumnsFromHeader);
 
       if (!findColumnsFromHeader && numColumns) {
+        const padLength = String(numColumns).length;
         inputFormat = deepSet(
           inputFormat,
           'columns',
-          range(0, numColumns).map(c => `column${c + 1}`),
+          range(0, numColumns).map(c => `column${String(c + 1).padStart(padLength, '0')}`),
         );
       }
     }
