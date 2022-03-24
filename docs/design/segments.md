@@ -34,7 +34,7 @@ file size to be within the recommended range of 300MB-700MB. If your
 segment files are larger than this range, then consider either
 changing the granularity of the time interval or partitioning your
 data and adjusting the `targetRowsPerSegment` in your `partitionsSpec`.
-(a good starting point for this parameter is 5 million rows).
+A good starting point for this parameter is 5 million rows.
 
 See the Sharding section below and the 'Partitioning specification' section of
 the [Batch ingestion](../ingestion/hadoop.md#partitionsspec) documentation
