@@ -74,7 +74,7 @@ Timestamp and metrics type columns are arrays of integer or floating point value
 [LZ4](https://github.com/lz4/lz4-java). Once a query identifies which rows to select, it decompresses them, pulls out the relevant rows, and applies the
 desired aggregation operator. If a query doesn’t require a column, Druid skips over that column's data.
 
-Dimensions columns are different because they support filter and
+Dimension columns are different because they support filter and
 group-by operations, so each dimension requires the following
 three data structures:
 
