@@ -28,7 +28,7 @@ Request logs contain information on query metrics, including execution time and 
 You can use information in the request logs to monitor query performance, determine bottlenecks, and analyze and improve slow queries.
 
 Request logging is disabled by default.
-This topic describes how to configure Druid to log and emit query metrics.
+This topic describes how to configure Druid to generate request logs to track query metrics.
 
 ## Configure request logging
 
