@@ -82,7 +82,7 @@ three data structures:
 - List: The column’s values, encoded using the dictionary. Required for GROUP BY and TOPN queries. These operators allow queries that solely aggregate metrics based on filters to run without accessing the list of values.
 - Bitmap: One bitmal for each distinct value in the column, to indicate which rows contain that value. Bitmaps allow for quick filtering operations because they are convenient for quickly applying AND and OR operators. Also known as inverted indexes.
 
-To get a better sense of these data structures, consider the ‘page’ column from the example data above.  The three data structures that represent this dimension are illustrated below:
+To get a better sense of these data structures, consider the ‘page’ column from the given example data as represented by the following data structures:
 
 ```
 1: Dictionary
