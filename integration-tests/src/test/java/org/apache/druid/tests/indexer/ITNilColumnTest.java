@@ -22,7 +22,7 @@ package org.apache.druid.tests.indexer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager.BasicState;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.sql.http.SqlQuery;
@@ -106,7 +106,7 @@ public class ITNilColumnTest extends AbstractKafkaIndexingServiceTest
       );
       // Verify supervisor is healthy before suspension
       ITRetryUtil.retryUntil(
-          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId())),
+          () -> BasicState.RUNNING.equals(indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId())),
           true,
           10000,
           30,
@@ -183,7 +183,7 @@ public class ITNilColumnTest extends AbstractKafkaIndexingServiceTest
         new SqlQueryWithResults(
             new SqlQuery(
                 StringUtils.format(
-                    "SELECT COLUMN_NAME, ORDINAL_POSITION, IS_NULLABLE, DATA_TYPE"
+                    "SELECT COLUMN_NAME, IS_NULLABLE, DATA_TYPE"
                     + " FROM INFORMATION_SCHEMA.COLUMNS"
                     + " WHERE TABLE_NAME = '%s' AND COLUMN_NAME IN ('%s', '%s')",
                     generatedTestConfig.getFullDatasourceName(),
@@ -201,22 +201,18 @@ public class ITNilColumnTest extends AbstractKafkaIndexingServiceTest
                 ImmutableMap.of(
                     "COLUMN_NAME",
                     NIL_DIM1,
-                    "ORDINAL_POSITION",
-                    0,
                     "IS_NULLABLE",
-                    true,
+                    "YES",
                     "DATA_TYPE",
-                    "STRING"
+                    "VARCHAR"
                 ),
                 ImmutableMap.of(
                     "COLUMN_NAME",
                     NIL_DIM2,
-                    "ORDINAL_POSITION",
-                    dimensions.size() - 1, // the last dimension
                     "IS_NULLABLE",
-                    true,
+                    "YES",
                     "DATA_TYPE",
-                    "STRING"
+                    "VARCHAR"
                 )
             )
         )
