@@ -29,7 +29,6 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -175,14 +174,6 @@ public class NoopTask extends AbstractTask
   public static NoopTask withGroupId(String groupId)
   {
     return new NoopTask(null, groupId, null, 0, 0, null, null, null);
-  }
-
-  public NoopTask withJavaOptsContext(Object javaOpts, Object javaOptsArray)
-  {
-    Map<String, Object> context = new HashMap<>(getContext());
-    context.put(ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY, javaOpts);
-    context.put(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY, javaOptsArray);
-    return new NoopTask(null, null, null, 0, 0, null, null, context);
   }
 
   @VisibleForTesting

@@ -54,7 +54,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ForkingTaskRunnerTest
 {
 
-  static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   // This tests the test to make sure the test fails when it should.
   @Test(expected = AssertionError.class)
