@@ -74,7 +74,7 @@ Unless you modify the query granularity in the [granularity spec](#compaction-gr
 If you configure query granularity in compaction to go from a finer granularity like month to a coarser query granularity like year, then Druid overshadows the original segment with coarser granularity. Because the new segments have a coarser granularity, running a kill task to remove the overshadowed segments for those intervals will cause you to permanently lose the finer granularity data.
 
 ### Dimension handling
-Apache Druid supports schema changes. Therefore, dimensions can be different across segments even if they are a part of the same data source. See [Different schemas among segments](../design/segments.md#different-schemas-among-segments). If the input segments have different dimensions, the resulting compacted segment include all dimensions of the input segments. 
+Apache Druid supports schema changes. Therefore, dimensions can be different across segments even if they are a part of the same data source. See [Different schemas among segments](../design/segments.md#segments-with-different-schemas). If the input segments have different dimensions, the resulting compacted segment include all dimensions of the input segments. 
 
 Even when the input segments have the same set of dimensions, the dimension order or the data type of dimensions can be different. The dimensions of recent segments precede that of old segments in terms of data types and the ordering because more recent segments are more likely to have the preferred order and data types.
 
