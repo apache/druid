@@ -244,7 +244,9 @@ public class StatsDEmitterTest
         true,
         true
     );
-    try (StatsDEmitter emitter = StatsDEmitter.of(config, new ObjectMapper())) {}
+    try (StatsDEmitter emitter = StatsDEmitter.of(config, new ObjectMapper())) {
+
+    }
   }
 
   @Test
