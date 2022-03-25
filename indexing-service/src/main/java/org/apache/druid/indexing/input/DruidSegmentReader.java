@@ -105,6 +105,29 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
   @Override
   protected CloseableIterator<Map<String, Object>> intermediateRowIterator() throws IOException
   {
+    if (source.isFromTombstone()) {
+      return new CloseableIterator<Map<String, Object>>()
+      {
+        @Override
+        public void close()
+        {
+
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+          return false;
+        }
+
+        @Override
+        public Map<String, Object> next()
+        {
+          return null;
+        }
+      };
+    }
+
     final CleanableFile segmentFile = source.fetch(temporaryDirectory, null);
     final WindowedStorageAdapter storageAdapter = new WindowedStorageAdapter(
         new QueryableIndexStorageAdapter(

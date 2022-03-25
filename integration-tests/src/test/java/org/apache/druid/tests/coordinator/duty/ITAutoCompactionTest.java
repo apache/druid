@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -62,6 +63,7 @@ import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.tests.indexer.AbstractITBatchIndexTest;
 import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.joda.time.chrono.ISOChronology;
@@ -75,6 +77,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -131,7 +134,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
           0,
-          14906,
+          14370,
           0,
           0,
           2,
@@ -149,7 +152,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
           0,
-          23372,
+          22568,
           0,
           0,
           3,
@@ -265,8 +268,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       getAndAssertCompactionStatus(
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
-          14906,
-          14905,
+          14370,
+          14369,
           0,
           2,
           2,
@@ -274,10 +277,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           1,
           1,
           0);
-      Assert.assertEquals(
-          "14906",
-          compactionResource.getCompactionProgress(fullDatasourceName).get("remainingSegmentSize")
-      );
+      Assert.assertEquals(compactionResource.getCompactionProgress(fullDatasourceName).get("remainingSegmentSize"), "14370");
       // Run compaction again to compact the remaining day
       // Remaining day compacted (1 new segment). Now both days compacted (2 total)
       forceTriggerAutoCompaction(2);
@@ -288,7 +288,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
           0,
-          23372,
+          22568,
           0,
           0,
           3,
@@ -302,7 +302,28 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   @Test
   public void testAutoCompactionDutyWithSegmentGranularityAndWithDropExistingTrue() throws Exception
   {
+    // Interval is "2013-08-31/2013-09-02", segment gran is DAY,
+    // "maxRowsPerSegment": 3
+    // input files:
+    //    "/resources/data/batch_index/json/wikipedia_index_data1.json",
+    //        3rows -> "2013-08-31T01:02:33Z", "2013-08-31T03:32:45Z", "2013-08-31T07:11:21Z"
+    //     "/resources/data/batch_index/json/wikipedia_index_data2.json",
+    //       3 rows -> "2013-08-31T11:58:39Z", "2013-08-31T12:41:27Z", "2013-09-01T01:02:33Z"
+    //     "/resources/data/batch_index/json/wikipedia_index_data3.json"
+    //       4 rows -> "2013-09-01T03:32:45Z", "2013-09-01T07:11:21Z", "2013-09-01T11:58:39Z", "2013-09-01T12:41:27Z"
+    //      Summary of data:
+    //       5 rows @ 2013-08031 and 5 at 2013-0901, TWO days have data only
+    //      Initial load/ingestion: DAY, "intervals" : [ "2013-08-31/2013-09-02" ], Four segments, no tombstones
+    //      1st compaction: YEAR: 10 rows during 2013 (4 segments of at most three rows each)
+    //              "interval": "2013-01-01T00:00:00.000Z/2014-01-01T00:00:00.000Z",
+    //      2nd compaction: MONTH: 5 rows @ 2013-08 (two segments), 5 rows @ 2013-09 (two segments)
+    //              "interval": "2013-01-01T00:00:00.000Z/2014-01-01T00:00:00.000Z",
+    //                             Four data segments (two months) and 10 tombstones for remaining months
+    //      3d compaction: QUARTER:  5 rows @ 2013-08-31 (two segments), 5 rows @ 2013-09-01 (two segments),
+    //               2 compactions were generated for year 2013; one for each semester to be compacted of the whole year.
+    //               
     loadData(INDEX_TASK);
+
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
       intervalsBeforeCompaction.sort(null);
@@ -310,11 +331,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
+
+      LOG.info("Auto compaction test with YEAR segment granularity, dropExisting is true");
       Granularity newGranularity = Granularities.YEAR;
       // Set dropExisting to true
+      // "interval": "2013-01-01T00:00:00.000Z/2014-01-01T00:00:00.000Z",
       submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), true);
-
-      LOG.info("Auto compaction test with YEAR segment granularity");
 
       List<String> expectedIntervalAfterCompaction = new ArrayList<>();
       for (String interval : intervalsBeforeCompaction) {
@@ -327,30 +349,57 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCompacted(1, 1000);
       checkCompactionIntervals(expectedIntervalAfterCompaction);
 
-      newGranularity = Granularities.DAY;
+
+      LOG.info("Auto compaction test with MONTH segment granularity, dropExisting is true");
+      //  "interval": "2013-01-01T00:00:00.000Z/2014-01-01T00:00:00.000Z",
+      newGranularity = Granularities.MONTH;
       // Set dropExisting to true
       submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), true);
 
-      LOG.info("Auto compaction test with DAY segment granularity");
-
       // Since dropExisting is set to true...
+      // Again data is only in two days
       // The earlier segment with YEAR granularity will be completely covered, overshadowed, by the
-      // new DAY segments for data and tombstones for days with no data
-      // Hence, we will only have 2013-08-31 to 2013-09-01 and 2013-09-01 to 2013-09-02
-      // plus 363 tombstones
-      final List<String> intervalsAfterYEARCompactionButBeforeDAYCompaction =
+      // new MONTH segments for data and tombstones for days with no data
+      // Hence, we will only have 2013-08 to 2013-09 months with data
+      // plus 12 tombstones
+      final List<String> intervalsAfterYEARCompactionButBeforeMONTHCompaction =
           coordinator.getSegmentIntervals(fullDatasourceName);
       expectedIntervalAfterCompaction = new ArrayList<>();
-      for (String interval : intervalsAfterYEARCompactionButBeforeDAYCompaction) {
+      for (String interval : intervalsAfterYEARCompactionButBeforeMONTHCompaction) {
         for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }
-      forceTriggerAutoCompaction(365);
+      forceTriggerAutoCompaction(12);
       verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifyTombstones(363);
-      verifySegmentsCompacted(365, 1000);
+      verifyTombstones(10);
+      verifySegmentsCompacted(12, 1000);
       checkCompactionIntervals(expectedIntervalAfterCompaction);
+
+      LOG.info("Auto compaction test with SEMESTER segment granularity, dropExisting is true, over tombstones");
+      // only reason is semester and not quarter or month is to minimize time in the test but to
+      // ensure that one of the compactions compacts *only* tombstones. The first semester will
+      // compact only tombstones, so it should be a tombstone itself.
+      newGranularity = new PeriodGranularity(new Period("P6M"), null, DateTimeZone.UTC);
+      // Set dropExisting to true
+      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), true);
+
+      // Since dropExisting is set to true...
+      // The earlier 12 segments with MONTH granularity will be completely covered, overshadowed, by the
+      // new PT6M segments for data and tombstones for days with no data
+      // Hence, we will have two segments, one tombstone for the first semester and one data segment for the second.
+      forceTriggerAutoCompaction(7); // one semester compacted, 6 months left to compact
+      forceTriggerAutoCompaction(2); // two semesters compacted
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifyTombstones(1);
+      verifySegmentsCompacted(2, 1000);
+
+      expectedIntervalAfterCompaction =
+          Arrays.asList("2013-01-01T00:00:00.000Z/2013-07-01T00:00:00.000Z",
+                        "2013-07-01T00:00:00.000Z/2014-01-01T00:00:00.000Z"
+          );
+      checkCompactionIntervals(expectedIntervalAfterCompaction);
+
     }
   }
 

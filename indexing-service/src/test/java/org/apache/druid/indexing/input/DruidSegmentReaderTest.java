@@ -52,6 +52,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -181,6 +182,25 @@ public class DruidSegmentReaderTest extends NullHandlingTest
                     .build()
             )
         ),
+        readRows(reader)
+    );
+  }
+
+  @Test
+  public void testReaderWithTombstone() throws IOException
+  {
+    final DruidSegmentReader reader = new DruidSegmentReader(
+        makeTombstoneInputEntity(Intervals.of("2000/P1D")),
+        null, // no indexio for tombstone since they are not pushed
+        null,
+        null,
+        null,
+        null,
+        temporaryFolder.newFolder()
+    );
+
+    Assert.assertEquals(
+        Collections.emptyList(),
         readRows(reader)
     );
   }
@@ -622,6 +642,53 @@ public class DruidSegmentReaderTest extends NullHandlingTest
                    .interval(Intervals.of("2000/P1D"))
                    .version("1")
                    .size(0)
+                   .build(),
+        interval
+    );
+  }
+
+  private DruidSegmentInputEntity makeTombstoneInputEntity(final Interval interval)
+  {
+    return new DruidSegmentInputEntity(
+        new SegmentCacheManager()
+        {
+          @Override
+          public boolean isSegmentCached(DataSegment segment)
+          {
+            throw new UnsupportedOperationException("unused");
+          }
+
+          @Override
+          public File getSegmentFiles(DataSegment segment)
+          {
+            return segmentDirectory;
+          }
+
+          @Override
+          public void cleanup(DataSegment segment)
+          {
+            throw new UnsupportedOperationException("unused");
+          }
+
+          @Override
+          public boolean reserve(DataSegment segment)
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public boolean release(DataSegment segment)
+          {
+            throw new UnsupportedOperationException();
+          }
+        },
+        DataSegment.builder()
+                   .dataSource("ds")
+                   .interval(Intervals.of("2000/P1D"))
+                   .version("1")
+                   .shardSpec(new TombstoneShardSpec())
+                   .loadSpec(ImmutableMap.of("type", "tomstone"))
+                   .size(1)
                    .build(),
         interval
     );
