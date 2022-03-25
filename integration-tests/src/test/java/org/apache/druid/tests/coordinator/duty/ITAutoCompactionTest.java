@@ -75,6 +75,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -307,11 +308,11 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
+
+      LOG.info("Auto compaction test with YEAR segment granularity, dropExisting is true");
       Granularity newGranularity = Granularities.YEAR;
       // Set dropExisting to true
       submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), true);
-
-      LOG.info("Auto compaction test with YEAR segment granularity");
 
       List<String> expectedIntervalAfterCompaction = new ArrayList<>();
       for (String interval : intervalsBeforeCompaction) {
@@ -324,29 +325,126 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCompacted(1, 1000);
       checkCompactionIntervals(expectedIntervalAfterCompaction);
 
-      newGranularity = Granularities.DAY;
+
+      LOG.info("Auto compaction test with MONTH segment granularity, dropExisting is true");
+      newGranularity = Granularities.MONTH;
       // Set dropExisting to true
       submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), true);
 
-      LOG.info("Auto compaction test with DAY segment granularity");
-
       // Since dropExisting is set to true...
       // The earlier segment with YEAR granularity will be completely covered, overshadowed, by the
-      // new DAY segments for data and tombstones for days with no data
-      // Hence, we will only have 2013-08-31 to 2013-09-01 and 2013-09-01 to 2013-09-02
-      // plus 363 tombstones
-      final List<String> intervalsAfterYEARCompactionButBeforeDAYCompaction =
+      // new MONTH segments for data and tombstones for days with no data
+      // Hence, we will only have 2013-08 to 2013-09 months with data
+      // plus 12 tombstones
+      final List<String> intervalsAfterYEARCompactionButBeforeMONTHCompaction =
           coordinator.getSegmentIntervals(fullDatasourceName);
       expectedIntervalAfterCompaction = new ArrayList<>();
-      for (String interval : intervalsAfterYEARCompactionButBeforeDAYCompaction) {
+      for (String interval : intervalsAfterYEARCompactionButBeforeMONTHCompaction) {
         for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }
-      forceTriggerAutoCompaction(365);
+      forceTriggerAutoCompaction(12);
       verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifyTombstones(363);
-      verifySegmentsCompacted(365, 1000);
+      verifyTombstones(10);
+      verifySegmentsCompacted(12, 1000);
+      checkCompactionIntervals(expectedIntervalAfterCompaction);
+
+      LOG.info("Auto compaction test with DAY segment granularity, dropExisting is true, over tombstones");
+      newGranularity = Granularities.DAY;
+      // Set dropExisting to true
+      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), true);
+
+      // Since dropExisting is set to true...
+      // The earlier segments with MONTH granularity will be completely covered, overshadowed, by the
+      // new DAY segments for data and tombstones for days with no data
+      // Hence, we will only have 2013-08-31 to 2013-09-01 and 2013-09-01 to 2013-09-02, two data DAY segments,
+      // plus the previous 10 tombstones for 01,02,03,04,05,06,07,10,11,12
+      // and finally 30 extra tombstones for days in 09 other than 2013-08-31
+      // and 29  extra tombstones for days other than 2013-09-01
+      // for a total of tombstones = 10 + 30 + 29 = 69
+      // and 2 data segments
+      // grand total of 71 segments
+      final List<String> intervalsAfterMONTHCompactionButBeforeDAYCompaction =
+          coordinator.getSegmentIntervals(fullDatasourceName);
+      expectedIntervalAfterCompaction =
+          Arrays.asList("2013-09-23T00:00:00.000Z/2013-09-24T00:00:00.000Z",
+                        "2013-08-20T00:00:00.000Z/2013-08-21T00:00:00.000Z",
+                        "2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z",
+                        "2013-08-19T00:00:00.000Z/2013-08-20T00:00:00.000Z",
+                        "2013-09-14T00:00:00.000Z/2013-09-15T00:00:00.000Z",
+                        "2013-08-11T00:00:00.000Z/2013-08-12T00:00:00.000Z",
+                        "2013-09-26T00:00:00.000Z/2013-09-27T00:00:00.000Z",
+                        "2013-08-23T00:00:00.000Z/2013-08-24T00:00:00.000Z",
+                        "2013-09-05T00:00:00.000Z/2013-09-06T00:00:00.000Z",
+                        "2013-08-27T00:00:00.000Z/2013-08-28T00:00:00.000Z",
+                        "2013-09-20T00:00:00.000Z/2013-09-21T00:00:00.000Z",
+                        "2013-08-06T00:00:00.000Z/2013-08-07T00:00:00.000Z",
+                        "2013-08-18T00:00:00.000Z/2013-08-19T00:00:00.000Z",
+                        "2013-09-11T00:00:00.000Z/2013-09-12T00:00:00.000Z",
+                        "2013-09-09T00:00:00.000Z/2013-09-10T00:00:00.000Z",
+                        "2013-11-01T00:00:00.000Z/2013-12-01T00:00:00.000Z",
+                        "2013-09-27T00:00:00.000Z/2013-09-28T00:00:00.000Z",
+                        "2013-08-24T00:00:00.000Z/2013-08-25T00:00:00.000Z",
+                        "2013-09-22T00:00:00.000Z/2013-09-23T00:00:00.000Z",
+                        "2013-07-01T00:00:00.000Z/2013-08-01T00:00:00.000Z",
+                        "2013-02-01T00:00:00.000Z/2013-03-01T00:00:00.000Z",
+                        "2013-08-31T00:00:00.000Z/2013-09-01T00:00:00.000Z",
+                        "2013-09-18T00:00:00.000Z/2013-09-19T00:00:00.000Z",
+                        "2013-09-13T00:00:00.000Z/2013-09-14T00:00:00.000Z",
+                        "2013-08-15T00:00:00.000Z/2013-08-16T00:00:00.000Z",
+                        "2013-08-10T00:00:00.000Z/2013-08-11T00:00:00.000Z",
+                        "2013-09-19T00:00:00.000Z/2013-09-20T00:00:00.000Z",
+                        "2013-09-17T00:00:00.000Z/2013-09-18T00:00:00.000Z",
+                        "2013-08-14T00:00:00.000Z/2013-08-15T00:00:00.000Z",
+                        "2013-09-12T00:00:00.000Z/2013-09-13T00:00:00.000Z",
+                        "2013-12-01T00:00:00.000Z/2014-01-01T00:00:00.000Z",
+                        "2013-09-08T00:00:00.000Z/2013-09-09T00:00:00.000Z",
+                        "2013-09-03T00:00:00.000Z/2013-09-04T00:00:00.000Z",
+                        "2013-08-05T00:00:00.000Z/2013-08-06T00:00:00.000Z",
+                        "2013-08-25T00:00:00.000Z/2013-08-26T00:00:00.000Z",
+                        "2013-04-01T00:00:00.000Z/2013-05-01T00:00:00.000Z",
+                        "2013-09-07T00:00:00.000Z/2013-09-08T00:00:00.000Z",
+                        "2013-08-04T00:00:00.000Z/2013-08-05T00:00:00.000Z",
+                        "2013-08-16T00:00:00.000Z/2013-08-17T00:00:00.000Z",
+                        "2013-08-28T00:00:00.000Z/2013-08-29T00:00:00.000Z",
+                        "2013-09-29T00:00:00.000Z/2013-09-30T00:00:00.000Z",
+                        "2013-05-01T00:00:00.000Z/2013-06-01T00:00:00.000Z",
+                        "2013-09-21T00:00:00.000Z/2013-09-22T00:00:00.000Z",
+                        "2013-08-07T00:00:00.000Z/2013-08-08T00:00:00.000Z",
+                        "2013-08-29T00:00:00.000Z/2013-08-30T00:00:00.000Z",
+                        "2013-03-01T00:00:00.000Z/2013-04-01T00:00:00.000Z",
+                        "2013-09-25T00:00:00.000Z/2013-09-26T00:00:00.000Z",
+                        "2013-08-22T00:00:00.000Z/2013-08-23T00:00:00.000Z",
+                        "2013-09-04T00:00:00.000Z/2013-09-05T00:00:00.000Z",
+                        "2013-08-01T00:00:00.000Z/2013-08-02T00:00:00.000Z",
+                        "2013-09-16T00:00:00.000Z/2013-09-17T00:00:00.000Z",
+                        "2013-08-13T00:00:00.000Z/2013-08-14T00:00:00.000Z",
+                        "2013-09-28T00:00:00.000Z/2013-09-29T00:00:00.000Z",
+                        "2013-08-17T00:00:00.000Z/2013-08-18T00:00:00.000Z",
+                        "2013-09-15T00:00:00.000Z/2013-09-16T00:00:00.000Z",
+                        "2013-09-10T00:00:00.000Z/2013-09-11T00:00:00.000Z",
+                        "2013-08-12T00:00:00.000Z/2013-08-13T00:00:00.000Z",
+                        "2013-09-06T00:00:00.000Z/2013-09-07T00:00:00.000Z",
+                        "2013-08-08T00:00:00.000Z/2013-08-09T00:00:00.000Z",
+                        "2013-09-01T00:00:00.000Z/2013-09-02T00:00:00.000Z",
+                        "2013-08-03T00:00:00.000Z/2013-08-04T00:00:00.000Z",
+                        "2013-08-02T00:00:00.000Z/2013-08-03T00:00:00.000Z",
+                        "2013-08-30T00:00:00.000Z/2013-08-31T00:00:00.000Z",
+                        "2013-08-09T00:00:00.000Z/2013-08-10T00:00:00.000Z",
+                        "2013-10-01T00:00:00.000Z/2013-11-01T00:00:00.000Z",
+                        "2013-09-30T00:00:00.000Z/2013-10-01T00:00:00.000Z",
+                        "2013-06-01T00:00:00.000Z/2013-07-01T00:00:00.000Z",
+                        "2013-08-26T00:00:00.000Z/2013-08-27T00:00:00.000Z",
+                        "2013-09-24T00:00:00.000Z/2013-09-25T00:00:00.000Z",
+                        "2013-08-21T00:00:00.000Z/2013-08-22T00:00:00.000Z",
+                        "2013-01-01T00:00:00.000Z/2013-02-01T00:00:00.000Z"
+          );
+
+      forceTriggerAutoCompaction(71);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifyTombstones(69);
+      verifySegmentsCompacted(71, 1000);
       checkCompactionIntervals(expectedIntervalAfterCompaction);
     }
   }

@@ -124,12 +124,15 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           VersionedIntervalTimeline<String, DataSegment> timelineWithConfiguredSegmentGranularity = new VersionedIntervalTimeline<>(Comparator.naturalOrder());
           Set<DataSegment> segments = timeline.findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
           for (DataSegment segment : segments) {
-            // Convert original segmentGranularity to new granularities bucket by configuredSegmentGranularity
-            // For example, if the original is interval of 2020-01-28/2020-02-03 with WEEK granularity
-            // and the configuredSegmentGranularity is MONTH, the segment will be split to two segments
-            // of 2020-01/2020-02 and 2020-02/2020-03.
-            for (Interval interval : configuredSegmentGranularity.getIterable(segment.getInterval())) {
-              intervalToPartitionMap.computeIfAbsent(interval, k -> new HashSet<>()).add(segment);
+            // intervals for tombstones should never be sent to compaction...
+            if (!segment.isTombstone()) {
+              // Convert original segmentGranularity to new granularities bucket by configuredSegmentGranularity
+              // For example, if the original is interval of 2020-01-28/2020-02-03 with WEEK granularity
+              // and the configuredSegmentGranularity is MONTH, the segment will be split to two segments
+              // of 2020-01/2020-02 and 2020-02/2020-03.
+              for (Interval interval : configuredSegmentGranularity.getIterable(segment.getInterval())) {
+                intervalToPartitionMap.computeIfAbsent(interval, k -> new HashSet<>()).add(segment);
+              }
             }
           }
           for (Map.Entry<Interval, Set<DataSegment>> partitionsPerInterval : intervalToPartitionMap.entrySet()) {
