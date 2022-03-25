@@ -94,8 +94,7 @@ public class RouterResource
   @Path("/cluster")
   @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getCluster(
-      @QueryParam("full") boolean full)
+  public Response getCluster(@QueryParam("full") boolean full)
   {
     List<NodeRole> roles = new ArrayList<>(nodeRoles);
     roles.sort((r1, r2) -> r1.getJsonName().compareTo(r2.getJsonName()));

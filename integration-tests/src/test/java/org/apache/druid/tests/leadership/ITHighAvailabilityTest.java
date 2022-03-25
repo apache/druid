@@ -31,6 +31,7 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -55,6 +56,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -180,6 +182,44 @@ public class ITHighAvailabilityTest
     );
   }
 
+  @Test
+  public void testRouterCluster()
+  {
+    ITRetryUtil.retryUntil(
+        () -> {
+          try {
+            return verifyRouterCluster();
+          }
+          catch (Throwable t) {
+            return false;
+          }
+        },
+        true,
+        RETRY_DELAY,
+        NUM_RETRIES,
+        "router cluster API validated"
+    );
+  }
+
+  @Test
+  public void testCoordinatorCluster()
+  {
+    ITRetryUtil.retryUntil(
+        () -> {
+          try {
+            return verifyCoordinatorCluster();
+          }
+          catch (Throwable t) {
+            return false;
+          }
+        },
+        true,
+        RETRY_DELAY,
+        NUM_RETRIES,
+        "coordinator cluster API validated"
+    );
+  }
+
   private int testSelfDiscovery(Collection<DiscoveryDruidNode> nodes)
       throws MalformedURLException, ExecutionException, InterruptedException
   {
@@ -262,18 +302,21 @@ public class ITHighAvailabilityTest
       {"host":"%%BROKER%%","server_type":"broker", "is_leader": %%NON_LEADER%%},
       {"host":"%%COORDINATOR_ONE%%","server_type":"coordinator", "is_leader": %%COORDINATOR_ONE_LEADER%%},
       {"host":"%%COORDINATOR_TWO%%","server_type":"coordinator", "is_leader": %%COORDINATOR_TWO_LEADER%%},
+      {"host":"%%CUSTOM_ROLE%%","server_type":"custom-node-role", "is_leader": %%NON_LEADER%%},
       {"host":"%%OVERLORD_ONE%%","server_type":"overlord", "is_leader": %%OVERLORD_ONE_LEADER%%},
       {"host":"%%OVERLORD_TWO%%","server_type":"overlord", "is_leader": %%OVERLORD_TWO_LEADER%%},
       {"host":"%%ROUTER%%","server_type":"router", "is_leader": %%NON_LEADER%%}
      */
     String working = template;
 
+    String customNode = "druid-custom-node-role";
     working = StringUtils.replace(working, "%%OVERLORD_ONE%%", config.getOverlordInternalHost());
     working = StringUtils.replace(working, "%%OVERLORD_TWO%%", config.getOverlordTwoInternalHost());
     working = StringUtils.replace(working, "%%COORDINATOR_ONE%%", config.getCoordinatorInternalHost());
     working = StringUtils.replace(working, "%%COORDINATOR_TWO%%", config.getCoordinatorTwoInternalHost());
     working = StringUtils.replace(working, "%%BROKER%%", config.getBrokerInternalHost());
     working = StringUtils.replace(working, "%%ROUTER%%", config.getRouterInternalHost());
+    working = StringUtils.replace(working, "%%CUSTOM_ROLE%%", customNode);
     if (isOverlordOneLeader(config, overlordLeader)) {
       working = StringUtils.replace(working, "%%OVERLORD_ONE_LEADER%%", "1");
       working = StringUtils.replace(working, "%%OVERLORD_TWO_LEADER%%", "0");
@@ -309,5 +352,93 @@ public class ITHighAvailabilityTest
   private static String transformHost(String host)
   {
     return StringUtils.format("%s:", host);
+  }
+
+  private boolean verifyCoordinatorCluster()
+  {
+    try {
+      StatusResponseHolder response = httpClient.go(
+          new Request(
+              HttpMethod.GET,
+              new URL(StringUtils.format(
+                  "%s/druid/coordinator/v1/cluster",
+                  config.getCoordinatorUrl()
+              ))
+          ),
+          StatusResponseHandler.getInstance()
+      ).get();
+
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while fetching cluster members from [%s] status [%s] content [%s]",
+            config.getCoordinatorUrl(),
+            response.getStatus(),
+            response.getContent()
+        );
+      }
+
+      // Verify the basics: 5 service types, one of which is the custom node role.
+      // One of the two-node services has a size of 2.
+      // This endpoint includes an entry for historicals, even if none are running.
+      Map<String, Object> results = jsonMapper.readValue(response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
+      if (results.size() != 6) {
+        return false;
+      }
+      if (results.get(CliCustomNodeRole.SERVICE_NAME) == null) {
+        return false;
+      }
+      @SuppressWarnings("unchecked")
+      List<Object> coordNodes = (List<Object>) results.get(NodeRole.COORDINATOR.getJsonName());
+      if (coordNodes.size() != 2) {
+        return false;
+      }
+      @SuppressWarnings("unchecked")
+      List<Object> histNodes = (List<Object>) results.get(NodeRole.HISTORICAL.getJsonName());
+      return histNodes.isEmpty();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private boolean verifyRouterCluster()
+  {
+    try {
+      StatusResponseHolder response = httpClient.go(
+          new Request(
+              HttpMethod.GET,
+              new URL(StringUtils.format(
+                  "%s/druid/router/v1/cluster",
+                  config.getRouterUrl()
+              ))
+          ),
+          StatusResponseHandler.getInstance()
+      ).get();
+
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while fetching cluster members from [%s] status [%s] content [%s]",
+            config.getRouterUrl(),
+            response.getStatus(),
+            response.getContent()
+        );
+      }
+
+      // Verify the basics: 5 service types, one of which is the custom node role.
+      // One of the two-node services has a size of 2.
+      Map<String, Object> results = jsonMapper.readValue(response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
+      if (results.size() != 5) {
+        return false;
+      }
+      if (results.get(CliCustomNodeRole.SERVICE_NAME) == null) {
+        return false;
+      }
+      @SuppressWarnings("unchecked")
+      List<Object> coordNodes = (List<Object>) results.get(NodeRole.COORDINATOR.getJsonName());
+      return coordNodes.size() == 2;
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 }

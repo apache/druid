@@ -88,9 +88,12 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -694,10 +697,31 @@ public class SystemSchema extends AbstractSchema
 
     private Iterator<DiscoveryDruidNode> getDruidServers(DruidNodeDiscoveryProvider druidNodeDiscoveryProvider)
     {
-      return allNodeRoles.stream()
+      return orderedNodeRoles().stream()
                    .flatMap(nodeRole -> druidNodeDiscoveryProvider.getForNodeRole(nodeRole).getAllNodes().stream())
                    .collect(Collectors.toList())
                    .iterator();
+    }
+
+    /**
+     * Preserve backward compatibility while adding custom node roles. Prior versions
+     * listed roles in the order defined in the NodeRole enum, now class. We add
+     * custom node roles at the end. We choose alphabetical order so the the custom
+     * roles, if more than one, return in a stable, if arbitrary, order.
+     */
+    private List<NodeRole> orderedNodeRoles()
+    {
+      List<NodeRole> roles = new ArrayList<>(Arrays.asList(NodeRole.values()));
+      Set<NodeRole> stockRoles = new HashSet<>(roles);
+      List<NodeRole> customRoles = new ArrayList<>();
+      for (NodeRole role : allNodeRoles) {
+        if (!stockRoles.contains(role)) {
+          customRoles.add(role);
+        }
+      }
+      customRoles.sort((o1, o2) -> o1.getJsonName().compareTo(o2.getJsonName()));
+      roles.addAll(customRoles);
+      return roles;
     }
   }
 

@@ -17,35 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.common;
+package org.apache.druid.testing.guice;
 
-import com.google.common.base.Strings;
-import org.apache.druid.common.exception.SanitizableException;
+import com.fasterxml.jackson.databind.Module;
+import com.google.inject.Binder;
+import org.apache.druid.cli.CliCustomNodeRole;
+import org.apache.druid.discovery.NodeRoles;
+import org.apache.druid.initialization.DruidModule;
 
-import java.util.function.Function;
+import java.util.Collections;
+import java.util.List;
 
 /**
+ * Super-simple "client" for the custom node role which defines
+ * the node role so that REST APIs and the system tables are
+ * aware of this role.
  */
-public class ISE extends IllegalStateException implements SanitizableException
+public class CustomNodeRoleClientModule implements DruidModule
 {
-  public ISE(String formatText, Object... arguments)
+  @Override
+  public void configure(Binder binder)
   {
-    super(StringUtils.nonStrictFormat(formatText, arguments));
-  }
-
-  public ISE(Throwable cause, String formatText, Object... arguments)
-  {
-    super(StringUtils.nonStrictFormat(formatText, arguments), cause);
+    NodeRoles.addRole(binder, CliCustomNodeRole.NODE_ROLE);
   }
 
   @Override
-  public Exception sanitize(Function<String, String> errorMessageTransformFunction)
+  public List<? extends Module> getJacksonModules()
   {
-    String transformedErrorMessage = errorMessageTransformFunction.apply(getMessage());
-    if (Strings.isNullOrEmpty(transformedErrorMessage)) {
-      return new ISE("");
-    } else {
-      return new ISE(transformedErrorMessage);
-    }
+    return Collections.emptyList();
   }
 }

@@ -14,3 +14,4 @@
 # limitations under the License.
 
 org.apache.druid.testing.guice.ITTLSCertificateCheckerModule
+org.apache.druid.testing.guice.CustomNodeRoleClientModule

@@ -33,7 +33,7 @@ import java.util.Set;
 
 public class NodeRoles
 {
-  private static final Logger LOG = new Logger(NodeRoles.class);
+  private static final Logger log = new Logger(NodeRoles.class);
 
   /**
    * Simulate the Guice binding of all node roles, but using just
@@ -57,7 +57,7 @@ public class NodeRoles
    */
   public static void addRole(Binder binder, NodeRole role)
   {
-    LOG.debug("Adding node role: " + role.getJsonName());
+    log.debug("Adding node role: %s", role.getJsonName());
     binder(binder)
                .addBinding()
                .toInstance(role);
@@ -96,6 +96,6 @@ public class NodeRoles
   {
     return Collections2.transform(
         getDiscoveryNodesForRole(provider, nodeRole),
-        (discoveryDruidNode) -> Node.from(discoveryDruidNode.getDruidNode()));
+        (discoveryDruidNode) -> new Node(discoveryDruidNode.getDruidNode()));
   }
 }

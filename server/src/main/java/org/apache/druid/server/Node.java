@@ -24,55 +24,48 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 
+/**
+ * This class exists only to support two REST endpoints. It is similar to a
+ * DruidNode, but serializes to the specific form expected by those REST
+ * endpoints. This version omits {@code bindOnHost}, uses the name
+ * {@code `service} where DruidNode uses {@code serviceName}, and
+ * omits the TLS or Plaintext port rather than using -1 and flags
+ * as in DruidNode. Think of this as a purpose-build facade onto a
+ * Druid Node.
+ */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Node
 {
-  private final String host;
-  private final String service;
-  private final Integer plaintextPort;
-  private final Integer tlsPort;
+  private final DruidNode node;
 
   @JsonCreator
-  public Node(String host, String service, Integer plaintextPort, Integer tlsPort)
+  public Node(DruidNode node)
   {
-    this.host = host;
-    this.service = service;
-    this.plaintextPort = plaintextPort;
-    this.tlsPort = tlsPort;
+    this.node = node;
   }
 
   @JsonProperty
   public String getHost()
   {
-    return host;
+    return node.getHost();
   }
 
   @JsonProperty
   public String getService()
   {
-    return service;
+    return node.getServiceName();
   }
 
   @JsonProperty
   public Integer getPlaintextPort()
   {
-    return plaintextPort;
+    return node.isEnablePlaintextPort() ? node.getPlaintextPort() : null;
   }
 
   @JsonProperty
   public Integer getTlsPort()
   {
-    return tlsPort;
-  }
-
-  public static Node from(DruidNode druidNode)
-  {
-    return new Node(
-        druidNode.getHost(),
-        druidNode.getServiceName(),
-        druidNode.getPlaintextPort() > 0 ? druidNode.getPlaintextPort() : null,
-        druidNode.getTlsPort() > 0 ? druidNode.getTlsPort() : null
-    );
+    return node.isEnableTlsPort() ? node.getTlsPort() : null;
   }
 
   @Override
@@ -85,15 +78,15 @@ public class Node
       return false;
     }
     Node other = (Node) o;
-    return Objects.equal(this.host, other.host) &&
-           Objects.equal(this.service, other.service) &&
-           Objects.equal(this.plaintextPort, other.plaintextPort) &&
-           Objects.equal(this.tlsPort, other.tlsPort);
+    return Objects.equal(this.getHost(), other.getHost()) &&
+           Objects.equal(this.getService(), other.getService()) &&
+           Objects.equal(this.getPlaintextPort(), other.getPlaintextPort()) &&
+           Objects.equal(this.getTlsPort(), other.getTlsPort());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hashCode(host, service, plaintextPort, tlsPort);
+    return Objects.hashCode(getHost(), getService(), getPlaintextPort(), getTlsPort());
   }
 }

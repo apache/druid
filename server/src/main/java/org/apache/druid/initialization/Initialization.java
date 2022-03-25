@@ -199,7 +199,6 @@ public class Initialization
           ServiceLoader.load(serviceClass, loader).forEach(impl -> tryAdd(impl, "local file system"));
         }
         catch (Exception e) {
-          log.error(e, "Failed to load extension [%s]", serviceClass.getName());
           throw new RuntimeException(e);
         }
       }
@@ -422,7 +421,6 @@ public class Initialization
         new IndexingServiceDiscoveryModule(),
         new CoordinatorDiscoveryModule(),
         new LocalDataStorageDruidModule(),
-        new TombstoneDataStorageModule(),
         new FirehoseModule(),
         new JavaScriptModule(),
         new AuthenticatorModule(),
@@ -522,7 +520,7 @@ public class Initialization
                                            .collect(Collectors.toSet());
       boolean shouldLoad = rolesPredicate.stream().anyMatch(nodeRoles::contains);
       if (!shouldLoad) {
-        log.info(
+        log.debug(
             "Not loading module [%s] - excluded per LoadScope",
             object.getClass().getName());
       }

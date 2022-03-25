@@ -55,7 +55,7 @@ public class DruidNode
    * Default is false, which means binding to all interfaces.
    */
   @JsonProperty
-  private boolean bindOnHost = false;
+  private boolean bindOnHost;
 
   /**
    * This property is now deprecated, this is present just so that JsonConfigurator does not fail if this is set.
@@ -78,7 +78,7 @@ public class DruidNode
   private int tlsPort = -1;
 
   @JsonProperty
-  private boolean enableTlsPort = false;
+  private boolean enableTlsPort;
 
   public DruidNode(
       String serviceName,

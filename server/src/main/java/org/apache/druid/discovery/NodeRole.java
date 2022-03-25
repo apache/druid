@@ -48,6 +48,12 @@ import java.util.stream.Collectors;
  *
  * These abstractions can all potentially be merged when Druid updates to Jackson 2.9 that supports JsonAliases,
  * see https://github.com/apache/druid/issues/7152.
+ *
+ * Extensions can define a custom node role. By default, such roles are not visible from the
+ * REST APIs or in the system tables. To make a custom role visible, register it using
+ * {@link NodeRoles#addRole(com.google.inject.Binder, NodeRole)}. The extension must be loaded
+ * in the Broker, Coordinator and Router for the API code to see the custom node role defined
+ * above.
  */
 public class NodeRole
 {

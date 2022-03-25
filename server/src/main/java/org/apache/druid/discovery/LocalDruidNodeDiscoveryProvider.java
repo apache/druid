@@ -39,21 +39,21 @@ import java.util.function.BooleanSupplier;
  * necessary to coordinate the active state with ongoing node
  * discovery and listener registrations. Such a "global" lock
  * is fine because the actions don't occur frequently, nor do the
- * actions take much time.
+ * actions take much time. For this same reason, we use plain old
+ * Java synchronization rather than a fancier locking mechanism.
+ * <p>
+ * At present, this class is used in unit tests so that it is
+ * possible to simulate cluster membership changes without actually running
+ * ZK, etc. The class can become the primary provider if/when Druid
+ * can run all services in a single process: in that case, we won't
+ * need ZK to tell the in-process services about each other.
  */
 public class LocalDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider implements DruidNodeAnnouncer
 {
   private class RoleEntry implements DruidNodeDiscovery
   {
-    @SuppressWarnings("unused")
-    private final NodeRole role;
     private final Map<DruidNode, DiscoveryDruidNode> nodes = new HashMap<>();
     private final List<Listener> listeners = new ArrayList<>();
-
-    private RoleEntry(NodeRole role)
-    {
-      this.role = role;
-    }
 
     private void register(DiscoveryDruidNode node)
     {
@@ -86,13 +86,15 @@ public class LocalDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider 
     }
 
     @Override
-    public synchronized Collection<DiscoveryDruidNode> getAllNodes()
+    public Collection<DiscoveryDruidNode> getAllNodes()
     {
-      return new ArrayList<>(nodes.values());
+      synchronized (LocalDruidNodeDiscoveryProvider.this) {
+        return new ArrayList<>(nodes.values());
+      }
     }
 
     @Override
-    public synchronized void registerListener(Listener listener)
+    public void registerListener(Listener listener)
     {
       synchronized (LocalDruidNodeDiscoveryProvider.this) {
         listeners.add(listener);
@@ -105,7 +107,9 @@ public class LocalDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider 
 
     private synchronized boolean contains(DruidNode node)
     {
-      return nodes.containsKey(node);
+      synchronized (LocalDruidNodeDiscoveryProvider.this) {
+        return nodes.containsKey(node);
+      }
     }
   }
 
@@ -143,7 +147,7 @@ public class LocalDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider 
 
   public RoleEntry entry(NodeRole nodeRole)
   {
-    return roles.computeIfAbsent(nodeRole, role -> new RoleEntry(role));
+    return roles.computeIfAbsent(nodeRole, role -> new RoleEntry());
   }
 
   @Override

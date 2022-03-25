@@ -31,7 +31,6 @@ import java.io.IOException;
  * (That is, it is non-concurrent.) Clients of this code should convert the
  * context to concurrent if it will be used across threads.
  */
-@SuppressWarnings("serial")
 public class ResponseContextDeserializer extends StdDeserializer<ResponseContext>
 {
   public ResponseContextDeserializer()

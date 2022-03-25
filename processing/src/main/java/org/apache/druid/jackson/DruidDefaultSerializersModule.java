@@ -42,7 +42,6 @@ import java.nio.ByteOrder;
 /**
  *
  */
-@SuppressWarnings("serial")
 public class DruidDefaultSerializersModule extends SimpleModule
 {
   @SuppressWarnings("rawtypes")

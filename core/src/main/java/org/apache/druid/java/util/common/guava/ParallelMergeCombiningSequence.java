@@ -265,7 +265,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    * {@link MergeCombineAction} do a final merge combine of all the parallel computed results, again pushing
    * {@link ResultBatch} into a {@link BlockingQueue} with a {@link QueuePusher}.
    */
-  @SuppressWarnings("serial")
   private static class MergeCombinePartitioningAction<T> extends RecursiveAction
   {
     private final List<Sequence<T>> sequences;
@@ -502,7 +501,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    * how many times a task has continued executing, and utilized to compute a cumulative moving average of task run time
    * per amount yielded in order to 'smooth' out the continual adjustment.
    */
-  @SuppressWarnings("serial")
   private static class MergeCombineAction<T> extends RecursiveAction
   {
     private final PriorityQueue<BatchedResultsCursor<T>> pQueue;
@@ -685,7 +683,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    * majority of its time will be spent managed blocking until results are ready for each cursor, or will be incredibly
    * short lived if all inputs are already available.
    */
-  @SuppressWarnings("serial")
   private static class PrepareMergeCombineInputsAction<T> extends RecursiveAction
   {
     private final List<BatchedResultsCursor<T>> partition;

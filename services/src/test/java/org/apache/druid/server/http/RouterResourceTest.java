@@ -52,8 +52,7 @@ public class RouterResourceTest
   }
 
   /**
-   * Verify that the /cluster endpoint works, and includes
-   * extension roles.
+   * Verify that the /cluster endpoint works, and includes extension roles.
    */
   @Test
   public void testCluster()

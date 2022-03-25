@@ -66,6 +66,7 @@ public class CliCustomNodeRole extends ServerRunnable
   public static final String SERVICE_NAME = "custom-node-role";
   public static final int PORT = 9301;
   public static final int TLS_PORT = 9501;
+  public static final NodeRole NODE_ROLE = new NodeRole(CliCustomNodeRole.SERVICE_NAME);
 
   public CliCustomNodeRole()
   {
@@ -75,7 +76,7 @@ public class CliCustomNodeRole extends ServerRunnable
   @Override
   protected Set<NodeRole> getNodeRoles(Properties properties)
   {
-    return ImmutableSet.of(new NodeRole(CliCustomNodeRole.SERVICE_NAME));
+    return ImmutableSet.of(NODE_ROLE);
   }
 
   @Override

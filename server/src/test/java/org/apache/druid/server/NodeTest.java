@@ -30,42 +30,24 @@ public class NodeTest
   @Test
   public void testNode()
   {
-    Node node = new Node("host", "service", 80, 81);
+    DruidNode druidNode = new DruidNode("service", "host", true, 80, 81, true, true);
+    Node node = new Node(druidNode);
     assertEquals("host", node.getHost());
     assertEquals("service", node.getService());
     assertEquals((Integer) 80, node.getPlaintextPort());
     assertEquals((Integer) 81, node.getTlsPort());
     assertEquals(node, node);
 
-    Node node2 = new Node("host", "service", null, null);
-    assertNull(node2.getPlaintextPort());
+    DruidNode druidNode2 = new DruidNode("service", "host", true, 80, 81, true, false);
+    Node node2 = new Node(druidNode2);
+    assertEquals((Integer) 80, node2.getPlaintextPort());
     assertNull(node2.getTlsPort());
     assertNotEquals(node, node2);
-  }
 
-  @Test
-  public void testFromDruidNode()
-  {
-    DruidNode druidNode = new DruidNode("service", "host", true, 80, 81, true, true);
-    Node node = Node.from(druidNode);
-    assertEquals("host", node.getHost());
-    assertEquals("service", node.getService());
-    assertEquals((Integer) 80, node.getPlaintextPort());
+    DruidNode druidNode3 = new DruidNode("service", "host", true, 80, 81, false, true);
+    Node node3 = new Node(druidNode3);
+    assertNull(node3.getPlaintextPort());
     assertEquals((Integer) 81, node.getTlsPort());
-
-    druidNode = new DruidNode("service", "host", true, 80, 81, false, true);
-    node = Node.from(druidNode);
-    assertEquals("host", node.getHost());
-    assertEquals("service", node.getService());
-    assertNull(node.getPlaintextPort());
-    assertEquals((Integer) 81, node.getTlsPort());
-
-    druidNode = new DruidNode("service", "host", true, 80, 81, true, false);
-    node = Node.from(druidNode);
-    assertEquals("host", node.getHost());
-    assertEquals("service", node.getService());
-    assertEquals((Integer) 80, node.getPlaintextPort());
-    assertNull(node.getTlsPort());
+    assertNotEquals(node, node2);
   }
-
 }

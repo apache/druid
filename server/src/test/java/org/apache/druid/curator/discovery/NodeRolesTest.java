@@ -83,7 +83,7 @@ public class NodeRolesTest
     Collection<Node> nodes = NodeRoles.getNodesForRole(provider, NodeRole.BROKER);
     assertEquals(1, nodes.size());
     Node node = Iterators.getOnlyElement(nodes.iterator());
-    assertEquals(node, Node.from(druidNode));
+    assertEquals(node, new Node(druidNode));
     assertEquals(node, Iterators.getOnlyElement(
         NodeRoles.getNodes(provider, NodeRole.BROKER, false).iterator()));
 
