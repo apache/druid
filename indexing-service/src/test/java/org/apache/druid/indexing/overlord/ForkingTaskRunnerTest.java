@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
@@ -48,9 +49,13 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ForkingTaskRunnerTest
 {
+
+  static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
   // This tests the test to make sure the test fails when it should.
   @Test(expected = AssertionError.class)
   public void testPatternMatcherFailureForJavaOptions()
@@ -355,12 +360,27 @@ public class ForkingTaskRunnerTest
   }
 
   @Test
-  public void testJavaOptsAndJavaOptsArrayOverride() throws ExecutionException, InterruptedException
+  public void testJavaOptsAndJavaOptsArrayOverride() throws ExecutionException, InterruptedException,
+                                                            JsonProcessingException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
-    String javaOpts = "-Xmx1g -Xms1g";
-    List<String> javaOptsArray = ImmutableList.of("-Xmx10g", "-Xms10g");
-    Task task = NoopTask.create().withJavaOptsContext(javaOpts, javaOptsArray);
+    final String taskContent = "{\n"
+                               + "  \"type\" : \"noop\",\n"
+                               + "  \"id\" : \"noop_2022-03-25T05:17:34.929Z_3a074de1-74b8-4f6e-84b5-67996144f9ac\",\n"
+                               + "  \"groupId\" : \"noop_2022-03-25T05:17:34.929Z_3a074de1-74b8-4f6e-84b5-67996144f9ac\",\n"
+                               + "  \"dataSource\" : \"none\",\n"
+                               + "  \"runTime\" : 2500,\n"
+                               + "  \"isReadyTime\" : 0,\n"
+                               + "  \"isReadyResult\" : \"YES\",\n"
+                               + "  \"firehose\" : null,\n"
+                               + "  \"context\" : {\n"
+                               + "    \"druid.indexer.runner.javaOptsArray\" : [ \"-Xmx10g\", \"-Xms10g\" ],\n"
+                               + "    \"druid.indexer.runner.javaOpts\" : \"-Xmx1g -Xms1g\"\n"
+                               + "  }\n"
+                               + "}";
+    final Task task = OBJECT_MAPPER.readValue(taskContent, NoopTask.class);
+    final AtomicInteger xmxJavaOptsIndex = new AtomicInteger(-1);
+    final AtomicInteger xmxJavaOptsArrayIndex = new AtomicInteger(-1);
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
         new ForkingTaskRunnerConfig(),
         new TaskConfig(
@@ -386,44 +406,85 @@ public class ForkingTaskRunnerTest
     )
     {
       @Override
-      ProcessHolder runTaskProcess(List<String> command, File logFile, TaskLocation taskLocation) throws IOException
+      ProcessHolder runTaskProcess(List<String> command, File logFile, TaskLocation taskLocation)
       {
-        ProcessHolder processHolder = Mockito.mock(ProcessHolder.class);
-        Mockito.doNothing().when(processHolder).registerWithCloser(ArgumentMatchers.any());
-        Mockito.doNothing().when(processHolder).shutdown();
+        xmxJavaOptsIndex.set(command.indexOf("-Xmx1g"));
+        xmxJavaOptsArrayIndex.set(command.indexOf("-Xmx10g"));
 
-        int xmxJavaOptsIndex = 0;
-        int xmxJavaOptsArrayIndex = 0;
-        String statusPath = "status.json";
-        for (int i = 0; i < command.size(); i++) {
-          if (command.get(i).endsWith("status.json")) {
-            statusPath = command.get(i);
-          }
-
-          if ("-Xmx1g".equals(command.get(i))) {
-            xmxJavaOptsIndex = i;
-          }
-          if ("-Xmx10g".equals(command.get(i))) {
-            xmxJavaOptsArrayIndex = i;
-          }
-        }
-        if (0 < xmxJavaOptsIndex && xmxJavaOptsIndex < xmxJavaOptsArrayIndex) {
-          mapper.writeValue(new File(statusPath), TaskStatus.success(task.getId()));
-        } else {
-          mapper.writeValue(new File(statusPath), TaskStatus.failure(task.getId(), "javaOpts or javaOptsArray override failed"));
-        }
-
-        return processHolder;
+        return Mockito.mock(ProcessHolder.class);
       }
 
       @Override
       int waitForTaskProcessToComplete(Task task, ProcessHolder processHolder, File logFile, File reportsFile)
       {
-        return 0;
+        return 1;
       }
     };
 
-    final TaskStatus status = forkingTaskRunner.run(task).get();
-    Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
+    forkingTaskRunner.run(task).get();
+    Assert.assertTrue(xmxJavaOptsArrayIndex.get() > xmxJavaOptsIndex.get());
+    Assert.assertTrue(xmxJavaOptsIndex.get() >= 0);
+  }
+
+  @Test
+  public void testInvalidTaskContextJavaOptsArray() throws JsonProcessingException
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    final String taskContent = "{\n"
+                               + "  \"type\" : \"noop\",\n"
+                               + "  \"id\" : \"noop_2022-03-25T05:17:34.929Z_3a074de1-74b8-4f6e-84b5-67996144f9ac\",\n"
+                               + "  \"groupId\" : \"noop_2022-03-25T05:17:34.929Z_3a074de1-74b8-4f6e-84b5-67996144f9ac\",\n"
+                               + "  \"dataSource\" : \"none\",\n"
+                               + "  \"runTime\" : 2500,\n"
+                               + "  \"isReadyTime\" : 0,\n"
+                               + "  \"isReadyResult\" : \"YES\",\n"
+                               + "  \"firehose\" : null,\n"
+                               + "  \"context\" : {\n"
+                               + "    \"druid.indexer.runner.javaOptsArray\" : \"not a string array\",\n"
+                               + "    \"druid.indexer.runner.javaOpts\" : \"-Xmx1g -Xms1g\"\n"
+                               + "  }\n"
+                               + "}";
+    final Task task = OBJECT_MAPPER.readValue(taskContent, NoopTask.class);
+    ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
+        new ForkingTaskRunnerConfig(),
+        new TaskConfig(
+            null,
+            null,
+            null,
+            null,
+            ImmutableList.of(),
+            false,
+            new Period("PT0S"),
+            new Period("PT10S"),
+            ImmutableList.of(),
+            false,
+            false,
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        ),
+        new WorkerConfig(),
+        new Properties(),
+        new NoopTaskLogs(),
+        mapper,
+        new DruidNode("middleManager", "host", false, 8091, null, true, false),
+        new StartupLoggingConfig()
+    )
+    {
+      @Override
+      ProcessHolder runTaskProcess(List<String> command, File logFile, TaskLocation taskLocation)
+      {
+        return Mockito.mock(ProcessHolder.class);
+      }
+
+      @Override
+      int waitForTaskProcessToComplete(Task task, ProcessHolder processHolder, File logFile, File reportsFile)
+      {
+        return 1;
+      }
+    };
+
+    ExecutionException e = Assert.assertThrows(ExecutionException.class, () -> forkingTaskRunner.run(task).get());
+    Assert.assertTrue(e.getMessage().endsWith(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY
+                                              + " in context of task: " + task.getId() + " must be an array of strings.")
+    );
   }
 }

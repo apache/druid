@@ -36,7 +36,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -178,7 +177,7 @@ public class NoopTask extends AbstractTask
     return new NoopTask(null, groupId, null, 0, 0, null, null, null);
   }
 
-  public NoopTask withJavaOptsContext(String javaOpts, List<String> javaOptsArray)
+  public NoopTask withJavaOptsContext(Object javaOpts, Object javaOptsArray)
   {
     Map<String, Object> context = new HashMap<>(getContext());
     context.put(ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY, javaOpts);
