@@ -19,7 +19,7 @@
 import { Button, ButtonGroup, Icon, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import { SqlExpression, SqlLiteral, SqlRef } from 'druid-query-toolkit';
+import { SqlComparison, SqlExpression, SqlLiteral, SqlRef } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
@@ -271,7 +271,16 @@ END AS "time_span"`,
 
         if (capabilities.hasSql()) {
           const whereParts = filterMap(filtered, (f: Filter) => {
-            if (f.id.startsWith('is_')) {
+            if (f.id === 'shard_type') {
+              // Special handling for shard_type that needs to be search in the shard_spec
+              // Creates filters like `shard_spec LIKE '%"type":"numbered"%'`
+              const needleAndMode = getNeedleAndMode(f);
+              const closingQuote = needleAndMode.mode === 'exact' ? '"' : '';
+              return SqlComparison.like(
+                SqlRef.column('shard_spec'),
+                `%"type":"${needleAndMode.needle}${closingQuote}%`,
+              );
+            } else if (f.id.startsWith('is_')) {
               if (f.value === 'all') return;
               return SqlRef.columnWithQuotes(f.id).equal(f.value === 'true' ? 1 : 0);
             } else {
@@ -583,19 +592,18 @@ END AS "time_span"`,
             Header: 'Shard type',
             show: visibleColumns.shown('Shard type'),
             id: 'shard_type',
-            accessor: 'shard_spec',
             width: 100,
             sortable: false,
-            filterable: false,
-            Cell: ({ value }) => {
+            accessor: d => {
               let v: any;
               try {
-                v = JSON.parse(value);
+                v = JSONBig.parse(d.shard_spec);
               } catch {}
 
               if (typeof v?.type !== 'string') return '-';
               return v?.type;
             },
+            Cell: renderFilterableCell('shard_type'),
           },
           {
             Header: 'Shard spec',
@@ -673,7 +681,7 @@ END AS "time_span"`,
                 case 'tombstone':
                   return (
                     <div className="spec-detail" onClick={onShowFullShardSpec}>
-                      no detail{fullShardIcon}
+                      No detail{fullShardIcon}
                     </div>
                   );
 

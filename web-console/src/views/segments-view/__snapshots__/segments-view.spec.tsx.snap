@@ -200,8 +200,7 @@ exports[`SegmentsView matches snapshot 1`] = `
           Object {
             "Cell": [Function],
             "Header": "Shard type",
-            "accessor": "shard_spec",
-            "filterable": false,
+            "accessor": [Function],
             "id": "shard_type",
             "show": true,
             "sortable": false,
