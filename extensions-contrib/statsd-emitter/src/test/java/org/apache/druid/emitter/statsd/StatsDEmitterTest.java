@@ -20,6 +20,7 @@
 package org.apache.druid.emitter.statsd;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.timgroup.statsd.Event;
 import com.timgroup.statsd.StatsDClient;
@@ -225,6 +226,25 @@ public class StatsDEmitterTest
     Assert.assertEquals(expectedEvent.getAlertType(), actualEvent.getAlertType());
     Assert.assertEquals(expectedEvent.getTitle(), actualEvent.getTitle());
     Assert.assertEquals(expectedEvent.getText(), actualEvent.getText());
+  }
+
+  @Test
+  public void testInitialization()
+  {
+    final StatsDEmitterConfig config = new StatsDEmitterConfig(
+        "localhost",
+        8888,
+        "druid",
+        "-",
+        true,
+        null,
+        null,
+        true,
+        ImmutableList.of("tag1", "value1"),
+        true,
+        true
+    );
+    try (StatsDEmitter emitter = StatsDEmitter.of(config, new ObjectMapper()));
   }
 
   @Test
