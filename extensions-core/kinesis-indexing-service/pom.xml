@@ -135,7 +135,6 @@
             <groupId>com.amazonaws</groupId>
             <artifactId>amazon-kinesis-client</artifactId>
             <version>1.9.2</version>
-            <scope>provided</scope>
         </dependency>
 
         <!-- Tests -->
