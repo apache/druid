@@ -25,9 +25,7 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Multimap;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.Union;
 import org.apache.datasketches.memory.Memory;
@@ -57,9 +55,6 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistributionMerger;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketchMerger;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -786,7 +781,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   TaskStatus runRangePartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
   {
     ParallelIndexIngestionSpec ingestionSchemaToUse = ingestionSchema;
-    ParallelIndexTaskRunner<PartialDimensionDistributionTask, DimensionDistributionReport> distributionRunner =
+    PartialDimensionDistributionParallelIndexTaskRunner distributionRunner =
+        (PartialDimensionDistributionParallelIndexTaskRunner)
         createRunner(
             toolbox,
             this::createPartialDimensionDistributionRunner
@@ -798,14 +794,26 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       return TaskStatus.failure(getId(), errMsg);
     }
 
-    Map<Interval, PartitionBoundaries> intervalToPartitions =
-        determineAllRangePartitions(distributionRunner.getReports().values());
-
-    if (intervalToPartitions.isEmpty()) {
-      String msg = "No valid rows for single dimension partitioning."
-                   + " All rows may have invalid timestamps or multiple dimension values.";
-      LOG.warn(msg);
-      return TaskStatus.success(getId(), msg);
+    // Get the partition boundaries for each interval
+    final Map<Interval, PartitionBoundaries> intervalToPartitions;
+    try {
+      intervalToPartitions = distributionRunner.getIntervalToPartitionBoundaries(
+          (DimensionRangePartitionsSpec) ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec()
+      );
+      if (intervalToPartitions.isEmpty()) {
+        String msg = "No valid rows for range partitioning."
+                     + " All rows may have invalid timestamps or multiple dimension values.";
+        LOG.warn(msg);
+        return TaskStatus.success(getId(), msg);
+      }
+    }
+    catch (Exception e) {
+      String errorMsg = "Error creating partition boundaries.";
+      if (distributionRunner.getStopReason() != null) {
+        errorMsg += " " + distributionRunner.getStopReason();
+      }
+      LOG.error(e, errorMsg);
+      return TaskStatus.failure(getId(), errorMsg);
     }
 
     ingestionSchemaToUse = rewriteIngestionSpecWithIntervalsIfMissing(
@@ -908,37 +916,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           }
         }
     );
-  }
-
-  private Map<Interval, PartitionBoundaries> determineAllRangePartitions(Collection<DimensionDistributionReport> reports)
-  {
-    Multimap<Interval, StringDistribution> intervalToDistributions = ArrayListMultimap.create();
-    reports.forEach(report -> {
-      Map<Interval, StringDistribution> intervalToDistribution = report.getIntervalToDistribution();
-      intervalToDistribution.forEach(intervalToDistributions::put);
-    });
-
-    return CollectionUtils.mapValues(intervalToDistributions.asMap(), this::determineRangePartition);
-  }
-
-  private PartitionBoundaries determineRangePartition(Collection<StringDistribution> distributions)
-  {
-    StringDistributionMerger distributionMerger = new StringSketchMerger();
-    distributions.forEach(distributionMerger::merge);
-    StringDistribution mergedDistribution = distributionMerger.getResult();
-
-    DimensionRangePartitionsSpec partitionsSpec =
-        (DimensionRangePartitionsSpec) ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec();
-
-    final PartitionBoundaries partitions;
-    Integer targetRowsPerSegment = partitionsSpec.getTargetRowsPerSegment();
-    if (targetRowsPerSegment == null) {
-      partitions = mergedDistribution.getEvenPartitionsByMaxSize(partitionsSpec.getMaxRowsPerSegment());
-    } else {
-      partitions = mergedDistribution.getEvenPartitionsByTargetSize(targetRowsPerSegment);
-    }
-
-    return partitions;
   }
 
   /**

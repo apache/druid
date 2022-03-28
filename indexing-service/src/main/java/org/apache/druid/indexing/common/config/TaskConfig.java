@@ -76,6 +76,7 @@ public class TaskConfig
 
   private static final Period DEFAULT_DIRECTORY_LOCK_TIMEOUT = new Period("PT10M");
   private static final Period DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = new Period("PT5M");
+  private static final boolean DEFAULT_STORE_EMPTY_COLUMNS = true;
 
   @JsonProperty
   private final String baseDir;
@@ -113,6 +114,9 @@ public class TaskConfig
   @JsonProperty
   private final BatchProcessingMode batchProcessingMode;
 
+  @JsonProperty
+  private final boolean storeEmptyColumns;
+
   @JsonCreator
   public TaskConfig(
       @JsonProperty("baseDir") String baseDir,
@@ -126,7 +130,8 @@ public class TaskConfig
       @JsonProperty("shuffleDataLocations") List<StorageLocationConfig> shuffleDataLocations,
       @JsonProperty("ignoreTimestampSpecForDruidInputSource") boolean ignoreTimestampSpecForDruidInputSource,
       @JsonProperty("batchMemoryMappedIndex") boolean batchMemoryMappedIndex, // deprecated, only set to true to fall back to older behavior
-      @JsonProperty("batchProcessingMode") String batchProcessingMode
+      @JsonProperty("batchProcessingMode") String batchProcessingMode,
+      @JsonProperty("storeEmptyColumns") @Nullable Boolean storeEmptyColumns
   )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
@@ -168,7 +173,8 @@ public class TaskConfig
                batchProcessingMode, this.batchProcessingMode
       );
     }
-    log.info("Batch processing mode:[%s]", this.batchProcessingMode);
+    log.debug("Batch processing mode:[%s]", this.batchProcessingMode);
+    this.storeEmptyColumns = storeEmptyColumns == null ? DEFAULT_STORE_EMPTY_COLUMNS : storeEmptyColumns;
   }
 
   @JsonProperty
@@ -267,6 +273,11 @@ public class TaskConfig
     return batchMemoryMappedIndex;
   }
 
+  @JsonProperty
+  public boolean isStoreEmptyColumns()
+  {
+    return storeEmptyColumns;
+  }
 
   private String defaultDir(@Nullable String configParameter, final String defaultVal)
   {

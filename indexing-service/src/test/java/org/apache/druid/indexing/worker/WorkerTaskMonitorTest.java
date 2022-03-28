@@ -48,7 +48,7 @@ import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
@@ -88,14 +88,14 @@ public class WorkerTaskMonitorTest
   private Worker worker;
   private final TestUtils testUtils;
   private ObjectMapper jsonMapper;
-  private IndexMergerV9 indexMergerV9;
+  private IndexMergerV9Factory indexMergerV9Factory;
   private IndexIO indexIO;
 
   public WorkerTaskMonitorTest()
   {
     testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
-    indexMergerV9 = testUtils.getTestIndexMergerV9();
+    indexMergerV9Factory = testUtils.getIndexMergerV9Factory();
     indexIO = testUtils.getTestIndexIO();
   }
 
@@ -165,7 +165,8 @@ public class WorkerTaskMonitorTest
         null,
         false,
         false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null
     );
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
     TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
@@ -197,7 +198,7 @@ public class WorkerTaskMonitorTest
                 null,
                 null,
                 null,
-                indexMergerV9,
+                indexMergerV9Factory,
                 null,
                 null,
                 null,

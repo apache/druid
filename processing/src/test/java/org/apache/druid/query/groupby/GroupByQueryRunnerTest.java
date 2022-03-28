@@ -33,6 +33,7 @@ import com.google.common.collect.Sets;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -82,6 +83,7 @@ import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
+import org.apache.druid.query.aggregation.mean.DoubleMeanAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
@@ -5882,6 +5884,33 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testDoubleMeanQuery()
+  {
+    GroupByQuery query = new GroupByQuery.Builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setGranularity(Granularities.ALL)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setAggregatorSpecs(
+            new DoubleMeanAggregatorFactory("meanOnDouble", "doubleNumericNull")
+        )
+        .build();
+
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(ISE.class);
+      expectedException.expectMessage("Unable to handle complex type");
+      GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    } else {
+      Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+      Row result = Iterables.getOnlyElement(results).toMapBasedRow(query);
+      if (NullHandling.replaceWithDefault()) {
+        Assert.assertEquals(39.2307d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
+      } else {
+        Assert.assertEquals(51.0d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
+      }
+    }
+  }
+
+  @Test
   public void testGroupByTimeExtractionNamedUnderUnderTime()
   {
     expectedException.expect(IAE.class);
@@ -11174,6 +11203,76 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
+  }
+
+  @Test
+  public void testMergeLimitPushDownResultsWithLongDimensionNotInLimitSpec()
+  {
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
+    if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
+      return;
+    }
+    GroupByQuery.Builder builder = makeQueryBuilder()
+            .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+            .setInterval("2011-04-02/2011-04-04")
+            .setDimensions(new ExtractionDimensionSpec("quality", "qualityLen", ColumnType.LONG, StrlenExtractionFn.instance()))
+            .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+            .setLimitSpec(
+                    new DefaultLimitSpec(
+                            Collections.emptyList(),
+                            20
+                    )
+            )
+            .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
+            .setGranularity(Granularities.ALL);
+
+    final GroupByQuery allGranQuery = builder.build();
+
+    QueryRunner mergedRunner = factory.getToolchest().mergeResults(
+        (queryPlus, responseContext) -> {
+          // simulate two daily segments
+          final QueryPlus<ResultRow> queryPlus1 = queryPlus.withQuery(
+                  queryPlus.getQuery().withQuerySegmentSpec(
+                          new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+                  )
+          );
+          final QueryPlus<ResultRow> queryPlus2 = queryPlus.withQuery(
+                  queryPlus.getQuery().withQuerySegmentSpec(
+                          new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+                  )
+          );
+
+          return factory.getToolchest().mergeResults(
+              (queryPlus3, responseContext1) -> new MergeSequence<>(
+                  queryPlus3.getQuery().getResultOrdering(),
+                  Sequences.simple(
+                      Arrays.asList(
+                          runner.run(queryPlus1, responseContext1),
+                          runner.run(queryPlus2, responseContext1)
+                      )
+                  )
+              )
+          ).run(queryPlus, responseContext);
+        }
+    );
+    Map<String, Object> context = new HashMap<>();
+    List<ResultRow> allGranExpectedResults = Arrays.asList(
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 4L, "rows", 2L),
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 6L, "rows", 4L),
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 7L, "rows", 6L),
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 8L, "rows", 2L),
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 9L, "rows", 6L),
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 10L, "rows", 4L),
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 13L, "rows", 2L)
+    );
+
+    TestHelper.assertExpectedObjects(
+            allGranExpectedResults,
+            mergedRunner.run(QueryPlus.wrap(allGranQuery)),
+            "merged"
+    );
   }
 
   @Test

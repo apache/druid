@@ -113,7 +113,7 @@ public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
                 null
             )
         ),
-        mmap ? 800544 : 803324,
+        mmap ? 805380 : 803324,
         4836,
         null,
         null,
