@@ -134,7 +134,7 @@
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>amazon-kinesis-client</artifactId>
-            <version>1.9.2</version>
+            <version>1.14.4</version>
         </dependency>
 
         <!-- Tests -->
