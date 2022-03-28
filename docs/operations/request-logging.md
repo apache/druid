@@ -23,7 +23,7 @@ sidebar_label: Request logging
   ~ under the License.
   -->
 
-All Apache Druid services that can serve queries can also log the query requests they see.
+All Apache Druid services that can serve queries can also log the query requests they process.
 Request logs contain information on query metrics, including execution time and memory usage.
 You can use information in the request logs to monitor query performance, determine bottlenecks, and analyze and improve slow queries.
 
@@ -54,7 +54,7 @@ If you use emitter request logging, you must also configure metrics emission.
 
 ## Configure metrics emission
 
-Druid emits metrics and alerts via an emitter. 
+Druid includes various emitters to send metrics and alerts. 
 To emit query metrics, set `druid.request.logging.feed=emitter`, and define the emitter type in the `druid.emitter` property.
 
 You can use any of the following emitters in Druid:
@@ -87,7 +87,7 @@ druid.emitter.http.recipientBaseUrl=http://example.com:8080/path
 druid.emitter.http.basicAuthentication=username:password
 ```
 
-The following output shows an example of the emitted information:
+The following shows an example log emitter output:
 ```
 [
     {

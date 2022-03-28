@@ -282,7 +282,7 @@ For SQL query request, the `native_query` field is empty. Example
 
 #### Emitter request logging
 
-The `emitter` request logger emits every request to some external location, which is configured through an [emitter](#enabling-metrics).
+The `emitter` request logger emits every request to the external location specified in the [emitter](#enabling-metrics) configuration.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -290,12 +290,12 @@ The `emitter` request logger emits every request to some external location, whic
 
 #### SLF4J request logging
 
-The `slf4j` request logger logs every request via  SLF4J. Native queries are serialized into JSON in the log message regardless of the SLF4J format specification. Requests are logged under the class `org.apache.druid.server.log.LoggingRequestLogger`.
+The `slf4j` request logger logs every request using SLF4J. It serializes native queries into JSON in the log message regardless of the SLF4J format specification. Requests are logged under the class `org.apache.druid.server.log.LoggingRequestLogger`.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.request.logging.setMDC`|If MDC entries should be set in the log entry. Your logging setup still has to be configured to handle MDC to format this data.|false|
-|`druid.request.logging.setContextMDC`|If the Druid query `context` should be added to the MDC entries. Has no effect unless `setMDC` is `true`.|false|
+|`druid.request.logging.setMDC`|If you want to set MDC entries within the log entry, set this value to `true`. Your logging system must be configured to support MDC in order to format this data.|false|
+|`druid.request.logging.setContextMDC`|Set to "true" to add  the Druid query `context` to the MDC entries. Only applies when `setMDC` is `true`.|false|
 
 For a native query, the following MDC fields are populated when `setMDC` is `true`:
 
@@ -314,8 +314,8 @@ For a native query, the following MDC fields are populated when `setMDC` is `tru
 #### Filtered request logging
 
 The `filtered` request logger filters requests based on the query type or how long a query takes to complete.
-For native queries, requests are only logged when the `query/time` metric is above the user-provided threshold.
-For SQL queries, requests are only logged when the `sqlQuery/time` metric is above the user-provided threshold.
+For native queries, the logger only logs requests when the `query/time` metric exceeds the threshold provided in `queryTimeThresholdMs`.
+For SQL queries, it only logs requests when the `sqlQuery/time` metric exceeds threshold provided in `sqlQueryTimeThresholdMs`.
 See [Metrics](../operations/metrics.md) for more details on query metrics.
 
 Requests that meet the threshold are logged using the request logger type set in `druid.request.logging.delegate.type`.
@@ -465,7 +465,7 @@ Instead use `recipientBaseUrlPattern` described in the table below.
 
 ##### Graphite Emitter
 
-To use graphite as emitter set `druid.emitter=graphite`. For configuration details, see the [documentation](../development/extensions-contrib/graphite.md) for the Graphite emitter Druid extension.
+To use graphite as emitter set `druid.emitter=graphite`. For configuration details, see [Graphite emitter](../development/extensions-contrib/graphite.md) for the Graphite emitter Druid extension.
 
 
 ### Metadata storage
