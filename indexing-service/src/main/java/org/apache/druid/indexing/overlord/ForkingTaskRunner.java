@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
@@ -216,6 +217,24 @@ public class ForkingTaskRunner
                           Iterables.addAll(
                               command,
                               new QuotableWhiteSpaceSplitter((String) taskJavaOpts)
+                          );
+                        }
+
+                        // Override task specific javaOptsArray
+                        try {
+                          List<String> taskJavaOptsArray = jsonMapper.convertValue(
+                              task.getContextValue(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY),
+                              new TypeReference<List<String>>() {}
+                          );
+                          if (taskJavaOptsArray != null) {
+                            Iterables.addAll(command, taskJavaOptsArray);
+                          }
+                        }
+                        catch (Exception e) {
+                          throw new IllegalArgumentException(
+                              ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY
+                              + " in context of task: " + task.getId() + " must be an array of strings.",
+                              e
                           );
                         }
 
