@@ -23,7 +23,7 @@ title: "Metrics"
   -->
 
 
-You can configure Druid to [emit metrics](../configuration/index.html#enabling-metrics) that are essential for monitoring query execution, ingestion, coordination, and so on.
+You can configure Druid to [emit metrics](../configuration/index.md#enabling-metrics) that are essential for monitoring query execution, ingestion, coordination, and so on.
 
 All Druid metrics share a common set of fields:
 
@@ -37,9 +37,6 @@ Metrics may have additional dimensions beyond those listed above.
 
 > Most metric values reset each emission period, as specified in `druid.monitoring.emissionPeriod`.
 
-Available Metrics
------------------
-
 ## Query metrics
 
 ### Broker
@@ -49,18 +46,18 @@ Available Metrics
 |`query/time`|Milliseconds taken to complete a query.|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|< 1s|
 |`query/bytes`|The total number of bytes returned to the requesting client in the query response from the broker.  Other services report the total bytes for their portion of the query. |Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`. Aggregation Queries: `numMetrics`, `numComplexMetrics`. GroupBy: `numDimensions`. TopN: `threshold`, `dimension`.| |
 |`query/node/time`|Milliseconds taken to query individual historical/realtime processes.|id, status, server.|< 1s|
-|`query/node/bytes`|number of bytes returned from querying individual historical/realtime processes.|id, status, server.| |
+|`query/node/bytes`|Number of bytes returned from querying individual historical/realtime processes.|id, status, server.| |
 |`query/node/ttfb`|Time to first byte. Milliseconds elapsed until Broker starts receiving the response from individual historical/realtime processes.|id, status, server.|< 1s|
 |`query/node/backpressure`|Milliseconds that the channel to this process has spent suspended due to backpressure.|id, status, server.| |
-|`query/count`|number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/interrupted/count`|number of queries interrupted due to cancellation.|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/timeout/count`|number of timed out queries.|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/segments/count`|This metric is not enabled by default. See the `QueryMetrics` Interface for reference regarding enabling this metric. Number of segments that will be touched by the query. In the broker, it makes a plan to distribute the query to realtime tasks and historicals based on a snapshot of segment distribution state. If there are some segments moved after this snapshot is created, certain historicals and realtime tasks can report those segments as missing to the broker. The broker will re-send the query to the new servers that serve those segments after move. In this case, those segments can be counted more than once in this metric.|Varies.|
+|`query/count`|Number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/success/count`|Number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/failed/count`|Number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/interrupted/count`|Number of queries interrupted due to cancellation.|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/timeout/count`|Number of timed out queries.|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/segments/count`|This metric is not enabled by default. See the `QueryMetrics` Interface for reference regarding enabling this metric. Number of segments that will be touched by the query. In the broker, it makes a plan to distribute the query to realtime tasks and historicals based on a snapshot of segment distribution state. If there are some segments moved after this snapshot is created, certain historicals and realtime tasks can report those segments as missing to the broker. The broker will re-send the query to the new servers that serve those segments after move. In this case, those segments can be counted more than once in this metric.|Varies.||
 |`query/priority`|Assigned lane and priority, only if Laning strategy is enabled. Refer to [Laning strategies](../configuration/index.md#laning-strategies)|lane, dataSource, type|0|
 |`sqlQuery/time`|Milliseconds taken to complete a SQL query.|id, nativeQueryIds, dataSource, remoteAddress, success.|< 1s|
-|`sqlQuery/bytes`|number of bytes returned in SQL query response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
+|`sqlQuery/bytes`|Number of bytes returned in the SQL query response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
 
 ### Historical
 
@@ -72,11 +69,11 @@ Available Metrics
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
 |`query/segmentAndCache/time`|Milliseconds taken to query individual segment or hit the cache (if it is enabled on the Historical process).|id, segment.|several hundred milliseconds|
 |`query/cpu/time`|Microseconds of CPU time taken to complete a query|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|Varies|
-|`query/count`|number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/interrupted/count`|number of queries interrupted due to cancellation.|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/timeout/count`|number of timed out queries.|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/count`|Total number of queries|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/success/count`|Number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/failed/count`|Number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/interrupted/count`|Number of queries interrupted due to cancellation.|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/timeout/count`|Number of timed out queries.|This metric is only available if the QueryCountStatsMonitor module is included.||
 
 ### Real-time
 
@@ -85,11 +82,11 @@ Available Metrics
 |`query/time`|Milliseconds taken to complete a query.|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|< 1s|
 |`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|id, segment.|several hundred milliseconds|
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
-|`query/count`|number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/interrupted/count`|number of queries interrupted due to cancellation.|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/timeout/count`|number of timed out queries.|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/count`|Number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/success/count`|Number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/failed/count`|Number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/interrupted/count`|Number of queries interrupted due to cancellation.|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/timeout/count`|Number of timed out queries.|This metric is only available if the QueryCountStatsMonitor module is included.||
 
 ### Jetty
 
@@ -145,9 +142,11 @@ If SQL is enabled, the Broker will emit the following metrics for SQL.
 |`sqlQuery/time`|Milliseconds taken to complete a SQL.|id, nativeQueryIds, dataSource, remoteAddress, success.|< 1s|
 |`sqlQuery/bytes`|number of bytes returned in SQL response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
 
-## Ingestion Metrics (Kafka Indexing Service)
+## Ingestion metrics
 
-These metrics are applicable for the Kafka Indexing Service.
+### Ingestion metrics for Kafka
+
+These metrics apply to the [Kafka indexing service](../development/extensions-core/kafka-ingestion.md).
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
@@ -155,9 +154,9 @@ These metrics are applicable for the Kafka Indexing Service.
 |`ingest/kafka/maxLag`|Max lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
 |`ingest/kafka/avgLag`|Average lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
 
-## Ingestion Metrics (Kinesis Indexing Service)
+### Ingestion metrics for Kinesis
 
-These metrics are applicable for the Kinesis Indexing Service.
+These metrics apply to the [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md).
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
@@ -165,7 +164,7 @@ These metrics are applicable for the Kinesis Indexing Service.
 |`ingest/kinesis/maxLag/time`|Max lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, up to max Kinesis retention period in milliseconds |
 |`ingest/kinesis/avgLag/time`|Average lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, up to max Kinesis retention period in milliseconds |
 
-## Ingestion metrics 
+### Other ingestion metrics
 
 Streaming ingestion tasks and certain types of
 batch ingestion emit the following metrics. These metrics are deltas for each emission period.
