@@ -1966,7 +1966,8 @@ public class CompactionTaskTest
               null,
               false,
               false,
-              TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+              TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+              null
           ),
           null,
           taskActionClient,
@@ -1989,7 +1990,7 @@ public class CompactionTaskTest
           null,
           null,
           null,
-          new IndexMergerV9(OBJECT_MAPPER, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance()),
+          new IndexMergerV9(OBJECT_MAPPER, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance(), true),
           null,
           null,
           null,

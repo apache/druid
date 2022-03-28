@@ -96,7 +96,11 @@ public class ColumnDescriptor implements Serializer
     }
   }
 
-  public ColumnHolder read(ByteBuffer buffer, ColumnConfig columnConfig, SmooshedFileMapper smooshedFiles)
+  public ColumnHolder read(
+      ByteBuffer buffer,
+      ColumnConfig columnConfig,
+      SmooshedFileMapper smooshedFiles
+  )
   {
     final ColumnBuilder builder = new ColumnBuilder()
         .setType(valueType)

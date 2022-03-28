@@ -63,6 +63,7 @@ import org.apache.druid.indexing.common.task.IngestionTestBase;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
@@ -77,6 +78,8 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -139,6 +142,9 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   static final DimensionsSpec DEFAULT_DIMENSIONS_SPEC = new DimensionsSpec(
       DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim"))
   );
+  static final AggregatorFactory[] DEFAULT_METRICS_SPEC = new AggregatorFactory[]{
+      new LongSumAggregatorFactory("val", "val")
+  };
   static final ParseSpec DEFAULT_PARSE_SPEC = new CSVParseSpec(
       DEFAULT_TIMESTAMP_SPEC,
       DEFAULT_DIMENSIONS_SPEC,
@@ -252,7 +258,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)),
             false,
             false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+            null
         ),
         null
     );
@@ -646,7 +653,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         false,
         false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null
     );
 
     objectMapper.setInjectableValues(
@@ -694,7 +702,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             null,
             false,
             false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+            null
         ),
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         actionClient,
@@ -726,7 +735,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         null,
-        getIndexMerger(),
+        getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)),
         null,
         null,
         null,

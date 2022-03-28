@@ -492,11 +492,10 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   }
 
   @Override
-  public boolean canSkip()
+  public boolean hasOnlyNulls()
   {
     return cardinality == 0;
   }
-
 
   protected IndexSeeker[] toIndexSeekers(
       List<IndexableAdapter> adapters,
