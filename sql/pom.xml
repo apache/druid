@@ -54,7 +54,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.calcite</groupId>
-      <artifactId>calcite-core-shaded</artifactId>
+      <artifactId>calcite-core</artifactId>
       <exclusions>
         <!--
           ~ Calcite 1.15.0 uses sketches-core 0.9.0 for a profiling feature:
@@ -295,7 +295,7 @@
               <artifactItems>
                 <artifactItem>
                   <groupId>org.apache.calcite</groupId>
-                  <artifactId>calcite-core-shaded</artifactId>
+                  <artifactId>calcite-core</artifactId>
                   <version>${shaded.calcite.version}</version>
                   <type>jar</type>
                   <overWrite>true</overWrite>
@@ -304,7 +304,7 @@
                 </artifactItem>
                 <artifactItem>
                   <groupId>org.apache.calcite</groupId>
-                  <artifactId>calcite-core-shaded</artifactId>
+                  <artifactId>calcite-core</artifactId>
                   <version>${shaded.calcite.version}</version>
                   <type>jar</type>
                   <overWrite>true</overWrite>
