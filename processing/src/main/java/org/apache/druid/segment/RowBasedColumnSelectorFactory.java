@@ -508,8 +508,8 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
     if (capabilities != null && capabilities.is(ValueType.COMPLEX) && capabilities.getComplexTypeName() != null) {
       try {
         final ComplexTypeSerde serde = ComplexTypes.getSerdeForType(capabilities.getComplexTypeName());
-        final ComplexTypeExtractor extractor = serde.getExtractor();
         if (serde != null) {
+          final ComplexTypeExtractor<?> extractor = serde.getExtractor();
           return in -> extractor.coerceValue(adapter.columnFunction(columnName).apply(in));
         }
       }

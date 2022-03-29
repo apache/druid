@@ -72,7 +72,6 @@ import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
-import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.serde.ComplexTypes;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.joda.time.Interval;
