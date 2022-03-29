@@ -31,7 +31,7 @@ import org.apache.druid.query.aggregation.momentsketch.aggregator.MomentSketchMa
 import org.apache.druid.query.aggregation.momentsketch.aggregator.MomentSketchMergeAggregatorFactory;
 import org.apache.druid.query.aggregation.momentsketch.aggregator.MomentSketchMinPostAggregator;
 import org.apache.druid.query.aggregation.momentsketch.aggregator.MomentSketchQuantilePostAggregator;
-import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypes;
 
 import java.util.List;
 
@@ -81,6 +81,6 @@ public class MomentSketchModule implements DruidModule
   @VisibleForTesting
   public static void registerSerde()
   {
-    ComplexMetrics.registerSerde(MomentSketchAggregatorFactory.TYPE_NAME, new MomentSketchComplexMetricSerde());
+    ComplexTypes.registerSerde(MomentSketchAggregatorFactory.TYPE_NAME, new MomentSketchComplexMetricSerde());
   }
 }

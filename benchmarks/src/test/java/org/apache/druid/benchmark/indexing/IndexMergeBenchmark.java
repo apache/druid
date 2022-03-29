@@ -38,6 +38,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypes;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -117,7 +118,7 @@ public class IndexMergeBenchmark
 
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
     indexMergerV9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, getSegmentWriteOutMediumFactory(factoryType));
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexTypes.registerSerde("hyperUnique", new HyperUniquesSerde());
 
     indexesToMerge = new ArrayList<>();
 

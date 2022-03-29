@@ -71,7 +71,7 @@ import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregat
 import org.apache.druid.query.aggregation.post.JavaScriptPostAggregator;
 import org.apache.druid.query.aggregation.post.LongGreatestPostAggregator;
 import org.apache.druid.query.aggregation.post.LongLeastPostAggregator;
-import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypes;
 
 public class AggregatorsModule extends SimpleModule
 {
@@ -79,9 +79,9 @@ public class AggregatorsModule extends SimpleModule
   {
     super("AggregatorFactories");
 
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
-    ComplexMetrics.registerSerde("preComputedHyperUnique", new PreComputedHyperUniquesSerde());
-    ComplexMetrics.registerSerde("serializablePairLongString", new SerializablePairLongStringSerde());
+    ComplexTypes.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexTypes.registerSerde("preComputedHyperUnique", new PreComputedHyperUniquesSerde());
+    ComplexTypes.registerSerde("serializablePairLongString", new SerializablePairLongStringSerde());
 
     setMixInAnnotation(AggregatorFactory.class, AggregatorFactoryMixin.class);
     setMixInAnnotation(PostAggregator.class, PostAggregatorMixin.class);

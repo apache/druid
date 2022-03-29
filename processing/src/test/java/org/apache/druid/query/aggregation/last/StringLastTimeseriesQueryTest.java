@@ -43,7 +43,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
-import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypes;
 import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
@@ -67,7 +67,7 @@ public class StringLastTimeseriesQueryTest
   public void setUp() throws IndexSizeExceededException
   {
     final SerializablePairLongStringSerde serde = new SerializablePairLongStringSerde();
-    ComplexMetrics.registerSerde(serde.getTypeName(), serde);
+    ComplexTypes.registerSerde(serde.getTypeName(), serde);
 
     incrementalIndex = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(

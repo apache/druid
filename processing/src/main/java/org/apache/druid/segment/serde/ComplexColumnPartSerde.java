@@ -32,7 +32,7 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
 {
   private final String typeName;
   @Nullable
-  private final ComplexMetricSerde serde;
+  private final ComplexTypeSerde serde;
   @Nullable
   private final Serializer serializer;
   private static final Logger log = new Logger(ComplexColumnPartSerde.class);
@@ -40,7 +40,7 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
   private ComplexColumnPartSerde(String typeName, @Nullable Serializer serializer)
   {
     this.typeName = typeName;
-    this.serde = ComplexMetrics.getSerdeForType(typeName);
+    this.serde = ComplexTypes.getSerdeForType(typeName);
     if (this.serde == null) {
       // Not choosing to fail here since this gets handled as
       // an UnknownTypeComplexColumn. See SimpleColumnHolder#getColumn.

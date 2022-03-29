@@ -75,8 +75,9 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
-import org.apache.druid.segment.serde.ComplexMetricSerde;
-import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypeExtractor;
+import org.apache.druid.segment.serde.ComplexTypeSerde;
+import org.apache.druid.segment.serde.ComplexTypes;
 import org.apache.druid.segment.transform.Transformer;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -145,12 +146,12 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
           // For complex aggregators that read from multiple columns, we wrap all of them. This is not ideal but it
           // has worked so far.
           final String complexTypeName = agg.getIntermediateType().getComplexTypeName();
-          final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(complexTypeName);
+          final ComplexTypeSerde serde = ComplexTypes.getSerdeForType(complexTypeName);
           if (serde == null) {
             throw new ISE("Don't know how to handle type[%s]", complexTypeName);
           }
 
-          final ComplexMetricExtractor extractor = serde.getExtractor();
+          final ComplexTypeExtractor extractor = serde.getExtractor();
           return new ColumnValueSelector()
           {
             @Override
@@ -1003,7 +1004,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       } else if (valueType.is(ValueType.COMPLEX)) {
         capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType)
                                              .setHasNulls(ColumnCapabilities.Capable.TRUE);
-        ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(valueType.getComplexTypeName());
+        ComplexTypeSerde serde = ComplexTypes.getSerdeForType(valueType.getComplexTypeName());
         if (serde != null) {
           this.type = serde.getTypeName();
         } else {
@@ -1416,7 +1417,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     {
       this.currEntry = currEntry;
       this.metricIndex = metricIndex;
-      classOfObject = ComplexMetrics.getSerdeForType(metricDesc.getType()).getObjectStrategy().getClazz();
+      classOfObject = ComplexTypes.getSerdeForType(metricDesc.getType()).getObjectStrategy().getClazz();
     }
 
     @Nullable

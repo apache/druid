@@ -32,7 +32,7 @@ import org.apache.druid.query.aggregation.bloom.BloomFilterSerde;
 import org.apache.druid.query.filter.BloomDimFilter;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.filter.BloomKFilterHolder;
-import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypes;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -52,7 +52,7 @@ public class BloomFilterSerializersModule extends SimpleModule
     addDeserializer(BloomKFilter.class, new BloomKFilterDeserializer());
     addDeserializer(BloomKFilterHolder.class, new BloomKFilterHolderDeserializer());
 
-    ComplexMetrics.registerSerde(BLOOM_FILTER_TYPE_NAME, new BloomFilterSerde());
+    ComplexTypes.registerSerde(BLOOM_FILTER_TYPE_NAME, new BloomFilterSerde());
   }
 
   private static class BloomKFilterSerializer extends StdSerializer<BloomKFilter>

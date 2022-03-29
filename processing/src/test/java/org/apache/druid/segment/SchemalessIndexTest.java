@@ -39,7 +39,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
-import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypes;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.Overshadowable;
 import org.joda.time.DateTime;
@@ -88,7 +88,7 @@ public class SchemalessIndexTest
   private static QueryableIndex mergedIndex = null;
 
   static {
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexTypes.registerSerde("hyperUnique", new HyperUniquesSerde());
   }
 
   private final IndexMerger indexMerger;

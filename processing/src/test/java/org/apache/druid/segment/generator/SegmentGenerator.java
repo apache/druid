@@ -37,7 +37,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypes;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -106,7 +106,7 @@ public class SegmentGenerator implements Closeable
   )
   {
     // In case we need to generate hyperUniques.
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexTypes.registerSerde("hyperUnique", new HyperUniquesSerde());
 
     final String dataHash = Hashing.sha256()
                                    .newHasher()
@@ -221,7 +221,7 @@ public class SegmentGenerator implements Closeable
   )
   {
     // In case we need to generate hyperUniques.
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexTypes.registerSerde("hyperUnique", new HyperUniquesSerde());
 
     final String dataHash = Hashing.sha256()
                                    .newHasher()

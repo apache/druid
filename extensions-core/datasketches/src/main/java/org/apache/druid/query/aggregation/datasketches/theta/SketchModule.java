@@ -33,7 +33,7 @@ import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSetI
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSetNotOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSetUnionOperatorConversion;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypes;
 import org.apache.druid.sql.guice.SqlBindings;
 
 import java.util.Collections;
@@ -93,8 +93,8 @@ public class SketchModule implements DruidModule
   @VisibleForTesting
   public static void registerSerde()
   {
-    ComplexMetrics.registerSerde(THETA_SKETCH, new SketchMergeComplexMetricSerde());
-    ComplexMetrics.registerSerde(THETA_SKETCH_MERGE_AGG, new SketchMergeComplexMetricSerde());
-    ComplexMetrics.registerSerde(THETA_SKETCH_BUILD_AGG, new SketchBuildComplexMetricSerde());
+    ComplexTypes.registerSerde(THETA_SKETCH, new SketchMergeComplexMetricSerde());
+    ComplexTypes.registerSerde(THETA_SKETCH_MERGE_AGG, new SketchMergeComplexMetricSerde());
+    ComplexTypes.registerSerde(THETA_SKETCH_BUILD_AGG, new SketchBuildComplexMetricSerde());
   }
 }

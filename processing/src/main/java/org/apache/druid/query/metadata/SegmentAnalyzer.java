@@ -49,8 +49,8 @@ import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
-import org.apache.druid.segment.serde.ComplexMetricSerde;
-import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypeSerde;
+import org.apache.druid.segment.serde.ComplexTypes;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -341,7 +341,7 @@ public class SegmentAnalyzer
       long size = 0;
 
       if (analyzingSize() && complexColumn != null) {
-        final ComplexMetricSerde serde = typeName == null ? null : ComplexMetrics.getSerdeForType(typeName);
+        final ComplexTypeSerde serde = typeName == null ? null : ComplexTypes.getSerdeForType(typeName);
         if (serde == null) {
           return ColumnAnalysis.error(StringUtils.format("unknown_complex_%s", typeName));
         }

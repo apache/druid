@@ -52,9 +52,9 @@ import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
-import org.apache.druid.segment.serde.ComplexMetricExtractor;
-import org.apache.druid.segment.serde.ComplexMetricSerde;
-import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypeExtractor;
+import org.apache.druid.segment.serde.ComplexTypeSerde;
+import org.apache.druid.segment.serde.ComplexTypes;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
@@ -224,7 +224,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
   }
 
   static {
-    ComplexMetrics.registerSerde(InvalidAggregatorFactory.TYPE, new ComplexMetricSerde()
+    ComplexTypes.registerSerde(InvalidAggregatorFactory.TYPE, new ComplexTypeSerde()
     {
       @Override
       public String getTypeName()
@@ -233,7 +233,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public ComplexMetricExtractor getExtractor()
+      public ComplexTypeExtractor getExtractor()
       {
         return null;
       }
@@ -304,7 +304,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     );
 
     // Unload the complex serde, then analyze the persisted segment.
-    ComplexMetrics.unregisterSerde(InvalidAggregatorFactory.TYPE);
+    ComplexTypes.unregisterSerde(InvalidAggregatorFactory.TYPE);
     {
       SegmentAnalyzer analyzer = new SegmentAnalyzer(EnumSet.of(SegmentMetadataQuery.AnalysisType.SIZE));
       QueryableIndexSegment segment = new QueryableIndexSegment(

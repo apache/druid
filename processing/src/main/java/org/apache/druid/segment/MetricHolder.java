@@ -23,11 +23,10 @@ import org.apache.druid.common.utils.SerializerUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.data.CompressedColumnarFloatsSupplier;
 import org.apache.druid.segment.data.GenericIndexed;
-import org.apache.druid.segment.serde.ComplexMetricSerde;
-import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypeSerde;
+import org.apache.druid.segment.serde.ComplexTypes;
 
 import javax.annotation.Nullable;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -54,7 +53,7 @@ public class MetricHolder
         holder.floatType = CompressedColumnarFloatsSupplier.fromByteBuffer(buf, ByteOrder.nativeOrder());
         break;
       case COMPLEX:
-        final ComplexMetricSerde serdeForType = ComplexMetrics.getSerdeForType(holder.getTypeName());
+        final ComplexTypeSerde serdeForType = ComplexTypes.getSerdeForType(holder.getTypeName());
 
         if (serdeForType == null) {
           throw new ISE("Unknown type[%s], cannot load.", holder.getTypeName());
@@ -70,7 +69,7 @@ public class MetricHolder
     return holder;
   }
 
-  private static <T> GenericIndexed<T> read(ByteBuffer buf, ComplexMetricSerde serde)
+  private static <T> GenericIndexed<T> read(ByteBuffer buf, ComplexTypeSerde serde)
   {
     return GenericIndexed.read(buf, serde.getObjectStrategy());
   }

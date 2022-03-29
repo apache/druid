@@ -41,8 +41,8 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
-import org.apache.druid.segment.serde.ComplexMetricSerde;
-import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypeSerde;
+import org.apache.druid.segment.serde.ComplexTypes;
 import org.apache.hadoop.io.WritableUtils;
 
 import javax.annotation.Nullable;
@@ -355,7 +355,7 @@ public class InputRowSerde
               out.writeDouble(agg.getDouble());
             } else if (type.is(ValueType.COMPLEX)) {
               Object val = agg.get();
-              ComplexMetricSerde serde = getComplexMetricSerde(type.getComplexTypeName());
+              ComplexTypeSerde serde = getComplexMetricSerde(type.getComplexTypeName());
               writeBytes(serde.toBytes(val), out);
             } else {
               throw new IAE("Unable to serialize type[%s]", type.asTypeString());
@@ -486,7 +486,7 @@ public class InputRowSerde
         } else if (type.is(ValueType.DOUBLE)) {
           event.put(metric, in.readDouble());
         } else {
-          ComplexMetricSerde serde = getComplexMetricSerde(agg.getIntermediateType().getComplexTypeName());
+          ComplexTypeSerde serde = getComplexMetricSerde(agg.getIntermediateType().getComplexTypeName());
           byte[] value = readBytes(in);
           event.put(metric, serde.fromBytes(value, 0, value.length));
         }
@@ -514,9 +514,9 @@ public class InputRowSerde
     return null;
   }
 
-  private static ComplexMetricSerde getComplexMetricSerde(String type)
+  private static ComplexTypeSerde getComplexMetricSerde(String type)
   {
-    ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(type);
+    ComplexTypeSerde serde = ComplexTypes.getSerdeForType(type);
     if (serde == null) {
       throw new IAE("Unknown type[%s]", type);
     }

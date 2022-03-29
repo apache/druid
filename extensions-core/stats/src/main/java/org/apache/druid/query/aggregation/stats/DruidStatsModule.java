@@ -31,7 +31,7 @@ import org.apache.druid.query.aggregation.variance.VarianceAggregatorFactory;
 import org.apache.druid.query.aggregation.variance.VarianceFoldingAggregatorFactory;
 import org.apache.druid.query.aggregation.variance.VarianceSerde;
 import org.apache.druid.query.aggregation.variance.sql.BaseVarianceSqlAggregator;
-import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypes;
 import org.apache.druid.sql.guice.SqlBindings;
 
 import java.util.List;
@@ -65,6 +65,6 @@ public class DruidStatsModule implements DruidModule
       SqlBindings.addAggregator(binder, BaseVarianceSqlAggregator.StdDevSampSqlAggregator.class);
       SqlBindings.addAggregator(binder, BaseVarianceSqlAggregator.StdDevSqlAggregator.class);
     }
-    ComplexMetrics.registerSerde("variance", new VarianceSerde());
+    ComplexTypes.registerSerde("variance", new VarianceSerde());
   }
 }

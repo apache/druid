@@ -53,8 +53,8 @@ import org.apache.druid.segment.loading.MMappedQueryableSegmentizerFactory;
 import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.segment.serde.ColumnPartSerde;
 import org.apache.druid.segment.serde.ComplexColumnPartSerde;
-import org.apache.druid.segment.serde.ComplexMetricSerde;
-import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypeSerde;
+import org.apache.druid.segment.serde.ComplexTypes;
 import org.apache.druid.segment.serde.DoubleNumericColumnPartSerde;
 import org.apache.druid.segment.serde.DoubleNumericColumnPartSerdeV2;
 import org.apache.druid.segment.serde.FloatNumericColumnPartSerde;
@@ -794,7 +794,7 @@ public class IndexMergerV9 implements IndexMerger
           break;
         case COMPLEX:
           final String typeName = metricTypeNames.get(metric);
-          ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
+          ComplexTypeSerde serde = ComplexTypes.getSerdeForType(typeName);
           if (serde == null) {
             throw new ISE("Unknown type[%s]", typeName);
           }

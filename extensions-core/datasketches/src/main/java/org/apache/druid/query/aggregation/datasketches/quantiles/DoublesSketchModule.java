@@ -35,7 +35,7 @@ import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSket
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchSummaryOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchToHistogramOperatorConversion;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypes;
 import org.apache.druid.sql.guice.SqlBindings;
 
 import java.util.Collections;
@@ -92,6 +92,6 @@ public class DoublesSketchModule implements DruidModule
   @VisibleForTesting
   public static void registerSerde()
   {
-    ComplexMetrics.registerSerde(DOUBLES_SKETCH, new DoublesSketchComplexMetricSerde());
+    ComplexTypes.registerSerde(DOUBLES_SKETCH, new DoublesSketchComplexMetricSerde());
   }
 }

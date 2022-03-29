@@ -19,25 +19,12 @@
 
 package org.apache.druid.segment.serde;
 
-import org.apache.druid.data.input.InputRow;
 import org.apache.druid.guice.annotations.ExtensionPoint;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-
-import javax.annotation.Nullable;
 
 /**
  */
 @ExtensionPoint
-public interface ComplexMetricExtractor<T>
+@Deprecated
+public interface ComplexMetricExtractor<T> extends ComplexTypeExtractor<T>
 {
-  Class<? extends T> extractedClass();
-
-  @Nullable
-  T extractValue(InputRow inputRow, String metricName);
-
-  @Nullable
-  default T extractValue(InputRow inputRow, String metricName, AggregatorFactory agg)
-  {
-    return extractValue(inputRow, metricName);
-  }
 }

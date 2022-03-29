@@ -27,7 +27,7 @@ import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.aggregation.histogram.sql.FixedBucketsHistogramQuantileSqlAggregator;
 import org.apache.druid.query.aggregation.histogram.sql.QuantileSqlAggregator;
-import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypes;
 import org.apache.druid.sql.guice.SqlBindings;
 
 import java.util.List;
@@ -66,7 +66,7 @@ public class ApproximateHistogramDruidModule implements DruidModule
   @VisibleForTesting
   public static void registerSerde()
   {
-    ComplexMetrics.registerSerde("approximateHistogram", new ApproximateHistogramFoldingSerde());
-    ComplexMetrics.registerSerde(FixedBucketsHistogramAggregator.TYPE_NAME, new FixedBucketsHistogramSerde());
+    ComplexTypes.registerSerde("approximateHistogram", new ApproximateHistogramFoldingSerde());
+    ComplexTypes.registerSerde(FixedBucketsHistogramAggregator.TYPE_NAME, new FixedBucketsHistogramSerde());
   }
 }

@@ -29,7 +29,7 @@ import org.apache.druid.query.aggregation.datasketches.theta.SketchHolder;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchHolderJsonSerializer;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeComplexMetricSerde;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
-import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypes;
 
 import java.util.Collections;
 import java.util.List;
@@ -44,12 +44,12 @@ public class OldApiSketchModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    ComplexMetrics.registerSerde(SKETCH_BUILD, new SketchBuildComplexMetricSerde());
-    ComplexMetrics.registerSerde(SET_SKETCH, new SketchMergeComplexMetricSerde());
-    ComplexMetrics.registerSerde(SKETCH_MERGE, new SketchMergeComplexMetricSerde());
-    ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH, new SketchMergeComplexMetricSerde());
-    ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH_MERGE_AGG, new SketchMergeComplexMetricSerde());
-    ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH_BUILD_AGG, new SketchBuildComplexMetricSerde());
+    ComplexTypes.registerSerde(SKETCH_BUILD, new SketchBuildComplexMetricSerde());
+    ComplexTypes.registerSerde(SET_SKETCH, new SketchMergeComplexMetricSerde());
+    ComplexTypes.registerSerde(SKETCH_MERGE, new SketchMergeComplexMetricSerde());
+    ComplexTypes.registerSerde(SketchModule.THETA_SKETCH, new SketchMergeComplexMetricSerde());
+    ComplexTypes.registerSerde(SketchModule.THETA_SKETCH_MERGE_AGG, new SketchMergeComplexMetricSerde());
+    ComplexTypes.registerSerde(SketchModule.THETA_SKETCH_BUILD_AGG, new SketchBuildComplexMetricSerde());
   }
 
   @Override

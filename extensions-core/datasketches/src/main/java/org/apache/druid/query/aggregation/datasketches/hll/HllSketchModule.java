@@ -32,7 +32,7 @@ import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchEstimate
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchObjectSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchSetUnionOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchToStringOperatorConversion;
-import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypes;
 import org.apache.druid.sql.guice.SqlBindings;
 
 import java.util.Collections;
@@ -92,8 +92,8 @@ public class HllSketchModule implements DruidModule
   @VisibleForTesting
   public static void registerSerde()
   {
-    ComplexMetrics.registerSerde(TYPE_NAME, new HllSketchMergeComplexMetricSerde());
-    ComplexMetrics.registerSerde(BUILD_TYPE_NAME, new HllSketchBuildComplexMetricSerde());
-    ComplexMetrics.registerSerde(MERGE_TYPE_NAME, new HllSketchMergeComplexMetricSerde());
+    ComplexTypes.registerSerde(TYPE_NAME, new HllSketchMergeComplexMetricSerde());
+    ComplexTypes.registerSerde(BUILD_TYPE_NAME, new HllSketchBuildComplexMetricSerde());
+    ComplexTypes.registerSerde(MERGE_TYPE_NAME, new HllSketchMergeComplexMetricSerde());
   }
 }

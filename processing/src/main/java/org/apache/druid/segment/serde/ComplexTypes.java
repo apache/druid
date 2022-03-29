@@ -19,40 +19,56 @@
 
 package org.apache.druid.segment.serde;
 
-import javax.annotation.Nullable;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.segment.column.TypeStrategies;
 
-/**
- *  ComplexMetrics houses a mapping of serde names to affiliated ComplexMetricSerde objects.
- *
- *  This is deprecated, use {@link ComplexTypes} instead.
- */
-@Deprecated
-public class ComplexMetrics
+import javax.annotation.Nullable;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class ComplexTypes
 {
+  private static final ConcurrentHashMap<String, ComplexTypeSerde> COMPLEX_SERIALIZERS = new ConcurrentHashMap<>();
+
   @Nullable
-  public static ComplexMetricSerde getSerdeForType(String type)
+  public static ComplexTypeSerde getSerdeForType(String type)
   {
-    return (ComplexMetricSerde) ComplexTypes.getSerdeForType(type);
+    return COMPLEX_SERIALIZERS.get(type);
   }
 
   /**
    * Register a serde name -> ComplexMetricSerde mapping.
    *
    * <p>
-   * If the specified serde key string is already used and the supplied ComplexMetricSerde is not of the same
+   * If the specified serde key string is already used and the supplied ComplexTypeSerde is not of the same
    * type as the existing value in the map for said key, an ISE is thrown.
    * </p>
    *
    * @param type The serde name used as the key in the map.
-   * @param serde The ComplexMetricSerde object to be associated with the 'type' in the map.
+   * @param serde The ComplexTypeSerde object to be associated with the 'type' in the map.
    */
-  public static void registerSerde(String type, ComplexMetricSerde serde)
+  public static void registerSerde(String type, ComplexTypeSerde serde)
   {
-    ComplexTypes.registerSerde(type, serde);
+    COMPLEX_SERIALIZERS.compute(type, (key, value) -> {
+      if (value == null) {
+        return serde;
+      } else {
+        if (!value.getClass().getName().equals(serde.getClass().getName())) {
+          throw new ISE(
+              "Incompatible serializer for type[%s] already exists. Expected [%s], found [%s].",
+              key,
+              serde.getClass().getName(),
+              value.getClass().getName()
+          );
+        } else {
+          TypeStrategies.registerComplex(type, serde.getTypeStrategy());
+          return value;
+        }
+      }
+    });
   }
 
   /**
-   * Unregister a serde name -> ComplexMetricSerde mapping.
+   * Unregister a serde name -> ComplexTypeSerde mapping.
    *
    * If the specified serde key string is not in use, does nothing.
    *
@@ -60,6 +76,6 @@ public class ComplexMetrics
    */
   public static void unregisterSerde(String type)
   {
-    ComplexTypes.unregisterSerde(type);
+    COMPLEX_SERIALIZERS.remove(type);
   }
 }

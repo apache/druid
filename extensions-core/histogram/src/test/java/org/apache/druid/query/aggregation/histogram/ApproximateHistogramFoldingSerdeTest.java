@@ -21,7 +21,7 @@ package org.apache.druid.query.aggregation.histogram;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.segment.serde.ComplexMetricExtractor;
+import org.apache.druid.segment.serde.ComplexTypeExtractor;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -34,7 +34,7 @@ public class ApproximateHistogramFoldingSerdeTest
   public void testExtractor()
   {
     final ApproximateHistogramFoldingSerde serde = new ApproximateHistogramFoldingSerde();
-    final ComplexMetricExtractor extractor = serde.getExtractor();
+    final ComplexTypeExtractor extractor = serde.getExtractor();
 
     final Map<String, Object> theMap = new HashMap<>();
     theMap.put("nullValue", null);

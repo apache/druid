@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -30,20 +31,26 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.aggregation.SerializablePairLongString;
+import org.apache.druid.query.aggregation.SerializablePairLongStringSerde;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.serde.ComplexMetricExtractor;
+import org.apache.druid.segment.serde.ComplexTypes;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.Duration;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -58,6 +65,8 @@ import java.util.stream.Collectors;
 public class RowBasedStorageAdapterTest
 {
   private static final String UNKNOWN_TYPE_NAME = "unknownType";
+  private static final String CUSTOM_TYPE_COLUMN_NAME = "customType";
+  private static final ColumnType CUSTOM_TYPE = ColumnType.ofComplex("long-string-pair");
 
   private static final RowSignature ROW_SIGNATURE =
       RowSignature.builder()
@@ -67,6 +76,7 @@ public class RowBasedStorageAdapterTest
                   .add(ValueType.STRING.name(), ColumnType.STRING)
                   .add(ValueType.COMPLEX.name(), ColumnType.UNKNOWN_COMPLEX)
                   .add(UNKNOWN_TYPE_NAME, null)
+                  .add(CUSTOM_TYPE_COLUMN_NAME, CUSTOM_TYPE)
                   .build();
 
   private static final List<Function<Cursor, Supplier<Object>>> READ_STRING =
@@ -95,6 +105,39 @@ public class RowBasedStorageAdapterTest
   public static void setUpClass()
   {
     NullHandling.initializeForTests();
+    ComplexTypes.registerSerde(CUSTOM_TYPE.getComplexTypeName(), new SerializablePairLongStringSerde()
+    {
+      @Override
+      public ComplexMetricExtractor getExtractor()
+      {
+        final ComplexMetricExtractor delegate = super.getExtractor();
+        return new ComplexMetricExtractor()
+        {
+          @Override
+          public Class extractedClass()
+          {
+            return delegate.getClass();
+          }
+
+          @Nullable
+          @Override
+          public Object extractValue(InputRow inputRow, String metricName)
+          {
+            return delegate.extractValue(inputRow, metricName);
+          }
+
+          @Nullable
+          @Override
+          public Object coerceValue(@Nullable Object value)
+          {
+            if (value instanceof String) {
+              return new SerializablePairLongString(0L, (String) value);
+            }
+            return value;
+          }
+        };
+      }
+    });
 
     PROCESSORS.clear();
 
@@ -169,6 +212,12 @@ public class RowBasedStorageAdapterTest
           }
       );
     }
+  }
+
+  @AfterClass
+  public static void teardown()
+  {
+    ComplexTypes.unregisterSerde(CUSTOM_TYPE.getComplexTypeName());
   }
 
   /**
@@ -420,6 +469,8 @@ public class RowBasedStorageAdapterTest
     for (String columnName : ROW_SIGNATURE.getColumnNames()) {
       if (UNKNOWN_TYPE_NAME.equals(columnName)) {
         Assert.assertNull(columnName, adapter.getColumnCapabilities(columnName));
+      } else if (CUSTOM_TYPE_COLUMN_NAME.equals(columnName)) {
+        Assert.assertEquals(columnName, CUSTOM_TYPE, adapter.getColumnCapabilities(columnName).toColumnType());
       } else {
         Assert.assertEquals(
             columnName,
@@ -746,7 +797,14 @@ public class RowBasedStorageAdapterTest
                 0d,
                 0L,
                 "0",
-                0
+                0,
+
+                // custom type
+                NullHandling.defaultFloatValue(),
+                NullHandling.defaultDoubleValue(),
+                NullHandling.defaultLongValue(),
+                null,
+                null
             ),
             Lists.newArrayList(
                 Intervals.ETERNITY.getStart(),
@@ -791,7 +849,14 @@ public class RowBasedStorageAdapterTest
                 1d,
                 1L,
                 "1",
-                1
+                1,
+
+                // custom type
+                NullHandling.defaultFloatValue(),
+                NullHandling.defaultDoubleValue(),
+                NullHandling.defaultLongValue(),
+                null,
+                null
             )
         ),
         walkCursors(cursors, new ArrayList<>(PROCESSORS.values()))
@@ -820,6 +885,52 @@ public class RowBasedStorageAdapterTest
     );
 
     Assert.assertEquals(1, numCloses.get());
+  }
+
+  @Test
+  public void test_makeCursors_customTypeCoercion()
+  {
+    final RowBasedStorageAdapter<String> adapter = new RowBasedStorageAdapter<>(
+        Sequences.simple(Lists.newArrayList(null, "a", "b")).withBaggage(numCloses::incrementAndGet),
+        new RowAdapter<String>()
+        {
+          @Override
+          public ToLongFunction<String> timestampFunction()
+          {
+            return i -> 0L;
+          }
+
+          @Override
+          public Function<String, Object> columnFunction(String columnName)
+          {
+            return i -> i;
+          }
+        },
+        ROW_SIGNATURE
+    );
+    final Sequence<Cursor> cursors = adapter.makeCursors(
+        null,
+        Intervals.ETERNITY,
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            Collections.singletonList(null),
+            ImmutableList.of(new SerializablePairLongString(0L, "a")),
+            ImmutableList.of(new SerializablePairLongString(0L, "b"))
+        ),
+        walkCursors(cursors, ImmutableList.of(
+            cursor -> {
+              final BaseObjectColumnValueSelector selector =
+                  cursor.getColumnSelectorFactory().makeColumnValueSelector(CUSTOM_TYPE_COLUMN_NAME);
+              return selector::getObject;
+            }
+        ))
+    );
   }
 
   private static List<List<Object>> walkCursors(

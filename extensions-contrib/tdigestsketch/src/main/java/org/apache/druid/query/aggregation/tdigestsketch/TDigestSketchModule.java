@@ -29,7 +29,7 @@ import com.tdunning.math.stats.MergingDigest;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.aggregation.tdigestsketch.sql.TDigestGenerateSketchSqlAggregator;
 import org.apache.druid.query.aggregation.tdigestsketch.sql.TDigestSketchQuantileSqlAggregator;
-import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.serde.ComplexTypes;
 import org.apache.druid.sql.guice.SqlBindings;
 
 import java.util.List;
@@ -73,7 +73,7 @@ public class TDigestSketchModule implements DruidModule
   @VisibleForTesting
   public static void registerSerde()
   {
-    ComplexMetrics.registerSerde(TDigestSketchAggregatorFactory.TYPE_NAME, new TDigestSketchComplexMetricSerde());
-    ComplexMetrics.registerSerde("TDIGEST_GENERATE_SKETCH", new TDigestSketchComplexMetricSerde());
+    ComplexTypes.registerSerde(TDigestSketchAggregatorFactory.TYPE_NAME, new TDigestSketchComplexMetricSerde());
+    ComplexTypes.registerSerde("TDIGEST_GENERATE_SKETCH", new TDigestSketchComplexMetricSerde());
   }
 }
