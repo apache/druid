@@ -34,6 +34,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RangeIndexedInts;
+import org.apache.druid.segment.serde.ComplexTypeExtractor;
 import org.apache.druid.segment.serde.ComplexTypeSerde;
 import org.apache.druid.segment.serde.ComplexTypes;
 
@@ -505,9 +506,15 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   {
     final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(columnName);
     if (capabilities != null && capabilities.is(ValueType.COMPLEX) && capabilities.getComplexTypeName() != null) {
-      final ComplexTypeSerde serde = ComplexTypes.getSerdeForType(capabilities.getComplexTypeName());
-      if (serde != null) {
-        return in -> serde.getExtractor().coerceValue(adapter.columnFunction(columnName).apply(in));
+      try {
+        final ComplexTypeSerde serde = ComplexTypes.getSerdeForType(capabilities.getComplexTypeName());
+        final ComplexTypeExtractor extractor = serde.getExtractor();
+        if (serde != null) {
+          return in -> extractor.coerceValue(adapter.columnFunction(columnName).apply(in));
+        }
+      }
+      catch (Throwable ignored) {
+        // ignore and fallback to direct access in case the complex type doesn't have an extractor
       }
     }
     return adapter.columnFunction(columnName);
