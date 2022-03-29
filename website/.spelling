@@ -694,6 +694,7 @@ doubleMeanNoNulls
 doubleMin
 doubleSum
 druid.generic.useDefaultValueForNull
+druid.generic.ignoreNullsForStringCardinality
 limitSpec
 longMax
 longAny
