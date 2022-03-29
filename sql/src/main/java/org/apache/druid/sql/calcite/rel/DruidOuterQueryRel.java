@@ -36,7 +36,6 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.util.List;
 import java.util.Set;
@@ -69,6 +68,7 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
       final PartialDruidQuery partialQuery
   )
   {
+
     return new DruidOuterQueryRel(
         sourceRel.getCluster(),
         sourceRel.getTraitSet().plusAll(partialQuery.getRelTraits()),
@@ -114,7 +114,8 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
   @Override
   public DruidQuery toDruidQueryForExplaining()
   {
-    return partialQuery.build(
+    return toDruidQuery(false);
+    /*return partialQuery.build(
         DUMMY_DATA_SOURCE,
         RowSignatures.fromRelDataType(
             sourceRel.getRowType().getFieldNames(),
@@ -123,7 +124,7 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
         getPlannerContext(),
         getCluster().getRexBuilder(),
         false
-    );
+    );*/
   }
 
   @Override
