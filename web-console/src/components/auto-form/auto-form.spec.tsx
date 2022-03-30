@@ -75,7 +75,7 @@ describe('AutoForm', () => {
           {
             dataSource: 'ds',
             taskPriority: 25,
-            inputSegmentSizeBytes: 419430400,
+            inputSegmentSizeBytes: 109951162777600,
             maxRowsPerSegment: null,
             skipOffsetFromLatest: 'P4D',
             tuningConfig: {
@@ -121,7 +121,7 @@ describe('AutoForm', () => {
         {
           dataSource: 'ds',
           taskPriority: 25,
-          inputSegmentSizeBytes: 419430400,
+          inputSegmentSizeBytes: 109951162777600,
           skipOffsetFromLatest: 'P4D',
           tuningConfig: {
             partitionsSpec: {

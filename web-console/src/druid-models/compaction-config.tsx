@@ -233,7 +233,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
   {
     name: 'inputSegmentSizeBytes',
     type: 'number',
-    defaultValue: 419430400,
+    defaultValue: 109951162777600,
     info: (
       <p>
         Maximum number of total segment bytes processed per compaction task. Since a time chunk must
