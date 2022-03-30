@@ -31,12 +31,8 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RangeIndexedInts;
-import org.apache.druid.segment.serde.ComplexTypeExtractor;
-import org.apache.druid.segment.serde.ComplexTypeSerde;
-import org.apache.druid.segment.serde.ComplexTypes;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -424,7 +420,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
       }
       return new TimeLongColumnSelector();
     } else {
-      final Function<T, Object> columnFunction = getColumnFunction(columnName);
+      final Function<T, Object> columnFunction = adapter.columnFunction(columnName);
       return new ColumnValueSelector<Object>()
       {
         @Override
@@ -500,23 +496,5 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     return getColumnCapabilities(columnInspector, columnName);
-  }
-
-  private Function<T, Object> getColumnFunction(String columnName)
-  {
-    final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(columnName);
-    if (capabilities != null && capabilities.is(ValueType.COMPLEX) && capabilities.getComplexTypeName() != null) {
-      try {
-        final ComplexTypeSerde serde = ComplexTypes.getSerdeForType(capabilities.getComplexTypeName());
-        if (serde != null) {
-          final ComplexTypeExtractor<?> extractor = serde.getExtractor();
-          return in -> extractor.coerceValue(adapter.columnFunction(columnName).apply(in));
-        }
-      }
-      catch (Throwable ignored) {
-        // ignore and fallback to direct access in case the complex type doesn't have an extractor
-      }
-    }
-    return adapter.columnFunction(columnName);
   }
 }

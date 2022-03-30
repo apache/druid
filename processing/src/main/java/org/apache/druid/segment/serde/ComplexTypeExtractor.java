@@ -51,23 +51,4 @@ public interface ComplexTypeExtractor<T>
   {
     return extractValue(inputRow, metricName);
   }
-
-  /**
-   * 'Coerce' a complex value type for use when creating column selectors for queries on a
-   * {@link org.apache.druid.segment.RowBasedColumnSelectorFactory}. By default, this method is a direct value
-   * passthrough.
-   *
-   * This method is used for selectors for all complex types from a
-   * {@link org.apache.druid.segment.RowBasedColumnSelectorFactory}, but for 'realtime' queries for complex 'metrics'
-   * (on {@link org.apache.druid.segment.incremental.IncrementalIndex}), this method will be not be used in favor of a
-   * customized selector which uses {@link #extractValue(InputRow, String, AggregatorFactory)} instead.
-   *
-   * Realtime queries on complex types which are not metrics (e.g. dimensions) will still use this method even for
-   * realtime queries.
-   */
-  @Nullable
-  default T coerceValue(@Nullable Object value)
-  {
-    return (T) value;
-  }
 }
