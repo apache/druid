@@ -58,7 +58,7 @@ public class ComplexMetrics
    *
    * Only expected to be used in tests.
    */
-  //noinspection unused
+  @SuppressWarnings("unused")
   public static void unregisterSerde(String type)
   {
     ComplexTypes.unregisterSerde(type);
