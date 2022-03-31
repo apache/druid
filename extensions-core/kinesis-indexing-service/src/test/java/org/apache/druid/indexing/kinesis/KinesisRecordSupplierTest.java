@@ -214,7 +214,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         60000,
         5,
-        true
+        true,
+        false
     );
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
@@ -308,7 +309,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         60000,
         100,
-        true
+        true,
+        false
     );
 
     recordSupplier.assign(partitions);
@@ -396,7 +398,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
             5000,
             60000,
             100,
-            true
+            true,
+            false
     );
 
     recordSupplier.assign(partitions);
@@ -457,7 +460,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         60000,
         100,
-        true
+        true,
+        false
     );
 
     recordSupplier.assign(partitions);
@@ -536,7 +540,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         60000,
         100,
-        true
+        true,
+        false
     );
 
     recordSupplier.assign(partitions);
@@ -604,7 +609,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         60000,
         100,
-        true
+        true,
+        false
     );
 
     recordSupplier.assign(partitions);
@@ -639,7 +645,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         60000,
         5,
-        true
+        true,
+        false
     );
 
     recordSupplier.assign(partitions);
@@ -702,7 +709,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         60000,
         1,
-        true
+        true,
+        false
     );
 
     recordSupplier.assign(partitions);
@@ -795,7 +803,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         60000,
         100,
-        true
+        true,
+        false
     );
 
     recordSupplier.assign(partitions);
@@ -869,7 +878,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1000,
         100,
-        true
+        true,
+        false
     );
 
     Assert.assertEquals("0", recordSupplier.getLatestSequenceNumber(StreamPartition.of(STREAM, SHARD_ID0)));
@@ -907,7 +917,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1000,
         100,
-        true
+        true,
+        false
     );
     return recordSupplier;
   }
@@ -990,7 +1001,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         60000,
         100,
-        true
+        true,
+        false
     );
 
     recordSupplier.assign(partitions);
@@ -1039,7 +1051,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
                                                              5000,
                                                              60000,
                                                              5,
-                                                             true
+                                                             true,
+                                                             false
     );
     Record record = new Record();
 
