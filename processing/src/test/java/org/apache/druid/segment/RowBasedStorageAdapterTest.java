@@ -746,14 +746,7 @@ public class RowBasedStorageAdapterTest
                 0d,
                 0L,
                 "0",
-                0,
-
-                // custom type
-                NullHandling.defaultFloatValue(),
-                NullHandling.defaultDoubleValue(),
-                NullHandling.defaultLongValue(),
-                null,
-                null
+                0
             ),
             Lists.newArrayList(
                 Intervals.ETERNITY.getStart(),
@@ -798,14 +791,7 @@ public class RowBasedStorageAdapterTest
                 1d,
                 1L,
                 "1",
-                1,
-
-                // custom type
-                NullHandling.defaultFloatValue(),
-                NullHandling.defaultDoubleValue(),
-                NullHandling.defaultLongValue(),
-                null,
-                null
+                1
             )
         ),
         walkCursors(cursors, new ArrayList<>(PROCESSORS.values()))

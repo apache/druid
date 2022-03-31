@@ -24,9 +24,8 @@ import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
-import org.apache.druid.segment.serde.ComplexTypeExtractor;
-import org.apache.druid.segment.serde.ComplexTypeSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
@@ -38,7 +37,7 @@ import java.nio.ByteBuffer;
  * {@link org.apache.druid.query.groupby.GroupByQueryEngine} will work, but isn't actually used because bloom filter
  * aggregators are currently only implemented for use at query time
  */
-public class BloomFilterSerde extends ComplexTypeSerde
+public class BloomFilterSerde extends ComplexMetricSerde
 {
   private static final BloomFilterObjectStrategy STRATEGY = new BloomFilterObjectStrategy();
 
@@ -49,7 +48,7 @@ public class BloomFilterSerde extends ComplexTypeSerde
   }
 
   @Override
-  public ComplexTypeExtractor getExtractor()
+  public ComplexMetricExtractor getExtractor()
   {
     throw new UnsupportedOperationException("Bloom filter aggregators are query-time only");
   }
