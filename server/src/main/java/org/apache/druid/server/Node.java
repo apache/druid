@@ -22,16 +22,23 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 
 /**
- * This class exists only to support two REST endpoints. It is similar to a
- * DruidNode, but serializes to the specific form expected by those REST
+ * This class exists only to support two REST endpoints:
+ * <ul>
+ * <li>{@code /druid/coordinator/v1/cluster}</li>
+ * <li>{@code /druid/router/v1/cluster}</li>
+ * </ul><p>
+ *
+ * The endpoints present similar information, as encapsulated here.
+ * <p>
+ * {@code Node} is similar to {@code DruidNode},
+ * but serializes to the specific form expected by those REST
  * endpoints. This version omits {@code bindOnHost}, uses the name
- * {@code `service} where DruidNode uses {@code serviceName}, and
+ * {@code service} where DruidNode uses {@code serviceName}, and
  * omits the TLS or Plaintext port rather than using -1 and flags
- * as in DruidNode. Think of this as a purpose-build facade onto a
- * Druid Node.
+ * as in {@code DruidNode}. Think of this as a purpose-built facade
+ * onto a {@code DruidNode}.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Node
@@ -77,16 +84,12 @@ public class Node
     if (o == null || !(o instanceof Node)) {
       return false;
     }
-    Node other = (Node) o;
-    return Objects.equal(this.getHost(), other.getHost()) &&
-           Objects.equal(this.getService(), other.getService()) &&
-           Objects.equal(this.getPlaintextPort(), other.getPlaintextPort()) &&
-           Objects.equal(this.getTlsPort(), other.getTlsPort());
+    return node.equals(((Node) o).node);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hashCode(getHost(), getService(), getPlaintextPort(), getTlsPort());
+    return node.hashCode();
   }
 }
