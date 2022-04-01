@@ -25,7 +25,7 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.IndexSupplier;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.easymock.EasyMock;
@@ -43,7 +43,7 @@ public class ColumnSelectorColumnIndexSelectorTest
   ColumnSelector index;
 
   ColumnSelectorColumnIndexSelector indexSelector;
-  IndexSupplier indexSupplier;
+  ColumnIndexSupplier indexSupplier;
 
   @Before
   public void setup()
@@ -52,7 +52,7 @@ public class ColumnSelectorColumnIndexSelectorTest
     virtualColumns = EasyMock.createMock(VirtualColumns.class);
     index = EasyMock.createMock(ColumnSelector.class);
     indexSelector = new ColumnSelectorColumnIndexSelector(bitmapFactory, virtualColumns, index);
-    indexSupplier = EasyMock.createMock(IndexSupplier.class);
+    indexSupplier = EasyMock.createMock(ColumnIndexSupplier.class);
 
     EasyMock.expect(virtualColumns.getVirtualColumn(STRING_DICTIONARY_COLUMN_NAME)).andReturn(null).anyTimes();
     EasyMock.expect(virtualColumns.getVirtualColumn(NON_STRING_DICTIONARY_COLUMN_NAME)).andReturn(null).anyTimes();

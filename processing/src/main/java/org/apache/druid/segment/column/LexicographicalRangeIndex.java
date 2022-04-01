@@ -24,6 +24,10 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 
 import javax.annotation.Nullable;
 
+/**
+ * An optimized column value index for columns which are stored in 'lexicographical' order, allowing short-circuit
+ * processing of string value ranges.
+ */
 public interface LexicographicalRangeIndex
 {
   /**

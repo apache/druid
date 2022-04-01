@@ -28,7 +28,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.IndexSupplier;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 
 import java.util.List;
 
@@ -117,7 +117,7 @@ public class AutoStrategy extends SearchStrategy
     for (DimensionSpec dimension : dimensionSpecs) {
       final ColumnHolder columnHolder = index.getColumnHolder(dimension.getDimension());
       if (columnHolder != null) {
-        final IndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+        final ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
         if (indexSupplier != null) {
           final DictionaryEncodedStringValueIndex bitmapIndex =
               indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class);

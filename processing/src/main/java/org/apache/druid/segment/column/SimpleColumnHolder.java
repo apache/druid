@@ -35,7 +35,7 @@ class SimpleColumnHolder implements ColumnHolder
   private final Supplier<? extends BaseColumn> columnSupplier;
 
   @Nullable
-  private final IndexSupplier indexSupplier;
+  private final ColumnIndexSupplier indexSupplier;
 
   private static final InvalidComplexColumnTypeValueSelector INVALID_COMPLEX_COLUMN_TYPE_VALUE_SELECTOR
       = new InvalidComplexColumnTypeValueSelector();
@@ -43,7 +43,7 @@ class SimpleColumnHolder implements ColumnHolder
   SimpleColumnHolder(
       ColumnCapabilities capabilities,
       @Nullable Supplier<? extends BaseColumn> columnSupplier,
-      @Nullable IndexSupplier indexSupplier
+      @Nullable ColumnIndexSupplier indexSupplier
   )
   {
     this.capabilities = capabilities;
@@ -87,7 +87,7 @@ class SimpleColumnHolder implements ColumnHolder
   }
 
   @Override
-  public IndexSupplier getIndexSupplier()
+  public ColumnIndexSupplier getIndexSupplier()
   {
     return indexSupplier;
   }

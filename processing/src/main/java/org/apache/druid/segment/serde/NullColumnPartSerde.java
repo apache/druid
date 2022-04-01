@@ -27,7 +27,7 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.IndexSupplier;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
@@ -48,7 +48,7 @@ import java.util.Objects;
 public class NullColumnPartSerde implements ColumnPartSerde
 {
   private static final ColumnIndexCapabilities INDEX_CAPABILITIES = new SimpleColumnIndexCapabilities(true, true);
-  private static final IndexSupplier NIL_INDEX_SUPPLIER = new IndexSupplier()
+  private static final ColumnIndexSupplier NIL_INDEX_SUPPLIER = new ColumnIndexSupplier()
   {
     @Override
     public <T> ColumnIndexCapabilities getIndexCapabilities(Class<T> clazz)

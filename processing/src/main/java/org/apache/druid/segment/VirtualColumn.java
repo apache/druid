@@ -293,6 +293,11 @@ public interface VirtualColumn extends Cacheable
    */
   boolean usesDotNotation();
 
+  /**
+   * Get the {@link ColumnIndexCapabilities} for the specified type of index, with the assistance of a
+   * {@link ColumnSelector} to allow reading things from segments. If the index does not exist this method will return
+   * null. A null return value from this method indicates that an index of the desired type in unavailable
+   */
   @SuppressWarnings("unused")
   @Nullable
   default <T> ColumnIndexCapabilities getIndexCapabilities(String columnName, ColumnSelector columnSelector, Class<T> clazz)
@@ -300,6 +305,10 @@ public interface VirtualColumn extends Cacheable
     return null;
   }
 
+  /**
+   * Get a column 'index' of the specified type, with the assistance of a {@link ColumnSelector} to allow reading
+   * things from segments. If the index of the desired type is not available, this method will return null
+   */
   @Nullable
   default <T> T getIndex(String columnName, ColumnSelector selector, Class<T> clazz)
   {

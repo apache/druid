@@ -31,7 +31,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.IndexSupplier;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.LexicographicalRangeIndex;
 import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 import org.apache.druid.segment.column.SpatialIndex;
@@ -43,7 +43,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-public class DictionaryEncodedStringIndexSupplier implements IndexSupplier
+public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
 {
   private static final Set<Class<?>> SUPPORTED_BITMAP_INDEX_TYPES = ImmutableSet.of(
       DictionaryEncodedStringValueIndex.class,

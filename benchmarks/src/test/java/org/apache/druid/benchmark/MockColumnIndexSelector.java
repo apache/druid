@@ -23,18 +23,18 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
-import org.apache.druid.segment.column.IndexSupplier;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 
 import javax.annotation.Nullable;
 
 public class MockColumnIndexSelector implements ColumnIndexSelector
 {
   private final BitmapFactory bitmapFactory;
-  private final IndexSupplier indexSupplier;
+  private final ColumnIndexSupplier indexSupplier;
 
   public MockColumnIndexSelector(
       BitmapFactory bitmapFactory,
-      IndexSupplier indexSupplier
+      ColumnIndexSupplier indexSupplier
   )
   {
     this.bitmapFactory = bitmapFactory;

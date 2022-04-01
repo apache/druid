@@ -77,7 +77,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.IndexSupplier;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
@@ -348,7 +348,7 @@ public class DumpSegment extends GuiceRunnable
                 {
                   for (final String columnName : columnNames) {
                     final ColumnHolder columnHolder = index.getColumnHolder(columnName);
-                    final IndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+                    final ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
                     if (indexSupplier == null) {
                       jg.writeNull();
                     } else {

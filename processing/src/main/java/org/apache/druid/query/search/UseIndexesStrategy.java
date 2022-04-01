@@ -40,7 +40,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.IndexSupplier;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.NumericColumn;
 import org.joda.time.Interval;
 
@@ -256,7 +256,7 @@ public class UseIndexesStrategy extends SearchStrategy
           continue;
         }
 
-        final IndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+        final ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
         Preconditions.checkArgument(indexSupplier != null,
                                     "Dimension [%s] should support bitmap index", dimension.getDimension()
         );

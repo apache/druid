@@ -34,7 +34,7 @@ public class ColumnBuilder
   @Nullable
   private Supplier<? extends BaseColumn> columnSupplier = null;
   @Nullable
-  private IndexSupplier indexSupplier = null;
+  private ColumnIndexSupplier indexSupplier = null;
   @Nullable
   private SmooshedFileMapper fileMapper = null;
 
@@ -96,7 +96,7 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnBuilder setIndexSupplier(IndexSupplier indexSupplier, boolean hasBitmapIndex, boolean hasSpatial)
+  public ColumnBuilder setIndexSupplier(ColumnIndexSupplier indexSupplier, boolean hasBitmapIndex, boolean hasSpatial)
   {
     this.indexSupplier = indexSupplier;
     capabilitiesBuilder.setHasBitmapIndexes(hasBitmapIndex);

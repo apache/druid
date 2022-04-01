@@ -21,16 +21,20 @@ package org.apache.druid.segment.column;
 
 import javax.annotation.Nullable;
 
-public interface IndexSupplier
+public interface ColumnIndexSupplier
 {
-  default <T> ColumnIndexCapabilities getIndexCapabilities(Class<T> clazz)
-  {
-    throw new UnsupportedOperationException("Column does not support indexes");
-  }
-
+  /**
+   * Get the {@link ColumnIndexCapabilities} for the specified type of index. If the index does not exist
+   * this method will return null. A null return value from this method indicates that an index of the desired type
+   * in unavailable
+   */
   @Nullable
-  default <T> T getIndex(Class<T> clazz)
-  {
-    throw new UnsupportedOperationException("Column does not support indexes");
-  }
+  <T> ColumnIndexCapabilities getIndexCapabilities(Class<T> clazz);
+
+  /**
+   * Get a column 'index' of the specified type. If the index of the desired type is not available, this method will
+   * return null
+   */
+  @Nullable
+  <T> T getIndex(Class<T> clazz);
 }

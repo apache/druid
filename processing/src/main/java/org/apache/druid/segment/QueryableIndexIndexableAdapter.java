@@ -31,7 +31,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.IndexSupplier;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
@@ -373,7 +373,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       return BitmapValues.EMPTY;
     }
 
-    final IndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+    final ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
     if (indexSupplier == null) {
       return BitmapValues.EMPTY;
     }
@@ -399,7 +399,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       return BitmapValues.EMPTY;
     }
 
-    final IndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+    final ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
     if (indexSupplier == null) {
       return BitmapValues.EMPTY;
     }

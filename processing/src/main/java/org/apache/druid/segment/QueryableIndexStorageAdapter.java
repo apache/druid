@@ -38,7 +38,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.IndexSupplier;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.filter.AndFilter;
@@ -148,7 +148,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     ColumnHolder columnHolder = index.getColumnHolder(dimension);
     if (columnHolder != null && columnHolder.getCapabilities().hasBitmapIndexes()) {
-      IndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+      ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
       DictionaryEncodedStringValueIndex index = indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class);
       return index.getCardinality() > 0 ? index.getValue(0) : null;
     }
@@ -161,7 +161,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     ColumnHolder columnHolder = index.getColumnHolder(dimension);
     if (columnHolder != null && columnHolder.getCapabilities().hasBitmapIndexes()) {
-      IndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+      ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
       DictionaryEncodedStringValueIndex index = indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class);
       return index.getCardinality() > 0 ? index.getValue(index.getCardinality() - 1) : null;
     }

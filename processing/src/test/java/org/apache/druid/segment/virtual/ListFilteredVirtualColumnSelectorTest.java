@@ -39,7 +39,7 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.IndexSupplier;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 import org.apache.druid.segment.column.ValueType;
@@ -173,7 +173,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
     DictionaryEncodedStringValueIndex index = EasyMock.createMock(DictionaryEncodedStringValueIndex.class);
     ImmutableBitmap bitmap = EasyMock.createMock(ImmutableBitmap.class);
     BitmapFactory bitmapFactory = EasyMock.createMock(BitmapFactory.class);
-    IndexSupplier indexSupplier = EasyMock.createMock(IndexSupplier.class);
+    ColumnIndexSupplier indexSupplier = EasyMock.createMock(ColumnIndexSupplier.class);
 
     EasyMock.expect(selector.getColumnHolder(COLUMN_NAME)).andReturn(holder).atLeastOnce();
     EasyMock.expect(selector.getColumnCapabilities(COLUMN_NAME))
@@ -237,7 +237,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
     ColumnHolder holder = EasyMock.createMock(ColumnHolder.class);
     DictionaryEncodedStringValueIndex index = EasyMock.createMock(DictionaryEncodedStringValueIndex.class);
     ImmutableBitmap bitmap = EasyMock.createMock(ImmutableBitmap.class);
-    IndexSupplier indexSupplier = EasyMock.createMock(IndexSupplier.class);
+    ColumnIndexSupplier indexSupplier = EasyMock.createMock(ColumnIndexSupplier.class);
     BitmapFactory bitmapFactory = EasyMock.createMock(BitmapFactory.class);
 
     EasyMock.expect(selector.getColumnHolder(COLUMN_NAME)).andReturn(holder).atLeastOnce();

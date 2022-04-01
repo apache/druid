@@ -170,13 +170,24 @@ public class VirtualColumns implements Cacheable
     return withDotSupport.get(baseColumnName);
   }
 
-
+  /**
+   * Get the {@link ColumnIndexCapabilities} of the specified virtual column for the specified type of index, with the
+   * assistance of a {@link ColumnSelector} to allow reading things from segments. If the index does not exist
+   * this method will return null. A null return value from this method indicates that an index of the desired type
+   * in unavailable
+   */
+  @Nullable
   public <T> ColumnIndexCapabilities getIndexCapabilities(String columnName, ColumnSelector columnSelector, Class<T> clazz)
   {
     final VirtualColumn virtualColumn = getVirtualColumnForSelector(columnName);
     return virtualColumn.getIndexCapabilities(columnName, columnSelector, clazz);
   }
 
+  /**
+   * Get a column 'index' of the specified type for the specified virtual column, with the assistance of a
+   * {@link ColumnSelector} to allow reading things from segments. If the index of the desired type is not available,
+   * this method will return null
+   */
   @Nullable
   public <T> T getIndex(String columnName, ColumnSelector columnSelector, Class<T> clazz)
   {

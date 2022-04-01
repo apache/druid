@@ -24,7 +24,7 @@ import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
-import org.apache.druid.segment.column.IndexSupplier;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 
@@ -80,7 +80,7 @@ public class ColumnSelectorColumnIndexSelector implements ColumnIndexSelector
       // either make an all true or all false bitmap if the matcher matches null
       return new SimpleColumnIndexCapabilities(true, true);
     }
-    final IndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+    final ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
     if (indexSupplier == null) {
       // column exists, but doesn't have an index supplier
       return null;
@@ -100,7 +100,7 @@ public class ColumnSelectorColumnIndexSelector implements ColumnIndexSelector
     if (columnHolder == null || !columnHolder.getCapabilities().isFilterable()) {
       return null;
     }
-    final IndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+    final ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
     if (indexSupplier == null) {
       return null;
     }

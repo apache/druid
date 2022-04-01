@@ -42,7 +42,7 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.IndexSupplier;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.LexicographicalRangeIndex;
 import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 import org.apache.druid.segment.column.StringValueSetIndex;
@@ -178,7 +178,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     if (holder == null) {
       return new SimpleColumnIndexCapabilities(true, true);
     }
-    IndexSupplier indexSupplier = holder.getIndexSupplier();
+    ColumnIndexSupplier indexSupplier = holder.getIndexSupplier();
     if (indexSupplier == null) {
       return null;
     }
