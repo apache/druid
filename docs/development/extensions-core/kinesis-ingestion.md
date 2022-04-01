@@ -352,6 +352,8 @@ The AWS access key ID and secret access key are used for Kinesis API requests. I
 look for credentials set in environment variables, via [Web Identity Token](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc.html), in the default profile configuration file, and from the EC2 instance
 profile provider (in this order).
 
+To use the Kinesis indexing service, the IAM user must belong to a role with the `ListShards` permission.
+
 ### Getting Supervisor Status Report
 
 `GET /druid/indexer/v1/supervisor/<supervisorId>/status` returns a snapshot report of the current state of the tasks
