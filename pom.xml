@@ -170,6 +170,7 @@
         <module>extensions-core/druid-aws-rds-extensions</module>
         <module>extensions-core/simple-client-sslcontext</module>
         <module>extensions-core/druid-basic-security</module>
+        <module>extensions-core/statsd-emitter</module>
         <module>extensions-core/google-extensions</module>
         <module>extensions-core/druid-ranger-security</module>
         <module>extensions-core/testing-tools</module>
@@ -180,7 +181,6 @@
         <module>extensions-contrib/cloudfiles-extensions</module>
         <module>extensions-contrib/graphite-emitter</module>
         <module>extensions-contrib/distinctcount</module>
-        <module>extensions-contrib/statsd-emitter</module>
         <module>extensions-contrib/time-min-max</module>
         <module>extensions-contrib/virtual-columns</module>
         <module>extensions-contrib/thrift-extensions</module>

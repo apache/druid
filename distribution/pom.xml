@@ -595,8 +595,6 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:sqlserver-metadata-storage</argument>
                                         <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:statsd-emitter</argument>
-                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:prometheus-emitter</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-thrift-extensions</argument>

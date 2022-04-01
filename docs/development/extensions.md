@@ -63,6 +63,7 @@ Core extensions are maintained by Druid committers.
 |simple-client-sslcontext|Simple SSLContext provider module to be used by Druid's internal HttpClient when talking to other Druid processes over HTTPS.|[link](../development/extensions-core/simple-client-sslcontext.md)|
 |druid-pac4j|OpenID Connect authentication for druid processes.|[link](../development/extensions-core/druid-pac4j.md)|
 |druid-kubernetes-extensions|Druid cluster deployment on Kubernetes without Zookeeper.|[link](../development/extensions-core/kubernetes.md)|
+|statsd-emitter|StatsD metrics emitter|[link](./extensions-core/statsd.md)|
 
 ## Community extensions
 
@@ -84,7 +85,6 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |druid-time-min-max|Min/Max aggregator for timestamp.|[link](../development/extensions-contrib/time-min-max.md)|
 |sqlserver-metadata-storage|Microsoft SQLServer deep storage.|[link](../development/extensions-contrib/sqlserver.md)|
 |graphite-emitter|Graphite metrics emitter|[link](../development/extensions-contrib/graphite.md)|
-|statsd-emitter|StatsD metrics emitter|[link](../development/extensions-contrib/statsd.md)|
 |kafka-emitter|Kafka metrics emitter|[link](../development/extensions-contrib/kafka-emitter.md)|
 |druid-thrift-extensions|Support thrift ingestion |[link](../development/extensions-contrib/thrift.md)|
 |druid-opentsdb-emitter|OpenTSDB metrics emitter |[link](../development/extensions-contrib/opentsdb-emitter.md)|
