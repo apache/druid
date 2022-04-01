@@ -51,12 +51,15 @@ data: {
     # List of additional classes and packages to import.
     # Example. "org.apache.calcite.sql.*", "java.util.List".
     imports: [
+      "java.util.List"
       "org.apache.calcite.sql.SqlNode"
       "org.apache.calcite.sql.SqlInsert"
+      "org.apache.druid.java.util.common.Intervals"
       "org.apache.druid.java.util.common.granularity.Granularity"
       "org.apache.druid.java.util.common.granularity.Granularities"
       "org.apache.druid.sql.calcite.parser.DruidSqlInsert"
       "org.apache.druid.sql.calcite.parser.DruidSqlParserUtils"
+      "org.joda.time.Interval"
     ]
 
     # List of new keywords. Example: "DATABASES", "TABLES". If the keyword is not a reserved
@@ -384,6 +387,7 @@ data: {
     statementParserMethods: [
       "DruidSqlInsert()"
       "DruidSqlExplain()"
+      "DruidSqlReplace()"
     ]
 
     # List of methods for parsing custom literals.
@@ -433,8 +437,10 @@ data: {
     # given as part of "statementParserMethods", "literalParserMethods" or
     # "dataTypeParserMethods".
     implementationFiles: [
+      "common.ftl"
       "insert.ftl"
       "explain.ftl"
+      "replace.ftl"
     ]
 
     includePosixOperators: false
