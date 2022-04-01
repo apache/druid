@@ -47,10 +47,12 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.schema.DruidCalciteSchemaModule;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -485,7 +487,7 @@ public class DruidMeta extends MetaImpl
       final String sql = "SELECT\n"
                          + "  DISTINCT CATALOG_NAME AS TABLE_CAT\n"
                          + "FROM\n"
-                         + "  INFORMATION_SCHEMA.SCHEMATA\n"
+                         + " " + DruidCalciteSchemaModule.INFORMATION_SCHEMA_NAME + ".SCHEMATA\n"
                          + "ORDER BY\n"
                          + "  TABLE_CAT\n";
 
@@ -521,7 +523,7 @@ public class DruidMeta extends MetaImpl
                          + "  SCHEMA_NAME AS TABLE_SCHEM,\n"
                          + "  CATALOG_NAME AS TABLE_CATALOG\n"
                          + "FROM\n"
-                         + "  INFORMATION_SCHEMA.SCHEMATA\n"
+                         + " " + DruidCalciteSchemaModule.INFORMATION_SCHEMA_NAME + ".SCHEMATA\n"
                          + where + "\n"
                          + "ORDER BY\n"
                          + "  TABLE_CATALOG, TABLE_SCHEM\n";
@@ -580,7 +582,7 @@ public class DruidMeta extends MetaImpl
                          + "  CAST(NULL AS VARCHAR) AS SELF_REFERENCING_COL_NAME,\n"
                          + "  CAST(NULL AS VARCHAR) AS REF_GENERATION\n"
                          + "FROM\n"
-                         + "  INFORMATION_SCHEMA.TABLES\n"
+                         + " " + DruidCalciteSchemaModule.INFORMATION_SCHEMA_NAME + ".TABLES\n"
                          + where + "\n"
                          + "ORDER BY\n"
                          + "  TABLE_TYPE, TABLE_CAT, TABLE_SCHEM, TABLE_NAME\n";
@@ -650,7 +652,7 @@ public class DruidMeta extends MetaImpl
                          + "  'NO' AS IS_AUTOINCREMENT,\n"
                          + "  'NO' AS IS_GENERATEDCOLUMN\n"
                          + "FROM\n"
-                         + "  INFORMATION_SCHEMA.COLUMNS\n"
+                         + " " + DruidCalciteSchemaModule.INFORMATION_SCHEMA_NAME + ".COLUMNS\n"
                          + where + "\n"
                          + "ORDER BY\n"
                          + "  TABLE_CAT, TABLE_SCHEM, TABLE_NAME, ORDINAL_POSITION\n";
@@ -672,7 +674,7 @@ public class DruidMeta extends MetaImpl
       final String sql = "SELECT\n"
                          + "  DISTINCT TABLE_TYPE AS TABLE_TYPE\n"
                          + "FROM\n"
-                         + "  INFORMATION_SCHEMA.TABLES\n"
+                         + " " + DruidCalciteSchemaModule.INFORMATION_SCHEMA_NAME + ".TABLES\n"
                          + "ORDER BY\n"
                          + "  TABLE_TYPE\n";
 
