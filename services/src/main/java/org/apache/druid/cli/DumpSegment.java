@@ -183,7 +183,7 @@ public class DumpSegment extends GuiceRunnable
           runMetadata(injector, index);
           break;
         case BITMAPS:
-          runBitmaps(injector, index);
+          runBitmaps(injector, outputFileName, index, getColumnsToInclude(index), decompressBitmaps);
           break;
         default:
           throw new ISE("dumpType[%s] has no handler", dumpType);
@@ -314,7 +314,14 @@ public class DumpSegment extends GuiceRunnable
     );
   }
 
-  private void runBitmaps(final Injector injector, final QueryableIndex index) throws IOException
+  @VisibleForTesting
+  public static void runBitmaps(
+      final Injector injector,
+      final String outputFileName,
+      final QueryableIndex index,
+      List<String> columnNames,
+      boolean decompressBitmaps
+  ) throws IOException
   {
     final ObjectMapper objectMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
@@ -331,70 +338,64 @@ public class DumpSegment extends GuiceRunnable
       );
     }
 
-    final List<String> columnNames = getColumnsToInclude(index);
-
     withOutputStream(
-        new Function<OutputStream, Object>()
-        {
-          @Override
-          public Object apply(final OutputStream out)
-          {
-            try (final JsonGenerator jg = objectMapper.getFactory().createGenerator(out)) {
+        out -> {
+          try (final JsonGenerator jg = objectMapper.getFactory().createGenerator(out)) {
+            jg.writeStartObject();
+            {
+              jg.writeObjectField("bitmapSerdeFactory", bitmapSerdeFactory);
+              jg.writeFieldName("bitmaps");
               jg.writeStartObject();
               {
-                jg.writeObjectField("bitmapSerdeFactory", bitmapSerdeFactory);
-                jg.writeFieldName("bitmaps");
-                jg.writeStartObject();
-                {
-                  for (final String columnName : columnNames) {
-                    final ColumnHolder columnHolder = index.getColumnHolder(columnName);
-                    final ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
-                    if (indexSupplier == null) {
-                      jg.writeNull();
+                for (final String columnName : columnNames) {
+                  final ColumnHolder columnHolder = index.getColumnHolder(columnName);
+                  final ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+                  if (indexSupplier == null) {
+                    jg.writeNull();
+                  } else {
+                    DictionaryEncodedStringValueIndex valueIndex =
+                        indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class);
+                    if (valueIndex == null) {
+                      jg.writeNullField(columnName);
                     } else {
-                      DictionaryEncodedStringValueIndex valueIndex =
-                          indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class);
-                      if (valueIndex == null) {
-                        jg.writeNullField(columnName);
-                      } else {
-                        jg.writeFieldName(columnName);
-                        jg.writeStartObject();
-                        for (int i = 0; i < valueIndex.getCardinality(); i++) {
-                          String val = valueIndex.getValue(i);
-                          // respect nulls if they are present in the dictionary
-                          jg.writeFieldName(val == null ? "null" : val);
-                          final ImmutableBitmap bitmap = valueIndex.getBitmap(i);
-                          if (decompressBitmaps) {
-                            jg.writeStartArray();
-                            final IntIterator iterator = bitmap.iterator();
-                            while (iterator.hasNext()) {
-                              final int rowNum = iterator.next();
-                              jg.writeNumber(rowNum);
-                            }
-                            jg.writeEndArray();
-                          } else {
-                            byte[] bytes = bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap);
-                            if (bytes != null) {
-                              jg.writeBinary(bytes);
-                            }
+                      jg.writeFieldName(columnName);
+                      jg.writeStartObject();
+                      for (int i = 0; i < valueIndex.getCardinality(); i++) {
+                        String val = valueIndex.getValue(i);
+                        // respect nulls if they are present in the dictionary
+                        jg.writeFieldName(val == null ? "null" : val);
+                        final ImmutableBitmap bitmap = valueIndex.getBitmap(i);
+                        if (decompressBitmaps) {
+                          jg.writeStartArray();
+                          final IntIterator iterator = bitmap.iterator();
+                          while (iterator.hasNext()) {
+                            final int rowNum = iterator.next();
+                            jg.writeNumber(rowNum);
+                          }
+                          jg.writeEndArray();
+                        } else {
+                          byte[] bytes = bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap);
+                          if (bytes != null) {
+                            jg.writeBinary(bytes);
                           }
                         }
-                        jg.writeEndObject();
                       }
+                      jg.writeEndObject();
                     }
                   }
                 }
-                jg.writeEndObject();
               }
               jg.writeEndObject();
             }
-            catch (IOException e) {
-              throw new RuntimeException(e);
-            }
-
-            return null;
+            jg.writeEndObject();
           }
-        }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+
+          return null;
+        },
+        outputFileName
     );
   }
 
@@ -420,6 +421,11 @@ public class DumpSegment extends GuiceRunnable
 
   @SuppressForbidden(reason = "System#out")
   private <T> T withOutputStream(Function<OutputStream, T> f) throws IOException
+  {
+    return withOutputStream(f, outputFileName);
+  }
+
+  private static <T> T withOutputStream(Function<OutputStream, T> f, String outputFileName) throws IOException
   {
     if (outputFileName == null) {
       return f.apply(System.out);
