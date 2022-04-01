@@ -23,8 +23,8 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
@@ -293,17 +293,16 @@ public interface VirtualColumn extends Cacheable
    */
   boolean usesDotNotation();
 
-  /**
-   * Returns the BitmapIndex for efficient filtering on columns that support it. This method is only used if
-   * {@link ColumnCapabilities} returned from {@link #capabilities(String)} has flag for BitmapIndex support.
-   * @param columnName
-   * @param selector
-   * @return BitmapIndex
-   */
   @SuppressWarnings("unused")
   @Nullable
-  default BitmapIndex getBitmapIndex(String columnName, ColumnSelector selector)
+  default <T> ColumnIndexCapabilities getIndexCapabilities(String columnName, ColumnSelector columnSelector, Class<T> clazz)
   {
-    throw new UnsupportedOperationException("not supported");
+    return null;
+  }
+
+  @Nullable
+  default <T> T getIndex(String columnName, ColumnSelector selector, Class<T> clazz)
+  {
+    throw new UnsupportedOperationException("Column does not support indexes");
   }
 }

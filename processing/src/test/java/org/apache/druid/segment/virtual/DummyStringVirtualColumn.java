@@ -33,10 +33,10 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.data.IndexedInts;
@@ -166,7 +166,11 @@ public class DummyStringVirtualColumn implements VirtualColumn
   }
 
   @Override
-  public @Nullable BitmapIndex getBitmapIndex(String columnName, ColumnSelector columnSelector)
+  public @Nullable <T> ColumnIndexCapabilities getIndexCapabilities(
+      String columnName,
+      ColumnSelector columnSelector,
+      Class<T> clazz
+  )
   {
     if (enableBitmaps) {
       ColumnHolder holder = columnSelector.getColumnHolder(baseColumnName);
@@ -174,7 +178,23 @@ public class DummyStringVirtualColumn implements VirtualColumn
         return null;
       }
 
-      return holder.getBitmapIndex();
+      return holder.getIndexSupplier().getIndexCapabilities(clazz);
+    } else {
+      return null;
+    }
+  }
+
+  @Nullable
+  @Override
+  public <T> T getIndex(String columnName, ColumnSelector selector, Class<T> clazz)
+  {
+    if (enableBitmaps) {
+      ColumnHolder holder = selector.getColumnHolder(baseColumnName);
+      if (holder == null) {
+        return null;
+      }
+
+      return holder.getIndexSupplier().getIndex(clazz);
     } else {
       throw new UnsupportedOperationException("not supported");
     }

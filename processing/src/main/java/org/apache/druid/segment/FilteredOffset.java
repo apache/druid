@@ -26,6 +26,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.RowOffsetMatcherFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
@@ -41,7 +42,7 @@ public final class FilteredOffset extends Offset
       ColumnSelectorFactory columnSelectorFactory,
       boolean descending,
       Filter postFilter,
-      ColumnSelectorBitmapIndexSelector bitmapIndexSelector
+      ColumnSelectorColumnIndexSelector bitmapIndexSelector
   )
   {
     this.baseOffset = baseOffset;
@@ -56,7 +57,10 @@ public final class FilteredOffset extends Offset
           rowOffsetMatcherFactory
       );
     } else {
-      if (postFilter.shouldUseBitmapIndex(bitmapIndexSelector)) {
+      final ColumnIndexCapabilities capabilities = postFilter.getIndexCapabilities(bitmapIndexSelector);
+      // we only consider "exact" filters here, because if false, we've already used the bitmap index for the base
+      // offset
+      if (capabilities != null && capabilities.isExact()) {
         filterMatcher = rowOffsetMatcherFactory.makeRowOffsetMatcher(
             postFilter.getBitmapIndex(bitmapIndexSelector)
         );

@@ -33,10 +33,12 @@ import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.column.IndexSupplier;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.filter.AndFilter;
@@ -146,8 +148,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     ColumnHolder columnHolder = index.getColumnHolder(dimension);
     if (columnHolder != null && columnHolder.getCapabilities().hasBitmapIndexes()) {
-      BitmapIndex bitmap = columnHolder.getBitmapIndex();
-      return bitmap.getCardinality() > 0 ? bitmap.getValue(0) : null;
+      IndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+      DictionaryEncodedStringValueIndex index = indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class);
+      return index.getCardinality() > 0 ? index.getValue(0) : null;
     }
     return null;
   }
@@ -158,8 +161,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     ColumnHolder columnHolder = index.getColumnHolder(dimension);
     if (columnHolder != null && columnHolder.getCapabilities().hasBitmapIndexes()) {
-      BitmapIndex bitmap = columnHolder.getBitmapIndex();
-      return bitmap.getCardinality() > 0 ? bitmap.getValue(bitmap.getCardinality() - 1) : null;
+      IndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+      DictionaryEncodedStringValueIndex index = indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class);
+      return index.getCardinality() > 0 ? index.getValue(index.getCardinality() - 1) : null;
     }
     return null;
   }
@@ -187,7 +191,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     if (filter != null) {
       final boolean filterCanVectorize =
-          filter.shouldUseBitmapIndex(makeBitmapIndexSelector(virtualColumns)) || filter.canVectorizeMatcher(this);
+          filter.getIndexCapabilities(makeBitmapIndexSelector(virtualColumns)) != null || filter.canVectorizeMatcher(this);
 
       if (!filterCanVectorize) {
         return false;
@@ -223,7 +227,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       return null;
     }
 
-    final ColumnSelectorBitmapIndexSelector bitmapIndexSelector = makeBitmapIndexSelector(virtualColumns);
+    final ColumnSelectorColumnIndexSelector bitmapIndexSelector = makeBitmapIndexSelector(virtualColumns);
 
     final FilterAnalysis filterAnalysis = analyzeFilter(filter, bitmapIndexSelector, queryMetrics);
 
@@ -260,7 +264,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       return Sequences.empty();
     }
 
-    final ColumnSelectorBitmapIndexSelector bitmapIndexSelector = makeBitmapIndexSelector(virtualColumns);
+    final ColumnSelectorColumnIndexSelector bitmapIndexSelector = makeBitmapIndexSelector(virtualColumns);
 
     final FilterAnalysis filterAnalysis = analyzeFilter(filter, bitmapIndexSelector, queryMetrics);
 
@@ -311,9 +315,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @VisibleForTesting
-  public ColumnSelectorBitmapIndexSelector makeBitmapIndexSelector(final VirtualColumns virtualColumns)
+  public ColumnSelectorColumnIndexSelector makeBitmapIndexSelector(final VirtualColumns virtualColumns)
   {
-    return new ColumnSelectorBitmapIndexSelector(
+    return new ColumnSelectorColumnIndexSelector(
         index.getBitmapFactoryForDimensions(),
         virtualColumns,
         index
@@ -323,7 +327,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @VisibleForTesting
   public FilterAnalysis analyzeFilter(
       @Nullable final Filter filter,
-      ColumnSelectorBitmapIndexSelector indexSelector,
+      ColumnSelectorColumnIndexSelector indexSelector,
       @Nullable QueryMetrics queryMetrics
   )
   {
@@ -355,19 +359,27 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         // If we get an AndFilter, we can split the subfilters across both filtering stages
         for (Filter subfilter : ((AndFilter) filter).getFilters()) {
 
-          if (subfilter.supportsBitmapIndex(indexSelector) && subfilter.shouldUseBitmapIndex(indexSelector)) {
+          final ColumnIndexCapabilities capabilities = subfilter.getIndexCapabilities(indexSelector);
 
-            preFilters.add(subfilter);
-          } else {
+          if (capabilities == null) {
             postFilters.add(subfilter);
+          } else {
+            preFilters.add(subfilter);
+            if (!capabilities.isExact()) {
+              postFilters.add(subfilter);
+            }
           }
         }
       } else {
         // If we get an OrFilter or a single filter, handle the filter in one stage
-        if (filter.supportsBitmapIndex(indexSelector) && filter.shouldUseBitmapIndex(indexSelector)) {
-          preFilters.add(filter);
-        } else {
+        final ColumnIndexCapabilities capabilities = filter.getIndexCapabilities(indexSelector);
+        if (capabilities == null) {
           postFilters.add(filter);
+        } else {
+          preFilters.add(filter);
+          if (!capabilities.isExact()) {
+            postFilters.add(filter);
+          }
         }
       }
     }

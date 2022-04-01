@@ -22,7 +22,7 @@ package org.apache.druid.segment.virtual;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.collections.bitmap.BitmapFactory;
+import com.google.common.base.Predicate;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -37,10 +37,15 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdMapping;
 import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.column.IndexSupplier;
+import org.apache.druid.segment.column.LexicographicalRangeIndex;
+import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
+import org.apache.druid.segment.column.StringValueSetIndex;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -50,7 +55,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Predicate;
 
 /**
  * {@link VirtualColumn} form of {@link ListFilteredDimensionSpec}, powered by
@@ -164,16 +168,34 @@ public class ListFilteredVirtualColumn implements VirtualColumn
   }
 
   @Override
-  public @Nullable BitmapIndex getBitmapIndex(
+  public @Nullable <T> ColumnIndexCapabilities getIndexCapabilities(
       String columnName,
-      ColumnSelector selector
+      ColumnSelector columnSelector,
+      Class<T> clazz
   )
+  {
+    final ColumnHolder holder = columnSelector.getColumnHolder(delegate.getDimension());
+    if (holder == null) {
+      return new SimpleColumnIndexCapabilities(true, true);
+    }
+    IndexSupplier indexSupplier = holder.getIndexSupplier();
+    if (indexSupplier == null) {
+      return null;
+    }
+    return indexSupplier.getIndexCapabilities(DictionaryEncodedStringValueIndex.class);
+  }
+
+  @Nullable
+  @Override
+  public <T> T getIndex(String columnName, ColumnSelector selector, Class<T> clazz)
   {
     final ColumnHolder holder = selector.getColumnHolder(delegate.getDimension());
     if (holder == null) {
       return null;
     }
-    final BitmapIndex underlyingIndex = holder.getBitmapIndex();
+    DictionaryEncodedStringValueIndex underlyingIndex = holder.getIndexSupplier().getIndex(
+        DictionaryEncodedStringValueIndex.class
+    );
     if (underlyingIndex == null) {
       return null;
     }
@@ -192,8 +214,14 @@ public class ListFilteredVirtualColumn implements VirtualColumn
           underlyingIndex::getValue
       );
     }
-
-    return new ListFilteredBitmapIndex(underlyingIndex, idMapping);
+    if (clazz.equals(StringValueSetIndex.class)) {
+      return (T) new ListFilteredStringValueSetIndex(underlyingIndex, idMapping);
+    } else if (clazz.equals(LexicographicalRangeIndex.class)) {
+      return (T) new ListFilteredLexicographicalRangeIndex(underlyingIndex, idMapping);
+    } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)) {
+      return (T) new ListFilteredDictionaryEncodedStringValueIndex(underlyingIndex, idMapping);
+    }
+    return null;
   }
 
   @Override
@@ -227,107 +255,68 @@ public class ListFilteredVirtualColumn implements VirtualColumn
            '}';
   }
 
-  private static class ListFilteredBitmapIndex implements BitmapIndex
+  private static class BaseListFilteredColumnIndex
   {
-    final BitmapIndex delegate;
+    final DictionaryEncodedStringValueIndex delegate;
     final IdMapping idMapping;
 
-    private ListFilteredBitmapIndex(BitmapIndex delegate, IdMapping idMapping)
+    private BaseListFilteredColumnIndex(
+        DictionaryEncodedStringValueIndex delegate,
+        IdMapping idMapping
+    )
     {
       this.delegate = delegate;
       this.idMapping = idMapping;
     }
 
-    @Override
-    public String getValue(int index)
-    {
-      return delegate.getValue(idMapping.getReverseId(index));
-    }
-
-    @Override
-    public boolean hasNulls()
-    {
-      return delegate.hasNulls();
-    }
-
-    @Override
-    public BitmapFactory getBitmapFactory()
-    {
-      return delegate.getBitmapFactory();
-    }
-
-    @Override
-    public int getCardinality()
-    {
-      return idMapping.getValueCardinality();
-    }
-
-    @Override
-    public int getIndex(@Nullable String value)
-    {
-      return getReverseIndex(value);
-    }
-
-    @Override
-    public ImmutableBitmap getBitmap(int idx)
+    ImmutableBitmap getBitmap(int idx)
     {
       return delegate.getBitmap(idMapping.getReverseId(idx));
     }
 
-    @Override
-    public ImmutableBitmap getBitmapForValue(@Nullable String value)
+    int getCardinality()
     {
-      if (getReverseIndex(value) < 0) {
-        return delegate.getBitmap(-1);
-      }
-      return delegate.getBitmapForValue(value);
+      return idMapping.getValueCardinality();
     }
 
-    @Override
-    public Iterable<ImmutableBitmap> getBitmapsInRange(
-        @Nullable String startValue,
-        boolean startStrict,
-        @Nullable String endValue,
-        boolean endStrict,
-        Predicate<String> matcher
-    )
+    int getReverseIndex(@Nullable String value)
     {
-      int startIndex, endIndex;
-      if (startValue == null) {
-        startIndex = 0;
-      } else {
-        final int found = getReverseIndex(NullHandling.emptyToNullIfNeeded(startValue));
-        if (found >= 0) {
-          startIndex = startStrict ? found + 1 : found;
+      int minIndex = 0;
+      int maxIndex = idMapping.getValueCardinality() - 1;
+      final Comparator<String> comparator = StringComparators.LEXICOGRAPHIC;
+      while (minIndex <= maxIndex) {
+        int currIndex = (minIndex + maxIndex) >>> 1;
+
+        String currValue = delegate.getValue(idMapping.getReverseId(currIndex));
+        int comparison = comparator.compare(currValue, value);
+        if (comparison == 0) {
+          return currIndex;
+        }
+
+        if (comparison < 0) {
+          minIndex = currIndex + 1;
         } else {
-          startIndex = -(found + 1);
+          maxIndex = currIndex - 1;
         }
       }
 
-      if (endValue == null) {
-        endIndex = idMapping.getValueCardinality();
-      } else {
-        final int found = getReverseIndex(NullHandling.emptyToNullIfNeeded(endValue));
-        if (found >= 0) {
-          endIndex = endStrict ? found : found + 1;
-        } else {
-          endIndex = -(found + 1);
-        }
-      }
+      return -(minIndex + 1);
+    }
 
-      endIndex = startIndex > endIndex ? startIndex : endIndex;
-      final int start = startIndex, end = endIndex;
+    Iterable<ImmutableBitmap> getBitmapsInRange(Predicate<String> matcher, int start, int end)
+    {
       return () -> new Iterator<ImmutableBitmap>()
       {
         int currIndex = start;
         int found;
+
         {
           found = findNext();
         }
 
         private int findNext()
         {
-          while (currIndex < end && !matcher.test(delegate.getValue(idMapping.getReverseId(currIndex)))) {
+          while (currIndex < end && !matcher.apply(delegate.getValue(idMapping.getReverseId(currIndex)))) {
             currIndex++;
           }
 
@@ -357,6 +346,28 @@ public class ListFilteredVirtualColumn implements VirtualColumn
           return getBitmap(cur);
         }
       };
+    }
+  }
+
+  private static class ListFilteredStringValueSetIndex extends BaseListFilteredColumnIndex implements StringValueSetIndex
+  {
+
+    private ListFilteredStringValueSetIndex(
+        DictionaryEncodedStringValueIndex delegate,
+        IdMapping idMapping
+    )
+    {
+      super(delegate, idMapping);
+    }
+
+    @Override
+    public ImmutableBitmap getBitmapForValue(@Nullable String value)
+    {
+      int reverseIndex = getReverseIndex(value);
+      if (reverseIndex < 0) {
+        return delegate.getBitmap(-1);
+      }
+      return delegate.getBitmap(idMapping.getReverseId(reverseIndex));
     }
 
     @Override
@@ -400,28 +411,104 @@ public class ListFilteredVirtualColumn implements VirtualColumn
       };
     }
 
-    private int getReverseIndex(@Nullable String value)
+    @Override
+    public Iterable<ImmutableBitmap> getBitmapsForPredicate(Predicate<String> matcher)
     {
-      int minIndex = 0;
-      int maxIndex = idMapping.getValueCardinality() - 1;
-      final Comparator<String> comparator = StringComparators.LEXICOGRAPHIC;
-      while (minIndex <= maxIndex) {
-        int currIndex = (minIndex + maxIndex) >>> 1;
+      final int start = 0, end = getCardinality();
+      return getBitmapsInRange(matcher, start, end);
+    }
+  }
 
-        String currValue = delegate.getValue(idMapping.getReverseId(currIndex));
-        int comparison = comparator.compare(currValue, value);
-        if (comparison == 0) {
-          return currIndex;
-        }
+  private static class ListFilteredLexicographicalRangeIndex extends BaseListFilteredColumnIndex
+      implements LexicographicalRangeIndex
+  {
 
-        if (comparison < 0) {
-          minIndex = currIndex + 1;
+    private ListFilteredLexicographicalRangeIndex(
+        DictionaryEncodedStringValueIndex delegate,
+        IdMapping idMapping
+    )
+    {
+      super(delegate, idMapping);
+    }
+
+    @Override
+    public Iterable<ImmutableBitmap> getBitmapsInRange(
+        @Nullable String startValue,
+        boolean startStrict,
+        @Nullable String endValue,
+        boolean endStrict,
+        Predicate<String> matcher
+    )
+    {
+      int startIndex, endIndex;
+      if (startValue == null) {
+        startIndex = 0;
+      } else {
+        final int found = getReverseIndex(NullHandling.emptyToNullIfNeeded(startValue));
+        if (found >= 0) {
+          startIndex = startStrict ? found + 1 : found;
         } else {
-          maxIndex = currIndex - 1;
+          startIndex = -(found + 1);
         }
       }
 
-      return -(minIndex + 1);
+      if (endValue == null) {
+        endIndex = idMapping.getValueCardinality();
+      } else {
+        final int found = getReverseIndex(NullHandling.emptyToNullIfNeeded(endValue));
+        if (found >= 0) {
+          endIndex = endStrict ? found : found + 1;
+        } else {
+          endIndex = -(found + 1);
+        }
+      }
+
+      endIndex = startIndex > endIndex ? startIndex : endIndex;
+      final int start = startIndex, end = endIndex;
+      return getBitmapsInRange(matcher, start, end);
+    }
+  }
+
+  private static class ListFilteredDictionaryEncodedStringValueIndex extends BaseListFilteredColumnIndex
+      implements DictionaryEncodedStringValueIndex
+  {
+    private ListFilteredDictionaryEncodedStringValueIndex(
+        DictionaryEncodedStringValueIndex delegate,
+        IdMapping idMapping
+    )
+    {
+      super(delegate, idMapping);
+    }
+
+    @Override
+    public boolean hasNulls()
+    {
+      return delegate.hasNulls();
+    }
+
+    @Override
+    public int getCardinality()
+    {
+      return idMapping.getValueCardinality();
+    }
+
+    @Nullable
+    @Override
+    public String getValue(int index)
+    {
+      return delegate.getValue(idMapping.getReverseId(index));
+    }
+
+    @Override
+    public int getIndex(@Nullable String value)
+    {
+      return getReverseIndex(value);
+    }
+
+    @Override
+    public ImmutableBitmap getBitmap(int idx)
+    {
+      return delegate.getBitmap(idMapping.getReverseId(idx));
     }
   }
 }

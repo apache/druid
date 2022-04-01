@@ -19,34 +19,35 @@
 
 package org.apache.druid.segment.column;
 
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
-
-import javax.annotation.Nullable;
-
-/**
- */
-public interface ColumnHolder
+public class SimpleColumnIndexCapabilities implements ColumnIndexCapabilities
 {
-  String TIME_COLUMN_NAME = "__time";
-  String DOUBLE_STORAGE_TYPE_PROPERTY = "druid.indexing.doubleStorage";
+  private final boolean invertible;
+  private final boolean exact;
 
-  static boolean storeDoubleAsFloat()
+  public SimpleColumnIndexCapabilities(boolean invertible, boolean exact)
   {
-    String value = System.getProperty(DOUBLE_STORAGE_TYPE_PROPERTY, "double");
-    return !"double".equals(StringUtils.toLowerCase(value));
+    this.invertible = invertible;
+    this.exact = exact;
   }
 
-  ColumnCapabilities getCapabilities();
+  @Override
+  public boolean isInvertible()
+  {
+    return invertible;
+  }
 
-  int getLength();
-  BaseColumn getColumn();
+  @Override
+  public boolean isExact()
+  {
+    return exact;
+  }
 
-  @Nullable
-  IndexSupplier getIndexSupplier();
-
-  /**
-   * Returns a new instance of a {@link SettableColumnValueSelector}, corresponding to the type of this column.
-   */
-  SettableColumnValueSelector makeNewSettableColumnValueSelector();
+  @Override
+  public ColumnIndexCapabilities merge(ColumnIndexCapabilities other)
+  {
+    return new SimpleColumnIndexCapabilities(
+        invertible && other.isInvertible(),
+        exact && other.isExact()
+    );
+  }
 }

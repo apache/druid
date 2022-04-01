@@ -64,10 +64,9 @@ import org.apache.druid.segment.data.IndexedIterable;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
 import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.DictionaryEncodedColumnSupplier;
+import org.apache.druid.segment.serde.DictionaryEncodedStringIndexSupplier;
 import org.apache.druid.segment.serde.FloatNumericColumnSupplier;
 import org.apache.druid.segment.serde.LongNumericColumnSupplier;
-import org.apache.druid.segment.serde.SpatialIndexColumnPartSupplier;
-import org.apache.druid.segment.serde.StringBitmapIndexColumnPartSupplier;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -454,17 +453,19 @@ public class IndexIO
                     Suppliers.ofInstance(index.getDimColumn(dimension)),
                     columnConfig.columnCacheSizeBytes()
                 )
-            )
-            .setBitmapIndex(
-                new StringBitmapIndexColumnPartSupplier(
-                    new ConciseBitmapFactory(),
-                    index.getBitmapIndexes().get(dimension),
-                    index.getDimValueLookup(dimension)
-                )
             );
-        if (index.getSpatialIndexes().get(dimension) != null) {
-          builder.setSpatialIndex(new SpatialIndexColumnPartSupplier(index.getSpatialIndexes().get(dimension)));
-        }
+        GenericIndexed<ImmutableBitmap> bitmaps = index.getBitmapIndexes().get(dimension);
+        ImmutableRTree spatialIndex = index.getSpatialIndexes().get(dimension);
+        builder.setIndexSupplier(
+            new DictionaryEncodedStringIndexSupplier(
+                new ConciseBitmapFactory(),
+                index.getDimValueLookup(dimension),
+                bitmaps,
+                spatialIndex
+            ),
+            bitmaps != null,
+            spatialIndex != null
+        );
         columns.put(dimension, getColumnHolderSupplier(builder, lazy));
       }
 

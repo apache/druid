@@ -31,7 +31,7 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
@@ -49,11 +49,15 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
+import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
@@ -217,15 +221,16 @@ public class ExpressionFilter implements Filter
     };
   }
 
+  @Nullable
   @Override
-  public boolean supportsBitmapIndex(final BitmapIndexSelector selector)
+  public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
   {
     final Expr.BindingAnalysis details = this.bindingDetails.get();
 
 
     if (details.getRequiredBindings().isEmpty()) {
       // Constant expression.
-      return true;
+      return new SimpleColumnIndexCapabilities(true, true);
     } else if (details.getRequiredBindings().size() == 1) {
       // Single-column expression. We can use bitmap indexes if this column has an index and the expression can
       // map over the values of the index.
@@ -237,21 +242,22 @@ public class ExpressionFilter implements Filter
           column,
           ColumnCapabilitiesImpl.createDefault()
       );
-      return selector.getBitmapIndex(column) != null && ExpressionSelectors.canMapOverDictionary(details, capabilities);
-    } else {
-      // Multi-column expression.
-      return false;
+      if (ExpressionSelectors.canMapOverDictionary(details, capabilities)) {
+        return Filters.checkFilterTuning(
+            selector,
+            column,
+            selector.getIndexCapabilities(column, StringValueSetIndex.class),
+            filterTuning
+        );
+      }
     }
+
+    // expression isn't mappable or is a multi-column input expression
+    return null;
   }
 
   @Override
-  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-  {
-    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
-  }
-
-  @Override
-  public <T> T getBitmapResult(final BitmapIndexSelector selector, final BitmapResultFactory<T> bitmapResultFactory)
+  public <T> T getBitmapResult(final ColumnIndexSelector selector, final BitmapResultFactory<T> bitmapResultFactory)
   {
     if (bindingDetails.get().getRequiredBindings().isEmpty()) {
       // Constant expression.
@@ -261,10 +267,6 @@ public class ExpressionFilter implements Filter
         return bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));
       }
     } else {
-      // Can assume there's only one binding, it has a bitmap index, and it's a single input mapping.
-      // Otherwise, supportsBitmapIndex would have returned false and the caller should not have called us.
-      assert supportsBitmapIndex(selector);
-
       final String column = Iterables.getOnlyElement(bindingDetails.get().getRequiredBindings());
       return Filters.matchPredicate(
           column,
@@ -283,14 +285,14 @@ public class ExpressionFilter implements Filter
   @Override
   public boolean supportsSelectivityEstimation(
       final ColumnSelector columnSelector,
-      final BitmapIndexSelector indexSelector
+      final ColumnIndexSelector indexSelector
   )
   {
     return false;
   }
 
   @Override
-  public double estimateSelectivity(final BitmapIndexSelector indexSelector)
+  public double estimateSelectivity(final ColumnIndexSelector indexSelector)
   {
     // Selectivity estimation not supported.
     throw new UnsupportedOperationException();

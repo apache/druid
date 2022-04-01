@@ -57,7 +57,7 @@ import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -76,6 +76,7 @@ import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.RowBasedStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -518,7 +519,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     final Filter postFilteringFilter = new Filter()
     {
       @Override
-      public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+      public <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
       {
         throw new UnsupportedOperationException();
       }
@@ -530,19 +531,13 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+      public @Nullable ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
       {
-        return false;
+        return null;
       }
 
       @Override
-      public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-      {
-        return false;
-      }
-
-      @Override
-      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
       {
         return false;
       }
@@ -554,7 +549,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public double estimateSelectivity(BitmapIndexSelector indexSelector)
+      public double estimateSelectivity(ColumnIndexSelector indexSelector)
       {
         return 1.0;
       }
@@ -592,7 +587,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     final Filter postFilteringFilter = new Filter()
     {
       @Override
-      public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+      public <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
       {
         throw new UnsupportedOperationException();
       }
@@ -603,16 +598,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
         return theFilter.makeMatcher(factory);
       }
 
+      @Nullable
       @Override
-      public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+      public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
       {
-        return false;
-      }
-
-      @Override
-      public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-      {
-        return false;
+        return null;
       }
 
       @Override
@@ -634,13 +624,13 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
       {
         return false;
       }
 
       @Override
-      public double estimateSelectivity(BitmapIndexSelector indexSelector)
+      public double estimateSelectivity(ColumnIndexSelector indexSelector)
       {
         return 1.0;
       }

@@ -34,9 +34,7 @@ public class ColumnBuilder
   @Nullable
   private Supplier<? extends BaseColumn> columnSupplier = null;
   @Nullable
-  private Supplier<BitmapIndex> bitmapIndex = null;
-  @Nullable
-  private Supplier<SpatialIndex> spatialIndex = null;
+  private IndexSupplier indexSupplier = null;
   @Nullable
   private SmooshedFileMapper fileMapper = null;
 
@@ -98,17 +96,11 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnBuilder setBitmapIndex(Supplier<BitmapIndex> bitmapIndex)
+  public ColumnBuilder setIndexSupplier(IndexSupplier indexSupplier, boolean hasBitmapIndex, boolean hasSpatial)
   {
-    this.bitmapIndex = bitmapIndex;
-    this.capabilitiesBuilder.setHasBitmapIndexes(true);
-    return this;
-  }
-
-  public ColumnBuilder setSpatialIndex(Supplier<SpatialIndex> spatialIndex)
-  {
-    this.spatialIndex = spatialIndex;
-    this.capabilitiesBuilder.setHasSpatialIndexes(true);
+    this.indexSupplier = indexSupplier;
+    capabilitiesBuilder.setHasBitmapIndexes(hasBitmapIndex);
+    capabilitiesBuilder.setHasSpatialIndexes(hasSpatial);
     return this;
   }
 
@@ -127,6 +119,6 @@ public class ColumnBuilder
   {
     Preconditions.checkState(capabilitiesBuilder.getType() != null, "Type must be set.");
 
-    return new SimpleColumnHolder(capabilitiesBuilder, columnSupplier, bitmapIndex, spatialIndex);
+    return new SimpleColumnHolder(capabilitiesBuilder, columnSupplier, indexSupplier);
   }
 }

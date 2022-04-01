@@ -26,7 +26,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.LikeDimFilter;
@@ -37,9 +37,12 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.LexicographicalRangeIndex;
+import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -65,13 +68,13 @@ public class LikeFilter implements Filter
   }
 
   @Override
-  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  public <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
     return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable(selector));
   }
 
   @Override
-  public double estimateSelectivity(BitmapIndexSelector selector)
+  public double estimateSelectivity(ColumnIndexSelector selector)
   {
     return Filters.estimateSelectivity(getBitmapIterable(selector).iterator(), selector.getNumRows());
   }
@@ -131,39 +134,47 @@ public class LikeFilter implements Filter
     );
   }
 
+  @Nullable
   @Override
-  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+  public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
   {
-    return selector.getBitmapIndex(dimension) != null;
+    if (isSimplePrefix()) {
+      ColumnIndexCapabilities capabilities = selector.getIndexCapabilities(dimension, LexicographicalRangeIndex.class);
+      if (capabilities != null) {
+        return Filters.checkFilterTuning(
+            selector,
+            dimension,
+            capabilities,
+            filterTuning
+        );
+      }
+    }
+    return Filters.checkFilterTuning(
+        selector,
+        dimension,
+        selector.getIndexCapabilities(dimension, StringValueSetIndex.class),
+        filterTuning
+    );
   }
 
   @Override
-  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-  {
-    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
   {
     return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
   }
 
-  private Iterable<ImmutableBitmap> getBitmapIterable(final BitmapIndexSelector selector)
+  private Iterable<ImmutableBitmap> getBitmapIterable(final ColumnIndexSelector selector)
   {
     if (isSimpleEquals()) {
       // Verify that dimension equals prefix.
       return ImmutableList.of(
-          selector.getBitmapIndex(
-              dimension,
+          selector.as(dimension, StringValueSetIndex.class).getBitmapForValue(
               NullHandling.emptyToNullIfNeeded(likeMatcher.getPrefix())
           )
       );
     } else if (isSimplePrefix()) {
-      // Verify that dimension startsWith prefix, and is accepted by likeMatcher.matchesSuffixOnly.
-      final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
-
-      if (bitmapIndex == null) {
+      final LexicographicalRangeIndex rangeIndex = selector.as(dimension, LexicographicalRangeIndex.class);
+      if (rangeIndex == null) {
         // Treat this as a column full of nulls
         return ImmutableList.of(likeMatcher.matches(null) ? Filters.allTrue(selector) : Filters.allFalse(selector));
       }
@@ -173,7 +184,7 @@ public class LikeFilter implements Filter
 
       // Union bitmaps for all matching dimension values in range.
       // Use lazy iterator to allow unioning bitmaps one by one and avoid materializing all of them at once.
-      return bitmapIndex.getBitmapsInRange(
+      return rangeIndex.getBitmapsInRange(
           lower,
           false,
           upper,

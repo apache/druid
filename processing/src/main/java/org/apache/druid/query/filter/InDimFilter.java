@@ -41,7 +41,6 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -58,7 +57,8 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -280,11 +280,16 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   }
 
   @Override
-  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  public <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
     if (extractionFn == null) {
-      final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
-      return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable(values, bitmapIndex));
+      final StringValueSetIndex valueSetIndex = selector.as(dimension, StringValueSetIndex.class);
+      if (valueSetIndex == null) {
+        return predicateFactory.makeStringPredicate().apply(null)
+               ? bitmapResultFactory.wrapAllTrue(Filters.allTrue(selector))
+               : bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));
+      }
+      return bitmapResultFactory.unionDimensionValueBitmaps(valueSetIndex.getBitmapsForValues(values));
     } else {
       return Filters.matchPredicate(
           dimension,
@@ -296,12 +301,12 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   }
 
   @Override
-  public double estimateSelectivity(BitmapIndexSelector indexSelector)
+  public double estimateSelectivity(ColumnIndexSelector indexSelector)
   {
     if (extractionFn == null) {
-      final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(dimension);
+      final StringValueSetIndex valueSetIndex = indexSelector.as(dimension, StringValueSetIndex.class);
       return Filters.estimateSelectivity(
-          bitmapIndex.getBitmapsForValues(values).iterator(),
+          valueSetIndex.getBitmapsForValues(values).iterator(),
           indexSelector.getNumRows()
       );
     } else {
@@ -362,20 +367,20 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     }
   }
 
+  @Nullable
   @Override
-  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+  public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
   {
-    return selector.getBitmapIndex(dimension) != null;
+    return Filters.checkFilterTuning(
+        selector,
+        dimension,
+        selector.getIndexCapabilities(dimension, StringValueSetIndex.class),
+        filterTuning
+    );
   }
 
   @Override
-  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-  {
-    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
   {
     return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
   }
@@ -494,11 +499,6 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   private static <T> boolean isNaturalOrder(@Nullable final Comparator<T> comparator)
   {
     return comparator == null || Comparators.naturalNullsFirst().equals(comparator);
-  }
-
-  private static Iterable<ImmutableBitmap> getBitmapIterable(final Set<String> values, final BitmapIndex bitmapIndex)
-  {
-    return bitmapIndex.getBitmapsForValues(values);
   }
 
   @SuppressWarnings("ReturnValueIgnored")

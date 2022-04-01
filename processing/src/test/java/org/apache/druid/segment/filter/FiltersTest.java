@@ -26,15 +26,12 @@ import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.segment.IntIteratorUtils;
-import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Set;
-import java.util.function.Predicate;
 
 public class FiltersTest extends InitializedNullHandlingTest
 {
@@ -43,7 +40,7 @@ public class FiltersTest extends InitializedNullHandlingTest
   {
     final int bitmapNum = 100;
     final List<ImmutableBitmap> bitmaps = Lists.newArrayListWithCapacity(bitmapNum);
-    final BitmapIndex bitmapIndex = makeNonOverlappedBitmapIndexes(bitmapNum, bitmaps);
+    final DictionaryEncodedStringValueIndex bitmapIndex = makeNonOverlappedBitmapIndexes(bitmapNum, bitmaps);
 
     final double estimated = Filters.estimateSelectivity(
         bitmapIndex,
@@ -54,9 +51,9 @@ public class FiltersTest extends InitializedNullHandlingTest
     Assert.assertEquals(expected, estimated, 0.00001);
   }
 
-  private static BitmapIndex getBitmapIndex(final List<ImmutableBitmap> bitmapList)
+  private static DictionaryEncodedStringValueIndex getBitmapIndex(final List<ImmutableBitmap> bitmapList)
   {
-    return new BitmapIndex()
+    return new DictionaryEncodedStringValueIndex()
     {
       @Override
       public int getCardinality()
@@ -77,48 +74,7 @@ public class FiltersTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public BitmapFactory getBitmapFactory()
-      {
-        return new ConciseBitmapFactory();
-      }
-
-      @Override
       public int getIndex(String value)
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public ImmutableBitmap getBitmapForValue(@Nullable String value)
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public Iterable<ImmutableBitmap> getBitmapsInRange(
-          @Nullable String startValue,
-          boolean startStrict,
-          @Nullable String endValue,
-          boolean endStrict
-      )
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public Iterable<ImmutableBitmap> getBitmapsInRange(
-          @Nullable String startValue,
-          boolean startStrict,
-          @Nullable String endValue,
-          boolean endStrict,
-          Predicate<String> matcher
-      )
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public Iterable<ImmutableBitmap> getBitmapsForValues(Set<String> values)
       {
         throw new UnsupportedOperationException();
       }
@@ -131,10 +87,10 @@ public class FiltersTest extends InitializedNullHandlingTest
     };
   }
 
-  private static BitmapIndex makeNonOverlappedBitmapIndexes(final int bitmapNum, final List<ImmutableBitmap> bitmaps)
+  private static DictionaryEncodedStringValueIndex makeNonOverlappedBitmapIndexes(final int bitmapNum, final List<ImmutableBitmap> bitmaps)
   {
-    final BitmapIndex bitmapIndex = getBitmapIndex(bitmaps);
-    final BitmapFactory factory = bitmapIndex.getBitmapFactory();
+    final BitmapFactory factory = new ConciseBitmapFactory();
+    final DictionaryEncodedStringValueIndex bitmapIndex = getBitmapIndex(bitmaps);
     for (int i = 0; i < bitmapNum; i++) {
       final MutableBitmap mutableBitmap = factory.makeEmptyMutableBitmap();
       for (int j = 0; j < 10; j++) {

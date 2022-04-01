@@ -22,13 +22,12 @@ package org.apache.druid.segment.filter;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.BoundDimFilter;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
@@ -43,9 +42,12 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.LexicographicalRangeIndex;
+import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -64,20 +66,28 @@ public class BoundFilter implements Filter
   }
 
   @Override
-  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  public <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
     if (supportShortCircuit()) {
-      final BitmapIndex bitmapIndex = selector.getBitmapIndex(boundDimFilter.getDimension());
-
-      if (bitmapIndex == null || bitmapIndex.getCardinality() == 0) {
+      final LexicographicalRangeIndex rangeIndex = selector.as(
+          boundDimFilter.getDimension(),
+          LexicographicalRangeIndex.class
+      );
+      if (rangeIndex == null) {
         if (doesMatchNull()) {
           return bitmapResultFactory.wrapAllTrue(Filters.allTrue(selector));
         } else {
           return bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));
         }
       }
-
-      return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterator(boundDimFilter, bitmapIndex));
+      return bitmapResultFactory.unionDimensionValueBitmaps(
+          rangeIndex.getBitmapsInRange(
+              boundDimFilter.getLower(),
+              boundDimFilter.isLowerStrict(),
+              boundDimFilter.getUpper(),
+              boundDimFilter.isUpperStrict()
+          )
+      );
     } else {
       return Filters.matchPredicate(
           boundDimFilter.getDimension(),
@@ -89,17 +99,18 @@ public class BoundFilter implements Filter
   }
 
   @Override
-  public double estimateSelectivity(BitmapIndexSelector indexSelector)
+  public double estimateSelectivity(ColumnIndexSelector indexSelector)
   {
     if (supportShortCircuit()) {
-      final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(boundDimFilter.getDimension());
-
-      if (bitmapIndex == null || bitmapIndex.getCardinality() == 0) {
+      final LexicographicalRangeIndex rangeIndex = indexSelector.as(
+          boundDimFilter.getDimension(),
+          LexicographicalRangeIndex.class
+      );
+      if (rangeIndex == null) {
         return doesMatchNull() ? 1. : 0.;
       }
-
       return Filters.estimateSelectivity(
-          bitmapIndex.getBitmapsInRange(
+          rangeIndex.getBitmapsInRange(
               boundDimFilter.getLower(),
               boundDimFilter.isLowerStrict(),
               boundDimFilter.getUpper(),
@@ -144,20 +155,34 @@ public class BoundFilter implements Filter
     return true;
   }
 
+  @Nullable
   @Override
-  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+  public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
   {
-    return selector.getBitmapIndex(boundDimFilter.getDimension()) != null;
+    final String columnName = boundDimFilter.getDimension();
+    final ColumnIndexCapabilities indexCapabilities = null;
+    if (supportShortCircuit()) {
+      final ColumnIndexCapabilities capabilities =
+          selector.getIndexCapabilities(columnName, LexicographicalRangeIndex.class);
+      if (capabilities != null) {
+        return Filters.checkFilterTuning(
+            selector,
+            columnName,
+            capabilities,
+            filterTuning
+        );
+      }
+    }
+    return Filters.checkFilterTuning(
+        selector,
+        columnName,
+        selector.getIndexCapabilities(columnName, StringValueSetIndex.class),
+        filterTuning
+    );
   }
 
   @Override
-  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-  {
-    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
   {
     return Filters.supportsSelectivityEstimation(this, boundDimFilter.getDimension(), columnSelector, indexSelector);
   }
@@ -198,19 +223,6 @@ public class BoundFilter implements Filter
     );
     return new BoundFilter(
         newDimFilter
-    );
-  }
-
-  private static Iterable<ImmutableBitmap> getBitmapIterator(
-      final BoundDimFilter boundDimFilter,
-      final BitmapIndex bitmapIndex
-  )
-  {
-    return bitmapIndex.getBitmapsInRange(
-        boundDimFilter.getLower(),
-        boundDimFilter.isLowerStrict(),
-        boundDimFilter.getUpper(),
-        boundDimFilter.isUpperStrict()
     );
   }
 

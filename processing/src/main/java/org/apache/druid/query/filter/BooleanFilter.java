@@ -21,7 +21,9 @@ package org.apache.druid.query.filter;
 
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
 
+import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -45,7 +47,7 @@ public interface BooleanFilter extends Filter
    *
    * An implementation should either:
    * - return a ValueMatcher that checks row values, using the provided ValueMatcherFactory
-   * - or, if possible, get a bitmap index for this filter using the BitmapIndexSelector, and
+   * - or, if possible, get a bitmap index for this filter using the ColumnIndexSelector, and
    * return a ValueMatcher that checks the current row offset, created using the bitmap index.
    *
    * @param selector                Object used to retrieve bitmap indexes
@@ -55,7 +57,7 @@ public interface BooleanFilter extends Filter
    * @return ValueMatcher that applies this filter
    */
   ValueMatcher makeMatcher(
-      BitmapIndexSelector selector,
+      ColumnIndexSelector selector,
       ColumnSelectorFactory columnSelectorFactory,
       RowOffsetMatcherFactory rowOffsetMatcherFactory
   );
@@ -70,30 +72,27 @@ public interface BooleanFilter extends Filter
     return allColumns;
   }
 
+  @Nullable
   @Override
-  default boolean supportsBitmapIndex(BitmapIndexSelector selector)
+  default ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
   {
-    for (Filter filter : getFilters()) {
-      if (!filter.supportsBitmapIndex(selector)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  @Override
-  default boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-  {
+    ColumnIndexCapabilities capabilities = null;
     for (Filter f : getFilters()) {
-      if (!f.shouldUseBitmapIndex(selector)) {
-        return false;
+      ColumnIndexCapabilities other = f.getIndexCapabilities(selector);
+      if (other == null) {
+        return null;
+      }
+      if (capabilities == null) {
+        capabilities = other;
+      } else {
+        capabilities = capabilities.merge(other);
       }
     }
-    return true;
+    return capabilities;
   }
 
   @Override
-  default boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  default boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
   {
     for (Filter filter : getFilters()) {
       if (!filter.supportsSelectivityEstimation(columnSelector, indexSelector)) {

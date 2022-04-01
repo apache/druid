@@ -28,8 +28,10 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Set;
 
@@ -38,8 +40,8 @@ public interface Filter
 {
   /**
    * Get a bitmap index, indicating rows that match this filter. Do not call this method unless
-   * {@link #supportsBitmapIndex(BitmapIndexSelector)} returns true. Behavior in the case that
-   * {@link #supportsBitmapIndex(BitmapIndexSelector)} returns false is undefined.
+   * {@link #getIndexCapabilities(ColumnIndexSelector)} returns a non-null value. Behavior in the case that
+   * {@link #getIndexCapabilities(ColumnIndexSelector)} returns null is undefined.
    *
    * This method is OK to be called, but generally should not be overridden, override {@link #getBitmapResult} instead.
    *
@@ -47,25 +49,25 @@ public interface Filter
    *
    * @return A bitmap indicating rows that match this filter.
    *
-   * @see Filter#estimateSelectivity(BitmapIndexSelector)
+   * @see Filter#estimateSelectivity(ColumnIndexSelector)
    */
-  default ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
+  default ImmutableBitmap getBitmapIndex(ColumnIndexSelector selector)
   {
     return getBitmapResult(selector, new DefaultBitmapResultFactory(selector.getBitmapFactory()));
   }
 
   /**
    * Get a (possibly wrapped) bitmap index, indicating rows that match this filter. Do not call this method unless
-   * {@link #supportsBitmapIndex(BitmapIndexSelector)} returns true. Behavior in the case that
-   * {@link #supportsBitmapIndex(BitmapIndexSelector)} returns false is undefined.
+   * {@link #getIndexCapabilities(ColumnIndexSelector)} returns a non-null value. Behavior in the case that
+   * {@link #getIndexCapabilities(ColumnIndexSelector)} returns null is undefined.
    *
    * @param selector Object used to retrieve bitmap indexes
    *
    * @return A bitmap indicating rows that match this filter.
    *
-   * @see Filter#estimateSelectivity(BitmapIndexSelector)
+   * @see Filter#estimateSelectivity(ColumnIndexSelector)
    */
-  <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory);
+  <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory);
 
   /**
    * Estimate selectivity of this filter.
@@ -79,9 +81,9 @@ public interface Filter
    *
    * @return an estimated selectivity ranging from 0 (filter selects no rows) to 1 (filter selects all rows).
    *
-   * @see Filter#getBitmapIndex(BitmapIndexSelector)
+   * @see Filter#getBitmapIndex(ColumnIndexSelector)
    */
-  double estimateSelectivity(BitmapIndexSelector indexSelector);
+  double estimateSelectivity(ColumnIndexSelector indexSelector);
 
   /**
    * Get a ValueMatcher that applies this filter to row values.
@@ -105,40 +107,17 @@ public interface Filter
   }
 
   /**
-   * Indicates whether this filter can return a bitmap index for filtering, based on the information provided by the
-   * input {@link BitmapIndexSelector}.
-   *
-   * Returning a value of true here guarantees that {@link #getBitmapIndex(BitmapIndexSelector)} will return a non-null
-   * {@link BitmapIndexSelector}, and also that all columns specified in {@link #getRequiredColumns()} have a bitmap
-   * index retrievable via {@link BitmapIndexSelector#getBitmapIndex(String)}.
-   *
-   * @param selector Object used to retrieve bitmap indexes
-   *
-   * @return true if this Filter can provide a bitmap index using the selector, false otherwise.
-   */
-  boolean supportsBitmapIndex(BitmapIndexSelector selector);
-
-  /**
-   * Determine if a filter *should* use a bitmap index based on information collected from the supplied
-   * {@link BitmapIndexSelector}. This method differs from {@link #supportsBitmapIndex(BitmapIndexSelector)} in that
-   * the former only indicates if a bitmap index is available and {@link #getBitmapIndex(BitmapIndexSelector)} may be
-   * used.
-   *
-   * If shouldUseFilter(selector) returns true, {@link #supportsBitmapIndex} must also return true when called with the
-   * same selector object. Returning a value of true here guarantees that {@link #getBitmapIndex(BitmapIndexSelector)}
-   * will return a non-null {@link BitmapIndexSelector}, and also that all columns specified in
-   * {@link #getRequiredColumns()} have a bitmap index retrievable via
-   * {@link BitmapIndexSelector#getBitmapIndex(String)}.
-   *
-   * Implementations of this methods typically consider a {@link FilterTuning} to make decisions about when to
-   * use an available index. A "standard" implementation of this is available to all {@link Filter} implementations in
-   * {@link org.apache.druid.segment.filter.Filters#shouldUseBitmapIndex(Filter, BitmapIndexSelector, FilterTuning)}.
+   * Provides {@link ColumnIndexCapabilities} for a filter, if any indexes can be used. A null return value from
+   * this method means that a filter cannot use indexes during query processing for the given
+   * {@link ColumnIndexSelector}
    *
    * @param selector Object used to retrieve bitmap indexes and provide information about the column
    *
-   * @return true if this Filter should provide a bitmap index using the selector, false otherwise.
+   * @return information about the function of the indexes which will be used when processing this filter, or null if
+   *         indexes may not be used to process this query.
    */
-  boolean shouldUseBitmapIndex(BitmapIndexSelector selector);
+  @Nullable
+  ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector);
 
   /**
    * Indicates whether this filter supports selectivity estimation.
@@ -150,7 +129,7 @@ public interface Filter
    *
    * @return true if this Filter supports selectivity estimation, false otherwise.
    */
-  boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector);
+  boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector);
 
   /**
    * Returns true if this filter can produce a vectorized matcher from its "makeVectorMatcher" method.
@@ -162,8 +141,8 @@ public interface Filter
   }
 
   /**
-   * Set of columns used by a filter. If {@link #supportsBitmapIndex} returns true, all columns returned by this method
-   * can be expected to have a bitmap index retrievable via {@link BitmapIndexSelector#getBitmapIndex(String)}
+   * Set of columns used by a filter. If {@link #getIndexCapabilities} returns a non-null value, all columns returned
+   * by this method can be expected to have an index available for filtering.
    */
   Set<String> getRequiredColumns();
 

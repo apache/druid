@@ -19,34 +19,30 @@
 
 package org.apache.druid.segment.column;
 
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
+import com.google.common.base.Predicate;
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
 
 import javax.annotation.Nullable;
+import java.util.Set;
 
 /**
+ * Index on individual values, and provide bitmaps for the rows which contain these values
  */
-public interface ColumnHolder
+public interface StringValueSetIndex
 {
-  String TIME_COLUMN_NAME = "__time";
-  String DOUBLE_STORAGE_TYPE_PROPERTY = "druid.indexing.doubleStorage";
-
-  static boolean storeDoubleAsFloat()
-  {
-    String value = System.getProperty(DOUBLE_STORAGE_TYPE_PROPERTY, "double");
-    return !"double".equals(StringUtils.toLowerCase(value));
-  }
-
-  ColumnCapabilities getCapabilities();
-
-  int getLength();
-  BaseColumn getColumn();
-
-  @Nullable
-  IndexSupplier getIndexSupplier();
+  /**
+   * Get the {@link ImmutableBitmap} corresponding to the supplied value
+   */
+  ImmutableBitmap getBitmapForValue(@Nullable String value);
 
   /**
-   * Returns a new instance of a {@link SettableColumnValueSelector}, corresponding to the type of this column.
+   * Get an {@link Iterable} of {@link ImmutableBitmap} corresponding to the specified set of values (if they are
+   * contained in the underlying column)
    */
-  SettableColumnValueSelector makeNewSettableColumnValueSelector();
+  Iterable<ImmutableBitmap> getBitmapsForValues(Set<String> values);
+
+  /**
+   * Get an {@link Iterable} of {@link ImmutableBitmap} for all values in the column which match the predicate
+   */
+  Iterable<ImmutableBitmap> getBitmapsForPredicate(Predicate<String> matcher);
 }

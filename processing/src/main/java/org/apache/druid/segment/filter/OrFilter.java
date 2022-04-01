@@ -25,8 +25,8 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.BooleanFilter;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.RowOffsetMatcherFactory;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -37,6 +37,7 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import java.util.ArrayList;
@@ -65,7 +66,7 @@ public class OrFilter implements BooleanFilter
   }
 
   @Override
-  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  public <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
     if (filters.size() == 1) {
       return Iterables.getOnlyElement(filters).getBitmapResult(selector, bitmapResultFactory);
@@ -111,7 +112,7 @@ public class OrFilter implements BooleanFilter
 
   @Override
   public ValueMatcher makeMatcher(
-      BitmapIndexSelector selector,
+      ColumnIndexSelector selector,
       ColumnSelectorFactory columnSelectorFactory,
       RowOffsetMatcherFactory rowOffsetMatcherFactory
   )
@@ -120,7 +121,10 @@ public class OrFilter implements BooleanFilter
     final List<ImmutableBitmap> bitmaps = new ArrayList<>();
 
     for (Filter filter : filters) {
-      if (filter.supportsBitmapIndex(selector)) {
+      // we only consider "exact" filters here, because if false, we've already used the bitmap index for the base
+      // offset
+      final ColumnIndexCapabilities capabilities = filter.getIndexCapabilities(selector);
+      if (capabilities != null && capabilities.isExact()) {
         bitmaps.add(filter.getBitmapIndex(selector));
       } else {
         ValueMatcher matcher = filter.makeMatcher(columnSelectorFactory);
@@ -144,7 +148,7 @@ public class OrFilter implements BooleanFilter
   }
 
   @Override
-  public double estimateSelectivity(BitmapIndexSelector indexSelector)
+  public double estimateSelectivity(ColumnIndexSelector indexSelector)
   {
     // Estimate selectivity with attribute value independence assumption
     double selectivity = 0;

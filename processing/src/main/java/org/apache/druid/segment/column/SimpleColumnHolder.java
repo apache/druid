@@ -33,22 +33,22 @@ class SimpleColumnHolder implements ColumnHolder
 {
   private final ColumnCapabilities capabilities;
   private final Supplier<? extends BaseColumn> columnSupplier;
+
   @Nullable
-  private final Supplier<BitmapIndex> bitmapIndex;
-  @Nullable
-  private final Supplier<SpatialIndex> spatialIndex;
+  private final IndexSupplier indexSupplier;
+
   private static final InvalidComplexColumnTypeValueSelector INVALID_COMPLEX_COLUMN_TYPE_VALUE_SELECTOR
       = new InvalidComplexColumnTypeValueSelector();
 
   SimpleColumnHolder(
       ColumnCapabilities capabilities,
       @Nullable Supplier<? extends BaseColumn> columnSupplier,
-      @Nullable Supplier<BitmapIndex> bitmapIndex,
-      @Nullable Supplier<SpatialIndex> spatialIndex
+      @Nullable IndexSupplier indexSupplier
   )
   {
     this.capabilities = capabilities;
     this.columnSupplier = columnSupplier;
+    this.indexSupplier = indexSupplier;
     // ColumnSupplier being null is sort of a rare case but can happen when a segment
     // was created, for example, using an aggregator that was removed in later versions.
     // In such cases we are not able to deserialize the column metadata and determine
@@ -62,8 +62,6 @@ class SimpleColumnHolder implements ColumnHolder
           "Only complex column types can have nullable column suppliers"
       );
     }
-    this.bitmapIndex = bitmapIndex;
-    this.spatialIndex = spatialIndex;
   }
 
   @Override
@@ -88,18 +86,10 @@ class SimpleColumnHolder implements ColumnHolder
     return columnSupplier == null ? UnknownTypeComplexColumn.instance() : columnSupplier.get();
   }
 
-  @Nullable
   @Override
-  public BitmapIndex getBitmapIndex()
+  public IndexSupplier getIndexSupplier()
   {
-    return bitmapIndex == null ? null : bitmapIndex.get();
-  }
-
-  @Nullable
-  @Override
-  public SpatialIndex getSpatialIndex()
-  {
-    return spatialIndex == null ? null : spatialIndex.get();
+    return indexSupplier;
   }
 
   @Override

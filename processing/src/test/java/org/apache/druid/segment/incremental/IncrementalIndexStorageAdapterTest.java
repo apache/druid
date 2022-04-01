@@ -42,7 +42,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
@@ -63,6 +63,8 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.SelectorFilter;
@@ -75,6 +77,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -655,13 +658,13 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     }
 
     @Override
-    public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+    public <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
     {
       return bitmapResultFactory.wrapAllTrue(Filters.allTrue(selector));
     }
 
     @Override
-    public double estimateSelectivity(BitmapIndexSelector indexSelector)
+    public double estimateSelectivity(ColumnIndexSelector indexSelector)
     {
       return 1;
     }
@@ -676,20 +679,15 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
       );
     }
 
+    @Nullable
     @Override
-    public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+    public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
     {
-      return true;
+      return new SimpleColumnIndexCapabilities(true, true);
     }
 
     @Override
-    public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-    {
-      return true;
-    }
-
-    @Override
-    public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+    public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
     {
       return true;
     }

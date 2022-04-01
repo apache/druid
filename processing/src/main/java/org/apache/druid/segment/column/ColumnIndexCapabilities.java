@@ -19,34 +19,22 @@
 
 package org.apache.druid.segment.column;
 
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
-
-import javax.annotation.Nullable;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 
 /**
+ * Sort of like {@link ColumnCapabilities}, except for indexes supplied by {@link ColumnIndexSelector}
  */
-public interface ColumnHolder
+public interface ColumnIndexCapabilities
 {
-  String TIME_COLUMN_NAME = "__time";
-  String DOUBLE_STORAGE_TYPE_PROPERTY = "druid.indexing.doubleStorage";
-
-  static boolean storeDoubleAsFloat()
-  {
-    String value = System.getProperty(DOUBLE_STORAGE_TYPE_PROPERTY, "double");
-    return !"double".equals(StringUtils.toLowerCase(value));
-  }
-
-  ColumnCapabilities getCapabilities();
-
-  int getLength();
-  BaseColumn getColumn();
-
-  @Nullable
-  IndexSupplier getIndexSupplier();
+  /**
+   * Indicates if an index can be inverted for use with a 'NOT' filter
+   */
+  boolean isInvertible();
 
   /**
-   * Returns a new instance of a {@link SettableColumnValueSelector}, corresponding to the type of this column.
+   * Indicates if an index is an exact match, or should also be post-filtered with a value matcher
    */
-  SettableColumnValueSelector makeNewSettableColumnValueSelector();
+  boolean isExact();
+
+  ColumnIndexCapabilities merge(ColumnIndexCapabilities other);
 }

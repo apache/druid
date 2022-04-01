@@ -19,34 +19,18 @@
 
 package org.apache.druid.segment.column;
 
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
-
 import javax.annotation.Nullable;
 
-/**
- */
-public interface ColumnHolder
+public interface IndexSupplier
 {
-  String TIME_COLUMN_NAME = "__time";
-  String DOUBLE_STORAGE_TYPE_PROPERTY = "druid.indexing.doubleStorage";
-
-  static boolean storeDoubleAsFloat()
+  default <T> ColumnIndexCapabilities getIndexCapabilities(Class<T> clazz)
   {
-    String value = System.getProperty(DOUBLE_STORAGE_TYPE_PROPERTY, "double");
-    return !"double".equals(StringUtils.toLowerCase(value));
+    throw new UnsupportedOperationException("Column does not support indexes");
   }
 
-  ColumnCapabilities getCapabilities();
-
-  int getLength();
-  BaseColumn getColumn();
-
   @Nullable
-  IndexSupplier getIndexSupplier();
-
-  /**
-   * Returns a new instance of a {@link SettableColumnValueSelector}, corresponding to the type of this column.
-   */
-  SettableColumnValueSelector makeNewSettableColumnValueSelector();
+  default <T> T getIndex(Class<T> clazz)
+  {
+    throw new UnsupportedOperationException("Column does not support indexes");
+  }
 }

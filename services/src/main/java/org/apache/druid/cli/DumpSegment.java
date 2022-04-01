@@ -74,9 +74,10 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.column.IndexSupplier;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
@@ -347,34 +348,39 @@ public class DumpSegment extends GuiceRunnable
                 {
                   for (final String columnName : columnNames) {
                     final ColumnHolder columnHolder = index.getColumnHolder(columnName);
-                    final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
-
-                    if (bitmapIndex == null) {
-                      jg.writeNullField(columnName);
+                    final IndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+                    if (indexSupplier == null) {
+                      jg.writeNull();
                     } else {
-                      jg.writeFieldName(columnName);
-                      jg.writeStartObject();
-                      for (int i = 0; i < bitmapIndex.getCardinality(); i++) {
-                        String val = bitmapIndex.getValue(i);
-                        // respect nulls if they are present in the dictionary
-                        jg.writeFieldName(val == null ? "null" : val);
-                        final ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
-                        if (decompressBitmaps) {
-                          jg.writeStartArray();
-                          final IntIterator iterator = bitmap.iterator();
-                          while (iterator.hasNext()) {
-                            final int rowNum = iterator.next();
-                            jg.writeNumber(rowNum);
-                          }
-                          jg.writeEndArray();
-                        } else {
-                          byte[] bytes = bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap);
-                          if (bytes != null) {
-                            jg.writeBinary(bytes);
+                      DictionaryEncodedStringValueIndex valueIndex =
+                          indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class);
+                      if (valueIndex == null) {
+                        jg.writeNullField(columnName);
+                      } else {
+                        jg.writeFieldName(columnName);
+                        jg.writeStartObject();
+                        for (int i = 0; i < valueIndex.getCardinality(); i++) {
+                          String val = valueIndex.getValue(i);
+                          // respect nulls if they are present in the dictionary
+                          jg.writeFieldName(val == null ? "null" : val);
+                          final ImmutableBitmap bitmap = valueIndex.getBitmap(i);
+                          if (decompressBitmaps) {
+                            jg.writeStartArray();
+                            final IntIterator iterator = bitmap.iterator();
+                            while (iterator.hasNext()) {
+                              final int rowNum = iterator.next();
+                              jg.writeNumber(rowNum);
+                            }
+                            jg.writeEndArray();
+                          } else {
+                            byte[] bytes = bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap);
+                            if (bytes != null) {
+                              jg.writeBinary(bytes);
+                            }
                           }
                         }
+                        jg.writeEndObject();
                       }
-                      jg.writeEndObject();
                     }
                   }
                 }

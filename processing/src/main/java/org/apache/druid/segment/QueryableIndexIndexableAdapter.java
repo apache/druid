@@ -26,11 +26,13 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.column.IndexSupplier;
+import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.ImmutableBitmapValues;
@@ -371,7 +373,12 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       return BitmapValues.EMPTY;
     }
 
-    final BitmapIndex bitmaps = columnHolder.getBitmapIndex();
+    final IndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+    if (indexSupplier == null) {
+      return BitmapValues.EMPTY;
+    }
+    final DictionaryEncodedStringValueIndex bitmaps =
+        indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class);
     if (bitmaps == null) {
       return BitmapValues.EMPTY;
     }
@@ -392,12 +399,17 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       return BitmapValues.EMPTY;
     }
 
-    final BitmapIndex bitmaps = columnHolder.getBitmapIndex();
-    if (bitmaps == null) {
+    final IndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+    if (indexSupplier == null) {
       return BitmapValues.EMPTY;
     }
 
-    return new ImmutableBitmapValues(bitmaps.getBitmapForValue(value));
+    final StringValueSetIndex index = indexSupplier.getIndex(StringValueSetIndex.class);
+    if (index == null) {
+      return BitmapValues.EMPTY;
+    }
+
+    return new ImmutableBitmapValues(index.getBitmapForValue(value));
   }
 
   @Override

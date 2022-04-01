@@ -19,33 +19,33 @@
 
 package org.apache.druid.query.filter;
 
-import com.google.errorprone.annotations.MustBeClosed;
 import org.apache.druid.collections.bitmap.BitmapFactory;
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.column.BitmapIndex;
-import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.data.CloseableIndexed;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
 
 import javax.annotation.Nullable;
 
 /**
  */
-public interface BitmapIndexSelector extends ColumnInspector
+public interface ColumnIndexSelector extends ColumnInspector
 {
-  @MustBeClosed
-  @Nullable
-  CloseableIndexed<String> getDimensionValues(String dimension);
-
-  @Deprecated
-  ColumnCapabilities.Capable hasMultipleValues(String dimension);
-
   int getNumRows();
+
   BitmapFactory getBitmapFactory();
+
+  /**
+   * Get the {@link ColumnIndexCapabilities} of a column for the specified type of index. If the index does not exist
+   * this method will return null. Note that 'missing' columns should in fact return a non-null value from this method
+   * to allow for filters to use 'nil' bitmaps if the filter matches nulls, in order to produce an all true or all
+   * false index.
+   */
   @Nullable
-  BitmapIndex getBitmapIndex(String dimension);
+  <T> ColumnIndexCapabilities getIndexCapabilities(String column, Class<T> clazz);
+
+  /**
+   * Get the specified type of index for the specified column. {@link #getIndexCapabilities(String, Class)} should
+   * be called prior to this method to distinguish 'missing' columns from columns without indexes.
+   */
   @Nullable
-  ImmutableBitmap getBitmapIndex(String dimension, String value);
-  ImmutableRTree getSpatialIndex(String dimension);
+  <T> T as(String column, Class<T> clazz);
 }

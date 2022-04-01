@@ -101,12 +101,10 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.SimpleQueryableIndex;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.SpatialIndex;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -2184,17 +2182,6 @@ public class CompactionTaskTest
       return null;
     }
 
-    @Override
-    public BitmapIndex getBitmapIndex()
-    {
-      return null;
-    }
-
-    @Override
-    public SpatialIndex getSpatialIndex()
-    {
-      return null;
-    }
   }
 
   /**

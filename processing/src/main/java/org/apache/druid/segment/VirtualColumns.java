@@ -33,9 +33,9 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
@@ -170,13 +170,18 @@ public class VirtualColumns implements Cacheable
     return withDotSupport.get(baseColumnName);
   }
 
-  @Nullable
-  public BitmapIndex getBitmapIndex(String columnName, ColumnSelector columnSelector)
+
+  public <T> ColumnIndexCapabilities getIndexCapabilities(String columnName, ColumnSelector columnSelector, Class<T> clazz)
   {
     final VirtualColumn virtualColumn = getVirtualColumnForSelector(columnName);
-    return virtualColumn.capabilities(columnSelector, columnName).hasBitmapIndexes()
-           ? virtualColumn.getBitmapIndex(columnName, columnSelector)
-           : null;
+    return virtualColumn.getIndexCapabilities(columnName, columnSelector, clazz);
+  }
+
+  @Nullable
+  public <T> T getIndex(String columnName, ColumnSelector columnSelector, Class<T> clazz)
+  {
+    final VirtualColumn virtualColumn = getVirtualColumnForSelector(columnName);
+    return virtualColumn.getIndex(columnName, columnSelector, clazz);
   }
 
   /**
@@ -497,4 +502,5 @@ public class VirtualColumns implements Cacheable
   {
     return virtualColumns.toString();
   }
+
 }
