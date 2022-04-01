@@ -686,16 +686,17 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     ImmutableSet.Builder<Shard> shards = ImmutableSet.builder();
     DescribeStreamRequest describeRequest = new DescribeStreamRequest();
     describeRequest.setStreamName(stream);
-    while (true) {
+    while (describeRequest != null) {
       StreamDescription description = kinesis.describeStream(describeRequest).getStreamDescription();
       List<Shard> shardResult = description.getShards();
       shards.addAll(shardResult);
       if (description.isHasMoreShards()) {
         describeRequest.setExclusiveStartShardId(Iterables.getLast(shardResult).getShardId());
       } else {
-        return shards.build();
+        describeRequest = null;
       }
     }
+    return shards.build();
   }
 
   /**

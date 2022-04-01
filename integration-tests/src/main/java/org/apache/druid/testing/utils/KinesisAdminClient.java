@@ -157,7 +157,7 @@ public class KinesisAdminClient implements StreamAdminClient
     Set<String> shardIds = new HashSet<>();
     DescribeStreamRequest request = new DescribeStreamRequest();
     request.setStreamName(streamName);
-    while (true) {
+    while (request != null) {
       StreamDescription description = amazonKinesis.describeStream(request).getStreamDescription();
       List<String> shardIdResult = description.getShards()
                                               .stream()
@@ -167,9 +167,10 @@ public class KinesisAdminClient implements StreamAdminClient
       if (description.isHasMoreShards()) {
         request.setExclusiveStartShardId(Iterables.getLast(shardIdResult));
       } else {
-        return shardIds.size();
+        request = null;
       }
     }
+    return shardIds.size();
   }
 
   @Override
