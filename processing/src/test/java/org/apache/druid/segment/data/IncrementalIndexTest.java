@@ -938,8 +938,8 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
       Assert.assertEquals(1481871600000L, row.getTimestampFromEpoch());
       if (index.isRollup()) {
         // All rows are rollup into one row
-        Assert.assertEquals( 2, row.getMetric("count").intValue());
-        Assert.assertEquals( 3, row.getMetric("sum_of_x").intValue());
+        Assert.assertEquals(2, row.getMetric("count").intValue());
+        Assert.assertEquals(3, row.getMetric("sum_of_x").intValue());
       } else {
         // We still have 2 rows
         if (rowCount == 1) {
