@@ -29,14 +29,16 @@ exports[`QueryOutput matches snapshot 1`] = `
               class="rt-resizable-header-content"
             >
               <span
-                class="clickable-cell bp3-popover2-target"
+                aria-haspopup="true"
+                class="clickable-cell bp4-popover2-target"
               >
                 <div
                   class=""
                 >
                   language
                   <span
-                    class="bp3-icon bp3-icon-filter"
+                    aria-hidden="true"
+                    class="bp4-icon bp4-icon-filter"
                     icon="filter"
                   >
                     <svg
@@ -45,9 +47,6 @@ exports[`QueryOutput matches snapshot 1`] = `
                       viewBox="0 0 16 16"
                       width="14"
                     >
-                      <desc>
-                        filter
-                      </desc>
                       <path
                         d="M13.99.99h-12a1.003 1.003 0 00-.71 1.71l4.71 4.71V14a1.003 1.003 0 001.71.71l2-2c.18-.18.29-.43.29-.71V7.41L14.7 2.7a1.003 1.003 0 00-.71-1.71z"
                         fill-rule="evenodd"
@@ -71,14 +70,16 @@ exports[`QueryOutput matches snapshot 1`] = `
               class="rt-resizable-header-content"
             >
               <span
-                class="clickable-cell bp3-popover2-target"
+                aria-haspopup="true"
+                class="clickable-cell bp4-popover2-target"
               >
                 <div
                   class=""
                 >
                   Count
                   <span
-                    class="bp3-icon bp3-icon-filter"
+                    aria-hidden="true"
+                    class="bp4-icon bp4-icon-filter"
                     icon="filter"
                   >
                     <svg
@@ -87,9 +88,6 @@ exports[`QueryOutput matches snapshot 1`] = `
                       viewBox="0 0 16 16"
                       width="14"
                     >
-                      <desc>
-                        filter
-                      </desc>
                       <path
                         d="M13.99.99h-12a1.003 1.003 0 00-.71 1.71l4.71 4.71V14a1.003 1.003 0 001.71.71l2-2c.18-.18.29-.43.29-.71V7.41L14.7 2.7a1.003 1.003 0 00-.71-1.71z"
                         fill-rule="evenodd"
@@ -113,7 +111,8 @@ exports[`QueryOutput matches snapshot 1`] = `
               class="rt-resizable-header-content"
             >
               <span
-                class="clickable-cell bp3-popover2-target"
+                aria-haspopup="true"
+                class="clickable-cell bp4-popover2-target"
               >
                 <div
                   class=""
@@ -136,7 +135,8 @@ exports[`QueryOutput matches snapshot 1`] = `
               class="rt-resizable-header-content"
             >
               <span
-                class="clickable-cell bp3-popover2-target"
+                aria-haspopup="true"
+                class="clickable-cell bp4-popover2-target"
               >
                 <div
                   class=""
@@ -170,7 +170,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell null"
@@ -187,7 +188,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell plain"
@@ -204,7 +206,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell plain"
@@ -221,7 +224,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell plain"
@@ -248,7 +252,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell plain"
@@ -265,7 +270,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell plain"
@@ -282,7 +288,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell plain"
@@ -299,7 +306,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell plain"
@@ -326,7 +334,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell plain"
@@ -343,7 +352,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell plain"
@@ -360,7 +370,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell plain"
@@ -377,7 +388,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell plain"
@@ -404,7 +416,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell plain"
@@ -421,7 +434,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell plain"
@@ -438,7 +452,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell plain"
@@ -455,7 +470,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell plain"
@@ -482,7 +498,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell null"
@@ -499,7 +516,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell null"
@@ -516,7 +534,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell null"
@@ -533,7 +552,8 @@ exports[`QueryOutput matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover2-target"
+                  aria-haspopup="true"
+                  class="bp4-popover2-target"
                 >
                   <span
                     class="table-cell null"
