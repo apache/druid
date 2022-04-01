@@ -227,7 +227,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   private final AggregatorFactory[] metrics;
   private final boolean deserializeComplexMetrics;
   private final Metadata metadata;
-  private final boolean preserveExistingMetrics;
+  protected final boolean preserveExistingMetrics;
 
   private final Map<String, MetricDesc> metricDescs;
 
@@ -257,6 +257,12 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
    * @param deserializeComplexMetrics flag whether or not to call ComplexMetricExtractor.extractValue() on the input
    *                                  value for aggregators that return metrics other than float.
    * @param concurrentEventAdd        flag whether ot not adding of input rows should be thread-safe
+   * @param preserveExistingMetrics   When set to true, for any row that already has metric
+   *                                  (with the same name defined in metricSpec), the metric aggregator in metricSpec
+   *                                  is skipped and the existing metric is unchanged. If the row does not already have
+   *                                  the metric, then the metric aggregator is applied on the source column as usual.
+   *                                  This should only be set for DruidInputSource since that is the only case where we
+   *                                  can have existing metrics.
    * @param useMaxMemoryEstimates     true if max values should be used to estimate memory
    */
   protected IncrementalIndex(
@@ -426,11 +432,6 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   public boolean isRollup()
   {
     return rollup;
-  }
-
-  public boolean isPreserveExistingMetrics()
-  {
-    return preserveExistingMetrics;
   }
 
   @Override

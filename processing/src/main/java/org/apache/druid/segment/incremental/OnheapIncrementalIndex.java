@@ -123,6 +123,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       boolean sortFacts,
       int maxRowCount,
       long maxBytesInMemory,
+      // preserveExistingMetrics should only be set true for DruidInputSource since that is the only case where we can have existing metrics
       boolean preserveExistingMetrics,
       boolean useMaxMemoryEstimates
   )
@@ -197,7 +198,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
               concurrentEventAdd
           )
       );
-      if (isPreserveExistingMetrics()) {
+      if (preserveExistingMetrics) {
         AggregatorFactory combiningAgg = agg.getCombiningFactory();
         combiningAggSelectors.put(
             combiningAgg.getName(),
@@ -231,7 +232,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       long aggSizeDelta = doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
       totalSizeInBytes.addAndGet(useMaxMemoryEstimates ? 0 : aggSizeDelta);
     } else {
-      if (isPreserveExistingMetrics()) {
+      if (preserveExistingMetrics) {
         aggs = new Aggregator[metrics.length * 2];
       } else {
         aggs = new Aggregator[metrics.length];
@@ -313,7 +314,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         totalInitialSizeBytes += aggReferenceSize;
       }
       // Creates aggregators to combine already aggregated field
-      if (isPreserveExistingMetrics()) {
+      if (preserveExistingMetrics) {
         if (useMaxMemoryEstimates) {
           AggregatorFactory combiningAgg = agg.getCombiningFactory();
           aggs[i + metrics.length] = combiningAgg.factorize(combiningAggSelectors.get(combiningAgg.getName()));
@@ -349,7 +350,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     long totalIncrementalBytes = 0L;
     for (int i = 0; i < metrics.length; i++) {
       final Aggregator agg;
-      if (isPreserveExistingMetrics() && row instanceof MapBasedRow && ((MapBasedRow) row).getEvent().containsKey(metrics[i].getName())) {
+      if (preserveExistingMetrics && row instanceof MapBasedRow && ((MapBasedRow) row).getEvent().containsKey(metrics[i].getName())) {
         agg = aggs[i + metrics.length];
       } else {
         agg = aggs[i];
@@ -364,8 +365,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         }
         catch (ParseException e) {
           // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
-          log.debug(e, "Encountered parse error, skipping aggregator[%s].", metrics[i].getName());
-          parseExceptionsHolder.add(e.getMessage());
+          if (preserveExistingMetrics) {
+            log.warn(e, "Failing ingestion as preserveExistingMetrics is enabled but selector of aggregator[%s] recieved incompatible type.", metrics[i].getName());
+            throw e;
+          } else {
+            log.debug(e, "Encountered parse error, skipping aggregator[%s].", metrics[i].getName());
+            parseExceptionsHolder.add(e.getMessage());
+          }
         }
       }
     }
@@ -469,7 +475,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Override
   public boolean isNull(int rowOffset, int aggOffset)
   {
-    if (isPreserveExistingMetrics()) {
+    if (preserveExistingMetrics) {
       return concurrentGet(rowOffset)[aggOffset].isNull() && concurrentGet(rowOffset)[aggOffset + getMetricAggs().length].isNull();
     } else {
       return concurrentGet(rowOffset)[aggOffset].isNull();
@@ -514,7 +520,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
               }
 
               Aggregator[] aggs = getAggsForRow(rowOffset);
-              int aggLength = isPreserveExistingMetrics() ? aggs.length / 2 : aggs.length;
+              int aggLength = preserveExistingMetrics ? aggs.length / 2 : aggs.length;
               for (int i = 0; i < aggLength; ++i) {
                 theVals.put(metrics[i].getName(), getMetricHelper(metrics, aggs, i, Aggregator::get));
               }
@@ -539,7 +545,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
    */
   private <T> T getMetricHelper(AggregatorFactory[] metrics, Aggregator[] aggs, int aggOffset, Function<Aggregator, T> getMetricTypeFunction)
   {
-    if (isPreserveExistingMetrics()) {
+    if (preserveExistingMetrics) {
       // Since the preserveExistingMetrics flag is set, we will have to check and possibly retrieve the aggregated values
       // from two aggregators, the aggregator for aggregating from input into output field and the aggregator
       // for combining already aggregated field
@@ -659,6 +665,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     private static final boolean DEFAULT_PRESERVE_EXISTING_METRICS = false;
     public static final String TYPE = "onheap";
 
+    // When set to true, for any row that already has metric (with the same name defined in metricSpec),
+    // the metric aggregator in metricSpec is skipped and the existing metric is unchanged. If the row does not already have
+    // the metric, then the metric aggregator is applied on the source column as usual. This should only be set for
+    // DruidInputSource since that is the only case where we can have existing metrics.
     final boolean preserveExistingMetrics;
 
     public Spec()
