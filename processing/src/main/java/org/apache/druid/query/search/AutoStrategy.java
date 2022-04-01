@@ -27,8 +27,8 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 
 import java.util.List;
 

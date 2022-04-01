@@ -339,18 +339,6 @@ public class Filters
 
   @Nullable
   public static ColumnIndexCapabilities checkFilterTuning(
-      @Nullable ColumnIndexCapabilities indexCapabilities,
-      @Nullable FilterTuning filterTuning
-  )
-  {
-    if (filterTuning != null && !filterTuning.getUseBitmapIndex()) {
-      return null;
-    }
-    return indexCapabilities;
-  }
-
-  @Nullable
-  public static ColumnIndexCapabilities checkFilterTuning(
       ColumnIndexSelector indexSelector,
       String columnName,
       @Nullable ColumnIndexCapabilities indexCapabilities,

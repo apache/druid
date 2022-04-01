@@ -160,7 +160,6 @@ public class BoundFilter implements Filter
   public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
   {
     final String columnName = boundDimFilter.getDimension();
-    final ColumnIndexCapabilities indexCapabilities = null;
     if (supportShortCircuit()) {
       final ColumnIndexCapabilities capabilities =
           selector.getIndexCapabilities(columnName, LexicographicalRangeIndex.class);

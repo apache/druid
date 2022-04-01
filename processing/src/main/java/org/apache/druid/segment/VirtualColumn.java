@@ -309,6 +309,7 @@ public interface VirtualColumn extends Cacheable
    * Get a column 'index' of the specified type, with the assistance of a {@link ColumnSelector} to allow reading
    * things from segments. If the index of the desired type is not available, this method will return null
    */
+  @SuppressWarnings("unused")
   @Nullable
   default <T> T getIndex(String columnName, ColumnSelector selector, Class<T> clazz)
   {

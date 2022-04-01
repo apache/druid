@@ -50,11 +50,6 @@ import java.util.Objects;
 @SubclassesMustOverrideEqualsAndHashCode
 public class FilterTuning
 {
-  public static FilterTuning createDefault()
-  {
-    return new FilterTuning(null, null, null);
-  }
-
   private final boolean useBitmapIndex;
   @Nullable
   private final Integer minCardinalityToUseBitmapIndex;
