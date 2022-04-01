@@ -215,7 +215,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         60000,
         5,
         true,
-        false
+        true
     );
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
@@ -310,7 +310,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         60000,
         100,
         true,
-        false
+        true
     );
 
     recordSupplier.assign(partitions);
@@ -1052,7 +1052,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
                                                              60000,
                                                              5,
                                                              true,
-                                                             false
+                                                             true
     );
     Record record = new Record();
 
