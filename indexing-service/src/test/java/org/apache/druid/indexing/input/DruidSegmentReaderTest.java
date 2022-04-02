@@ -199,6 +199,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         temporaryFolder.newFolder()
     );
 
+    Assert.assertTrue(reader.source().isFromTombstone());
     Assert.assertEquals(
         Collections.emptyList(),
         readRows(reader)
