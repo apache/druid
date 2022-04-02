@@ -104,7 +104,5 @@ public class DumpSegmentTest
         false
     );
     Assert.assertTrue(true);
-    Mockito.verify(injector);
-    Mockito.verify(queryableIndex);
   }
 }

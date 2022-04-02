@@ -76,8 +76,8 @@ import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
@@ -351,7 +351,7 @@ public class DumpSegment extends GuiceRunnable
                   final ColumnHolder columnHolder = index.getColumnHolder(columnName);
                   final ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
                   if (indexSupplier == null) {
-                    jg.writeNull();
+                    jg.writeNullField(columnName);
                   } else {
                     DictionaryEncodedStringValueIndex valueIndex =
                         indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class);
@@ -419,12 +419,12 @@ public class DumpSegment extends GuiceRunnable
     return ImmutableList.copyOf(columnNames);
   }
 
-  @SuppressForbidden(reason = "System#out")
   private <T> T withOutputStream(Function<OutputStream, T> f) throws IOException
   {
     return withOutputStream(f, outputFileName);
   }
 
+  @SuppressForbidden(reason = "System#out")
   private static <T> T withOutputStream(Function<OutputStream, T> f, String outputFileName) throws IOException
   {
     if (outputFileName == null) {
@@ -501,5 +501,4 @@ public class DumpSegment extends GuiceRunnable
   {
     sequence.accumulate(null, (accumulated, in) -> null);
   }
-
 }
