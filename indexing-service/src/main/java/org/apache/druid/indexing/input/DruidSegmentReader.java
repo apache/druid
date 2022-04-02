@@ -123,7 +123,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
         @Override
         public Map<String, Object> next()
         {
-          return null;
+          throw new NoSuchElementException();
         }
       };
     }
