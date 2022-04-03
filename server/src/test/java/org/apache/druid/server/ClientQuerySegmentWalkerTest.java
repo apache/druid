@@ -637,7 +637,7 @@ public class ClientQuerySegmentWalkerTest
   {
     ScanQuery subquery = new Druids.ScanQueryBuilder().dataSource(MULTI)
                                                       .columns("s", "n")
-                                                      .eternity()
+                                                      .eternityInterval()
                                                       .legacy(false)
                                                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                                       .build();
@@ -688,7 +688,7 @@ public class ClientQuerySegmentWalkerTest
   {
     ScanQuery subquery = new Druids.ScanQueryBuilder().dataSource(MULTI)
                                                       .columns("s", "n")
-                                                      .eternity()
+                                                      .eternityInterval()
                                                       .legacy(false)
                                                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                                       .build();
