@@ -778,9 +778,7 @@ public class Druids
    * <pre><code>
    *   ScanQuery query = new ScanQueryBuilder()
    *           .dataSource("Example")
-   *           .intervals(
-   *               new MultipleIntervalSegmentSpec(
-   *                   ImmutableList.of(Intervals.ETERNITY)))
+   *           .eternityInterval()
    *           .build();
    * </code></pre>
    *
@@ -801,10 +799,6 @@ public class Druids
     private Boolean legacy;
     private ScanQuery.Order order;
     private List<ScanQuery.OrderBy> orderBy;
-
-    public ScanQueryBuilder()
-    {
-    }
 
     public ScanQuery build()
     {
@@ -863,7 +857,7 @@ public class Druids
     /**
      * Convenience method for an interval over all time.
      */
-    public ScanQueryBuilder eternity()
+    public ScanQueryBuilder eternityInterval()
     {
       return intervals(
             new MultipleIntervalSegmentSpec(
