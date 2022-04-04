@@ -39,7 +39,7 @@ public class InputEntityTest
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
-  public void testInputEntity() throws IOException
+  public void testInputEntity() 
   {
     InputEntity inputEntity = new InputEntity()
     {
