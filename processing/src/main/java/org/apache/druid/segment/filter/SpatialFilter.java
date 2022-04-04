@@ -90,12 +90,7 @@ public class SpatialFilter implements Filter
   @Override
   public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
   {
-    return Filters.checkFilterTuning(
-        selector,
-        dimension,
-        selector.getIndexCapabilities(dimension, SpatialIndex.class),
-        filterTuning
-    );
+    return Filters.getCapabilitiesWithFilterTuning(selector, dimension, SpatialIndex.class, filterTuning);
   }
 
   @Override

@@ -161,23 +161,15 @@ public class BoundFilter implements Filter
   {
     final String columnName = boundDimFilter.getDimension();
     if (supportShortCircuit()) {
-      final ColumnIndexCapabilities capabilities =
-          selector.getIndexCapabilities(columnName, LexicographicalRangeIndex.class);
+      final ColumnIndexCapabilities capabilities = selector.getIndexCapabilities(
+          columnName,
+          LexicographicalRangeIndex.class
+      );
       if (capabilities != null) {
-        return Filters.checkFilterTuning(
-            selector,
-            columnName,
-            capabilities,
-            filterTuning
-        );
+        return Filters.getCapabilitiesWithFilterTuning(selector, columnName, capabilities, filterTuning);
       }
     }
-    return Filters.checkFilterTuning(
-        selector,
-        columnName,
-        selector.getIndexCapabilities(columnName, StringValueSetIndex.class),
-        filterTuning
-    );
+    return Filters.getCapabilitiesWithFilterTuning(selector, columnName, StringValueSetIndex.class, filterTuning);
   }
 
   @Override

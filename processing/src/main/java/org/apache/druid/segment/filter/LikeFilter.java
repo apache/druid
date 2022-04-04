@@ -141,20 +141,10 @@ public class LikeFilter implements Filter
     if (isSimplePrefix()) {
       ColumnIndexCapabilities capabilities = selector.getIndexCapabilities(dimension, LexicographicalRangeIndex.class);
       if (capabilities != null) {
-        return Filters.checkFilterTuning(
-            selector,
-            dimension,
-            capabilities,
-            filterTuning
-        );
+        return Filters.getCapabilitiesWithFilterTuning(selector, dimension, capabilities, filterTuning);
       }
     }
-    return Filters.checkFilterTuning(
-        selector,
-        dimension,
-        selector.getIndexCapabilities(dimension, StringValueSetIndex.class),
-        filterTuning
-    );
+    return Filters.getCapabilitiesWithFilterTuning(selector, dimension, StringValueSetIndex.class, filterTuning);
   }
 
   @Override

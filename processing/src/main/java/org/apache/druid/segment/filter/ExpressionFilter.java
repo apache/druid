@@ -243,12 +243,7 @@ public class ExpressionFilter implements Filter
           ColumnCapabilitiesImpl.createDefault()
       );
       if (ExpressionSelectors.canMapOverDictionary(details, capabilities)) {
-        return Filters.checkFilterTuning(
-            selector,
-            column,
-            selector.getIndexCapabilities(column, StringValueSetIndex.class),
-            filterTuning
-        );
+        return Filters.getCapabilitiesWithFilterTuning(selector, column, StringValueSetIndex.class, filterTuning);
       }
     }
 

@@ -110,12 +110,7 @@ public class SelectorFilter implements Filter
   @Override
   public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
   {
-    return Filters.checkFilterTuning(
-        selector,
-        dimension,
-        selector.getIndexCapabilities(dimension, StringValueSetIndex.class),
-        filterTuning
-    );
+    return Filters.getCapabilitiesWithFilterTuning(selector, dimension, StringValueSetIndex.class, filterTuning);
   }
 
   @Override

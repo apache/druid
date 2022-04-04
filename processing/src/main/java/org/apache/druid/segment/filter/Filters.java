@@ -338,7 +338,19 @@ public class Filters
   }
 
   @Nullable
-  public static ColumnIndexCapabilities checkFilterTuning(
+  public static <T> ColumnIndexCapabilities getCapabilitiesWithFilterTuning(
+      ColumnIndexSelector indexSelector,
+      String columnName,
+      Class<T> indexClazz,
+      @Nullable FilterTuning filterTuning
+  )
+  {
+    final ColumnIndexCapabilities indexCapabilities = indexSelector.getIndexCapabilities(columnName, indexClazz);
+    return getCapabilitiesWithFilterTuning(indexSelector, columnName, indexCapabilities, filterTuning);
+  }
+
+  @Nullable
+  public static ColumnIndexCapabilities getCapabilitiesWithFilterTuning(
       ColumnIndexSelector indexSelector,
       String columnName,
       @Nullable ColumnIndexCapabilities indexCapabilities,

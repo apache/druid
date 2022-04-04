@@ -371,10 +371,10 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   @Override
   public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
   {
-    return Filters.checkFilterTuning(
+    return Filters.getCapabilitiesWithFilterTuning(
         selector,
         dimension,
-        selector.getIndexCapabilities(dimension, StringValueSetIndex.class),
+        StringValueSetIndex.class,
         filterTuning
     );
   }
