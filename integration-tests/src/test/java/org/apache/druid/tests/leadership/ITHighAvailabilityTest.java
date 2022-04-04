@@ -356,6 +356,7 @@ public class ITHighAvailabilityTest
 
   private boolean verifyCoordinatorCluster()
   {
+    Map<String, Object> results;
     try {
       StatusResponseHolder response = httpClient.go(
           new Request(
@@ -376,33 +377,29 @@ public class ITHighAvailabilityTest
             response.getContent()
         );
       }
-
-      // Verify the basics: 5 service types, one of which is the custom node role.
-      // One of the two-node services has a size of 2.
-      // This endpoint includes an entry for historicals, even if none are running.
-      Map<String, Object> results = jsonMapper.readValue(response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
-      if (results.size() != 6) {
-        return false;
-      }
-      if (results.get(CliCustomNodeRole.SERVICE_NAME) == null) {
-        return false;
-      }
-      @SuppressWarnings("unchecked")
-      List<Object> coordNodes = (List<Object>) results.get(NodeRole.COORDINATOR.getJsonName());
-      if (coordNodes.size() != 2) {
-        return false;
-      }
-      @SuppressWarnings("unchecked")
-      List<Object> histNodes = (List<Object>) results.get(NodeRole.HISTORICAL.getJsonName());
-      return histNodes.isEmpty();
+      results = jsonMapper.readValue(response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+
+    // Verify the basics: 5 service types, one of which is the custom node role.
+    // One of the two-node services has a size of 2.
+    // This endpoint includes an entry for historicals, even if none are running.
+    Assert.assertEquals(6, results.size(), "Wrong result count");
+    Assert.assertNotNull(results.get(CliCustomNodeRole.SERVICE_NAME), "Custom node role missing");
+    @SuppressWarnings("unchecked")
+    List<Object> coordNodes = (List<Object>) results.get(NodeRole.COORDINATOR.getJsonName());
+    Assert.assertEquals(2, coordNodes.size(), "Expected two coordinators");
+    @SuppressWarnings("unchecked")
+    List<Object> histNodes = (List<Object>) results.get(NodeRole.HISTORICAL.getJsonName());
+    Assert.assertTrue(histNodes.isEmpty(), "Expected no nistorical nodes");
+    return true;
   }
 
   private boolean verifyRouterCluster()
   {
+    Map<String, Object> results;
     try {
       StatusResponseHolder response = httpClient.go(
           new Request(
@@ -423,22 +420,19 @@ public class ITHighAvailabilityTest
             response.getContent()
         );
       }
-
-      // Verify the basics: 5 service types, one of which is the custom node role.
-      // One of the two-node services has a size of 2.
-      Map<String, Object> results = jsonMapper.readValue(response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
-      if (results.size() != 5) {
-        return false;
-      }
-      if (results.get(CliCustomNodeRole.SERVICE_NAME) == null) {
-        return false;
-      }
-      @SuppressWarnings("unchecked")
-      List<Object> coordNodes = (List<Object>) results.get(NodeRole.COORDINATOR.getJsonName());
-      return coordNodes.size() == 2;
+      results = jsonMapper.readValue(response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+
+    // Verify the basics: 5 service types, one of which is the custom node role.
+    // One of the two-node services has a size of 2.
+    Assert.assertEquals(5, results.size(), "Wrong result count");
+    Assert.assertNotNull(results.get(CliCustomNodeRole.SERVICE_NAME), "Custom node role missing");
+    @SuppressWarnings("unchecked")
+    List<Object> coordNodes = (List<Object>) results.get(NodeRole.COORDINATOR.getJsonName());
+    Assert.assertEquals(2, coordNodes.size(), "Expected two coordinators");
+    return true;
   }
 }
