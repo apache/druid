@@ -272,14 +272,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
             "type": "boolean",
           },
           Object {
-            "defaultValue": 419430400,
-            "info": <p>
-              Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.
-            </p>,
-            "name": "inputSegmentSizeBytes",
-            "type": "number",
-          },
-          Object {
             "defaultValue": 1,
             "info": <React.Fragment>
               Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
@@ -640,14 +632,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             </p>,
             "name": "tuningConfig.partitionsSpec.assumeGrouped",
             "type": "boolean",
-          },
-          Object {
-            "defaultValue": 419430400,
-            "info": <p>
-              Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.
-            </p>,
-            "name": "inputSegmentSizeBytes",
-            "type": "number",
           },
           Object {
             "defaultValue": 1,
@@ -1012,14 +996,6 @@ exports[`CompactionDialog matches snapshot with compactionConfig (range partitio
             "type": "boolean",
           },
           Object {
-            "defaultValue": 419430400,
-            "info": <p>
-              Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.
-            </p>,
-            "name": "inputSegmentSizeBytes",
-            "type": "number",
-          },
-          Object {
             "defaultValue": 1,
             "info": <React.Fragment>
               Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
@@ -1380,14 +1356,6 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             </p>,
             "name": "tuningConfig.partitionsSpec.assumeGrouped",
             "type": "boolean",
-          },
-          Object {
-            "defaultValue": 419430400,
-            "info": <p>
-              Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.
-            </p>,
-            "name": "inputSegmentSizeBytes",
-            "type": "number",
           },
           Object {
             "defaultValue": 1,
