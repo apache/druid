@@ -10,37 +10,39 @@ exports[`ServicesView renders data 1`] = `
     <Component>
       Group by
     </Component>
-    <Blueprint3.ButtonGroup>
-      <Blueprint3.Button
+    <Blueprint4.ButtonGroup>
+      <Blueprint4.Button
         active={true}
         onClick={[Function]}
       >
         None
-      </Blueprint3.Button>
-      <Blueprint3.Button
+      </Blueprint4.Button>
+      <Blueprint4.Button
         active={false}
         onClick={[Function]}
       >
         Type
-      </Blueprint3.Button>
-      <Blueprint3.Button
+      </Blueprint4.Button>
+      <Blueprint4.Button
         active={false}
         onClick={[Function]}
       >
         Tier
-      </Blueprint3.Button>
-    </Blueprint3.ButtonGroup>
+      </Blueprint4.Button>
+    </Blueprint4.ButtonGroup>
     <Memo(RefreshButton)
       localStorageKey="services-refresh-rate"
       onRefresh={[Function]}
     />
     <Memo(MoreButton)>
-      <Blueprint3.MenuItem
+      <Blueprint4.MenuItem
+        active={false}
         disabled={false}
         icon="application"
         multiline={false}
         onClick={[Function]}
         popoverProps={Object {}}
+        selected={false}
         shouldDismissPopover={true}
         text="View SQL query for table"
       />

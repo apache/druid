@@ -184,6 +184,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
           (KinesisIndexTaskTuningConfig) taskTuningConfig,
           (KinesisIndexTaskIOConfig) taskIoConfig,
           context,
+          spec.getSpec().getTuningConfig().isUseListShards(),
           awsCredentialsConfig
       ));
     }
@@ -213,7 +214,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
         taskTuningConfig.getRecordBufferFullWait(),
         taskTuningConfig.getFetchSequenceNumberTimeout(),
         taskTuningConfig.getMaxRecordsPerPoll(),
-        ioConfig.isUseEarliestSequenceNumber()
+        ioConfig.isUseEarliestSequenceNumber(),
+        spec.getSpec().getTuningConfig().isUseListShards()
     );
   }
 

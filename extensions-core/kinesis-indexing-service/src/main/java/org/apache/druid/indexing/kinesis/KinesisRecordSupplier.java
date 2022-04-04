@@ -26,6 +26,7 @@ import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
+import com.amazonaws.services.kinesis.model.DescribeStreamRequest;
 import com.amazonaws.services.kinesis.model.ExpiredIteratorException;
 import com.amazonaws.services.kinesis.model.GetRecordsRequest;
 import com.amazonaws.services.kinesis.model.GetRecordsResult;
@@ -37,11 +38,13 @@ import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.ShardIteratorType;
+import com.amazonaws.services.kinesis.model.StreamDescription;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.amazonaws.util.AwsHostNameUtils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
 import org.apache.druid.common.aws.AWSClientUtil;
@@ -402,6 +405,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   private final int fetchThreads;
   private final int recordBufferSize;
   private final boolean useEarliestSequenceNumber;
+  private final boolean useListShards;
 
   private ScheduledExecutorService scheduledExec;
 
@@ -424,7 +428,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
       int recordBufferFullWait,
       int fetchSequenceNumberTimeout,
       int maxRecordsPerPoll,
-      boolean useEarliestSequenceNumber
+      boolean useEarliestSequenceNumber,
+      boolean useListShards
   )
   {
     Preconditions.checkNotNull(amazonKinesis);
@@ -439,6 +444,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     this.fetchThreads = fetchThreads;
     this.recordBufferSize = recordBufferSize;
     this.useEarliestSequenceNumber = useEarliestSequenceNumber;
+    this.useListShards = useListShards;
     this.backgroundFetchEnabled = fetchThreads > 0;
 
     // the deaggregate function is implemented by the amazon-kinesis-client, whose license is not compatible with Apache.
@@ -660,7 +666,41 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     return getSequenceNumber(partition, ShardIteratorType.TRIM_HORIZON);
   }
 
+  public Set<Shard> getShards(String stream)
+  {
+    if (useListShards) {
+      return getShardsUsingListShards(stream);
+    }
+    return getShardsUsingDescribeStream(stream);
+  }
+
   /**
+   * Default method to avoid incompatibility when user doesn't have sufficient IAM permissions on AWS
+   * Not advised. getShardsUsingListShards is recommended instead if sufficient permissions are present.
+   *
+   * @param stream name of stream
+   * @return Immutable set of shards
+   */
+  private Set<Shard> getShardsUsingDescribeStream(String stream)
+  {
+    ImmutableSet.Builder<Shard> shards = ImmutableSet.builder();
+    DescribeStreamRequest describeRequest = new DescribeStreamRequest();
+    describeRequest.setStreamName(stream);
+    while (describeRequest != null) {
+      StreamDescription description = kinesis.describeStream(describeRequest).getStreamDescription();
+      List<Shard> shardResult = description.getShards();
+      shards.addAll(shardResult);
+      if (description.isHasMoreShards()) {
+        describeRequest.setExclusiveStartShardId(Iterables.getLast(shardResult).getShardId());
+      } else {
+        describeRequest = null;
+      }
+    }
+    return shards.build();
+  }
+
+  /**
+   * If the user has the IAM policy for listShards, and useListShards is true:
    * Use the API listShards which is the recommended way instead of describeStream
    * listShards can return 1000 shards per call and has a limit of 100TPS
    * This makes the method resilient to LimitExceeded exceptions (compared to 100 shards, 10 TPS of describeStream)
@@ -668,7 +708,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
    * @param stream name of stream
    * @return Immutable set of shards
    */
-  public Set<Shard> getShards(String stream)
+  private Set<Shard> getShardsUsingListShards(String stream)
   {
     ImmutableSet.Builder<Shard> shards = ImmutableSet.builder();
     ListShardsRequest request = new ListShardsRequest().withStreamName(stream);

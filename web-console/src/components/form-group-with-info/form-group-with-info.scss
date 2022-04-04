@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .form-group-with-info {
-  .bp3-text-muted .bp3-popover2-target {
+  .#{$bp-ns}-text-muted .#{$bp-ns}-popover2-target {
     margin-top: 0;
   }
 
-  .bp3-form-content {
+  .#{$bp-ns}-form-content {
     position: relative;
 
     & > .info-popover {

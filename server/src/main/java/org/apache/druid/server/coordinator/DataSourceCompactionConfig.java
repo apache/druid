@@ -34,7 +34,7 @@ public class DataSourceCompactionConfig
 {
   /** Must be synced with Tasks.DEFAULT_MERGE_TASK_PRIORITY */
   public static final int DEFAULT_COMPACTION_TASK_PRIORITY = 25;
-  private static final long DEFAULT_INPUT_SEGMENT_SIZE_BYTES = 400 * 1024 * 1024;
+  private static final long DEFAULT_INPUT_SEGMENT_SIZE_BYTES = Long.MAX_VALUE;
   private static final Period DEFAULT_SKIP_OFFSET_FROM_LATEST = new Period("P1D");
 
   private final String dataSource;
