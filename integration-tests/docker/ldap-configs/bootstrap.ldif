@@ -71,6 +71,12 @@ cn: datasourceOnlyGroup
 description: datasourceOnlyGroup users
 uniqueMember: uid=datasourceOnlyUser,ou=Users,dc=example,dc=org
 
+dn: cn=datasourceWithContextParamsGroup,ou=Groups,dc=example,dc=org
+objectClass: groupOfUniqueNames
+cn: datasourceWithContextParamsGroup
+description: datasourceWithContextParamsGroup users
+uniqueMember: uid=datasourceWithContextParamsUser,ou=Users,dc=example,dc=org
+
 dn: uid=datasourceWithStateUser,ou=Users,dc=example,dc=org
 uid: datasourceWithStateUser
 cn: datasourceWithStateUser

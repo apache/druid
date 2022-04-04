@@ -19,8 +19,9 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.java.util.common.DateTimes;
@@ -45,14 +46,22 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.server.QueryResource.ResourceIOReaderWriter;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -63,7 +72,7 @@ import java.util.concurrent.TimeUnit;
  * ensures that a query goes through the following stages, in the proper order:
  *
  * <ol>
- * <li>Initialization ({@link #initialize(Query)})</li>
+ * <li>Initialization ({@link #initialize(QueryHolder, QueryContext)})</li>
  * <li>Authorization ({@link #authorize(HttpServletRequest)}</li>
  * <li>Execution ({@link #execute()}</li>
  * <li>Logging ({@link #emitLogsAndMetrics(Throwable, String, long)}</li>
@@ -82,13 +91,43 @@ public class QueryLifecycle
   private final RequestLogger requestLogger;
   private final AuthorizerMapper authorizerMapper;
   private final DefaultQueryConfig defaultQueryConfig;
+  private final AuthConfig authConfig;
   private final long startMs;
   private final long startNs;
 
   private State state = State.NEW;
   private AuthenticationResult authenticationResult;
   private QueryToolChest toolChest;
-  private Query baseQuery;
+
+  /**
+   * A holder for the user query to run.
+   *
+   * The holder has a state for query context.
+   * The query context in {@link QueryHolder#delegate#context} is not valid until they are authorized.
+   * {@link #context} should be used instead to get query context until authorized.
+   *
+   * Variable state change flow:
+   *
+   * - Initialized to null.
+   * - Set in {@link #initialize}.
+   * - Updated with context after authorization in {@link #doAuthorize}.
+   */
+  @MonotonicNonNull
+  private QueryHolder<?> baseQuery;
+
+  /**
+   * A separate query context holder that is used only until query context params are authorized.
+   * Once authorized, {@link #baseQuery#context} should be used instead to get query context.
+   *
+   * Variable state change flow:
+   *
+   * - Initialized to null.
+   * - Set in {@link #initialize}.
+   * - Set to null after authorization in {@link #doAuthorize}. It is no longer valid once it is set to null and
+   *   query context should be retrieved from {@link #baseQuery} instead.
+   */
+  @Nullable
+  private QueryContext context;
 
   public QueryLifecycle(
       final QueryToolChestWarehouse warehouse,
@@ -98,6 +137,7 @@ public class QueryLifecycle
       final RequestLogger requestLogger,
       final AuthorizerMapper authorizerMapper,
       final DefaultQueryConfig defaultQueryConfig,
+      final AuthConfig authConfig,
       final long startMs,
       final long startNs
   )
@@ -109,6 +149,7 @@ public class QueryLifecycle
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
     this.defaultQueryConfig = defaultQueryConfig;
+    this.authConfig = authConfig;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -132,7 +173,7 @@ public class QueryLifecycle
       final Access authorizationResult
   )
   {
-    initialize(query);
+    initialize(new QueryHolder<>(query), new QueryContext(query.getContext()));
 
     final Sequence<T> results;
 
@@ -169,24 +210,16 @@ public class QueryLifecycle
    * @param baseQuery the query
    */
   @SuppressWarnings("unchecked")
-  public void initialize(final Query baseQuery)
+  public void initialize(final QueryHolder<?> baseQuery, final QueryContext context)
   {
     transition(State.NEW, State.INITIALIZED);
 
-    String queryId = baseQuery.getId();
-    if (Strings.isNullOrEmpty(queryId)) {
-      queryId = UUID.randomUUID().toString();
-    }
+    context.addDefaultParam(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
+    context.addDefaultParams(defaultQueryConfig.getContext());
 
-    Map<String, Object> mergedUserAndConfigContext;
-    if (baseQuery.getContext() != null) {
-      mergedUserAndConfigContext = BaseQuery.computeOverriddenContext(defaultQueryConfig.getContext(), baseQuery.getContext());
-    } else {
-      mergedUserAndConfigContext = defaultQueryConfig.getContext();
-    }
-
-    this.baseQuery = baseQuery.withOverriddenContext(mergedUserAndConfigContext).withId(queryId);
-    this.toolChest = warehouse.getToolChest(baseQuery);
+    this.baseQuery = baseQuery;
+    this.context = context;
+    this.toolChest = warehouse.getToolChest(baseQuery.getDelegate());
   }
 
   /**
@@ -200,14 +233,23 @@ public class QueryLifecycle
   public Access authorize(HttpServletRequest req)
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
+    final Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
+        Iterables.transform(
+            baseQuery.getDataSource().getTableNames(),
+            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
+        ),
+        authConfig.authorizeQueryContextParams()
+        ? Iterables.transform(
+            Preconditions.checkNotNull(context, "context").getUserParams().keySet(),
+            contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
+        )
+        : Collections.emptyList()
+    );
     return doAuthorize(
         AuthorizationUtils.authenticationResultFromRequest(req),
         AuthorizationUtils.authorizeAllResourceActions(
             req,
-            Iterables.transform(
-                baseQuery.getDataSource().getTableNames(),
-                AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
-            ),
+            resourcesToAuthorize,
             authorizerMapper
         )
     );
@@ -233,6 +275,9 @@ public class QueryLifecycle
     }
 
     this.authenticationResult = authenticationResult;
+    // we have authorized query context params. now we can simply use the Query object to get context.
+    this.baseQuery = baseQuery.withContext(context);
+    this.context = null;
 
     return authorizationResult;
   }
@@ -250,7 +295,7 @@ public class QueryLifecycle
 
     final ResponseContext responseContext = DirectDruidClient.makeResponseContextForQuery();
 
-    final Sequence res = QueryPlus.wrap(baseQuery)
+    final Sequence res = QueryPlus.wrap(baseQuery.getDelegateWithValidContext())
                                   .withIdentity(authenticationResult.getIdentity())
                                   .run(texasRanger, responseContext);
 
@@ -277,12 +322,15 @@ public class QueryLifecycle
     }
 
     if (state == State.DONE) {
-      log.warn("Tried to emit logs and metrics twice for query[%s]!", baseQuery.getId());
+      log.warn("Tried to emit logs and metrics twice for query[%s]!", getQueryId());
     }
 
     state = State.DONE;
 
     final boolean success = e == null;
+    final Query<?> query = baseQuery.isValidContext()
+                           ? baseQuery.getDelegate()
+                           : baseQuery.withContext(Preconditions.checkNotNull(context, "context")).getDelegate();
 
     try {
       final long queryTimeNs = System.nanoTime() - startNs;
@@ -290,7 +338,7 @@ public class QueryLifecycle
       QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
           queryMetricsFactory,
           toolChest,
-          baseQuery,
+          query,
           StringUtils.nullToEmptyNonDruidDataString(remoteAddress)
       );
       queryMetrics.success(success);
@@ -317,10 +365,10 @@ public class QueryLifecycle
 
       if (e != null) {
         statsMap.put("exception", e.toString());
-        if (QueryContexts.isDebug(baseQuery)) {
-          log.warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
+        if (QueryContexts.isDebug(query)) {
+          log.warn(e, "Exception while processing queryId [%s]", query.getId());
         } else {
-          log.noStackTrace().warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
+          log.noStackTrace().warn(e, "Exception while processing queryId [%s]", query.getId());
         }
         if (e instanceof QueryInterruptedException || e instanceof QueryTimeoutException) {
           // Mimic behavior from QueryResource, where this code was originally taken from.
@@ -331,7 +379,7 @@ public class QueryLifecycle
 
       requestLogger.logNativeQuery(
           RequestLogLine.forNative(
-              baseQuery,
+              query,
               DateTimes.utc(startMs),
               StringUtils.nullToEmptyNonDruidDataString(remoteAddress),
               new QueryStats(statsMap)
@@ -339,13 +387,61 @@ public class QueryLifecycle
       );
     }
     catch (Exception ex) {
-      log.error(ex, "Unable to log query [%s]!", baseQuery);
+      log.error(ex, "Unable to log query [%s]!", query);
     }
   }
 
-  public Query getQuery()
+  /**
+   * Returns the Query wrapped inside QueryHolder.
+   *
+   * This method does not check the validity of query context in the Query object. That means, the query context
+   * in the Query object returned can be different from actual query context that is used for query processing.
+   * To avoid unexpected mismatch of query context, callers should use this method only when it is clear that
+   * query context in the Query object will not be used anywhere. To avoid any potential bug in the future,
+   * this method should be used only for debugging or logging purpose.
+   *
+   * If you want to get a query context param value, consider using other methods or adding a new one in this class,
+   * such as {@link #getQueryId()}, that knows the valid place where the context param is stored.
+   */
+  @Nullable
+  public Query<?> getQuery()
   {
-    return baseQuery;
+    return baseQuery == null ? null : baseQuery.getDelegate();
+  }
+
+  public String getQueryId()
+  {
+    return baseQuery.isValidContext()
+           ? baseQuery.getDelegate().getId()
+           : Preconditions.checkNotNull(context, "context").getAsString(BaseQuery.QUERY_ID);
+  }
+
+  public String threadName(String currThreadName)
+  {
+    return StringUtils.format(
+        "%s[%s_%s_%s]",
+        currThreadName,
+        baseQuery.getType(),
+        baseQuery.getDataSource().getTableNames(),
+        getQueryId()
+    );
+  }
+
+  private boolean isSerializeDateTimeAsLong()
+  {
+    final Query<?> query = baseQuery.getDelegateWithValidContext();
+    final boolean shouldFinalize = QueryContexts.isFinalize(query, true);
+    return QueryContexts.isSerializeDateTimeAsLong(query, false)
+           || (!shouldFinalize && QueryContexts.isSerializeDateTimeAsLongInner(query, false));
+  }
+
+  public ObjectWriter newOutputWriter(ResourceIOReaderWriter ioReaderWriter)
+  {
+    return ioReaderWriter.getResponseWriter().newOutputWriter(
+        getToolChest(),
+        baseQuery.getDelegateWithValidContext(),
+        isSerializeDateTimeAsLong()
+    );
   }
 
   public QueryToolChest getToolChest()
@@ -398,5 +494,17 @@ public class QueryLifecycle
     {
       return responseContext;
     }
+  }
+
+  @VisibleForTesting
+  QueryHolder<?> getBaseQuery()
+  {
+    return baseQuery;
+  }
+
+  @VisibleForTesting
+  QueryContext getContext()
+  {
+    return context;
   }
 }

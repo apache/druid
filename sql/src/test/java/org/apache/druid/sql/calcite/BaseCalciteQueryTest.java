@@ -73,7 +73,9 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.server.QueryContext;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -848,6 +850,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     final SqlLifecycleFactory sqlLifecycleFactory = getSqlLifecycleFactory(
         plannerConfig,
+        new AuthConfig(),
         operatorTable,
         macroTable,
         authorizerMapper,
@@ -962,8 +965,20 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       AuthenticationResult authenticationResult
   )
   {
+    return analyzeResources(plannerConfig, new AuthConfig(), sql, ImmutableMap.of(), authenticationResult);
+  }
+
+  public Set<ResourceAction> analyzeResources(
+      PlannerConfig plannerConfig,
+      AuthConfig authConfig,
+      String sql,
+      Map<String, Object> contexts,
+      AuthenticationResult authenticationResult
+  )
+  {
     SqlLifecycleFactory lifecycleFactory = getSqlLifecycleFactory(
         plannerConfig,
+        authConfig,
         createOperatorTable(),
         createMacroTable(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
@@ -971,12 +986,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     );
 
     SqlLifecycle lifecycle = lifecycleFactory.factorize();
-    lifecycle.initialize(sql, ImmutableMap.of());
+    lifecycle.initialize(sql, new QueryContext(contexts));
     return lifecycle.runAnalyzeResources(authenticationResult).getResourceActions();
   }
 
   public SqlLifecycleFactory getSqlLifecycleFactory(
       PlannerConfig plannerConfig,
+      AuthConfig authConfig,
       DruidOperatorTable operatorTable,
       ExprMacroTable macroTable,
       AuthorizerMapper authorizerMapper,
@@ -1006,7 +1022,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         objectMapper,
         CalciteTests.DRUID_SCHEMA_NAME
     );
-    final SqlLifecycleFactory sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(plannerFactory);
+    final SqlLifecycleFactory sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(plannerFactory, authConfig);
 
     viewManager.createView(
         plannerFactory,

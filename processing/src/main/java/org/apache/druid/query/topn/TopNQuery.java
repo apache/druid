@@ -220,6 +220,12 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   }
 
   @Override
+  public Query<Result<TopNResultValue>> withContext(Map<String, Object> context)
+  {
+    return new TopNQueryBuilder(this).context(context).build();
+  }
+
+  @Override
   public String toString()
   {
     return "TopNQuery{" +

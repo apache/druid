@@ -42,7 +42,6 @@ import org.testng.annotations.Test;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 @Test(groups = TestNGGroup.LDAP_SECURITY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -129,6 +128,15 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   }
 
   @Override
+  protected void setupDatasourceAndContextParamsUser() throws Exception
+  {
+    createRoleWithPermissionsAndGroupMapping(
+        "datasourceWithContextParamsGroup",
+        ImmutableMap.of("datasourceWithContextParamsRole", DATASOURCE_QUERY_CONTEXT_PERMISSIONS)
+    );
+  }
+
+  @Override
   protected void setupDatasourceAndSysTableUser() throws Exception
   {
     createRoleWithPermissionsAndGroupMapping(
@@ -193,24 +201,6 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   protected String getExpectedAvaticaAuthError()
   {
     return EXPECTED_AVATICA_AUTH_ERROR;
-  }
-
-  @Override
-  protected Properties getAvaticaConnectionProperties()
-  {
-    Properties connectionProperties = new Properties();
-    connectionProperties.setProperty("user", "admin");
-    connectionProperties.setProperty("password", "priest");
-    return connectionProperties;
-  }
-
-  @Override
-  protected Properties getAvaticaConnectionPropertiesFailure()
-  {
-    Properties connectionProperties = new Properties();
-    connectionProperties.setProperty("user", "admin");
-    connectionProperties.setProperty("password", "wrongpassword");
-    return connectionProperties;
   }
 
   private void createRoleWithPermissionsAndGroupMapping(

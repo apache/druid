@@ -105,6 +105,17 @@ public abstract class AbstractAuthConfigurationTest
       )
   );
 
+  protected static final List<ResourceAction> DATASOURCE_QUERY_CONTEXT_PERMISSIONS = ImmutableList.of(
+      new ResourceAction(
+          new Resource("auth_test", ResourceType.DATASOURCE),
+          Action.READ
+      ),
+      new ResourceAction(
+          new Resource("auth_test_ctx", ResourceType.QUERY_CONTEXT),
+          Action.WRITE
+      )
+  );
+
   /**
    * create a ResourceAction set of permissions that can only read 'auth_test' + partial SYSTEM_TABLE, for Authorizer
    * implementations which use ResourceAction pattern matching
@@ -188,6 +199,7 @@ public abstract class AbstractAuthConfigurationTest
 
   protected HttpClient adminClient;
   protected HttpClient datasourceOnlyUserClient;
+  protected HttpClient datasourceAndContextParamsClient;
   protected HttpClient datasourceAndSysUserClient;
   protected HttpClient datasourceWithStateUserClient;
   protected HttpClient stateOnlyUserClient;
@@ -195,6 +207,7 @@ public abstract class AbstractAuthConfigurationTest
 
 
   protected abstract void setupDatasourceOnlyUser() throws Exception;
+  protected abstract void setupDatasourceAndContextParamsUser() throws Exception;
   protected abstract void setupDatasourceAndSysTableUser() throws Exception;
   protected abstract void setupDatasourceAndSysAndStateUser() throws Exception;
   protected abstract void setupSysTableAndStateOnlyUser() throws Exception;
@@ -202,8 +215,6 @@ public abstract class AbstractAuthConfigurationTest
   protected abstract String getAuthenticatorName();
   protected abstract String getAuthorizerName();
   protected abstract String getExpectedAvaticaAuthError();
-  protected abstract Properties getAvaticaConnectionProperties();
-  protected abstract Properties getAvaticaConnectionPropertiesFailure();
 
   @Test
   public void test_systemSchemaAccess_admin() throws Exception
@@ -444,27 +455,71 @@ public abstract class AbstractAuthConfigurationTest
   @Test
   public void test_avaticaQuery_broker()
   {
-    testAvaticaQuery(getBrokerAvacticaUrl());
-    testAvaticaQuery(StringUtils.maybeRemoveTrailingSlash(getBrokerAvacticaUrl()));
+    final Properties properties = getAvaticaConnectionPropertiesForAdmin();
+    testAvaticaQuery(properties, getBrokerAvacticaUrl());
+    testAvaticaQuery(properties, StringUtils.maybeRemoveTrailingSlash(getBrokerAvacticaUrl()));
   }
 
   @Test
   public void test_avaticaQuery_router()
   {
-    testAvaticaQuery(getRouterAvacticaUrl());
-    testAvaticaQuery(StringUtils.maybeRemoveTrailingSlash(getRouterAvacticaUrl()));
+    final Properties properties = getAvaticaConnectionPropertiesForAdmin();
+    testAvaticaQuery(properties, getRouterAvacticaUrl());
+    testAvaticaQuery(properties, StringUtils.maybeRemoveTrailingSlash(getRouterAvacticaUrl()));
   }
 
   @Test
   public void test_avaticaQueryAuthFailure_broker() throws Exception
   {
-    testAvaticaAuthFailure(getBrokerAvacticaUrl());
+    final Properties properties = getAvaticaConnectionPropertiesForWrongAdmin();
+    testAvaticaAuthFailure(properties, getBrokerAvacticaUrl());
   }
 
   @Test
   public void test_avaticaQueryAuthFailure_router() throws Exception
   {
-    testAvaticaAuthFailure(getRouterAvacticaUrl());
+    final Properties properties = getAvaticaConnectionPropertiesForWrongAdmin();
+    testAvaticaAuthFailure(properties, getRouterAvacticaUrl());
+  }
+
+  @Test
+  public void test_avaticaQueryWithContext_datasourceOnlyUser_fail() throws Exception
+  {
+    final Properties properties = getAvaticaConnectionPropertiesForUser("datasourceOnlyUser", "helloworld");
+    properties.setProperty("auth_test_ctx", "should-be-denied");
+    testAvaticaAuthFailure(properties, getRouterAvacticaUrl());
+  }
+
+  @Test
+  public void test_avaticaQueryWithContext_datasourceAndContextParamsUser_succeed() throws Exception
+  {
+    final Properties properties = getAvaticaConnectionPropertiesForUser("datasourceAndContextParamsUser", "helloworld");
+    properties.setProperty("auth_test_ctx", "should-be-allowed");
+    testAvaticaAuthFailure(properties, getRouterAvacticaUrl());
+  }
+
+  @Test
+  public void test_sqlQueryWithContext_datasourceOnlyUser_fail() throws Exception
+  {
+    final String query = "select count(*) from auth_test";
+    StatusResponseHolder responseHolder = makeSQLQueryRequest(
+        datasourceOnlyUserClient,
+        query,
+        ImmutableMap.of("auth_test_ctx", "should-be-denied"),
+        HttpResponseStatus.FORBIDDEN
+    );
+  }
+
+  @Test
+  public void test_sqlQueryWithContext_datasourceAndContextParamsUser_succeed() throws Exception
+  {
+    final String query = "select count(*) from auth_test";
+    StatusResponseHolder responseHolder = makeSQLQueryRequest(
+        datasourceOnlyUserClient,
+        query,
+        ImmutableMap.of("auth_test_ctx", "should-be-allowed"),
+        HttpResponseStatus.OK
+    );
   }
 
   @Test
@@ -501,6 +556,7 @@ public abstract class AbstractAuthConfigurationTest
   {
     setupHttpClients();
     setupDatasourceOnlyUser();
+    setupDatasourceAndContextParamsUser();
     setupDatasourceAndSysTableUser();
     setupDatasourceAndSysAndStateUser();
     setupSysTableAndStateOnlyUser();
@@ -538,11 +594,28 @@ public abstract class AbstractAuthConfigurationTest
     HttpUtil.makeRequest(client, HttpMethod.GET, config.getCoordinatorUrl() + "/druid/coordinator/v1/loadqueue", null);
   }
 
-  protected void testAvaticaQuery(String url)
+  private Properties getAvaticaConnectionPropertiesForAdmin()
+  {
+    return getAvaticaConnectionPropertiesForUser("admin", "priest");
+  }
+
+  private Properties getAvaticaConnectionPropertiesForWrongAdmin()
+  {
+    return getAvaticaConnectionPropertiesForUser("admin", "wrongpassword");
+  }
+
+  private Properties getAvaticaConnectionPropertiesForUser(String id, String password)
+  {
+    Properties connectionProperties = new Properties();
+    connectionProperties.setProperty("user", id);
+    connectionProperties.setProperty("password", password);
+    return connectionProperties;
+  }
+
+  protected void testAvaticaQuery(Properties connectionProperties, String url)
   {
     LOG.info("URL: " + url);
     try {
-      Properties connectionProperties = getAvaticaConnectionProperties();
       Connection connection = DriverManager.getConnection(url, connectionProperties);
       Statement statement = connection.createStatement();
       statement.setMaxRows(450);
@@ -557,11 +630,10 @@ public abstract class AbstractAuthConfigurationTest
     }
   }
 
-  protected void testAvaticaAuthFailure(String url) throws Exception
+  protected void testAvaticaAuthFailure(Properties connectionProperties, String url) throws Exception
   {
     LOG.info("URL: " + url);
     try {
-      Properties connectionProperties = getAvaticaConnectionPropertiesFailure();
       Connection connection = DriverManager.getConnection(url, connectionProperties);
       Statement statement = connection.createStatement();
       statement.setMaxRows(450);
@@ -613,8 +685,19 @@ public abstract class AbstractAuthConfigurationTest
       HttpResponseStatus expectedStatus
   ) throws Exception
   {
+    return makeSQLQueryRequest(httpClient, query, ImmutableMap.of(), expectedStatus);
+  }
+
+  protected StatusResponseHolder makeSQLQueryRequest(
+      HttpClient httpClient,
+      String query,
+      Map<String, Object> context,
+      HttpResponseStatus expectedStatus
+  ) throws Exception
+  {
     Map<String, Object> queryMap = ImmutableMap.of(
-        "query", query
+        "query", query,
+        "context", context
     );
     return HttpUtil.makeRequestWithExpectedStatus(
         httpClient,
@@ -758,7 +841,6 @@ public abstract class AbstractAuthConfigurationTest
     setupTestSpecificHttpClients();
   }
 
-
   protected void setupCommonHttpClients()
   {
     adminClient = new CredentialedHttpClient(
@@ -768,6 +850,11 @@ public abstract class AbstractAuthConfigurationTest
 
     datasourceOnlyUserClient = new CredentialedHttpClient(
         new BasicCredentials("datasourceOnlyUser", "helloworld"),
+        httpClient
+    );
+
+    datasourceAndContextParamsClient = new CredentialedHttpClient(
+        new BasicCredentials("datasourceAndContextParamsUser", "helloworld"),
         httpClient
     );
 

@@ -61,7 +61,6 @@ import java.util.UUID;
     @JsonSubTypes.Type(name = Query.SELECT, value = SelectQuery.class),
     @JsonSubTypes.Type(name = Query.TOPN, value = TopNQuery.class),
     @JsonSubTypes.Type(name = Query.DATASOURCE_METADATA, value = DataSourceMetadataQuery.class)
-
 })
 public interface Query<T>
 {
@@ -119,6 +118,8 @@ public interface Query<T>
   Ordering<T> getResultOrdering();
 
   Query<T> withOverriddenContext(Map<String, Object> contextOverride);
+
+  Query<T> withContext(Map<String, Object> context);
 
   /**
    * Returns a new query, identical to this one, but with a different associated {@link QuerySegmentSpec}.

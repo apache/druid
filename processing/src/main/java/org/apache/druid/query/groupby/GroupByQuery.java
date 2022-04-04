@@ -835,6 +835,12 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   }
 
   @Override
+  public Query<ResultRow> withContext(Map<String, Object> context)
+  {
+    return new Builder(this).setContext(context).build();
+  }
+
+  @Override
   public GroupByQuery withQuerySegmentSpec(QuerySegmentSpec spec)
   {
     return new Builder(this).setQuerySegmentSpec(spec).build();

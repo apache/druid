@@ -146,6 +146,12 @@ public class SelectQuery implements Query<Object>
   }
 
   @Override
+  public Query<Object> withContext(Map<String, Object> context)
+  {
+    throw new RuntimeException(REMOVED_ERROR_MESSAGE);
+  }
+
+  @Override
   public Query<Object> withQuerySegmentSpec(QuerySegmentSpec spec)
   {
     throw new RuntimeException(REMOVED_ERROR_MESSAGE);

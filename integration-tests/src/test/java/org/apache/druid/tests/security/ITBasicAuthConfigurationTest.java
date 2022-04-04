@@ -36,7 +36,6 @@ import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import java.util.List;
-import java.util.Properties;
 
 @Test(groups = TestNGGroup.SECURITY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -78,6 +77,18 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
         "helloworld",
         "datasourceOnlyRole",
         DATASOURCE_ONLY_PERMISSIONS
+    );
+  }
+
+  @Override
+  protected void setupDatasourceAndContextParamsUser() throws Exception
+  {
+    createUserAndRoleWithPermissions(
+        adminClient,
+        "datasourceAndContextParamsUser",
+        "helloworld",
+        "datasourceAndContextParamsRole",
+        DATASOURCE_QUERY_CONTEXT_PERMISSIONS
     );
   }
 
@@ -185,24 +196,6 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   protected String getExpectedAvaticaAuthError()
   {
     return EXPECTED_AVATICA_AUTH_ERROR;
-  }
-
-  @Override
-  protected Properties getAvaticaConnectionProperties()
-  {
-    Properties connectionProperties = new Properties();
-    connectionProperties.setProperty("user", "admin");
-    connectionProperties.setProperty("password", "priest");
-    return connectionProperties;
-  }
-
-  @Override
-  protected Properties getAvaticaConnectionPropertiesFailure()
-  {
-    Properties connectionProperties = new Properties();
-    connectionProperties.setProperty("user", "admin");
-    connectionProperties.setProperty("password", "wrongpassword");
-    return connectionProperties;
   }
 
   private void createUserAndRoleWithPermissions(

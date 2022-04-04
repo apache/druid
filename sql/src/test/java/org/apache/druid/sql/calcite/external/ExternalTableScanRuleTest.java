@@ -26,6 +26,7 @@ import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.server.QueryContext;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
@@ -57,7 +58,7 @@ public class ExternalTableScanRuleTest
                 NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
             )
         ),
-        ImmutableMap.of()
+        new QueryContext()
     );
     plannerContext.setQueryMaker(
         CalciteTests.createMockQueryMakerFactory(

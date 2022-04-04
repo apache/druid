@@ -113,8 +113,13 @@ public class DruidStatementTest extends CalciteTestBase
   public void testSignature()
   {
     final String sql = "SELECT * FROM druid.foo";
-    final DruidStatement statement = new DruidStatement("", 0, null, sqlLifecycleFactory.factorize(), () -> {
-    }).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
+    final DruidStatement statement = new DruidStatement(
+        "",
+        0,
+        null,
+        sqlLifecycleFactory.factorize(),
+        () -> {}
+    ).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
 
     // Check signature.
     final Meta.Signature signature = statement.getSignature();
@@ -154,8 +159,13 @@ public class DruidStatementTest extends CalciteTestBase
   public void testSubQueryWithOrderBy()
   {
     final String sql = "select T20.F13 as F22  from (SELECT DISTINCT dim1 as F13 FROM druid.foo T10) T20 order by T20.F13 ASC";
-    final DruidStatement statement = new DruidStatement("", 0, null, sqlLifecycleFactory.factorize(), () -> {
-    }).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
+    final DruidStatement statement = new DruidStatement(
+        "",
+        0,
+        null,
+        sqlLifecycleFactory.factorize(),
+        () -> {}
+    ).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
     // First frame, ask for all rows.
     Meta.Frame frame = statement.execute(Collections.emptyList()).nextFrame(DruidStatement.START_OFFSET, 6);
     Assert.assertEquals(
@@ -182,8 +192,13 @@ public class DruidStatementTest extends CalciteTestBase
   public void testSelectAllInFirstFrame()
   {
     final String sql = "SELECT __time, cnt, dim1, dim2, m1 FROM druid.foo";
-    final DruidStatement statement = new DruidStatement("", 0, null, sqlLifecycleFactory.factorize(), () -> {
-    }).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
+    final DruidStatement statement = new DruidStatement(
+        "",
+        0,
+        null,
+        sqlLifecycleFactory.factorize(),
+        () -> {}
+    ).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
 
     // First frame, ask for all rows.
     Meta.Frame frame = statement.execute(Collections.emptyList()).nextFrame(DruidStatement.START_OFFSET, 6);
@@ -215,8 +230,13 @@ public class DruidStatementTest extends CalciteTestBase
   public void testSelectSplitOverTwoFrames()
   {
     final String sql = "SELECT __time, cnt, dim1, dim2, m1 FROM druid.foo";
-    final DruidStatement statement = new DruidStatement("", 0, null, sqlLifecycleFactory.factorize(), () -> {
-    }).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
+    final DruidStatement statement = new DruidStatement(
+        "",
+        0,
+        null,
+        sqlLifecycleFactory.factorize(),
+        () -> {}
+    ).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
 
     // First frame, ask for 2 rows.
     Meta.Frame frame = statement.execute(Collections.emptyList()).nextFrame(DruidStatement.START_OFFSET, 2);

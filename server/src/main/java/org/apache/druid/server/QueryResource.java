@@ -29,7 +29,6 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
@@ -38,6 +37,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -47,7 +47,6 @@ import org.apache.druid.query.BadJsonQueryException;
 import org.apache.druid.query.BadQueryException;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
@@ -80,7 +79,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -109,7 +107,6 @@ public class QueryResource implements QueryCountStatsProvider
   protected final ObjectMapper serializeDateTimeAsLongJsonMapper;
   protected final ObjectMapper serializeDateTimeAsLongSmileMapper;
   protected final QueryScheduler queryScheduler;
-  protected final AuthConfig authConfig;
   protected final AuthorizerMapper authorizerMapper;
 
   private final ResponseContextConfig responseContextConfig;
@@ -138,7 +135,6 @@ public class QueryResource implements QueryCountStatsProvider
     this.serializeDateTimeAsLongJsonMapper = serializeDataTimeAsLong(jsonMapper);
     this.serializeDateTimeAsLongSmileMapper = serializeDataTimeAsLong(smileMapper);
     this.queryScheduler = queryScheduler;
-    this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
     this.responseContextConfig = responseContextConfig;
     this.selfNode = selfNode;
@@ -184,28 +180,19 @@ public class QueryResource implements QueryCountStatsProvider
   ) throws IOException
   {
     final QueryLifecycle queryLifecycle = queryLifecycleFactory.factorize();
-    Query<?> query = null;
 
     final ResourceIOReaderWriter ioReaderWriter = createResourceIOReaderWriter(req, pretty != null);
 
     final String currThreadName = Thread.currentThread().getName();
     try {
-      queryLifecycle.initialize(readQuery(req, in, ioReaderWriter));
-      query = queryLifecycle.getQuery();
-      final String queryId = query.getId();
-
-      final String queryThreadName = StringUtils.format(
-          "%s[%s_%s_%s]",
-          currThreadName,
-          query.getType(),
-          query.getDataSource().getTableNames(),
-          queryId
-      );
-
+      final NonnullPair<QueryHolder<?>, QueryContext> pair = readQuery(req, in, ioReaderWriter);
+      queryLifecycle.initialize(pair.lhs, pair.rhs);
+      final String queryId = queryLifecycle.getQueryId();
+      final String queryThreadName = queryLifecycle.threadName(currThreadName);
       Thread.currentThread().setName(queryThreadName);
 
       if (log.isDebugEnabled()) {
-        log.debug("Got query [%s]", query);
+        log.debug("Got query [%s]", queryLifecycle.getQuery());
       }
 
       final Access authResult = queryLifecycle.authorize(req);
@@ -227,16 +214,7 @@ public class QueryResource implements QueryCountStatsProvider
       final Yielder<?> yielder = Yielders.each(results);
 
       try {
-        boolean shouldFinalize = QueryContexts.isFinalize(query, true);
-        boolean serializeDateTimeAsLong =
-            QueryContexts.isSerializeDateTimeAsLong(query, false)
-            || (!shouldFinalize && QueryContexts.isSerializeDateTimeAsLongInner(query, false));
-
-        final ObjectWriter jsonWriter = ioReaderWriter.getResponseWriter().newOutputWriter(
-            queryLifecycle.getToolChest(),
-            queryLifecycle.getQuery(),
-            serializeDateTimeAsLong
-        );
+        final ObjectWriter jsonWriter = queryLifecycle.newOutputWriter(ioReaderWriter);
 
         Response.ResponseBuilder responseBuilder = Response
             .ok(
@@ -364,7 +342,12 @@ public class QueryResource implements QueryCountStatsProvider
 
       log.noStackTrace()
          .makeAlert(e, "Exception handling request")
-         .addData("query", query != null ? jsonMapper.writeValueAsString(query) : "unparseable query")
+         .addData(
+             "query",
+             queryLifecycle.getQuery() != null
+             ? jsonMapper.writeValueAsString(queryLifecycle.getQuery())
+             : "unparseable query"
+         )
          .addData("peer", req.getRemoteAddr())
          .emit();
 
@@ -375,28 +358,27 @@ public class QueryResource implements QueryCountStatsProvider
     }
   }
 
-  private Query<?> readQuery(
+  private NonnullPair<QueryHolder<?>, QueryContext> readQuery(
       final HttpServletRequest req,
       final InputStream in,
       final ResourceIOReaderWriter ioReaderWriter
   ) throws IOException
   {
-    Query baseQuery;
+    final Query<?> baseQuery;
     try {
       baseQuery = ioReaderWriter.getRequestMapper().readValue(in, Query.class);
     }
     catch (JsonParseException e) {
       throw new BadJsonQueryException(e);
     }
+    final QueryContext context = new QueryContext(baseQuery.getContext());
     String prevEtag = getPreviousEtag(req);
 
     if (prevEtag != null) {
-      baseQuery = baseQuery.withOverriddenContext(
-          ImmutableMap.of(HEADER_IF_NONE_MATCH, prevEtag)
-      );
+      context.addSystemParam(HEADER_IF_NONE_MATCH, prevEtag);
     }
 
-    return baseQuery;
+    return new NonnullPair<>(new QueryHolder<>(baseQuery), context);
   }
 
   private static String getPreviousEtag(final HttpServletRequest req)

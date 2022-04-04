@@ -40,7 +40,9 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.server.QueryContext;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
@@ -894,6 +896,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
 
       final SqlLifecycleFactory sqlLifecycleFactory = getSqlLifecycleFactory(
           plannerConfig,
+          new AuthConfig(),
           createOperatorTable(),
           createMacroTable(),
           CalciteTests.TEST_AUTHORIZER_MAPPER,
@@ -901,7 +904,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
       );
 
       final SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
-      sqlLifecycle.initialize(sql, queryContext);
+      sqlLifecycle.initialize(sql, new QueryContext(queryContext));
 
       final Throwable e = Assert.assertThrows(
           Throwable.class,

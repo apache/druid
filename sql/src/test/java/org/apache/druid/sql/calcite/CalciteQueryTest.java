@@ -105,6 +105,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.server.QueryContext;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.SqlPlanningException.PlanningError;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -132,8 +133,6 @@ import java.util.stream.Collectors;
 
 public class CalciteQueryTest extends BaseCalciteQueryTest
 {
-
-
   @Test
   public void testGroupByWithPostAggregatorReferencingTimeFloorColumnOnTimeseries() throws Exception
   {
@@ -2162,10 +2161,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // to a bug in the Calcite's rule (AggregateExpandDistinctAggregatesRule)
     try {
       testQuery(
-          PLANNER_CONFIG_NO_HLL.withOverrides(ImmutableMap.of(
-              PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
-              "false"
-          )), // Enable exact count distinct
+          PLANNER_CONFIG_NO_HLL.withOverrides(
+              new QueryContext(
+                  ImmutableMap.of(
+                      PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+                      "false"
+                  )
+              )
+          ), // Enable exact count distinct
           sqlQuery,
           CalciteTests.REGULAR_USER_AUTH_RESULT,
           ImmutableList.of(),
@@ -2179,10 +2182,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     requireMergeBuffers(3);
     testQuery(
-        PLANNER_CONFIG_NO_HLL.withOverrides(ImmutableMap.of(
-            PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
-            "true"
-        )),
+        PLANNER_CONFIG_NO_HLL.withOverrides(
+            new QueryContext(
+                ImmutableMap.of(
+                    PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+                    "true"
+                )
+            )
+        ),
         sqlQuery,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
@@ -6243,10 +6250,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     requireMergeBuffers(4);
     testQuery(
-        PLANNER_CONFIG_NO_HLL.withOverrides(ImmutableMap.of(
-            PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
-            "true"
-        )),
+        PLANNER_CONFIG_NO_HLL.withOverrides(
+            new QueryContext(
+                ImmutableMap.of(
+                    PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+                    "true"
+                )
+            )
+        ),
         "SELECT FLOOR(__time to day), COUNT(distinct city), COUNT(distinct user) FROM druid.visits GROUP BY 1",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
@@ -8263,10 +8274,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     requireMergeBuffers(3);
     testQuery(
-        PLANNER_CONFIG_NO_HLL.withOverrides(ImmutableMap.of(
-            PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
-            "true"
-        )),
+        PLANNER_CONFIG_NO_HLL.withOverrides(
+            new QueryContext(
+                ImmutableMap.of(
+                    PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+                    "true"
+                )
+            )
+        ),
         "SELECT\n"
         + "(SUM(CASE WHEN (TIMESTAMP '2000-01-04 17:00:00'<=__time AND __time<TIMESTAMP '2022-01-05 17:00:00') THEN 1 ELSE 0 END)*1.0/COUNT(DISTINCT CASE WHEN (TIMESTAMP '2000-01-04 17:00:00'<=__time AND __time<TIMESTAMP '2022-01-05 17:00:00') THEN dim1 END))\n"
         + "FROM druid.foo\n"

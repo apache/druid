@@ -36,6 +36,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Queries;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
@@ -486,6 +487,12 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   public ScanQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     return Druids.ScanQueryBuilder.copy(this).context(computeOverriddenContext(getContext(), contextOverrides)).build();
+  }
+
+  @Override
+  public Query<ScanResultValue> withContext(Map<String, Object> context)
+  {
+    return Druids.ScanQueryBuilder.copy(this).columns(columns).build();
   }
 
   @Override

@@ -194,6 +194,12 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   }
 
   @Override
+  public Query<SegmentAnalysis> withContext(Map<String, Object> context)
+  {
+    return Druids.SegmentMetadataQueryBuilder.copy(this).context(context).build();
+  }
+
+  @Override
   public Query<SegmentAnalysis> withQuerySegmentSpec(QuerySegmentSpec spec)
   {
     return Druids.SegmentMetadataQueryBuilder.copy(this).intervals(spec).build();

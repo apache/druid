@@ -32,7 +32,6 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
@@ -40,6 +39,7 @@ import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchTo
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.server.QueryContext;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -50,7 +50,6 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
 
 public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
 {
@@ -200,11 +199,12 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
     );
   }
 
-  @Nullable
-  static Long getMaxStreamLengthFromQueryContext(Map<String, Object> queryContext)
+  static long getMaxStreamLengthFromQueryContext(QueryContext queryContext)
   {
-    final Object val = queryContext.get(CTX_APPROX_QUANTILE_DS_MAX_STREAM_LENGTH);
-    return val == null ? null : Numbers.parseLong(val);
+    return queryContext.getAsLong(
+        CTX_APPROX_QUANTILE_DS_MAX_STREAM_LENGTH,
+        DoublesSketchAggregatorFactory.DEFAULT_MAX_STREAM_LENGTH
+    );
   }
 
   private static class DoublesSketchApproxQuantileSqlAggFunction extends SqlAggFunction
