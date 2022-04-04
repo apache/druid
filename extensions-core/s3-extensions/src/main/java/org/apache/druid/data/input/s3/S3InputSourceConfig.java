@@ -94,19 +94,19 @@ public class S3InputSourceConfig
   @JsonIgnore
   public boolean isAssumeRoleArnConfigured()
   {
-    return assumeRoleArn != null && !assumeRoleArn.trim().isEmpty();
+    return assumeRoleArn != null && !assumeRoleArn.isEmpty();
   }
 
   @JsonIgnore
   public boolean isAssumeRoleArnEnvConfigured()
   {
-    return !System.getenv(SDKGlobalConfiguration.AWS_ROLE_ARN_ENV_VAR).trim().isEmpty();
+    return !System.getenv(SDKGlobalConfiguration.AWS_ROLE_ARN_ENV_VAR).isEmpty();
   }
 
   @JsonIgnore
   public boolean isWebIdentityTokenEnvConfigured()
   {
-    return !System.getenv(SDKGlobalConfiguration.AWS_WEB_IDENTITY_ENV_VAR).trim().isEmpty();
+    return !System.getenv(SDKGlobalConfiguration.AWS_WEB_IDENTITY_ENV_VAR).isEmpty();
   }
 
   @Override
