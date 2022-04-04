@@ -89,7 +89,7 @@ Configure the JSON `inputFormat` to load JSON data as follows:
 |-------|------|-------------|----------|
 | type | String | Set value to `json`. | yes |
 | flattenSpec | JSON Object | Specifies flattening configuration for nested JSON data. See [`flattenSpec`](#flattenspec) for more info. | no |
-| featureSpec | JSON Object | [JSON parser features](https://github.com/FasterXML/jackson-core/wiki/JsonParser-Features) supported by Jackson, a JSON processor for Java. The features control parsing of the input JSON data. Specify each feature as a map of the feature name and Boolean value of whether the feature is enabled. For example: `"featureSpec": {"ALLOW_UNQUOTED_FIELD_NAMES": true}` | no |
+| featureSpec | JSON Object | [JSON parser features](https://github.com/FasterXML/jackson-core/wiki/JsonParser-Features) supported by Jackson, a JSON processor for Java. The features control parsing of the input JSON data. Map the feature name to a Boolean value of whether the feature is enabled. For example: `"featureSpec": {"ALLOW_SINGLE_QUOTES": true, "ALLOW_UNQUOTED_FIELD_NAMES": true}` | no |
 
 For example:
 ```json
