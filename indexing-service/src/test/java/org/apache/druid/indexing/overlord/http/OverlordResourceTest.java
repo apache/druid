@@ -1094,7 +1094,7 @@ public class OverlordResourceTest
         .getTasks("blah", "ds_test", null, null, null, req)
         .getEntity();
     Assert.assertEquals(
-        "Invalid state : blah, valid values are: [pending, waiting, running, complete]",
+        "{error=Invalid, errorMessage=Invalid state : blah, valid values are: [pending, waiting, running, complete]}",
         responseObject.toString()
     );
   }
@@ -1501,7 +1501,9 @@ public class OverlordResourceTest
     final Response response = overlordResource.enableWorker(host);
 
     Assert.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode(), response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("error", "Worker API returns error!"), response.getEntity());
+    Assert.assertEquals(
+        ImmutableMap.of("error", "Failed", "errorMessage", "Worker API returns error!"),
+        response.getEntity());
   }
 
   @Test
@@ -1524,7 +1526,9 @@ public class OverlordResourceTest
     final Response response = overlordResource.disableWorker(host);
 
     Assert.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode(), response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("error", "Worker API returns error!"), response.getEntity());
+    Assert.assertEquals(
+        ImmutableMap.of("error", "Failed", "errorMessage", "Worker API returns error!"),
+        response.getEntity());
   }
 
   @Test
