@@ -572,12 +572,9 @@ determines the number of records to be processed per each ingestion loop in the 
 See [issue](https://github.com/apache/druid/issues/6714)
 
 The Kinesis indexing service supports de-aggregation of multiple rows packed into a single record by the Kinesis
-Producer Library's aggregate method for more efficient data transfer. Currently, enabling the de-aggregate functionality
-requires the user to manually provide the Kinesis Client Library on the classpath, since this library has a license not
-compatible with Apache projects.
+Producer Library's aggregate method for more efficient data transfer.
 
-To enable this feature, add the `amazon-kinesis-client` (tested on version `1.9.2`) jar file ([link](https://mvnrepository.com/artifact/com.amazonaws/amazon-kinesis-client/1.9.2)) under `dist/druid/extensions/druid-kinesis-indexing-service/`.
-Then when submitting a supervisor-spec, set `deaggregate` to true.
+To enable this feature, set `deaggregate` to true when submitting a supervisor-spec.
 
 ## Resharding
 

@@ -3479,6 +3479,16 @@ libraries:
 
 ---
 
+name: Kinesis Client
+license_category: binary
+version: 1.14.4
+module: extensions/druid-kinesis-indexing-service
+license_name: Apache License version 2.0
+libraries:
+  - com.amazonaws: amazon-kinesis-client
+
+---
+
 name: Kafka Client
 version: 5.5.1-ccs
 license_category: binary
