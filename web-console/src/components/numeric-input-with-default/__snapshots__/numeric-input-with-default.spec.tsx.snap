@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`NumericInputWithDefault matches snapshot 1`] = `
-<Blueprint3.NumericInput
+<Blueprint4.NumericInput
   allowNumericCharactersOnly={true}
   buttonPosition="right"
   clampValueOnBlur={false}

@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partitionsSpec) 1`] = `
-<Blueprint3.Dialog
+<Blueprint4.Dialog
   canOutsideClickClose={false}
   className="compaction-dialog"
   isOpen={true}
@@ -337,21 +337,21 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
     />
   </div>
   <div
-    className="bp3-dialog-footer"
+    className="bp4-dialog-footer"
   >
     <div
-      className="bp3-dialog-footer-actions"
+      className="bp4-dialog-footer-actions"
     >
-      <Blueprint3.Button
+      <Blueprint4.Button
         intent="danger"
         onClick={[Function]}
         text="Delete"
       />
-      <Blueprint3.Button
+      <Blueprint4.Button
         onClick={[Function]}
         text="Close"
       />
-      <Blueprint3.Button
+      <Blueprint4.Button
         disabled={false}
         intent="primary"
         onClick={[Function]}
@@ -359,11 +359,11 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
       />
     </div>
   </div>
-</Blueprint3.Dialog>
+</Blueprint4.Dialog>
 `;
 
 exports[`CompactionDialog matches snapshot with compactionConfig (hashed partitionsSpec) 1`] = `
-<Blueprint3.Dialog
+<Blueprint4.Dialog
   canOutsideClickClose={false}
   className="compaction-dialog"
   isOpen={true}
@@ -699,21 +699,21 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
     />
   </div>
   <div
-    className="bp3-dialog-footer"
+    className="bp4-dialog-footer"
   >
     <div
-      className="bp3-dialog-footer-actions"
+      className="bp4-dialog-footer-actions"
     >
-      <Blueprint3.Button
+      <Blueprint4.Button
         intent="danger"
         onClick={[Function]}
         text="Delete"
       />
-      <Blueprint3.Button
+      <Blueprint4.Button
         onClick={[Function]}
         text="Close"
       />
-      <Blueprint3.Button
+      <Blueprint4.Button
         disabled={false}
         intent="primary"
         onClick={[Function]}
@@ -721,11 +721,11 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
       />
     </div>
   </div>
-</Blueprint3.Dialog>
+</Blueprint4.Dialog>
 `;
 
 exports[`CompactionDialog matches snapshot with compactionConfig (range partitionsSpec) 1`] = `
-<Blueprint3.Dialog
+<Blueprint4.Dialog
   canOutsideClickClose={false}
   className="compaction-dialog"
   isOpen={true}
@@ -1061,21 +1061,21 @@ exports[`CompactionDialog matches snapshot with compactionConfig (range partitio
     />
   </div>
   <div
-    className="bp3-dialog-footer"
+    className="bp4-dialog-footer"
   >
     <div
-      className="bp3-dialog-footer-actions"
+      className="bp4-dialog-footer-actions"
     >
-      <Blueprint3.Button
+      <Blueprint4.Button
         intent="danger"
         onClick={[Function]}
         text="Delete"
       />
-      <Blueprint3.Button
+      <Blueprint4.Button
         onClick={[Function]}
         text="Close"
       />
-      <Blueprint3.Button
+      <Blueprint4.Button
         disabled={true}
         intent="primary"
         onClick={[Function]}
@@ -1083,11 +1083,11 @@ exports[`CompactionDialog matches snapshot with compactionConfig (range partitio
       />
     </div>
   </div>
-</Blueprint3.Dialog>
+</Blueprint4.Dialog>
 `;
 
 exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
-<Blueprint3.Dialog
+<Blueprint4.Dialog
   canOutsideClickClose={false}
   className="compaction-dialog"
   isOpen={true}
@@ -1423,16 +1423,16 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
     />
   </div>
   <div
-    className="bp3-dialog-footer"
+    className="bp4-dialog-footer"
   >
     <div
-      className="bp3-dialog-footer-actions"
+      className="bp4-dialog-footer-actions"
     >
-      <Blueprint3.Button
+      <Blueprint4.Button
         onClick={[Function]}
         text="Close"
       />
-      <Blueprint3.Button
+      <Blueprint4.Button
         disabled={false}
         intent="primary"
         onClick={[Function]}
@@ -1440,5 +1440,5 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
       />
     </div>
   </div>
-</Blueprint3.Dialog>
+</Blueprint4.Dialog>
 `;

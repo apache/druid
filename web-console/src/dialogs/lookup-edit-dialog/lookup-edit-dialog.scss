@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .lookup-edit-dialog {
-  &.bp3-dialog {
+  &.#{$bp-ns}-dialog {
     height: 80vh;
     width: 600px;
   }

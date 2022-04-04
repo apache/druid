@@ -5098,12 +5098,21 @@ license_file_path: licenses/bin/@babel-types.MIT
 
 ---
 
+name: "@blueprintjs/colors"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Palantir Technologies
+version: 4.0.1
+
+---
+
 name: "@blueprintjs/core"
 license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.45.0
+version: 4.0.3
 
 ---
 
@@ -5112,7 +5121,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.23.4
+version: 4.0.3
 
 ---
 
@@ -5121,7 +5130,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.31.0
+version: 4.1.1
 
 ---
 
@@ -5130,7 +5139,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 0.10.1
+version: 1.0.3
 
 ---
 
@@ -5234,12 +5243,21 @@ license_file_path: licenses/bin/@hypnosphi-create-react-context.MIT
 
 ---
 
+name: "@juggle/resize-observer"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Juggle
+version: 3.3.1
+
+---
+
 name: "@popperjs/core"
 license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Federico Zivolo
-version: 2.9.2
+version: 2.11.4
 license_file_path: licenses/bin/@popperjs-core.MIT
 
 ---
@@ -5249,7 +5267,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Microsoft Corporation.
-version: 2.0.1
+version: 2.0.2
 license_file_path: licenses/bin/@types-dom4.MIT
 
 ---
@@ -5334,6 +5352,26 @@ license_file_path: licenses/bin/callsites.MIT
 
 ---
 
+name: "camel-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 4.1.2
+license_file_path: licenses/bin/camel-case.MIT
+
+---
+
+name: "capital-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 1.0.4
+license_file_path: licenses/bin/capital-case.MIT
+
+---
+
 name: "chalk"
 license_category: binary
 module: web-console
@@ -5341,6 +5379,16 @@ license_name: MIT License
 copyright: Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
 version: 2.4.2
 license_file_path: licenses/bin/chalk.MIT
+
+---
+
+name: "change-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 4.1.2
+license_file_path: licenses/bin/change-case.MIT
 
 ---
 
@@ -5371,6 +5419,16 @@ license_name: MIT License
 copyright: DY
 version: 1.1.3
 license_file_path: licenses/bin/color-name.MIT
+
+---
+
+name: "constant-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/constant-case.MIT
 
 ---
 
@@ -5568,7 +5626,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Jason Quense
-version: 3.4.0
+version: 5.2.1
 license_file_path: licenses/bin/dom-helpers.MIT
 
 ---
@@ -5580,6 +5638,16 @@ license_name: MIT License
 copyright: Andrea Giammarchi
 version: 2.1.6
 license_file_path: licenses/bin/dom4.MIT
+
+---
+
+name: "dot-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/dot-case.MIT
 
 ---
 
@@ -5719,6 +5787,16 @@ license_name: MIT License
 copyright: Thiago de Arruda
 version: 1.0.3
 license_file_path: licenses/bin/has.MIT
+
+---
+
+name: "header-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 2.0.4
+license_file_path: licenses/bin/header-case.MIT
 
 ---
 
@@ -5902,6 +5980,16 @@ license_file_path: licenses/bin/loose-envify.MIT
 
 ---
 
+name: "lower-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 2.0.2
+license_file_path: licenses/bin/lower-case.MIT
+
+---
+
 name: "memoize-one"
 license_category: binary
 module: web-console
@@ -5919,6 +6007,16 @@ license_name: MIT License
 copyright: StringEpsilon
 version: 0.3.2
 license_file_path: licenses/bin/mini-create-react-context.MIT
+
+---
+
+name: "no-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/no-case.MIT
 
 ---
 
@@ -5981,6 +6079,16 @@ version: 1.101.0
 
 ---
 
+name: "param-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/param-case.MIT
+
+---
+
 name: "parent-module"
 license_category: binary
 module: web-console
@@ -5998,6 +6106,26 @@ license_name: MIT License
 copyright: Sindre Sorhus
 version: 5.2.0
 license_file_path: licenses/bin/parse-json.MIT
+
+---
+
+name: "pascal-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.1.2
+license_file_path: licenses/bin/pascal-case.MIT
+
+---
+
+name: "path-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/path-case.MIT
 
 ---
 
@@ -6111,16 +6239,6 @@ license_file_path: licenses/bin/react-is.MIT
 
 ---
 
-name: "react-lifecycles-compat"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Facebook, Inc.
-version: 3.0.4
-license_file_path: licenses/bin/react-lifecycles-compat.MIT
-
----
-
 name: "react-popper"
 license_category: binary
 module: web-console
@@ -6176,7 +6294,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: React Community
-version: 2.9.0
+version: 4.4.2
 license_file_path: licenses/bin/react-transition-group.BSD3
 
 ---
@@ -6208,16 +6326,6 @@ license_name: MIT License
 copyright: Jordan Harband
 version: 1.2.0
 license_file_path: licenses/bin/regexp.prototype.flags.MIT
-
----
-
-name: "resize-observer-polyfill"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Denis Rul
-version: 1.5.1
-license_file_path: licenses/bin/resize-observer-polyfill.MIT
 
 ---
 
@@ -6268,6 +6376,26 @@ license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
 version: 0.19.1
 license_file_path: licenses/bin/scheduler.MIT
+
+---
+
+name: "sentence-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/sentence-case.MIT
+
+---
+
+name: "snake-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/snake-case.MIT
 
 ---
 
@@ -6336,7 +6464,7 @@ license_category: binary
 module: web-console
 license_name: Zero-Clause BSD
 copyright: Microsoft Corp.
-version: 1.13.0
+version: 2.3.1
 license_file_path: licenses/bin/tslib.0BSD
 
 ---
@@ -6348,6 +6476,26 @@ license_name: MIT License
 copyright: lttb
 version: 0.0.7
 license_file_path: licenses/bin/typed-styles.MIT
+
+---
+
+name: "upper-case-first"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 2.0.2
+license_file_path: licenses/bin/upper-case-first.MIT
+
+---
+
+name: "upper-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 2.0.2
+license_file_path: licenses/bin/upper-case.MIT
 
 ---
 
