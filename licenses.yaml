@@ -3479,26 +3479,6 @@ libraries:
 
 ---
 
-name: AWS dynamodb
-license_category: binary
-version: 1.12.3
-module: extensions/druid-kinesis-indexing-service
-license_name: Apache License version 2.0
-libraries:
-  - com.amazonaws: aws-java-sdk-dynamodb
-
----
-
-name: AWS cloudwatch
-license_category: binary
-version: 1.12.3
-module: extensions/druid-kinesis-indexing-service
-license_name: Apache License version 2.0
-libraries:
-  - com.amazonaws: aws-java-sdk-cloudwatch
-
----
-
 name: Kinesis Client
 license_category: binary
 version: 1.14.4
