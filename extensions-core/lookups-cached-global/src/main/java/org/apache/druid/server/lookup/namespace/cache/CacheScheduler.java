@@ -37,10 +37,12 @@ import javax.annotation.Nullable;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -151,6 +153,7 @@ public final class CacheScheduler
     private final CacheGenerator<T> cacheGenerator;
     private final ConcurrentAwaitableCounter updateCounter = new ConcurrentAwaitableCounter();
     private final CountDownLatch startLatch = new CountDownLatch(1);
+    private final CompletableFuture<Boolean> firstLoadFinishedSuccessfully = new CompletableFuture<>();
 
     private EntryImpl(final T namespace, final Entry<T> entry, final CacheGenerator<T> cacheGenerator)
     {
@@ -200,6 +203,9 @@ public final class CacheScheduler
         }
         catch (Exception e) {
           t.addSuppressed(e);
+        }
+        if (!firstLoadFinishedSuccessfully.isDone()) {
+          firstLoadFinishedSuccessfully.complete(false);
         }
         if (Thread.currentThread().isInterrupted() || t instanceof InterruptedException || t instanceof Error) {
           throw new RuntimeException(t);
@@ -251,6 +257,11 @@ public final class CacheScheduler
         if (Thread.currentThread().isInterrupted() || t instanceof InterruptedException || t instanceof Error) {
           // propagate to the catch block in updateCache()
           throw t;
+        }
+      }
+      finally {
+        if (!firstLoadFinishedSuccessfully.isDone()) {
+          firstLoadFinishedSuccessfully.complete(updatedCacheSuccessfully);
         }
       }
     }
@@ -467,22 +478,31 @@ public final class CacheScheduler
   @Nullable
   public Entry scheduleAndWait(ExtractionNamespace namespace, long waitForFirstRunMs) throws InterruptedException
   {
+    Exception loadException = null;
     final Entry entry = schedule(namespace);
     log.debug("Scheduled new %s", entry);
     boolean success = false;
     try {
-      success = entry.impl.updateCounter.awaitFirstIncrement(waitForFirstRunMs, TimeUnit.MILLISECONDS);
+      success = (boolean) entry.impl.firstLoadFinishedSuccessfully.get(waitForFirstRunMs, TimeUnit.MILLISECONDS);
       if (success) {
         return entry;
       } else {
         return null;
       }
     }
+    catch (ExecutionException | TimeoutException e) {
+      loadException = e;
+      return null;
+    }
     finally {
       if (!success) {
         // ExecutionException's cause is logged in entry.close()
         entry.close();
-        log.error("CacheScheduler[%s] - problem during start or waiting for the first run", entry);
+        if (loadException != null) {
+          log.error(loadException, "CacheScheduler[%s] - problem during start or waiting for the first run", entry);
+        } else {
+          log.error("CacheScheduler[%s] - problem during start or waiting for the first run", entry);
+        }
       }
     }
   }
