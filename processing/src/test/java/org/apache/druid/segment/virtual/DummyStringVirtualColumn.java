@@ -169,7 +169,8 @@ public class DummyStringVirtualColumn implements VirtualColumn
   @Nullable
   @Override
   public ColumnIndexSupplier getIndexSupplier(
-      String columnName, ColumnSelector columnSelector
+      String columnName,
+      ColumnSelector columnSelector
   )
   {
     return new ColumnIndexSupplier()
