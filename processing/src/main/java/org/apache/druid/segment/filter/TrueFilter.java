@@ -75,7 +75,7 @@ public class TrueFilter implements Filter
   @Override
   public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
   {
-    return new SimpleColumnIndexCapabilities(true, true);
+    return SimpleColumnIndexCapabilities.getConstant();
   }
 
   @Override

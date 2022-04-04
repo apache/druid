@@ -230,7 +230,7 @@ public class ExpressionFilter implements Filter
 
     if (details.getRequiredBindings().isEmpty()) {
       // Constant expression.
-      return new SimpleColumnIndexCapabilities(true, true);
+      return SimpleColumnIndexCapabilities.getConstant();
     } else if (details.getRequiredBindings().size() == 1) {
       // Single-column expression. We can use bitmap indexes if this column has an index and the expression can
       // map over the values of the index.

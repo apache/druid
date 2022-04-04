@@ -167,61 +167,66 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     return false;
   }
 
-  @Override
-  public @Nullable <T> ColumnIndexCapabilities getIndexCapabilities(
-      String columnName,
-      ColumnSelector columnSelector,
-      Class<T> clazz
-  )
-  {
-    final ColumnHolder holder = columnSelector.getColumnHolder(delegate.getDimension());
-    if (holder == null) {
-      return new SimpleColumnIndexCapabilities(true, true);
-    }
-    ColumnIndexSupplier indexSupplier = holder.getIndexSupplier();
-    if (indexSupplier == null) {
-      return null;
-    }
-    return indexSupplier.getIndexCapabilities(DictionaryEncodedStringValueIndex.class);
-  }
-
   @Nullable
   @Override
-  public <T> T getIndex(String columnName, ColumnSelector selector, Class<T> clazz)
+  public ColumnIndexSupplier getIndexSupplier(String columnName, ColumnSelector columnSelector)
   {
-    final ColumnHolder holder = selector.getColumnHolder(delegate.getDimension());
-    if (holder == null) {
-      return null;
-    }
-    DictionaryEncodedStringValueIndex underlyingIndex = holder.getIndexSupplier().getIndex(
-        DictionaryEncodedStringValueIndex.class
-    );
-    if (underlyingIndex == null) {
-      return null;
-    }
-    final IdMapping idMapping;
-    if (allowList) {
-      idMapping = ListFilteredDimensionSpec.buildAllowListIdMapping(
-          values,
-          underlyingIndex.getCardinality(),
-          null,
-          underlyingIndex::getValue
-      );
-    } else {
-      idMapping = ListFilteredDimensionSpec.buildDenyListIdMapping(
-          values,
-          underlyingIndex.getCardinality(),
-          underlyingIndex::getValue
-      );
-    }
-    if (clazz.equals(StringValueSetIndex.class)) {
-      return (T) new ListFilteredStringValueSetIndex(underlyingIndex, idMapping);
-    } else if (clazz.equals(LexicographicalRangeIndex.class)) {
-      return (T) new ListFilteredLexicographicalRangeIndex(underlyingIndex, idMapping);
-    } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)) {
-      return (T) new ListFilteredDictionaryEncodedStringValueIndex(underlyingIndex, idMapping);
-    }
-    return null;
+    return new ColumnIndexSupplier()
+    {
+      @Nullable
+      @Override
+      public <T> ColumnIndexCapabilities getIndexCapabilities(Class<T> clazz)
+      {
+        final ColumnHolder holder = columnSelector.getColumnHolder(delegate.getDimension());
+        if (holder == null) {
+          return SimpleColumnIndexCapabilities.getConstant();
+        }
+        ColumnIndexSupplier indexSupplier = holder.getIndexSupplier();
+        if (indexSupplier == null) {
+          return null;
+        }
+        return indexSupplier.getIndexCapabilities(DictionaryEncodedStringValueIndex.class);
+      }
+
+      @Nullable
+      @Override
+      public <T> T getIndex(Class<T> clazz)
+      {
+        final ColumnHolder holder = columnSelector.getColumnHolder(delegate.getDimension());
+        if (holder == null) {
+          return null;
+        }
+        DictionaryEncodedStringValueIndex underlyingIndex = holder.getIndexSupplier().getIndex(
+            DictionaryEncodedStringValueIndex.class
+        );
+        if (underlyingIndex == null) {
+          return null;
+        }
+        final IdMapping idMapping;
+        if (allowList) {
+          idMapping = ListFilteredDimensionSpec.buildAllowListIdMapping(
+              values,
+              underlyingIndex.getCardinality(),
+              null,
+              underlyingIndex::getValue
+          );
+        } else {
+          idMapping = ListFilteredDimensionSpec.buildDenyListIdMapping(
+              values,
+              underlyingIndex.getCardinality(),
+              underlyingIndex::getValue
+          );
+        }
+        if (clazz.equals(StringValueSetIndex.class)) {
+          return (T) new ListFilteredStringValueSetIndex(underlyingIndex, idMapping);
+        } else if (clazz.equals(LexicographicalRangeIndex.class)) {
+          return (T) new ListFilteredLexicographicalRangeIndex(underlyingIndex, idMapping);
+        } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)) {
+          return (T) new ListFilteredDictionaryEncodedStringValueIndex(underlyingIndex, idMapping);
+        }
+        return null;
+      }
+    };
   }
 
   @Override

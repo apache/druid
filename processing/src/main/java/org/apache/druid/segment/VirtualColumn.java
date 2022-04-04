@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
@@ -294,25 +294,15 @@ public interface VirtualColumn extends Cacheable
   boolean usesDotNotation();
 
   /**
-   * Get the {@link ColumnIndexCapabilities} for the specified type of index, with the assistance of a
-   * {@link ColumnSelector} to allow reading things from segments. If the index does not exist this method will return
-   * null. A null return value from this method indicates that an index of the desired type in unavailable
+   * Get the {@link ColumnIndexSupplier} for the specified virtual column, with the assistance of a
+   * {@link ColumnSelector} to allow reading things from segments. If the virtual column has no indexes, this method
+   * will return null, or may also return a non-null supplier whose methods may return null values - having a supplier
+   * is no guarantee that the column has indexes.
    */
   @SuppressWarnings("unused")
   @Nullable
-  default <T> ColumnIndexCapabilities getIndexCapabilities(String columnName, ColumnSelector columnSelector, Class<T> clazz)
+  default ColumnIndexSupplier getIndexSupplier(String columnName, ColumnSelector columnSelector)
   {
     return null;
-  }
-
-  /**
-   * Get a column 'index' of the specified type, with the assistance of a {@link ColumnSelector} to allow reading
-   * things from segments. If the index of the desired type is not available, this method will return null
-   */
-  @SuppressWarnings("unused")
-  @Nullable
-  default <T> T getIndex(String columnName, ColumnSelector selector, Class<T> clazz)
-  {
-    throw new UnsupportedOperationException("Column does not support indexes");
   }
 }

@@ -61,7 +61,7 @@ public interface Filter
    * {@link #getIndexCapabilities(ColumnIndexSelector)} returns a non-null value. Behavior in the case that
    * {@link #getIndexCapabilities(ColumnIndexSelector)} returns null is undefined.
    *
-   * @param selector Object used to retrieve bitmap indexes
+   * @param selector Object used to retrieve indexes
    *
    * @return A bitmap indicating rows that match this filter.
    *
@@ -77,7 +77,7 @@ public interface Filter
    * with reasonable sacrifice of the accuracy.
    * As a result, the estimated selectivity might be different from the exact value.
    *
-   * @param indexSelector Object used to retrieve bitmap indexes
+   * @param indexSelector Object used to retrieve indexes
    *
    * @return an estimated selectivity ranging from 0 (filter selects no rows) to 1 (filter selects all rows).
    *
@@ -107,11 +107,11 @@ public interface Filter
   }
 
   /**
-   * Provides {@link ColumnIndexCapabilities} for a filter, if any indexes can be used. A null return value from
+   * Provides {@link ColumnIndexCapabilities} for a filter, if any indexes may be used. A null return value from
    * this method means that a filter cannot use indexes during query processing for the given
-   * {@link ColumnIndexSelector}
+   * {@link ColumnIndexSelector}.
    *
-   * @param selector Object used to retrieve bitmap indexes and provide information about the column
+   * @param selector Object used to retrieve index information and provide information about the column
    *
    * @return information about the function of the indexes which will be used when processing this filter, or null if
    *         indexes may not be used to process this query.

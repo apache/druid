@@ -22,17 +22,20 @@ package org.apache.druid.segment.column;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 
 /**
- * Sort of like {@link ColumnCapabilities}, except for indexes supplied by {@link ColumnIndexSelector}
+ * Sort of like {@link ColumnCapabilities}, except for indexes supplied by {@link ColumnIndexSelector}, provides
+ * information for how query processing may use indexes.
  */
 public interface ColumnIndexCapabilities
 {
   /**
-   * Indicates if an index can be inverted for use with a 'NOT' filter
+   * Indicates if an index can be inverted for use with a 'NOT' filter. Some types of indexes may not be invertible,
+   * such as those which provide false positive matches.
    */
   boolean isInvertible();
 
   /**
-   * Indicates if an index is an exact match, or should also be post-filtered with a value matcher
+   * Indicates if an index is an exact match, or should also be post-filtered with a value matcher. Filters which
+   * are not an exact match must always use a value matcher as a post-filter, even if they have an index.
    */
   boolean isExact();
 

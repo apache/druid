@@ -36,7 +36,7 @@ public class ColumnSelectorColumnIndexSelector implements ColumnIndexSelector
 {
   private final BitmapFactory bitmapFactory;
   private final VirtualColumns virtualColumns;
-  private final ColumnSelector index;
+  private final ColumnSelector columnSelector;
 
   public ColumnSelectorColumnIndexSelector(
       final BitmapFactory bitmapFactory,
@@ -46,13 +46,13 @@ public class ColumnSelectorColumnIndexSelector implements ColumnIndexSelector
   {
     this.bitmapFactory = bitmapFactory;
     this.virtualColumns = virtualColumns;
-    this.index = index;
+    this.columnSelector = index;
   }
 
   @Override
   public int getNumRows()
   {
-    try (final NumericColumn column = (NumericColumn) index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getColumn()) {
+    try (final NumericColumn column = (NumericColumn) columnSelector.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getColumn()) {
       return column.length();
     }
   }
@@ -70,17 +70,18 @@ public class ColumnSelectorColumnIndexSelector implements ColumnIndexSelector
       Class<T> clazz
   )
   {
+    final ColumnIndexSupplier indexSupplier;
     if (isVirtualColumn(column)) {
-      return virtualColumns.getIndexCapabilities(column, index, clazz);
+      indexSupplier = virtualColumns.getIndexSupplier(column, columnSelector);
+    } else {
+      final ColumnHolder columnHolder = columnSelector.getColumnHolder(column);
+      if (columnHolder == null || !columnHolder.getCapabilities().isFilterable()) {
+        // if a column doesn't exist or isn't filterable, return true so that callers can use a value matcher to
+        // either make an all true or all false bitmap if the matcher matches null
+        return SimpleColumnIndexCapabilities.getConstant();
+      }
+      indexSupplier = columnHolder.getIndexSupplier();
     }
-
-    final ColumnHolder columnHolder = index.getColumnHolder(column);
-    if (columnHolder == null || !columnHolder.getCapabilities().isFilterable()) {
-      // if a column doesn't exist or isn't filterable, return true so that callers can use a value matcher to
-      // either make an all true or all false bitmap if the matcher matches null
-      return new SimpleColumnIndexCapabilities(true, true);
-    }
-    final ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
     if (indexSupplier == null) {
       // column exists, but doesn't have an index supplier
       return null;
@@ -92,15 +93,16 @@ public class ColumnSelectorColumnIndexSelector implements ColumnIndexSelector
   @Override
   public <T> T as(String column, Class<T> clazz)
   {
+    final ColumnIndexSupplier indexSupplier;
     if (isVirtualColumn(column)) {
-      return virtualColumns.getIndex(column, index, clazz);
+      indexSupplier = virtualColumns.getIndexSupplier(column, columnSelector);
+    } else {
+      final ColumnHolder columnHolder = columnSelector.getColumnHolder(column);
+      if (columnHolder == null || !columnHolder.getCapabilities().isFilterable()) {
+        return null;
+      }
+      indexSupplier = columnHolder.getIndexSupplier();
     }
-
-    final ColumnHolder columnHolder = index.getColumnHolder(column);
-    if (columnHolder == null || !columnHolder.getCapabilities().isFilterable()) {
-      return null;
-    }
-    final ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
     if (indexSupplier == null) {
       return null;
     }
@@ -116,6 +118,6 @@ public class ColumnSelectorColumnIndexSelector implements ColumnIndexSelector
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    return virtualColumns.getColumnCapabilities(index, column);
+    return virtualColumns.getColumnCapabilities(columnSelector, column);
   }
 }

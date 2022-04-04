@@ -19,8 +19,20 @@
 
 package org.apache.druid.segment.column;
 
+import java.util.Objects;
+
 public class SimpleColumnIndexCapabilities implements ColumnIndexCapabilities
 {
+  private static final SimpleColumnIndexCapabilities DEFAULT = new SimpleColumnIndexCapabilities(true, true);
+
+  /**
+   * {@link ColumnIndexCapabilities} to use for constant values (including 'null' values for 'missing' columns)
+   */
+  public static ColumnIndexCapabilities getConstant()
+  {
+    return DEFAULT;
+  }
+
   private final boolean invertible;
   private final boolean exact;
 
@@ -49,5 +61,24 @@ public class SimpleColumnIndexCapabilities implements ColumnIndexCapabilities
         invertible && other.isInvertible(),
         exact && other.isExact()
     );
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SimpleColumnIndexCapabilities that = (SimpleColumnIndexCapabilities) o;
+    return invertible == that.invertible && exact == that.exact;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(invertible, exact);
   }
 }

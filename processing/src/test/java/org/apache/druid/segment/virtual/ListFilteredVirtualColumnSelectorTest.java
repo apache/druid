@@ -187,7 +187,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
 
     EasyMock.expect(holder.getIndexSupplier()).andReturn(indexSupplier).atLeastOnce();
     EasyMock.expect(indexSupplier.getIndexCapabilities(DictionaryEncodedStringValueIndex.class))
-            .andReturn(new SimpleColumnIndexCapabilities(true, true)).atLeastOnce();
+            .andReturn(SimpleColumnIndexCapabilities.getConstant()).atLeastOnce();
     EasyMock.expect(indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class)).andReturn(index).atLeastOnce();
 
     EasyMock.expect(index.getCardinality()).andReturn(3).atLeastOnce();

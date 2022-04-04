@@ -683,7 +683,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     @Override
     public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
     {
-      return new SimpleColumnIndexCapabilities(true, true);
+      return SimpleColumnIndexCapabilities.getConstant();
     }
 
     @Override

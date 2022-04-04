@@ -35,7 +35,7 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
@@ -171,28 +171,16 @@ public class VirtualColumns implements Cacheable
   }
 
   /**
-   * Get the {@link ColumnIndexCapabilities} of the specified virtual column for the specified type of index, with the
-   * assistance of a {@link ColumnSelector} to allow reading things from segments. If the index does not exist
-   * this method will return null. A null return value from this method indicates that an index of the desired type
-   * in unavailable
+   * Get the {@link ColumnIndexSupplier} of the specified virtual column, with the assistance of a
+   * {@link ColumnSelector} to allow reading things from segments. If the column does not have indexes this method
+   * may return null, or may also return a non-null supplier whose methods may return null values - having a supplier
+   * is no guarantee that the column has indexes.
    */
   @Nullable
-  public <T> ColumnIndexCapabilities getIndexCapabilities(String columnName, ColumnSelector columnSelector, Class<T> clazz)
+  public ColumnIndexSupplier getIndexSupplier(String columnName, ColumnSelector columnSelector)
   {
     final VirtualColumn virtualColumn = getVirtualColumnForSelector(columnName);
-    return virtualColumn.getIndexCapabilities(columnName, columnSelector, clazz);
-  }
-
-  /**
-   * Get a column 'index' of the specified type for the specified virtual column, with the assistance of a
-   * {@link ColumnSelector} to allow reading things from segments. If the index of the desired type is not available,
-   * this method will return null
-   */
-  @Nullable
-  public <T> T getIndex(String columnName, ColumnSelector columnSelector, Class<T> clazz)
-  {
-    final VirtualColumn virtualColumn = getVirtualColumnForSelector(columnName);
-    return virtualColumn.getIndex(columnName, columnSelector, clazz);
+    return virtualColumn.getIndexSupplier(columnName, columnSelector);
   }
 
   /**

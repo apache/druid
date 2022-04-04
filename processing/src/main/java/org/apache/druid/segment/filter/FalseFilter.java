@@ -78,7 +78,7 @@ public class FalseFilter implements Filter
   @Override
   public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
   {
-    return new SimpleColumnIndexCapabilities(true, true);
+    return SimpleColumnIndexCapabilities.getConstant();
   }
 
   @Override

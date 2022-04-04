@@ -21,19 +21,34 @@ package org.apache.druid.segment.column;
 
 import javax.annotation.Nullable;
 
+/**
+ * Provides indexes and information about them ({@link ColumnIndexCapabilities}) for a column. Indexes which satisfy
+ * the {@link org.apache.druid.query.filter.Filter} used in a {@link org.apache.druid.query.Query}, allow the query
+ * engine to construct {@link org.apache.druid.segment.data.Offset} (and
+ * {@link org.apache.druid.segment.vector.VectorOffset}) to build {@link org.apache.druid.segment.Cursor}
+ * (and {@link org.apache.druid.segment.vector.VectorCursor}). This allows the engine to only scan the rows which match
+ * the filter values, instead of performing a full scan of the column and using a
+ * {@link org.apache.druid.query.filter.ValueMatcher}
+ * (or {@link org.apache.druid.query.filter.vector.VectorValueMatcher}) to filter the values (or in addition to, in the
+ * case of indexes which {@link ColumnIndexCapabilities#isExact()} is false, which must still use a value matcher
+ * when using an index).
+ */
 public interface ColumnIndexSupplier
 {
   /**
    * Get the {@link ColumnIndexCapabilities} for the specified type of index. If the index does not exist
    * this method will return null. A null return value from this method indicates that an index of the desired type
-   * in unavailable
+   * in unavailable.
    */
   @Nullable
   <T> ColumnIndexCapabilities getIndexCapabilities(Class<T> clazz);
 
   /**
    * Get a column 'index' of the specified type. If the index of the desired type is not available, this method will
-   * return null
+   * return null. If the value is non-null, the index may be used for the eventual construction of an
+   * {@link org.apache.druid.segment.data.Offset} to form the basis of a {@link org.apache.druid.segment.Cursor}
+   * (or {@link org.apache.druid.segment.vector.VectorOffset} and {@link org.apache.druid.segment.vector.VectorCursor})
+   * which can greatly reduce the total number of rows which need to be scanned and processed.
    */
   @Nullable
   <T> T getIndex(Class<T> clazz);

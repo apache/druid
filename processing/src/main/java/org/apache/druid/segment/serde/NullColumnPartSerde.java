@@ -47,13 +47,12 @@ import java.util.Objects;
  */
 public class NullColumnPartSerde implements ColumnPartSerde
 {
-  private static final ColumnIndexCapabilities INDEX_CAPABILITIES = new SimpleColumnIndexCapabilities(true, true);
   private static final ColumnIndexSupplier NIL_INDEX_SUPPLIER = new ColumnIndexSupplier()
   {
     @Override
     public <T> ColumnIndexCapabilities getIndexCapabilities(Class<T> clazz)
     {
-      return INDEX_CAPABILITIES;
+      return SimpleColumnIndexCapabilities.getConstant();
     }
 
     @Nullable
