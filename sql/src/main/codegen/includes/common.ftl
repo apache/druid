@@ -91,46 +91,51 @@ org.apache.druid.java.util.common.Pair<Granularity, String> PartitionGranularity
   }
 }
 
-List<Interval> PartitionSpecs() :
+List<String> PartitionSpecs() :
 {
-  List<Interval> list;
-  Interval interval;
+  List<String> list;
   String intervalString;
+}
+{
+  (
+    intervalString = PartitionSpec()
+    {
+        return startList(intervalString);
+    }
+  |
+    <LPAREN>
+    intervalString = PartitionSpec()
+    {
+      list = startList(intervalString);
+    }
+    (
+      <COMMA>
+      intervalString = PartitionSpec()
+      {
+        list.add(intervalString);
+      }
+    )*
+    <RPAREN>
+    {
+      return list;
+    }
+  )
+}
+
+String PartitionSpec() :
+{
   SqlNode sqlNode;
 }
 {
   (
     <ALL> <TIME>
     {
-        return Intervals.ONLY_ETERNITY;
+      return "all";
     }
   |
     <PARTITION> sqlNode = StringLiteral()
     {
-      intervalString = SqlLiteral.stringValue(sqlNode);
-      interval = Interval.parse(SqlParserUtil.parseString(intervalString));
-      return startList(interval);
-    }
-  |
-    <LPAREN>
-    <PARTITION> sqlNode = StringLiteral()
-    {
-      intervalString = SqlLiteral.stringValue(sqlNode);
-      interval = Interval.parse(SqlParserUtil.parseString(intervalString));
-      list = startList(interval);
-    }
-    (
-      <COMMA>
-      <PARTITION> sqlNode = StringLiteral()
-      {
-        intervalString = SqlLiteral.stringValue(sqlNode);
-        interval = Interval.parse(SqlParserUtil.parseString(intervalString));
-        list.add(interval);
-      }
-    )*
-    <RPAREN>
-    {
-      return list;
+      return SqlParserUtil.parseString(SqlLiteral.stringValue(sqlNode));
     }
   )
 }

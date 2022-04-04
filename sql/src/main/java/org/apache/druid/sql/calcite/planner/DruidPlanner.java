@@ -84,6 +84,7 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
+import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
@@ -150,8 +151,10 @@ public class DruidPlanner implements Closeable
 
     final Set<ResourceAction> resourceActions = new HashSet<>(resourceCollectorShuttle.getResourceActions());
 
-    if (parsed.getInsertNode() != null) {
-      final String targetDataSource = validateAndGetDataSourceForInsert(parsed.getInsertNode());
+    if (parsed.getInsertNode() != null || parsed.getReplaceNode() != null) {
+      final String targetDataSource = parsed.getInsertNode() != null
+                                      ? validateAndGetDataSourceForInsert(parsed.getInsertNode())
+                                      : validateAndGetDataSourceForInsert(parsed.getReplaceNode());
       resourceActions.add(new ResourceAction(new Resource(targetDataSource, ResourceType.DATASOURCE), Action.WRITE));
     }
 
@@ -182,7 +185,7 @@ public class DruidPlanner implements Closeable
     if (parsed.getExplainNode() != null) {
       returnedRowType = getExplainStructType(typeFactory);
     } else {
-      returnedRowType = buildQueryMaker(rootQueryRel, parsed.getInsertNode()).getResultType();
+      returnedRowType = buildQueryMaker(rootQueryRel, parsed.getInsertNode(), parsed.getReplaceNode()).getResultType();
     }
 
     return new PrepareResult(returnedRowType, parameterTypes);
@@ -210,6 +213,13 @@ public class DruidPlanner implements Closeable
             plannerContext.getJsonMapper().writeValueAsString(parsed.getIngestionGranularity())
         );
       }
+
+      if (parsed.getReplaceTimeChunks() != null) {
+        plannerContext.getQueryContext().put(
+            DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
+            plannerContext.getJsonMapper().writeValueAsString(String.join(",", parsed.getReplaceTimeChunks()))
+        );
+      }
     }
     catch (JsonProcessingException e) {
       throw new ValidationException("Unable to serialize partition granularity.");
@@ -222,7 +232,12 @@ public class DruidPlanner implements Closeable
     final RelRoot rootQueryRel = planner.rel(validatedQueryNode);
 
     try {
-      return planWithDruidConvention(rootQueryRel, parsed.getExplainNode(), parsed.getInsertNode());
+      return planWithDruidConvention(
+          rootQueryRel,
+          parsed.getExplainNode(),
+          parsed.getInsertNode(),
+          parsed.getReplaceNode()
+      );
     }
     catch (Exception e) {
       Throwable cannotPlanException = Throwables.getCauseOfType(e, RelOptPlanner.CannotPlanException.class);
@@ -233,7 +248,7 @@ public class DruidPlanner implements Closeable
 
       // If there isn't any INSERT clause, then we should try again with BINDABLE convention. And return without
       // any error, if it is plannable by the bindable convention
-      if (parsed.getInsertNode() == null) {
+      if (parsed.getInsertNode() == null && parsed.getReplaceNode() == null) {
         // Try again with BINDABLE convention. Used for querying Values and metadata tables.
         try {
           return planWithBindableConvention(rootQueryRel, parsed.getExplainNode());
@@ -290,12 +305,13 @@ public class DruidPlanner implements Closeable
   private PlannerResult planWithDruidConvention(
       final RelRoot root,
       @Nullable final SqlExplain explain,
-      @Nullable final SqlInsert insert
+      @Nullable final SqlInsert insert,
+      @Nullable final SqlInsert replace
   ) throws ValidationException, RelConversionException
   {
     final RelRoot possiblyLimitedRoot = possiblyWrapRootWithOuterLimitFromContext(root);
 
-    final QueryMaker queryMaker = buildQueryMaker(root, insert);
+    final QueryMaker queryMaker = buildQueryMaker(root, insert, replace);
     plannerContext.setQueryMaker(queryMaker);
 
     RelNode parameterized = rewriteRelDynamicParameters(possiblyLimitedRoot.rel);
@@ -645,11 +661,14 @@ public class DruidPlanner implements Closeable
 
   private QueryMaker buildQueryMaker(
       final RelRoot rootQueryRel,
-      @Nullable final SqlInsert insert
+      @Nullable final SqlInsert insert,
+      @Nullable final SqlInsert replace
   ) throws ValidationException
   {
-    if (insert != null) {
-      final String targetDataSource = validateAndGetDataSourceForInsert(insert);
+    if (insert != null || replace != null) {
+      final String targetDataSource = insert != null
+                                      ? validateAndGetDataSourceForInsert(insert)
+                                      : validateAndGetDataSourceForInsert(replace);
       return queryMakerFactory.buildForInsert(targetDataSource, rootQueryRel, plannerContext);
     } else {
       return queryMakerFactory.buildForSelect(rootQueryRel, plannerContext);
@@ -760,30 +779,42 @@ public class DruidPlanner implements Closeable
     @Nullable
     private final DruidSqlInsert insert;
 
+    @Nullable
+    private final DruidSqlReplace replace;
+
     private final SqlNode query;
 
     @Nullable
     private final Granularity ingestionGranularity;
 
+    @Nullable
+    private final List<String> replaceTimeChunks;
+
     private ParsedNodes(
         @Nullable SqlExplain explain,
         @Nullable DruidSqlInsert insert,
+        @Nullable DruidSqlReplace replace,
         SqlNode query,
-        @Nullable Granularity ingestionGranularity
+        @Nullable Granularity ingestionGranularity,
+        @Nullable List<String> partitionSpec
     )
     {
       this.explain = explain;
       this.insert = insert;
+      this.replace = replace;
       this.query = query;
       this.ingestionGranularity = ingestionGranularity;
+      this.replaceTimeChunks = partitionSpec;
     }
 
     static ParsedNodes create(final SqlNode node) throws ValidationException
     {
       SqlExplain explain = null;
       DruidSqlInsert druidSqlInsert = null;
+      DruidSqlReplace druidSqlReplace = null;
       SqlNode query = node;
       Granularity ingestionGranularity = null;
+      List<String> replaceTimeChunks = null;
 
       if (query.getKind() == SqlKind.EXPLAIN) {
         explain = (SqlExplain) query;
@@ -791,43 +822,65 @@ public class DruidPlanner implements Closeable
       }
 
       if (query.getKind() == SqlKind.INSERT) {
-        druidSqlInsert = (DruidSqlInsert) query;
-        query = druidSqlInsert.getSource();
+        if (query instanceof DruidSqlInsert) {
+          druidSqlInsert = (DruidSqlInsert) query;
+          query = druidSqlInsert.getSource();
 
-        // Check if ORDER BY clause is not provided to the underlying query
-        if (query instanceof SqlOrderBy) {
-          SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
-          SqlNodeList orderByList = sqlOrderBy.orderList;
-          if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
-            throw new ValidationException("Cannot have ORDER BY on an INSERT query, use CLUSTERED BY instead.");
-          }
-        }
-
-        ingestionGranularity = druidSqlInsert.getPartitionedBy();
-
-        if (druidSqlInsert.getClusteredBy() != null) {
-          // If we have a CLUSTERED BY clause, extract the information in that CLUSTERED BY and create a new SqlOrderBy
-          // node
-          SqlNode offset = null;
-          SqlNode fetch = null;
-
+          // Check if ORDER BY clause is not provided to the underlying query
           if (query instanceof SqlOrderBy) {
             SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
-            // This represents the underlying query free of OFFSET, FETCH and ORDER BY clauses
-            // For a sqlOrderBy.query like "SELECT dim1, sum(dim2) FROM foo OFFSET 10 FETCH 30 ORDER BY dim1 GROUP BY dim1
-            // this would represent the "SELECT dim1, sum(dim2) from foo GROUP BY dim1
-            query = sqlOrderBy.query;
-            offset = sqlOrderBy.offset;
-            fetch = sqlOrderBy.fetch;
+            SqlNodeList orderByList = sqlOrderBy.orderList;
+            if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
+              throw new ValidationException("Cannot have ORDER BY on an INSERT query, use CLUSTERED BY instead.");
+            }
           }
-          // Creates a new SqlOrderBy query, which may have our CLUSTERED BY overwritten
-          query = new SqlOrderBy(
-              query.getParserPosition(),
-              query,
-              druidSqlInsert.getClusteredBy(),
-              offset,
-              fetch
-          );
+
+          ingestionGranularity = druidSqlInsert.getPartitionedBy();
+
+          if (druidSqlInsert.getClusteredBy() != null) {
+            // If we have a CLUSTERED BY clause, extract the information in that CLUSTERED BY and create a new
+            // SqlOrderBy node
+            SqlNode offset = null;
+            SqlNode fetch = null;
+
+            if (query instanceof SqlOrderBy) {
+              SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
+              // This represents the underlying query free of OFFSET, FETCH and ORDER BY clauses
+              // For a sqlOrderBy.query like "SELECT dim1, sum(dim2) FROM foo OFFSET 10 FETCH 30 ORDER BY dim1 GROUP
+              // BY dim1 this would represent the "SELECT dim1, sum(dim2) from foo GROUP BY dim1
+              query = sqlOrderBy.query;
+              offset = sqlOrderBy.offset;
+              fetch = sqlOrderBy.fetch;
+            }
+            // Creates a new SqlOrderBy query, which may have our CLUSTERED BY overwritten
+            query = new SqlOrderBy(
+                query.getParserPosition(),
+                query,
+                druidSqlInsert.getClusteredBy(),
+                offset,
+                fetch
+            );
+          }
+        } else if (query instanceof DruidSqlReplace) {
+          druidSqlReplace = (DruidSqlReplace) query;
+          query = druidSqlReplace.getSource();
+
+          // Check if ORDER BY clause is not provided to the underlying query
+          if (query instanceof SqlOrderBy) {
+            SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
+            SqlNodeList orderByList = sqlOrderBy.orderList;
+            if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
+              throw new ValidationException("Cannot have ORDER BY on a REPLACE query.");
+            }
+          }
+
+          List<String> replaceTimeChunksList = druidSqlReplace.getReplaceTimeChunks();
+          if (replaceTimeChunksList == null || replaceTimeChunksList.isEmpty()) {
+            throw new ValidationException("Missing partition specs for replace. Use FOR statement to specify them.");
+          }
+
+          ingestionGranularity = druidSqlReplace.getPartitionedBy();
+          replaceTimeChunks = druidSqlReplace.getReplaceTimeChunks();
         }
       }
 
@@ -835,7 +888,7 @@ public class DruidPlanner implements Closeable
         throw new ValidationException(StringUtils.format("Cannot execute [%s].", query.getKind()));
       }
 
-      return new ParsedNodes(explain, druidSqlInsert, query, ingestionGranularity);
+      return new ParsedNodes(explain, druidSqlInsert, druidSqlReplace, query, ingestionGranularity, replaceTimeChunks);
     }
 
     @Nullable
@@ -848,6 +901,18 @@ public class DruidPlanner implements Closeable
     public DruidSqlInsert getInsertNode()
     {
       return insert;
+    }
+
+    @Nullable
+    public DruidSqlReplace getReplaceNode()
+    {
+      return replace;
+    }
+
+    @Nullable
+    public List<String> getReplaceTimeChunks()
+    {
+      return replaceTimeChunks;
     }
 
     public SqlNode getQueryNode()

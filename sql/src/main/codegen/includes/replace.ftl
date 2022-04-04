@@ -29,7 +29,7 @@ SqlNode DruidSqlReplace() :
     final Span s;
     SqlInsert sqlInsert;
     org.apache.druid.java.util.common.Pair<Granularity, String> partitionedBy = new org.apache.druid.java.util.common.Pair(null, null);
-    List<Interval> partitionSpecList;
+    List<String> partitionSpecList;
 }
 {
     <REPLACE> { s = span(); }
