@@ -285,9 +285,11 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     if (extractionFn == null) {
       final StringValueSetIndex valueSetIndex = selector.as(dimension, StringValueSetIndex.class);
       if (valueSetIndex == null) {
-        return predicateFactory.makeStringPredicate().apply(null)
-               ? bitmapResultFactory.wrapAllTrue(Filters.allTrue(selector))
-               : bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));
+        return Filters.makeNullIndexResult(
+            predicateFactory.makeStringPredicate().apply(null),
+            selector,
+            bitmapResultFactory
+        );
       }
       return bitmapResultFactory.unionDimensionValueBitmaps(valueSetIndex.getBitmapsForValues(values));
     } else {

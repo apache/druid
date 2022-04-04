@@ -81,13 +81,9 @@ public class SelectorFilter implements Filter
   {
     final StringValueSetIndex valueSetIndex = selector.as(dimension, StringValueSetIndex.class);
     if (valueSetIndex == null) {
-      return NullHandling.isNullOrEquivalent(value)
-             ? bitmapResultFactory.wrapAllTrue(Filters.allTrue(selector))
-             : bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));
+      return Filters.makeNullIndexResult(NullHandling.isNullOrEquivalent(value), selector, bitmapResultFactory);
     }
-    return bitmapResultFactory.wrapDimensionValue(
-        valueSetIndex.getBitmapForValue(value)
-    );
+    return bitmapResultFactory.wrapDimensionValue(valueSetIndex.getBitmapForValue(value));
   }
 
   @Override

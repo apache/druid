@@ -256,11 +256,11 @@ public class ExpressionFilter implements Filter
   {
     if (bindingDetails.get().getRequiredBindings().isEmpty()) {
       // Constant expression.
-      if (expr.get().eval(InputBindings.nilBindings()).asBoolean()) {
-        return bitmapResultFactory.wrapAllTrue(Filters.allTrue(selector));
-      } else {
-        return bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));
-      }
+      return Filters.makeNullIndexResult(
+          expr.get().eval(InputBindings.nilBindings()).asBoolean(),
+          selector,
+          bitmapResultFactory
+      );
     } else {
       final String column = Iterables.getOnlyElement(bindingDetails.get().getRequiredBindings());
       return Filters.matchPredicate(

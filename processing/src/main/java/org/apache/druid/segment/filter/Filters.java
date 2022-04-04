@@ -142,6 +142,17 @@ public class Filters
     );
   }
 
+  public static <T> T makeNullIndexResult(
+      boolean matchesNull,
+      final ColumnIndexSelector selector,
+      BitmapResultFactory<T> bitmapResultFactory
+  )
+  {
+    return matchesNull
+           ? bitmapResultFactory.wrapAllTrue(Filters.allTrue(selector))
+           : bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));
+  }
+
   public static ImmutableBitmap allFalse(final ColumnIndexSelector selector)
   {
     return selector.getBitmapFactory().makeEmptyImmutableBitmap();

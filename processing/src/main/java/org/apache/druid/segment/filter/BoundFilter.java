@@ -74,11 +74,7 @@ public class BoundFilter implements Filter
           LexicographicalRangeIndex.class
       );
       if (rangeIndex == null) {
-        if (doesMatchNull()) {
-          return bitmapResultFactory.wrapAllTrue(Filters.allTrue(selector));
-        } else {
-          return bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));
-        }
+        return Filters.makeNullIndexResult(doesMatchNull(), selector, bitmapResultFactory);
       }
       return bitmapResultFactory.unionDimensionValueBitmaps(
           rangeIndex.getBitmapsInRange(
