@@ -60,7 +60,7 @@ exports[`QueryHistoryDialog matches snapshot 1`] = `
           class="bp4-dialog-body"
         >
           <div
-            class="center-message bp3-input"
+            class="center-message bp4-input"
           >
             <div
               class="center-message-inner"
