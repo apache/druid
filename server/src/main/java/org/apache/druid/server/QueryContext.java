@@ -123,6 +123,7 @@ public class QueryContext
     return val == null ? defaultParams.get(key) : val;
   }
 
+  @Nullable
   public String getAsString(String key)
   {
     return (String) get(key);

@@ -110,7 +110,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   }
 
   @Override
-  public Query<Result<SearchResultValue>> withContext(Map<String, Object> context)
+  public SearchQuery withContext(Map<String, Object> context)
   {
     return Druids.SearchQueryBuilder.copy(this).context(context).build();
   }

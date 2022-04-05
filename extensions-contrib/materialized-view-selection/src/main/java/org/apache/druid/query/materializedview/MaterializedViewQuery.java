@@ -182,7 +182,7 @@ public class MaterializedViewQuery<T> implements Query<T>
   }
 
   @Override
-  public Query<T> withContext(Map<String, Object> context)
+  public MaterializedViewQuery withContext(Map<String, Object> context)
   {
     return new MaterializedViewQuery<>(query.withContext(context), optimizer);
   }

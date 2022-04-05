@@ -490,9 +490,9 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   }
 
   @Override
-  public Query<ScanResultValue> withContext(Map<String, Object> context)
+  public ScanQuery withContext(Map<String, Object> context)
   {
-    return Druids.ScanQueryBuilder.copy(this).columns(columns).build();
+    return Druids.ScanQueryBuilder.copy(this).context(context).build();
   }
 
   @Override

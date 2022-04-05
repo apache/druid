@@ -255,7 +255,7 @@ public class MovingAverageQuery extends BaseQuery<Row>
   }
 
   @Override
-  public Query<Row> withContext(Map<String, Object> context)
+  public MovingAverageQuery withContext(Map<String, Object> context)
   {
     return new MovingAverageQuery(
         getDataSource(),

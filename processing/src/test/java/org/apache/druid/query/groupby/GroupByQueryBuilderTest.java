@@ -94,4 +94,16 @@ public class GroupByQueryBuilderTest
         .build();
     Assert.assertEquals(ImmutableMap.of(BaseQuery.QUERY_ID, "realQueryId", "my", "context"), query.getContext());
   }
+
+  @Test
+  public void testWithContext()
+  {
+    final GroupByQuery query = builder.setContext(ImmutableMap.of("to-overwrite", "val", "to-overwrite2", "val"))
+                                      .build();
+    final GroupByQuery queryWithContext = query.withContext(ImmutableMap.of("key", "val"));
+    Assert.assertEquals(
+        builder.setContext(ImmutableMap.of("key", "val")).build(),
+        queryWithContext
+    );
+  }
 }

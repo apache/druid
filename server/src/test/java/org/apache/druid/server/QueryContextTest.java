@@ -41,6 +41,7 @@ public class QueryContextTest
 
     Assert.assertEquals("val", context.get("key"));
     Assert.assertEquals("val", context.getAsString("key"));
+    Assert.assertNull(context.getAsString("non-exist"));
   }
 
   @Test
@@ -55,6 +56,7 @@ public class QueryContextTest
 
     Assert.assertTrue(context.getAsBoolean("key1", false));
     Assert.assertTrue(context.getAsBoolean("key2", false));
+    Assert.assertFalse(context.getAsBoolean("non-exist", false));
   }
 
   @Test
@@ -69,6 +71,22 @@ public class QueryContextTest
 
     Assert.assertEquals(100, context.getAsInt("key1", 0));
     Assert.assertEquals(100, context.getAsInt("key2", 0));
+    Assert.assertEquals(0, context.getAsInt("non-exist", 0));
+  }
+
+  @Test
+  public void testGetLong()
+  {
+    final QueryContext context = new QueryContext(
+        ImmutableMap.of(
+            "key1", "100",
+            "key2", 100
+        )
+    );
+
+    Assert.assertEquals(100L, context.getAsLong("key1", 0));
+    Assert.assertEquals(100L, context.getAsLong("key2", 0));
+    Assert.assertEquals(0L, context.getAsLong("non-exist", 0));
   }
 
   @Test

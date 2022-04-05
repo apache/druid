@@ -199,7 +199,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   }
 
   @Override
-  public Query<Result<TimeseriesResultValue>> withContext(Map<String, Object> context)
+  public TimeseriesQuery withContext(Map<String, Object> context)
   {
     return Druids.TimeseriesQueryBuilder.copy(this).context(context).build();
   }

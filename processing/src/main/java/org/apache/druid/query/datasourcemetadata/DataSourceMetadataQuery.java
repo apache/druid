@@ -80,7 +80,7 @@ public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadata
   }
 
   @Override
-  public Query<Result<DataSourceMetadataResultValue>> withContext(Map<String, Object> context)
+  public DataSourceMetadataQuery withContext(Map<String, Object> context)
   {
     return Druids.DataSourceMetadataQueryBuilder.copy(this).context(context).build();
   }

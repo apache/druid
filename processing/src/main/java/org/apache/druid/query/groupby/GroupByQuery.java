@@ -835,7 +835,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   }
 
   @Override
-  public Query<ResultRow> withContext(Map<String, Object> context)
+  public GroupByQuery withContext(Map<String, Object> context)
   {
     return new Builder(this).setContext(context).build();
   }

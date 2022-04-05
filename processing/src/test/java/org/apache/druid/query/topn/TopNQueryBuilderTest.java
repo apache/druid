@@ -92,4 +92,15 @@ public class TopNQueryBuilderTest
         .build();
     Assert.assertEquals(ImmutableMap.of(BaseQuery.QUERY_ID, "realQueryId", "my", "context"), query.getContext());
   }
+
+  @Test
+  public void testWithContext()
+  {
+    final TopNQuery query = builder.context(ImmutableMap.of("to-overwrite", "val", "to-overwrite2", "val")).build();
+    final TopNQuery queryWithContext = query.withContext(ImmutableMap.of("key", "val"));
+    Assert.assertEquals(
+        builder.context(ImmutableMap.of("key", "val")).build(),
+        queryWithContext
+    );
+  }
 }
