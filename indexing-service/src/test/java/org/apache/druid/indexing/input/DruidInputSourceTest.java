@@ -242,9 +242,7 @@ public class DruidInputSourceTest
     InputRowSchema inputRowSchema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(
-            DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b")),
-            new ArrayList<>(),
-            new ArrayList<>()
+            DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b"))
         ),
         originalColumnsFilter,
         ImmutableList.of(metricName)
@@ -279,9 +277,7 @@ public class DruidInputSourceTest
     InputRowSchema inputRowSchema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(
-            DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b")),
-            new ArrayList<>(),
-            new ArrayList<>()
+            DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b"))
         ),
         originalColumnsFilter,
         ImmutableList.of()

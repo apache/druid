@@ -120,9 +120,7 @@ public class InputRowSchemasTest extends NullHandlingTest
             new LongDimensionSchema("d3"),
             new FloatDimensionSchema("d4"),
             new DoubleDimensionSchema("d5")
-        ),
-        null,
-        null
+        )
     );
     DataSchema schema = new DataSchema(
         "dataSourceName",
