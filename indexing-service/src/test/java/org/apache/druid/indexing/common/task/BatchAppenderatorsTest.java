@@ -145,7 +145,7 @@ public class BatchAppenderatorsTest
           new MapInputRowParser(
               new JSONParseSpec(
                   new TimestampSpec("ts", "auto", null),
-                  new DimensionsSpec(null, null, null),
+                  DimensionsSpec.EMPTY,
                   null,
                   null,
                   null
@@ -580,7 +580,8 @@ public class BatchAppenderatorsTest
                 null,
                 false,
                 false,
-                mode.name()
+                mode.name(),
+                null
             ),
             null,
             null,

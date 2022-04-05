@@ -1,4 +1,5 @@
 #!/bin/bash -eu
+
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -14,5 +15,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# set thread count to 2 times of cores to speed up checking
-mvn checkstyle:checkstyle -T 2C --fail-at-end
+.git/hooks/run-all-in-dir.py .git/hooks/pre-commits

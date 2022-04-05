@@ -31,6 +31,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
@@ -103,10 +104,11 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
     context.put("priority", compactionTaskPriority);
 
     final String taskId = IdUtils.newTaskId(idPrefix, ClientCompactionTaskQuery.TYPE, dataSource, null);
+    final Granularity segmentGranularity = granularitySpec == null ? null : granularitySpec.getSegmentGranularity();
     final ClientTaskQuery taskQuery = new ClientCompactionTaskQuery(
         taskId,
         dataSource,
-        new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments), dropExisting),
+        new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments, segmentGranularity), dropExisting),
         tuningConfig,
         granularitySpec,
         dimensionsSpec,

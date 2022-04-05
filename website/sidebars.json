@@ -178,12 +178,19 @@
           "operations/clean-metadata-store"
         ]
       },       
+      {
+        "type": "subcategory",
+        "label": "Monitoring",
+        "ids": [
+          "operations/request-logging",
+          "operations/metrics",
+          "operations/alerts"
+        ]
+      },       
       "operations/api-reference",
       "operations/high-availability",
       "operations/rolling-updates",
       "operations/rule-configuration",
-      "operations/metrics",
-      "operations/alerts",
       "operations/other-hadoop",
       {
         "type": "subcategory",

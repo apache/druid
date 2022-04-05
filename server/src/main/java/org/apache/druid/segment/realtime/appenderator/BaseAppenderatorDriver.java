@@ -53,6 +53,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -560,12 +561,18 @@ public abstract class BaseAppenderatorDriver implements Closeable
   ListenableFuture<SegmentsAndCommitMetadata> publishInBackground(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
       @Nullable Set<DataSegment> segmentsToBeDropped,
+      @Nullable Set<DataSegment> tombstones,
       SegmentsAndCommitMetadata segmentsAndCommitMetadata,
       TransactionalSegmentPublisher publisher,
       java.util.function.Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
   )
   {
-    if (segmentsAndCommitMetadata.getSegments().isEmpty()) {
+    final Set<DataSegment> pushedAndTombstones = new HashSet<>(segmentsAndCommitMetadata.getSegments());
+    if (tombstones != null) {
+      pushedAndTombstones.addAll(tombstones);
+    }
+    if (pushedAndTombstones.isEmpty()) {
+      // no tombstones and no pushed segments, so nothing to publish...
       if (!publisher.supportsEmptyPublish()) {
         log.info("Nothing to publish, skipping publish step.");
         final SettableFuture<SegmentsAndCommitMetadata> retVal = SettableFuture.create();
@@ -588,11 +595,10 @@ public abstract class BaseAppenderatorDriver implements Closeable
     final Object callerMetadata = metadata == null
                                   ? null
                                   : ((AppenderatorDriverMetadata) metadata).getCallerMetadata();
-
     return executor.submit(
         () -> {
           try {
-            final ImmutableSet<DataSegment> ourSegments = ImmutableSet.copyOf(segmentsAndCommitMetadata.getSegments());
+            final ImmutableSet<DataSegment> ourSegments = ImmutableSet.copyOf(pushedAndTombstones);
             final SegmentPublishResult publishResult = publisher.publishSegments(
                 segmentsToBeOverwritten,
                 segmentsToBeDropped,

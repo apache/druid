@@ -251,16 +251,17 @@ Note that some sensitive information may be logged if these settings are enabled
 ### Request Logging
 
 All processes that can serve queries can also log the query requests they see. Broker processes can additionally log the SQL requests (both from HTTP and JDBC) they see.
+For an example of setting up request logging, see [Request logging](../operations/request-logging.md).
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.request.logging.type`|Choices: noop, file, emitter, slf4j, filtered, composing, switching. How to log every query request.|[required to configure request logging]|
+|`druid.request.logging.type`|How to log every query request. Choices: `noop`, [`file`](#file-request-logging), [`emitter`](#emitter-request-logging), [`slf4j`](#slf4j-request-logging), [`filtered`](#filtered-request-logging), [`composing`](#composing-request-logging), [`switching`](#switching-request-logging)|`noop` (request logging disabled by default)|
 
-Note that, you can enable sending all the HTTP requests to log by setting  "org.apache.druid.jetty.RequestLog" to DEBUG level. See [Logging](../configuration/logging.md)
+Note that you can enable sending all the HTTP requests to log by setting  `org.apache.druid.jetty.RequestLog` to the `DEBUG` level. See [Logging](../configuration/logging.md) for more information.
 
-#### File Request Logging
+#### File request logging
 
-Daily request logs are stored on disk.
+The `file` request logger stores daily request logs on disk.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -279,24 +280,24 @@ For SQL query request, the `native_query` field is empty. Example
 2019-01-14T10:00:00.000Z        127.0.0.1       {"sqlQuery/time":100,"sqlQuery/bytes":600,"success":true,"identity":"user1"}  {"query":"SELECT page, COUNT(*) AS Edits FROM wikiticker WHERE __time BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY page ORDER BY Edits DESC LIMIT 10","context":{"sqlQueryId":"c9d035a0-5ffd-4a79-a865-3ffdadbb5fdd","nativeQueryIds":"[490978e4-f5c7-4cf6-b174-346e63cf8863]"}}
 ```
 
-#### Emitter Request Logging
+#### Emitter request logging
 
-Every request is emitted to some external location.
+The `emitter` request logger emits every request to the external location specified in the [emitter](#enabling-metrics) configuration.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.request.logging.feed`|Feed name for requests.|none|
 
-#### SLF4J Request Logging
+#### SLF4J request logging
 
-Every request is logged via SLF4J. Native queries are serialized into JSON in the log message regardless of the SLF4J format specification. They will be logged under the class `org.apache.druid.server.log.LoggingRequestLogger`.
+The `slf4j` request logger logs every request using SLF4J. It serializes native queries into JSON in the log message regardless of the SLF4J format specification. Requests are logged under the class `org.apache.druid.server.log.LoggingRequestLogger`.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.request.logging.setMDC`|If MDC entries should be set in the log entry. Your logging setup still has to be configured to handle MDC to format this data|false|
-|`druid.request.logging.setContextMDC`|If the druid query `context` should be added to the MDC entries. Has no effect unless `setMDC` is `true`|false|
+|`druid.request.logging.setMDC`|If you want to set MDC entries within the log entry, set this value to `true`. Your logging system must be configured to support MDC in order to format this data.|false|
+|`druid.request.logging.setContextMDC`|Set to "true" to add  the Druid query `context` to the MDC entries. Only applies when `setMDC` is `true`.|false|
 
-For native query, the following MDC fields are populated with `setMDC`:
+For a native query, the following MDC fields are populated when `setMDC` is `true`:
 
 |MDC field|Description|
 |---------|-----------|
@@ -310,31 +311,36 @@ For native query, the following MDC fields are populated with `setMDC`:
 |`resultOrdering`|The ordering of results|
 |`descending`|If the query is a descending query|
 
-#### Filtered Request Logging
-Filtered Request Logger filters requests based on a configurable query/time threshold (for native query) and sqlQuery/time threshold (for SQL query).
-For native query, only request logs where query/time is above the threshold are emitted. For SQL query, only request logs where sqlQuery/time is above the threshold are emitted.
+#### Filtered request logging
+
+The `filtered` request logger filters requests based on the query type or how long a query takes to complete.
+For native queries, the logger only logs requests when the `query/time` metric exceeds the threshold provided in `queryTimeThresholdMs`.
+For SQL queries, it only logs requests when the `sqlQuery/time` metric exceeds threshold provided in `sqlQueryTimeThresholdMs`.
+See [Metrics](../operations/metrics.md) for more details on query metrics.
+
+Requests that meet the threshold are logged using the request logger type set in `druid.request.logging.delegate.type`.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.request.logging.queryTimeThresholdMs`|Threshold value for query/time in milliseconds.|0, i.e., no filtering|
-|`druid.request.logging.sqlQueryTimeThresholdMs`|Threshold value for sqlQuery/time in milliseconds.|0, i.e., no filtering|
+|`druid.request.logging.queryTimeThresholdMs`|Threshold value for the `query/time` metric in milliseconds.|0, i.e., no filtering|
+|`druid.request.logging.sqlQueryTimeThresholdMs`|Threshold value for the `sqlQuery/time` metric in milliseconds.|0, i.e., no filtering|
 |`druid.request.logging.mutedQueryTypes` | Query requests of these types are not logged. Query types are defined as string objects corresponding to the "queryType" value for the specified query in the Druid's [native JSON query API](http://druid.apache.org/docs/latest/querying/querying). Misspelled query types will be ignored. Example to ignore scan and timeBoundary queries: ["scan", "timeBoundary"]| []|
 |`druid.request.logging.delegate.type`|Type of delegate request logger to log requests.|none|
 
-#### Composite Request Logging
-Composite Request Logger emits request logs to multiple request loggers.
+#### Composing request logging
+The `composing` request logger emits request logs to multiple request loggers.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.request.logging.loggerProviders`|List of request loggers for emitting request logs.|none|
 
-#### Switching Request Logging
-Switching Request Logger routes native query's request logs to one request logger and SQL query's request logs to another request logger.
+#### Switching request logging
+The `switching` request logger routes native query request logs to one request logger and SQL query request logs to another request logger.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.request.logging.nativeQueryLogger`|request logger for emitting native query's request logs.|none|
-|`druid.request.logging.sqlQueryLogger`|request logger for emitting SQL query's request logs.|none|
+|`druid.request.logging.nativeQueryLogger`|Request logger for emitting native query request logs.|none|
+|`druid.request.logging.sqlQueryLogger`|Request logger for emitting SQL query request logs.|none|
 
 ### Audit Logging
 
@@ -355,7 +361,7 @@ You can configure Druid processes to emit [metrics](../operations/metrics.md) re
 |--------|-----------|-------|
 |`druid.monitoring.emissionPeriod`| Frequency that Druid emits metrics.|`PT1M`|
 |[`druid.monitoring.monitors`](#metrics-monitors)|Sets list of Druid monitors used by a process.|none (no monitors)|
-|[`druid.emitter`](#metrics-emitters)|Setting this value initializes one of the emitter modules.|`noop`|
+|[`druid.emitter`](#metrics-emitters)|Setting this value initializes one of the emitter modules.|`noop` (metric emission disabled by default)|
 
 #### Metrics monitors
 
@@ -380,7 +386,9 @@ Metric monitoring is an essential part of Druid operations.  The following monit
 
 For example, you might configure monitors on all processes for system and JVM information within `common.runtime.properties` as follows:
 
-`druid.monitoring.monitors=["org.apache.druid.java.util.metrics.SysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]`
+```
+druid.monitoring.monitors=["org.apache.druid.java.util.metrics.SysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]
+```
 
 You can override cluster-wide configuration by amending the `runtime.properties` of individual processes.
 
@@ -388,12 +396,12 @@ You can override cluster-wide configuration by amending the `runtime.properties`
 
 There are several emitters available:
 
-- `noop` (default)
-- log4j ([`logging`](#logging-emitter-module))
-- POSTs of JSON events ([`http`](#http-emitter-module))
-- [`parametrized`](#parametrized-http-emitter-module)
-- [`composing`](#composing-emitter-module) to initialize multiple emitter modules
-- [`graphite`](#graphite-emitter)
+- `noop` (default) disables metric emission.
+- [`logging`](#logging-emitter-module) emits logs using Log4j2.
+- [`http`](#http-emitter-module) sends `POST` requests of JSON events.
+- [`parametrized`](#parametrized-http-emitter-module) operates like the `http` emitter but fine-tunes the recipient URL based on the event feed.
+- [`composing`](#composing-emitter-module) initializes multiple emitter modules.
+- [`graphite`](#graphite-emitter) emits metrics to a [Graphite](https://graphiteapp.org/) Carbon service.
 
 ##### Logging Emitter Module
 
@@ -436,11 +444,14 @@ The following properties allow the HTTP Emitter to use its own truststore config
 
 ##### Parametrized HTTP Emitter Module
 
-`druid.emitter.parametrized.httpEmitting.*` configs correspond to the configs of HTTP Emitter Modules, see above.
-Except `recipientBaseUrl`. E.g., `druid.emitter.parametrized.httpEmitting.flushMillis`,
-`druid.emitter.parametrized.httpEmitting.flushCount`, `druid.emitter.parametrized.httpEmitting.ssl.trustStorePath`, etc.
+The parametrized emitter takes the same configs as the [`http` emitter](#http-emitter-module) using the prefix `druid.emitter.parametrized.httpEmitting.`.
+For example:
+* `druid.emitter.parametrized.httpEmitting.flushMillis`
+* `druid.emitter.parametrized.httpEmitting.flushCount`
+* `druid.emitter.parametrized.httpEmitting.ssl.trustStorePath`
 
-The additional configs are:
+Do not specify `recipientBaseUrl` with the parametrized emitter.
+Instead use `recipientBaseUrlPattern` described in the table below.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -454,7 +465,7 @@ The additional configs are:
 
 ##### Graphite Emitter
 
-To use graphite as emitter set `druid.emitter=graphite`. For configuration details please follow this [link](../development/extensions-contrib/graphite.md).
+To use graphite as emitter set `druid.emitter=graphite`. For configuration details, see [Graphite emitter](../development/extensions-contrib/graphite.md) for the Graphite emitter Druid extension.
 
 
 ### Metadata storage
@@ -750,7 +761,7 @@ Prior to version 0.13.0, Druid string columns treated `''` and `null` values as 
 |Property|Description|Default|
 |---|---|---|
 |`druid.generic.useDefaultValueForNull`|When set to `true`, `null` values will be stored as `''` for string columns and `0` for numeric columns. Set to `false` to store and query data in SQL compatible mode.|`true`|
-
+|`druid.generic.ignoreNullsForStringCardinality`|When set to `true`, `null` values will be ignored for the built-in cardinality aggregator over string columns. Set to `false` to include `null` values while estimating cardinality of only string columns using the built-in cardinality aggregator. This setting takes effect only when `druid.generic.useDefaultValueForNull` is set to `true` and is ignored in SQL compatibility mode. Additionally, empty strings (equivalent to null) are not counted when this is set to `true`. |`false`|
 This mode does have a storage size and query performance cost, see [segment documentation](../design/segments.md#sql-compatible-null-handling) for more details.
 
 ### HTTP Client
@@ -760,6 +771,7 @@ All Druid components can communicate with each other over HTTP.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.global.http.numConnections`|Size of connection pool per destination URL. If there are more HTTP requests than this number that all need to speak to the same URL, then they will queue up.|`20`|
+|`druid.global.http.eagerInitialization`|Indicates that http connections should be eagerly initialized. If set to true, `numConnections` connections are created upon initialization|`true`|
 |`druid.global.http.compressionCodec`|Compression codec to communicate with others. May be "gzip" or "identity".|`gzip`|
 |`druid.global.http.readTimeout`|The timeout for data reads.|`PT15M`|
 |`druid.global.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.global.http.readTimeout`. Set this timeout = ~90% of `druid.global.http.readTimeout`|`PT4M`|
@@ -950,7 +962,7 @@ A description of the compaction config is:
 |--------|-----------|--------|
 |`dataSource`|dataSource name to be compacted.|yes|
 |`taskPriority`|[Priority](../ingestion/tasks.md#priority) of compaction task.|no (default = 25)|
-|`inputSegmentSizeBytes`|Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.|no (default = 419430400)|
+|`inputSegmentSizeBytes`|Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.|no (default = Long.MAX_VALUE)|
 |`maxRowsPerSegment`|Max number of rows per segment after compaction.|no|
 |`skipOffsetFromLatest`|The offset for searching segments to be compacted in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Strongly recommended to set for realtime dataSources. See [Data handling with compaction](../ingestion/compaction.md#data-handling-with-compaction)|no (default = "P1D")|
 |`tuningConfig`|Tuning config for compaction tasks. See below [Compaction Task TuningConfig](#automatic-compaction-tuningconfig).|no|
@@ -1026,7 +1038,7 @@ The below is a list of the supported configurations for auto compaction.
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|
-|`dropExisting`|If `true`, then the generated compaction task drops (mark unused) all existing segments fully contained by the umbrella interval of the compacted segments when the task publishes new segments. If compaction fails, Druid does not drop or mark unused any segments. WARNING: this functionality is still in beta and can result in temporary data unavailability for data within the compacted `interval`. Note that changing this config does not cause intervals to be compacted again.|false|no|
+|`dropExisting`|If `true` the compaction task replaces all existing segments fully contained by the umbrella interval of the compacted segments when the task publishes new segments and tombstones. If compaction fails, Druid does not publish any segments or tombstones. WARNING: this functionality is still in beta. Note that changing this config does not cause intervals to be compacted again.|false|no|
 
 ### Overlord
 
@@ -1420,6 +1432,7 @@ Additional peon configs include:
 |`druid.indexer.task.hadoopWorkingPath`|Temporary working directory for Hadoop tasks.|`/tmp/druid-indexing`|
 |`druid.indexer.task.restoreTasksOnRestart`|If true, MiddleManagers will attempt to stop tasks gracefully on shutdown and restore them on restart.|false|
 |`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`|If true, tasks using the [Druid input source](../ingestion/native-batch-input-source.md) will ignore the provided timestampSpec, and will use the `__time` column of the input datasource. This option is provided for compatibility with ingestion specs written before Druid 0.22.0.|false|
+|`druid.indexer.task.storeEmptyColumns`|Boolean value for whether or not to store empty columns during ingestion. When set to true, Druid stores every column specified in the [`dimensionsSpec`](../ingestion/ingestion-spec.md#dimensionsspec). If you use schemaless ingestion and don't specify any dimensions to ingest, you must also set [`includeAllDimensions`](../ingestion/ingestion-spec.md#dimensionsspec) for Druid to store empty columns.<br/><br/>If you set `storeEmptyColumns` to false, Druid SQL queries referencing empty columns will fail. If you intend to leave `storeEmptyColumns` disabled, you should either ingest dummy data for empty columns or else not query on empty columns.<br/><br/>This configuration can be overwritten by setting `storeEmptyColumns` in the [task context](../ingestion/tasks.md#context-parameters).|true|
 |`druid.indexer.server.maxChatRequests`|Maximum number of concurrent requests served by a task's chat handler. Set to 0 to disable limiting.|0|
 
 If the peon is running in remote mode, there must be an Overlord up and running. Peons in remote mode can set the following configurations:
@@ -1485,6 +1498,7 @@ then the value from the configuration below is used:
 |`druid.indexer.task.hadoopWorkingPath`|Temporary working directory for Hadoop tasks.|`/tmp/druid-indexing`|
 |`druid.indexer.task.restoreTasksOnRestart`|If true, the Indexer will attempt to stop tasks gracefully on shutdown and restore them on restart.|false|
 |`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`|If true, tasks using the [Druid input source](../ingestion/native-batch-input-source.md) will ignore the provided timestampSpec, and will use the `__time` column of the input datasource. This option is provided for compatibility with ingestion specs written before Druid 0.22.0.|false|
+|`druid.indexer.task.storeEmptyColumns`|Boolean value for whether or not to store empty columns during ingestion. When set to true, Druid stores every column specified in the [`dimensionsSpec`](../ingestion/ingestion-spec.md#dimensionsspec). If you use schemaless ingestion and don't specify any dimensions to ingest, you must also set [`includeAllDimensions`](../ingestion/ingestion-spec.md#dimensionsspec) for Druid to store empty columns.<br/><br/>If you set `storeEmptyColumns` to false, Druid SQL queries referencing empty columns will fail. If you intend to leave `storeEmptyColumns` disabled, you should either ingest dummy data for empty columns or else not query on empty columns.<br/><br/>This configuration can be overwritten by setting `storeEmptyColumns` in the [task context](../ingestion/tasks.md#context-parameters).|true|
 |`druid.peon.taskActionClient.retry.minWait`|The minimum retry time to communicate with Overlord.|PT5S|
 |`druid.peon.taskActionClient.retry.maxWait`|The maximum retry time to communicate with Overlord.|PT1M|
 |`druid.peon.taskActionClient.retry.maxRetryCount`|The maximum number of retries to communicate with Overlord.|60|
@@ -1761,6 +1775,7 @@ client has the following configuration options.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.broker.http.numConnections`|Size of connection pool for the Broker to connect to Historical and real-time processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|`20`|
+|`druid.broker.http.eagerInitialization`|Indicates that http connections from Broker to Historical and Real-time processes should be eagerly initialized. If set to true, `numConnections` connections are created upon initialization|`true`|
 |`druid.broker.http.compressionCodec`|Compression codec the Broker uses to communicate with Historical and real-time processes. May be "gzip" or "identity".|`gzip`|
 |`druid.broker.http.readTimeout`|The timeout for data reads from Historical servers and real-time tasks.|`PT15M`|
 |`druid.broker.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.broker.http.readTimeout`. Set this timeout = ~90% of `druid.broker.http.readTimeout`|`PT4M`|
@@ -2047,13 +2062,15 @@ Supported runtime properties:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.groupBy.maxMergingDictionarySize`|Maximum amount of heap space (approximately) to use for the string dictionary during merging. When the dictionary exceeds this size, a spill to disk will be triggered.|100000000|
+|`druid.query.groupBy.maxSelectorDictionarySize`|Maximum amount of heap space (approximately) to use for per-segment string dictionaries. See [groupBy memory tuning and resource limits](../querying/groupbyquery.md#memory-tuning-and-resource-limits) for details.|100000000|
+|`druid.query.groupBy.maxMergingDictionarySize`|Maximum amount of heap space (approximately) to use for per-query string dictionaries. When the dictionary exceeds this size, a spill to disk will be triggered. See [groupBy memory tuning and resource limits](../querying/groupbyquery.md#memory-tuning-and-resource-limits) for details.|100000000|
 |`druid.query.groupBy.maxOnDiskStorage`|Maximum amount of disk space to use, per-query, for spilling result sets to disk when either the merging buffer or the dictionary fills up. Queries that exceed this limit will fail. Set to zero to disable disk spilling.|0 (disabled)|
 
 Supported query contexts:
 
 |Key|Description|
 |---|-----------|
+|`maxSelectorDictionarySize`|Can be used to lower the value of `druid.query.groupBy.maxMergingDictionarySize` for this query.|
 |`maxMergingDictionarySize`|Can be used to lower the value of `druid.query.groupBy.maxMergingDictionarySize` for this query.|
 |`maxOnDiskStorage`|Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.|
 
@@ -2150,6 +2167,7 @@ Supported query contexts:
 |`druid.router.avatica.balancer.type`|Class to use for balancing Avatica queries across Brokers. Please see [Avatica Query Balancing](../design/router.md#avatica-query-balancing).|rendezvousHash|
 |`druid.router.managementProxy.enabled`|Enables the Router's [management proxy](../design/router.md#router-as-management-proxy) functionality.|false|
 |`druid.router.http.numConnections`|Size of connection pool for the Router to connect to Broker processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|`20`|
+|`druid.router.http.eagerInitialization`|Indicates that http connections from Router to Broker should be eagerly initialized. If set to true, `numConnections` connections are created upon initialization|`true`|
 |`druid.router.http.readTimeout`|The timeout for data reads from Broker processes.|`PT15M`|
 |`druid.router.http.numMaxThreads`|Maximum number of worker threads to handle HTTP requests and responses|`max(10, ((number of cores * 17) / 16 + 2) + 30)`|
 |`druid.router.http.numRequestsQueued`|Maximum number of requests that may be queued to a destination|`1024`|

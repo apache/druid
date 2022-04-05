@@ -231,6 +231,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
 
   private final Map<String, MetricDesc> metricDescs;
 
+  private final DimensionsSpec dimensionsSpec;
   private final Map<String, DimensionDesc> dimensionDescs;
   private final List<DimensionDesc> dimensionDescsList;
   // dimension capabilities are provided by the indexers
@@ -302,7 +303,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       timeAndMetricsColumnCapabilities.put(metricDesc.getName(), metricDesc.getCapabilities());
     }
 
-    DimensionsSpec dimensionsSpec = incrementalIndexSchema.getDimensionsSpec();
+    this.dimensionsSpec = incrementalIndexSchema.getDimensionsSpec();
 
     this.dimensionDescsList = new ArrayList<>();
     for (DimensionSchema dimSchema : dimensionsSpec.getDimensions()) {
@@ -749,6 +750,14 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   public AggregatorFactory[] getMetricAggs()
   {
     return metrics;
+  }
+
+  /**
+   * Returns dimensionsSpec from the ingestionSpec.
+   */
+  public DimensionsSpec getDimensionsSpec()
+  {
+    return dimensionsSpec;
   }
 
   public List<String> getDimensionNames()

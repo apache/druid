@@ -81,12 +81,12 @@ The `maxNumConcurrentSubTasks` in the `tuningConfig` determines the number of co
 #### Replacing or appending data
 By default, batch ingestion replaces all data in the intervals in your `granularitySpec`' for any segment that it writes to. If you want to add to the segment instead, set the `appendToExisting` flag in the `ioConfig`. Batch ingestion only replaces data in segments where it actively adds data. If there are segments in the intervals for your `granularitySpec` that have do not have data from a task, they remain unchanged. If any existing segments partially overlap with the intervals in the `granularitySpec`, the portion of those segments outside the interval for the new spec remain visible.
 
-#### Dropping existing segments
-You can set `dropExisting` flag in the `ioConfig` to true if you want the ingestion task to drop all existing segments that start and end within the intervals for your `granularitySpec`. This applies whether or not the new data covers all existing segments. `dropExisting` only applies when `appendToExisting` is false and the  `granularitySpec` contains an `interval`. WARNING: this functionality is still in beta and can result in temporary data unavailability for data within the specified `interval`.
+#### Fully replacing existing segments using tombstones
+You can set `dropExisting` flag in the `ioConfig` to true if you want the ingestion task to replace all existing segments that start and end within the intervals for your `granularitySpec`. This applies whether or not the new data covers all existing segments. `dropExisting` only applies when `appendToExisting` is false and the  `granularitySpec` contains an `interval`. WARNING: this functionality is still in beta.
 
 The following examples demonstrate when to set the `dropExisting` property to true in the `ioConfig`:
 
-Consider an existing segment with an interval of 2020-01-01 to 2021-01-01 and `YEAR` `segmentGranularity`. You want to overwrite the whole interval of 2020-01-01 to 2021-01-01 with new data using the finer segmentGranularity of `MONTH`. If the replacement data does not have a record within every months from 2020-01-01 to 2021-01-01 Druid cannot drop the original `YEAR` segment even if it does include all the replacement data. Set `dropExisting` to true in this case to drop the original segment at `YEAR` `segmentGranularity` since you no longer need it.<br><br>
+Consider an existing segment with an interval of 2020-01-01 to 2021-01-01 and `YEAR` `segmentGranularity`. You want to overwrite the whole interval of 2020-01-01 to 2021-01-01 with new data using the finer segmentGranularity of `MONTH`. If the replacement data does not have a record within every months from 2020-01-01 to 2021-01-01 Druid cannot drop the original `YEAR` segment even if it does include all the replacement data. Set `dropExisting` to true in this case to replace the original segment at `YEAR` `segmentGranularity` since you no longer need it.<br><br>
 Imagine you want to re-ingest or overwrite a datasource and the new data does not contain some time intervals that exist in the datasource. For example, a datasource contains the following data at `MONTH` segmentGranularity:  
 - **January**: 1 record  
 - **February**: 10 records  
@@ -102,7 +102,7 @@ Unless you set `dropExisting` to true, the result after ingestion with overwrite
 * **February**: 10 records  
 * **March**: 9 records
 
-This is incorrect since the new data has 0 records for January. Set `dropExisting` to true to drop the unneeded January segment.
+This may not be what it is expected since the new data has 0 records for January. Set `dropExisting` to true to replace the unneeded January segment with a tombstone.
    
 ## Parallel indexing example
 
@@ -183,13 +183,16 @@ The following example illustrates the configuration for a parallel indexing task
   }
 }
 ```
+
+## Parallel indexing configuration
+
 The following table defines the primary sections of the input spec:
 |property|description|required?|
 |--------|-----------|---------|
-|type|The task type. For parallel task, set the value to `index_parallel`.|yes|
-|id|The task ID. If omitted, Druid generates the task ID using task type, data source name, interval, and date-time stamp. |no|
-|spec|The ingestion spec that defines: the data schema, IO config, and tuning config. See [`ioConfig`](#ioconfig) for more details. |yes|
-|context|Context to specify various task configuration parameters.|no|
+|type|The task type. For parallel task indexing, set the value to `index_parallel`.|yes|
+|id|The task ID. If omitted, Druid generates the task ID using the task type, data source name, interval, and date-time stamp. |no|
+|spec|The ingestion spec that defines the [data schema](#dataschema), [IO config](#ioconfig), and [tuning config](#tuningconfig).|yes|
+|context|Context to specify various task configuration parameters. See [Task context parameters](tasks.md#context-parameters) for more details.|no|
 
 ### `dataSchema`
 
@@ -208,7 +211,7 @@ When defining the `granularitySpec` for index parallel, consider the defining `i
 |type|The task type. Set to the value to `index_parallel`.|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
 |appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This means that you can append new segments to any datasource regardless of its original partitioning scheme. You must use the `dynamic` partitioning type for the appended segments. If you specify a different partitioning type, the task fails with an error.|false|no|
-|dropExisting|If `true` and `appendToExisting` is `false` and the `granularitySpec` contains an`interval`, then the ingestion task drops (mark unused) all existing segments fully contained by the specified `interval` when the task publishes new segments. If ingestion fails, Druid does not drop or mark unused any segments. In the case of misconfiguration where either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec`, Druid does not drop any segments even if `dropExisting` is `true`. WARNING: this functionality is still in beta and can result in temporary data unavailability for data within the specified `interval`.|false|no|
+|dropExisting|If `true` and `appendToExisting` is `false` and the `granularitySpec` contains an`interval`, then the ingestion task replaces all existing segments fully contained by the specified `interval` when the task publishes new segments. If ingestion fails, Druid does not change any existing segment. In the case of misconfiguration where either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec`, Druid does not replace any segments even if `dropExisting` is `true`. WARNING: this functionality is still in beta.|false|no|
 
 ### `tuningConfig`
 
@@ -409,7 +412,7 @@ Use "countryName" or both "countryName" and "cityName" in the `WHERE` clause of 
 |maxRowsPerSegment|Soft max for the number of rows to include in a partition.|none|either this or `targetRowsPerSegment`|
 |assumeGrouped|Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.|false|no|
 
-### HTTP status endpoints
+## HTTP status endpoints
 
 The supervisor task provides some HTTP endpoints to get running status.
 
@@ -637,7 +640,7 @@ An example of the result is
 
 Returns the task attempt history of the worker task spec of the given id, or HTTP 404 Not Found error if the supervisor task is running in the sequential mode.
 
-### Segment pushing modes
+## Segment pushing modes
 While ingesting data using the parallel task indexing, Druid creates segments from the input data and pushes them. For segment pushing,
 the parallel task index supports the following segment pushing modes based upon your type of [rollup](./rollup.md):
 
@@ -645,7 +648,7 @@ the parallel task index supports the following segment pushing modes based upon 
 To enable bulk pushing mode, set `forceGuaranteedRollup` in your TuningConfig. You cannot use bulk pushing with `appendToExisting` in your IOConfig.
 - Incremental pushing mode: Used for best-effort rollup. Druid pushes segments are incrementally during the course of the indexing task. The index task collects data and stores created segments in the memory and disks of the services running the task until the total number of collected rows exceeds `maxTotalRows`. At that point the index task immediately pushes all segments created up until that moment, cleans up pushed segments, and continues to ingest the remaining data.
 
-### Capacity planning
+## Capacity planning
 
 The supervisor task can create up to `maxNumConcurrentSubTasks` worker tasks no matter how many task slots are currently available.
 As a result, total number of tasks which can be run at the same time is `(maxNumConcurrentSubTasks + 1)` (including the supervisor task).

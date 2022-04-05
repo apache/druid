@@ -97,7 +97,7 @@ public class SqlFirehoseTest
         new MapInputRowParser(
             new TimeAndDimsParseSpec(
                 new TimestampSpec("timestamp", "auto", null),
-                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")), null, null)
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")))
             )
         )
     );
@@ -152,7 +152,7 @@ public class SqlFirehoseTest
         new StringInputRowParser(
           new TimeAndDimsParseSpec(
               new TimestampSpec("timestamp", "auto", null),
-              new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")), null, null)
+              new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")))
           ),
           Charset.defaultCharset().name()
         )
@@ -190,7 +190,7 @@ public class SqlFirehoseTest
     final InputRowParser stringParser = new TransformingStringInputRowParser(
         new TimeAndDimsParseSpec(
             new TimestampSpec("timestamp", "auto", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")), null, null)
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")))
         ),
         Charset.defaultCharset().name(),
         new TransformSpec(

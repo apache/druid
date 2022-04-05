@@ -17,27 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.server.lookup.namespace.cache;
+package org.apache.druid.segment.filter.cnf;
 
-import com.google.common.collect.ForwardingConcurrentMap;
+import org.apache.druid.java.util.common.StringUtils;
 
-import java.util.concurrent.ConcurrentMap;
-
-/**
- * Used in {@link OffHeapNamespaceExtractionCacheManager#createCache()}
- */
-final class CacheProxy extends ForwardingConcurrentMap<String, String>
+public class CNFFilterExplosionException extends Exception
 {
-  private final ConcurrentMap<String, String> delegate;
-
-  CacheProxy(ConcurrentMap<String, String> delegate)
+  public CNFFilterExplosionException(String formatText, Object... arguments)
   {
-    this.delegate = delegate;
-  }
-
-  @Override
-  protected ConcurrentMap<String, String> delegate()
-  {
-    return delegate;
+    super(StringUtils.nonStrictFormat(formatText, arguments));
   }
 }

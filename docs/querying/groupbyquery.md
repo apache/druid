@@ -275,13 +275,18 @@ as the index, so the aggregated values in the array can be accessed directly wit
 
 ### Memory tuning and resource limits
 
-When using groupBy v2, three parameters control resource usage and limits:
+When using groupBy v2, four parameters control resource usage and limits:
 
 - `druid.processing.buffer.sizeBytes`: size of the off-heap hash table used for aggregation, per query, in bytes. At
 most `druid.processing.numMergeBuffers` of these will be created at once, which also serves as an upper limit on the
 number of concurrently running groupBy queries.
-- `druid.query.groupBy.maxMergingDictionarySize`: size of the on-heap dictionary used when grouping on strings, per query,
-in bytes. Note that this is based on a rough estimate of the dictionary size, not the actual size.
+- `druid.query.groupBy.maxSelectorDictionarySize`: size of the on-heap segment-level dictionary used when grouping on
+string or array-valued expressions that do not have pre-existing dictionaries. There is at most one dictionary per
+processing thread; therefore there are up to `druid.processing.numThreads` of these. Note that the size is based on a
+rough estimate of the dictionary footprint.
+- `druid.query.groupBy.maxMergingDictionarySize`: size of the on-heap query-level dictionary used when grouping on
+any string expression. There is at most one dictionary per concurrently-running query; therefore there are up to
+`druid.server.http.numThreads` of these. Note that the size is based on a rough estimate of the dictionary footprint.
 - `druid.query.groupBy.maxOnDiskStorage`: amount of space on disk used for aggregation, per query, in bytes. By default,
 this is 0, which means aggregation will not use disk.
 
@@ -381,13 +386,15 @@ Supported runtime properties:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.groupBy.maxMergingDictionarySize`|Maximum amount of heap space (approximately) to use for the string dictionary during merging. When the dictionary exceeds this size, a spill to disk will be triggered.|100000000|
+|`druid.query.groupBy.maxSelectorDictionarySize`|Maximum amount of heap space (approximately) to use for per-segment string dictionaries. See [Memory tuning and resource limits](#memory-tuning-and-resource-limits) for details.|100000000|
+|`druid.query.groupBy.maxMergingDictionarySize`|Maximum amount of heap space (approximately) to use for per-query string dictionaries. When the dictionary exceeds this size, a spill to disk will be triggered. See [Memory tuning and resource limits](#memory-tuning-and-resource-limits) for details.|100000000|
 |`druid.query.groupBy.maxOnDiskStorage`|Maximum amount of disk space to use, per-query, for spilling result sets to disk when either the merging buffer or the dictionary fills up. Queries that exceed this limit will fail. Set to zero to disable disk spilling.|0 (disabled)|
 
 Supported query contexts:
 
 |Key|Description|
 |---|-----------|
+|`maxSelectorDictionarySize`|Can be used to lower the value of `druid.query.groupBy.maxMergingDictionarySize` for this query.|
 |`maxMergingDictionarySize`|Can be used to lower the value of `druid.query.groupBy.maxMergingDictionarySize` for this query.|
 |`maxOnDiskStorage`|Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.|
 

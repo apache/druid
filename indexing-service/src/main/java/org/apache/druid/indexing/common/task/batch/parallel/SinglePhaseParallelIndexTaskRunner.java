@@ -20,8 +20,6 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
@@ -29,19 +27,12 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexing.common.Counters;
-import org.apache.druid.indexing.common.TaskLock;
-import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.LockListAction;
-import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.BuildingNumberedShardSpec;
@@ -55,10 +46,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 /**
  * An implementation of {@link ParallelIndexTaskRunner} to support best-effort roll-up. This runner can submit and
@@ -299,71 +288,9 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
     return segmentIdHolder.getValue();
   }
 
-  private NonnullPair<Interval, String> findIntervalAndVersion(DateTime timestamp) throws IOException
+  NonnullPair<Interval, String> findIntervalAndVersion(DateTime timestamp) throws IOException
   {
-    final GranularitySpec granularitySpec = getIngestionSchema().getDataSchema().getGranularitySpec();
-    // This method is called whenever subtasks need to allocate a new segment via the supervisor task.
-    // As a result, this code is never called in the Overlord. For now using the materialized intervals
-    // here is ok for performance reasons
-    final Set<Interval> materializedBucketIntervals = granularitySpec.materializedBucketIntervals();
-
-    // List locks whenever allocating a new segment because locks might be revoked and no longer valid.
-    final List<TaskLock> locks = getToolbox()
-        .getTaskActionClient()
-        .submit(new LockListAction());
-    final TaskLock revokedLock = locks.stream().filter(TaskLock::isRevoked).findAny().orElse(null);
-    if (revokedLock != null) {
-      throw new ISE("Lock revoked: [%s]", revokedLock);
-    }
-    final Map<Interval, String> versions = locks
-        .stream()
-        .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
-
-    Interval interval;
-    String version;
-    if (!materializedBucketIntervals.isEmpty()) {
-      // If granularity spec has explicit intervals, we just need to find the version associated to the interval.
-      // This is because we should have gotten all required locks up front when the task starts up.
-      final Optional<Interval> maybeInterval = granularitySpec.bucketInterval(timestamp);
-      if (!maybeInterval.isPresent()) {
-        throw new IAE("Could not find interval for timestamp [%s]", timestamp);
-      }
-
-      interval = maybeInterval.get();
-      if (!materializedBucketIntervals.contains(interval)) {
-        throw new ISE("Unspecified interval[%s] in granularitySpec[%s]", interval, granularitySpec);
-      }
-
-      version = ParallelIndexSupervisorTask.findVersion(versions, interval);
-      if (version == null) {
-        throw new ISE("Cannot find a version for interval[%s]", interval);
-      }
-    } else {
-      // We don't have explicit intervals. We can use the segment granularity to figure out what
-      // interval we need, but we might not have already locked it.
-      interval = granularitySpec.getSegmentGranularity().bucket(timestamp);
-      version = ParallelIndexSupervisorTask.findVersion(versions, interval);
-      if (version == null) {
-        final int maxAllowedLockCount = getIngestionSchema().getTuningConfig().getMaxAllowedLockCount();
-        if (maxAllowedLockCount >= 0 && locks.size() >= maxAllowedLockCount) {
-          throw new MaxAllowedLocksExceededException(maxAllowedLockCount);
-        }
-
-        // We don't have a lock for this interval, so we should lock it now.
-        final TaskLock lock = Preconditions.checkNotNull(
-            getToolbox().getTaskActionClient().submit(
-                new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)
-            ),
-            "Cannot acquire a lock for interval[%s]",
-            interval
-        );
-        if (lock.isRevoked()) {
-          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
-        }
-        version = lock.getVersion();
-      }
-    }
-    return new NonnullPair<>(interval, version);
+    return AbstractBatchIndexTask.findIntervalAndVersion(getToolbox(), ingestionSchema, timestamp);
   }
 
   @Override

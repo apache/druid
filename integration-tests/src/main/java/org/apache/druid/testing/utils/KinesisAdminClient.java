@@ -29,9 +29,8 @@ import com.amazonaws.services.kinesis.model.AddTagsToStreamRequest;
 import com.amazonaws.services.kinesis.model.AddTagsToStreamResult;
 import com.amazonaws.services.kinesis.model.CreateStreamResult;
 import com.amazonaws.services.kinesis.model.DeleteStreamResult;
+import com.amazonaws.services.kinesis.model.DescribeStreamRequest;
 import com.amazonaws.services.kinesis.model.DescribeStreamResult;
-import com.amazonaws.services.kinesis.model.ListShardsRequest;
-import com.amazonaws.services.kinesis.model.ListShardsResult;
 import com.amazonaws.services.kinesis.model.ScalingType;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.StreamDescription;
@@ -39,14 +38,17 @@ import com.amazonaws.services.kinesis.model.StreamStatus;
 import com.amazonaws.services.kinesis.model.UpdateShardCountRequest;
 import com.amazonaws.services.kinesis.model.UpdateShardCountResult;
 import com.amazonaws.util.AwsHostNameUtils;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.ISE;
 
 import java.io.FileInputStream;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class KinesisAdminClient implements StreamAdminClient
 {
@@ -152,7 +154,23 @@ public class KinesisAdminClient implements StreamAdminClient
   @Override
   public int getStreamPartitionCount(String streamName)
   {
-    return listShards(streamName).size();
+    Set<String> shardIds = new HashSet<>();
+    DescribeStreamRequest request = new DescribeStreamRequest();
+    request.setStreamName(streamName);
+    while (request != null) {
+      StreamDescription description = amazonKinesis.describeStream(request).getStreamDescription();
+      List<String> shardIdResult = description.getShards()
+                                              .stream()
+                                              .map(Shard::getShardId)
+                                              .collect(Collectors.toList());
+      shardIds.addAll(shardIdResult);
+      if (description.isHasMoreShards()) {
+        request.setExclusiveStartShardId(Iterables.getLast(shardIdResult));
+      } else {
+        request = null;
+      }
+    }
+    return shardIds.size();
   }
 
   @Override
@@ -163,21 +181,6 @@ public class KinesisAdminClient implements StreamAdminClient
     // would still returns both open shards and closed shards from the API call.
     // To verify, we sum the old count (closed shareds) and the expected new count (open shards)
     return actualShardCount == oldShardCount + newShardCount;
-  }
-
-  private Set<Shard> listShards(String streamName)
-  {
-    ListShardsRequest listShardsRequest = new ListShardsRequest().withStreamName(streamName);
-    ImmutableSet.Builder<Shard> shards = ImmutableSet.builder();
-    while (true) {
-      ListShardsResult listShardsResult = amazonKinesis.listShards(listShardsRequest);
-      shards.addAll(listShardsResult.getShards());
-      String nextToken = listShardsResult.getNextToken();
-      if (nextToken == null) {
-        return shards.build();
-      }
-      listShardsRequest = new ListShardsRequest().withNextToken(nextToken);
-    }
   }
 
   private boolean verifyStreamStatus(String streamName, StreamStatus... streamStatuses)

@@ -599,19 +599,15 @@ public class GroupByQueryEngineV2
       return indexedInts.size() == 1 ? indexedInts.get(0) : GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE;
     }
 
+    /**
+     * Throws {@link UnexpectedMultiValueDimensionException} if "allowMultiValueGrouping" is false.
+     */
     protected void checkIfMultiValueGroupingIsAllowed(String dimName)
     {
       if (!allowMultiValueGrouping) {
-        throw new ISE(
-            "Encountered multi-value dimension %s that cannot be processed with %s set to false."
-            + " Consider setting %s to true.",
-            dimName,
-            GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY,
-            GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY
-        );
+        throw new UnexpectedMultiValueDimensionException(dimName);
       }
     }
-
   }
 
   private static class HashAggregateIterator extends GroupByEngineIterator<ByteBuffer>
@@ -623,7 +619,10 @@ public class GroupByQueryEngineV2
     private final ByteBuffer keyBuffer;
 
     private int stackPointer = Integer.MIN_VALUE;
-    protected boolean currentRowWasPartiallyAggregated = false;
+    private boolean currentRowWasPartiallyAggregated = false;
+
+    // Sum of internal state footprint across all "dims".
+    private long selectorInternalFootprint = 0;
 
     public HashAggregateIterator(
         GroupByQuery query,
@@ -717,12 +716,19 @@ public class GroupByQueryEngineV2
     @Override
     protected void aggregateSingleValueDims(Grouper<ByteBuffer> grouper)
     {
+      if (!currentRowWasPartiallyAggregated) {
+        for (GroupByColumnSelectorPlus dim : dims) {
+          dim.getColumnSelectorStrategy().reset();
+        }
+        selectorInternalFootprint = 0;
+      }
+
       while (!cursor.isDone()) {
         for (GroupByColumnSelectorPlus dim : dims) {
           final GroupByColumnSelectorStrategy strategy = dim.getColumnSelectorStrategy();
-          strategy.writeToKeyBuffer(
+          selectorInternalFootprint += strategy.writeToKeyBuffer(
               dim.getKeyBufferPosition(),
-              strategy.getOnlyValue(dim.getSelector()),
+              dim.getSelector(),
               keyBuffer
           );
         }
@@ -731,13 +737,27 @@ public class GroupByQueryEngineV2
         if (!grouper.aggregate(keyBuffer).isOk()) {
           return;
         }
+
         cursor.advance();
+
+        // Check selectorInternalFootprint after advancing the cursor. (We reset after the first row that causes
+        // us to go past the limit.)
+        if (selectorInternalFootprint > querySpecificConfig.getMaxSelectorDictionarySize()) {
+          return;
+        }
       }
     }
 
     @Override
     protected void aggregateMultiValueDims(Grouper<ByteBuffer> grouper)
     {
+      if (!currentRowWasPartiallyAggregated) {
+        for (GroupByColumnSelectorPlus dim : dims) {
+          dim.getColumnSelectorStrategy().reset();
+        }
+        selectorInternalFootprint = 0;
+      }
+
       while (!cursor.isDone()) {
         if (!currentRowWasPartiallyAggregated) {
           // Set up stack, valuess, and first grouping in keyBuffer for this row
@@ -745,7 +765,7 @@ public class GroupByQueryEngineV2
 
           for (int i = 0; i < dims.length; i++) {
             GroupByColumnSelectorStrategy strategy = dims[i].getColumnSelectorStrategy();
-            strategy.initColumnValues(
+            selectorInternalFootprint += strategy.initColumnValues(
                 dims[i].getSelector(),
                 i,
                 valuess
@@ -808,6 +828,12 @@ public class GroupByQueryEngineV2
         // Advance to next row
         cursor.advance();
         currentRowWasPartiallyAggregated = false;
+
+        // Check selectorInternalFootprint after advancing the cursor. (We reset after the first row that causes
+        // us to go past the limit.)
+        if (selectorInternalFootprint > querySpecificConfig.getMaxSelectorDictionarySize()) {
+          return;
+        }
       }
     }
 
@@ -882,6 +908,9 @@ public class GroupByQueryEngineV2
 
     private void aggregateSingleValueDims(IntGrouper grouper)
     {
+      // No need to track strategy internal state footprint, because array-based grouping does not use strategies.
+      // It accesses dimension selectors directly and only works on truly dictionary-coded columns.
+
       while (!cursor.isDone()) {
         final int key;
         if (dim != null) {
@@ -900,6 +929,9 @@ public class GroupByQueryEngineV2
 
     private void aggregateMultiValueDims(IntGrouper grouper)
     {
+      // No need to track strategy internal state footprint, because array-based grouping does not use strategies.
+      // It accesses dimension selectors directly and only works on truly dictionary-coded columns.
+
       if (dim == null) {
         throw new ISE("dim must exist");
       }

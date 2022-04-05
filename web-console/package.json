@@ -66,10 +66,10 @@
     "not ie 11"
   ],
   "dependencies": {
-    "@blueprintjs/core": "^3.45.0",
-    "@blueprintjs/datetime": "^3.23.4",
-    "@blueprintjs/icons": "^3.31.0",
-    "@blueprintjs/popover2": "^0.10.1",
+    "@blueprintjs/core": "^4.0.3",
+    "@blueprintjs/datetime": "^4.0.3",
+    "@blueprintjs/icons": "^4.1.1",
+    "@blueprintjs/popover2": "^1.0.3",
     "ace-builds": "^1.4.13",
     "axios": "^0.21.4",
     "classnames": "^2.2.6",

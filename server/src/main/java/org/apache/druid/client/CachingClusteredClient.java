@@ -425,9 +425,12 @@ public class CachingClusteredClient implements QuerySegmentWalker
     {
       final java.util.function.Function<Interval, List<TimelineObjectHolder<String, ServerSelector>>> lookupFn
           = specificSegments ? timeline::lookupWithIncompletePartitions : timeline::lookup;
+
+      List<TimelineObjectHolder<String, ServerSelector>> timelineObjectHolders =
+          intervals.stream().flatMap(i -> lookupFn.apply(i).stream()).collect(Collectors.toList());
       final List<TimelineObjectHolder<String, ServerSelector>> serversLookup = toolChest.filterSegments(
           query,
-          intervals.stream().flatMap(i -> lookupFn.apply(i).stream()).collect(Collectors.toList())
+          timelineObjectHolders
       );
 
       final Set<SegmentServerSelector> segments = new LinkedHashSet<>();
@@ -859,7 +862,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     public TimelineLookup<String, ServerSelector> apply(TimelineLookup<String, ServerSelector> timeline)
     {
       final VersionedIntervalTimeline<String, ServerSelector> timeline2 =
-          new VersionedIntervalTimeline<>(Ordering.natural());
+          new VersionedIntervalTimeline<>(Ordering.natural(), true);
       Iterator<PartitionChunkEntry<String, ServerSelector>> unfilteredIterator =
           Iterators.transform(specs.iterator(), spec -> toChunkEntry(timeline, spec));
       Iterator<PartitionChunkEntry<String, ServerSelector>> iterator = Iterators.filter(

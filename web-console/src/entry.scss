@@ -38,7 +38,7 @@ body {
 body {
   background: $light-gray4;
 
-  &.bp3-dark {
+  &.#{$bp-ns}-dark {
     background: $dark-gray2;
   }
 

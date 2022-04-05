@@ -148,14 +148,15 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
    * Deprecated method. Use {@link #processRowValsToUnsortedEncodedKeyComponent(Object, boolean)}
    * and {@link EncodedKeyComponent#getEffectiveSizeBytes()}.
    */
-  public long estimateEncodedKeyComponentSize(int[] key)
+  public long estimateEncodedKeyComponentSize(int[] keys)
   {
     // string length is being accounted for each time they are referenced, based on dimension handler interface,
     // even though they are stored just once. It may overestimate the size by a bit, but we wanted to leave
     // more buffer to be safe
-    long estimatedSize = key.length * Integer.BYTES;
-    for (int element : key) {
-      String val = dimLookup.getValue(element);
+    long estimatedSize = keys.length * Integer.BYTES;
+
+    String[] vals = dimLookup.getValues(keys);
+    for (String val : vals) {
       if (val != null) {
         // According to https://www.ibm.com/developerworks/java/library/j-codetoheap/index.html
         // String has the following memory usuage...

@@ -53,7 +53,7 @@
           box-shadow: inset 0 -3px 0 0 rgba(255, 255, 255, 0.6);
         }
 
-        .bp3-icon {
+        .#{$bp-ns}-icon {
           margin-left: 3px;
         }
       }
@@ -69,7 +69,7 @@
     width: 100%;
   }
 
-  .bp3-popover2-target {
+  .#{$bp-ns}-popover2-target {
     width: 100%;
   }
 

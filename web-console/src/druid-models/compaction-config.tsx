@@ -231,20 +231,6 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     ),
   },
   {
-    name: 'inputSegmentSizeBytes',
-    type: 'number',
-    defaultValue: 419430400,
-    info: (
-      <p>
-        Maximum number of total segment bytes processed per compaction task. Since a time chunk must
-        be processed in its entirety, if the segments for a particular time chunk have a total size
-        in bytes greater than this parameter, compaction will not run for that time chunk. Because
-        each compaction task runs with a single thread, setting this value too far above 1–2GB will
-        result in compaction tasks taking an excessive amount of time.
-      </p>
-    ),
-  },
-  {
     name: 'tuningConfig.maxNumConcurrentSubTasks',
     type: 'number',
     defaultValue: 1,

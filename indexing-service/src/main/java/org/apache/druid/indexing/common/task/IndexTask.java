@@ -58,6 +58,7 @@ import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
+import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.DefaultIndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.common.task.batch.partition.CompletePartitionAnalysis;
 import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalysis;
@@ -92,6 +93,7 @@ import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
@@ -883,10 +885,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         throw new UOE("[%s] secondary partition type is not supported", partitionsSpec.getType());
     }
 
-    Set<DataSegment> segmentsFoundForDrop = null;
-    if (ingestionSchema.getIOConfig().isDropExisting()) {
-      segmentsFoundForDrop = getUsedSegmentsWithinInterval(toolbox, getDataSource(), ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals());
-    }
 
     final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
         toolbox.getTaskActionClient()
@@ -912,7 +910,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
       driver.startJob();
 
-      InputSourceProcessor.process(
+      SegmentsAndCommitMetadata pushed = InputSourceProcessor.process(
           dataSchema,
           driver,
           partitionsSpec,
@@ -942,9 +940,36 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
               ingestionSchema
           );
 
+      Set<DataSegment> tombStones = Collections.emptySet();
+      if (ingestionSchema.getIOConfig().isDropExisting()) {
+        TombstoneHelper tombstoneHelper = new TombstoneHelper(pushed.getSegments(),
+                                                              ingestionSchema.getDataSchema(),
+                                                              toolbox.getTaskActionClient());
+
+        List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals();
+        // now find the versions for the tombstone intervals
+        Map<Interval, SegmentIdWithShardSpec> tombstonesAndVersions = new HashMap<>();
+        for (Interval interval : tombstoneIntervals) {
+          SegmentIdWithShardSpec segmentIdWithShardSpec = allocateNewSegmentForTombstone(
+              ingestionSchema,
+              interval.getStart(),
+              toolbox
+          );
+          tombstonesAndVersions.put(interval, segmentIdWithShardSpec);
+        }
+        tombStones = tombstoneHelper.computeTombstones(tombstonesAndVersions);
+        log.debugSegments(tombStones, "To publish tombstones");
+      }
+
       // Probably we can publish atomicUpdateGroup along with segments.
       final SegmentsAndCommitMetadata published =
-          awaitPublish(driver.publishAll(inputSegments, segmentsFoundForDrop, publisher, annotateFunction), pushTimeout);
+          awaitPublish(driver.publishAll(
+              inputSegments,
+              null,
+              tombStones,
+              publisher,
+              annotateFunction
+          ), pushTimeout);
       appenderator.close();
 
       // Try to wait for segments to be loaded by the cluster if the tuning config specifies a non-zero value
@@ -1034,6 +1059,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (dataSchema.getParserMap() != null && ioConfig.getInputSource() != null) {
         throw new IAE("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
       }
+
+      if (ioConfig.isDropExisting() && dataSchema.getGranularitySpec().inputIntervals().isEmpty()) {
+        throw new IAE("GranularitySpec's intervals cannot be empty when setting dropExisting to true.");
+      }
+
       if (ioConfig.getInputSource() != null && ioConfig.getInputSource().needsFormat()) {
         Checks.checkOneNotNullOrEmpty(
             ImmutableList.of(

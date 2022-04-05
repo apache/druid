@@ -33,6 +33,7 @@ import com.google.common.collect.Sets;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -72,6 +73,7 @@ import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
@@ -81,6 +83,7 @@ import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
+import org.apache.druid.query.aggregation.mean.DoubleMeanAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
@@ -113,6 +116,7 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SearchQueryDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensionException;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.having.DimensionSelectorHavingSpec;
 import org.apache.druid.query.groupby.having.EqualToHavingSpec;
@@ -136,6 +140,9 @@ import org.apache.druid.segment.data.ComparableList;
 import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.Description;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
@@ -144,6 +151,7 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableCauseMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -159,6 +167,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -294,6 +303,12 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       public String getDefaultStrategy()
       {
         return GroupByStrategySelector.STRATEGY_V2;
+      }
+
+      @Override
+      public long getMaxSelectorDictionarySize()
+      {
+        return 20;
       }
 
       @Override
@@ -1314,6 +1329,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testMultiValueDimensionNotAllowed()
   {
+    final String dimName = "placementish";
 
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UOE.class);
@@ -1323,13 +1339,38 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       ));
     } else if (!vectorize) {
       expectedException.expect(RuntimeException.class);
-      expectedException.expectMessage(StringUtils.format(
-          "Encountered multi-value dimension %s that cannot be processed with %s set to false."
-          + " Consider setting %s to true.",
-          "placementish",
-          GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY,
-          GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY
-      ));
+      expectedException.expectCause(CoreMatchers.instanceOf(ExecutionException.class));
+      expectedException.expectCause(
+          ThrowableCauseMatcher.hasCause(CoreMatchers.instanceOf(UnexpectedMultiValueDimensionException.class))
+      );
+      expectedException.expect(
+          new BaseMatcher<Throwable>()
+          {
+            @Override
+            public boolean matches(Object o)
+            {
+              final UnexpectedMultiValueDimensionException cause =
+                  (UnexpectedMultiValueDimensionException) ((Throwable) o).getCause().getCause();
+
+              return dimName.equals(cause.getDimensionName());
+            }
+
+            @Override
+            public void describeTo(Description description)
+            {
+              description.appendText("an UnexpectedMultiValueDimensionException with dimension [placementish]");
+            }
+          }
+      );
+      expectedException.expectMessage(
+          StringUtils.format(
+              "Encountered multi-value dimension [%s] that cannot be processed with '%s' set to false."
+              + " Consider setting '%s' to true in your query context.",
+              dimName,
+              GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
+              GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING
+          )
+      );
     } else {
       cannotVectorize();
     }
@@ -1337,7 +1378,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("placementish", "alias"))
+        .setDimensions(new DefaultDimensionSpec(dimName, "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false))
@@ -5840,6 +5881,33 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-different-intervals");
+  }
+
+  @Test
+  public void testDoubleMeanQuery()
+  {
+    GroupByQuery query = new GroupByQuery.Builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setGranularity(Granularities.ALL)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setAggregatorSpecs(
+            new DoubleMeanAggregatorFactory("meanOnDouble", "doubleNumericNull")
+        )
+        .build();
+
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(ISE.class);
+      expectedException.expectMessage("Unable to handle complex type");
+      GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    } else {
+      Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+      Row result = Iterables.getOnlyElement(results).toMapBasedRow(query);
+      if (NullHandling.replaceWithDefault()) {
+        Assert.assertEquals(39.2307d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
+      } else {
+        Assert.assertEquals(51.0d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
+      }
+    }
   }
 
   @Test
@@ -11138,6 +11206,76 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testMergeLimitPushDownResultsWithLongDimensionNotInLimitSpec()
+  {
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
+    if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
+      return;
+    }
+    GroupByQuery.Builder builder = makeQueryBuilder()
+            .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+            .setInterval("2011-04-02/2011-04-04")
+            .setDimensions(new ExtractionDimensionSpec("quality", "qualityLen", ColumnType.LONG, StrlenExtractionFn.instance()))
+            .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+            .setLimitSpec(
+                    new DefaultLimitSpec(
+                            Collections.emptyList(),
+                            20
+                    )
+            )
+            .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
+            .setGranularity(Granularities.ALL);
+
+    final GroupByQuery allGranQuery = builder.build();
+
+    QueryRunner mergedRunner = factory.getToolchest().mergeResults(
+        (queryPlus, responseContext) -> {
+          // simulate two daily segments
+          final QueryPlus<ResultRow> queryPlus1 = queryPlus.withQuery(
+                  queryPlus.getQuery().withQuerySegmentSpec(
+                          new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+                  )
+          );
+          final QueryPlus<ResultRow> queryPlus2 = queryPlus.withQuery(
+                  queryPlus.getQuery().withQuerySegmentSpec(
+                          new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+                  )
+          );
+
+          return factory.getToolchest().mergeResults(
+              (queryPlus3, responseContext1) -> new MergeSequence<>(
+                  queryPlus3.getQuery().getResultOrdering(),
+                  Sequences.simple(
+                      Arrays.asList(
+                          runner.run(queryPlus1, responseContext1),
+                          runner.run(queryPlus2, responseContext1)
+                      )
+                  )
+              )
+          ).run(queryPlus, responseContext);
+        }
+    );
+    Map<String, Object> context = new HashMap<>();
+    List<ResultRow> allGranExpectedResults = Arrays.asList(
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 4L, "rows", 2L),
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 6L, "rows", 4L),
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 7L, "rows", 6L),
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 8L, "rows", 2L),
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 9L, "rows", 6L),
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 10L, "rows", 4L),
+            makeRow(allGranQuery, "2011-04-02", "qualityLen", 13L, "rows", 2L)
+    );
+
+    TestHelper.assertExpectedObjects(
+            allGranExpectedResults,
+            mergedRunner.run(QueryPlus.wrap(allGranQuery)),
+            "merged"
+    );
+  }
+
+  @Test
   public void testMergeResultsWithLimitPushDown()
   {
     if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
@@ -12851,6 +12989,165 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "travel",
             "array_agg_distinct",
             new String[] {"preferred", "t"}
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+  @Test
+  public void testGroupByFloatMaxExpressionVsVirtualColumn()
+  {
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("nil", "nil", ColumnType.STRING))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "v0",
+                "\"floatNumericNull\"",
+                ColumnType.FLOAT,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setAggregatorSpecs(
+            new FloatMinAggregatorFactory(
+                "min",
+                "floatNumericNull"
+            ),
+            new FloatMinAggregatorFactory(
+                "minExpression",
+                null,
+                "\"floatNumericNull\"",
+                TestExprMacroTable.INSTANCE
+            ),
+            new FloatMinAggregatorFactory(
+                "minVc",
+                "v0"
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "nil",
+            null,
+            "min",
+            NullHandling.replaceWithDefault() ? 0.0 : 10.0,
+            "minExpression",
+            NullHandling.replaceWithDefault() ? 0.0 : 10.0,
+            "minVc",
+            NullHandling.replaceWithDefault() ? 0.0 : 10.0
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+  @Test
+  public void testGroupByFloatMinExpressionVsVirtualColumnWithNonFloatInputButMatchingVirtualColumnType()
+  {
+    // SQL should never plan anything like this, the virtual column would be inferred to be a string type, and
+    // would try to make a string min aggregator, which would throw an exception at the time of this comment since
+    // it doesn't exist...
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("nil", "nil", ColumnType.STRING))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "v0",
+                "\"placement\"",
+                ColumnType.FLOAT,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setAggregatorSpecs(
+            new FloatMinAggregatorFactory(
+                "minExpression",
+                null,
+                "\"placement\"",
+                TestExprMacroTable.INSTANCE
+            ),
+            new FloatMinAggregatorFactory(
+                "minVc",
+                "v0"
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "nil",
+            null,
+            "minExpression",
+            NullHandling.replaceWithDefault() ? Float.POSITIVE_INFINITY : null,
+            "minVc",
+            NullHandling.defaultFloatValue()
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+  @Test
+  public void testGroupByFloatMinExpressionVsVirtualColumnWithExplicitStringVirtualColumnTypedInput()
+  {
+    cannotVectorize();
+    // SQL should never plan anything like this, where the virtual column type mismatches the aggregator type
+    // but it still works ok
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("nil", "nil", ColumnType.STRING))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "v0",
+                "\"placement\"",
+                ColumnType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setAggregatorSpecs(
+            new FloatMinAggregatorFactory(
+                "min",
+                "placement"
+            ),
+            new FloatMinAggregatorFactory(
+                "minExpression",
+                null,
+                "\"placement\"",
+                TestExprMacroTable.INSTANCE
+            ),
+            new FloatMinAggregatorFactory(
+                "minVc",
+                "v0"
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "nil",
+            null,
+            "min",
+            Float.POSITIVE_INFINITY,
+            "minExpression",
+            NullHandling.replaceWithDefault() ? Float.POSITIVE_INFINITY : null,
+            "minVc",
+            NullHandling.replaceWithDefault() ? Float.POSITIVE_INFINITY : null
         )
     );
 

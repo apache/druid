@@ -109,7 +109,7 @@ public class GroupByQueryHelper
     }
 
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
-        .withDimensionsSpec(new DimensionsSpec(dimensionSchemas, null, null))
+        .withDimensionsSpec(new DimensionsSpec(dimensionSchemas))
         .withMetrics(aggs.toArray(new AggregatorFactory[0]))
         .withQueryGranularity(gran)
         .withMinTimestamp(granTimeStart)

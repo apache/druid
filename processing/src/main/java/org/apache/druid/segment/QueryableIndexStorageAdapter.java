@@ -168,7 +168,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Nullable
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    return getColumnCapabilities(index, column);
+    return index.getColumnCapabilities(column);
   }
 
   @Override
@@ -278,21 +278,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         ).build(gran),
         Objects::nonNull
     );
-  }
-
-  @Nullable
-  public static ColumnCapabilities getColumnCapabilities(ColumnSelector index, String columnName)
-  {
-    final ColumnHolder columnHolder = index.getColumnHolder(columnName);
-    if (columnHolder == null) {
-      return null;
-    }
-    return columnHolder.getCapabilities();
-  }
-
-  public static ColumnInspector getColumnInspectorForIndex(ColumnSelector index)
-  {
-    return column -> getColumnCapabilities(index, column);
   }
 
   @Override

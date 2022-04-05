@@ -38,6 +38,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
@@ -46,7 +47,7 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -89,7 +90,7 @@ public class TaskToolboxFactory
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
-  private final IndexMergerV9 indexMergerV9;
+  private final IndexMergerV9Factory indexMergerV9Factory;
   private final DruidNodeAnnouncer druidNodeAnnouncer;
   private final DruidNode druidNode;
   private final LookupNodeService lookupNodeService;
@@ -130,7 +131,7 @@ public class TaskToolboxFactory
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
-      IndexMergerV9 indexMergerV9,
+      IndexMergerV9Factory indexMergerV9Factory,
       DruidNodeAnnouncer druidNodeAnnouncer,
       @RemoteChatHandler DruidNode druidNode,
       LookupNodeService lookupNodeService,
@@ -168,7 +169,7 @@ public class TaskToolboxFactory
     this.cache = cache;
     this.cacheConfig = cacheConfig;
     this.cachePopulatorStats = cachePopulatorStats;
-    this.indexMergerV9 = indexMergerV9;
+    this.indexMergerV9Factory = indexMergerV9Factory;
     this.druidNodeAnnouncer = druidNodeAnnouncer;
     this.druidNode = druidNode;
     this.lookupNodeService = lookupNodeService;
@@ -211,7 +212,7 @@ public class TaskToolboxFactory
         cache,
         cacheConfig,
         cachePopulatorStats,
-        indexMergerV9,
+        indexMergerV9Factory.create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, config.isStoreEmptyColumns())),
         druidNodeAnnouncer,
         druidNode,
         lookupNodeService,

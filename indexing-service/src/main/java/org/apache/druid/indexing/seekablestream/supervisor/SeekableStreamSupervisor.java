@@ -765,7 +765,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.useExclusiveStartingSequence = useExclusiveStartingSequence;
     this.dataSource = spec.getDataSchema().getDataSource();
     this.ioConfig = spec.getIoConfig();
-    this.autoScalerConfig = ioConfig.getAutoscalerConfig();
+    this.autoScalerConfig = ioConfig.getAutoScalerConfig();
     this.tuningConfig = spec.getTuningConfig();
     this.taskTuningConfig = this.tuningConfig.convertToTaskTuningConfig();
     this.supervisorId = supervisorId;

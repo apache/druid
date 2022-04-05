@@ -73,7 +73,7 @@ $vertical-gap: 6px;
           margin-bottom: 6px;
           font-size: $pt-font-size;
 
-          .bp3-control-indicator {
+          .#{$bp-ns}-control-indicator {
             margin-top: -1px;
           }
         }

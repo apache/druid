@@ -700,11 +700,15 @@ public class CompactionTask extends AbstractBatchIndexTask
       LockGranularity lockGranularityInUse
   ) throws IOException, SegmentLoadingException
   {
-    final List<DataSegment> usedSegments = segmentProvider.findSegments(toolbox.getTaskActionClient());
-    segmentProvider.checkSegments(lockGranularityInUse, usedSegments);
-    final Map<DataSegment, File> segmentFileMap = toolbox.fetchSegments(usedSegments);
+    final List<DataSegment> usedSegmentsMinusTombstones =
+        segmentProvider.findSegments(toolbox.getTaskActionClient())
+                       .stream()
+                       .filter(dataSegment -> !dataSegment.isTombstone()) // skip tombstones
+                       .collect(Collectors.toList());
+    segmentProvider.checkSegments(lockGranularityInUse, usedSegmentsMinusTombstones);
+    final Map<DataSegment, File> segmentFileMap = toolbox.fetchSegments(usedSegmentsMinusTombstones);
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = VersionedIntervalTimeline
-        .forSegments(usedSegments)
+        .forSegments(usedSegmentsMinusTombstones)
         .lookup(segmentProvider.interval);
     return new NonnullPair<>(segmentFileMap, timelineSegments);
   }
@@ -898,7 +902,7 @@ public class CompactionTask extends AbstractBatchIndexTask
                                                             })
                                                             .collect(Collectors.toList());
 
-    return new DimensionsSpec(dimensionSchemas, null, null);
+    return new DimensionsSpec(dimensionSchemas);
   }
 
   private static List<NonnullPair<QueryableIndex, DataSegment>> loadSegments(

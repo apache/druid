@@ -38,6 +38,7 @@ import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
@@ -150,7 +151,7 @@ public class PlannerFactory
         .withExpand(false)
         .withDecorrelationEnabled(false)
         .withTrimUnusedFields(false)
-        .withInSubQueryThreshold(Integer.MAX_VALUE)
+        .withInSubQueryThreshold(QueryContexts.getInSubQueryThreshold(plannerContext.getQueryContext()))
         .build();
     return Frameworks
         .newConfigBuilder()

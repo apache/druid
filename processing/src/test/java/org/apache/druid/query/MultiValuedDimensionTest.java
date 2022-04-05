@@ -151,7 +151,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
     StringInputRowParser parser = new StringInputRowParser(
         new CSVParseSpec(
             new TimestampSpec("timestamp", "iso", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags", "othertags")), null, null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags", "othertags"))),
             "\t",
             ImmutableList.of("timestamp", "product", "tags", "othertags"),
             false,
@@ -181,7 +181,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
     StringInputRowParser parserNullSampler = new StringInputRowParser(
         new JSONParseSpec(
             new TimestampSpec("time", "iso", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags", "othertags")), null, null)
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags", "othertags")))
         ),
         "UTF-8"
     );

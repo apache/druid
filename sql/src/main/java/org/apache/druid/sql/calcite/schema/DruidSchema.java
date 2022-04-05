@@ -228,9 +228,7 @@ public class DruidSchema extends AbstractSchema
     this.brokerInternalQueryConfig = brokerInternalQueryConfig;
     this.druidSchemaManager = druidSchemaManager;
 
-    if (druidSchemaManager == null || druidSchemaManager instanceof NoopDruidSchemaManager) {
-      initServerViewTimelineCallback(serverView);
-    }
+    initServerViewTimelineCallback(serverView);
   }
 
   private void initServerViewTimelineCallback(final TimelineServerView serverView)
@@ -375,11 +373,7 @@ public class DruidSchema extends AbstractSchema
   @LifecycleStart
   public void start() throws InterruptedException
   {
-    if (druidSchemaManager == null || druidSchemaManager instanceof NoopDruidSchemaManager) {
-      startCacheExec();
-    } else {
-      initialized.countDown();
-    }
+    startCacheExec();
 
     if (config.isAwaitInitializationOnStart()) {
       final long startNanos = System.nanoTime();
