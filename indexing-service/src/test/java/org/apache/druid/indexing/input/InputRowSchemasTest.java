@@ -140,4 +140,33 @@ public class InputRowSchemasTest extends NullHandlingTest
     Assert.assertEquals(dimensionsSpec.getDimensionNames(), inputRowSchema.getDimensionsSpec().getDimensionNames());
     Assert.assertEquals(ImmutableList.of("count", "met"), inputRowSchema.getMetricNames());
   }
+
+  @Test
+  public void testFromDataSchemaWithNoAggregator()
+  {
+    TimestampSpec timestampSpec = new TimestampSpec(null, null, null);
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Arrays.asList(
+            new StringDimensionSchema("d1"),
+            new StringDimensionSchema("d2"),
+            new LongDimensionSchema("d3"),
+            new FloatDimensionSchema("d4"),
+            new DoubleDimensionSchema("d5")
+        )
+    );
+    DataSchema schema = new DataSchema(
+        "dataSourceName",
+        new TimestampSpec(null, null, null),
+        dimensionsSpec,
+        new AggregatorFactory[]{},
+        new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null),
+        null
+    );
+
+    InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(schema);
+    Assert.assertEquals(timestampSpec, inputRowSchema.getTimestampSpec());
+    Assert.assertEquals(dimensionsSpec.getDimensions(), inputRowSchema.getDimensionsSpec().getDimensions());
+    Assert.assertEquals(dimensionsSpec.getDimensionNames(), inputRowSchema.getDimensionsSpec().getDimensionNames());
+    Assert.assertEquals(ImmutableList.of(), inputRowSchema.getMetricNames());
+  }
 }

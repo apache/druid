@@ -60,7 +60,7 @@ public class InputRowSchemas
         ),
         Arrays.stream(dataSchema.getAggregators())
               .map(AggregatorFactory::getName)
-              .collect(Collectors.toList())
+              .collect(Collectors.toSet())
     );
   }
 

@@ -263,7 +263,8 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
    *                                  is skipped and the existing metric is unchanged. If the row does not already have
    *                                  the metric, then the metric aggregator is applied on the source column as usual.
    *                                  This should only be set for DruidInputSource since that is the only case where we
-   *                                  can have existing metrics.
+   *                                  can have existing metrics. This is currently only use by auto compaction and
+   *                                  should not be use for anything else.
    * @param useMaxMemoryEstimates     true if max values should be used to estimate memory
    */
   protected IncrementalIndex(

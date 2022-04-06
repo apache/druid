@@ -132,30 +132,30 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(2);
       ArrayList<Object> nullList = new ArrayList<Object>();
       nullList.add(null);
-      Map<String, Object> expectedResult = ImmutableMap.of(
+      Map<String, Object> queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(nullList)), ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(31))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
-      expectedResult = ImmutableMap.of(
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
+      queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "count",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(2))), ImmutableMap.of("events", ImmutableList.of(nullList)))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
-      expectedResult = ImmutableMap.of(
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
+      queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "sum_added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(62))), ImmutableMap.of("events", ImmutableList.of(nullList)))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
-      expectedResult = ImmutableMap.of(
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
+      queryAndResultFields = ImmutableMap.of(
           "%%QUANTILESRESULT%%", 2,
           "%%THETARESULT%%", 2,
           "%%HLLRESULT%%", 2
       );
-      verifyQuery(INDEX_ROLLUP_SKETCH_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_SKETCH_QUERIES_RESOURCE, queryAndResultFields);
 
       submitCompactionConfig(
           MAX_ROWS_PER_SEGMENT_COMPACTED,
@@ -176,30 +176,30 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // added = null, count = 3, sum_added = 93
       forceTriggerAutoCompaction(1);
 
-      expectedResult = ImmutableMap.of(
+      queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(nullList)))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
-      expectedResult = ImmutableMap.of(
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
+      queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "count",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(3))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
-      expectedResult = ImmutableMap.of(
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
+      queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "sum_added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(93))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
-      expectedResult = ImmutableMap.of(
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
+      queryAndResultFields = ImmutableMap.of(
           "%%QUANTILESRESULT%%", 3,
           "%%THETARESULT%%", 3,
           "%%HLLRESULT%%", 3
       );
-      verifyQuery(INDEX_ROLLUP_SKETCH_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_SKETCH_QUERIES_RESOURCE, queryAndResultFields);
 
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(intervalsBeforeCompaction);
@@ -226,12 +226,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(2);
       ArrayList<Object> nullList = new ArrayList<Object>();
       nullList.add(null);
-      Map<String, Object> expectedResult = ImmutableMap.of(
+      Map<String, Object> queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(31))), ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(31))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
 
       submitCompactionConfig(
           MAX_ROWS_PER_SEGMENT_COMPACTED,
@@ -246,24 +246,24 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // added = null, count = 2, sum_added = 62
       forceTriggerAutoCompaction(1);
 
-      expectedResult = ImmutableMap.of(
+      queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(nullList)))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
-      expectedResult = ImmutableMap.of(
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
+      queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "count",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(2))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
-      expectedResult = ImmutableMap.of(
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
+      queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "sum_added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(62))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
 
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(intervalsBeforeCompaction);
@@ -288,18 +288,18 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       intervalsBeforeCompaction.sort(null);
       // 2 segments across 1 days...
       verifySegmentsCount(2);
-      Map<String, Object> expectedResult = ImmutableMap.of(
+      Map<String, Object> queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "count",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(2))), ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(2))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
-      expectedResult = ImmutableMap.of(
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
+      queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "sum_added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(62))), ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(62))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
 
       submitCompactionConfig(
           MAX_ROWS_PER_SEGMENT_COMPACTED,
@@ -314,18 +314,18 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // added = null, count = 4, sum_added = 124
       forceTriggerAutoCompaction(1);
 
-      expectedResult = ImmutableMap.of(
+      queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "count",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(4))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
-      expectedResult = ImmutableMap.of(
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
+      queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "sum_added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(124))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
 
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(intervalsBeforeCompaction);
@@ -874,12 +874,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.MONTH, Granularities.DAY, false, ImmutableList.of(new Interval("2013-08-31/2013-09-02", chrono))));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      Map<String, Object> expectedResult = ImmutableMap.of(
+      Map<String, Object> queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
       submitCompactionConfig(
           MAX_ROWS_PER_SEGMENT_COMPACTED,
           NO_SKIP_OFFSET,
@@ -895,12 +895,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // does not have data on every week on the month
       forceTriggerAutoCompaction(3);
       // Make sure that no data is lost after compaction
-      expectedResult = ImmutableMap.of(
+      queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
       List<TaskResponseObject> tasks = indexer.getCompleteTasksForDataSource(fullDatasourceName);
       TaskResponseObject compactTask = null;
@@ -924,12 +924,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.WEEK, Granularities.DAY, false, ImmutableList.of(new Interval("2013-08-31/2013-09-02", chrono))));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      Map<String, Object> expectedResult = ImmutableMap.of(
+      Map<String, Object> queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
       submitCompactionConfig(
           MAX_ROWS_PER_SEGMENT_COMPACTED,
           NO_SKIP_OFFSET,
@@ -942,12 +942,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // we expect the compaction task's interval to align with the MONTH segmentGranularity (2013-08-01 to 2013-10-01)
       forceTriggerAutoCompaction(2);
       // Make sure that no data is lost after compaction
-      expectedResult = ImmutableMap.of(
+      queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
       List<TaskResponseObject> tasks = indexer.getCompleteTasksForDataSource(fullDatasourceName);
       TaskResponseObject compactTask = null;
@@ -970,12 +970,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.DAY, Granularities.DAY, false, ImmutableList.of(new Interval("2013-08-31/2013-09-02", chrono))));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      Map<String, Object> expectedResult = ImmutableMap.of(
+      Map<String, Object> queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
       submitCompactionConfig(
           MAX_ROWS_PER_SEGMENT_COMPACTED,
           NO_SKIP_OFFSET,
@@ -983,12 +983,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           false
       );
       forceTriggerAutoCompaction(2);
-      expectedResult = ImmutableMap.of(
+      queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(516.0))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
 
       List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
@@ -1006,12 +1006,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, true, ImmutableList.of(new Interval("2013-08-31/2013-09-02", chrono))));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      Map<String, Object> expectedResult = ImmutableMap.of(
+      Map<String, Object> queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
       submitCompactionConfig(
           MAX_ROWS_PER_SEGMENT_COMPACTED,
           NO_SKIP_OFFSET,
@@ -1019,12 +1019,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           false
       );
       forceTriggerAutoCompaction(2);
-      expectedResult = ImmutableMap.of(
+      queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(516.0))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
 
       List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
@@ -1048,12 +1048,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(4);
 
       // Result is not rollup
-      Map<String, Object> expectedResult = ImmutableMap.of(
+      Map<String, Object> queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
 
       // Compact and change dimension to only "language"
       submitCompactionConfig(
@@ -1068,12 +1068,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       forceTriggerAutoCompaction(2);
 
       // Result should rollup on language dimension
-      expectedResult = ImmutableMap.of(
+      queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(516.0))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
 
       List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
@@ -1096,12 +1096,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       // Result is not rollup
       // For dim "page", result has values "Gypsy Danger" and "Striker Eureka"
-      Map<String, Object> expectedResult = ImmutableMap.of(
+      Map<String, Object> queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
 
       // Compact and filter with selector on dim "page" and value "Striker Eureka"
       submitCompactionConfig(
@@ -1116,12 +1116,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       forceTriggerAutoCompaction(2);
 
       // For dim "page", result should only contain value "Striker Eureka"
-      expectedResult = ImmutableMap.of(
+      queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(459.0))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
 
       List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
@@ -1143,12 +1143,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(4);
 
       // For dim "page", result has values "Gypsy Danger" and "Striker Eureka"
-      Map<String, Object> expectedResult = ImmutableMap.of(
+      Map<String, Object> queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
 
       // Compact and add longSum and doubleSum metrics
       submitCompactionConfig(
@@ -1164,19 +1164,19 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       // Result should be the same with the addition of new metrics, "double_sum_added" and "long_sum_added".
       // These new metrics should have the same value as the input field "added"
-      expectedResult = ImmutableMap.of(
+      queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "double_sum_added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
 
-      expectedResult = ImmutableMap.of(
+      queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "long_sum_added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57), ImmutableList.of(459))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
 
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
 
@@ -1204,12 +1204,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       // Result is not rollup
       // For dim "page", result has values "Gypsy Danger" and "Striker Eureka"
-      Map<String, Object> expectedResult = ImmutableMap.of(
+      Map<String, Object> queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
 
       submitCompactionConfig(
           MAX_ROWS_PER_SEGMENT_COMPACTED,
@@ -1222,11 +1222,11 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       );
       // Compact the MONTH segment
       forceTriggerAutoCompaction(2);
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
 
       // Compact the WEEK segment
       forceTriggerAutoCompaction(2);
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
 
       // Verify all task succeed
       List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);

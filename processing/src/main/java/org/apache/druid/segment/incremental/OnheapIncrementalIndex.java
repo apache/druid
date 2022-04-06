@@ -27,6 +27,7 @@ import com.google.common.collect.Maps;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -124,6 +125,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       int maxRowCount,
       long maxBytesInMemory,
       // preserveExistingMetrics should only be set true for DruidInputSource since that is the only case where we can have existing metrics
+      // This is currently only use by auto compaction and should not be use for anything else.
       boolean preserveExistingMetrics,
       boolean useMaxMemoryEstimates
   )
@@ -669,6 +671,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     // the metric aggregator in metricSpec is skipped and the existing metric is unchanged. If the row does not already have
     // the metric, then the metric aggregator is applied on the source column as usual. This should only be set for
     // DruidInputSource since that is the only case where we can have existing metrics.
+    // This is currently only use by auto compaction and should not be use for anything else.
     final boolean preserveExistingMetrics;
 
     public Spec()
