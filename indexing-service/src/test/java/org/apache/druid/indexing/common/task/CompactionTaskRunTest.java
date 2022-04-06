@@ -1503,7 +1503,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
             null,
             false,
             false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+            null
         ),
         null,
         createActionClient(task),
@@ -1526,7 +1527,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         null,
         null,
         null,
-        getIndexMerger(),
+        getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)),
         null,
         null,
         null,

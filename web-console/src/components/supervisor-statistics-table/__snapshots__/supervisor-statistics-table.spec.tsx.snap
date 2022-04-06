@@ -7,16 +7,16 @@ exports[`SupervisorStatisticsTable matches snapshot on error 1`] = `
   <div
     className="top-actions"
   >
-    <Blueprint3.ButtonGroup
+    <Blueprint4.ButtonGroup
       className="right-buttons"
     >
-      <Blueprint3.Button
+      <Blueprint4.Button
         disabled={false}
         minimal={true}
         onClick={[Function]}
         text="View raw"
       />
-    </Blueprint3.ButtonGroup>
+    </Blueprint4.ButtonGroup>
   </div>
   <div
     className="main-area"
@@ -181,16 +181,16 @@ exports[`SupervisorStatisticsTable matches snapshot on init 1`] = `
   <div
     className="top-actions"
   >
-    <Blueprint3.ButtonGroup
+    <Blueprint4.ButtonGroup
       className="right-buttons"
     >
-      <Blueprint3.Button
+      <Blueprint4.Button
         disabled={false}
         minimal={true}
         onClick={[Function]}
         text="View raw"
       />
-    </Blueprint3.ButtonGroup>
+    </Blueprint4.ButtonGroup>
   </div>
   <div
     className="main-area"
@@ -355,16 +355,16 @@ exports[`SupervisorStatisticsTable matches snapshot on loading 1`] = `
   <div
     className="top-actions"
   >
-    <Blueprint3.ButtonGroup
+    <Blueprint4.ButtonGroup
       className="right-buttons"
     >
-      <Blueprint3.Button
+      <Blueprint4.Button
         disabled={true}
         minimal={true}
         onClick={[Function]}
         text="View raw"
       />
-    </Blueprint3.ButtonGroup>
+    </Blueprint4.ButtonGroup>
   </div>
   <div
     className="main-area"
@@ -381,16 +381,16 @@ exports[`SupervisorStatisticsTable matches snapshot on no data 1`] = `
   <div
     className="top-actions"
   >
-    <Blueprint3.ButtonGroup
+    <Blueprint4.ButtonGroup
       className="right-buttons"
     >
-      <Blueprint3.Button
+      <Blueprint4.Button
         disabled={false}
         minimal={true}
         onClick={[Function]}
         text="View raw"
       />
-    </Blueprint3.ButtonGroup>
+    </Blueprint4.ButtonGroup>
   </div>
   <div
     className="main-area"
@@ -555,16 +555,16 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
   <div
     className="top-actions"
   >
-    <Blueprint3.ButtonGroup
+    <Blueprint4.ButtonGroup
       className="right-buttons"
     >
-      <Blueprint3.Button
+      <Blueprint4.Button
         disabled={false}
         minimal={true}
         onClick={[Function]}
         text="View raw"
       />
-    </Blueprint3.ButtonGroup>
+    </Blueprint4.ButtonGroup>
   </div>
   <div
     className="main-area"

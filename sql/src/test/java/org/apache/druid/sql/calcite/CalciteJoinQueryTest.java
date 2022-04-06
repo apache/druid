@@ -2924,7 +2924,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 new QueryDataSource(
                     newScanQueryBuilder()
                         .dataSource(CalciteTests.DATASOURCE1)
-                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .eternityInterval()
                         .filters(new SelectorDimFilter("dim1", "10.1", null))
                         .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ColumnType.STRING))
                         .columns(ImmutableList.of("__time", "v0"))
@@ -2935,7 +2935,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 new QueryDataSource(
                     newScanQueryBuilder()
                         .dataSource(CalciteTests.DATASOURCE1)
-                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .eternityInterval()
                         .filters(new SelectorDimFilter("dim1", "10.1", null))
                         .columns(ImmutableList.of("dim1"))
                         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -4986,6 +4986,59 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         queryContext,
         ImmutableList.of(query),
         ImmutableList.of(new Object[]{4.0F, 4.0F})
+    );
+  }
+
+  @Test
+  public void testPlanWithInFilterMoreThanInSubQueryThreshold() throws Exception
+  {
+    String query = "SELECT l1 FROM numfoo WHERE l1 IN (4842, 4844, 4845, 14905, 4853, 29064)";
+
+    Map<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    queryContext.put(QueryContexts.IN_SUB_QUERY_THRESHOLD_KEY, 3);
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        queryContext,
+        DEFAULT_PARAMETERS,
+        query,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      JoinDataSource.create(
+                          new TableDataSource(CalciteTests.DATASOURCE3),
+                          InlineDataSource.fromIterable(
+                              ImmutableList.of(
+                                  new Object[]{4842L},
+                                  new Object[]{4844L},
+                                  new Object[]{4845L},
+                                  new Object[]{14905L},
+                                  new Object[]{4853L},
+                                  new Object[]{29064L}
+                              ),
+                              RowSignature.builder()
+                                          .add("ROW_VALUE", ColumnType.LONG)
+                                          .build()
+                          ),
+                          "j0.",
+                          "(\"l1\" == \"j0.ROW_VALUE\")",
+                          JoinType.INNER,
+                          null,
+                          ExprMacroTable.nil()
+                      )
+                  )
+                  .columns("l1")
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .context(queryContext)
+                  .legacy(false)
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .build()
+        ),
+        (sql, result) -> {
+          // Ignore the results, only need to check that the type of query is a join.
+        },
+        null
     );
   }
 }

@@ -25,7 +25,7 @@ sidebar_label: "Simple task indexing"
 
 The simple task (type `index`) is designed to ingest small data sets into Apache Druid. The task executes within the indexing service. For general information on native batch indexing and parallel task indexing, see [Native batch ingestion](./native-batch.md).
 
-## Task syntax
+## Simple task example
 
 A sample task is shown below:
 
@@ -94,12 +94,14 @@ A sample task is shown below:
 }
 ```
 
+## Simple task configuration
+
 |property|description|required?|
 |--------|-----------|---------|
 |type|The task type, this should always be `index`.|yes|
 |id|The task ID. If this is not explicitly specified, Druid generates the task ID using task type, data source name, interval, and date-time stamp. |no|
-|spec|The ingestion spec including the data schema, IOConfig, and TuningConfig. See below for more details. |yes|
-|context|Context containing various task configuration parameters. See below for more details.|no|
+|spec|The ingestion spec including the [data schema](#dataschema), [IO config](#ioconfig), and [tuning config](#tuningconfig).|yes|
+|context|Context to specify various task configuration parameters. See [Task context parameters](tasks.md#context-parameters) for more details.|no|
 
 ### `dataSchema`
 
@@ -175,7 +177,7 @@ For best-effort rollup, you should use `dynamic`.
 |-----|----|-----------|--------|
 |type|String|See [Additional Peon Configuration: SegmentWriteOutMediumFactory](../configuration/index.md#segmentwriteoutmediumfactory) for explanation and available options.|yes|
 
-### Segment pushing modes
+## Segment pushing modes
 
 While ingesting data using the simple task indexing, Druid creates segments from the input data and pushes them. For segment pushing,
 the simple task index supports the following segment pushing modes based upon your type of [rollup](./rollup.md):

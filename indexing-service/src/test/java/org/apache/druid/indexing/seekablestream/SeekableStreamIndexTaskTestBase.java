@@ -94,6 +94,7 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -464,10 +465,15 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     unlockBasePersistDir.invoke(task.getAppenderator());
   }
 
-  protected List<SegmentDescriptor> publishedDescriptors()
+  protected Collection<DataSegment> publishedSegments()
   {
     return metadataStorageCoordinator
-        .retrieveAllUsedSegments(OLD_DATA_SCHEMA.getDataSource(), Segments.ONLY_VISIBLE)
+        .retrieveAllUsedSegments(OLD_DATA_SCHEMA.getDataSource(), Segments.ONLY_VISIBLE);
+  }
+
+  protected List<SegmentDescriptor> publishedDescriptors()
+  {
+    return publishedSegments()
         .stream()
         .map(DataSegment::toDescriptor)
         .collect(Collectors.toList());
