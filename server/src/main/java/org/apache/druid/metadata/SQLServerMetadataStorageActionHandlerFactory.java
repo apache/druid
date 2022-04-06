@@ -35,8 +35,8 @@ public class SQLServerMetadataStorageActionHandlerFactory extends SQLMetadataSto
   }
 
   @Override
-  public <EntryType, StatusType, LogType, LockType>
-      MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType> create(
+  public <EntryType, StatusType, LogType, LockType, TaskRunnerWorkItem>
+      MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType, TaskRunnerWorkItem> create(
           String entryType,
           MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> payloadTypes
   )

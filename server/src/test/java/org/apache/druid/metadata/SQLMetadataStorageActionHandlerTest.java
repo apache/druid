@@ -53,7 +53,7 @@ public class SQLMetadataStorageActionHandlerTest
   public final ExpectedException thrown = ExpectedException.none();
 
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
-  private SQLMetadataStorageActionHandler<Map<String, Integer>, Map<String, Integer>, Map<String, String>, Map<String, Integer>> handler;
+  private SQLMetadataStorageActionHandler<Map<String, Integer>, Map<String, Integer>, Map<String, String>, Map<String, Integer>, Map<String, String>> handler;
 
   @Before
   public void setUp()

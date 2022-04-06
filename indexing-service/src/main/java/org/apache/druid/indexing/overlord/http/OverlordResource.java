@@ -690,7 +690,7 @@ public class OverlordResource
         taskMaster.getTaskRunner(),
         taskRunner -> {
           final List<TaskStatusPlus> authorizedList = securedTaskStatusPlus(
-              getTasks(
+              getTaskStatusPlusList(
                   taskRunner,
                   TaskStateLookup.fromString(state),
                   dataSource,
@@ -704,6 +704,58 @@ public class OverlordResource
           return Response.ok(authorizedList).build();
         }
     );
+  }
+
+  private List<TaskStatusPlus> getTaskStatusPlusList(
+      TaskRunner taskRunner,
+      TaskStateLookup state,
+      @Nullable String dataSource,
+      @Nullable String createdTimeInterval,
+      @Nullable Integer maxCompletedTasks,
+      @Nullable String type
+  )
+  {
+    final Duration createdTimeDuration;
+    if (createdTimeInterval != null) {
+      final Interval theInterval = Intervals.of(StringUtils.replace(createdTimeInterval, "_", "/"));
+      createdTimeDuration = theInterval.toDuration();
+    } else {
+      createdTimeDuration = null;
+    }
+
+    // This way, we can use the snapshot from taskStorage as the source of truth for the set of tasks to process
+    // and use the snapshot from taskRunner as a reference for potential task state updates happened
+    // after the first snapshotting.
+    final Map<String, ? extends TaskRunnerWorkItem> runnerWorkItems = getTaskRunnerWorkItems(
+        taskRunner,
+        state,
+        dataSource,
+        type
+    );
+    Stream<TaskStatusPlus> taskStatusPlusStream = getTaskStatusPlusStreamFromStorage(
+        state,
+        dataSource,
+        createdTimeDuration,
+        maxCompletedTasks,
+        type,
+        runnerWorkItems
+    );
+
+    if (state == TaskStateLookup.PENDING || state == TaskStateLookup.RUNNING) {
+      // We are interested in only those tasks which are in taskRunner.
+      taskStatusPlusStream = taskStatusPlusStream
+          .filter(taskStatusPlus -> runnerWorkItems.containsKey(taskStatusPlus.getId()));
+    }
+    final List<TaskStatusPlus> taskStatusPlusList = taskStatusPlusStream.collect(Collectors.toList());
+    for (TaskStatusPlus taskStatusPlus : taskStatusPlusList) {
+      if (taskStatusPlus.getRunnerStatusCode() == null) {
+        // this is racy for remoteTaskRunner
+        RunnerTaskState runnerTaskState = taskRunner.getRunnerTaskState(taskStatusPlus.getId());
+        taskStatusPlus.setRunnerTaskState(runnerTaskState);
+      }
+    }
+
+    return taskStatusPlusList;
   }
 
   private List<TaskStatusPlus> getTasks(
@@ -823,6 +875,58 @@ public class OverlordResource
     });
 
     return statuses;
+  }
+
+  private Stream<TaskStatusPlus> getTaskStatusPlusStreamFromStorage(
+      TaskStateLookup state,
+      @Nullable String dataSource,
+      Duration createdTimeDuration,
+      @Nullable Integer maxCompletedTasks,
+      @Nullable String type,
+      Map<String, ? extends TaskRunnerWorkItem> runnerWorkItems
+  )
+  {
+    final Map<TaskLookupType, TaskLookup> taskLookups;
+    switch (state) {
+      case ALL:
+        taskLookups = ImmutableMap.of(
+            TaskLookupType.ACTIVE,
+            ActiveTaskLookup.getInstance(),
+            TaskLookupType.COMPLETE,
+            CompleteTaskLookup.of(maxCompletedTasks, createdTimeDuration)
+        );
+        break;
+      case COMPLETE:
+        taskLookups = ImmutableMap.of(
+            TaskLookupType.COMPLETE,
+            CompleteTaskLookup.of(maxCompletedTasks, createdTimeDuration)
+        );
+        break;
+      case WAITING:
+      case PENDING:
+      case RUNNING:
+        taskLookups = ImmutableMap.of(
+            TaskLookupType.ACTIVE,
+            ActiveTaskLookup.getInstance()
+        );
+        break;
+      default:
+        throw new IAE("Unknown state: [%s]", state);
+    }
+
+    final Stream<TaskStatusPlus> taskStatusPlusStream =
+        taskStorageQueryAdapter.getTaskStatusPlusList(
+            taskLookups,
+            dataSource,
+            runnerWorkItems
+        ).stream();
+    if (type != null) {
+      return taskStatusPlusStream.filter(
+          taskStatusPlus -> type.equals(taskStatusPlus == null ? null : taskStatusPlus.getType())
+      );
+    } else {
+      return taskStatusPlusStream;
+    }
   }
 
   private Stream<TaskInfo<Task, TaskStatus>> getTaskInfoStreamFromTaskStorage(

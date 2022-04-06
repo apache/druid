@@ -35,8 +35,8 @@ public class PostgreSQLMetadataStorageActionHandlerFactory extends SQLMetadataSt
   }
 
   @Override
-  public <EntryType, StatusType, LogType, LockType>
-      MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType> create(
+  public <EntryType, StatusType, LogType, LockType, TaskRunnerWorkType>
+      MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType, TaskRunnerWorkType> create(
           String entryType,
           MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> payloadTypes
   )

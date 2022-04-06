@@ -22,10 +22,16 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import net.minidev.json.parser.JSONParser;
+import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
+import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
@@ -54,13 +60,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
-    implements MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
+public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType, TaskRunnerWorkItem>
+    implements MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType, TaskRunnerWorkItem>
 {
   private static final EmittingLogger log = new EmittingLogger(SQLMetadataStorageActionHandler.class);
 
   private final SQLMetadataConnector connector;
   private final ObjectMapper jsonMapper;
+  private final JSONParser jsonParser;
   private final TypeReference<EntryType> entryType;
   private final TypeReference<StatusType> statusType;
   private final TypeReference<LogType> logType;
@@ -89,6 +96,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     //noinspection UnnecessaryFullyQualifiedName
     this.jsonMapper = jsonMapper.copy().addMixIn(org.apache.druid.metadata.PasswordProvider.class,
             org.apache.druid.metadata.PasswordProviderRedactionMixIn.class);
+    this.jsonParser = new JSONParser();
     this.entryType = types.getEntryType();
     this.statusType = types.getStatusType();
     this.logType = types.getLogType();
@@ -272,6 +280,48 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   @Override
+  public List<TaskStatusPlus> getTaskStatusPlusList(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String dataSource,
+      Map<String, ? extends TaskRunnerWorkItem> runnerWorkItems
+  )
+  {
+    TaskStatusPlusMapper taskStatusPlusMapper = new TaskStatusPlusMapper<>(jsonMapper, runnerWorkItems);
+    return getConnector().retryTransaction(
+        (handle, status) -> {
+          final List<TaskStatusPlus> tasks = new ArrayList<>();
+          for (Entry<TaskLookupType, TaskLookup> entry : taskLookups.entrySet()) {
+            final Query<Map<String, Object>> query;
+            switch (entry.getKey()) {
+              case ACTIVE:
+                query = createActiveTaskInfoStreamingQuery(
+                    handle,
+                    dataSource
+                );
+                tasks.addAll(query.map(taskStatusPlusMapper).list());
+                break;
+              case COMPLETE:
+                CompleteTaskLookup completeTaskLookup = (CompleteTaskLookup) entry.getValue();
+                query = createCompletedTaskInfoStreamingQuery(
+                    handle,
+                    completeTaskLookup.getTasksCreatedPriorTo(),
+                    completeTaskLookup.getMaxTaskStatuses(),
+                    dataSource
+                );
+                tasks.addAll(query.map(taskStatusPlusMapper).list());
+                break;
+              default:
+                throw new IAE("Unknown TaskLookupType: [%s]", entry.getKey());
+            }
+          }
+          return tasks;
+        },
+        3,
+        SQLMetadataConnector.DEFAULT_MAX_TRIES
+    );
+  }
+
+  @Override
   public List<TaskInfo<EntryType, StatusType>> getTaskInfos(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String dataSource
@@ -284,7 +334,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
             final Query<Map<String, Object>> query;
             switch (entry.getKey()) {
               case ACTIVE:
-                query = createActiveTaskInfoQuery(
+                query = createActiveTaskInfoStreamingQuery(
                     handle,
                     dataSource
                 );
@@ -292,7 +342,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                 break;
               case COMPLETE:
                 CompleteTaskLookup completeTaskLookup = (CompleteTaskLookup) entry.getValue();
-                query = createCompletedTaskInfoQuery(
+                query = createCompletedTaskInfoStreamingQuery(
                     handle,
                     completeTaskLookup.getTasksCreatedPriorTo(),
                     completeTaskLookup.getMaxTaskStatuses(),
@@ -311,7 +361,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     );
   }
 
-  protected Query<Map<String, Object>> createCompletedTaskInfoQuery(
+  protected Query<Map<String, Object>> createCompletedTaskInfoStreamingQuery(
       Handle handle,
       DateTime timestamp,
       @Nullable Integer maxNumStatuses,
@@ -336,7 +386,9 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     if (maxNumStatuses != null) {
       sql = decorateSqlWithLimit(sql);
     }
-    Query<Map<String, Object>> query = handle.createQuery(sql).bind("start", timestamp.toString());
+    Query<Map<String, Object>> query = handle.createQuery(sql)
+                                             .bind("start", timestamp.toString())
+                                             .setFetchSize(connector.getStreamingFetchSize());
 
     if (maxNumStatuses != null) {
       query = query.bind("n", maxNumStatuses);
@@ -358,7 +410,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     return sql;
   }
 
-  private Query<Map<String, Object>> createActiveTaskInfoQuery(Handle handle, @Nullable String dataSource)
+  private Query<Map<String, Object>> createActiveTaskInfoStreamingQuery(Handle handle, @Nullable String dataSource)
   {
     String sql = StringUtils.format(
         "SELECT "
@@ -375,7 +427,8 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         entryTable
     );
 
-    Query<Map<String, Object>> query = handle.createQuery(sql);
+    Query<Map<String, Object>> query = handle.createQuery(sql)
+                                             .setFetchSize(connector.getStreamingFetchSize());
     if (dataSource != null) {
       query = query.bind("ds", dataSource);
     }
@@ -389,6 +442,108 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
       sql += " AND datasource = :ds ";
     }
     return sql;
+  }
+
+  static class TaskStatusPlusMapper<TaskRunnerWorkItem> implements ResultSetMapper<TaskStatusPlus>
+  {
+    private final ObjectMapper objectMapper;
+    private final Map<String, ? extends TaskRunnerWorkItem> runnerWorkItems;
+
+    TaskStatusPlusMapper(ObjectMapper objectMapper, Map<String, ? extends TaskRunnerWorkItem> runnerWorkItems)
+    {
+      this.objectMapper = objectMapper;
+      this.runnerWorkItems = runnerWorkItems;
+    }
+
+    @Override
+    public TaskStatusPlus map(int index, ResultSet resultSet, StatementContext context)
+        throws SQLException
+    {
+      ObjectNode task;
+      try {
+        task = objectMapper.readValue(resultSet.getBytes("payload"), ObjectNode.class);
+      }
+      catch (IOException e) {
+        log.warn("Encountered exception[%s] while deserializing task payload, setting payload to null",
+                 e.getMessage());
+        task = null;
+      }
+
+      ObjectNode status;
+      try {
+        status = objectMapper.readValue(resultSet.getBytes("status_payload"), ObjectNode.class);
+      }
+      catch (IOException e) {
+        log.error(e, "Encountered exception while deserializing task status_payload");
+        throw new SQLException(e);
+      }
+      final String id = resultSet.getString("id");
+      final String datasource = resultSet.getString("datasource");
+      final DateTime createdDate = DateTimes.of(resultSet.getString("created_date"));
+      return getTaskStatusPlus(id, datasource, createdDate, task, status);
+    }
+
+    private TaskStatusPlus getTaskStatusPlus(String id, String datasource, DateTime createdDate,
+                                             ObjectNode task, ObjectNode status)
+    {
+      final TaskState statusCode = TaskState.valueOf(status.get("status").asText());
+      final TaskRunnerWorkItem runnerWorkItem = runnerWorkItems.get(id);
+      TaskLocation taskLocation;
+      if (!statusCode.isRunnable() || runnerWorkItem == null) {
+        // COMPLETED OR WAITING task
+        try {
+          taskLocation = objectMapper.treeToValue(status.get("location"), TaskLocation.class);
+        }
+        catch (JsonProcessingException e) {
+          throw new IllegalArgumentException(e);
+        }
+        TaskStatusPlus taskStatusPlus = new TaskStatusPlus(
+            id,
+            task == null ? null : task.get("groupId").asText(),
+            task == null ? null : task.get("type").asText(),
+            createdDate,
+            DateTimes.EPOCH,
+            statusCode,
+            null, // set below to NONE(completed) or WAITING
+            status.get("duration").asLong(),
+            taskLocation,
+            datasource,
+            status.get("errorMsg").asText()
+        );
+        if (!statusCode.isRunnable()) {
+          taskStatusPlus.setRunnerTaskState(RunnerTaskState.NONE);
+        } else {
+          taskStatusPlus.setRunnerTaskState(RunnerTaskState.WAITING);
+        }
+        return taskStatusPlus;
+      } else {
+        DateTime createdTime;
+        DateTime queueInsertionTime;
+        try {
+          ObjectNode runnerWorkItemJson = objectMapper.convertValue(runnerWorkItem, ObjectNode.class);
+          createdTime = objectMapper.treeToValue(runnerWorkItemJson.get("createdTime"), DateTime.class);
+          queueInsertionTime = objectMapper.treeToValue(runnerWorkItemJson.get("queueInsertionTime"), DateTime.class);
+          // location in taskInfo is only updated after the task is done.
+          taskLocation = objectMapper.treeToValue(runnerWorkItemJson.get("location"), TaskLocation.class);
+        }
+        catch (JsonProcessingException e) {
+          throw new IllegalArgumentException(e);
+        }
+        return new TaskStatusPlus(
+            id,
+            task == null ? null : task.get("groupId").asText(),
+            task == null ? null : task.get("type").asText(),
+            createdTime,
+            queueInsertionTime,
+            statusCode,
+            null, // Set later in OverlordResource to taskRunner.getRunnerTaskState(id)
+            status.get("duration").asLong(),
+            taskLocation,
+            datasource,
+            status.get("errorMsg").asText()
+        );
+      }
+    }
   }
 
   static class TaskInfoMapper<EntryType, StatusType> implements ResultSetMapper<TaskInfo<EntryType, StatusType>>

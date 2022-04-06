@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.StringUtils;
 
-public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
-    extends SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
+public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType, TaskRunnerWorkItem>
+    extends SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType, TaskRunnerWorkItem>
 {
   @VisibleForTesting
   DerbyMetadataStorageActionHandler(

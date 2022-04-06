@@ -29,6 +29,7 @@ import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
@@ -95,7 +96,7 @@ public class MetadataTaskStorage implements TaskStorage
 
   private final MetadataStorageConnector metadataStorageConnector;
   private final TaskStorageConfig config;
-  private final MetadataStorageActionHandler<Task, TaskStatus, TaskAction, TaskLock> handler;
+  private final MetadataStorageActionHandler<Task, TaskStatus, TaskAction, TaskLock, TaskRunnerWorkItem> handler;
 
   private static final EmittingLogger log = new EmittingLogger(MetadataTaskStorage.class);
 
@@ -218,6 +219,30 @@ public class MetadataTaskStorage implements TaskStorage
       }
     }
     return tasksBuilder.build();
+  }
+
+  @Override
+  public List<TaskStatusPlus> getTaskStatusPlusList(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String datasource,
+      Map<String, ? extends TaskRunnerWorkItem> runnerWorkItems
+  )
+  {
+    Map<TaskLookupType, TaskLookup> theTaskLookups = Maps.newHashMapWithExpectedSize(taskLookups.size());
+    for (Entry<TaskLookupType, TaskLookup> entry : taskLookups.entrySet()) {
+      if (entry.getKey() == TaskLookupType.COMPLETE) {
+        CompleteTaskLookup completeTaskLookup = (CompleteTaskLookup) entry.getValue();
+        theTaskLookups.put(
+            entry.getKey(),
+            completeTaskLookup.hasTaskCreatedTimeFilter()
+            ? completeTaskLookup
+            : completeTaskLookup.withDurationBeforeNow(config.getRecentlyFinishedThreshold())
+        );
+      } else {
+        theTaskLookups.put(entry.getKey(), entry.getValue());
+      }
+    }
+    return Collections.unmodifiableList(handler.getTaskStatusPlusList(theTaskLookups, datasource, runnerWorkItems));
   }
 
   @Override

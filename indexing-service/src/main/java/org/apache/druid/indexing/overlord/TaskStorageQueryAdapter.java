@@ -23,6 +23,7 @@ import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
@@ -100,6 +101,15 @@ public class TaskStorageQueryAdapter
   )
   {
     return storage.getTaskInfos(taskLookups, dataSource);
+  }
+
+  public List<TaskStatusPlus> getTaskStatusPlusList(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String datasource,
+      Map<String, ? extends TaskRunnerWorkItem> runnerWorkItems
+  )
+  {
+    return storage.getTaskStatusPlusList(taskLookups, datasource, runnerWorkItems);
   }
 
   public Optional<Task> getTask(final String taskid)

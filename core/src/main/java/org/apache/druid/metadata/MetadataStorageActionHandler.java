@@ -21,6 +21,7 @@ package org.apache.druid.metadata;
 
 import com.google.common.base.Optional;
 import org.apache.druid.indexer.TaskInfo;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.joda.time.DateTime;
 
@@ -30,7 +31,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
+public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType, TaskRunnerWorkItem>
 {
   /**
    * Creates a new entry.
@@ -82,6 +83,24 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
 
   @Nullable
   TaskInfo<EntryType, StatusType> getTaskInfo(String entryId);
+
+  /**
+   * Returns a list of {@link TaskStatusPlus} from metadata store matching the given filters.
+   *
+   * If {@code taskLookups} includes {@link TaskLookupType#ACTIVE}, it returns all active tasks in the metadata store.
+   * If {@code taskLookups} includes {@link TaskLookupType#COMPLETE}, it returns all complete tasks in the metadata
+   * store. For complete tasks, additional filters in {@code CompleteTaskLookup} can be applied.
+   * All lookups should be processed atomically if there are more than one lookup is given.
+   *
+   * @param taskLookups task lookup type and filters.
+   * @param datasource  datasource filter
+   * @param runnerWorkItems map of id to work items for running tasks
+   */
+  List<TaskStatusPlus> getTaskStatusPlusList(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String datasource,
+      Map<String, ? extends TaskRunnerWorkItem> runnerWorkItems
+  );
 
   /**
    * Returns a list of {@link TaskInfo} from metadata store that matches to the given filters.

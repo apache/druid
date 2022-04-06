@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord;
 import com.google.common.base.Optional;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.Task;
@@ -149,6 +150,23 @@ public interface TaskStorage
    * @return list of {@link Task}
    */
   List<Task> getActiveTasksByDatasource(String datasource);
+
+  /**
+   * Returns a list of tasks' relevant status info stored in the storage facility as {@link TaskStatusPlus}. No
+   * particular order is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
+   *
+   * The returned list can contain active tasks and complete tasks depending on the {@code taskLookups} parameter.
+   * See {@link TaskLookup} for more details of active and complete tasks.
+   *
+   * @param taskLookups lookup types and filters
+   * @param datasource  datasource filter
+   * @param runnerWorkItems
+   */
+  List<TaskStatusPlus> getTaskStatusPlusList(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String datasource,
+      Map<String, ? extends TaskRunnerWorkItem> runnerWorkItems
+  );
 
   /**
    * Returns a list of tasks stored in the storage facility as {@link TaskInfo}. No

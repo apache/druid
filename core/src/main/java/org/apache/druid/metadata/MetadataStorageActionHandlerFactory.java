@@ -21,7 +21,7 @@ package org.apache.druid.metadata;
 
 public interface MetadataStorageActionHandlerFactory
 {
-  <EntryType, StatusType, LogType, LockType> MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType> create(
+  <EntryType, StatusType, LogType, LockType, TaskRunnerWorkItem> MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType, TaskRunnerWorkItem> create(
       String entryType,
       MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> payloadTypes
   );
