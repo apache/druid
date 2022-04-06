@@ -21,6 +21,7 @@ package org.apache.druid.segment.data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.github.luben.zstd.Zstd;
 import com.ning.compress.BufferRecycler;
 import com.ning.compress.lzf.LZFDecoder;
 import com.ning.compress.lzf.LZFEncoder;
@@ -75,6 +76,21 @@ public enum CompressionStrategy
       return LZ4Compressor.DEFAULT_COMPRESSOR;
     }
   },
+
+  ZSTD((byte) 0x2) {
+    @Override
+    public Decompressor getDecompressor()
+    {
+      return ZstdDecompressor.DEFAULT_COMPRESSOR;
+    }
+
+    @Override
+    public Compressor getCompressor()
+    {
+      return ZstdCompressor.DEFAULT_COMPRESSOR;
+    }
+  },
+
   UNCOMPRESSED((byte) 0xFF) {
     @Override
     public Decompressor getDecompressor()
@@ -341,6 +357,81 @@ public enum CompressionStrategy
       in.position(position);
       out.flip();
       return out;
+    }
+  }
+
+  public static class ZstdCompressor extends Compressor
+  {
+    private static final ZstdCompressor DEFAULT_COMPRESSOR = new ZstdCompressor();
+
+    @Override
+    ByteBuffer allocateInBuffer(int inputSize, Closer closer)
+    {
+      ByteBuffer inBuffer = ByteBuffer.allocateDirect(inputSize);
+      closer.register(() -> ByteBufferUtils.free(inBuffer));
+      return inBuffer;
+    }
+
+    @Override
+    ByteBuffer allocateOutBuffer(int inputSize, Closer closer)
+    {
+      ByteBuffer outBuffer = ByteBuffer.allocateDirect((int) Zstd.compressBound(inputSize));
+      closer.register(() -> ByteBufferUtils.free(outBuffer));
+      return outBuffer;
+    }
+
+    @Override
+    public ByteBuffer compress(ByteBuffer in, ByteBuffer out)
+    {
+      int position = in.position();
+      out.clear();
+      long sizeNeeded = Zstd.compressBound(in.remaining());
+      if (out.remaining() < sizeNeeded) {
+        throw new RuntimeException("Output buffer too small, please allocate more space. " + sizeNeeded + " required.");
+      }
+      Zstd.compress(out, in, Zstd.maxCompressionLevel());
+      in.position(position);
+      out.flip();
+      return out;
+    }
+  }
+
+  public static class ZstdDecompressor implements Decompressor
+  {
+    private static final ZstdDecompressor DEFAULT_COMPRESSOR = new ZstdDecompressor();
+
+    @Override
+    public void decompress(ByteBuffer in, int numBytes, ByteBuffer out)
+    {
+      out.clear();
+      // some tests don't use dbb's and zstd jni doesn't allow for non-dbb byte buffers.
+      if (!in.isDirect()) {
+        in = cloneBuffer(in);
+      }
+      if (!out.isDirect()) {
+        out = cloneBuffer(out);
+      }
+      int decompressedBytes = (int) Zstd.decompressDirectByteBuffer(
+          out,
+          out.position(),
+          out.remaining(),
+          in,
+          in.position(),
+          numBytes
+      );
+      out.limit(out.position() + decompressedBytes);
+    }
+
+    /*
+    ZStandard library requires a direct byte buffer to work, some tests use a heap byte buffer, this allows those tests to pass.
+    Please don't use this library if you are not using a direct byte buffer, as cloning is an expensive operation.
+     */
+    private ByteBuffer cloneBuffer(ByteBuffer buffer)
+    {
+      ByteBuffer copy = ByteBuffer.allocateDirect(buffer.remaining());
+      copy.put(buffer);
+      copy.flip();
+      return copy;
     }
   }
 
