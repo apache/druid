@@ -17,25 +17,6 @@
  * under the License.
  */
 
-SqlNodeList ClusterItems() :
-{
-  List<SqlNode> list;
-  final Span s;
-  SqlNode e;
-}
-{
-  e = OrderItem() {
-    s = span();
-    list = startList(e);
-  }
-  (
-    LOOKAHEAD(2) <COMMA> e = OrderItem() { list.add(e); }
-  )*
-  {
-    return new SqlNodeList(list, s.addAll(list).pos());
-  }
-}
-
 org.apache.druid.java.util.common.Pair<Granularity, String> PartitionGranularity() :
 {
   SqlNode e = null;
@@ -89,53 +70,4 @@ org.apache.druid.java.util.common.Pair<Granularity, String> PartitionGranularity
   {
     return new org.apache.druid.java.util.common.Pair(granularity, unparseString);
   }
-}
-
-List<String> PartitionSpecs() :
-{
-  List<String> list;
-  String intervalString;
-}
-{
-  (
-    intervalString = PartitionSpec()
-    {
-        return startList(intervalString);
-    }
-  |
-    <LPAREN>
-    intervalString = PartitionSpec()
-    {
-      list = startList(intervalString);
-    }
-    (
-      <COMMA>
-      intervalString = PartitionSpec()
-      {
-        list.add(intervalString);
-      }
-    )*
-    <RPAREN>
-    {
-      return list;
-    }
-  )
-}
-
-String PartitionSpec() :
-{
-  SqlNode sqlNode;
-}
-{
-  (
-    <ALL> <TIME>
-    {
-      return "all";
-    }
-  |
-    <PARTITION> sqlNode = StringLiteral()
-    {
-      return SqlParserUtil.parseString(SqlLiteral.stringValue(sqlNode));
-    }
-  )
 }

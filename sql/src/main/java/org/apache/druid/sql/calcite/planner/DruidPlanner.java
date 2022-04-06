@@ -94,7 +94,6 @@ import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 import org.apache.druid.utils.Throwables;
 
 import javax.annotation.Nullable;
-
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -151,10 +150,8 @@ public class DruidPlanner implements Closeable
 
     final Set<ResourceAction> resourceActions = new HashSet<>(resourceCollectorShuttle.getResourceActions());
 
-    if (parsed.getInsertNode() != null || parsed.getReplaceNode() != null) {
-      final String targetDataSource = parsed.getInsertNode() != null
-                                      ? validateAndGetDataSourceForInsert(parsed.getInsertNode())
-                                      : validateAndGetDataSourceForInsert(parsed.getReplaceNode());
+    if (parsed.getInsertOrReplace() != null) {
+      final String targetDataSource = validateAndGetDataSourceForIngest(parsed.getInsertOrReplace());
       resourceActions.add(new ResourceAction(new Resource(targetDataSource, ResourceType.DATASOURCE), Action.WRITE));
     }
 
@@ -185,7 +182,7 @@ public class DruidPlanner implements Closeable
     if (parsed.getExplainNode() != null) {
       returnedRowType = getExplainStructType(typeFactory);
     } else {
-      returnedRowType = buildQueryMaker(rootQueryRel, parsed.getInsertNode(), parsed.getReplaceNode()).getResultType();
+      returnedRowType = buildQueryMaker(rootQueryRel, parsed.getInsertOrReplace()).getResultType();
     }
 
     return new PrepareResult(returnedRowType, parameterTypes);
@@ -213,16 +210,16 @@ public class DruidPlanner implements Closeable
             plannerContext.getJsonMapper().writeValueAsString(parsed.getIngestionGranularity())
         );
       }
-
-      if (parsed.getReplaceTimeChunks() != null) {
-        plannerContext.getQueryContext().put(
-            DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
-            plannerContext.getJsonMapper().writeValueAsString(String.join(",", parsed.getReplaceTimeChunks()))
-        );
-      }
     }
     catch (JsonProcessingException e) {
       throw new ValidationException("Unable to serialize partition granularity.");
+    }
+
+    if (parsed.getReplaceTimeChunks() != null) {
+      plannerContext.getQueryContext().put(
+          DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
+          String.join(",", parsed.getReplaceTimeChunks())
+      );
     }
 
     // the planner's type factory is not available until after parsing
@@ -235,8 +232,7 @@ public class DruidPlanner implements Closeable
       return planWithDruidConvention(
           rootQueryRel,
           parsed.getExplainNode(),
-          parsed.getInsertNode(),
-          parsed.getReplaceNode()
+          parsed.getInsertOrReplace()
       );
     }
     catch (Exception e) {
@@ -248,7 +244,7 @@ public class DruidPlanner implements Closeable
 
       // If there isn't any INSERT clause, then we should try again with BINDABLE convention. And return without
       // any error, if it is plannable by the bindable convention
-      if (parsed.getInsertNode() == null && parsed.getReplaceNode() == null) {
+      if (parsed.getInsertOrReplace() == null) {
         // Try again with BINDABLE convention. Used for querying Values and metadata tables.
         try {
           return planWithBindableConvention(rootQueryRel, parsed.getExplainNode());
@@ -305,13 +301,11 @@ public class DruidPlanner implements Closeable
   private PlannerResult planWithDruidConvention(
       final RelRoot root,
       @Nullable final SqlExplain explain,
-      @Nullable final SqlInsert insert,
-      @Nullable final SqlInsert replace
+      @Nullable final SqlInsert insertOrReplace
   ) throws ValidationException, RelConversionException
   {
     final RelRoot possiblyLimitedRoot = possiblyWrapRootWithOuterLimitFromContext(root);
-
-    final QueryMaker queryMaker = buildQueryMaker(root, insert, replace);
+    final QueryMaker queryMaker = buildQueryMaker(root, insertOrReplace);
     plannerContext.setQueryMaker(queryMaker);
 
     RelNode parameterized = rewriteRelDynamicParameters(possiblyLimitedRoot.rel);
@@ -661,14 +655,11 @@ public class DruidPlanner implements Closeable
 
   private QueryMaker buildQueryMaker(
       final RelRoot rootQueryRel,
-      @Nullable final SqlInsert insert,
-      @Nullable final SqlInsert replace
+      @Nullable final SqlInsert insertOrReplace
   ) throws ValidationException
   {
-    if (insert != null || replace != null) {
-      final String targetDataSource = insert != null
-                                      ? validateAndGetDataSourceForInsert(insert)
-                                      : validateAndGetDataSourceForInsert(replace);
+    if (insertOrReplace != null) {
+      final String targetDataSource = validateAndGetDataSourceForIngest(insertOrReplace);
       return queryMakerFactory.buildForInsert(targetDataSource, rootQueryRel, plannerContext);
     } else {
       return queryMakerFactory.buildForSelect(rootQueryRel, plannerContext);
@@ -687,17 +678,17 @@ public class DruidPlanner implements Closeable
   }
 
   /**
-   * Extract target datasource from a {@link SqlInsert}, and also validate that the INSERT is of a form we support.
-   * Expects the INSERT target to be either an unqualified name, or a name qualified by the default schema.
+   * Extract target datasource from a {@link SqlInsert}, and also validate that the ingestion is of a form we support.
+   * Expects the target datasource to be either an unqualified name, or a name qualified by the default schema.
    */
-  private String validateAndGetDataSourceForInsert(final SqlInsert insert) throws ValidationException
+  private String validateAndGetDataSourceForIngest(final SqlInsert insert) throws ValidationException
   {
     if (insert.isUpsert()) {
       throw new ValidationException("UPSERT is not supported.");
     }
 
     if (insert.getTargetColumnList() != null) {
-      throw new ValidationException("INSERT with target column list is not supported.");
+      throw new ValidationException("Ingestion with target column list is not supported.");
     }
 
     final SqlIdentifier tableIdentifier = (SqlIdentifier) insert.getTargetTable();
@@ -705,7 +696,7 @@ public class DruidPlanner implements Closeable
 
     if (tableIdentifier.names.isEmpty()) {
       // I don't think this can happen, but include a branch for it just in case.
-      throw new ValidationException("INSERT requires target table.");
+      throw new ValidationException("Ingestion requires target table.");
     } else if (tableIdentifier.names.size() == 1) {
       // Unqualified name.
       dataSource = Iterables.getOnlyElement(tableIdentifier.names);
@@ -718,13 +709,13 @@ public class DruidPlanner implements Closeable
         dataSource = tableIdentifier.names.get(1);
       } else {
         throw new ValidationException(
-            StringUtils.format("Cannot INSERT into [%s] because it is not a Druid datasource.", tableIdentifier)
+            StringUtils.format("Cannot ingest into [%s] because it is not a Druid datasource.", tableIdentifier)
         );
       }
     }
 
     try {
-      IdUtils.validateId("INSERT dataSource", dataSource);
+      IdUtils.validateId("Ingestion dataSource", dataSource);
     }
     catch (IllegalArgumentException e) {
       throw new ValidationException(e.getMessage());
@@ -777,10 +768,7 @@ public class DruidPlanner implements Closeable
     private final SqlExplain explain;
 
     @Nullable
-    private final DruidSqlInsert insert;
-
-    @Nullable
-    private final DruidSqlReplace replace;
+    private final SqlInsert insertOrReplace;
 
     private final SqlNode query;
 
@@ -792,16 +780,14 @@ public class DruidPlanner implements Closeable
 
     private ParsedNodes(
         @Nullable SqlExplain explain,
-        @Nullable DruidSqlInsert insert,
-        @Nullable DruidSqlReplace replace,
+        @Nullable SqlInsert insertOrReplace,
         SqlNode query,
         @Nullable Granularity ingestionGranularity,
         @Nullable List<String> partitionSpec
     )
     {
       this.explain = explain;
-      this.insert = insert;
-      this.replace = replace;
+      this.insertOrReplace = insertOrReplace;
       this.query = query;
       this.ingestionGranularity = ingestionGranularity;
       this.replaceTimeChunks = partitionSpec;
@@ -876,7 +862,7 @@ public class DruidPlanner implements Closeable
 
           List<String> replaceTimeChunksList = druidSqlReplace.getReplaceTimeChunks();
           if (replaceTimeChunksList == null || replaceTimeChunksList.isEmpty()) {
-            throw new ValidationException("Missing partition specs for replace. Use FOR statement to specify them.");
+            throw new ValidationException("Missing partition specs for replace.");
           }
 
           ingestionGranularity = druidSqlReplace.getPartitionedBy();
@@ -888,7 +874,11 @@ public class DruidPlanner implements Closeable
         throw new ValidationException(StringUtils.format("Cannot execute [%s].", query.getKind()));
       }
 
-      return new ParsedNodes(explain, druidSqlInsert, druidSqlReplace, query, ingestionGranularity, replaceTimeChunks);
+      if (druidSqlInsert != null) {
+        return new ParsedNodes(explain, druidSqlInsert, query, ingestionGranularity, replaceTimeChunks);
+      } else {
+        return new ParsedNodes(explain, druidSqlReplace, query, ingestionGranularity, replaceTimeChunks);
+      }
     }
 
     @Nullable
@@ -898,15 +888,9 @@ public class DruidPlanner implements Closeable
     }
 
     @Nullable
-    public DruidSqlInsert getInsertNode()
+    public SqlInsert getInsertOrReplace()
     {
-      return insert;
-    }
-
-    @Nullable
-    public DruidSqlReplace getReplaceNode()
-    {
-      return replace;
+      return insertOrReplace;
     }
 
     @Nullable

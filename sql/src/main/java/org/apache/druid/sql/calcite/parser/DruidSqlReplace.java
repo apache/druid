@@ -24,10 +24,16 @@ import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlWriter;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.sql.Timestamp;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -39,7 +45,6 @@ public class DruidSqlReplace extends SqlInsert
 {
   public static final String SQL_REPLACE_TIME_CHUNKS = "sqlReplaceTimeChunks";
 
-  // This allows reusing super.unparse
   public static final SqlOperator OPERATOR = SqlInsert.OPERATOR;
 
   private final Granularity partitionedBy;
@@ -57,7 +62,7 @@ public class DruidSqlReplace extends SqlInsert
       @Nonnull SqlInsert insertNode,
       @Nullable Granularity partitionedBy,
       @Nullable String partitionedByStringForUnparse,
-      @Nonnull List<String> replaceTimeChunks
+      @Nonnull List<String> partitionSpecs
   ) throws ParseException
   {
     super(
@@ -72,10 +77,47 @@ public class DruidSqlReplace extends SqlInsert
     }
     this.partitionedBy = partitionedBy;
 
-    Preconditions.checkNotNull(partitionedByStringForUnparse);
-    this.partitionedByStringForUnparse = partitionedByStringForUnparse;
+    this.partitionedByStringForUnparse = Preconditions.checkNotNull(partitionedByStringForUnparse);
 
-    this.replaceTimeChunks = replaceTimeChunks;
+    // Partition Spec validation
+
+    if (partitionSpecs.size() == 1 && "all".equals(partitionSpecs.get(0))) {
+      // If the partition spec is set to replace the whole datasource, no further validation for aligning the
+      // partitions needs to be done.
+      this.replaceTimeChunks = partitionSpecs;
+    } else {
+
+      // Validate that the query is not partitioned by ALL.
+      if (!(partitionedBy instanceof PeriodGranularity)) {
+        throw new ParseException("FOR must only contain ALL TIME if it is PARTITIONED BY ALL granularity");
+      }
+
+      List<String> replaceTimeChunks = new ArrayList<>();
+
+      for (String partitionSpec : partitionSpecs) {
+        Interval interval;
+
+        if (partitionSpec.contains("/")) {
+          // It must be a partition interval
+          interval = Intervals.of(partitionSpec);
+        } else {
+          // It must be an SQL timestamp.
+          String timestamp = Timestamp.valueOf(partitionSpec)
+                                      .toLocalDateTime()
+                                      .toInstant(ZoneOffset.UTC)
+                                      .toString();
+          String period = ((PeriodGranularity) partitionedBy).getPeriod().toString();
+          interval = Intervals.of(timestamp + "/" + period);
+        }
+
+        if (!partitionedBy.isAligned(interval)) {
+          throw new ParseException("FOR contains a partitionSpec which is not aligned with PARTITIONED BY granularity");
+        }
+        replaceTimeChunks.add(interval.toString());
+      }
+
+      this.replaceTimeChunks = replaceTimeChunks;
+    }
   }
 
   public List<String> getReplaceTimeChunks()
@@ -105,13 +147,17 @@ public class DruidSqlReplace extends SqlInsert
     getTargetTable().unparse(writer, opLeft, opRight);
 
     writer.keyword("FOR");
-    final SqlWriter.Frame frame = writer.startList("(", ")");
     List<String> replaceTimeChunks = getReplaceTimeChunks();
-    for (String replaceTimeChunk : replaceTimeChunks) {
-      writer.sep(","); // sep() takes care of not printing the first separator
-      writer.literal(unparseTimeChunk(replaceTimeChunk));
+    if (replaceTimeChunks.size() == 1) {
+      unparseTimeChunk(writer, replaceTimeChunks.get(0));
+    } else {
+      final SqlWriter.Frame frame = writer.startList("(", ")");
+      for (String replaceTimeChunk : replaceTimeChunks) {
+        writer.sep(","); // sep() takes care of not printing the first separator
+        unparseTimeChunk(writer, replaceTimeChunk);
+      }
+      writer.endList(frame);
     }
-    writer.endList(frame);
 
     if (getTargetColumnList() != null) {
       getTargetColumnList().unparse(writer, opLeft, opRight);
@@ -122,12 +168,13 @@ public class DruidSqlReplace extends SqlInsert
     writer.keyword(partitionedByStringForUnparse);
   }
 
-  private String unparseTimeChunk(String timeChunkString)
+  private void unparseTimeChunk(SqlWriter sqlWriter, String timeChunkString)
   {
-    if ("all".equals(timeChunkString)) {
-      return "ALL TIME";
+    if ("all".equalsIgnoreCase(timeChunkString)) {
+      sqlWriter.keyword("ALL TIME");
     } else {
-      return "PARTITION " + timeChunkString;
+      sqlWriter.keyword("PARTITION");
+      sqlWriter.literal(timeChunkString);
     }
   }
 }

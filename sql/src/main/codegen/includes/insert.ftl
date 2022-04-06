@@ -44,3 +44,22 @@ SqlNode DruidSqlInsert() :
     return new DruidSqlInsert(sqlInsert, partitionedBy.lhs, partitionedBy.rhs, clusteredBy);
   }
 }
+
+SqlNodeList ClusterItems() :
+{
+  List<SqlNode> list;
+  final Span s;
+  SqlNode e;
+}
+{
+  e = OrderItem() {
+    s = span();
+    list = startList(e);
+  }
+  (
+    LOOKAHEAD(2) <COMMA> e = OrderItem() { list.add(e); }
+  )*
+  {
+    return new SqlNodeList(list, s.addAll(list).pos());
+  }
+}

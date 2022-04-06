@@ -17,38 +17,24 @@
  * under the License.
  */
 
-// Using fully qualified name for Pair class, since Calcite also has a same class name being used in the Parser.jj
+// Taken from syntax of SqlInsert statement from calcite parser, edited for replace syntax
 SqlNode DruidSqlReplace() :
 {
-    final List<SqlLiteral> keywords = new ArrayList<SqlLiteral>();
-    final SqlNodeList keywordList;
     SqlNode table;
     SqlNodeList extendList = null;
     SqlNode source;
     SqlNodeList columnList = null;
     final Span s;
     SqlInsert sqlInsert;
+    // Using fully qualified name for Pair class, since Calcite also has a same class name being used in the Parser.jj
     org.apache.druid.java.util.common.Pair<Granularity, String> partitionedBy = new org.apache.druid.java.util.common.Pair(null, null);
     List<String> partitionSpecList;
+    final Pair<SqlNodeList, SqlNodeList> p;
 }
 {
     <REPLACE> { s = span(); }
-    SqlInsertKeywords(keywords)
-    {
-        keywordList = new SqlNodeList(keywords, s.addAll(keywords).pos());
-    }
     <INTO> table = CompoundIdentifier()
-    <FOR> partitionSpecList = PartitionSpecs()
     [
-        LOOKAHEAD(5)
-        [ <EXTEND> ]
-        extendList = ExtendList() {
-            table = extend(table, extendList);
-        }
-    ]
-    [
-        LOOKAHEAD(2)
-        { final Pair<SqlNodeList, SqlNodeList> p; }
         p = ParenthesizedCompoundIdentifierList() {
             if (p.right.size() > 0) {
                 table = extend(table, p.right);
@@ -59,12 +45,69 @@ SqlNode DruidSqlReplace() :
         }
     ]
     source = OrderedQueryOrExpr(ExprContext.ACCEPT_QUERY)
+    <FOR> partitionSpecList = PartitionSpecs()
     [
       <PARTITIONED> <BY>
       partitionedBy = PartitionGranularity()
     ]
     {
-        sqlInsert = new SqlInsert(s.end(source), keywordList, table, source, columnList);
+        sqlInsert = new SqlInsert(s.end(source), SqlNodeList.EMPTY, table, source, columnList);
         return new DruidSqlReplace(sqlInsert, partitionedBy.lhs, partitionedBy.rhs, partitionSpecList);
     }
+}
+
+List<String> PartitionSpecs() :
+{
+  List<String> partitionSpecList;
+  String intervalString;
+}
+{
+  (
+    <ALL> <TIME>
+    {
+     return startList("all");
+    }
+  |
+    intervalString = PartitionSpec()
+    {
+      return startList(intervalString);
+    }
+  |
+    <LPAREN>
+    intervalString = PartitionSpec()
+    {
+      partitionSpecList = startList(intervalString);
+    }
+    (
+      <COMMA>
+      intervalString = PartitionSpec()
+      {
+        partitionSpecList.add(intervalString);
+      }
+    )*
+    <RPAREN>
+    {
+      return partitionSpecList;
+    }
+  )
+}
+
+String PartitionSpec() :
+{
+  final Span s;
+  SqlNode sqlNode;
+}
+{
+  (
+    <PARTITION> sqlNode = StringLiteral()
+    {
+      return SqlParserUtil.parseString(SqlLiteral.stringValue(sqlNode));
+    }
+  |
+    <PARTITION> <TIMESTAMP> { s = span(); } <QUOTED_STRING>
+    {
+      SqlTimestampLiteral timestampLiteral = SqlParserUtil.parseTimestampLiteral(token.image, s.end(this));
+      return timestampLiteral.toFormattedString();
+    }
+  )
 }
