@@ -132,9 +132,10 @@ public class DruidConvertletTable implements SqlRexConvertletTable
       final SqlOperator operator = call.getOperator();
       if (operator.equals(SqlStdOperatorTable.CURRENT_TIMESTAMP)
           || operator.equals(SqlStdOperatorTable.LOCALTIMESTAMP)) {
-        return cx.getRexBuilder().makeTimestampLiteral(
-            Calcites.jodaToCalciteTimestampString(plannerContext.getLocalNow(), plannerContext.getTimeZone()),
-            RelDataType.PRECISION_NOT_SPECIFIED
+        return Calcites.jodaToCalciteTimestampLiteral(
+            cx.getRexBuilder(),
+            plannerContext.getLocalNow(),
+            plannerContext.getTimeZone()
         );
       } else if (operator.equals(SqlStdOperatorTable.CURRENT_TIME) || operator.equals(SqlStdOperatorTable.LOCALTIME)) {
         return cx.getRexBuilder().makeTimeLiteral(

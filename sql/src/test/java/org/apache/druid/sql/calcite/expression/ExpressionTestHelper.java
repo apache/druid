@@ -137,7 +137,7 @@ class ExpressionTestHelper
 
   RexNode makeLiteral(DateTime timestamp)
   {
-    return rexBuilder.makeTimestampLiteral(Calcites.jodaToCalciteTimestampString(timestamp, DateTimeZone.UTC), 0);
+    return Calcites.jodaToCalciteTimestampLiteral(rexBuilder, timestamp, DateTimeZone.UTC);
   }
 
   RexNode makeLiteral(Integer integer)
