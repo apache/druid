@@ -74,8 +74,8 @@ parsing data is less efficient than writing a native Java parser or using an ext
 
 ## Input format
 
-> The `inputFormat` field is a new way to specify the data format of your input data which was introduced in 0.17.0.
-Unfortunately, `inputFormat` doesn't support all data formats or ingestion methods supported by Druid yet.
+You can use the `inputFormat` field to specify the data format for your input data.
+> `inputFormat` doesn't support all data formats or ingestion methods supported by Druid yet.
 Especially if you want to use the Hadoop ingestion, you still need to use the [Parser](#parser).
 If your data is formatted in some format not listed in this section, please consider using the Parser instead.
 
@@ -89,7 +89,7 @@ Configure the JSON `inputFormat` to load JSON data as follows:
 |-------|------|-------------|----------|
 | type | String | Set value to `json`. | yes |
 | flattenSpec | JSON Object | Specifies flattening configuration for nested JSON data. See [`flattenSpec`](#flattenspec) for more info. | no |
-| featureSpec | JSON Object | [JSON parser features](https://github.com/FasterXML/jackson-core/wiki/JsonParser-Features) supported by Jackson, a JSON processor for Java. The features control parsing of the input JSON data. Map the feature name to a Boolean value of whether the feature is enabled. For example: `"featureSpec": {"ALLOW_SINGLE_QUOTES": true, "ALLOW_UNQUOTED_FIELD_NAMES": true}` | no |
+| featureSpec | JSON Object | [JSON parser features](https://github.com/FasterXML/jackson-core/wiki/JsonParser-Features) supported by Jackson, a JSON processor for Java. The features control parsing of the input JSON data. To enable a feature, map the feature name to a Boolean value of "true". For example: `"featureSpec": {"ALLOW_SINGLE_QUOTES": true, "ALLOW_UNQUOTED_FIELD_NAMES": true}` | no |
 
 For example:
 ```json
@@ -584,7 +584,7 @@ For example:
 
 ### FlattenSpec
 
-The `flattenSpec` object bridges the gap between potentially nested input data (such as JSON, Avro, etc) and Druid's flat data model. It is an object within the `inputFormat` object.
+The `flattenSpec` object bridges the gap between potentially nested input data, such as JSON or Avro, and Druid's flat data model. It is an object within the `inputFormat` object.
 
 Configure your `flattenSpec` as follows:
 
