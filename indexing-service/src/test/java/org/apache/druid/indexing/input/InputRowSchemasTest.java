@@ -138,7 +138,7 @@ public class InputRowSchemasTest extends NullHandlingTest
     Assert.assertEquals(timestampSpec, inputRowSchema.getTimestampSpec());
     Assert.assertEquals(dimensionsSpec.getDimensions(), inputRowSchema.getDimensionsSpec().getDimensions());
     Assert.assertEquals(dimensionsSpec.getDimensionNames(), inputRowSchema.getDimensionsSpec().getDimensionNames());
-    Assert.assertEquals(ImmutableList.of("count", "met"), inputRowSchema.getMetricNames());
+    Assert.assertEquals(ImmutableSet.of("count", "met"), inputRowSchema.getMetricNames());
   }
 
   @Test
@@ -167,6 +167,6 @@ public class InputRowSchemasTest extends NullHandlingTest
     Assert.assertEquals(timestampSpec, inputRowSchema.getTimestampSpec());
     Assert.assertEquals(dimensionsSpec.getDimensions(), inputRowSchema.getDimensionsSpec().getDimensions());
     Assert.assertEquals(dimensionsSpec.getDimensionNames(), inputRowSchema.getDimensionsSpec().getDimensionNames());
-    Assert.assertEquals(ImmutableList.of(), inputRowSchema.getMetricNames());
+    Assert.assertEquals(ImmutableSet.of(), inputRowSchema.getMetricNames());
   }
 }
