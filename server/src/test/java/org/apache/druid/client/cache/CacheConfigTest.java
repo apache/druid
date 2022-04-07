@@ -130,22 +130,22 @@ public class CacheConfigTest
     throw new IllegalStateException("Should have already failed");
   }
 
-  @Test(expected = ProvisionException.class)
+  @Test
   public void testTRUE()
   {
     properties.put(PROPERTY_PREFIX + ".populateCache", "TRUE");
     configProvider.inject(properties, configurator);
     CacheConfig config = configProvider.get().get();
-    throw new IllegalStateException("Should have already failed");
+    Assert.assertTrue(config.isPopulateCache());
   }
 
-  @Test(expected = ProvisionException.class)
+  @Test
   public void testFALSE()
   {
     properties.put(PROPERTY_PREFIX + ".populateCache", "FALSE");
     configProvider.inject(properties, configurator);
     CacheConfig config = configProvider.get().get();
-    throw new IllegalStateException("Should have already failed");
+    Assert.assertFalse(config.isPopulateCache());
   }
 
 
