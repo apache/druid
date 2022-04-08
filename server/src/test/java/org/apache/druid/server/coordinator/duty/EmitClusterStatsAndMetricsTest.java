@@ -116,4 +116,90 @@ public class EmitClusterStatsAndMetricsTest
     Assert.assertFalse(foundHistoricalDutyMetric);
     Assert.assertTrue(foundCompactMetric);
   }
+
+  @Test
+  public void testRunEmitStatsForCompactionCalculatePercentage()
+  {
+    String groupName = "blah";
+    String dataSource = "foo";
+    CoordinatorStats stats = new CoordinatorStats();
+    stats.addToDataSourceStat(
+        CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING,
+        dataSource,
+        20
+    );
+    stats.addToDataSourceStat(
+        CompactSegments.TOTAL_COUNT_OF_SEGMENTS_AWAITING,
+        dataSource,
+        2
+    );
+    stats.addToDataSourceStat(
+        CompactSegments.TOTAL_INTERVAL_OF_SEGMENTS_AWAITING,
+        dataSource,
+        1
+    );
+    stats.addToDataSourceStat(
+        CompactSegments.TOTAL_SIZE_OF_SEGMENTS_COMPACTED,
+        dataSource,
+        30
+    );
+    stats.addToDataSourceStat(
+        CompactSegments.TOTAL_COUNT_OF_SEGMENTS_COMPACTED,
+        dataSource,
+        3
+    );
+    stats.addToDataSourceStat(
+        CompactSegments.TOTAL_INTERVAL_OF_SEGMENTS_COMPACTED,
+        dataSource,
+        1
+    );
+    stats.addToDataSourceStat(
+        CompactSegments.TOTAL_SIZE_OF_SEGMENTS_SKIPPED,
+        dataSource,
+        40
+    );
+    stats.addToDataSourceStat(
+        CompactSegments.TOTAL_COUNT_OF_SEGMENTS_SKIPPED,
+        dataSource,
+        4
+    );
+    stats.addToDataSourceStat(
+        CompactSegments.TOTAL_INTERVAL_OF_SEGMENTS_SKIPPED,
+        dataSource,
+        2
+    );
+
+    ArgumentCaptor<ServiceEventBuilder> argumentCaptor = ArgumentCaptor.forClass(ServiceEventBuilder.class);
+    Mockito.when(mockDruidCoordinatorRuntimeParams.getEmitter()).thenReturn(mockServiceEmitter);
+    Mockito.when(mockDruidCoordinatorRuntimeParams.getCoordinatorStats()).thenReturn(stats);
+    Mockito.when(mockDruidCoordinatorRuntimeParams.getDruidCluster()).thenReturn(mockDruidCluster);
+    CoordinatorDuty duty = new EmitClusterStatsAndMetrics(mockDruidCoordinator, groupName, true);
+    duty.run(mockDruidCoordinatorRuntimeParams);
+    Mockito.verify(mockServiceEmitter, Mockito.atLeastOnce()).emit(argumentCaptor.capture());
+    List<ServiceEventBuilder> emittedEvents = argumentCaptor.getAllValues();
+    boolean foundSegmentCountPercentage = false;
+    boolean foundSegmentSizePercentage = false;
+    boolean foundIntervalCountPercentage = false;
+
+    for (ServiceEventBuilder eventBuilder : emittedEvents) {
+      ServiceMetricEvent serviceMetricEvent = ((ServiceMetricEvent) eventBuilder.build("x", "x"));
+      String metric = serviceMetricEvent.getMetric();
+      if ("segment/compacted/count/percentage".equals(metric)) {
+        foundSegmentCountPercentage = true;
+        // Expected value is 3 / (3 + 2 + 4)
+        Assert.assertEquals((double) 3 / 9, serviceMetricEvent.getValue());
+      } else if ("segment/compacted/bytes/percentage".equals(metric)) {
+        foundSegmentSizePercentage = true;
+        // Expected value is 30 / (30 + 20 + 40)
+        Assert.assertEquals((double) 30 / 90, serviceMetricEvent.getValue());
+      } else if ("interval/compacted/count/percentage".equals(metric)) {
+        foundIntervalCountPercentage = true;
+        // Expected value is 1 / (1 + 1 + 2)
+        Assert.assertEquals(0.25, serviceMetricEvent.getValue());
+      }
+    }
+    Assert.assertTrue(foundSegmentCountPercentage);
+    Assert.assertTrue(foundSegmentSizePercentage);
+    Assert.assertTrue(foundIntervalCountPercentage);
+  }
 }
