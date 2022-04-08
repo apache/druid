@@ -237,7 +237,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.12.6.20220326
+version: 2.12.6
 libraries:
   - com.fasterxml.jackson.core: jackson-annotations
   - com.fasterxml.jackson.core: jackson-core
@@ -278,7 +278,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.12.6.20220326
+version: 2.12.6.1
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |

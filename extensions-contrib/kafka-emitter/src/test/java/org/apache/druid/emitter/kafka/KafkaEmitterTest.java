@@ -19,9 +19,9 @@
 
 package org.apache.druid.emitter.kafka;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
@@ -85,7 +85,7 @@ public class KafkaEmitterTest
     final KafkaProducer<String, String> producer = mock(KafkaProducer.class);
     final KafkaEmitter kafkaEmitter = new KafkaEmitter(
         new KafkaEmitterConfig("", "metrics", "alerts", requestTopic, "test-cluster", null),
-        new ObjectMapper()
+        new DefaultObjectMapper()
     )
     {
       @Override
