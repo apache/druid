@@ -36,8 +36,6 @@ import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
-import java.util.Set;
-
 /**
  * Emits stats of the cluster and metrics of the coordination (including segment balancing) process.
  */
@@ -515,42 +513,5 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
           );
         }
     );
-
-    // Compute compaction progress as percentage
-    Set<String> dataSources = stats.getDataSources(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING);
-    for (String dataSource : dataSources) {
-      double percentage = (double) stats.getDataSourceStat(CompactSegments.TOTAL_COUNT_OF_SEGMENTS_COMPACTED, dataSource) /
-                          (stats.getDataSourceStat(CompactSegments.TOTAL_COUNT_OF_SEGMENTS_COMPACTED, dataSource) +
-                           stats.getDataSourceStat(CompactSegments.TOTAL_COUNT_OF_SEGMENTS_AWAITING, dataSource) +
-                           stats.getDataSourceStat(CompactSegments.TOTAL_COUNT_OF_SEGMENTS_SKIPPED, dataSource));
-      emitter.emit(
-          new ServiceMetricEvent.Builder()
-              .setDimension(DruidMetrics.DUTY_GROUP, groupName)
-              .setDimension(DruidMetrics.DATASOURCE, dataSource)
-              .build("segment/compacted/count/percentage", percentage)
-      );
-
-      percentage = (double) stats.getDataSourceStat(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_COMPACTED, dataSource) /
-                   (stats.getDataSourceStat(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_COMPACTED, dataSource) +
-                    stats.getDataSourceStat(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_SKIPPED, dataSource) +
-                    stats.getDataSourceStat(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING, dataSource));
-      emitter.emit(
-          new ServiceMetricEvent.Builder()
-              .setDimension(DruidMetrics.DUTY_GROUP, groupName)
-              .setDimension(DruidMetrics.DATASOURCE, dataSource)
-              .build("segment/compacted/bytes/percentage", percentage)
-      );
-
-      percentage = (double) stats.getDataSourceStat(CompactSegments.TOTAL_INTERVAL_OF_SEGMENTS_COMPACTED, dataSource) /
-                   (stats.getDataSourceStat(CompactSegments.TOTAL_INTERVAL_OF_SEGMENTS_COMPACTED, dataSource) +
-                    stats.getDataSourceStat(CompactSegments.TOTAL_INTERVAL_OF_SEGMENTS_SKIPPED, dataSource) +
-                    stats.getDataSourceStat(CompactSegments.TOTAL_INTERVAL_OF_SEGMENTS_AWAITING, dataSource));
-      emitter.emit(
-          new ServiceMetricEvent.Builder()
-              .setDimension(DruidMetrics.DUTY_GROUP, groupName)
-              .setDimension(DruidMetrics.DATASOURCE, dataSource)
-              .build("interval/compacted/count/percentage", percentage)
-      );
-    }
   }
 }

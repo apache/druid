@@ -261,9 +261,6 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/compacted/bytes`|Total bytes of this datasource that are already compacted with the spec set in the auto compaction config.|datasource.|Varies.|
 |`segment/compacted/count`|Total number of segments of this datasource that are already compacted with the spec set in the auto compaction config.|datasource.|Varies.|
 |`interval/compacted/count`|Total number of intervals of this datasource that are already compacted with the spec set in the auto compaction config.|datasource.|Varies.|
-|`segment/compacted/bytes/percentage`|Percentage of bytes of this datasource that are already compacted with the spec set in the auto compaction config over the total bytes of this datasource.|datasource.|Varies.|
-|`segment/compacted/count/percentage`|Percentage of number of segments of this datasource that are already compacted with the spec set in the auto compaction config over the total number of segments of this datasource.|datasource.|Varies.|
-|`interval/compacted/count/percentage`|Percentage of number of intervals of this datasource that are already compacted with the spec set in the auto compaction config over the total number of intervals of this datasource.|datasource.|Varies.|
 |`segment/skipCompact/bytes`|Total bytes of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|datasource.|Varies.|
 |`segment/skipCompact/count`|Total number of segments of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|datasource.|Varies.|
 |`interval/skipCompact/count`|Total number of intervals of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|datasource.|Varies.|
