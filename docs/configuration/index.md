@@ -970,6 +970,7 @@ A description of the compaction config is:
 |`granularitySpec`|Custom `granularitySpec`. See [Automatic compaction granularitySpec](#automatic-compaction-granularityspec)|No|
 |`dimensionsSpec`|Custom `dimensionsSpec`. See [Automatic compaction dimensionsSpec](#automatic-compaction-dimensions-spec)|No|
 |`transformSpec`|Custom `transformSpec`. See [Automatic compaction transformSpec](#automatic-compaction-transform-spec)|No|
+|`metricsSpec`|Custom `metricsSpec`. The compaction task uses the specified `metricsSpec` rather than generating one. Note that if `metricsSpec` is specified then the compaction task will preserve existing metrics of the original data. This means that for any row that already has metric (with the same name defined in metricSpec), the metric aggregator in metricSpec is skipped and the existing metric is preserved. If the row does not already have the metric, then the metric aggregator is applied on the source column as usual. Metrics is then combined and rollup across segments as usual.|No|
 |`ioConfig`|IO config for compaction tasks. See below [Compaction Task IOConfig](#automatic-compaction-ioconfig).|no|
 
 An example of compaction config is:
