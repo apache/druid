@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.incremental;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
@@ -52,6 +54,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 /**
  *
@@ -109,6 +112,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Nullable
   private volatile Map<String, ColumnSelectorFactory> selectors;
   @Nullable
+  private volatile Map<String, ColumnSelectorFactory> combiningAggSelectors;
+  @Nullable
   private String outOfRowsReason = null;
 
   OnheapIncrementalIndex(
@@ -118,10 +123,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       boolean sortFacts,
       int maxRowCount,
       long maxBytesInMemory,
+      // preserveExistingMetrics should only be set true for DruidInputSource since that is the only case where we can have existing metrics
+      // This is currently only use by auto compaction and should not be use for anything else.
+      boolean preserveExistingMetrics,
       boolean useMaxMemoryEstimates
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd, useMaxMemoryEstimates);
+    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd, preserveExistingMetrics, useMaxMemoryEstimates);
     this.maxRowCount = maxRowCount;
     this.maxBytesInMemory = maxBytesInMemory == 0 ? Long.MAX_VALUE : maxBytesInMemory;
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
@@ -182,6 +190,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   )
   {
     selectors = new HashMap<>();
+    combiningAggSelectors = new HashMap<>();
     for (AggregatorFactory agg : metrics) {
       selectors.put(
           agg.getName(),
@@ -190,6 +199,16 @@ public class OnheapIncrementalIndex extends IncrementalIndex
               concurrentEventAdd
           )
       );
+      if (preserveExistingMetrics) {
+        AggregatorFactory combiningAgg = agg.getCombiningFactory();
+        combiningAggSelectors.put(
+            combiningAgg.getName(),
+            new CachingColumnSelectorFactory(
+                makeColumnSelectorFactory(combiningAgg, rowSupplier, deserializeComplexMetrics),
+                concurrentEventAdd
+            )
+        );
+      }
     }
   }
 
@@ -214,7 +233,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       long aggSizeDelta = doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
       totalSizeInBytes.addAndGet(useMaxMemoryEstimates ? 0 : aggSizeDelta);
     } else {
-      aggs = new Aggregator[metrics.length];
+      if (preserveExistingMetrics) {
+        aggs = new Aggregator[metrics.length * 2];
+      } else {
+        aggs = new Aggregator[metrics.length];
+      }
       long aggSizeForRow = factorizeAggs(metrics, aggs, rowContainer, row);
       aggSizeForRow += doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
 
@@ -279,23 +302,33 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   {
     long totalInitialSizeBytes = 0L;
     rowContainer.set(row);
-
     final long aggReferenceSize = Long.BYTES;
     for (int i = 0; i < metrics.length; i++) {
       final AggregatorFactory agg = metrics[i];
-
+      // Creates aggregators to aggregate from input into output fields
       if (useMaxMemoryEstimates) {
         aggs[i] = agg.factorize(selectors.get(agg.getName()));
       } else {
-        AggregatorAndSize aggregatorAndSize =
-            agg.factorizeWithSize(selectors.get(agg.getName()));
+        AggregatorAndSize aggregatorAndSize = agg.factorizeWithSize(selectors.get(agg.getName()));
         aggs[i] = aggregatorAndSize.getAggregator();
         totalInitialSizeBytes += aggregatorAndSize.getInitialSizeBytes();
         totalInitialSizeBytes += aggReferenceSize;
       }
+      // Creates aggregators to combine already aggregated field
+      if (preserveExistingMetrics) {
+        if (useMaxMemoryEstimates) {
+          AggregatorFactory combiningAgg = agg.getCombiningFactory();
+          aggs[i + metrics.length] = combiningAgg.factorize(combiningAggSelectors.get(combiningAgg.getName()));
+        } else {
+          AggregatorFactory combiningAgg = agg.getCombiningFactory();
+          AggregatorAndSize aggregatorAndSize = combiningAgg.factorizeWithSize(combiningAggSelectors.get(combiningAgg.getName()));
+          aggs[i + metrics.length] = aggregatorAndSize.getAggregator();
+          totalInitialSizeBytes += aggregatorAndSize.getInitialSizeBytes();
+          totalInitialSizeBytes += aggReferenceSize;
+        }
+      }
     }
     rowContainer.set(null);
-
     return totalInitialSizeBytes;
   }
 
@@ -315,10 +348,14 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   )
   {
     rowContainer.set(row);
-
     long totalIncrementalBytes = 0L;
-    for (int i = 0; i < aggs.length; i++) {
-      final Aggregator agg = aggs[i];
+    for (int i = 0; i < metrics.length; i++) {
+      final Aggregator agg;
+      if (preserveExistingMetrics && row instanceof MapBasedRow && ((MapBasedRow) row).getEvent().containsKey(metrics[i].getName())) {
+        agg = aggs[i + metrics.length];
+      } else {
+        agg = aggs[i];
+      }
       synchronized (agg) {
         try {
           if (useMaxMemoryEstimates) {
@@ -329,8 +366,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         }
         catch (ParseException e) {
           // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
-          log.debug(e, "Encountered parse error, skipping aggregator[%s].", metrics[i].getName());
-          parseExceptionsHolder.add(e.getMessage());
+          if (preserveExistingMetrics) {
+            log.warn(e, "Failing ingestion as preserveExistingMetrics is enabled but selector of aggregator[%s] recieved incompatible type.", metrics[i].getName());
+            throw e;
+          } else {
+            log.debug(e, "Encountered parse error, skipping aggregator[%s].", metrics[i].getName());
+            parseExceptionsHolder.add(e.getMessage());
+          }
         }
       }
     }
@@ -410,31 +452,35 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Override
   public float getMetricFloatValue(int rowOffset, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].getFloat();
+    return getMetricHelper(getMetricAggs(), concurrentGet(rowOffset), aggOffset, Aggregator::getFloat);
   }
 
   @Override
   public long getMetricLongValue(int rowOffset, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].getLong();
+    return getMetricHelper(getMetricAggs(), concurrentGet(rowOffset), aggOffset, Aggregator::getLong);
   }
 
   @Override
   public Object getMetricObjectValue(int rowOffset, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].get();
+    return getMetricHelper(getMetricAggs(), concurrentGet(rowOffset), aggOffset, Aggregator::get);
   }
 
   @Override
   protected double getMetricDoubleValue(int rowOffset, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].getDouble();
+    return getMetricHelper(getMetricAggs(), concurrentGet(rowOffset), aggOffset, Aggregator::getDouble);
   }
 
   @Override
   public boolean isNull(int rowOffset, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].isNull();
+    if (preserveExistingMetrics) {
+      return concurrentGet(rowOffset)[aggOffset].isNull() && concurrentGet(rowOffset)[aggOffset + getMetricAggs().length].isNull();
+    } else {
+      return concurrentGet(rowOffset)[aggOffset].isNull();
+    }
   }
 
   @Override
@@ -475,8 +521,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex
               }
 
               Aggregator[] aggs = getAggsForRow(rowOffset);
-              for (int i = 0; i < aggs.length; ++i) {
-                theVals.put(metrics[i].getName(), aggs[i].get());
+              int aggLength = preserveExistingMetrics ? aggs.length / 2 : aggs.length;
+              for (int i = 0; i < aggLength; ++i) {
+                theVals.put(metrics[i].getName(), getMetricHelper(metrics, aggs, i, Aggregator::get));
               }
 
               if (postAggs != null) {
@@ -493,6 +540,40 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   }
 
   /**
+   * Apply the getMetricTypeFunction function to the retrieve aggregated value given the list of aggregators and offset.
+   * If preserveExistingMetrics flag is set, then this method will combine values from two aggregators, the aggregator
+   * for aggregating from input into output field and the aggregator for combining already aggregated field, as needed
+   */
+  private <T> T getMetricHelper(AggregatorFactory[] metrics, Aggregator[] aggs, int aggOffset, Function<Aggregator, T> getMetricTypeFunction)
+  {
+    if (preserveExistingMetrics) {
+      // Since the preserveExistingMetrics flag is set, we will have to check and possibly retrieve the aggregated values
+      // from two aggregators, the aggregator for aggregating from input into output field and the aggregator
+      // for combining already aggregated field
+      if (aggs[aggOffset].isNull()) {
+        // If the aggregator for aggregating from input into output field is null, then we get the value from the
+        // aggregator that we use for combining already aggregated field
+        return getMetricTypeFunction.apply(aggs[aggOffset + metrics.length]);
+      } else if (aggs[aggOffset + metrics.length].isNull()) {
+        // If the aggregator for combining already aggregated field is null, then we get the value from the
+        // aggregator for aggregating from input into output field
+        return getMetricTypeFunction.apply(aggs[aggOffset]);
+      } else {
+        // Since both aggregators is not null and contain values, we will have to retrieve the values from both
+        // aggregators and combine them
+        AggregatorFactory aggregatorFactory = metrics[aggOffset];
+        T aggregatedFromSource = getMetricTypeFunction.apply(aggs[aggOffset]);
+        T aggregatedFromCombined = getMetricTypeFunction.apply(aggs[aggOffset + metrics.length]);
+        return (T) aggregatorFactory.combine(aggregatedFromSource, aggregatedFromCombined);
+      }
+    } else {
+      // If preserveExistingMetrics flag is not set then we simply get metrics from the list of Aggregator, aggs, using the
+      // given aggOffset
+      return getMetricTypeFunction.apply(aggs[aggOffset]);
+    }
+  }
+
+  /**
    * Clear out maps to allow GC
    * NOTE: This is NOT thread-safe with add... so make sure all the adding is DONE before closing
    */
@@ -505,6 +586,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     facts.clear();
     if (selectors != null) {
       selectors.clear();
+    }
+    if (combiningAggSelectors != null) {
+      combiningAggSelectors.clear();
     }
   }
 
@@ -571,6 +655,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
           sortFacts,
           maxRowCount,
           maxBytesInMemory,
+          preserveExistingMetrics,
           useMaxMemoryEstimates
       );
     }
@@ -578,12 +663,39 @@ public class OnheapIncrementalIndex extends IncrementalIndex
 
   public static class Spec implements AppendableIndexSpec
   {
+    private static final boolean DEFAULT_PRESERVE_EXISTING_METRICS = false;
     public static final String TYPE = "onheap";
+
+    // When set to true, for any row that already has metric (with the same name defined in metricSpec),
+    // the metric aggregator in metricSpec is skipped and the existing metric is unchanged. If the row does not already have
+    // the metric, then the metric aggregator is applied on the source column as usual. This should only be set for
+    // DruidInputSource since that is the only case where we can have existing metrics.
+    // This is currently only use by auto compaction and should not be use for anything else.
+    final boolean preserveExistingMetrics;
+
+    public Spec()
+    {
+      this.preserveExistingMetrics = DEFAULT_PRESERVE_EXISTING_METRICS;
+    }
+
+    @JsonCreator
+    public Spec(
+        final @JsonProperty("preserveExistingMetrics") @Nullable Boolean preserveExistingMetrics
+    )
+    {
+      this.preserveExistingMetrics = preserveExistingMetrics != null ? preserveExistingMetrics : DEFAULT_PRESERVE_EXISTING_METRICS;
+    }
+
+    @JsonProperty
+    public boolean isPreserveExistingMetrics()
+    {
+      return preserveExistingMetrics;
+    }
 
     @Override
     public AppendableIndexBuilder builder()
     {
-      return new Builder();
+      return new Builder().setPreserveExistingMetrics(preserveExistingMetrics);
     }
 
     @Override
@@ -596,15 +708,22 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     }
 
     @Override
-    public boolean equals(Object that)
+    public boolean equals(Object o)
     {
-      return that.getClass().equals(this.getClass());
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      Spec spec = (Spec) o;
+      return preserveExistingMetrics == spec.preserveExistingMetrics;
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(this.getClass());
+      return Objects.hash(preserveExistingMetrics);
     }
   }
 }

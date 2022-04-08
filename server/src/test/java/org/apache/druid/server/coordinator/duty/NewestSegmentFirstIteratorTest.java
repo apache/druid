@@ -120,6 +120,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null,
             null,
+            null,
             new DynamicPartitionsSpec(null, null),
             null,
             null,
@@ -159,6 +160,7 @@ public class NewestSegmentFirstIteratorTest
         null,
         null,
         new UserCompactionTaskQueryTuningConfig(
+            null,
             null,
             null,
             null,
@@ -206,6 +208,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null,
             null,
+            null,
             new DynamicPartitionsSpec(100, 1000L),
             null,
             null,
@@ -245,6 +248,7 @@ public class NewestSegmentFirstIteratorTest
         100,
         null,
         new UserCompactionTaskQueryTuningConfig(
+            null,
             null,
             null,
             1000L,
@@ -292,6 +296,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null,
             null,
+            null,
             new DynamicPartitionsSpec(null, null),
             null,
             null,
@@ -331,6 +336,7 @@ public class NewestSegmentFirstIteratorTest
         null,
         null,
         new UserCompactionTaskQueryTuningConfig(
+            null,
             null,
             null,
             1000L,
@@ -378,6 +384,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null,
             null,
+            null,
             new HashedPartitionsSpec(null, 10, ImmutableList.of("dim")),
             null,
             null,
@@ -417,6 +424,7 @@ public class NewestSegmentFirstIteratorTest
         null,
         null,
         new UserCompactionTaskQueryTuningConfig(
+            null,
             null,
             null,
             null,
