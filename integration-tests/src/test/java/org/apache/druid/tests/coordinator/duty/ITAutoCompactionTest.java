@@ -152,7 +152,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
       queryAndResultFields = ImmutableMap.of(
           "%%QUANTILESRESULT%%", 2,
-          "%%THETARESULT%%", 2,
+          "%%THETARESULT%%", 2.0,
           "%%HLLRESULT%%", 2
       );
       verifyQuery(INDEX_ROLLUP_SKETCH_QUERIES_RESOURCE, queryAndResultFields);
@@ -196,7 +196,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
       queryAndResultFields = ImmutableMap.of(
           "%%QUANTILESRESULT%%", 3,
-          "%%THETARESULT%%", 3,
+          "%%THETARESULT%%", 3.0,
           "%%HLLRESULT%%", 3
       );
       verifyQuery(INDEX_ROLLUP_SKETCH_QUERIES_RESOURCE, queryAndResultFields);
