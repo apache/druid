@@ -554,7 +554,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                 ImmutableList.of()
             )
     );
-    Assert.assertEquals("INSERT statements must specify PARTITIONED BY clause explictly", e.getMessage());
+    Assert.assertEquals("INSERT statements must specify PARTITIONED BY clause explicitly", e.getMessage());
     didTest = true;
   }
 
@@ -730,7 +730,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInsertAndSelectReturnsConsistentErrorMessage()
+  public void testInsertWithInvalidSelectStatement()
   {
     testInsertQuery()
         .sql("INSERT INTO t SELECT channel, added as count FROM foo PARTITIONED BY ALL")
