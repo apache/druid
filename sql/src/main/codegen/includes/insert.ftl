@@ -34,7 +34,7 @@ SqlNode DruidSqlInsertEof() :
     <CLUSTERED> <BY>
     clusteredBy = ClusterItems()
   ]
-  // EOF is also present in SqlStmtEof but is a special case and multiple occurances together are valid with one token
+  // EOF is also present in SqlStmtEof but EOF is a special case and a single EOF can be consumed multiple times. The reason for adding EOF here is to ensure that we create a DruidSqlInsert node after the syntax has been validated and throw SQL syntax errors before performing validations in the DruidSqlInsert which can overshadow the actual error message```
   <EOF>
   {
     if (!(insertNode instanceof SqlInsert)) {
