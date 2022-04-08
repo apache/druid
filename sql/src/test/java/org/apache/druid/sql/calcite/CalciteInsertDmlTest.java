@@ -733,7 +733,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
   public void testInsertWithInvalidSelectStatement()
   {
     testInsertQuery()
-        .sql("INSERT INTO t SELECT channel, added as count FROM foo PARTITIONED BY ALL")
+        .sql("INSERT INTO t SELECT channel, added as count FROM foo PARTITIONED BY ALL") // count is a keyword
         .expectValidationError(
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(SqlPlanningException.class),
