@@ -53,6 +53,17 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
       @Nullable StatusType status
   ) throws EntryExistsException;
 
+  void insertTask(
+      @NotNull String id,
+      @NotNull DateTime timestamp,
+      @NotNull String dataSource,
+      @NotNull EntryType entry,
+      @NotNull String type,
+      @NotNull String groupId,
+      boolean active,
+      @Nullable StatusType status
+  ) throws EntryExistsException;
+
 
   /**
    * Sets or updates the status for any active entry with the given id.
@@ -114,6 +125,22 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param datasource  datasource filter
    */
   List<TaskInfo<EntryType, StatusType>> getTaskInfos(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String datasource
+  );
+
+  /**
+   * Returns a list of {@link TaskInfo} from metadata store that matches to the given filters.
+   *
+   * If {@code taskLookups} includes {@link TaskLookupType#ACTIVE}, it returns all active tasks in the metadata store.
+   * If {@code taskLookups} includes {@link TaskLookupType#COMPLETE}, it returns all complete tasks in the metadata
+   * store. For complete tasks, additional filters in {@code CompleteTaskLookup} can be applied.
+   * All lookups should be processed atomically if there are more than one lookup is given.
+   *
+   * @param taskLookups task lookup type and filters.
+   * @param datasource  datasource filter
+   */
+  List<TaskInfo<Map<String, String>, StatusType>> getTaskSummaryList(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource
   );

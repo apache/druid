@@ -115,7 +115,7 @@ public class MetadataTaskStorage implements TaskStorage
   @LifecycleStart
   public void start()
   {
-    metadataStorageConnector.createTaskTables();
+    metadataStorageConnector.createNewTaskTables();
   }
 
   @LifecycleStop
@@ -138,12 +138,20 @@ public class MetadataTaskStorage implements TaskStorage
 
     log.info("Inserting task %s with status: %s", task.getId(), status);
 
+    String dummy = "dummy";
+    while (dummy.length() < (int) 1e5) {
+      dummy += dummy;
+    }
+    task.getContext().put("dummy", dummy);
+
     try {
-      handler.insert(
+      handler.insertTask(
           task.getId(),
           DateTimes.nowUtc(),
           task.getDataSource(),
           task,
+          task.getType(),
+          task.getGroupId(),
           status.isRunnable(),
           status
       );
@@ -266,6 +274,29 @@ public class MetadataTaskStorage implements TaskStorage
       }
     }
     return Collections.unmodifiableList(handler.getTaskInfos(theTaskLookups, datasource));
+  }
+
+  @Override
+  public List<TaskInfo<Map<String, String>, TaskStatus>> getTaskSummaryList(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String datasource
+  )
+  {
+    Map<TaskLookupType, TaskLookup> theTaskLookups = Maps.newHashMapWithExpectedSize(taskLookups.size());
+    for (Entry<TaskLookupType, TaskLookup> entry : taskLookups.entrySet()) {
+      if (entry.getKey() == TaskLookupType.COMPLETE) {
+        CompleteTaskLookup completeTaskLookup = (CompleteTaskLookup) entry.getValue();
+        theTaskLookups.put(
+            entry.getKey(),
+            completeTaskLookup.hasTaskCreatedTimeFilter()
+            ? completeTaskLookup
+            : completeTaskLookup.withDurationBeforeNow(config.getRecentlyFinishedThreshold())
+        );
+      } else {
+        theTaskLookups.put(entry.getKey(), entry.getValue());
+      }
+    }
+    return Collections.unmodifiableList(handler.getTaskSummaryList(theTaskLookups, datasource));
   }
 
   @Override

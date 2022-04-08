@@ -83,6 +83,8 @@ public interface MetadataStorageConnector
 
   void createTaskTables();
 
+  void createNewTaskTables();
+
   void createAuditTable();
 
   void createSupervisorsTable();

@@ -169,6 +169,21 @@ public interface TaskStorage
   );
 
   /**
+   * Returns a list of tasks summaries stored in the storage facility as {@link TaskInfo}. No
+   * particular order is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
+   *
+   * The returned list can contain active tasks and complete tasks depending on the {@code taskLookups} parameter.
+   * See {@link TaskLookup} for more details of active and complete tasks.
+   *
+   * @param taskLookups lookup types and filters
+   * @param datasource  datasource filter
+   */
+  List<TaskInfo<Map<String, String>, TaskStatus>> getTaskSummaryList(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String datasource
+  );
+
+  /**
    * Returns a list of tasks stored in the storage facility as {@link TaskInfo}. No
    * particular order is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
    *

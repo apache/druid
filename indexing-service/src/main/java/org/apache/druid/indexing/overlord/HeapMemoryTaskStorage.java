@@ -235,6 +235,15 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
+  public List<TaskInfo<Map<String, String>, TaskStatus>> getTaskSummaryList(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String datasource
+  )
+  {
+    return Collections.emptyList();
+  }
+
+  @Override
   public List<TaskStatusPlus> getTaskStatusPlusList(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource,

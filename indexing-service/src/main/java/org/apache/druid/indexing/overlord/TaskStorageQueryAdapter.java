@@ -95,6 +95,14 @@ public class TaskStorageQueryAdapter
     return storage.getTaskInfos(CompleteTaskLookup.of(maxTaskStatuses, duration), dataSource);
   }
 
+  public List<TaskInfo<Map<String, String>, TaskStatus>> getTaskSummaryList(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String dataSource
+  )
+  {
+    return storage.getTaskSummaryList(taskLookups, dataSource);
+  }
+
   public List<TaskInfo<Task, TaskStatus>> getTaskInfos(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String dataSource
