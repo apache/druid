@@ -729,6 +729,20 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
         .verify();
   }
 
+  @Test
+  public void testInsertAndSelectReturnsConsistentErrorMessage()
+  {
+    testInsertQuery()
+        .sql("INSERT INTO t SELECT channel, added as count FROM foo PARTITIONED BY ALL")
+        .expectValidationError(
+            CoreMatchers.allOf(
+                CoreMatchers.instanceOf(SqlPlanningException.class),
+                ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Encountered \"as count\""))
+            )
+        )
+        .verify();
+  }
+
   private String externSql(final ExternalDataSource externalDataSource)
   {
     try {
