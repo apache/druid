@@ -89,7 +89,7 @@ Once some segments are found, it issues a [compaction task](../ingestion/tasks.m
 The maximum number of running compaction tasks is `min(sum of worker capacity * slotRatio, maxSlots)`.
 Note that even though `min(sum of worker capacity * slotRatio, maxSlots)` = 0, at least one compaction task is always submitted
 if the compaction is enabled for a dataSource.
-See [Compaction Configuration API](../operations/api-reference.md#compaction-configuration) and [Compaction Configuration](../configuration/index.md#compaction-dynamic-configuration) to enable the compaction.
+See [Automatic compaction configuration API](../operations/api-reference.md#automatic-compaction-configuration) and [Automatic compaction configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) to enable the compaction.
 
 Compaction tasks might fail due to the following reasons.
 
@@ -134,13 +134,13 @@ If the coordinator has enough task slots for compaction, this policy will contin
 `bar_2017-10-01T00:00:00.000Z_2017-11-01T00:00:00.000Z_VERSION` and `bar_2017-10-01T00:00:00.000Z_2017-11-01T00:00:00.000Z_VERSION_1`.
 Finally, `foo_2017-09-01T00:00:00.000Z_2017-10-01T00:00:00.000Z_VERSION` will be picked up even though there is only one segment in the time chunk of `2017-09-01T00:00:00.000Z/2017-10-01T00:00:00.000Z`.
 
-The search start point can be changed by setting [skipOffsetFromLatest](../configuration/index.md#compaction-dynamic-configuration).
+The search start point can be changed by setting [skipOffsetFromLatest](../configuration/index.md#automatic-compaction-dynamic-configuration).
 If this is set, this policy will ignore the segments falling into the time chunk of (the end time of the most recent segment - `skipOffsetFromLatest`).
 This is to avoid conflicts between compaction tasks and realtime tasks.
 Note that realtime tasks have a higher priority than compaction tasks by default. Realtime tasks will revoke the locks of compaction tasks if their intervals overlap, resulting in the termination of the compaction task.
 
 > This policy currently cannot handle the situation when there are a lot of small segments which have the same interval,
-> and their total size exceeds [inputSegmentSizeBytes](../configuration/index.md#compaction-dynamic-configuration).
+> and their total size exceeds [inputSegmentSizeBytes](../configuration/index.md#automatic-compaction-dynamic-configuration).
 > If it finds such segments, it simply skips them.
 
 ### The Coordinator console

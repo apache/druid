@@ -949,10 +949,10 @@ These configuration options control the behavior of the Lookup dynamic configura
 |`druid.manager.lookups.threadPoolSize`|How many processes can be managed concurrently (concurrent POST and DELETE requests). Requests this limit will wait in a queue until a slot becomes available.|10|
 |`druid.manager.lookups.period`|How many milliseconds between checks for configuration changes|30_000|
 
-##### Compaction Dynamic Configuration
+##### Automatic Compaction Dynamic Configuration
 
 Compaction configurations can also be set or updated dynamically using
-[Coordinator's API](../operations/api-reference.md#compaction-configuration) without restarting Coordinators.
+[Coordinator's API](../operations/api-reference.md#automatic-compaction-configuration) without restarting Coordinators.
 
 For details about segment compaction, please check [Segment Size Optimization](../operations/segment-optimization.md).
 

@@ -493,7 +493,7 @@ The `latestStatus` object has the following keys:
 Similar to the API `/druid/coordinator/v1/compaction/status` above but filters response to only return information for the {dataSource} given. 
 Note that {dataSource} given must have/had auto compaction enabled.
 
-#### Compaction Configuration
+#### Automatic Compaction Configuration
 
 ##### GET
 
@@ -518,7 +518,7 @@ will be set for them.
 * `/druid/coordinator/v1/config/compaction`
 
 Creates or updates the compaction config for a dataSource.
-See [Compaction Configuration](../configuration/index.md#compaction-dynamic-configuration) for configuration details.
+See [Automatic compaction configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for configuration details.
 
 
 ##### DELETE

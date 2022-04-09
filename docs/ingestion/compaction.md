@@ -62,7 +62,7 @@ During compaction, Druid overwrites the original set of segments with the compac
 You can set `dropExisting` in `ioConfig` to "true" in the compaction task to configure Druid to replace all existing segments fully contained by the interval. See the suggestion for reindexing with finer granularity under [Implementation considerations](native-batch.md#implementation-considerations) for an example.
 > WARNING: `dropExisting` in `ioConfig` is a beta feature.
 
-If an ingestion task needs to write data to a segment for a time interval locked for compaction, by default the ingestion task supersedes the compaction task and the compaction task fails without finishing. For manual compaction tasks you can adjust the input spec interval to avoid conflicts between ingestion and compaction. For automatic compaction, you can set the `skipOffsetFromLatest` key to adjust the auto compaction starting point from the current time to reduce the chance of conflicts between ingestion and compaction. See [Compaction dynamic configuration](../configuration/index.md#compaction-dynamic-configuration) for more information. Another option is to set the compaction task to higher priority than the ingestion task.
+If an ingestion task needs to write data to a segment for a time interval locked for compaction, by default the ingestion task supersedes the compaction task and the compaction task fails without finishing. For manual compaction tasks you can adjust the input spec interval to avoid conflicts between ingestion and compaction. For automatic compaction, you can set the `skipOffsetFromLatest` key to adjust the auto compaction starting point from the current time to reduce the chance of conflicts between ingestion and compaction. See [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for more information. Another option is to set the compaction task to higher priority than the ingestion task.
 
 ### Segment granularity handling
 
@@ -127,7 +127,7 @@ To perform a manual compaction, you submit a compaction task. Compaction tasks m
 
 > Note: Use `granularitySpec` over `segmentGranularity` and only set one of these values. If you specify different values for these in the same compaction spec, the task fails.
 
-To control the number of result segments per time chunk, you can set [`maxRowsPerSegment`](../configuration/index.md#compaction-dynamic-configuration) or [`numShards`](../ingestion/native-batch.md#tuningconfig).
+To control the number of result segments per time chunk, you can set [`maxRowsPerSegment`](../configuration/index.md#automatic-compaction-dynamic-configuration) or [`numShards`](../ingestion/native-batch.md#tuningconfig).
 
 > You can run multiple compaction tasks in parallel. For example, if you want to compact the data for a year, you are not limited to running a single task for the entire year. You can run 12 compaction tasks with month-long intervals.
 
@@ -240,5 +240,5 @@ For example, to set the segment granularity to "day", the query granularity to "
 See the following topics for more information:
 - [Segment optimization](../operations/segment-optimization.md) for guidance to determine if compaction will help in your case.
 - [Compacting Segments](../design/coordinator.md#compacting-segments) for more on automatic compaction.
-- [Compaction Configuration API](../operations/api-reference.md#compaction-configuration)
-and [Compaction Configuration](../configuration/index.md#compaction-dynamic-configuration) for automatic compaction configuration information.
+- [Automatic compaction configuration API](../operations/api-reference.md#automatic-compaction-configuration)
+and [Automatic compaction configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for automatic compaction configuration information.
