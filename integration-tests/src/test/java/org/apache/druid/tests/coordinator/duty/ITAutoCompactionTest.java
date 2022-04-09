@@ -399,6 +399,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           );
       checkCompactionIntervals(expectedIntervalAfterCompaction);
 
+      // verify that autocompaction completed  nefore
+      List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      forceTriggerAutoCompaction(2);
+      List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
+
     }
   }
 
@@ -487,27 +493,25 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
                                                                                            null, null
       ), false);
 
-      // Since dropExisting is set to false no new tombstones will be generated
-      // The first six months of tombstones will be left untouched and a new semester segment will be
-      // generated for the second semester
-      // Hence, we will have seven segments, six tombstones for the first semester and one data segment for the second.
-      forceTriggerAutoCompaction(7); // two semesters compacted
+      // Since dropExisting is set to false the first semester will be forced to dropExisting true
+      // Hence, we will have two, one tombstone for the first semester and one data segment for the second.
+      forceTriggerAutoCompaction(2); // two semesters compacted
       verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifyTombstones(6);
-      verifySegmentsCompacted(7, 1000);
+      verifyTombstones(1);
+      verifySegmentsCompacted(2, 1000);
 
       expectedIntervalAfterCompaction =
           Arrays.asList(
-              "2013-01-01T00:00:00.000Z/2013-02-01T00:00:00.000Z",
-              "2013-02-01T00:00:00.000Z/2013-03-01T00:00:00.000Z",
-              "2013-03-01T00:00:00.000Z/2013-04-01T00:00:00.000Z",
-              "2013-04-01T00:00:00.000Z/2013-05-01T00:00:00.000Z",
-              "2013-05-01T00:00:00.000Z/2013-06-01T00:00:00.000Z",
-              "2013-06-01T00:00:00.000Z/2013-07-01T00:00:00.000Z",
+              "2013-01-01T00:00:00.000Z/2013-07-01T00:00:00.000Z",
               "2013-07-01T00:00:00.000Z/2014-01-01T00:00:00.000Z"
           );
       checkCompactionIntervals(expectedIntervalAfterCompaction);
 
+      // verify that autocompaction completed  nefore
+      List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      forceTriggerAutoCompaction(2);
+      List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
     }
   }
 

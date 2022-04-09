@@ -426,6 +426,14 @@ public class CompactSegments implements CoordinatorCustomDuty
         if (config.getIoConfig() != null) {
           dropExisting = config.getIoConfig().isDropExisting();
         }
+        // force dropExisting to true if all segments to compact are tombstones otherwise
+        // auto-compaction will cycle indefinitely since segments won't be compacted and their
+        // compaction state won't be set
+        if (dropExisting == null || !dropExisting) {
+          dropExisting =
+              segmentsToCompact.stream().allMatch(dataSegment -> dataSegment.isTombstone());
+          LOG.info("Forcing dropExisting to %s since all segments to compact are tombstones", dropExisting);
+        }
 
         // make tuningConfig
         final String taskId = indexingServiceClient.compactSegments(
