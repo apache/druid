@@ -360,13 +360,13 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
           0,
           14906,
-          0,
+          14905,
           0,
           2,
-          0,
+          2,
           0,
           1,
-          0);
+          1);
       submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET);
       //...compacted into 1 new segment for the remaining one day. 2 day compacted and 0 day uncompacted. (2 total)
       forceTriggerAutoCompaction(2);
