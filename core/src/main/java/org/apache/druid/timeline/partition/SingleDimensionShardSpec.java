@@ -27,7 +27,6 @@ import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.StringTuple;
-import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -112,24 +111,6 @@ public class SingleDimensionShardSpec extends DimensionRangeShardSpec
   public String getEnd()
   {
     return end;
-  }
-
-  @Override
-  public ShardSpecLookup getLookup(final List<? extends ShardSpec> shardSpecs)
-  {
-    return createLookup(shardSpecs);
-  }
-
-  static ShardSpecLookup createLookup(List<? extends ShardSpec> shardSpecs)
-  {
-    return (long timestamp, InputRow row) -> {
-      for (ShardSpec spec : shardSpecs) {
-        if (((SingleDimensionShardSpec) spec).isInChunk(row)) {
-          return spec;
-        }
-      }
-      throw new ISE("row[%s] doesn't fit in any shard[%s]", row, shardSpecs);
-    };
   }
 
   private Range<String> getRange()
