@@ -69,7 +69,7 @@ public class DruidSqlInsert extends SqlInsert
         insertNode.getTargetColumnList()
     );
     if (partitionedBy == null) {
-      throw new ParseException("INSERT statements must specify PARTITIONED BY clause explictly");
+      throw new ParseException("INSERT statements must specify PARTITIONED BY clause explicitly");
     }
     this.partitionedBy = partitionedBy;
 
