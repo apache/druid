@@ -433,7 +433,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         // compaction state won't be set
         if (dropExisting == null || !dropExisting) {
           if (segmentsToCompact.stream().allMatch(dataSegment -> dataSegment.isTombstone())) {
-            dropExisting = false;
+            dropExisting = true;
             LOG.info("Forcing dropExisting to %s since all segments to compact are tombstones", dropExisting);
           }
         }
