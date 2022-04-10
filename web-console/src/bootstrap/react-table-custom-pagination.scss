@@ -16,30 +16,29 @@
  * limitations under the License.
  */
 
-@import '../blueprint-overrides/common/colors';
-@import '../blueprint-overrides/common/variables';
+@import '../variables';
 
 .ReactTable {
   .-pageJump {
-    .bp3-input {
+    .#{$bp-ns}-input {
       position: relative;
       top: -2px;
       border: none;
 
-      .bp3-dark & {
+      .#{$bp-ns}-dark & {
         background-color: $dark-gray4;
       }
     }
   }
 
   .-pageSizeOptions {
-    .bp3-html-select select {
+    .#{$bp-ns}-html-select select {
       width: 90px;
       position: relative;
       top: -2px;
       border: none;
 
-      .bp3-dark & {
+      .#{$bp-ns}-dark & {
         background-color: $dark-gray4;
       }
     }

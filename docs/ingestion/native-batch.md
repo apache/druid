@@ -183,13 +183,16 @@ The following example illustrates the configuration for a parallel indexing task
   }
 }
 ```
+
+## Parallel indexing configuration
+
 The following table defines the primary sections of the input spec:
 |property|description|required?|
 |--------|-----------|---------|
-|type|The task type. For parallel task, set the value to `index_parallel`.|yes|
-|id|The task ID. If omitted, Druid generates the task ID using task type, data source name, interval, and date-time stamp. |no|
-|spec|The ingestion spec that defines: the data schema, IO config, and tuning config. See [`ioConfig`](#ioconfig) for more details. |yes|
-|context|Context to specify various task configuration parameters.|no|
+|type|The task type. For parallel task indexing, set the value to `index_parallel`.|yes|
+|id|The task ID. If omitted, Druid generates the task ID using the task type, data source name, interval, and date-time stamp. |no|
+|spec|The ingestion spec that defines the [data schema](#dataschema), [IO config](#ioconfig), and [tuning config](#tuningconfig).|yes|
+|context|Context to specify various task configuration parameters. See [Task context parameters](tasks.md#context-parameters) for more details.|no|
 
 ### `dataSchema`
 
@@ -409,7 +412,7 @@ Use "countryName" or both "countryName" and "cityName" in the `WHERE` clause of 
 |maxRowsPerSegment|Soft max for the number of rows to include in a partition.|none|either this or `targetRowsPerSegment`|
 |assumeGrouped|Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.|false|no|
 
-### HTTP status endpoints
+## HTTP status endpoints
 
 The supervisor task provides some HTTP endpoints to get running status.
 
@@ -637,7 +640,7 @@ An example of the result is
 
 Returns the task attempt history of the worker task spec of the given id, or HTTP 404 Not Found error if the supervisor task is running in the sequential mode.
 
-### Segment pushing modes
+## Segment pushing modes
 While ingesting data using the parallel task indexing, Druid creates segments from the input data and pushes them. For segment pushing,
 the parallel task index supports the following segment pushing modes based upon your type of [rollup](./rollup.md):
 
@@ -645,7 +648,7 @@ the parallel task index supports the following segment pushing modes based upon 
 To enable bulk pushing mode, set `forceGuaranteedRollup` in your TuningConfig. You cannot use bulk pushing with `appendToExisting` in your IOConfig.
 - Incremental pushing mode: Used for best-effort rollup. Druid pushes segments are incrementally during the course of the indexing task. The index task collects data and stores created segments in the memory and disks of the services running the task until the total number of collected rows exceeds `maxTotalRows`. At that point the index task immediately pushes all segments created up until that moment, cleans up pushed segments, and continues to ingest the remaining data.
 
-### Capacity planning
+## Capacity planning
 
 The supervisor task can create up to `maxNumConcurrentSubTasks` worker tasks no matter how many task slots are currently available.
 As a result, total number of tasks which can be run at the same time is `(maxNumConcurrentSubTasks + 1)` (including the supervisor task).

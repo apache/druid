@@ -2924,7 +2924,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 new QueryDataSource(
                     newScanQueryBuilder()
                         .dataSource(CalciteTests.DATASOURCE1)
-                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .eternityInterval()
                         .filters(new SelectorDimFilter("dim1", "10.1", null))
                         .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ColumnType.STRING))
                         .columns(ImmutableList.of("__time", "v0"))
@@ -2935,7 +2935,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 new QueryDataSource(
                     newScanQueryBuilder()
                         .dataSource(CalciteTests.DATASOURCE1)
-                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .eternityInterval()
                         .filters(new SelectorDimFilter("dim1", "10.1", null))
                         .columns(ImmutableList.of("dim1"))
                         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)

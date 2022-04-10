@@ -254,7 +254,7 @@ and Kinesis indexing services.
 This section explains the task locking system in Druid. Druid's locking system
 and versioning system are tightly coupled with each other to guarantee the correctness of ingested data.
 
-## "Overshadowing" between segments
+### "Overshadowing" between segments
 
 You can run a task to overwrite existing data. The segments created by an overwriting task _overshadows_ existing segments.
 Note that the overshadow relation holds only for the same time chunk and the same data source.
@@ -277,9 +277,9 @@ Here are some examples.
 - A segment of the major version of `2019-01-01T00:00:00.000Z` and the minor version of `1` overshadows
  another of the major version of `2019-01-01T00:00:00.000Z` and the minor version of `0`.
 
-## Locking
+### Locking
 
-If you are running two or more [druid tasks](./tasks.md) which generate segments for the same data source and the same time chunk,
+If you are running two or more [Druid tasks](./tasks.md) which generate segments for the same data source and the same time chunk,
 the generated segments could potentially overshadow each other, which could lead to incorrect query results.
 
 To avoid this problem, tasks will attempt to get locks prior to creating any segment in Druid.
@@ -331,7 +331,7 @@ For example, Kafka indexing tasks of the same supervisor have the same groupId a
 
 <a name="priority"></a>
 
-## Lock priority
+### Lock priority
 
 Each task type has a different default lock priority. The below table shows the default priorities of different task types. Higher the number, higher the priority.
 
@@ -354,19 +354,20 @@ You can override the task priority by setting your priority in the task context 
 
 ## Context parameters
 
-The task context is used for various individual task configuration. The following parameters apply to all task types.
+The task context is used for various individual task configuration.
+Specify task context configurations in the `context` field of the ingestion spec.
+The following parameters apply to all task types.
 
 |property|default|description|
 |--------|-------|-----------|
-|`taskLockTimeout`|300000|task lock timeout in millisecond. For more details, see [Locking](#locking).|
-|`forceTimeChunkLock`|true|_Setting this to false is still experimental_<br/> Force to always use time chunk lock. If not set, each task automatically chooses a lock type to use. If this set, it will overwrite the `druid.indexer.tasklock.forceTimeChunkLock` [configuration for the overlord](../configuration/index.md#overlord-operations). See [Locking](#locking) for more details.|
+|`taskLockTimeout`|300000|Task lock timeout in milliseconds. For more details, see [Locking](#locking).<br/><br/>When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result. As a result, an HTTP timeout error can occur if `taskLockTimeout` is greater than `druid.server.http.maxIdleTime` of Overlords.|
+|`forceTimeChunkLock`|true|_Setting this to false is still experimental_<br/> Force to always use time chunk lock. If not set, each task automatically chooses a lock type to use. If set, this parameter overwrites `druid.indexer.tasklock.forceTimeChunkLock` [configuration for the overlord](../configuration/index.md#overlord-operations). See [Locking](#locking) for more details.|
 |`priority`|Different based on task types. See [Priority](#priority).|Task priority|
 |`useLineageBasedSegmentAllocation`|false in 0.21 or earlier, true in 0.22 or later|Enable the new lineage-based segment allocation protocol for the native Parallel task with dynamic partitioning. This option should be off during the replacing rolling upgrade from one of the Druid versions between 0.19 and 0.21 to Druid 0.22 or higher. Once the upgrade is done, it must be set to true to ensure data correctness.|
+|`storeEmptyColumns`|true|Boolean value for whether or not to store empty columns during ingestion. When set to true, Druid stores every column specified in the [`dimensionsSpec`](ingestion-spec.md#dimensionsspec). If you use schemaless ingestion and don't specify any dimensions to ingest, you must also set [`includeAllDimensions`](ingestion-spec.md#dimensionsspec) for Druid to store empty columns.<br/><br/>If you set `storeEmptyColumns` to false, Druid SQL queries referencing empty columns will fail. If you intend to leave `storeEmptyColumns` disabled, you should either ingest dummy data for empty columns or else not query on empty columns.<br/><br/>When set in the task context, `storeEmptyColumns` overrides the system property [`druid.indexer.task.storeEmptyColumns`](../configuration/index.md#additional-peon-configuration).|
 
-> When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result.
-> As a result, an HTTP timeout error can occur if `taskLockTimeout` is greater than `druid.server.http.maxIdleTime` of Overlords.
 
-## Task Logs
+## Task logs
 
 Logs are created by ingestion tasks as they run.  You can configure Druid to push these into a repository for long-term storage after they complete.
 

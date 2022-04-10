@@ -59,7 +59,6 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryHelper;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
@@ -638,11 +637,7 @@ public class ClientQuerySegmentWalkerTest
   {
     ScanQuery subquery = new Druids.ScanQueryBuilder().dataSource(MULTI)
                                                       .columns("s", "n")
-                                                      .intervals(
-                                                          new MultipleIntervalSegmentSpec(
-                                                              ImmutableList.of(Intervals.ETERNITY)
-                                                          )
-                                                      )
+                                                      .eternityInterval()
                                                       .legacy(false)
                                                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                                       .build();
@@ -693,11 +688,7 @@ public class ClientQuerySegmentWalkerTest
   {
     ScanQuery subquery = new Druids.ScanQueryBuilder().dataSource(MULTI)
                                                       .columns("s", "n")
-                                                      .intervals(
-                                                          new MultipleIntervalSegmentSpec(
-                                                              ImmutableList.of(Intervals.ETERNITY)
-                                                          )
-                                                      )
+                                                      .eternityInterval()
                                                       .legacy(false)
                                                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                                       .build();
@@ -1023,7 +1014,6 @@ public class ClientQuerySegmentWalkerTest
         )
     );
   }
-
 
   @Test
   public void testGroupByOnArraysUnknownStrings()
@@ -1469,12 +1459,12 @@ public class ClientQuerySegmentWalkerTest
       this.how = how;
     }
 
-    static ExpectedQuery local(final Query query)
+    static ExpectedQuery local(final Query<?> query)
     {
       return new ExpectedQuery(query, ClusterOrLocal.LOCAL);
     }
 
-    static ExpectedQuery cluster(final Query query)
+    static ExpectedQuery cluster(final Query<?> query)
     {
       return new ExpectedQuery(query, ClusterOrLocal.CLUSTER);
     }

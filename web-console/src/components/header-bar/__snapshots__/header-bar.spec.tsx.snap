@@ -1,10 +1,10 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`HeaderBar matches snapshot 1`] = `
-<Blueprint3.Navbar
+<Blueprint4.Navbar
   className="header-bar"
 >
-  <Blueprint3.NavbarGroup
+  <Blueprint4.NavbarGroup
     align="left"
   >
     <a
@@ -12,8 +12,8 @@ exports[`HeaderBar matches snapshot 1`] = `
     >
       <Memo(DruidLogo) />
     </a>
-    <Blueprint3.NavbarDivider />
-    <Blueprint3.AnchorButton
+    <Blueprint4.NavbarDivider />
+    <Blueprint4.AnchorButton
       active={true}
       disabled={false}
       href="#load-data"
@@ -22,8 +22,8 @@ exports[`HeaderBar matches snapshot 1`] = `
       minimal={true}
       text="Load data"
     />
-    <Blueprint3.NavbarDivider />
-    <Blueprint3.AnchorButton
+    <Blueprint4.NavbarDivider />
+    <Blueprint4.AnchorButton
       active={false}
       disabled={false}
       href="#ingestion"
@@ -31,7 +31,7 @@ exports[`HeaderBar matches snapshot 1`] = `
       minimal={true}
       text="Ingestion"
     />
-    <Blueprint3.AnchorButton
+    <Blueprint4.AnchorButton
       active={false}
       disabled={false}
       href="#datasources"
@@ -39,7 +39,7 @@ exports[`HeaderBar matches snapshot 1`] = `
       minimal={true}
       text="Datasources"
     />
-    <Blueprint3.AnchorButton
+    <Blueprint4.AnchorButton
       active={false}
       disabled={false}
       href="#segments"
@@ -47,7 +47,7 @@ exports[`HeaderBar matches snapshot 1`] = `
       minimal={true}
       text="Segments"
     />
-    <Blueprint3.AnchorButton
+    <Blueprint4.AnchorButton
       active={false}
       disabled={false}
       href="#services"
@@ -55,8 +55,8 @@ exports[`HeaderBar matches snapshot 1`] = `
       minimal={true}
       text="Services"
     />
-    <Blueprint3.NavbarDivider />
-    <Blueprint3.AnchorButton
+    <Blueprint4.NavbarDivider />
+    <Blueprint4.AnchorButton
       active={false}
       disabled={false}
       href="#query"
@@ -64,8 +64,8 @@ exports[`HeaderBar matches snapshot 1`] = `
       minimal={true}
       text="Query"
     />
-  </Blueprint3.NavbarGroup>
-  <Blueprint3.NavbarGroup
+  </Blueprint4.NavbarGroup>
+  <Blueprint4.NavbarGroup
     align="right"
   >
     <Memo(RestrictedMode)
@@ -77,85 +77,100 @@ exports[`HeaderBar matches snapshot 1`] = `
         }
       }
     />
-    <Blueprint3.Popover2
+    <Blueprint4.Popover2
       boundary="clippingParents"
       captureDismiss={false}
       content={
-        <Blueprint3.Menu>
-          <Blueprint3.MenuItem
+        <Blueprint4.Menu>
+          <Blueprint4.MenuItem
+            active={false}
             disabled={false}
             icon="pulse"
             multiline={false}
             onClick={[Function]}
             popoverProps={Object {}}
+            selected={false}
             shouldDismissPopover={true}
             text="Druid Doctor"
           />
-          <Blueprint3.MenuItem
+          <Blueprint4.MenuItem
+            active={false}
             disabled={false}
             icon="settings"
             multiline={false}
             onClick={[Function]}
             popoverProps={Object {}}
+            selected={false}
             shouldDismissPopover={true}
             text="Coordinator dynamic config"
           />
-          <Blueprint3.MenuItem
+          <Blueprint4.MenuItem
+            active={false}
             disabled={false}
             icon="wrench"
             multiline={false}
             onClick={[Function]}
             popoverProps={Object {}}
+            selected={false}
             shouldDismissPopover={true}
             text="Overlord dynamic config"
           />
-          <Blueprint3.MenuItem
+          <Blueprint4.MenuItem
             active={false}
             disabled={false}
             href="#lookups"
             icon="properties"
             multiline={false}
             popoverProps={Object {}}
+            selected={false}
             shouldDismissPopover={true}
             text="Lookups"
           />
-          <Blueprint3.MenuDivider />
-          <Blueprint3.MenuItem
+          <Blueprint4.MenuDivider />
+          <Blueprint4.MenuItem
+            active={false}
             disabled={false}
             icon="cog"
             multiline={false}
             popoverProps={Object {}}
+            selected={false}
             shouldDismissPopover={true}
             text="Console options"
           >
             <React.Fragment>
-              <Blueprint3.MenuItem
+              <Blueprint4.MenuItem
+                active={false}
                 disabled={false}
                 multiline={false}
                 onClick={[Function]}
                 popoverProps={Object {}}
+                selected={false}
                 shouldDismissPopover={true}
                 text="Force Coordinator/Overlord mode"
               />
-              <Blueprint3.MenuItem
+              <Blueprint4.MenuItem
+                active={false}
                 disabled={false}
                 multiline={false}
                 onClick={[Function]}
                 popoverProps={Object {}}
+                selected={false}
                 shouldDismissPopover={true}
                 text="Force Coordinator mode"
               />
-              <Blueprint3.MenuItem
+              <Blueprint4.MenuItem
+                active={false}
                 disabled={false}
                 multiline={false}
                 onClick={[Function]}
                 popoverProps={Object {}}
+                selected={false}
                 shouldDismissPopover={true}
                 text="Force Overlord mode"
               />
             </React.Fragment>
-          </Blueprint3.MenuItem>
-        </Blueprint3.Menu>
+          </Blueprint4.MenuItem>
+        </Blueprint4.Menu>
       }
       defaultIsOpen={false}
       disabled={false}
@@ -169,70 +184,81 @@ exports[`HeaderBar matches snapshot 1`] = `
       openOnTargetFocus={true}
       position="bottom-right"
       positioningStrategy="absolute"
+      shouldReturnFocusOnClose={false}
       targetTagName="span"
       transitionDuration={300}
       usePortal={true}
     >
-      <Blueprint3.Button
+      <Blueprint4.Button
         icon="cog"
         minimal={true}
       />
-    </Blueprint3.Popover2>
-    <Blueprint3.Popover2
+    </Blueprint4.Popover2>
+    <Blueprint4.Popover2
       boundary="clippingParents"
       captureDismiss={false}
       content={
-        <Blueprint3.Menu>
-          <Blueprint3.MenuItem
+        <Blueprint4.Menu>
+          <Blueprint4.MenuItem
+            active={false}
             disabled={false}
             icon="graph"
             multiline={false}
             onClick={[Function]}
             popoverProps={Object {}}
+            selected={false}
             shouldDismissPopover={true}
             text="About"
           />
-          <Blueprint3.MenuItem
+          <Blueprint4.MenuItem
+            active={false}
             disabled={false}
             href="https://druid.apache.org/docs/0.20.0"
             icon="th"
             multiline={false}
             popoverProps={Object {}}
+            selected={false}
             shouldDismissPopover={true}
             target="_blank"
             text="Docs"
           />
-          <Blueprint3.MenuItem
+          <Blueprint4.MenuItem
+            active={false}
             disabled={false}
             href="https://groups.google.com/forum/#!forum/druid-user"
             icon="user"
             multiline={false}
             popoverProps={Object {}}
+            selected={false}
             shouldDismissPopover={true}
             target="_blank"
             text="User group"
           />
-          <Blueprint3.MenuItem
+          <Blueprint4.MenuItem
+            active={false}
             disabled={false}
             href="https://druid.apache.org/community/join-slack"
             icon="chat"
             multiline={false}
             popoverProps={Object {}}
+            selected={false}
             shouldDismissPopover={true}
             target="_blank"
             text="Slack channel"
           />
-          <Blueprint3.MenuItem
+          <Blueprint4.MenuItem
+            active={false}
             disabled={false}
             href="https://github.com/apache/druid"
             icon="git-branch"
             multiline={false}
             popoverProps={Object {}}
+            selected={false}
             shouldDismissPopover={true}
             target="_blank"
             text="GitHub"
           />
-        </Blueprint3.Menu>
+        </Blueprint4.Menu>
       }
       defaultIsOpen={false}
       disabled={false}
@@ -246,15 +272,16 @@ exports[`HeaderBar matches snapshot 1`] = `
       openOnTargetFocus={true}
       position="bottom-right"
       positioningStrategy="absolute"
+      shouldReturnFocusOnClose={false}
       targetTagName="span"
       transitionDuration={300}
       usePortal={true}
     >
-      <Blueprint3.Button
+      <Blueprint4.Button
         icon="help"
         minimal={true}
       />
-    </Blueprint3.Popover2>
-  </Blueprint3.NavbarGroup>
-</Blueprint3.Navbar>
+    </Blueprint4.Popover2>
+  </Blueprint4.NavbarGroup>
+</Blueprint4.Navbar>
 `;

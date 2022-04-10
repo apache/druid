@@ -396,6 +396,7 @@ rollups
 rsync
 runtime
 schemas
+schemaless
 searchable
 secondaryPartitionPruning
 seekable-stream
@@ -694,6 +695,7 @@ doubleMeanNoNulls
 doubleMin
 doubleSum
 druid.generic.useDefaultValueForNull
+druid.generic.ignoreNullsForStringCardinality
 limitSpec
 longMax
 longAny
@@ -1956,7 +1958,6 @@ dimensionExclusions
 expr
 jackson-jq
 missingValue
-schemaless
 skipBytesInMemoryOverheadCheck
 spatialDimensions
 useFieldDiscovery
