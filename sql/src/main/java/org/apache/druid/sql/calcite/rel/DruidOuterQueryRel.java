@@ -119,7 +119,7 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
       final DruidQuery subQuery = ((DruidRel) sourceRel).toDruidQueryForExplaining();
       sourceRowSignature = subQuery.getOutputRowSignature();
     } else {
-      // fallback for .. reasons?
+      // fallback for cases other than group by inner query with order by with alias on __time column
       sourceRowSignature = RowSignatures.fromRelDataType(
           sourceRel.getRowType().getFieldNames(),
           sourceRel.getRowType()
