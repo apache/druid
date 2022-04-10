@@ -114,12 +114,20 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
   @Override
   public DruidQuery toDruidQueryForExplaining()
   {
+    final RowSignature sourceRowSignature;
+    if (sourceRel instanceof DruidRel) {
+      final DruidQuery subQuery = ((DruidRel) sourceRel).toDruidQueryForExplaining();
+      sourceRowSignature = subQuery.getOutputRowSignature();
+    } else {
+      // fallback for .. reasons?
+      sourceRowSignature = RowSignatures.fromRelDataType(
+          sourceRel.getRowType().getFieldNames(),
+          sourceRel.getRowType()
+      );
+    }
     return partialQuery.build(
         DUMMY_DATA_SOURCE,
-        RowSignatures.fromRelDataType(
-            sourceRel.getRowType().getFieldNames(),
-            sourceRel.getRowType()
-        ),
+        sourceRowSignature,
         getPlannerContext(),
         getCluster().getRexBuilder(),
         false

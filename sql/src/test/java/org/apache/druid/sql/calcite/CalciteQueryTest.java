@@ -11100,6 +11100,65 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+
+  @Test
+  public void testOrderByAlongWithAliasOrderByTimeGroupByMulti() throws Exception
+  {
+    testQuery(
+        "select  __time as bug, dim2  from druid.foo group by 1, 2 order by 1 limit 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("__time", "d0", ColumnType.LONG),
+                                new DefaultDimensionSpec("dim2", "d1", ColumnType.STRING)
+                            )
+                        )
+                        .setLimitSpec(
+                            new DefaultLimitSpec(
+                                Collections.singletonList(
+                                    new OrderByColumnSpec("d0", Direction.ASCENDING, StringComparators.NUMERIC)
+                                ),
+                                1
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L, "a"}
+        )
+    );
+  }
+
+
+  @Test
+  public void testOrderByAlongWithAliasOrderByTimeGroupByOneCol() throws Exception
+  {
+    testQuery(
+        "select __time as bug from druid.foo group by 1 order by 1 limit 1",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(
+                    new DefaultDimensionSpec("__time", "d0", ColumnType.LONG)
+                )
+                .threshold(1)
+                .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L}
+        )
+    );
+  }
+
   @Test
   public void testProjectAfterSort() throws Exception
   {
