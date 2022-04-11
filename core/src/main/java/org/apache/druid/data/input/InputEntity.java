@@ -137,12 +137,4 @@ public interface InputEntity
     return Predicates.alwaysFalse();
   }
 
-  /**
-   * This is required so that an empty iterator is created for the reader corresponding to a tombstone
-   * @return false if the entity does not come from a tombstone segment, true otherwise
-   */
-  default boolean isFromTombstone()
-  {
-    return false;
-  }
 }
