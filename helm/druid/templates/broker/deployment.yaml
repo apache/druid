@@ -46,6 +46,10 @@ spec:
 {{ toYaml . | indent 8 }}
       {{- end }}
     spec:
+{{- if .Values.broker.securityContext }}
+      securityContext:
+{{ toYaml .Values.broker.securityContext | indent 8 }}
+{{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

@@ -17,7 +17,7 @@
 
 image:
   repository: apache/druid
-  tag: 0.22.0
+  tag: 0.22.1
   pullPolicy: IfNotPresent
   pullSecrets: []
 
@@ -82,7 +82,9 @@ broker:
     #  - secretName: chart-example-tls
     #    hosts:
     #      - chart-example.local
-
+  securityContext:
+    fsGroup: 1000
+    runAsUser: 1000
   resources: {}
     # limits:
     #   cpu: 1
@@ -125,7 +127,9 @@ coordinator:
     #  - secretName: chart-example-tls
     #    hosts:
     #      - chart-example.local
-
+  securityContext:
+    fsGroup: 1000
+    runAsUser: 1000
   resources: {}
     # limits:
     #   cpu: 500m
@@ -165,7 +169,9 @@ overlord:
     #  - secretName: chart-example-tls
     #    hosts:
     #      - chart-example.local
-
+  securityContext:
+    fsGroup: 1000
+    runAsUser: 1000
   resources: {}
 
   nodeSelector: {}
@@ -222,6 +228,7 @@ historical:
 
   securityContext:
     fsGroup: 1000
+    runAsUser: 1000
 
   tolerations: []
 
@@ -304,6 +311,7 @@ middleManager:
 
   securityContext:
     fsGroup: 1000
+    runAsUser: 1000
 
   tolerations: []
 
@@ -352,6 +360,9 @@ router:
     #  - secretName: chart-example-tls
     #    hosts:
     #      - chart-example.local
+  securityContext:
+    fsGroup: 1000
+    runAsUser: 1000
 
   resources: {}
     # limits:

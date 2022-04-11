@@ -101,9 +101,9 @@ spec:
         {{- end}}
         envFrom:
           - configMapRef:
-              name: {{ template "druid.name" . }} 
+              name: {{ template "druid.name" . }}
         resources:
-{{ toYaml .Values.middleManager.resources | indent 12 }}
+{{ toYaml .Values.middleManager.resources | indent 10 }}
         livenessProbe:
           initialDelaySeconds: 60
           httpGet:
@@ -127,7 +127,7 @@ spec:
           mountPath: /var/secrets/google
   {{- end }}
       volumes:
-  {{- if not .Values.middleManager.persistence.enabled }} 
+  {{- if not .Values.middleManager.persistence.enabled }}
       - name: data
         emptyDir: {}
   {{- end }}

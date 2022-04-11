@@ -127,7 +127,7 @@ spec:
           mountPath: /var/secrets/google
   {{- end }}
       volumes:
-  {{- if not .Values.historical.persistence.enabled }} 
+  {{- if not .Values.historical.persistence.enabled }}
       - name: data
         emptyDir: {}
   {{- end }}

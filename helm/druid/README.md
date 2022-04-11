@@ -39,7 +39,7 @@ helm install druid helm/druid --namespace dev --create-namespace
 After installation succeeds, you can get a status of Chart
 
 ```bash
-helm status druid -n dev 
+helm status druid -n dev
 ```
 
 If you want to delete your Chart, use this command:
@@ -89,7 +89,7 @@ The following table lists the configurable parameters of the Druid chart and the
 | Parameter                                | Description                                             | Default                                    |
 |------------------------------------------|---------------------------------------------------------|--------------------------------------------|
 | `image.repository`                       | container image name                                    | `apache/druid`                             |
-| `image.tag`                              | container image tag                                     | `0.19.0`                                   |
+| `image.tag`                              | container image tag                                     | `0.22.1`                                   |
 | `image.pullPolicy`                       | container pull policy                                   | `IfNotPresent`                             |
 | `image.pullSecrets`                      | image pull secrest for private repositoty               | `[]`                                       |
 | `configMap.enabled`                       | enable druid configuration as configmap                   | `true`                                     |
