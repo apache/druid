@@ -38,9 +38,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.NavigableMap;
-import java.util.NavigableSet;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -321,7 +319,7 @@ public class SegmentsCostCache
     static class Builder
     {
       protected final Interval interval;
-      private final NavigableSet<SegmentAndSum> segments = new TreeSet<>();
+      private final SegmentTreap treap = new SegmentTreap();
 
       public Builder(Interval interval)
       {
@@ -344,22 +342,22 @@ public class SegmentsCostCache
         SegmentAndSum segmentAndSum = new SegmentAndSum(dataSegment, leftValue, rightValue);
 
         // left/right value should be added to left/right sums for elements greater/lower than current segment
-        segments.tailSet(segmentAndSum).forEach(v -> v.leftSum += leftValue);
-        segments.headSet(segmentAndSum).forEach(v -> v.rightSum += rightValue);
+        treap.update(segmentAndSum, Pair.of(leftValue, 0.0), true);
+        treap.update(segmentAndSum, Pair.of(0.0, rightValue), false);
 
         // leftSum_i = leftValue_i + \sum leftValue_j = leftValue_i + leftSum_{i-1} , j < i
-        SegmentAndSum lower = segments.lower(segmentAndSum);
+        SegmentAndSum lower = treap.lower(segmentAndSum).val;
         if (lower != null) {
           segmentAndSum.leftSum = leftValue + lower.leftSum;
         }
 
         // rightSum_i = rightValue_i + \sum rightValue_j = rightValue_i + rightSum_{i+1} , j > i
-        SegmentAndSum higher = segments.higher(segmentAndSum);
+        SegmentAndSum higher = treap.upper(segmentAndSum).val;
         if (higher != null) {
           segmentAndSum.rightSum = rightValue + higher.rightSum;
         }
 
-        if (!segments.add(segmentAndSum)) {
+        if (!treap.insert(segmentAndSum)) {
           throw new ISE("expect new segment");
         }
         return this;
@@ -369,7 +367,7 @@ public class SegmentsCostCache
       {
         SegmentAndSum segmentAndSum = new SegmentAndSum(dataSegment, 0.0, 0.0);
 
-        if (!segments.remove(segmentAndSum)) {
+        if (!treap.remove(segmentAndSum)) {
           return this;
         }
 
@@ -379,23 +377,24 @@ public class SegmentsCostCache
         double leftValue = FastMath.exp(t0) - FastMath.exp(t1);
         double rightValue = FastMath.exp(-t1) - FastMath.exp(-t0);
 
-        segments.tailSet(segmentAndSum).forEach(v -> v.leftSum -= leftValue);
-        segments.headSet(segmentAndSum).forEach(v -> v.rightSum -= rightValue);
+        treap.update(segmentAndSum, Pair.of(-leftValue, 0.0), true);
+        treap.update(segmentAndSum, Pair.of(0.0, -rightValue), false);
+
         return this;
       }
 
       public boolean isEmpty()
       {
-        return segments.isEmpty();
+        return treap.isEmpty();
       }
 
       public Bucket build()
       {
-        ArrayList<DataSegment> segmentsList = new ArrayList<>(segments.size());
-        double[] leftSum = new double[segments.size()];
-        double[] rightSum = new double[segments.size()];
+        ArrayList<DataSegment> segmentsList = new ArrayList<>();
+        double[] leftSum = new double[treap.root.size];
+        double[] rightSum = new double[treap.root.size];
         int i = 0;
-        for (SegmentAndSum segmentAndSum : segments) {
+        for (SegmentAndSum segmentAndSum : treap.toList()) {
           segmentsList.add(segmentAndSum.dataSegment);
           leftSum[i] = segmentAndSum.leftSum;
           rightSum[i] = segmentAndSum.rightSum;
@@ -488,14 +487,18 @@ public class SegmentsCostCache
       return ceil(val, root);
     }
 
-    public void insert(X val)
+    public boolean insert(X val)
     {
+      int oldSize = root.size;
       root = insert(new TreapNode(val), root);
+      return root.size > oldSize;
     }
 
-    public void remove(X val)
+    public boolean remove(X val)
     {
+      int oldSize = root.size;
       root = remove(val, root);
+      return root.size < oldSize;
     }
 
     public TreapNode getMin()
@@ -799,7 +802,7 @@ public class SegmentsCostCache
   public static class SegmentTreap extends Treap<SegmentAndSum, Pair<Double, Double>>
   {
 
-    final Pair<Double, Double> ZERO = Pair.of(0.0, 0.0);
+    static final Pair<Double, Double> ZERO = Pair.of(0.0, 0.0);
 
     @Override
     protected Pair<Double, Double> getVal(SegmentAndSum val)
@@ -845,6 +848,7 @@ public class SegmentsCostCache
       if (NULL.equals(node)) {
         return;
       }
+      node.lazyPropogate();
       accumulate(list, node.left);
       list.add(node.val);
       accumulate(list, node.right);

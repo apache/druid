@@ -323,7 +323,6 @@ public final class SegmentId implements Comparable<SegmentId>
   public Interval getInterval()
   {
     return interval;
-    //return new Interval(intervalStartMillis, intervalEndMillis, intervalChronology);
   }
 
   public String getVersion()
