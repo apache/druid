@@ -163,7 +163,7 @@ public class SegmentsCostCacheTest
     long start = System.currentTimeMillis();
     SegmentsCostCache.TestTreap treap = new SegmentsCostCache.TestTreap();
     for (int i = 0; i < n; i++) {
-      SegmentsCostCache.TestVal val = new SegmentsCostCache.TestVal(ids.get(i), vals.get(i));
+      SegmentsCostCache.TestX val = new SegmentsCostCache.TestX(ids.get(i), vals.get(i));
       treap.update(val, 1.0, false);
       treap.update(val, 3.0, true);
       treap.insert(val);
@@ -171,7 +171,7 @@ public class SegmentsCostCacheTest
     System.out.println(treap.query());
     long end = System.currentTimeMillis();
     for (int i = n - 1; i >= 0; i -= 3) {
-      SegmentsCostCache.TestVal val = new SegmentsCostCache.TestVal(ids.get(i), vals.get(i));
+      SegmentsCostCache.TestX val = new SegmentsCostCache.TestX(ids.get(i), vals.get(i));
       treap.remove(val);
       treap.update(val, -1.0, false);
       treap.update(val, -3.0, true);
@@ -181,34 +181,34 @@ public class SegmentsCostCacheTest
 
     System.out.println("TreeSet:");
     start = System.currentTimeMillis();
-    NavigableSet<SegmentsCostCache.TestVal> set = new TreeSet<>();
+    NavigableSet<SegmentsCostCache.TestX> set = new TreeSet<>();
     for (int i = 0; i < n; i++) {
-      SegmentsCostCache.TestVal val = new SegmentsCostCache.TestVal(ids.get(i), vals.get(i));
-      for (SegmentsCostCache.TestVal l : set.headSet(val)) {
+      SegmentsCostCache.TestX val = new SegmentsCostCache.TestX(ids.get(i), vals.get(i));
+      for (SegmentsCostCache.TestX l : set.headSet(val)) {
         l.setB(l.getB() + 1.0);
       }
-      for (SegmentsCostCache.TestVal u : set.tailSet(val)) {
+      for (SegmentsCostCache.TestX u : set.tailSet(val)) {
         u.setB(u.getB() + 3.0);
       }
       set.add(val);
     }
     double ans = 0;
-    for (SegmentsCostCache.TestVal val : set) {
+    for (SegmentsCostCache.TestX val : set) {
       ans += val.getB();
     }
     System.out.println(ans);
     for (int i = n - 1; i >= 0; i -= 3) {
-      SegmentsCostCache.TestVal val = new SegmentsCostCache.TestVal(ids.get(i), vals.get(i));
+      SegmentsCostCache.TestX val = new SegmentsCostCache.TestX(ids.get(i), vals.get(i));
       set.remove(val);
-      for (SegmentsCostCache.TestVal l : set.headSet(val)) {
+      for (SegmentsCostCache.TestX l : set.headSet(val)) {
         l.setB(l.getB() - 1.0);
       }
-      for (SegmentsCostCache.TestVal u : set.tailSet(val)) {
+      for (SegmentsCostCache.TestX u : set.tailSet(val)) {
         u.setB(u.getB() - 3.0);
       }
     }
     ans = 0;
-    for (SegmentsCostCache.TestVal val : set) {
+    for (SegmentsCostCache.TestX val : set) {
       ans += val.getB();
     }
     System.out.println(ans);

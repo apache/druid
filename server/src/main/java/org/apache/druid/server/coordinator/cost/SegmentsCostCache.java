@@ -35,6 +35,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 import java.util.ListIterator;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
@@ -444,7 +445,7 @@ public class SegmentsCostCache
   }
 
 
-  abstract static class Treap<X extends Comparable<X>>
+  abstract static class Treap<X extends Comparable<X>, Y>
   {
     protected TreapNode root;
     protected final TreapNode NULL;
@@ -515,12 +516,12 @@ public class SegmentsCostCache
       return node;
     }
 
-    public double query()
+    public Y query()
     {
       return root.sum;
     }
 
-    public void update(X val, double lazy, boolean dir)
+    public void update(X val, Y lazy, boolean dir)
     {
       if (dir) {
         root = update(root, val, null, lazy);
@@ -529,9 +530,15 @@ public class SegmentsCostCache
       }
     }
 
-    protected abstract double getVal(X val);
+    protected abstract Y getVal(X val);
 
-    protected abstract X setVal(X val, double add);
+    protected abstract X setVal(X val, Y lazy);
+
+    protected abstract Y add(Y a, Y b);
+
+    protected abstract Y multiply(int a, Y b);
+
+    protected abstract Y zero();
 
     private boolean contains(X val, TreapNode node)
     {
@@ -671,7 +678,7 @@ public class SegmentsCostCache
       return node;
     }
 
-    private TreapNode update(TreapNode node, @Nullable X begin, @Nullable X end, double lazy)
+    private TreapNode update(TreapNode node, @Nullable X begin, @Nullable X end, Y lazy)
     {
       TreapNode left = NULL;
       TreapNode right = NULL;
@@ -685,7 +692,7 @@ public class SegmentsCostCache
         node = pair.lhs;
         right = pair.rhs;
       }
-      node.lazy += lazy;
+      node.lazy = add(node.lazy, lazy);
       node = merge(left, node);
       node = merge(node, right);
       return node;
@@ -694,11 +701,11 @@ public class SegmentsCostCache
     class TreapNode
     {
       X val;
+      Y sum;
+      Y lazy;
       TreapNode left;
       TreapNode right;
       double priority;
-      double sum;
-      double lazy;
       int size;
 
       TreapNode(@Nullable X val)
@@ -716,6 +723,8 @@ public class SegmentsCostCache
         this.left = left;
         this.right = right;
         this.priority = Math.random();
+        this.sum = zero();
+        this.lazy = zero();
       }
 
       void recompute()
@@ -727,7 +736,7 @@ public class SegmentsCostCache
         sum = getVal(val);
         left.lazyPropogate();
         right.lazyPropogate();
-        sum += left.sum + right.sum;
+        sum = add(sum, add(left.sum, right.sum));
       }
 
       void lazyPropogate()
@@ -736,14 +745,14 @@ public class SegmentsCostCache
           return;
         }
         val = setVal(val, lazy);
-        sum += size * lazy;
+        sum = add(sum, multiply(size, lazy));
         if (!NULL.equals(left)) {
-          left.lazy += lazy;
+          left.lazy = add(left.lazy, lazy);
         }
         if (!NULL.equals(right)) {
-          right.lazy += lazy;
+          right.lazy = add(right.lazy, lazy);
         }
-        lazy = 0;
+        lazy = zero();
       }
 
       @Override
@@ -754,12 +763,12 @@ public class SegmentsCostCache
     }
   }
 
-  public static class TestVal implements Comparable<TestVal>
+  public static class TestX implements Comparable<TestX>
   {
     final String a;
     double b;
 
-    public TestVal(String a, double b)
+    public TestX(String a, double b)
     {
       this.a = a;
       this.b = b;
@@ -781,25 +790,98 @@ public class SegmentsCostCache
     }
 
     @Override
-    public int compareTo(TestVal that)
+    public int compareTo(TestX that)
     {
       return a.compareTo(that.getA());
     }
   }
 
-  public static class TestTreap extends Treap<TestVal>
+  public static class SegmentTreap extends Treap<SegmentAndSum, Pair<Double, Double>>
+  {
+
+    final Pair<Double, Double> ZERO = Pair.of(0.0, 0.0);
+
+    @Override
+    protected Pair<Double, Double> getVal(SegmentAndSum val)
+    {
+      return Pair.of(val.leftSum, val.rightSum);
+    }
+
+    @Override
+    protected SegmentAndSum setVal(SegmentAndSum val, Pair<Double, Double> lazy)
+    {
+      val.leftSum += lazy.lhs;
+      val.rightSum += lazy.rhs;
+      return val;
+    }
+
+    @Override
+    protected Pair<Double, Double> zero()
+    {
+      return ZERO;
+    }
+
+    @Override
+    protected Pair<Double, Double> add(Pair<Double, Double> a, Pair<Double, Double> b)
+    {
+      return Pair.of(a.lhs + b.lhs, a.rhs + b.rhs);
+    }
+
+    @Override
+    protected Pair<Double, Double> multiply(int a, Pair<Double, Double> b)
+    {
+      return Pair.of(a * b.lhs, a * b.rhs);
+    }
+
+    public List<SegmentAndSum> toList()
+    {
+      List<SegmentAndSum> list = new ArrayList<>();
+      accumulate(list, root);
+      return list;
+    }
+
+    private void accumulate(List<SegmentAndSum> list, TreapNode node)
+    {
+      if (NULL.equals(node)) {
+        return;
+      }
+      accumulate(list, node.left);
+      list.add(node.val);
+      accumulate(list, node.right);
+    }
+  }
+
+  public static class TestTreap extends Treap<TestX, Double>
   {
     @Override
-    protected double getVal(TestVal val)
+    protected Double getVal(TestX val)
     {
       return val.getB();
     }
 
     @Override
-    protected TestVal setVal(TestVal val, double lazy)
+    protected TestX setVal(TestX val, Double lazy)
     {
       val.setB(val.getB() + lazy);
       return val;
+    }
+
+    @Override
+    protected Double add(Double a, Double b)
+    {
+      return Double.sum(a, b);
+    }
+
+    @Override
+    protected Double multiply(int a, Double b)
+    {
+      return a * b;
+    }
+
+    @Override
+    protected Double zero()
+    {
+      return 0.0;
     }
 
     public void print()
