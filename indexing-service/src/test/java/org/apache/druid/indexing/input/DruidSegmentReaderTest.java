@@ -689,6 +689,13 @@ public class DruidSegmentReaderTest extends NullHandlingTest
           {
             throw new UnsupportedOperationException();
           }
+
+          @Override
+          public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
+          {
+            throw new UnsupportedOperationException();
+
+          }
         },
         DataSegment.builder()
                    .dataSource("ds")
