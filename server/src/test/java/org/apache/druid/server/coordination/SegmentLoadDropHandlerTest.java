@@ -519,7 +519,8 @@ public class SegmentLoadDropHandlerTest
   public void testProcessBatchDuplicateLoadRequestsWhenFirstRequestFailsSecondRequestShouldSucceed() throws Exception
   {
     final SegmentManager segmentManager = Mockito.mock(SegmentManager.class);
-    Mockito.when(segmentManager.loadSegment(ArgumentMatchers.any(), ArgumentMatchers.anyBoolean(), ArgumentMatchers.any()))
+    Mockito.when(segmentManager.loadSegment(ArgumentMatchers.any(), ArgumentMatchers.anyBoolean(),
+                                            ArgumentMatchers.any(), ArgumentMatchers.any()))
            .thenThrow(new RuntimeException("segment loading failure test"))
            .thenReturn(true);
     final SegmentLoadDropHandler segmentLoadDropHandler = new SegmentLoadDropHandler(
@@ -562,7 +563,7 @@ public class SegmentLoadDropHandlerTest
   public void testProcessBatchLoadDropLoadSequenceForSameSegment() throws Exception
   {
     final SegmentManager segmentManager = Mockito.mock(SegmentManager.class);
-    Mockito.when(segmentManager.loadSegment(ArgumentMatchers.any(), ArgumentMatchers.anyBoolean(), ArgumentMatchers.any()))
+    Mockito.when(segmentManager.loadSegment(ArgumentMatchers.any(), ArgumentMatchers.anyBoolean(), ArgumentMatchers.any(), ArgumentMatchers.any()))
            .thenReturn(true);
     Mockito.doNothing().when(segmentManager).dropSegment(ArgumentMatchers.any());
     final SegmentLoadDropHandler segmentLoadDropHandler = new SegmentLoadDropHandler(
@@ -603,7 +604,7 @@ public class SegmentLoadDropHandlerTest
     scheduledRunnable.clear();
 
     // check invocations after a load-drop sequence
-    Mockito.verify(segmentManager, Mockito.times(1)).loadSegment(ArgumentMatchers.any(), ArgumentMatchers.anyBoolean(), ArgumentMatchers.any());
+    Mockito.verify(segmentManager, Mockito.times(1)).loadSegment(ArgumentMatchers.any(), ArgumentMatchers.anyBoolean(), ArgumentMatchers.any(), ArgumentMatchers.any());
     Mockito.verify(segmentManager, Mockito.times(1)).dropSegment(ArgumentMatchers.any());
 
     // try to reload the segment - this should be a no-op since it might be the case that this is the first load client
@@ -615,7 +616,7 @@ public class SegmentLoadDropHandlerTest
     Assert.assertEquals(STATE.SUCCESS, result.get(0).getStatus().getState());
 
     // check invocations - should stay the same
-    Mockito.verify(segmentManager, Mockito.times(1)).loadSegment(ArgumentMatchers.any(), ArgumentMatchers.anyBoolean(), ArgumentMatchers.any());
+    Mockito.verify(segmentManager, Mockito.times(1)).loadSegment(ArgumentMatchers.any(), ArgumentMatchers.anyBoolean(), ArgumentMatchers.any(), ArgumentMatchers.any());
     Mockito.verify(segmentManager, Mockito.times(1)).dropSegment(ArgumentMatchers.any());
 
     // try to reload the segment - this time the loader will know that is a fresh request to load
@@ -630,7 +631,7 @@ public class SegmentLoadDropHandlerTest
     scheduledRunnable.clear();
 
     // check invocations - the load segment counter should bump up
-    Mockito.verify(segmentManager, Mockito.times(2)).loadSegment(ArgumentMatchers.any(), ArgumentMatchers.anyBoolean(), ArgumentMatchers.any());
+    Mockito.verify(segmentManager, Mockito.times(2)).loadSegment(ArgumentMatchers.any(), ArgumentMatchers.anyBoolean(), ArgumentMatchers.any(), ArgumentMatchers.any());
     Mockito.verify(segmentManager, Mockito.times(1)).dropSegment(ArgumentMatchers.any());
 
     segmentLoadDropHandler.stop();
