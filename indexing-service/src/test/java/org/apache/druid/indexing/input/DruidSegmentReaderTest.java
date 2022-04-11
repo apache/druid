@@ -67,6 +67,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 public class DruidSegmentReaderTest extends NullHandlingTest
 {
@@ -632,6 +633,12 @@ public class DruidSegmentReaderTest extends NullHandlingTest
 
           @Override
           public boolean release(DataSegment segment)
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
           {
             throw new UnsupportedOperationException();
           }
