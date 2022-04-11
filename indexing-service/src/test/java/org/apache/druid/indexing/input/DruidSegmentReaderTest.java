@@ -688,7 +688,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
                    .interval(Intervals.of("2000/P1D"))
                    .version("1")
                    .shardSpec(new TombstoneShardSpec())
-                   .loadSpec(ImmutableMap.of("type", "tomstone"))
+                   .loadSpec(ImmutableMap.of("type", "tombstone"))
                    .size(1)
                    .build(),
         interval
