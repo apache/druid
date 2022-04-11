@@ -28,7 +28,9 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NavigableSet;
 import java.util.Random;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -37,7 +39,7 @@ public class SegmentsCostCacheTest
 {
 
   private static final String DATA_SOURCE = "dataSource";
-  private static final DateTime REFERENCE_TIME = DateTimes.of("2014-01-01T00:00:00");
+  private static DateTime REFERENCE_TIME = DateTimes.of("2014-01-01T00:00:00");
   private static final double EPSILON = 0.00000001;
 
   @Test
@@ -143,6 +145,75 @@ public class SegmentsCostCacheTest
     double segmentCost = bucket.cost(segmentB);
 
     Assert.assertEquals(0.001574717989780039, segmentCost, EPSILON);
+  }
+
+  @Test
+  public void treapBenchmarkTest()
+  {
+    final int n = 20000;
+
+    List<String> ids = new ArrayList<>();
+    List<Double> vals = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      ids.add(UUID.randomUUID().toString());
+      vals.add((double) i);
+    }
+
+    System.out.println("Treap:");
+    long start = System.currentTimeMillis();
+    SegmentsCostCache.TestTreap treap = new SegmentsCostCache.TestTreap();
+    for (int i = 0; i < n; i++) {
+      SegmentsCostCache.TestVal val = new SegmentsCostCache.TestVal(ids.get(i), vals.get(i));
+      treap.update(val, 1.0, false);
+      treap.update(val, 3.0, true);
+      treap.insert(val);
+    }
+    System.out.println(treap.query());
+    long end = System.currentTimeMillis();
+    for (int i = n - 1; i >= 0; i -= 3) {
+      SegmentsCostCache.TestVal val = new SegmentsCostCache.TestVal(ids.get(i), vals.get(i));
+      treap.remove(val);
+      treap.update(val, -1.0, false);
+      treap.update(val, -3.0, true);
+    }
+    System.out.println(treap.query());
+    System.out.println(end - start + " ms");
+
+    System.out.println("TreeSet:");
+    start = System.currentTimeMillis();
+    NavigableSet<SegmentsCostCache.TestVal> set = new TreeSet<>();
+    for (int i = 0; i < n; i++) {
+      SegmentsCostCache.TestVal val = new SegmentsCostCache.TestVal(ids.get(i), vals.get(i));
+      for (SegmentsCostCache.TestVal l : set.headSet(val)) {
+        l.setB(l.getB() + 1.0);
+      }
+      for (SegmentsCostCache.TestVal u : set.tailSet(val)) {
+        u.setB(u.getB() + 3.0);
+      }
+      set.add(val);
+    }
+    double ans = 0;
+    for (SegmentsCostCache.TestVal val : set) {
+      ans += val.getB();
+    }
+    System.out.println(ans);
+    for (int i = n - 1; i >= 0; i -= 3) {
+      SegmentsCostCache.TestVal val = new SegmentsCostCache.TestVal(ids.get(i), vals.get(i));
+      set.remove(val);
+      for (SegmentsCostCache.TestVal l : set.headSet(val)) {
+        l.setB(l.getB() - 1.0);
+      }
+      for (SegmentsCostCache.TestVal u : set.tailSet(val)) {
+        u.setB(u.getB() - 3.0);
+      }
+    }
+    ans = 0;
+    for (SegmentsCostCache.TestVal val : set) {
+      ans += val.getB();
+    }
+    System.out.println(ans);
+    end = System.currentTimeMillis();
+    System.out.println(end - start + " ms");
   }
 
   @Test

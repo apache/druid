@@ -266,6 +266,7 @@ public final class SegmentId implements Comparable<SegmentId>
   private final long intervalEndMillis;
   @Nullable
   private final Chronology intervalChronology;
+  private final Interval interval;
   private final String version;
   private final int partitionNum;
 
@@ -281,6 +282,7 @@ public final class SegmentId implements Comparable<SegmentId>
     this.intervalStartMillis = interval.getStartMillis();
     this.intervalEndMillis = interval.getEndMillis();
     this.intervalChronology = interval.getChronology();
+    this.interval = new Interval(intervalStartMillis, intervalEndMillis, intervalChronology);
     // Versions are timestamp-based Strings, interning of them doesn't make sense. If this is not the case, interning
     // could be conditionally allowed via a system property.
     this.version = Objects.requireNonNull(version);
@@ -320,7 +322,8 @@ public final class SegmentId implements Comparable<SegmentId>
 
   public Interval getInterval()
   {
-    return new Interval(intervalStartMillis, intervalEndMillis, intervalChronology);
+    return interval;
+    //return new Interval(intervalStartMillis, intervalEndMillis, intervalChronology);
   }
 
   public String getVersion()

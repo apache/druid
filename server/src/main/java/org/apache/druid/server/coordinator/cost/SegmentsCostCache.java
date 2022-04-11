@@ -24,12 +24,14 @@ import com.google.common.collect.Ordering;
 import org.apache.commons.math3.util.FastMath;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.server.coordinator.CostBalancerStrategy;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -48,18 +50,18 @@ import java.util.stream.Collectors;
  * Joint cost for two segments (you can make formulas below readable by copy-pasting to
  * https://www.codecogs.com/latex/eqneditor.php):
  *
- *        cost(X, Y) = \int_{x_0}^{x_1} \int_{y_0}^{y_1} e^{-\lambda |x-y|}dxdy
+ *        cost(Y, Y) = \int_{x_0}^{x_1} \int_{y_0}^{y_1} e^{-\lambda |x-y|}dxdy
  * or
- *        cost(X, Y) = e^{y_0 + y_1} (e^{x_0} - e^{x_1})(e^{y_0} - e^{y_1})  (*)
+ *        cost(Y, Y) = e^{y_0 + y_1} (e^{x_0} - e^{x_1})(e^{y_0} - e^{y_1})  (*)
  *                                                                          if x_0 <= x_1 <= y_0 <= y_1
  * (*) lambda coefficient is omitted for simplicity.
  *
  * For a group of segments {S_xi}, i = {0, n} total joint cost with segment S_y could be calculated as:
  *
- *        cost(X, Y) = \sum cost(X_i, Y) =  e^{y_0 + y_1} (e^{y_0} - e^{y_1}) \sum (e^{xi_0} - e^{xi_1})
+ *        cost(Y, Y) = \sum cost(X_i, Y) =  e^{y_0 + y_1} (e^{y_0} - e^{y_1}) \sum (e^{xi_0} - e^{xi_1})
  *                                                                          if xi_0 <= xi_1 <= y_0 <= y_1
  * and
- *        cost(X, Y) = \sum cost(X_i, Y) = (e^{y_0} - e^{y_1}) \sum e^{xi_0 + xi_1} (e^{xi_0} - e^{xi_1})
+ *        cost(Y, Y) = \sum cost(X_i, Y) = (e^{y_0} - e^{y_1}) \sum e^{xi_0 + xi_1} (e^{xi_0} - e^{xi_1})
  *                                                                          if y_0 <= y_1 <= xi_0 <= xi_1
  *
  * SegmentsCostCache stores pre-computed sums for a group of segments {S_xi}:
@@ -99,7 +101,7 @@ public class SegmentsCostCache
 
   /**
    * LIFE_THRESHOLD is used to avoid calculations for segments that are "far"
-   * from each other and thus cost(X,Y) ~ 0 for these segments
+   * from each other and thus cost(Y,Y) ~ 0 for these segments
    */
   private static final long LIFE_THRESHOLD = TimeUnit.DAYS.toMillis(30);
 
@@ -196,9 +198,9 @@ public class SegmentsCostCache
     {
       return new SegmentsCostCache(
           buckets
-              .entrySet()
+              .values()
               .stream()
-              .map(entry -> entry.getValue().build())
+              .map(Bucket.Builder::build)
               .collect(Collectors.toCollection(ArrayList::new))
       );
     }
@@ -317,7 +319,7 @@ public class SegmentsCostCache
 
     static class Builder
     {
-      private final Interval interval;
+      protected final Interval interval;
       private final NavigableSet<SegmentAndSum> segments = new TreeSet<>();
 
       public Builder(Interval interval)
@@ -438,6 +440,382 @@ public class SegmentsCostCache
     public int hashCode()
     {
       throw new UnsupportedOperationException();
+    }
+  }
+
+
+  abstract static class Treap<X extends Comparable<X>>
+  {
+    protected TreapNode root;
+    protected final TreapNode NULL;
+
+    public Treap()
+    {
+      NULL = new TreapNode(null);
+      NULL.left = NULL.right = NULL;
+      NULL.priority = Double.POSITIVE_INFINITY;
+      root = NULL;
+    }
+
+    public boolean isEmpty()
+    {
+      return NULL.equals(root);
+    }
+
+    public boolean contains(X val)
+    {
+      return contains(val, root);
+    }
+
+    public TreapNode lower(X val)
+    {
+      return lower(val, root);
+    }
+
+    public TreapNode upper(X val)
+    {
+      return upper(val, root);
+    }
+
+    public TreapNode floor(X val)
+    {
+      return floor(val, root);
+    }
+
+    public TreapNode ceil(X val)
+    {
+      return ceil(val, root);
+    }
+
+    public void insert(X val)
+    {
+      root = insert(new TreapNode(val), root);
+    }
+
+    public void remove(X val)
+    {
+      root = remove(val, root);
+    }
+
+    public TreapNode getMin()
+    {
+      TreapNode node = root;
+      while (!NULL.equals(node.left)) {
+        node = node.left;
+      }
+      return node;
+    }
+
+    public TreapNode getMax()
+    {
+      TreapNode node = root;
+      while (!NULL.equals(node.right)) {
+        node = node.right;
+      }
+      return node;
+    }
+
+    public double query()
+    {
+      return root.sum;
+    }
+
+    public void update(X val, double lazy, boolean dir)
+    {
+      if (dir) {
+        root = update(root, val, null, lazy);
+      } else {
+        root = update(root, null, val, lazy);
+      }
+    }
+
+    protected abstract double getVal(X val);
+
+    protected abstract X setVal(X val, double add);
+
+    private boolean contains(X val, TreapNode node)
+    {
+      if (NULL.equals(node)) {
+        return false;
+      }
+      final int cmp = val.compareTo(node.val);
+      if (cmp < 0) {
+        return contains(val, node.left);
+      }
+      if (cmp > 0) {
+        return contains(val, node.right);
+      }
+      return true;
+    }
+
+    private TreapNode lower(X val, TreapNode node)
+    {
+      if (NULL.equals(node)) {
+        return node;
+      }
+      final int cmp = val.compareTo(node.val);
+      if (cmp <= 0) {
+        return lower(val, node.left);
+      } else {
+        TreapNode ret = lower(val, node.right);
+        return (NULL.equals(ret)) ? node : ret;
+      }
+    }
+
+    private TreapNode upper(X val, TreapNode node)
+    {
+      if (NULL.equals(node)) {
+        return node;
+      }
+      final int cmp = val.compareTo(node.val);
+      if (cmp >= 0) {
+        return upper(val, node.right);
+      } else {
+        TreapNode ret = upper(val, node.left);
+        return (NULL.equals(ret)) ? node : ret;
+      }
+    }
+
+    private TreapNode floor(X val, TreapNode node)
+    {
+      if (NULL.equals(node)) {
+        return node;
+      }
+      final int cmp = val.compareTo(node.val);
+      if (cmp < 0) {
+        return floor(val, node.left);
+      } else {
+        TreapNode ret = floor(val, node.right);
+        return (NULL.equals(ret)) ? node : ret;
+      }
+    }
+
+    private TreapNode ceil(X val, TreapNode node)
+    {
+      if (NULL.equals(node)) {
+        return node;
+      }
+      final int cmp = val.compareTo(node.val);
+      if (cmp > 0) {
+        return ceil(val, node.right);
+      } else {
+        TreapNode ret = ceil(val, node.left);
+        return (NULL.equals(ret)) ? node : ret;
+      }
+    }
+
+    private TreapNode insert(TreapNode val, TreapNode node)
+    {
+      if (NULL.equals(node)) {
+        return val;
+      }
+      Pair<TreapNode, TreapNode> pair = split(node, val.val);
+      node = merge(pair.lhs, val);
+      node = merge(node, pair.rhs);
+      return node;
+    }
+
+    private TreapNode remove(X val, TreapNode node)
+    {
+      if (NULL.equals(node)) {
+        return node;
+      }
+      Pair<TreapNode, TreapNode> pair = split(node, val);
+      TreapNode lower = lower(val, pair.lhs);
+      if (NULL.equals(lower)) {
+        return pair.rhs;
+      }
+      return merge(split(pair.lhs, lower.val).lhs, pair.rhs);
+    }
+
+    private Pair<TreapNode, TreapNode> split(TreapNode node, X val)
+    {
+      if (NULL.equals(node)) {
+        return Pair.of(NULL, NULL);
+      }
+      node.lazyPropogate();
+      final int cmp = val.compareTo(node.val);
+      Pair<TreapNode, TreapNode> pair;
+      if (cmp < 0) {
+        pair = split(node.left, val);
+        node.left = pair.rhs;
+        pair = Pair.of(pair.lhs, node);
+      } else {
+        pair = split(node.right, val);
+        node.right = pair.lhs;
+        pair = Pair.of(node, pair.rhs);
+      }
+      node.recompute();
+      return pair;
+    }
+
+    private TreapNode merge(TreapNode left, TreapNode right)
+    {
+      if (NULL.equals(left)) {
+        return right;
+      }
+      if (NULL.equals(right)) {
+        return left;
+      }
+      left.lazyPropogate();
+      right.lazyPropogate();
+      TreapNode node;
+      if (left.priority < right.priority) {
+        left.right = merge(left.right, right);
+        node = left;
+      } else {
+        right.left = merge(left, right.left);
+        node = right;
+      }
+      node.recompute();
+      return node;
+    }
+
+    private TreapNode update(TreapNode node, @Nullable X begin, @Nullable X end, double lazy)
+    {
+      TreapNode left = NULL;
+      TreapNode right = NULL;
+      if (begin != null) {
+        Pair<TreapNode, TreapNode> pair = split(node, begin);
+        left = pair.lhs;
+        node = pair.rhs;
+      }
+      if (end != null) {
+        Pair<TreapNode, TreapNode> pair = split(node, end);
+        node = pair.lhs;
+        right = pair.rhs;
+      }
+      node.lazy += lazy;
+      node = merge(left, node);
+      node = merge(node, right);
+      return node;
+    }
+
+    class TreapNode
+    {
+      X val;
+      TreapNode left;
+      TreapNode right;
+      double priority;
+      double sum;
+      double lazy;
+      int size;
+
+      TreapNode(@Nullable X val)
+      {
+        this(val, NULL, NULL);
+        if (val != null) {
+          sum = getVal(val);
+          size = 1;
+        }
+      }
+
+      TreapNode(@Nullable X val, @Nullable TreapNode left, @Nullable TreapNode right)
+      {
+        this.val = val;
+        this.left = left;
+        this.right = right;
+        this.priority = Math.random();
+      }
+
+      void recompute()
+      {
+        if (NULL.equals(this)) {
+          return;
+        }
+        size = 1 + left.size + right.size;
+        sum = getVal(val);
+        left.lazyPropogate();
+        right.lazyPropogate();
+        sum += left.sum + right.sum;
+      }
+
+      void lazyPropogate()
+      {
+        if (NULL.equals(this)) {
+          return;
+        }
+        val = setVal(val, lazy);
+        sum += size * lazy;
+        if (!NULL.equals(left)) {
+          left.lazy += lazy;
+        }
+        if (!NULL.equals(right)) {
+          right.lazy += lazy;
+        }
+        lazy = 0;
+      }
+
+      @Override
+      public boolean equals(Object that)
+      {
+        return this == that;
+      }
+    }
+  }
+
+  public static class TestVal implements Comparable<TestVal>
+  {
+    final String a;
+    double b;
+
+    public TestVal(String a, double b)
+    {
+      this.a = a;
+      this.b = b;
+    }
+
+    public String getA()
+    {
+      return a;
+    }
+
+    public double getB()
+    {
+      return b;
+    }
+
+    public void setB(double b)
+    {
+      this.b = b;
+    }
+
+    @Override
+    public int compareTo(TestVal that)
+    {
+      return a.compareTo(that.getA());
+    }
+  }
+
+  public static class TestTreap extends Treap<TestVal>
+  {
+    @Override
+    protected double getVal(TestVal val)
+    {
+      return val.getB();
+    }
+
+    @Override
+    protected TestVal setVal(TestVal val, double lazy)
+    {
+      val.setB(val.getB() + lazy);
+      return val;
+    }
+
+    public void print()
+    {
+      print(this.root);
+      System.out.println();
+    }
+
+    private void print(TreapNode node)
+    {
+      if (NULL.equals(node)) {
+        return;
+      }
+      print(node.left);
+      System.out.println(node.val.getA() + ", " + node.val.getB() + ", " + node.sum + ", " + node.lazy + ", " + node.priority);
+      print(node.right);
     }
   }
 }

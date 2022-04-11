@@ -411,6 +411,36 @@ public class DataSegmentTest
 
   }
 
+  @Test
+  public void getIntervalBenchmarkTest()
+  {
+    final DataSegment segment = DataSegment.builder()
+                                            .dataSource("foo")
+                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
+                                            .shardSpec(new TombstoneShardSpec())
+                                            .loadSpec(Collections.singletonMap(
+                                                "type",
+                                                DataSegment.TOMBSTONE_LOADSPEC_TYPE
+                                            ))
+                                            .size(0)
+                                            .build();
+
+    long start = System.currentTimeMillis();
+    int cnt = 0;
+
+    for (int i = 0; i < 1000000000; i++) {
+      Interval interval = segment.getInterval();
+      cnt++;
+      if (cnt == 100000000) {
+        cnt = 0;
+        System.out.println(interval);
+      }
+    }
+    long end = System.currentTimeMillis();
+    System.out.println(end - start);
+  }
+
   private DataSegment makeDataSegment(String dataSource, String interval, String version)
   {
     return DataSegment.builder()
