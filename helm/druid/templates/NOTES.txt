@@ -28,8 +28,8 @@
   echo http://$NODE_IP:$NODE_PORT
 {{- else if contains "LoadBalancer" .Values.router.serviceType }}
      NOTE: It may take a few minutes for the LoadBalancer IP to be available.
-           You can watch the status of by running 'kubectl get svc -w {{ include "druid.fullname" . }}'
-  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "druid.fullname" . }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "druid.fullname" . }}-router'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "druid.fullname" . }}-router -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
   echo http://$SERVICE_IP:{{ .Values.router.port }}
 {{- else if contains "ClusterIP" .Values.router.serviceType }}
   export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app={{ include "druid.name" . }},release={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
