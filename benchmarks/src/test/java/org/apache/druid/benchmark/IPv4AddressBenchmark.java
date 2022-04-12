@@ -1,13 +1,29 @@
-package org.apache.druid.benchmark;
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
-import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.Random;
+package org.apache.druid.benchmark;
 
 import com.google.common.net.InetAddresses;
 import inet.ipaddr.IPAddress;
 import inet.ipaddr.IPAddressString;
 import inet.ipaddr.ipv4.IPv4Address;
+import org.apache.commons.net.util.SubnetUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.query.expression.IPv4AddressExprUtils;
@@ -27,10 +43,11 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
-import org.apache.commons.net.util.SubnetUtils;
-
 import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -44,16 +61,31 @@ import java.util.regex.Pattern;
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 public class IPv4AddressBenchmark
 {
+  private static final Pattern IPV4_PATTERN = Pattern.compile(
+      "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+  );
   // Different representations of IPv4 addresses.
   private static List<String> IPV4_ADDRESS_STRS;
   private static List<IPv4Address> IPV4_ADDRESSES;
   private static List<Inet4Address> INET4_ADDRESSES;
   private static List<Long> IPV4_ADDRESS_LONGS;
   private static List<String> IPV4_SUBNETS;
-
-
   @Param({"10", "100", "1000"})
   public int numOfAddresses;
+
+  static boolean isValidAddress(String string)
+  {
+    return string != null && IPV4_PATTERN.matcher(string).matches();
+  }
+
+  public static void main(String[] args) throws RunnerException
+  {
+    Options opt = new OptionsBuilder()
+        .include(IPv4AddressBenchmark.class.getSimpleName())
+        .forks(1)
+        .build();
+    new Runner(opt).run();
+  }
 
   @Setup
   public void setUp()
@@ -97,15 +129,6 @@ public class IPv4AddressBenchmark
     }
   }
 
-  private static final Pattern IPV4_PATTERN = Pattern.compile(
-      "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
-  );
-
-  static boolean isValidAddress(String string)
-  {
-    return string != null && IPV4_PATTERN.matcher(string).matches();
-  }
-
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
@@ -135,8 +158,7 @@ public class IPv4AddressBenchmark
 
   private Inet4Address parseUsingSubnetUtils(long longValue)
   {
-    if(IPv4AddressExprUtils.overflowsUnsignedInt(longValue))
-    {
+    if (IPv4AddressExprUtils.overflowsUnsignedInt(longValue)) {
       return InetAddresses.fromInteger((int) longValue);
     }
     return null;
@@ -205,7 +227,7 @@ public class IPv4AddressBenchmark
 
       IPv4Address iPv4Address = IPv4AddressExprUtils.parse(v4Long);
       IPAddressString subnetString = new IPAddressString(v4Subnet);
-      if(iPv4Address != null) {
+      if (iPv4Address != null) {
         subnetString.contains(iPv4Address.toAddressString());
       }
     }
@@ -223,12 +245,12 @@ public class IPv4AddressBenchmark
 
   private Inet4Address parseUsingSubnetUtils(String string)
   {
-      if (isValidAddress(string)) {
-        InetAddress address = InetAddresses.forString(string);
-        if (address instanceof Inet4Address) {
-          return (Inet4Address) address;
-        }
+    if (isValidAddress(string)) {
+      InetAddress address = InetAddresses.forString(string);
+      if (address instanceof Inet4Address) {
+        return (Inet4Address) address;
       }
+    }
     return null;
   }
 
@@ -243,25 +265,15 @@ public class IPv4AddressBenchmark
   }
 
   private SubnetUtils.SubnetInfo getSubnetInfo(String subnet)
-   {
-     SubnetUtils subnetUtils;
-     try {
-       subnetUtils = new SubnetUtils(subnet);
-     }
-     catch (IllegalArgumentException e) {
-       throw new IAE(e, ExprUtils.createErrMsg("getSubnetInfo()",   " arg has an invalid format: " + subnet));
-     }
-     subnetUtils.setInclusiveHostCount(true);  // make network and broadcast addresses match
-     return subnetUtils.getInfo();
-   }
-
-
-  public static void main(String[] args) throws RunnerException
   {
-    Options opt = new OptionsBuilder()
-        .include(IPv4AddressBenchmark.class.getSimpleName())
-        .forks(1)
-        .build();
-    new Runner(opt).run();
+    SubnetUtils subnetUtils;
+    try {
+      subnetUtils = new SubnetUtils(subnet);
+    }
+    catch (IllegalArgumentException e) {
+      throw new IAE(e, ExprUtils.createErrMsg("getSubnetInfo()", " arg has an invalid format: " + subnet));
+    }
+    subnetUtils.setInclusiveHostCount(true);  // make network and broadcast addresses match
+    return subnetUtils.getInfo();
   }
 }
