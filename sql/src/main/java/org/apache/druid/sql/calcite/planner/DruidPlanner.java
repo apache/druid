@@ -51,6 +51,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
@@ -58,6 +59,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOrderBy;
+import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
@@ -794,13 +796,16 @@ public class DruidPlanner implements Closeable
         druidSqlInsert = (DruidSqlInsert) query;
         query = druidSqlInsert.getSource();
 
-        // Check if ORDER BY clause is not provided to the underlying query
         if (query instanceof SqlOrderBy) {
           SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
           SqlNodeList orderByList = sqlOrderBy.orderList;
+          // Check if ORDER BY clause is not provided to the underlying query
           if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
             throw new ValidationException("Cannot have ORDER BY on an INSERT query, use CLUSTERED BY instead.");
           }
+          validateSelectColumnForIngestion((SqlSelect) sqlOrderBy.query);
+        } else {
+          validateSelectColumnForIngestion(((SqlSelect) query));
         }
 
         ingestionGranularity = druidSqlInsert.getPartitionedBy();
@@ -836,6 +841,20 @@ public class DruidPlanner implements Closeable
       }
 
       return new ParsedNodes(explain, druidSqlInsert, query, ingestionGranularity);
+    }
+
+    private static void validateSelectColumnForIngestion(SqlSelect sqlSelect) throws ValidationException
+    {
+      // Validate that all columns which do some computation in the select statement are named.
+      // If the column is named, the top level operator should be "AS".
+      for (SqlNode column : sqlSelect.getSelectList().getList()) {
+        if (column instanceof SqlBasicCall) {
+          SqlBasicCall basicCall = (SqlBasicCall) column;
+          if (!"AS".equalsIgnoreCase(basicCall.getOperator().getName())) {
+            throw new ValidationException("Cannot ingest unnamed columns.");
+          }
+        }
+      }
     }
 
     @Nullable

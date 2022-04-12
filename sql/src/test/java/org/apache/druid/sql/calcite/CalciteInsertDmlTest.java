@@ -380,12 +380,12 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                                                   .add("__time", ColumnType.LONG)
                                                   .add("floor_m1", ColumnType.FLOAT)
                                                   .add("dim1", ColumnType.STRING)
-                                                  .add("EXPR$3", ColumnType.DOUBLE)
+                                                  .add("ciel_m2", ColumnType.DOUBLE)
                                                   .build();
     testInsertQuery()
         .sql(
             "INSERT INTO druid.dst "
-            + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) FROM foo "
+            + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ciel_m2 FROM foo "
             + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1 DESC, CEIL(m2)"
         )
         .expectTarget("dst", targetRowSignature)
@@ -739,6 +739,18 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                 CoreMatchers.instanceOf(SqlPlanningException.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Encountered \"as count\""))
             )
+        )
+        .verify();
+  }
+
+  @Test
+  public void testInsertWithUnnamedColumnInSelectStatement()
+  {
+    testInsertQuery()
+        .sql("INSERT INTO t SELECT added, channel || '-lol' FROM foo PARTITIONED BY ALL")
+        .expectValidationError(
+            SqlPlanningException.class,
+            "Cannot ingest unnamed column"
         )
         .verify();
   }
