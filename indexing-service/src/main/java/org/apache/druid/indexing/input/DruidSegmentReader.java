@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.input;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -29,7 +28,6 @@ import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntity.CleanableFile;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.data.input.IntermediateRowParsingReader;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -70,9 +68,8 @@ import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String, Object>>
+public class DruidSegmentReader extends DruidSegmentReaderBase
 {
-  private final DruidSegmentInputEntity source;
   private final IndexIO indexIO;
   private final ColumnsFilter columnsFilter;
   private final InputRowSchema inputRowSchema;
@@ -89,8 +86,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
       final File temporaryDirectory
   )
   {
-    Preconditions.checkArgument(source instanceof DruidSegmentInputEntity);
-    this.source = (DruidSegmentInputEntity) source;
+    super(source);
     this.indexIO = indexIO;
     this.columnsFilter = columnsFilter;
     this.inputRowSchema = new InputRowSchema(
@@ -105,35 +101,12 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
   @Override
   protected CloseableIterator<Map<String, Object>> intermediateRowIterator() throws IOException
   {
-    if (source.isFromTombstone()) {
-      return new CloseableIterator<Map<String, Object>>()
-      {
-        @Override
-        public void close()
-        {
-
-        }
-
-        @Override
-        public boolean hasNext()
-        {
-          return false;
-        }
-
-        @Override
-        public Map<String, Object> next()
-        {
-          throw new NoSuchElementException();
-        }
-      };
-    }
-
-    final CleanableFile segmentFile = source.fetch(temporaryDirectory, null);
+    final CleanableFile segmentFile = source().fetch(temporaryDirectory, null);
     final WindowedStorageAdapter storageAdapter = new WindowedStorageAdapter(
         new QueryableIndexStorageAdapter(
             indexIO.loadIndex(segmentFile.file())
         ),
-        source.getIntervalFilter()
+        druidSegmentInputEntitySource().getIntervalFilter()
     );
 
     final Sequence<Cursor> cursors = storageAdapter.getAdapter().makeCursors(
@@ -164,11 +137,6 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
     return makeCloseableIteratorFromSequenceAndSegmentFile(sequence, segmentFile);
   }
 
-  @Override
-  protected InputEntity source()
-  {
-    return source;
-  }
 
   @Override
   protected List<InputRow> parseInputRows(Map<String, Object> intermediateRow) throws ParseException

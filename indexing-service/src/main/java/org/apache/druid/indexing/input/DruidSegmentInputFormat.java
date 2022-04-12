@@ -55,14 +55,27 @@ public class DruidSegmentInputFormat implements InputFormat
       File temporaryDirectory
   )
   {
-    return new DruidSegmentReader(
-        source,
-        indexIO,
-        inputRowSchema.getTimestampSpec(),
-        inputRowSchema.getDimensionsSpec(),
-        inputRowSchema.getColumnsFilter(),
-        dimFilter,
-        temporaryDirectory
-    );
+    // this method handles the case when the entity comes from a tombstone or from a regular segment
+
+    InputEntityReader retVal = null;
+    // source is tombstone case
+    if (source instanceof DruidSegmentInputEntity) {
+      if (((DruidSegmentInputEntity) source).isFromTombstone()) {
+        retVal = new DruidTombstoneSegmentReader(source);
+      }
+    }
+    // source is not tombstone:
+    if (retVal == null) {
+      retVal = new DruidSegmentReader(
+          source,
+          indexIO,
+          inputRowSchema.getTimestampSpec(),
+          inputRowSchema.getDimensionsSpec(),
+          inputRowSchema.getColumnsFilter(),
+          dimFilter,
+          temporaryDirectory
+      );
+    }
+    return retVal;
   }
 }

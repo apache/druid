@@ -188,16 +188,10 @@ public class DruidSegmentReaderTest extends NullHandlingTest
   }
 
   @Test
-  public void testReaderWithTombstone() throws IOException
+  public void testDruidTombstoneSegmentReader() throws IOException
   {
-    final DruidSegmentReader reader = new DruidSegmentReader(
-        makeTombstoneInputEntity(Intervals.of("2000/P1D")),
-        null, // no indexio for tombstone since they are not pushed
-        null,
-        null,
-        null,
-        null,
-        temporaryFolder.newFolder()
+    final DruidTombstoneSegmentReader reader = new DruidTombstoneSegmentReader(
+        makeTombstoneInputEntity(Intervals.of("2000/P1D"))
     );
 
     Assert.assertTrue(((DruidSegmentInputEntity) reader.source()).isFromTombstone());
@@ -709,7 +703,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     );
   }
 
-  private List<InputRow> readRows(final DruidSegmentReader reader) throws IOException
+  private List<InputRow> readRows(final DruidSegmentReaderBase reader) throws IOException
   {
     final List<InputRow> rows = new ArrayList<>();
     try (final CloseableIterator<Map<String, Object>> iterator = reader.intermediateRowIterator()) {
