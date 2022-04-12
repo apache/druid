@@ -106,7 +106,7 @@ public class DruidSegmentReader extends DruidSegmentReaderBase
         new QueryableIndexStorageAdapter(
             indexIO.loadIndex(segmentFile.file())
         ),
-        druidSegmentInputEntitySource().getIntervalFilter()
+        getDruidSegmentInputEntitySource().getIntervalFilter()
     );
 
     final Sequence<Cursor> cursors = storageAdapter.getAdapter().makeCursors(

@@ -30,6 +30,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
+import org.apache.druid.data.input.impl.FileEntity;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.hll.HyperLogLogCollector;
@@ -68,6 +69,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+
+import static org.junit.Assert.assertThrows;
 
 public class DruidSegmentReaderTest extends NullHandlingTest
 {
@@ -195,10 +198,24 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     );
 
     Assert.assertTrue(((DruidSegmentInputEntity) reader.source()).isFromTombstone());
+    Assert.assertFalse(reader.intermediateRowIterator().hasNext());
     Assert.assertEquals(
         Collections.emptyList(),
         readRows(reader)
     );
+  }
+
+
+  @Test
+  public void testDruidTombstoneSegmentReaderBadEntity()
+  {
+    Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+      new DruidTombstoneSegmentReader(
+          new FileEntity(null));
+    });
+    String expectedMessage = "Bad input entity type: org.apache.druid.data.input.impl.FileEntity";
+    String actualMessage = exception.getMessage();
+    Assert.assertEquals(expectedMessage, actualMessage);
   }
 
   @Test
@@ -598,6 +615,11 @@ public class DruidSegmentReaderTest extends NullHandlingTest
 
   private DruidSegmentInputEntity makeInputEntity(final Interval interval)
   {
+    return makeInputEntity(interval, segmentDirectory);
+  }
+
+  public static DruidSegmentInputEntity makeInputEntity(final Interval interval, final File segmentDirectory)
+  {
     return new DruidSegmentInputEntity(
         new SegmentCacheManager()
         {
@@ -649,7 +671,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     );
   }
 
-  private DruidSegmentInputEntity makeTombstoneInputEntity(final Interval interval)
+  public static DruidSegmentInputEntity makeTombstoneInputEntity(final Interval interval)
   {
     return new DruidSegmentInputEntity(
         new SegmentCacheManager()
@@ -663,7 +685,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
           @Override
           public File getSegmentFiles(DataSegment segment)
           {
-            return segmentDirectory;
+            throw new UnsupportedOperationException("unused");
           }
 
           @Override
@@ -702,7 +724,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         interval
     );
   }
-
+  
   private List<InputRow> readRows(final DruidSegmentReaderBase reader) throws IOException
   {
     final List<InputRow> rows = new ArrayList<>();

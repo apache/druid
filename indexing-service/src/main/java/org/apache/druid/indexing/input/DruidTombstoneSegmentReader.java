@@ -22,6 +22,8 @@ package org.apache.druid.indexing.input;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
+import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -62,5 +64,10 @@ public class DruidTombstoneSegmentReader extends DruidSegmentReaderBase
     };
   }
 
+  @Override
+  protected List<Map<String, Object>> toMap(Map<String, Object> intermediateRow) throws IOException
+  {
+    throw new UnsupportedOperationException(getClass().getName().toString());
+  }
 
 }

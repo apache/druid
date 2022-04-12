@@ -627,7 +627,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           );
       checkCompactionIntervals(expectedIntervalAfterCompaction);
 
-      // verify that autocompaction completed  nefore
+      // verify that autocompaction completed  before
       List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
       forceTriggerAutoCompaction(2);
       List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
@@ -735,7 +735,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           );
       checkCompactionIntervals(expectedIntervalAfterCompaction);
 
-      // verify that autocompaction completed  nefore
+      // verify that autocompaction completed  before
       List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
       forceTriggerAutoCompaction(2);
       List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);

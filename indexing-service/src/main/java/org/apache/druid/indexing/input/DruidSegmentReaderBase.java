@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.input;
 
 import com.google.common.base.Preconditions;
+import org.apache.curator.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.IntermediateRowParsingReader;
@@ -37,7 +38,7 @@ public abstract class DruidSegmentReaderBase extends IntermediateRowParsingReade
 
   public DruidSegmentReaderBase(InputEntity source)
   {
-    Preconditions.checkArgument(source instanceof DruidSegmentInputEntity);
+    Preconditions.checkArgument(source instanceof DruidSegmentInputEntity, "Bad input entity type: " + source.getClass().getName());
     this.source = (DruidSegmentInputEntity) source;
   }
 
@@ -47,23 +48,19 @@ public abstract class DruidSegmentReaderBase extends IntermediateRowParsingReade
     return source;
   }
 
-  protected DruidSegmentInputEntity druidSegmentInputEntitySource()
+  protected DruidSegmentInputEntity getDruidSegmentInputEntitySource()
   {
     return source;
   }
 
+  @VisibleForTesting
   @Override
   protected List<InputRow> parseInputRows(Map<String, Object> intermediateRow) throws IOException, ParseException
   {
     throw new UnsupportedEncodingException(this.getClass().getName());
   }
 
-  @Override
-  protected List<Map<String, Object>> toMap(Map<String, Object> intermediateRow) throws IOException
-  {
-    throw new UnsupportedEncodingException(this.getClass().getName());
-  }
-
+  @VisibleForTesting
   @Override
   protected CloseableIterator<Map<String, Object>> intermediateRowIterator() throws IOException
   {

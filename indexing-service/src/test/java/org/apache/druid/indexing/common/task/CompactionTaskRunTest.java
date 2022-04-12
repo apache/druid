@@ -1214,50 +1214,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
     resultOverOnlyTombstones.rhs.forEach(t -> Assert.assertTrue(t.isTombstone()));
   }
 
-
-  @Test
-  public void testCompactDatasourceOverFullIntervalWithOnlyTombstones() throws Exception
-  {
-    // This test fails with segment lock because of the bug reported in https://github.com/apache/druid/issues/10911.
-    if (lockGranularity == LockGranularity.SEGMENT) {
-      return;
-    }
-
-    // The following task creates (several, more than three, last time I checked, six) HOUR segments with intervals of
-    // - 2014-01-01T00:00:00/2014-01-01T01:00:00
-    // - 2014-01-01T01:00:00/2014-01-01T02:00:00
-    // - 2014-01-01T02:00:00/2014-01-01T03:00:00
-    // The six segments are:
-    // three rows in hour 00:
-    // 2014-01-01T00:00:00.000Z_2014-01-01T01:00:00.000Z with two rows
-    // 2014-01-01T00:00:00.000Z_2014-01-01T01:00:00.000Z_1 with one row
-    // three rows in hour 01:
-    // 2014-01-01T01:00:00.000Z_2014-01-01T02:00:00.000Z with two rows
-    // 2014-01-01T01:00:00.000Z_2014-01-01T02:00:00.000Z_1 with one row
-    // four rows in hour 02:
-    // 2014-01-01T02:00:00.000Z_2014-01-01T03:00:00.000Z with two rows
-    // 2014-01-01T02:00:00.000Z_2014-01-01T03:00:00.000Z_1 with two rows
-    // there are 10 rows total in data set
-
-    // maxRowsPerSegment is set to 2 inside the runIndexTask methods
-    Pair<TaskStatus, List<DataSegment>> result = runIndexTask();
-    Assert.assertEquals(6, result.rhs.size());
-
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
-    );
-
-
-    // replace hour 01
-
-    // compact hour 01 using minute granularity
-
-    // compact all interval using hour granularity
-
-  }
-
   @Test
   public void testPartialIntervalCompactWithFinerSegmentGranularityThenFullIntervalCompactWithDropExistingFalse() throws Exception
   {
