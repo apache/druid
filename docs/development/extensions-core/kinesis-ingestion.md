@@ -354,11 +354,15 @@ The AWS access key ID and secret access key are used for Kinesis API requests. I
 look for credentials set in environment variables, via [Web Identity Token](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc.html), in the default profile configuration file, and from the EC2 instance
 profile provider (in this order).
 
-To ingest data from Kinesis, ensure that the policy attached to the IAM role contains the necessary permissions:
+To ingest data from Kinesis, ensure that the policy attached to your IAM role contains the necessary permissions.
+The permissions needed depend on the value of `useListShards`.
 
-* `ListStreams`: required for all resources
+If the `useListShards` flag is set to `true`, you need following permissions:
+
+* `ListStreams`: required to list your data streams
 * `Get*`: required for `GetShardIterator`
-* `GetRecords`: required for streams of interest
+* `GetRecords`: required to get data records from a data stream's shard
+* `ListShards` : required to get the shards for a stream of interest
 
 **Example policy**
 
@@ -366,7 +370,7 @@ To ingest data from Kinesis, ensure that the policy attached to the IAM role con
 [
   {
     "Effect": "Allow",
-    "Action": ["kinesis:ListStreams"],
+    "Action": ["kinesis:List*"],
     "Resource": ["*"]
   },
   {
@@ -377,24 +381,33 @@ To ingest data from Kinesis, ensure that the policy attached to the IAM role con
 ]
 ```
 
-If the `useListShards` flag is set to true, update the policy to include the `ListShards` permission:
+If the `useListShards` flag is set to `false`, you need following permissions:
 
-```
-{
-  "Effect": "Allow",
-  "Action": ["kinesis:ListShards"],
-  "Resource": [<ARN for shards to be ingested>]
-}
-```
+* `ListStreams`: required to list your data streams
+* `Get*`: required for `GetShardIterator`
+* `GetRecords`: required to get data records from a data stream's shard
+* `DescribeStream`: required to describe the specified data stream
 
-Otherwise, ensure that the `DescribeStream` permission is present for streams of interest:
+**Example policy**
 
 ```    
-{
-  "Effect": "Allow",
-  "Action": ["kinesis:DescribeStream"],
-  "Resource": [<ARN for shards to be ingested>]
-}
+[
+  {
+    "Effect": "Allow",
+    "Action": ["kinesis:ListStreams"],
+    "Resource": ["*"]
+  },
+  {
+    "Effect": "Allow",
+    "Action": ["kinesis:DescribeStreams"],
+    "Resource": ["*"]
+  },
+  {
+    "Effect": "Allow",
+    "Action": ["kinesis:Get*"],
+    "Resource": [<ARN for shards to be ingested>]
+  }
+]
 ```
 
 ### Getting Supervisor Status Report
