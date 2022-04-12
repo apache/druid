@@ -35,7 +35,6 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.SplittableInputSource;
@@ -71,10 +70,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 @RunWith(Parameterized.class)
-public class HashPartitionMultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiPhaseParallelIndexingTest
+public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiPhaseParallelIndexingTest
 {
   private static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec("ts", "auto", null);
   private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
@@ -107,7 +107,7 @@ public class HashPartitionMultiPhaseParallelIndexingWithNullColumnTest extends A
 
   private final PartitionsSpec partitionsSpec;
 
-  public HashPartitionMultiPhaseParallelIndexingWithNullColumnTest(PartitionsSpec partitionsSpec)
+  public MultiPhaseParallelIndexingWithNullColumnTest(PartitionsSpec partitionsSpec)
   {
     super(LockGranularity.TIME_CHUNK, true, 0., 0.);
     this.partitionsSpec = partitionsSpec;
@@ -352,21 +352,9 @@ public class HashPartitionMultiPhaseParallelIndexingWithNullColumnTest extends A
     final List<Map<String, Object>> rows = new ArrayList<>();
     Map<String, Object> row;
     for (int i = 0; i < 3; i++) {
-      row = new HashMap<>();
-      row.put("ts", StringUtils.format("2022-01-%02d", i + 1));
-      for (int j = 0; j < 2; j++) {
-        row.put("dim" + (j + 1), "val" + (j + 1));
-      }
-      row.put("dim3", null);
-      rows.add(row);
+      rows.add(row(StringUtils.format("2022-01-%02d", i + 1), "val1", "val2", null));
     }
-    row = new HashMap<>();
-    row.put("ts", "2022-01-04");
-    row.put("dim1", null);
-    row.put("dim2", null);
-    row.put("dim3", null);
-    row.put("nested", ImmutableMap.of("k", "v"));
-    rows.add(row);
+    rows.add(row("2022-01-04", null, null, null, ImmutableMap.of("k", "v")));
     final String data = StringUtils.format(
         "%s\n%s\n%s\n%s\n",
         mapper.writeValueAsString(rows.get(0)),
@@ -376,6 +364,14 @@ public class HashPartitionMultiPhaseParallelIndexingWithNullColumnTest extends A
     );
 
     return new SplittableInlineDataSource(ImmutableList.of(data));
+  }
+
+  private static Map<String, Object> row(String timestamp, Object... dims)
+  {
+    Map<String, Object> row = new HashMap<>();
+    row.put("ts", timestamp);
+    IntStream.range(0, dims.length).forEach(i -> row.put("dim" + (i + 1), dims[i]));
+    return row;
   }
 
   /**

@@ -74,6 +74,17 @@ public class JsonInputFormatTest
   }
 
   @Test
+  public void test_unsetUseFieldDiscovery_unsetKeepNullColumnsByDefault()
+  {
+    final JsonInputFormat format = new JsonInputFormat(
+        new JSONPathSpec(false, null),
+        null,
+        null
+    );
+    Assert.assertFalse(format.isKeepNullColumns());
+  }
+
+  @Test
   public void testUseFieldDiscovery_setKeepNullColumnsByDefault()
   {
     final JsonInputFormat format = new JsonInputFormat(

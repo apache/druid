@@ -205,8 +205,7 @@ public class IndexMergerV9 implements IndexMerger
       final File outDir,
       final ProgressIndicator progress,
       final List<String> mergedDimensions, // should have both explicit and implicit dimensions
-      // a subset of mergedDimensions that are explicitly specified in DimensionsSpec
-      final DimensionMergerUtil dimensionMergerUtil,
+      final DimensionsSpecInspector dimensionsSpecInspector,
       final List<String> mergedMetrics,
       final Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn,
       final boolean fillRowNumConversions,
@@ -333,7 +332,7 @@ public class IndexMergerV9 implements IndexMerger
         if (!merger.hasOnlyNulls()) {
           ColumnDescriptor columnDesc = merger.makeColumnDescriptor();
           makeColumn(v9Smoosher, mergedDimensions.get(i), columnDesc);
-        } else if (dimensionMergerUtil.shouldStore(mergedDimensions.get(i))) {
+        } else if (dimensionsSpecInspector.shouldStore(mergedDimensions.get(i))) {
           // shouldStore AND hasOnlyNulls
           ColumnDescriptor columnDesc = ColumnDescriptor
               .builder()
@@ -357,7 +356,7 @@ public class IndexMergerV9 implements IndexMerger
           progress,
           indexSpec,
           mergers,
-          dimensionMergerUtil
+          dimensionsSpecInspector
       );
       makeMetadataBinary(v9Smoosher, progress, segmentMetadata);
 
@@ -396,7 +395,7 @@ public class IndexMergerV9 implements IndexMerger
       final ProgressIndicator progress,
       final IndexSpec indexSpec,
       final List<DimensionMergerV9> mergers,
-      final DimensionMergerUtil dimensionMergerUtil
+      final DimensionsSpecInspector dimensionsSpecInspector
   ) throws IOException
   {
     final Set<String> columnSet = new HashSet<>(mergedDimensions);
@@ -431,7 +430,7 @@ public class IndexMergerV9 implements IndexMerger
         nonNullOnlyColumns.add(mergedDimensions.get(i));
         allDimensions.add(null);
         allColumns.add(null);
-      } else if (dimensionMergerUtil.shouldStore(mergedDimensions.get(i))) {
+      } else if (dimensionsSpecInspector.shouldStore(mergedDimensions.get(i))) {
         // shouldStore AND hasOnlyNulls
         allDimensions.add(mergedDimensions.get(i));
         allColumns.add(mergedDimensions.get(i));
@@ -1307,11 +1306,7 @@ public class IndexMergerV9 implements IndexMerger
         outDir,
         progress,
         mergedDimensions,
-        new DimensionMergerUtil(
-            storeEmptyColumns,
-            dimensionsSpec == null ? ImmutableSet.of() : new HashSet<>(dimensionsSpec.getDimensionNames()),
-            dimensionsSpec != null && dimensionsSpec.isIncludeAllDimensions()
-        ),
+        new DimensionsSpecInspector(storeEmptyColumns, dimensionsSpec),
         mergedMetrics,
         rowMergerFn,
         true,
@@ -1457,21 +1452,22 @@ public class IndexMergerV9 implements IndexMerger
     }
   }
 
-  private static class DimensionMergerUtil
+  private static class DimensionsSpecInspector
   {
     private final boolean storeEmptyColumns;
     private final Set<String> explicitDimensions;
     private final boolean includeAllDimensions;
 
-    private DimensionMergerUtil(
+    private DimensionsSpecInspector(
         boolean storeEmptyColumns,
-        Set<String> explicitDimensions,
-        boolean includeAllDimensions
+        @Nullable DimensionsSpec dimensionsSpec
     )
     {
       this.storeEmptyColumns = storeEmptyColumns;
-      this.explicitDimensions = explicitDimensions;
-      this.includeAllDimensions = includeAllDimensions;
+      this.explicitDimensions = dimensionsSpec == null
+                                ? ImmutableSet.of()
+                                : new HashSet<>(dimensionsSpec.getDimensionNames());
+      this.includeAllDimensions = dimensionsSpec != null && dimensionsSpec.isIncludeAllDimensions();
     }
 
     /**
