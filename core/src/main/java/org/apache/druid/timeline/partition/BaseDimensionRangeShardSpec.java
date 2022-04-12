@@ -100,6 +100,7 @@ public abstract class BaseDimensionRangeShardSpec implements ShardSpec
   {
     final String[] inputDimensionValues = new String[dimensions.size()];
     for (int i = 0; i < dimensions.size(); ++i) {
+      // Get the values of this dimension, treat multiple values as null
       List<String> values = inputRow.getDimension(dimensions.get(i));
       inputDimensionValues[i] = values != null && values.size() == 1 ? values.get(0) : null;
     }

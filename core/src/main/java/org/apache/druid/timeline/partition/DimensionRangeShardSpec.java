@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.StringTuple;
 
 import javax.annotation.Nullable;
@@ -251,22 +250,6 @@ public class DimensionRangeShardSpec extends BaseDimensionRangeShardSpec
     } else {
       return new NumberedPartitionChunk<>(partitionNum, numCorePartitions, obj);
     }
-  }
-
-  public static boolean isInChunk(
-      List<String> dimensions,
-      @Nullable StringTuple start,
-      @Nullable StringTuple end,
-      InputRow inputRow
-  )
-  {
-    final StringTuple inputRowTuple = getInputRowTuple(dimensions, inputRow);
-
-    int inputVsStart = inputRowTuple.compareTo(start);
-    int inputVsEnd = inputRowTuple.compareTo(end);
-
-    return (inputVsStart >= 0 || start == null)
-           && (inputVsEnd < 0 || end == null);
   }
 
   @Override
