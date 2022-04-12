@@ -31,6 +31,7 @@ import org.apache.commons.net.util.SubnetUtils;
 
 import java.net.Inet4Address;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -64,7 +65,7 @@ public class IPv4AddressBenchmark
     IPV4_ADDRESS_LONGS = new ArrayList<>(numOfAddresses);
 
     for (int i = 0; i < numOfAddresses; i++) {
-      Random r = new Random();
+      Random r = ThreadLocalRandom.current();
       String genIpAddress = r.nextInt(256) + "." + r.nextInt(256) + "." + r.nextInt(256) + "." + r.nextInt(256);
       IPAddressString ipAddressString = new IPAddressString(genIpAddress);
       IPAddress prefixBlock = ipAddressString.getAddress().applyPrefixLength(r.nextInt(32)).toPrefixBlock();
