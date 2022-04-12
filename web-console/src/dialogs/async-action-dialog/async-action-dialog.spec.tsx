@@ -21,7 +21,7 @@ import React from 'react';
 
 import { AsyncActionDialog } from './async-action-dialog';
 
-describe('async action dialog', () => {
+describe('AsyncActionDialog', () => {
   it('matches snapshot', () => {
     const asyncActionDialog = (
       <AsyncActionDialog

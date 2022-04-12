@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -44,7 +45,7 @@ public class InlineSegmentWrangler implements SegmentWrangler
     return Collections.singletonList(
         new RowBasedSegment<>(
             SegmentId.dummy(SEGMENT_ID),
-            inlineDataSource.getRows(),
+            Sequences.simple(inlineDataSource.getRows()),
             inlineDataSource.rowAdapter(),
             inlineDataSource.getRowSignature()
         )

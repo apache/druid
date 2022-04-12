@@ -45,7 +45,7 @@ public class ArrayOfDoublesSketchOperations
         final ArrayOfDoublesUnion union = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(nominalEntries)
             .setNumberOfValues(numberOfValues).buildUnion();
         for (final ArrayOfDoublesSketch sketch : sketches) {
-          union.update(sketch);
+          union.union(sketch);
         }
         return union.getResult();
       }
@@ -57,7 +57,7 @@ public class ArrayOfDoublesSketchOperations
         final ArrayOfDoublesIntersection intersection = new ArrayOfDoublesSetOperationBuilder()
             .setNominalEntries(nominalEntries).setNumberOfValues(numberOfValues).buildIntersection();
         for (final ArrayOfDoublesSketch sketch : sketches) {
-          intersection.update(sketch, COMBINER);
+          intersection.intersect(sketch, COMBINER);
         }
         return intersection.getResult();
       }

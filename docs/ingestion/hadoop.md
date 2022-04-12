@@ -140,7 +140,7 @@ A type of inputSpec where a static path to the data files is provided.
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |inputFormat|String|Specifies the Hadoop InputFormat class to use. e.g. `org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat` |no|
-|paths|Array of String|A String of input paths indicating where the raw data is located.|yes|
+|paths|String|Comma-separated input paths to the raw data. Druid ingests data only from the configured paths. It does not search recursively for data in subdirectories. |yes|
 
 For example, using the static input paths:
 

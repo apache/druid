@@ -54,7 +54,6 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -206,9 +205,7 @@ public class IngestSegmentFirehoseFactoryTest
       index.add(ROW_PARSER.parseBatch(buildRow(i.longValue())).get(0));
     }
 
-    if (!PERSIST_DIR.mkdirs() && !PERSIST_DIR.exists()) {
-      throw new IOE("Could not create directory at [%s]", PERSIST_DIR.getAbsolutePath());
-    }
+    FileUtils.mkdirp(PERSIST_DIR);
     INDEX_MERGER_V9.persist(index, PERSIST_DIR, indexSpec, null);
 
     final CoordinatorClient cc = new CoordinatorClient(null, null)
@@ -235,11 +232,9 @@ public class IngestSegmentFirehoseFactoryTest
         new MapInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec(TIME_COLUMN, "auto", null),
-                new DimensionsSpec(
-                    DimensionsSpec.getDefaultSchemas(ImmutableList.of()),
-                    ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
-                    ImmutableList.of()
-                ),
+                DimensionsSpec.builder()
+                              .setDimensionExclusions(ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME))
+                              .build(),
                 null,
                 null,
                 null
@@ -363,11 +358,10 @@ public class IngestSegmentFirehoseFactoryTest
   private static final InputRowParser<Map<String, Object>> ROW_PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
           new TimestampSpec(TIME_COLUMN, "auto", null),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)),
-              ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
-              ImmutableList.of()
-          )
+          DimensionsSpec.builder()
+                        .setDimensions(DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)))
+                        .setDimensionExclusions(ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME))
+                        .build()
       )
   );
 

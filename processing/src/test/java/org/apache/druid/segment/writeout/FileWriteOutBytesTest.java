@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.writeout;
 
+import org.apache.druid.java.util.common.IAE;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -138,5 +139,57 @@ public class FileWriteOutBytesTest
     fileWriteOutBytes.writeInt(10);
     size = fileWriteOutBytes.size();
     Assert.assertEquals(4, size);
+  }
+
+  @Test
+  public void testReadFullyWorks() throws IOException
+  {
+    int fileSize = 4096;
+    int numOfInt = fileSize / Integer.BYTES;
+    ByteBuffer destination = ByteBuffer.allocate(Integer.BYTES);
+    ByteBuffer underlying = ByteBuffer.allocate(fileSize);
+    // Write 4KiB of ints and expect the write operation of the file channel will be triggered only once.
+    EasyMock.expect(mockFileChannel.write(EasyMock.anyObject(ByteBuffer.class)))
+            .andAnswer(() -> {
+              ByteBuffer buffer = (ByteBuffer) EasyMock.getCurrentArguments()[0];
+              underlying.position(0);
+              underlying.put(buffer);
+              return 0;
+            }).times(1);
+    EasyMock.expect(mockFileChannel.read(EasyMock.eq(destination), EasyMock.eq(100L * Integer.BYTES)))
+            .andAnswer(() -> {
+              ByteBuffer buffer = (ByteBuffer) EasyMock.getCurrentArguments()[0];
+              long pos = (long) EasyMock.getCurrentArguments()[1];
+              buffer.putInt(underlying.getInt((int) pos));
+              return Integer.BYTES;
+            }).times(1);
+    EasyMock.replay(mockFileChannel);
+    for (int i = 0; i < numOfInt; i++) {
+      fileWriteOutBytes.writeInt(i);
+    }
+    Assert.assertEquals(underlying.capacity(), fileWriteOutBytes.size());
+
+    destination.position(0);
+    fileWriteOutBytes.readFully(100L * Integer.BYTES, destination);
+    destination.position(0);
+    Assert.assertEquals(100, destination.getInt());
+    EasyMock.verify(mockFileChannel);
+  }
+
+  @Test
+  public void testReadFullyOutOfBoundsDoesnt() throws IOException
+  {
+    int fileSize = 4096;
+    int numOfInt = fileSize / Integer.BYTES;
+    ByteBuffer destination = ByteBuffer.allocate(Integer.BYTES);
+    EasyMock.replay(mockFileChannel);
+    for (int i = 0; i < numOfInt; i++) {
+      fileWriteOutBytes.writeInt(i);
+    }
+    Assert.assertEquals(fileSize, fileWriteOutBytes.size());
+
+    destination.position(0);
+    Assert.assertThrows(IAE.class, () -> fileWriteOutBytes.readFully(5000, destination));
+    EasyMock.verify(mockFileChannel);
   }
 }

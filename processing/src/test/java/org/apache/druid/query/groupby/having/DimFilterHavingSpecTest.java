@@ -26,7 +26,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -73,7 +73,7 @@ public class DimFilterHavingSpecTest
                     .setDataSource("dummy")
                     .setInterval("1000/3000")
                     .setGranularity(Granularities.ALL)
-                    .setDimensions(new DefaultDimensionSpec("foo", "foo", ValueType.LONG))
+                    .setDimensions(new DefaultDimensionSpec("foo", "foo", ColumnType.LONG))
                     .build()
     );
 

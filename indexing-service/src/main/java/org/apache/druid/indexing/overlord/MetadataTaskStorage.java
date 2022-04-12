@@ -25,6 +25,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
@@ -43,11 +44,16 @@ import org.apache.druid.metadata.MetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.MetadataStorageActionHandlerTypes;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
-import org.joda.time.Duration;
+import org.apache.druid.metadata.TaskLookup;
+import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
+import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
+import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 public class MetadataTaskStorage implements TaskStorage
@@ -191,7 +197,7 @@ public class MetadataTaskStorage implements TaskStorage
   {
     // filter out taskInfo with a null 'task' which should only happen in practice if we are missing a jackson module
     // and don't know what to do with the payload, so we won't be able to make use of it anyway
-    return handler.getActiveTaskInfo(null)
+    return handler.getTaskInfos(Collections.singletonMap(TaskLookupType.ACTIVE, ActiveTaskLookup.getInstance()), null)
                   .stream()
                   .filter(taskInfo -> taskInfo.getStatus().isRunnable() && taskInfo.getTask() != null)
                   .map(TaskInfo::getTask)
@@ -201,7 +207,10 @@ public class MetadataTaskStorage implements TaskStorage
   @Override
   public List<Task> getActiveTasksByDatasource(String datasource)
   {
-    List<TaskInfo<Task, TaskStatus>> activeTaskInfos = handler.getActiveTaskInfo(datasource);
+    List<TaskInfo<Task, TaskStatus>> activeTaskInfos = handler.getTaskInfos(
+        Collections.singletonMap(TaskLookupType.ACTIVE, ActiveTaskLookup.getInstance()),
+        datasource
+    );
     ImmutableList.Builder<Task> tasksBuilder = ImmutableList.builder();
     for (TaskInfo<Task, TaskStatus> taskInfo : activeTaskInfos) {
       if (taskInfo.getStatus().isRunnable() && taskInfo.getTask() != null) {
@@ -212,28 +221,26 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
-  {
-    return ImmutableList.copyOf(
-        handler.getActiveTaskInfo(dataSource)
-    );
-  }
-
-  @Override
-  public List<TaskInfo<Task, TaskStatus>> getRecentlyCreatedAlreadyFinishedTaskInfo(
-      @Nullable Integer maxTaskStatuses,
-      @Nullable Duration durationBeforeNow,
+  public List<TaskInfo<Task, TaskStatus>> getTaskInfos(
+      Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource
   )
   {
-    return ImmutableList.copyOf(
-        handler.getCompletedTaskInfo(
-            DateTimes.nowUtc()
-                     .minus(durationBeforeNow == null ? config.getRecentlyFinishedThreshold() : durationBeforeNow),
-            maxTaskStatuses,
-            datasource
-        )
-    );
+    Map<TaskLookupType, TaskLookup> theTaskLookups = Maps.newHashMapWithExpectedSize(taskLookups.size());
+    for (Entry<TaskLookupType, TaskLookup> entry : taskLookups.entrySet()) {
+      if (entry.getKey() == TaskLookupType.COMPLETE) {
+        CompleteTaskLookup completeTaskLookup = (CompleteTaskLookup) entry.getValue();
+        theTaskLookups.put(
+            entry.getKey(),
+            completeTaskLookup.hasTaskCreatedTimeFilter()
+            ? completeTaskLookup
+            : completeTaskLookup.withDurationBeforeNow(config.getRecentlyFinishedThreshold())
+        );
+      } else {
+        theTaskLookups.put(entry.getKey(), entry.getValue());
+      }
+    }
+    return Collections.unmodifiableList(handler.getTaskInfos(theTaskLookups, datasource));
   }
 
   @Override

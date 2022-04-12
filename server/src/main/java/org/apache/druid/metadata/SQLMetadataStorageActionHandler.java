@@ -27,9 +27,12 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
+import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
@@ -269,37 +272,90 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   @Override
-  public List<TaskInfo<EntryType, StatusType>> getCompletedTaskInfo(
+  public List<TaskInfo<EntryType, StatusType>> getTaskInfos(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String dataSource
+  )
+  {
+    return getConnector().retryTransaction(
+        (handle, status) -> {
+          final List<TaskInfo<EntryType, StatusType>> tasks = new ArrayList<>();
+          for (Entry<TaskLookupType, TaskLookup> entry : taskLookups.entrySet()) {
+            final Query<Map<String, Object>> query;
+            switch (entry.getKey()) {
+              case ACTIVE:
+                query = createActiveTaskInfoQuery(
+                    handle,
+                    dataSource
+                );
+                tasks.addAll(query.map(taskInfoMapper).list());
+                break;
+              case COMPLETE:
+                CompleteTaskLookup completeTaskLookup = (CompleteTaskLookup) entry.getValue();
+                query = createCompletedTaskInfoQuery(
+                    handle,
+                    completeTaskLookup.getTasksCreatedPriorTo(),
+                    completeTaskLookup.getMaxTaskStatuses(),
+                    dataSource
+                );
+                tasks.addAll(query.map(taskInfoMapper).list());
+                break;
+              default:
+                throw new IAE("Unknown TaskLookupType: [%s]", entry.getKey());
+            }
+          }
+          return tasks;
+        },
+        3,
+        SQLMetadataConnector.DEFAULT_MAX_TRIES
+    );
+  }
+
+  protected Query<Map<String, Object>> createCompletedTaskInfoQuery(
+      Handle handle,
       DateTime timestamp,
       @Nullable Integer maxNumStatuses,
       @Nullable String dataSource
   )
   {
-    return getConnector().retryWithHandle(
-        handle -> {
-          final Query<Map<String, Object>> query = createCompletedTaskInfoQuery(
-              handle,
-              timestamp,
-              maxNumStatuses,
-              dataSource
-          );
-          return query.map(taskInfoMapper).list();
-        }
+    String sql = StringUtils.format(
+        "SELECT "
+        + "  id, "
+        + "  status_payload, "
+        + "  created_date, "
+        + "  datasource, "
+        + "  payload "
+        + "FROM "
+        + "  %s "
+        + "WHERE "
+        + getWhereClauseForInactiveStatusesSinceQuery(dataSource)
+        + "ORDER BY created_date DESC",
+        getEntryTable()
     );
+
+    if (maxNumStatuses != null) {
+      sql = decorateSqlWithLimit(sql);
+    }
+    Query<Map<String, Object>> query = handle.createQuery(sql).bind("start", timestamp.toString());
+
+    if (maxNumStatuses != null) {
+      query = query.bind("n", maxNumStatuses);
+    }
+    if (dataSource != null) {
+      query = query.bind("ds", dataSource);
+    }
+    return query;
   }
 
-  @Override
-  public List<TaskInfo<EntryType, StatusType>> getActiveTaskInfo(@Nullable String dataSource)
+  protected abstract String decorateSqlWithLimit(String sql);
+
+  private String getWhereClauseForInactiveStatusesSinceQuery(@Nullable String datasource)
   {
-    return getConnector().retryWithHandle(
-        handle -> {
-          final Query<Map<String, Object>> query = createActiveTaskInfoQuery(
-              handle,
-              dataSource
-          );
-          return query.map(taskInfoMapper).list();
-        }
-    );
+    String sql = StringUtils.format("active = FALSE AND created_date >= :start ");
+    if (datasource != null) {
+      sql += " AND datasource = :ds ";
+    }
+    return sql;
   }
 
   private Query<Map<String, Object>> createActiveTaskInfoQuery(Handle handle, @Nullable String dataSource)
@@ -379,13 +435,6 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
       return taskInfo;
     }
   }
-
-  protected abstract Query<Map<String, Object>> createCompletedTaskInfoQuery(
-      Handle handle,
-      DateTime timestamp,
-      @Nullable Integer maxNumStatuses,
-      @Nullable String dataSource
-  );
 
   @Override
   public boolean addLock(final String entryId, final LockType lock)

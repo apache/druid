@@ -21,7 +21,7 @@ import React from 'react';
 
 import { CenterMessage } from './center-message';
 
-describe('decribe center-message', () => {
+describe('CenterMessage', () => {
   it('matches snapshot', () => {
     const centerMessage = (
       <CenterMessage>

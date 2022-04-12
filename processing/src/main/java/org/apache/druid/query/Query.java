@@ -138,6 +138,7 @@ public interface Query<T>
    */
   Query<T> withSubQueryId(String subQueryId);
 
+  @SuppressWarnings("unused")
   default Query<T> withDefaultSubQueryId()
   {
     return withSubQueryId(UUID.randomUUID().toString());

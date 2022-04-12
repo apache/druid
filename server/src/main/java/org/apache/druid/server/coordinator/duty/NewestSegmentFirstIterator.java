@@ -24,7 +24,12 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
+import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -34,9 +39,10 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentUtils;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.server.coordinator.CompactionStatistics;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.CompactionState;
@@ -54,6 +60,7 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -155,7 +162,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           timeline = timelineWithConfiguredSegmentGranularity;
         }
         final List<Interval> searchIntervals =
-            findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest(), configuredSegmentGranularity, skipIntervals.get(dataSource));
+            findInitialSearchInterval(dataSource, timeline, config.getSkipOffsetFromLatest(), configuredSegmentGranularity, skipIntervals.get(dataSource));
         if (!searchIntervals.isEmpty()) {
           timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals, originalTimeline));
         }
@@ -309,7 +316,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   }
 
   @VisibleForTesting
-  static PartitionsSpec findPartitinosSpecFromConfig(ClientCompactionTaskQueryTuningConfig tuningConfig)
+  static PartitionsSpec findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig tuningConfig)
   {
     final PartitionsSpec partitionsSpecFromTuningConfig = tuningConfig.getPartitionsSpec();
     if (partitionsSpecFromTuningConfig instanceof DynamicPartitionsSpec) {
@@ -332,7 +339,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     Preconditions.checkState(!candidates.isEmpty(), "Empty candidates");
     final ClientCompactionTaskQueryTuningConfig tuningConfig =
         ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment());
-    final PartitionsSpec partitionsSpecFromConfig = findPartitinosSpecFromConfig(tuningConfig);
+    final PartitionsSpec partitionsSpecFromConfig = findPartitionsSpecFromConfig(tuningConfig);
     final CompactionState lastCompactionState = candidates.segments.get(0).getLastCompactionState();
     if (lastCompactionState == null) {
       log.info("Candidate segment[%s] is not compacted yet. Needs compaction.", candidates.segments.get(0).getId());
@@ -384,30 +391,117 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       return true;
     }
 
-    if (config.getGranularitySpec() != null && config.getGranularitySpec().getSegmentGranularity() != null) {
-      // Only checks for segmentGranularity as auto compaction currently only supports segmentGranularity
-      final Granularity existingSegmentGranularity = lastCompactionState.getGranularitySpec() != null ?
-                                                     objectMapper.convertValue(lastCompactionState.getGranularitySpec(), GranularitySpec.class).getSegmentGranularity() :
-                                                     null;
-      if (existingSegmentGranularity == null) {
-        // Candidate segments were all compacted without segment granularity set.
-        // We need to check if all segments have the same segment granularity as the configured segment granularity.
-        boolean needsCompaction = candidates.segments.stream()
-                                             .anyMatch(segment -> !config.getGranularitySpec().getSegmentGranularity().isAligned(segment.getInterval()));
-        if (needsCompaction) {
+    if (config.getGranularitySpec() != null) {
+
+      final ClientCompactionTaskGranularitySpec existingGranularitySpec = lastCompactionState.getGranularitySpec() != null ?
+                                                                          objectMapper.convertValue(lastCompactionState.getGranularitySpec(), ClientCompactionTaskGranularitySpec.class) :
+                                                                          null;
+      // Checks for segmentGranularity
+      if (config.getGranularitySpec().getSegmentGranularity() != null) {
+        final Granularity existingSegmentGranularity = existingGranularitySpec != null ?
+                                                       existingGranularitySpec.getSegmentGranularity() :
+                                                       null;
+        if (existingSegmentGranularity == null) {
+          // Candidate segments were all compacted without segment granularity set.
+          // We need to check if all segments have the same segment granularity as the configured segment granularity.
+          boolean needsCompaction = candidates.segments.stream()
+                                                       .anyMatch(segment -> !config.getGranularitySpec().getSegmentGranularity().isAligned(segment.getInterval()));
+          if (needsCompaction) {
+            log.info(
+                "Segments were previously compacted but without segmentGranularity in auto compaction."
+                + " Configured segmentGranularity[%s] is different from granularity implied by segment intervals. Needs compaction",
+                config.getGranularitySpec().getSegmentGranularity()
+            );
+            return true;
+          }
+
+        } else if (!config.getGranularitySpec().getSegmentGranularity().equals(existingSegmentGranularity)) {
           log.info(
-              "Segments were previously compacted but without segmentGranularity in auto compaction."
-              + " Configured segmentGranularity[%s] is different from granularity implied by segment intervals. Needs compaction",
-              config.getGranularitySpec().getSegmentGranularity()
+              "Configured segmentGranularity[%s] is different from the segmentGranularity[%s] of segments. Needs compaction",
+              config.getGranularitySpec().getSegmentGranularity(),
+              existingSegmentGranularity
           );
           return true;
         }
+      }
 
-      } else if (!config.getGranularitySpec().getSegmentGranularity().equals(existingSegmentGranularity)) {
+      // Checks for rollup
+      if (config.getGranularitySpec().isRollup() != null) {
+        final Boolean existingRollup = existingGranularitySpec != null ?
+                                       existingGranularitySpec.isRollup() :
+                                       null;
+        if (existingRollup == null || !config.getGranularitySpec().isRollup().equals(existingRollup)) {
+          log.info(
+              "Configured rollup[%s] is different from the rollup[%s] of segments. Needs compaction",
+              config.getGranularitySpec().isRollup(),
+              existingRollup
+          );
+          return true;
+        }
+      }
+
+      // Checks for queryGranularity
+      if (config.getGranularitySpec().getQueryGranularity() != null) {
+
+        final Granularity existingQueryGranularity = existingGranularitySpec != null ?
+                                                     existingGranularitySpec.getQueryGranularity() :
+                                                     null;
+        if (!config.getGranularitySpec().getQueryGranularity().equals(existingQueryGranularity)) {
+          log.info(
+              "Configured queryGranularity[%s] is different from the queryGranularity[%s] of segments. Needs compaction",
+              config.getGranularitySpec().getQueryGranularity(),
+              existingQueryGranularity
+          );
+          return true;
+        }
+      }
+    }
+
+    if (config.getDimensionsSpec() != null) {
+      final DimensionsSpec existingDimensionsSpec = lastCompactionState.getDimensionsSpec();
+      // Checks for list of dimensions
+      if (config.getDimensionsSpec().getDimensions() != null) {
+        final List<DimensionSchema> existingDimensions = existingDimensionsSpec != null ?
+                                                         existingDimensionsSpec.getDimensions() :
+                                                         null;
+        if (!config.getDimensionsSpec().getDimensions().equals(existingDimensions)) {
+          log.info(
+              "Configured dimensionsSpec is different from the dimensionsSpec of segments. Needs compaction"
+          );
+          return true;
+        }
+      }
+    }
+
+    if (config.getTransformSpec() != null) {
+      final ClientCompactionTaskTransformSpec existingTransformSpec = lastCompactionState.getTransformSpec() != null ?
+                                                                      objectMapper.convertValue(lastCompactionState.getTransformSpec(), ClientCompactionTaskTransformSpec.class) :
+                                                                      null;
+      // Checks for filters
+      if (config.getTransformSpec().getFilter() != null) {
+        final DimFilter existingFilters = existingTransformSpec != null ?
+                                          existingTransformSpec.getFilter() :
+                                          null;
+        if (!config.getTransformSpec().getFilter().equals(existingFilters)) {
+          log.info(
+              "Configured filter[%s] is different from the filter[%s] of segments. Needs compaction",
+              config.getTransformSpec().getFilter(),
+              existingFilters
+          );
+          return true;
+        }
+      }
+    }
+
+    if (ArrayUtils.isNotEmpty(config.getMetricsSpec())) {
+      final AggregatorFactory[] existingMetricsSpec = lastCompactionState.getMetricsSpec() == null || lastCompactionState.getMetricsSpec().isEmpty() ?
+                                                      null :
+                                                      objectMapper.convertValue(lastCompactionState.getMetricsSpec(), AggregatorFactory[].class);
+      if (existingMetricsSpec == null || !Arrays.deepEquals(config.getMetricsSpec(), existingMetricsSpec)) {
         log.info(
-            "Configured segmentGranularity[%s] is different from the segmentGranularity[%s] of segments. Needs compaction",
-            config.getGranularitySpec().getSegmentGranularity(),
-            existingSegmentGranularity
+            "Configured metricsSpec[%s] is different from the metricsSpec[%s] of segments. Needs compaction",
+            Arrays.toString(config.getMetricsSpec()),
+            Arrays.toString(existingMetricsSpec)
         );
         return true;
       }
@@ -501,7 +595,8 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
    *
    * @return found interval to search or null if it's not found
    */
-  private static List<Interval> findInitialSearchInterval(
+  private List<Interval> findInitialSearchInterval(
+      String dataSourceName,
       VersionedIntervalTimeline<String, DataSegment> timeline,
       Period skipOffset,
       Granularity configuredSegmentGranularity,
@@ -519,6 +614,12 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         configuredSegmentGranularity,
         skipIntervals
     );
+
+    // Calcuate stats of all skipped segments
+    for (Interval skipInterval : fullSkipIntervals) {
+      final List<DataSegment> segments = new ArrayList<>(timeline.findNonOvershadowedObjectsInInterval(skipInterval, Partitions.ONLY_COMPLETE));
+      collectSegmentStatistics(skippedSegments, dataSourceName, new SegmentsToCompact(segments));
+    }
 
     final Interval totalInterval = new Interval(first.getInterval().getStart(), last.getInterval().getEnd());
     final List<Interval> filteredInterval = filterSkipIntervals(totalInterval, fullSkipIntervals);

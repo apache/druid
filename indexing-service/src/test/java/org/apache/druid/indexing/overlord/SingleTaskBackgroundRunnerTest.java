@@ -96,7 +96,9 @@ public class SingleTaskBackgroundRunnerTest
         null,
         null,
         false,
-        false
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null
     );
     final ServiceEmitter emitter = new NoopServiceEmitter();
     EmittingLogger.registerEmitter(emitter);
@@ -122,7 +124,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         null,
         null,
-        utils.getTestIndexMergerV9(),
+        utils.getIndexMergerV9Factory(),
         null,
         node,
         null,

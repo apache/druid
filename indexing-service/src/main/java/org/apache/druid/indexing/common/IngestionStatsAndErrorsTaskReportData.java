@@ -44,12 +44,16 @@ public class IngestionStatsAndErrorsTaskReportData
   @JsonProperty
   private boolean segmentAvailabilityConfirmed;
 
+  @JsonProperty
+  private long segmentAvailabilityWaitTimeMs;
+
   public IngestionStatsAndErrorsTaskReportData(
       @JsonProperty("ingestionState") IngestionState ingestionState,
       @JsonProperty("unparseableEvents") Map<String, Object> unparseableEvents,
       @JsonProperty("rowStats") Map<String, Object> rowStats,
       @JsonProperty("errorMsg") @Nullable String errorMsg,
-      @JsonProperty("segmentAvailabilityConfirmed") boolean segmentAvailabilityConfirmed
+      @JsonProperty("segmentAvailabilityConfirmed") boolean segmentAvailabilityConfirmed,
+      @JsonProperty("segmentAvailabilityWaitTimeMs") long segmentAvailabilityWaitTimeMs
   )
   {
     this.ingestionState = ingestionState;
@@ -57,6 +61,7 @@ public class IngestionStatsAndErrorsTaskReportData
     this.rowStats = rowStats;
     this.errorMsg = errorMsg;
     this.segmentAvailabilityConfirmed = segmentAvailabilityConfirmed;
+    this.segmentAvailabilityWaitTimeMs = segmentAvailabilityWaitTimeMs;
   }
 
   @JsonProperty
@@ -90,6 +95,12 @@ public class IngestionStatsAndErrorsTaskReportData
     return segmentAvailabilityConfirmed;
   }
 
+  @JsonProperty
+  public long getSegmentAvailabilityWaitTimeMs()
+  {
+    return segmentAvailabilityWaitTimeMs;
+  }
+
   public static IngestionStatsAndErrorsTaskReportData getPayloadFromTaskReports(
       Map<String, TaskReport> taskReports
   )
@@ -112,7 +123,8 @@ public class IngestionStatsAndErrorsTaskReportData
            Objects.equals(getUnparseableEvents(), that.getUnparseableEvents()) &&
            Objects.equals(getRowStats(), that.getRowStats()) &&
            Objects.equals(getErrorMsg(), that.getErrorMsg()) &&
-           Objects.equals(isSegmentAvailabilityConfirmed(), that.isSegmentAvailabilityConfirmed());
+           Objects.equals(isSegmentAvailabilityConfirmed(), that.isSegmentAvailabilityConfirmed()) &&
+           Objects.equals(getSegmentAvailabilityWaitTimeMs(), that.getSegmentAvailabilityWaitTimeMs());
   }
 
   @Override
@@ -123,7 +135,8 @@ public class IngestionStatsAndErrorsTaskReportData
         getUnparseableEvents(),
         getRowStats(),
         getErrorMsg(),
-        isSegmentAvailabilityConfirmed()
+        isSegmentAvailabilityConfirmed(),
+        getSegmentAvailabilityWaitTimeMs()
     );
   }
 
@@ -135,7 +148,8 @@ public class IngestionStatsAndErrorsTaskReportData
            ", unparseableEvents=" + unparseableEvents +
            ", rowStats=" + rowStats +
            ", errorMsg='" + errorMsg + '\'' +
-           ", segmentAvailabilityConfirmed=" + segmentAvailabilityConfirmed +
+           ", segmentAvailabilityConfoirmed=" + segmentAvailabilityConfirmed +
+           ", segmentAvailabilityWaitTimeMs=" + segmentAvailabilityWaitTimeMs +
            '}';
   }
 }

@@ -52,7 +52,6 @@ import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -89,7 +88,7 @@ public class StreamAppenderatorTester implements AutoCloseable
   private final Appenderator appenderator;
   private final ExecutorService queryExecutor;
   private final IndexIO indexIO;
-  private final IndexMerger indexMerger;
+  private final IndexMergerV9 indexMerger;
   private final ServiceEmitter emitter;
 
   private final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<>();
@@ -155,7 +154,7 @@ public class StreamAppenderatorTester implements AutoCloseable
         new MapInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("ts", "auto", null),
-                new DimensionsSpec(null, null, null),
+                DimensionsSpec.EMPTY,
                 null,
                 null,
                 null
@@ -290,7 +289,8 @@ public class StreamAppenderatorTester implements AutoCloseable
         new CacheConfig(),
         new CachePopulatorStats(),
         rowIngestionMeters,
-        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0)
+        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+        true
     );
   }
 

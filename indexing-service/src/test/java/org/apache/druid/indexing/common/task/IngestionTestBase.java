@@ -57,7 +57,7 @@ import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -82,6 +82,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 
@@ -215,9 +216,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return testUtils.getTestIndexIO();
   }
 
-  public IndexMergerV9 getIndexMerger()
+  public IndexMergerV9Factory getIndexMergerV9Factory()
   {
-    return testUtils.getTestIndexMergerV9();
+    return testUtils.getIndexMergerV9Factory();
   }
 
   public class TestLocalTaskActionClientFactory implements TaskActionClientFactory
@@ -314,7 +315,21 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         );
 
         final TaskToolbox box = new TaskToolbox(
-            new TaskConfig(null, null, null, null, null, false, null, null, null, false, false),
+            new TaskConfig(
+                null,
+                null,
+                null,
+                null,
+                null,
+                false,
+                null,
+                null,
+                null,
+                false,
+                false,
+                TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+                null
+            ),
             new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
             taskActionClient,
             null,
@@ -336,7 +351,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             null,
             null,
             null,
-            getIndexMerger(),
+            testUtils.getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)),
             null,
             null,
             null,
@@ -404,31 +419,31 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     }
 
     @Override
-    public long getTotalTaskSlotCount()
+    public Map<String, Long> getTotalTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getIdleTaskSlotCount()
+    public Map<String, Long> getIdleTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getUsedTaskSlotCount()
+    public Map<String, Long> getUsedTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getLazyTaskSlotCount()
+    public Map<String, Long> getLazyTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getBlacklistedTaskSlotCount()
+    public Map<String, Long> getBlacklistedTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }

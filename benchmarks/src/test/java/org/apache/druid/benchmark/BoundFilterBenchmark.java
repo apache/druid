@@ -26,20 +26,17 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
-import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.extendedset.intset.ConciseSetUtils;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.BitmapIndex;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
-import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.filter.BoundFilter;
-import org.apache.druid.segment.serde.BitmapIndexColumnPartSupplier;
+import org.apache.druid.segment.serde.StringBitmapIndexColumnPartSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -167,7 +164,7 @@ public class BoundFilterBenchmark
         FluentIterable.from(ints).transform(i -> i.toString()),
         GenericIndexed.STRING_STRATEGY
     );
-    final BitmapIndex bitmapIndex = new BitmapIndexColumnPartSupplier(
+    final BitmapIndex bitmapIndex = new StringBitmapIndexColumnPartSupplier(
         bitmapFactory,
         GenericIndexed.fromIterable(
             FluentIterable.from(ints)
@@ -187,50 +184,7 @@ public class BoundFilterBenchmark
         ),
         dictionary
     ).get();
-    selector = new BitmapIndexSelector()
-    {
-      @Override
-      public CloseableIndexed<String> getDimensionValues(String dimension)
-      {
-        return dictionary;
-      }
-
-      @Override
-      public ColumnCapabilities.Capable hasMultipleValues(final String dimension)
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public int getNumRows()
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public BitmapFactory getBitmapFactory()
-      {
-        return bitmapFactory;
-      }
-
-      @Override
-      public ImmutableBitmap getBitmapIndex(String dimension, String value)
-      {
-        return bitmapIndex.getBitmap(bitmapIndex.getIndex(value));
-      }
-
-      @Override
-      public BitmapIndex getBitmapIndex(String dimension)
-      {
-        return bitmapIndex;
-      }
-
-      @Override
-      public ImmutableRTree getSpatialIndex(String dimension)
-      {
-        throw new UnsupportedOperationException();
-      }
-    };
+    selector = new MockBitmapIndexSelector(dictionary, bitmapFactory, bitmapIndex);
   }
 
   @Benchmark

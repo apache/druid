@@ -36,10 +36,10 @@ export interface LookupEditDialogProps {
   onClose: () => void;
   onSubmit: (updateLookupVersion: boolean) => void;
   onChange: (
-    field: 'name' | 'tier' | 'version' | 'spec',
+    field: 'id' | 'tier' | 'version' | 'spec',
     value: string | Partial<LookupSpec>,
   ) => void;
-  lookupName: string;
+  lookupId: string;
   lookupTier: string;
   lookupVersion: string;
   lookupSpec: Partial<LookupSpec>;
@@ -53,7 +53,7 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
     onSubmit,
     lookupSpec,
     lookupTier,
-    lookupName,
+    lookupId,
     lookupVersion,
     onChange,
     isEdit,
@@ -64,7 +64,7 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
   const [jsonError, setJsonError] = useState<Error | undefined>();
 
   const disableSubmit = Boolean(
-    jsonError || isLookupInvalid(lookupName, lookupVersion, lookupTier, lookupSpec),
+    jsonError || isLookupInvalid(lookupId, lookupVersion, lookupTier, lookupSpec),
   );
 
   return (
@@ -73,13 +73,14 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
       isOpen
       onClose={onClose}
       title={isEdit ? 'Edit lookup' : 'Add lookup'}
+      canEscapeKeyClose={false}
     >
       <div className="content">
         <FormGroup label="Name">
           <InputGroup
-            value={lookupName}
-            onChange={(e: any) => onChange('name', e.target.value)}
-            intent={lookupName ? Intent.NONE : Intent.PRIMARY}
+            value={lookupId}
+            onChange={(e: any) => onChange('id', e.target.value)}
+            intent={lookupId ? Intent.NONE : Intent.PRIMARY}
             disabled={isEdit}
             placeholder="Enter the lookup name"
           />
@@ -112,7 +113,7 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
             rightElement={
               <Button
                 minimal
-                text="Use ISO as version"
+                text="Set to current ISO time"
                 onClick={() => onChange('version', new Date().toISOString())}
               />
             }
@@ -136,6 +137,7 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
               setJsonError(undefined);
             }}
             onError={setJsonError}
+            issueWithValue={spec => AutoForm.issueWithModel(spec, LOOKUP_FIELDS)}
           />
         )}
       </div>

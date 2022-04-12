@@ -28,7 +28,7 @@ describe('LookupEditDialog', () => {
         onClose={() => {}}
         onSubmit={() => {}}
         onChange={() => {}}
-        lookupName="test"
+        lookupId="test"
         lookupTier="test"
         lookupVersion="test"
         lookupSpec={{ type: 'map', map: { a: 1 } }}

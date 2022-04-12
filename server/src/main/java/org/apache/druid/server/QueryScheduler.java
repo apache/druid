@@ -32,6 +32,10 @@ import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.core.NoopEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
@@ -58,26 +62,43 @@ import java.util.Set;
  */
 public class QueryScheduler implements QueryWatcher
 {
+  private static final Logger LOGGER = new Logger(QueryScheduler.class);
   public static final int UNAVAILABLE = -1;
   public static final String TOTAL = "total";
   private final int totalCapacity;
   private final QueryPrioritizationStrategy prioritizationStrategy;
   private final QueryLaningStrategy laningStrategy;
   private final BulkheadRegistry laneRegistry;
+
   /**
-   * mapping of query id to set of futures associated with the query
+   * mapping of query id to set of futures associated with the query.
+   * This map is synchronized as there are 2 threads, query execution thread and query canceling thread,
+   * that can access the map at the same time.
+   *
+   * The updates (additions and removals) on this and {@link #queryDatasources} are racy
+   * as those updates are not being done atomically on those 2 maps,
+   * but it is OK in most cases since they will be cleaned up once the query is done.
    */
   private final SetMultimap<String, ListenableFuture<?>> queryFutures;
+
   /**
-   * mapping of query id to set of datasource names that are being queried, used for authorization
+   * mapping of query id to set of datasource names that are being queried, used for authorization.
+   * This map is synchronized as there are 2 threads, query execution thread and query canceling thread,
+   * that can access the map at the same time.
+   *
+   * The updates (additions and removals) on this and {@link #queryFutures} are racy
+   * as those updates are not being done atomically on those 2 maps,
+   * but it is OK in most cases since they will be cleaned up once the query is done.
    */
   private final SetMultimap<String, String> queryDatasources;
+  private final ServiceEmitter emitter;
 
   public QueryScheduler(
       int totalNumThreads,
       QueryPrioritizationStrategy prioritizationStrategy,
       QueryLaningStrategy laningStrategy,
-      ServerConfig serverConfig
+      ServerConfig serverConfig,
+      ServiceEmitter emitter
   )
   {
     this.prioritizationStrategy = prioritizationStrategy;
@@ -94,6 +115,21 @@ public class QueryScheduler implements QueryWatcher
       this.totalCapacity = serverConfig.getNumThreads();
     }
     this.laneRegistry = BulkheadRegistry.of(getLaneConfigs(limitTotal));
+    this.emitter = emitter;
+  }
+
+  /**
+   * Keeping the old constructor as many test classes are dependent on this
+   */
+  @VisibleForTesting
+  public QueryScheduler(
+      int totalNumThreads,
+      QueryPrioritizationStrategy prioritizationStrategy,
+      QueryLaningStrategy laningStrategy,
+      ServerConfig serverConfig
+  )
+  {
+    this(totalNumThreads, prioritizationStrategy, laningStrategy, serverConfig, new ServiceEmitter("test", "localhost", new NoopEmitter()));
   }
 
   @Override
@@ -123,6 +159,12 @@ public class QueryScheduler implements QueryWatcher
     Optional<Integer> priority = prioritizationStrategy.computePriority(queryPlus, segments);
     query = priority.map(query::withPriority).orElse(query);
     Optional<String> lane = laningStrategy.computeLane(queryPlus.withQuery(query), segments);
+    LOGGER.info("[%s] lane assigned to [%s] query with [%,d] priority", lane.orElse("default"), query.getType(), priority.orElse(Integer.valueOf(0)));
+    final ServiceMetricEvent.Builder builderUsr = ServiceMetricEvent.builder().setFeed("metrics")
+                                                                    .setDimension("lane", lane.orElse("default"))
+                                                                    .setDimension("dataSource", query.getDataSource().getTableNames())
+                                                                    .setDimension("type", query.getType());
+    emitter.emit(builderUsr.build("query/priority", priority.orElse(Integer.valueOf(0))));
     return lane.map(query::withLane).orElse(query);
   }
 

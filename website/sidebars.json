@@ -44,6 +44,8 @@
         "label": "Stream ingestion",
         "ids": [
           "development/extensions-core/kafka-ingestion",
+          "development/extensions-core/kafka-supervisor-reference",
+          "development/extensions-core/kafka-supervisor-operations",
           "development/extensions-core/kinesis-ingestion",
           "ingestion/standalone-realtime"
         ]
@@ -53,6 +55,9 @@
         "label": "Batch ingestion",
         "ids": [
           "ingestion/native-batch",
+          "ingestion/native-batch-simple-task",
+          "ingestion/native-batch-input-sources",
+          "ingestion/native-batch-firehose",
           "ingestion/hadoop"
         ]
       },
@@ -63,6 +68,7 @@
       "querying/sql",
       "querying/querying",
       "querying/query-execution",
+      "querying/troubleshooting",
       {
         "type": "subcategory",
         "label": "Concepts",
@@ -75,6 +81,35 @@
           "querying/caching",
           "querying/using-caching",
           "querying/query-context"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Druid SQL",
+        "ids": [
+          "querying/sql-syntax",
+          "querying/sql-data-types",
+          "querying/sql-metadata-tables",
+          "querying/sql-translation"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Druid SQL Functions",
+        "ids": [
+          "querying/sql-operators",
+          "querying/sql-scalar",
+          "querying/sql-aggregations",
+          "querying/sql-multivalue-string-functions"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Druid SQL APIs",
+        "ids": [
+          "querying/sql-api",
+          "querying/sql-jdbc",
+          "querying/sql-connection-context"
         ]
       },
       {
@@ -126,6 +161,7 @@
           "operations/security-user-auth",
           "operations/auth-ldap",
           "operations/password-provider",
+          "operations/dynamic-config-provider",
           "design/auth",
           "operations/tls-support"
 
@@ -137,16 +173,24 @@
         "ids": [
           "operations/basic-cluster-tuning",
           "operations/segment-optimization",
+          "operations/mixed-workloads",
           "operations/http-compression",
           "operations/clean-metadata-store"
+        ]
+      },       
+      {
+        "type": "subcategory",
+        "label": "Monitoring",
+        "ids": [
+          "operations/request-logging",
+          "operations/metrics",
+          "operations/alerts"
         ]
       },       
       "operations/api-reference",
       "operations/high-availability",
       "operations/rolling-updates",
       "operations/rule-configuration",
-      "operations/metrics",
-      "operations/alerts",
       "operations/other-hadoop",
       {
         "type": "subcategory",
@@ -219,6 +263,8 @@
       "development/extensions-core/simple-client-sslcontext",
       "development/extensions-core/stats",
       "development/extensions-core/test-stats",
+      "development/extensions-core/druid-aws-rds",
+      "development/extensions-core/kubernetes",
       "development/extensions-contrib/ambari-metrics-emitter",
       "development/extensions-contrib/cassandra",
       "development/extensions-contrib/cloudfiles",
@@ -239,6 +285,8 @@
       "development/extensions-contrib/time-min-max",
       "development/extensions-contrib/gce-extensions",
       "development/extensions-contrib/aliyun-oss",
+      "development/extensions-contrib/prometheus",
+      "operations/kubernetes",
       "querying/hll-old",
       "querying/select-query",
       "ingestion/standalone-realtime"

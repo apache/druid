@@ -263,6 +263,37 @@ public class AvroFlattenerMakerTest
         flattener.makeJsonPathExtractor("$.someIntArray").apply(record)
     );
     Assert.assertEquals(
+        (double) record.getSomeIntArray().stream().mapToInt(Integer::intValue).min().getAsInt(),
+
+        //return type of min is double
+        flattener.makeJsonPathExtractor("$.someIntArray.min()").apply(record)
+    );
+    Assert.assertEquals(
+        (double) record.getSomeIntArray().stream().mapToInt(Integer::intValue).max().getAsInt(),
+
+        //return type of max is double
+        flattener.makeJsonPathExtractor("$.someIntArray.max()").apply(record)
+    );
+    Assert.assertEquals(
+        record.getSomeIntArray().stream().mapToInt(Integer::intValue).average().getAsDouble(),
+        flattener.makeJsonPathExtractor("$.someIntArray.avg()").apply(record)
+    );
+    Assert.assertEquals(
+        record.getSomeIntArray().size(),
+        flattener.makeJsonPathExtractor("$.someIntArray.length()").apply(record)
+    );
+    Assert.assertEquals(
+        (double) record.getSomeIntArray().stream().mapToInt(Integer::intValue).sum(),
+
+        //return type of sum is double
+        flattener.makeJsonPathExtractor("$.someIntArray.sum()").apply(record)
+    );
+    Assert.assertEquals(
+        2.681,
+        (double) flattener.makeJsonPathExtractor("$.someIntArray.stddev()").apply(record),
+        0.0001
+    );
+    Assert.assertEquals(
         record.getSomeStringArray(),
         flattener.makeJsonPathExtractor("$.someStringArray").apply(record)
     );

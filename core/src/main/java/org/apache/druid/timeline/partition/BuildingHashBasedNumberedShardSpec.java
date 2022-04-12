@@ -36,8 +36,6 @@ import java.util.Objects;
  */
 public class BuildingHashBasedNumberedShardSpec implements BuildingShardSpec<HashBasedNumberedShardSpec>
 {
-  public static final String TYPE = "building_hashed";
-
   private final int partitionId;
   private final int bucketId;
   private final int numBuckets;
@@ -118,6 +116,12 @@ public class BuildingHashBasedNumberedShardSpec implements BuildingShardSpec<Has
         partitionFunction,
         jsonMapper
     );
+  }
+
+  @Override
+  public String getType()
+  {
+    return Type.BUILDING_HASHED;
   }
 
   @Override

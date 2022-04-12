@@ -74,7 +74,7 @@ public class StringLastTimeseriesQueryTest
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.SECOND)
                 .withMetrics(new CountAggregatorFactory("cnt"))
-                .withMetrics(new StringLastAggregatorFactory(LAST_CLIENT_TYPE, CLIENT_TYPE, 1024))
+                .withMetrics(new StringLastAggregatorFactory(LAST_CLIENT_TYPE, CLIENT_TYPE, null, 1024))
                 .build()
         )
         .setMaxRowCount(1000)
@@ -117,10 +117,10 @@ public class StringLastTimeseriesQueryTest
                                   .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                                   .aggregators(
                                       ImmutableList.of(
-                                          new StringLastAggregatorFactory("nonfolding", CLIENT_TYPE, 1024),
-                                          new StringLastAggregatorFactory("folding", LAST_CLIENT_TYPE, 1024),
-                                          new StringLastAggregatorFactory("nonexistent", "nonexistent", 1024),
-                                          new StringLastAggregatorFactory("numeric", "cnt", 1024)
+                                          new StringLastAggregatorFactory("nonfolding", CLIENT_TYPE, null, 1024),
+                                          new StringLastAggregatorFactory("folding", LAST_CLIENT_TYPE, null, 1024),
+                                          new StringLastAggregatorFactory("nonexistent", "nonexistent", null, 1024),
+                                          new StringLastAggregatorFactory("numeric", "cnt", null, 1024)
                                       )
                                   )
                                   .build();

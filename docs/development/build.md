@@ -33,7 +33,9 @@ make sure it has `/master/` in the URL.
 
 ##### Installing Java and Maven
 
-- JDK 8, 8u92+. We recommend using an OpenJDK distribution that provides long-term support and open-source licensing,
+- JDK 8, 8u92+ or JDK 11
+    
+    We recommend using an OpenJDK distribution that provides long-term support and open-source licensing,
   like [Amazon Corretto](https://aws.amazon.com/corretto/) or [Azul Zulu](https://www.azul.com/downloads/zulu/).
 - [Maven version 3.x](http://maven.apache.org/download.cgi)
 
@@ -71,6 +73,25 @@ Putting these together, if you wish to build the source and binary distributions
 ```bash
 mvn clean install -Papache-release,dist,rat -DskipTests
 ```
+
+### Building hadoop 3 distribution
+
+By default, druid ships hadoop 2.x.x jars along with the distribution. Exact version can be found in the
+main [pom](https://github.com/apache/druid/blob/master/pom.xml). To build druid with hadoop 3.x.x jars, hadoop3 profile
+needs to be activated.
+
+To generate build with hadoop 3 dependencies, run:
+
+```bash
+mvn clean install -Phadoop3
+```
+
+To generate distribution with hadoop3 dependencies, run :
+
+```bash
+mvn clean install -Papache-release,dist-hadoop3,rat,hadoop3 -DskipTests 
+```
+
 #### Potential issues
 
 ##### Missing `pyyaml`

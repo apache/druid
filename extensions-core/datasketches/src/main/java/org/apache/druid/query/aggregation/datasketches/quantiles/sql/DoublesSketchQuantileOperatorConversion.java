@@ -40,7 +40,7 @@ public class DoublesSketchQuantileOperatorConversion extends DoublesSketchSingle
 
   public DoublesSketchQuantileOperatorConversion()
   {
-    super(SQL_FUNCTION, FUNCTION_NAME);
+    super(SQL_FUNCTION);
   }
 
   @Override

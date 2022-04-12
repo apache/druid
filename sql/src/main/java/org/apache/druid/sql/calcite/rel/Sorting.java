@@ -84,7 +84,7 @@ public class Sorting
     return new Sorting(Collections.emptyList(), OffsetLimit.none(), null);
   }
 
-  public SortKind getSortKind(final String timeColumn)
+  public SortKind getTimeSortKind(final String timeColumn)
   {
     if (orderBys.isEmpty()) {
       return SortKind.UNORDERED;

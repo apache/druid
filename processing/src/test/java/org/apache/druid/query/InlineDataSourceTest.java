@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
@@ -66,12 +67,13 @@ public class InlineDataSourceTest
       "double_array"
   );
 
-  private final List<ValueType> expectedColumnTypes = ImmutableList.of(
-      ValueType.LONG,
-      ValueType.STRING,
-      ValueType.DOUBLE,
-      ValueType.COMPLEX,
-      ValueType.DOUBLE_ARRAY
+  private final ColumnType someComplex = new ColumnType(ValueType.COMPLEX, "foo", null);
+  private final List<ColumnType> expectedColumnTypes = ImmutableList.of(
+      ColumnType.LONG,
+      ColumnType.STRING,
+      ColumnType.DOUBLE,
+      someComplex,
+      ColumnType.DOUBLE_ARRAY
   );
 
   private final RowSignature expectedRowSignature;
@@ -126,11 +128,11 @@ public class InlineDataSourceTest
   {
     Assert.assertEquals(
         RowSignature.builder()
-                    .add(ColumnHolder.TIME_COLUMN_NAME, ValueType.LONG)
-                    .add("str", ValueType.STRING)
-                    .add("double", ValueType.DOUBLE)
-                    .add("complex", ValueType.COMPLEX)
-                    .add("double_array", ValueType.DOUBLE_ARRAY)
+                    .add(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG)
+                    .add("str", ColumnType.STRING)
+                    .add("double", ColumnType.DOUBLE)
+                    .add("complex", someComplex)
+                    .add("double_array", ColumnType.DOUBLE_ARRAY)
                     .build(),
         listDataSource.getRowSignature()
     );

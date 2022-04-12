@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
@@ -27,6 +28,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -51,7 +53,6 @@ import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -99,6 +100,7 @@ public class ForkingTaskRunner
   private final ListeningExecutorService exec;
   private final PortFinder portFinder;
   private final StartupLoggingConfig startupLoggingConfig;
+  private final WorkerConfig workerConfig;
 
   private volatile boolean stopping = false;
 
@@ -121,6 +123,7 @@ public class ForkingTaskRunner
     this.node = node;
     this.portFinder = new PortFinder(config.getStartPort(), config.getEndPort(), config.getPorts());
     this.startupLoggingConfig = startupLoggingConfig;
+    this.workerConfig = workerConfig;
     this.exec = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(workerConfig.getCapacity(), "forking-task-runner-%d")
     );
@@ -161,9 +164,7 @@ public class ForkingTaskRunner
                   try {
                     final Closer closer = Closer.create();
                     try {
-                      if (!attemptDir.mkdirs()) {
-                        throw new IOE("Could not create directories: %s", attemptDir);
-                      }
+                      FileUtils.mkdirp(attemptDir);
 
                       final File taskFile = new File(taskDir, "task.json");
                       final File statusFile = new File(attemptDir, "status.json");
@@ -216,6 +217,24 @@ public class ForkingTaskRunner
                           Iterables.addAll(
                               command,
                               new QuotableWhiteSpaceSplitter((String) taskJavaOpts)
+                          );
+                        }
+
+                        // Override task specific javaOptsArray
+                        try {
+                          List<String> taskJavaOptsArray = jsonMapper.convertValue(
+                              task.getContextValue(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY),
+                              new TypeReference<List<String>>() {}
+                          );
+                          if (taskJavaOptsArray != null) {
+                            Iterables.addAll(command, taskJavaOptsArray);
+                          }
+                        }
+                        catch (Exception e) {
+                          throw new IllegalArgumentException(
+                              ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY
+                              + " in context of task: " + task.getId() + " must be an array of strings.",
+                              e
                           );
                         }
 
@@ -669,7 +688,15 @@ public class ForkingTaskRunner
   }
 
   @Override
-  public long getTotalTaskSlotCount()
+  public Map<String, Long> getTotalTaskSlotCount()
+  {
+    if (config.getPorts() != null && !config.getPorts().isEmpty()) {
+      return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(config.getPorts().size()));
+    }
+    return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(config.getEndPort() - config.getStartPort() + 1));
+  }
+
+  public long getTotalTaskSlotCountLong()
   {
     if (config.getPorts() != null && !config.getPorts().isEmpty()) {
       return config.getPorts().size();
@@ -678,27 +705,32 @@ public class ForkingTaskRunner
   }
 
   @Override
-  public long getIdleTaskSlotCount()
+  public Map<String, Long> getIdleTaskSlotCount()
   {
-    return Math.max(getTotalTaskSlotCount() - getUsedTaskSlotCount(), 0);
+    return ImmutableMap.of(workerConfig.getCategory(), Math.max(getTotalTaskSlotCountLong() - getUsedTaskSlotCountLong(), 0));
   }
 
   @Override
-  public long getUsedTaskSlotCount()
+  public Map<String, Long> getUsedTaskSlotCount()
+  {
+    return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(portFinder.findUsedPortCount()));
+  }
+
+  public long getUsedTaskSlotCountLong()
   {
     return portFinder.findUsedPortCount();
   }
 
   @Override
-  public long getLazyTaskSlotCount()
+  public Map<String, Long> getLazyTaskSlotCount()
   {
-    return 0;
+    return ImmutableMap.of(workerConfig.getCategory(), 0L);
   }
 
   @Override
-  public long getBlacklistedTaskSlotCount()
+  public Map<String, Long> getBlacklistedTaskSlotCount()
   {
-    return 0;
+    return ImmutableMap.of(workerConfig.getCategory(), 0L);
   }
 
   protected static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem

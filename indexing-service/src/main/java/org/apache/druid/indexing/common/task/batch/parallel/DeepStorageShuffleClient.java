@@ -21,7 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.LoadSpec;
@@ -47,7 +47,7 @@ public class DeepStorageShuffleClient implements ShuffleClient<DeepStoragePartit
   {
     final LoadSpec loadSpec = objectMapper.convertValue(location.getLoadSpec(), LoadSpec.class);
     final File unzippedDir = new File(partitionDir, StringUtils.format("unzipped_%s", location.getSubTaskId()));
-    FileUtils.forceMkdir(unzippedDir);
+    FileUtils.mkdirp(unzippedDir);
     try {
       loadSpec.loadSegment(unzippedDir);
     }

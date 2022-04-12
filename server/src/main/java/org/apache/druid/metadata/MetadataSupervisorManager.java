@@ -33,6 +33,8 @@ public interface MetadataSupervisorManager
 
   Map<String, List<VersionedSupervisorSpec>> getAll();
 
+  List<VersionedSupervisorSpec> getAllForId(String id);
+
   /**
    * Return latest supervisors (both active and terminated)
    *

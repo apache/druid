@@ -21,16 +21,22 @@ package org.apache.druid.server.security;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Strings;
+import org.apache.druid.common.exception.SanitizableException;
+
+import java.util.function.Function;
 
 /**
  * Throw this when a request is unauthorized and we want to send a 403 response back, Jersey exception mapper will
  * take care of sending the response.
  */
-public class ForbiddenException extends RuntimeException
+public class ForbiddenException extends RuntimeException implements SanitizableException
 {
+  static final String DEFAULT_ERROR_MESSAGE = "Unauthorized.";
+
   public ForbiddenException()
   {
-    super("Unauthorized.");
+    super(DEFAULT_ERROR_MESSAGE);
   }
 
   @JsonCreator
@@ -43,5 +49,16 @@ public class ForbiddenException extends RuntimeException
   public String getErrorMessage()
   {
     return super.getMessage();
+  }
+
+  @Override
+  public ForbiddenException sanitize(Function<String, String> errorMessageTransformFunction)
+  {
+    String transformedErrorMessage = errorMessageTransformFunction.apply(getMessage());
+    if (Strings.isNullOrEmpty(transformedErrorMessage)) {
+      return new ForbiddenException();
+    } else {
+      return new ForbiddenException(transformedErrorMessage);
+    }
   }
 }

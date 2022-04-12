@@ -20,6 +20,7 @@
 package org.apache.druid.client.indexing;
 
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -51,6 +52,9 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
       int compactionTaskPriority,
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
+      @Nullable ClientCompactionTaskDimensionsSpec dimensionsSpec,
+      @Nullable AggregatorFactory[] metricsSpec,
+      @Nullable ClientCompactionTaskTransformSpec transformSpec,
       @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context
   )
@@ -60,6 +64,12 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
 
   @Override
   public int getTotalWorkerCapacity()
+  {
+    return 0;
+  }
+
+  @Override
+  public int getTotalWorkerCapacityWithAutoScale()
   {
     return 0;
   }
@@ -103,6 +113,13 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
 
   @Override
   public TaskPayloadResponse getTaskPayload(String taskId)
+  {
+    return null;
+  }
+
+  @Nullable
+  @Override
+  public Map<String, Object> getTaskReport(String taskId)
   {
     return null;
   }

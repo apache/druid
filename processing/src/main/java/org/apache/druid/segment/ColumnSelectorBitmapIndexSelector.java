@@ -27,10 +27,12 @@ import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.column.BitmapIndexes;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.NumericColumn;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.IndexedIterable;
 
@@ -111,6 +113,11 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
     if (columnHolder == null) {
       return null;
     }
+    if (!columnHolder.getCapabilities().toColumnType().is(ValueType.STRING)) {
+      // this method only supports returning STRING values, so other types of dictionary encoded columns will not
+      // work correctly here until reworking is done to support filtering/indexing other types of columns
+      return null;
+    }
     BaseColumn col = columnHolder.getColumn();
     if (!(col instanceof DictionaryEncodedColumn)) {
       return null;
@@ -164,10 +171,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
       VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(dimension);
       ColumnCapabilities virtualCapabilities = null;
       if (virtualColumn != null) {
-        virtualCapabilities = virtualColumn.capabilities(
-            QueryableIndexStorageAdapter.getColumnInspectorForIndex(index),
-            dimension
-        );
+        virtualCapabilities = virtualColumn.capabilities(index, dimension);
       }
       return virtualCapabilities != null ? virtualCapabilities.hasMultipleValues() : ColumnCapabilities.Capable.FALSE;
     }
@@ -209,56 +213,10 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
       // Create a BitmapIndex so that filters applied to null columns can use
       // bitmap indexes. Filters check for the presence of a bitmap index, this is used to determine
       // whether the filter is applied in the pre or post filtering stage.
-      return new BitmapIndex()
-      {
-        @Override
-        public int getCardinality()
-        {
-          return 1;
-        }
-
-        @Override
-        @Nullable
-        public String getValue(int index)
-        {
-          return null;
-        }
-
-        @Override
-        public boolean hasNulls()
-        {
-          return true;
-        }
-
-        @Override
-        public BitmapFactory getBitmapFactory()
-        {
-          return bitmapFactory;
-        }
-
-        /**
-         * Return -2 for non-null values to match what the {@link BitmapIndex} implementation in
-         * {@link org.apache.druid.segment.serde.BitmapIndexColumnPartSupplier}
-         * would return for {@link BitmapIndex#getIndex(String)} when there is only a single index, for the null value.
-         * i.e., return an 'insertion point' of 1 for non-null values (see {@link BitmapIndex} interface)
-         */
-        @Override
-        public int getIndex(@Nullable String value)
-        {
-          return NullHandling.isNullOrEquivalent(value) ? 0 : -2;
-        }
-
-        @Override
-        public ImmutableBitmap getBitmap(int idx)
-        {
-          if (idx == 0) {
-            return bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), getNumRows());
-          } else {
-            return bitmapFactory.makeEmptyImmutableBitmap();
-          }
-        }
-      };
-    } else if (columnHolder.getCapabilities().hasBitmapIndexes()) {
+      return BitmapIndexes.forNilColumn(this::getNumRows, bitmapFactory);
+    } else if (columnHolder.getCapabilities().hasBitmapIndexes() && columnHolder.getCapabilities().is(ValueType.STRING)) {
+      // currently BitmapIndex are reliant on STRING dictionaries to operate correctly, and will fail when used with
+      // other types of dictionary encoded columns
       return columnHolder.getBitmapIndex();
     } else {
       return null;
@@ -273,7 +231,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
       if (idx == null) {
         return null;
       }
-      return idx.getBitmap(idx.getIndex(value));
+      return idx.getBitmapForValue(value);
     }
 
     final ColumnHolder columnHolder = index.getColumnHolder(dimension);
@@ -285,12 +243,14 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
       }
     }
 
-    if (!columnHolder.getCapabilities().hasBitmapIndexes()) {
+    if (!columnHolder.getCapabilities().hasBitmapIndexes() || !columnHolder.getCapabilities().is(ValueType.STRING)) {
+      // currently BitmapIndex are reliant on STRING dictionaries to operate correctly, and will fail when used with
+      // other types of dictionary encoded columns
       return null;
     }
 
     final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
-    return bitmapIndex.getBitmap(bitmapIndex.getIndex(value));
+    return bitmapIndex.getBitmapForValue(value);
   }
 
   @Override
@@ -311,5 +271,12 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   private boolean isVirtualColumn(final String columnName)
   {
     return virtualColumns.getVirtualColumn(columnName) != null;
+  }
+
+  @Nullable
+  @Override
+  public ColumnCapabilities getColumnCapabilities(String column)
+  {
+    return virtualColumns.getColumnCapabilities(index, column);
   }
 }

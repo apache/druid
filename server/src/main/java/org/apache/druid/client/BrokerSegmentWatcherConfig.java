@@ -31,7 +31,13 @@ public class BrokerSegmentWatcherConfig
   private Set<String> watchedTiers = null;
 
   @JsonProperty
+  private Set<String> ignoredTiers = null;
+
+  @JsonProperty
   private Set<String> watchedDataSources = null;
+
+  @JsonProperty
+  private boolean watchRealtimeTasks = true;
 
   @JsonProperty
   private boolean awaitInitializationOnStart = true;
@@ -41,9 +47,19 @@ public class BrokerSegmentWatcherConfig
     return watchedTiers;
   }
 
+  public Set<String> getIgnoredTiers()
+  {
+    return ignoredTiers;
+  }
+
   public Set<String> getWatchedDataSources()
   {
     return watchedDataSources;
+  }
+
+  public boolean isWatchRealtimeTasks()
+  {
+    return watchRealtimeTasks;
   }
 
   public boolean isAwaitInitializationOnStart()

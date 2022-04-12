@@ -195,7 +195,7 @@ is to ingest them as [long-typed dimensions](./ingestion-spec.md#dimensionsspec)
 If necessary, you can get them into this format using a [`transformSpec`](./ingestion-spec.md#transformspec) and
 [expressions](../misc/math-expr.md) like `timestamp_parse`, which returns millisecond timestamps.
 
-At query time, you can query secondary timestamps with [SQL time functions](../querying/sql.md#time-functions)
+At query time, you can query secondary timestamps with [SQL time functions](../querying/sql-scalar.md#date-and-time-functions)
 like `MILLIS_TO_TIMESTAMP`, `TIME_FLOOR`, and others. If you're using native Druid queries, you can use
 [expressions](../misc/math-expr.md).
 

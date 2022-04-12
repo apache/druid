@@ -114,7 +114,7 @@ public class DataSchema
     // this validation is not necessarily going to be able to catch everything. It will run again in getDimensionsSpec.
     computeAndValidateOutputFieldNames(this.dimensionsSpec, this.aggregators);
 
-    if (this.granularitySpec.isRollup()) {
+    if (this.granularitySpec.isRollup() && this.aggregators.length == 0) {
       log.warn(
           "Rollup is enabled for dataSource [%s] but no metricsSpec has been provided. "
           + "Are you sure this is what you want?",

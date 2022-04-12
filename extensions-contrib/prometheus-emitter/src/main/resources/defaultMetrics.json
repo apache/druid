@@ -2,7 +2,7 @@
   "query/time" : { "dimensions" : ["dataSource", "type"], "type" : "timer", "conversionFactor": 1000.0, "help":  "Seconds taken to complete a query."},
   "query/bytes" : { "dimensions" : ["dataSource", "type"], "type" : "count", "help":  "Number of bytes returned in query response."},
   "query/node/time" : { "dimensions" : ["server"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken to query individual historical/realtime processes."},
-  "query/node/ttfb" : { "dimensions" : ["server"], "type" : "timer", "help":  "Time to first byte. Seconds elapsed until Broker starts receiving the response from individual historical/realtime processes."},
+  "query/node/ttfb" : { "dimensions" : ["server"], "type" : "timer", "conversionFactor": 1000.0, "help":  "Time to first byte. Seconds elapsed until Broker starts receiving the response from individual historical/realtime processes."},
   "query/node/bytes" : { "dimensions" : ["server"], "type" : "count", "help": "Number of bytes returned from querying individual historical/realtime processes."},
   "query/node/backpressure": { "dimensions" : ["server"], "type" : "timer", "help": "Seconds that the channel to this process has spent suspended due to backpressure."},
   "query/intervalChunk/time" : { "dimensions" : [], "type" : "timer", "conversionFactor": 1000.0, "help": "Only emitted if interval chunking is enabled. Milliseconds required to query an interval chunk. This metric is deprecated and will be removed in the future because interval chunking is deprecated."},

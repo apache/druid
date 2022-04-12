@@ -39,7 +39,6 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -71,8 +70,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -464,68 +461,6 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testAppendRetainsValues() throws Exception
-  {
-    final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(null);
-    IncrementalIndexTest.populateIndex(timestamp, toPersist1);
-
-    final File tempDir1 = temporaryFolder.newFolder();
-    final File mergedDir = temporaryFolder.newFolder();
-    final IndexableAdapter incrementalAdapter = new IncrementalIndexAdapter(
-        toPersist1.getInterval(),
-        toPersist1,
-        indexSpec.getBitmapSerdeFactory()
-                 .getBitmapFactory()
-    );
-
-    QueryableIndex index1 = closer.closeLater(
-        indexIO.loadIndex(indexMerger.append(ImmutableList.of(incrementalAdapter), null, tempDir1, indexSpec, null))
-    );
-    final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
-
-    indexIO.validateTwoSegments(incrementalAdapter, queryableAdapter);
-
-    Assert.assertEquals(2, index1.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
-    Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
-    Assert.assertEquals(3, index1.getColumnNames().size());
-
-    Assert.assertArrayEquals(
-        IncrementalIndexTest.getDefaultCombiningAggregatorFactories(),
-        index1.getMetadata().getAggregators()
-    );
-
-    AggregatorFactory[] mergedAggregators = new AggregatorFactory[]{new CountAggregatorFactory("count")};
-    QueryableIndex merged = closer.closeLater(
-        indexIO.loadIndex(
-            indexMerger.mergeQueryableIndex(
-                ImmutableList.of(index1),
-                true,
-                mergedAggregators,
-                mergedDir,
-                indexSpec,
-                null,
-                -1
-            )
-        )
-    );
-
-    Assert.assertEquals(2, merged.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
-    Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(merged.getAvailableDimensions()));
-    Assert.assertEquals(3, merged.getColumnNames().size());
-
-    indexIO.validateTwoSegments(tempDir1, mergedDir);
-
-    assertDimCompression(index1, indexSpec.getDimensionCompression());
-    assertDimCompression(merged, indexSpec.getDimensionCompression());
-
-    Assert.assertArrayEquals(
-        getCombiningAggregators(mergedAggregators),
-        merged.getMetadata().getAggregators()
-    );
-  }
-
-  @Test
   public void testMergeSpecChange() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
@@ -590,134 +525,6 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
     assertDimCompression(index1, indexSpec.getDimensionCompression());
     assertDimCompression(merged, newSpec.getDimensionCompression());
-  }
-
-
-  @Test
-  public void testConvertSame() throws Exception
-  {
-    final long timestamp = System.currentTimeMillis();
-    final AggregatorFactory[] aggregators = new AggregatorFactory[]{
-        new LongSumAggregatorFactory(
-            "longSum1",
-            "dim1"
-        ),
-        new LongSumAggregatorFactory("longSum2", "dim2")
-    };
-
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(aggregators);
-    IncrementalIndexTest.populateIndex(timestamp, toPersist1);
-
-    final File tempDir1 = temporaryFolder.newFolder();
-    final File convertDir = temporaryFolder.newFolder();
-    final IndexableAdapter incrementalAdapter = new IncrementalIndexAdapter(
-        toPersist1.getInterval(),
-        toPersist1,
-        indexSpec.getBitmapSerdeFactory()
-                 .getBitmapFactory()
-    );
-
-    QueryableIndex index1 = closer.closeLater(
-        indexIO.loadIndex(indexMerger.persist(toPersist1, tempDir1, indexSpec, null))
-    );
-
-    final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
-
-    indexIO.validateTwoSegments(incrementalAdapter, queryableAdapter);
-
-    Assert.assertEquals(2, index1.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
-    Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
-    Assert.assertEquals(4, index1.getColumnNames().size());
-
-
-    QueryableIndex converted = closer.closeLater(
-        indexIO.loadIndex(indexMerger.convert(tempDir1, convertDir, indexSpec))
-    );
-
-    Assert.assertEquals(2, converted.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
-    Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(converted.getAvailableDimensions()));
-    Assert.assertEquals(4, converted.getColumnNames().size());
-
-    indexIO.validateTwoSegments(tempDir1, convertDir);
-
-    assertDimCompression(index1, indexSpec.getDimensionCompression());
-    assertDimCompression(converted, indexSpec.getDimensionCompression());
-
-    Assert.assertArrayEquals(
-        getCombiningAggregators(aggregators),
-        converted.getMetadata().getAggregators()
-    );
-  }
-
-
-  @Test
-  public void testConvertDifferent() throws Exception
-  {
-    final long timestamp = System.currentTimeMillis();
-    final AggregatorFactory[] aggregators = new AggregatorFactory[]{
-        new LongSumAggregatorFactory(
-            "longSum1",
-            "dim1"
-        ),
-        new LongSumAggregatorFactory("longSum2", "dim2")
-    };
-
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(aggregators);
-    IncrementalIndexTest.populateIndex(timestamp, toPersist1);
-
-    final File tempDir1 = temporaryFolder.newFolder();
-    final File convertDir = temporaryFolder.newFolder();
-    final IndexableAdapter incrementalAdapter = new IncrementalIndexAdapter(
-        toPersist1.getInterval(),
-        toPersist1,
-        indexSpec.getBitmapSerdeFactory()
-                 .getBitmapFactory()
-    );
-
-    QueryableIndex index1 = closer.closeLater(
-        indexIO.loadIndex(indexMerger.persist(toPersist1, tempDir1, indexSpec, null))
-    );
-
-
-    final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
-
-    indexIO.validateTwoSegments(incrementalAdapter, queryableAdapter);
-
-    Assert.assertEquals(2, index1.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
-    Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
-    Assert.assertEquals(4, index1.getColumnNames().size());
-
-
-    IndexSpec newSpec = new IndexSpec(
-        indexSpec.getBitmapSerdeFactory(),
-        CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
-        CompressionStrategy.LZF :
-        CompressionStrategy.LZ4,
-        CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
-        CompressionStrategy.LZF :
-        CompressionStrategy.LZ4,
-        CompressionFactory.LongEncodingStrategy.LONGS.equals(indexSpec.getLongEncoding()) ?
-        CompressionFactory.LongEncodingStrategy.AUTO :
-        CompressionFactory.LongEncodingStrategy.LONGS
-    );
-
-    QueryableIndex converted = closer.closeLater(
-        indexIO.loadIndex(indexMerger.convert(tempDir1, convertDir, newSpec))
-    );
-
-    Assert.assertEquals(2, converted.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
-    Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(converted.getAvailableDimensions()));
-    Assert.assertEquals(4, converted.getColumnNames().size());
-
-    indexIO.validateTwoSegments(tempDir1, convertDir);
-
-    assertDimCompression(index1, indexSpec.getDimensionCompression());
-    assertDimCompression(converted, newSpec.getDimensionCompression());
-
-    Assert.assertArrayEquals(
-        getCombiningAggregators(aggregators),
-        converted.getMetadata().getAggregators()
-    );
   }
 
   private void assertDimCompression(QueryableIndex index, CompressionStrategy expectedStrategy)
@@ -832,11 +639,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
   public void testMergeWithDimensionsList() throws Exception
   {
     IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withDimensionsSpec(new DimensionsSpec(
-            makeDimensionSchemas(Arrays.asList("dimA", "dimB", "dimC")),
-            null,
-            null
-        ))
+        .withDimensionsSpec(new DimensionsSpec(makeDimensionSchemas(Arrays.asList("dimA", "dimB", "dimC"))))
         .withMetrics(new CountAggregatorFactory("count"))
         .build();
 
@@ -955,6 +758,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                   Arrays.asList(indexA, indexB),
                   true,
                   new AggregatorFactory[]{new CountAggregatorFactory("count")},
+
                   tmpDirMerged,
                   indexSpec,
                   null,
@@ -1537,6 +1341,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             new LongSumAggregatorFactory("C", "C"),
             },
         tmpDirMerged,
+        null,
         indexSpec,
         -1
     );
@@ -1587,6 +1392,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
         true,
         new AggregatorFactory[]{new LongSumAggregatorFactory("A", "A"), new LongSumAggregatorFactory("C", "C")},
         tmpDirMerged,
+        null,
         indexSpec,
         -1
     );
@@ -1658,6 +1464,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             new LongSumAggregatorFactory("C", "C")
         },
         tmpDirMerged,
+        null,
         indexSpec,
         -1
     );
@@ -1722,6 +1529,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             new LongSumAggregatorFactory("D", "D")
         },
         tmpDirMerged,
+        null,
         indexSpec,
         -1
     );
@@ -1767,6 +1575,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             new LongSumAggregatorFactory("D", "D")
         },
         tmpDirMerged,
+        null,
         indexSpec,
         -1
     );
@@ -1882,7 +1691,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
   private IncrementalIndex getIndexWithDimsFromSchemata(List<DimensionSchema> dims)
   {
     IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withDimensionsSpec(new DimensionsSpec(dims, null, null))
+        .withDimensionsSpec(new DimensionsSpec(dims))
         .withMetrics(new CountAggregatorFactory("count"))
         .build();
 
@@ -1986,7 +1795,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
   private IncrementalIndex getIndexWithDims(List<String> dims)
   {
     IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withDimensionsSpec(new DimensionsSpec(makeDimensionSchemas(dims), null, null))
+        .withDimensionsSpec(new DimensionsSpec(makeDimensionSchemas(dims)))
         .withMetrics(new CountAggregatorFactory("count"))
         .build();
 
@@ -2003,31 +1812,6 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
       combiningAggregators[i] = aggregators[i].getCombiningFactory();
     }
     return combiningAggregators;
-  }
-
-  @Test
-  public void testDictIdSeeker()
-  {
-    IntBuffer dimConversions = ByteBuffer.allocateDirect(3 * Integer.BYTES).asIntBuffer();
-    dimConversions.put(0);
-    dimConversions.put(2);
-    dimConversions.put(4);
-    IndexMerger.IndexSeeker dictIdSeeker = new IndexMerger.IndexSeekerWithConversion(
-        (IntBuffer) dimConversions.asReadOnlyBuffer().rewind()
-    );
-    Assert.assertEquals(0, dictIdSeeker.seek(0));
-    Assert.assertEquals(-1, dictIdSeeker.seek(1));
-    Assert.assertEquals(1, dictIdSeeker.seek(2));
-    try {
-      dictIdSeeker.seek(5);
-      Assert.fail("Only support access in order");
-    }
-    catch (ISE ise) {
-      Assert.assertTrue("Only support access in order", true);
-    }
-    Assert.assertEquals(-1, dictIdSeeker.seek(3));
-    Assert.assertEquals(2, dictIdSeeker.seek(4));
-    Assert.assertEquals(-1, dictIdSeeker.seek(5));
   }
 
   @Test
@@ -2902,7 +2686,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
   private QueryableIndex persistAndLoad(List<DimensionSchema> schema, InputRow... rows) throws IOException
   {
-    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null, new DimensionsSpec(schema, null, null));
+    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null, new DimensionsSpec(schema));
     for (InputRow row : rows) {
       toPersist.add(row);
     }

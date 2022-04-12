@@ -29,16 +29,16 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToStringPostAggregator;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.PostAggregatorVisitor;
+import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class DoublesSketchSummaryOperatorConversion extends DirectOperatorConversion
+public class DoublesSketchSummaryOperatorConversion implements SqlOperatorConversion
 {
   private static final String FUNCTION_NAME = "DS_QUANTILE_SUMMARY";
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
@@ -46,11 +46,6 @@ public class DoublesSketchSummaryOperatorConversion extends DirectOperatorConver
       .operandTypes(SqlTypeFamily.ANY)
       .returnTypeNonNull(SqlTypeName.VARCHAR)
       .build();
-
-  public DoublesSketchSummaryOperatorConversion()
-  {
-    super(SQL_FUNCTION, FUNCTION_NAME);
-  }
 
   @Override
   public SqlOperator calciteOperator()

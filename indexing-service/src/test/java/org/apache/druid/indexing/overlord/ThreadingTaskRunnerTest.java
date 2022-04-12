@@ -61,7 +61,9 @@ public class ThreadingTaskRunnerTest
             new Period("PT10S"),
             ImmutableList.of(),
             false,
-            false
+            false,
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+            null
         ),
         new WorkerConfig(),
         new NoopTaskLogs(),

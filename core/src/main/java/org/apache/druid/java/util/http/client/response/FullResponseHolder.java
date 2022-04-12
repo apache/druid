@@ -29,18 +29,16 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
  */
 public abstract class FullResponseHolder<T>
 {
-  private final HttpResponseStatus status;
   private final HttpResponse response;
 
-  public FullResponseHolder(HttpResponseStatus status, HttpResponse response)
+  public FullResponseHolder(HttpResponse response)
   {
-    this.status = status;
     this.response = response;
   }
 
   public HttpResponseStatus getStatus()
   {
-    return status;
+    return response.getStatus();
   }
 
   public HttpResponse getResponse()

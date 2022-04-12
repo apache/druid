@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class DruidConnection
 {
-  private static final Logger log = new Logger(DruidConnection.class);
+  private static final Logger LOG = new Logger(DruidConnection.class);
   private static final Set<String> SENSITIVE_CONTEXT_FIELDS = Sets.newHashSet(
       "user", "password"
   );
@@ -63,12 +63,21 @@ public class DruidConnection
   @GuardedBy("connectionLock")
   private boolean open = true;
 
-  public DruidConnection(final String connectionId, final int maxStatements, final Map<String, Object> context)
+  public DruidConnection(
+      final String connectionId,
+      final int maxStatements,
+      final Map<String, Object> context
+  )
   {
     this.connectionId = Preconditions.checkNotNull(connectionId);
     this.maxStatements = maxStatements;
     this.context = ImmutableMap.copyOf(context);
     this.statements = new ConcurrentHashMap<>();
+  }
+
+  public String getConnectionId()
+  {
+    return connectionId;
   }
 
   public DruidStatement createStatement(SqlLifecycleFactory sqlLifecycleFactory)
@@ -79,11 +88,11 @@ public class DruidConnection
       if (statements.containsKey(statementId)) {
         // Will only happen if statementCounter rolls over before old statements are cleaned up. If this
         // ever happens then something fishy is going on, because we shouldn't have billions of statements.
-        throw new ISE("Uh oh, too many statements");
+        throw DruidMeta.logFailure(new ISE("Uh oh, too many statements"));
       }
 
       if (statements.size() >= maxStatements) {
-        throw new ISE("Too many open statements, limit is[%,d]", maxStatements);
+        throw DruidMeta.logFailure(new ISE("Too many open statements, limit is[%,d]", maxStatements));
       }
 
       // remove sensitive fields from the context, only the connection's context needs to have authentication
@@ -101,14 +110,14 @@ public class DruidConnection
           sqlLifecycleFactory.factorize(),
           () -> {
             // onClose function for the statement
-            log.debug("Connection[%s] closed statement[%s].", connectionId, statementId);
+            LOG.debug("Connection[%s] closed statement[%s].", connectionId, statementId);
             // statements will be accessed unsynchronized to avoid deadlock
             statements.remove(statementId);
           }
       );
 
       statements.put(statementId, statement);
-      log.debug("Connection[%s] opened statement[%s].", connectionId, statementId);
+      LOG.debug("Connection[%s] opened statement[%s].", connectionId, statementId);
       return statement;
     }
   }
@@ -146,11 +155,11 @@ public class DruidConnection
           statement.close();
         }
         catch (Exception e) {
-          log.warn("Connection[%s] failed to close statement[%s]!", connectionId, statement.getStatementId());
+          LOG.warn("Connection[%s] failed to close statement[%s]!", connectionId, statement.getStatementId());
         }
       }
 
-      log.debug("Connection[%s] closed.", connectionId);
+      LOG.debug("Connection[%s] closed.", connectionId);
       open = false;
     }
   }

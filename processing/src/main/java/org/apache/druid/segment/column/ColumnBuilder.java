@@ -54,13 +54,13 @@ public class ColumnBuilder
 
   public ColumnBuilder setType(ValueType type)
   {
-    this.capabilitiesBuilder.setType(type);
+    this.capabilitiesBuilder.setType(ColumnTypeFactory.ofValueType(type));
     return this;
   }
 
   public ColumnBuilder setComplexTypeName(String typeName)
   {
-    this.capabilitiesBuilder.setComplexTypeName(typeName);
+    this.capabilitiesBuilder.setType(ColumnType.ofComplex(typeName));
     return this;
   }
 

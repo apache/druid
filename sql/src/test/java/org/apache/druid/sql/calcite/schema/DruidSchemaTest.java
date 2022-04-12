@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -28,6 +29,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -37,13 +39,25 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
+import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
+import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
+import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.QueryLifecycle;
+import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -54,6 +68,7 @@ import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -61,6 +76,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -77,6 +93,7 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
   private DruidSchema schema2 = null;
   private CountDownLatch buildTableLatch = new CountDownLatch(1);
   private CountDownLatch markDataSourceLatch = new CountDownLatch(1);
+  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
   @Before
   public void setUp() throws Exception
@@ -158,9 +175,14 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         serverView,
         segmentManager,
-        new MapJoinableFactory(ImmutableSet.of(globalTableJoinable), ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)),
+        new MapJoinableFactory(
+            ImmutableSet.of(globalTableJoinable),
+            ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)
+        ),
         PLANNER_CONFIG_DEFAULT,
-        new NoopEscalator()
+        new NoopEscalator(),
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
@@ -185,11 +207,14 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(globalTableJoinable), ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)),
         PLANNER_CONFIG_DEFAULT,
-        new NoopEscalator()
+        new NoopEscalator(),
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
 
       boolean throwException = true;
+
       @Override
       protected DruidTable buildDruidTable(String dataSource)
       {
@@ -199,7 +224,7 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
       }
 
       @Override
-      Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
+      protected Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
       {
         if (throwException) {
           throwException = false;
@@ -414,9 +439,9 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
     Assert.assertEquals(1L, metadata.isRealtime());
     // get the historical server
     final ImmutableDruidServer historicalServer = druidServers.stream()
-                                                        .filter(s -> s.getType().equals(ServerType.HISTORICAL))
-                                                        .findAny()
-                                                        .orElse(null);
+                                                              .filter(s -> s.getType().equals(ServerType.HISTORICAL))
+                                                              .findAny()
+                                                              .orElse(null);
 
     Assert.assertNotNull(historicalServer);
     final DruidServerMetadata historicalServerMetadata = historicalServer.getMetadata();
@@ -461,11 +486,13 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
-        new NoopEscalator()
+        new NoopEscalator(),
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
-      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -502,11 +529,13 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
-        new NoopEscalator()
+        new NoopEscalator(),
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
-      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -547,11 +576,13 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
-        new NoopEscalator()
+        new NoopEscalator(),
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
-      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -589,11 +620,13 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
-        new NoopEscalator()
+        new NoopEscalator(),
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
-      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -628,11 +661,13 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
-        new NoopEscalator()
+        new NoopEscalator(),
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
-      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -684,11 +719,13 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
-        new NoopEscalator()
+        new NoopEscalator(),
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
-      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -743,7 +780,9 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
-        new NoopEscalator()
+        new NoopEscalator(),
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
@@ -776,11 +815,13 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
-        new NoopEscalator()
+        new NoopEscalator(),
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
-      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -822,11 +863,13 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
-        new NoopEscalator()
+        new NoopEscalator(),
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
-      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -993,6 +1036,167 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
     Assert.assertFalse(fooTable.getDataSource() instanceof GlobalTableDataSource);
     Assert.assertFalse(fooTable.isBroadcast());
     Assert.assertFalse(fooTable.isJoinable());
+  }
+
+  /**
+   * Ensure that the BrokerInternalQueryConfig context is honored for this internally generated SegmentMetadata Query
+   */
+  @Test
+  public void testRunSegmentMetadataQueryWithContext() throws Exception
+  {
+    Map<String, Object> queryContext = ImmutableMap.of("priority", 5);
+
+    String brokerInternalQueryConfigJson = "{\"context\": { \"priority\": 5} }";
+
+    TestHelper.makeJsonMapper();
+    BrokerInternalQueryConfig brokerInternalQueryConfig = MAPPER.readValue(
+        MAPPER.writeValueAsString(
+            MAPPER.readValue(brokerInternalQueryConfigJson, BrokerInternalQueryConfig.class)
+        ),
+        BrokerInternalQueryConfig.class
+    );
+
+    DataSegment segment = newSegment("test", 0);
+    List<SegmentId> segmentIterable = ImmutableList.of(segment.getId());
+
+    // This is the query that we expect this method to create. We will be testing that it matches the query generated by the method under test.
+    SegmentMetadataQuery expectedMetadataQuery = new SegmentMetadataQuery(
+        new TableDataSource(segment.getDataSource()),
+        new MultipleSpecificSegmentSpec(
+            segmentIterable.stream()
+                         .map(SegmentId::toDescriptor).collect(Collectors.toList())),
+        new AllColumnIncluderator(),
+        false,
+        queryContext,
+        EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
+        false,
+        false
+    );
+
+    QueryLifecycleFactory factoryMock = EasyMock.createMock(QueryLifecycleFactory.class);
+    QueryLifecycle lifecycleMock = EasyMock.createMock(QueryLifecycle.class);
+
+    // Need to create schema for this test because the available schemas don't mock the QueryLifecycleFactory, which I need for this test.
+    DruidSchema mySchema = new DruidSchema(
+        factoryMock,
+        serverView,
+        segmentManager,
+        new MapJoinableFactory(
+            ImmutableSet.of(globalTableJoinable),
+            ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)
+        ),
+        PLANNER_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        brokerInternalQueryConfig,
+        null
+    );
+
+    EasyMock.expect(factoryMock.factorize()).andReturn(lifecycleMock).once();
+    // This is the mat of the test, making sure that the query created by the method under test matches the expected query, specifically the operator configured context
+    EasyMock.expect(lifecycleMock.runSimple(expectedMetadataQuery, AllowAllAuthenticator.ALLOW_ALL_RESULT, Access.OK)).andReturn(null);
+
+    EasyMock.replay(factoryMock, lifecycleMock);
+
+    mySchema.runSegmentMetadataQuery(segmentIterable);
+
+    EasyMock.verify(factoryMock, lifecycleMock);
+
+  }
+
+  @Test
+  public void testSegmentMetadataColumnType()
+  {
+    RowSignature signature = DruidSchema.analysisToRowSignature(
+        new SegmentAnalysis(
+            "id",
+            ImmutableList.of(Intervals.utc(1L, 2L)),
+            ImmutableMap.of(
+                "a",
+                new ColumnAnalysis(
+                    ColumnType.STRING,
+                    ColumnType.STRING.asTypeString(),
+                    false,
+                    true,
+                    1234,
+                    26,
+                    "a",
+                    "z",
+                    null
+                ),
+                "count",
+                new ColumnAnalysis(
+                    ColumnType.LONG,
+                    ColumnType.LONG.asTypeString(),
+                    false,
+                    true,
+                    1234,
+                    26,
+                    "a",
+                    "z",
+                    null
+                )
+            ),
+            1234,
+            100,
+            null,
+            null,
+            null,
+            null
+        )
+    );
+
+    Assert.assertEquals(
+        RowSignature.builder().add("a", ColumnType.STRING).add("count", ColumnType.LONG).build(),
+        signature
+    );
+  }
+
+
+  @Test
+  public void testSegmentMetadataFallbackType()
+  {
+    RowSignature signature = DruidSchema.analysisToRowSignature(
+        new SegmentAnalysis(
+            "id",
+            ImmutableList.of(Intervals.utc(1L, 2L)),
+            ImmutableMap.of(
+                "a",
+                new ColumnAnalysis(
+                    null,
+                    ColumnType.STRING.asTypeString(),
+                    false,
+                    true,
+                    1234,
+                    26,
+                    "a",
+                    "z",
+                null
+                ),
+                "count",
+                new ColumnAnalysis(
+                    null,
+                    ColumnType.LONG.asTypeString(),
+                    false,
+                    true,
+                    1234,
+                    26,
+                    "a",
+                    "z",
+                    null
+                )
+            ),
+            1234,
+            100,
+            null,
+            null,
+            null,
+            null
+        )
+    );
+    Assert.assertEquals(
+        RowSignature.builder().add("a", ColumnType.STRING).add("count", ColumnType.LONG).build(),
+        signature
+    );
   }
 
   private static DataSegment newSegment(String datasource, int partitionId)

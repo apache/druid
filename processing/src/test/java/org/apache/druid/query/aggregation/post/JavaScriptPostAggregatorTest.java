@@ -26,8 +26,8 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -101,9 +101,9 @@ public class JavaScriptPostAggregatorTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("total", ValueType.LONG)
-                    .add("delta", ValueType.LONG)
-                    .add("a", ValueType.DOUBLE)
+                    .add("total", ColumnType.LONG)
+                    .add("delta", ColumnType.LONG)
+                    .add("a", ColumnType.DOUBLE)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );

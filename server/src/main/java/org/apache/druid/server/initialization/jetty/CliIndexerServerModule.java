@@ -160,7 +160,9 @@ public class CliIndexerServerModule implements Module
         oldConfig.getInflateBufferSize(),
         oldConfig.getCompressionLevel(),
         oldConfig.isEnableForwardedRequestCustomizer(),
-        oldConfig.getAllowedHttpMethods()
+        oldConfig.getAllowedHttpMethods(),
+        oldConfig.isShowDetailedJettyErrors(),
+        oldConfig.getErrorResponseTransformStrategy()
     );
   }
 }

@@ -30,6 +30,7 @@ import {
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
+import { durationSanitizer } from '../../utils';
 import { Rule, RuleUtil } from '../../utils/load-rule';
 import { SuggestibleInput } from '../suggestible-input/suggestible-input';
 
@@ -175,10 +176,9 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
               {RuleUtil.hasPeriod(rule) && (
                 <SuggestibleInput
                   value={rule.period || ''}
+                  sanitizer={durationSanitizer}
                   onValueChange={period => {
                     if (typeof period === 'undefined') return;
-                    // Ensure the period is upper case and does not contain anytihng but the allowed chars
-                    period = period.toUpperCase().replace(/[^PYMDTHS0-9]/g, '');
                     onChange(RuleUtil.changePeriod(rule, period));
                   }}
                   placeholder={PERIOD_SUGGESTIONS[0]}

@@ -111,7 +111,7 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
   public boolean canVectorize(ColumnInspector columnInspector)
   {
     ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
-    return (capabilities != null) && (capabilities.getType() == ValueType.COMPLEX);
+    return capabilities != null && capabilities.is(ValueType.COMPLEX);
   }
 
   @Override

@@ -46,6 +46,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 public abstract class AbstractQueryResourceTestClient<QueryType>
 {
@@ -132,8 +133,6 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
     this.acceptHeader = acceptHeader;
   }
 
-  public abstract String getBrokerURL();
-
   public List<Map<String, Object>> query(String url, QueryType query)
   {
     try {
@@ -154,7 +153,7 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
             "Error while querying[%s] status[%s] content[%s]",
-            getBrokerURL(),
+            url,
             response.getStatus(),
             new String(response.getContent(), StandardCharsets.UTF_8)
         );
@@ -185,6 +184,22 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
           request,
           StatusResponseHandler.getInstance()
       );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public HttpResponseStatus cancelQuery(String url, long timeoutMs)
+  {
+    try {
+      Request request = new Request(HttpMethod.DELETE, new URL(url));
+      Future<StatusResponseHolder> future = httpClient.go(
+          request,
+          StatusResponseHandler.getInstance()
+      );
+      StatusResponseHolder responseHolder = future.get(timeoutMs, TimeUnit.MILLISECONDS);
+      return responseHolder.getStatus();
     }
     catch (Exception e) {
       throw new RuntimeException(e);

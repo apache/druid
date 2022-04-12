@@ -22,7 +22,7 @@ import ReactTable, { CellInfo, Column } from 'react-table';
 
 import { useQueryManager } from '../../hooks';
 import { Api, UrlBaser } from '../../singletons';
-import { deepGet } from '../../utils';
+import { deepGet, SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../utils';
 import { Loader } from '../loader/loader';
 
 import './supervisor-statistics-table.scss';
@@ -106,26 +106,26 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
       columns = columns.concat(
         Object.keys(movingAveragesBuildSegments)
           .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-          .map(
-            (interval: string): Column<SupervisorStatisticsTableRow> => {
-              return {
-                Header: interval,
-                id: interval,
-                accessor: d => {
-                  return deepGet(d, `summary.movingAverages.buildSegments.${interval}`);
-                },
-                Cell: renderCell,
-              };
-            },
-          ),
+          .map((interval: string): Column<SupervisorStatisticsTableRow> => {
+            return {
+              Header: interval,
+              id: interval,
+              accessor: d => {
+                return deepGet(d, `summary.movingAverages.buildSegments.${interval}`);
+              },
+              Cell: renderCell,
+            };
+          }),
       );
     }
 
+    const statisticsData = supervisorStatisticsState.data || [];
     return (
       <ReactTable
-        data={supervisorStatisticsState.data || []}
-        showPagination={false}
-        defaultPageSize={6}
+        data={statisticsData}
+        defaultPageSize={SMALL_TABLE_PAGE_SIZE}
+        pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
+        showPagination={statisticsData.length > SMALL_TABLE_PAGE_SIZE}
         columns={columns}
         noDataText={supervisorStatisticsState.getErrorMessage() || 'No statistics data found'}
       />

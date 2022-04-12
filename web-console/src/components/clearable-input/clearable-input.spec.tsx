@@ -21,7 +21,7 @@ import React from 'react';
 
 import { ClearableInput } from './clearable-input';
 
-describe('clearable-input', () => {
+describe('ClearableInput', () => {
   it('matches snapshot', () => {
     const centerMessage = (
       <ClearableInput

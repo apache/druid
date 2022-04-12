@@ -77,7 +77,7 @@ class CheckTestSuite(unittest.TestCase):
             ['check_test_suite_test.py'],
             ['website/core/Footer.js'],
             ['web-console/src/views/index.ts'],
-            ['check_test_suite_test.py', 'website/core/Footer.js', 'web-console/unified-console.html']
+            ['check_test_suite_test.py', 'website/core/Footer.js', 'web-console/unified-console.html', 'owasp-dependency-check-suppressions.xml']
         ]
         some_java_diffs = [
             ['core/src/main/java/org/apache/druid/math/expr/Expr.java'],

@@ -43,6 +43,7 @@ import org.apache.druid.segment.ColumnSelectorBitmapIndexSelector;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
@@ -609,7 +610,7 @@ public class FilterPartitionTest extends BaseFilterTest
   }
 
   @Test
-  public void testDistributeOrCNF()
+  public void testDistributeOrCNF() throws CNFFilterExplosionException
   {
     DimFilter dimFilter1 = new OrDimFilter(Arrays.asList(
         new SelectorDimFilter("dim0", "6", null),
@@ -663,7 +664,7 @@ public class FilterPartitionTest extends BaseFilterTest
   }
 
   @Test
-  public void testDistributeOrCNFExtractionFn()
+  public void testDistributeOrCNFExtractionFn() throws CNFFilterExplosionException
   {
     DimFilter dimFilter1 = new OrDimFilter(Arrays.asList(
         new SelectorDimFilter("dim0", "super-6", JS_EXTRACTION_FN),

@@ -29,7 +29,7 @@ always_run_jobs = ['license checks', '(openjdk8) packaging check', '(openjdk11) 
 ignore_prefixes = ['.github', '.idea', '.asf.yaml', '.backportrc.json', '.codecov.yml', '.dockerignore', '.gitignore',
                    '.lgtm.yml', 'CONTRIBUTING.md', 'setup-hooks.sh', 'upload.sh', 'dev', 'distribution/docker',
                    'distribution/asf-release-process-guide.md', '.travis.yml', 'check_test_suite.py',
-                   'check_test_suite_test.py']
+                   'check_test_suite_test.py', 'owasp-dependency-check-suppressions.xml']
 
 # these files are docs changes
 # if changes are limited to this set then we can skip web-console and java

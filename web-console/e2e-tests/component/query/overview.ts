@@ -18,7 +18,7 @@
 
 import * as playwright from 'playwright-chromium';
 
-import { clickButton, setInput } from '../../util/playwright';
+import { clickButton, clickText, setInput } from '../../util/playwright';
 import { extractTable } from '../../util/table';
 
 /**
@@ -43,5 +43,42 @@ export class QueryOverview {
     await this.page.waitForSelector('div.query-info');
 
     return await extractTable(this.page, 'div.query-output div.rt-tr-group', 'div.rt-td');
+  }
+
+  async cancelQuery(query: string): Promise<number> {
+    await this.page.goto(this.baseUrl);
+    await this.page.reload({ waitUntil: 'networkidle' });
+
+    await this.page.waitForSelector('div.query-input textarea');
+    const input = await this.page.$('div.query-input textarea');
+
+    await setInput(input!, query);
+
+    await Promise.all([
+      this.page.waitForRequest(
+        request => request.url().includes('druid/v2') && request.method() === 'POST',
+      ),
+      clickButton(this.page, 'Run'),
+    ]);
+
+    await this.page.waitForSelector('.cancel-label');
+
+    const [resp] = await Promise.all([
+      this.page.waitForResponse(
+        response => response.url().includes('druid/v2') && response.request().method() === 'DELETE',
+      ),
+
+      clickText(this.page, 'Cancel query'),
+      this.page.off(
+        'requestfinished',
+        request => request.url().includes('druid/v2') && request.method() === 'POST',
+      ),
+      this.page.off(
+        'requestfinished',
+        request => request.url().includes('druid/v2') && request.method() === 'DELETE',
+      ),
+    ]);
+
+    return resp.status();
   }
 }

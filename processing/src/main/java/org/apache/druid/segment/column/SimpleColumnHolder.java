@@ -58,7 +58,7 @@ class SimpleColumnHolder implements ColumnHolder
     // are prone to such backward incompatible changes.
     if (columnSupplier == null) {
       Preconditions.checkArgument(
-          capabilities.getType() == ValueType.COMPLEX,
+          capabilities.is(ValueType.COMPLEX),
           "Only complex column types can have nullable column suppliers"
       );
     }

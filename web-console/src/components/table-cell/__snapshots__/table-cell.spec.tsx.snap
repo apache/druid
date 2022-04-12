@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`table cell matches snapshot array long 1`] = `
+exports[`TableCell matches snapshot array long 1`] = `
 <span
   class="table-cell truncated"
 >
@@ -12,7 +12,8 @@ exports[`table cell matches snapshot array long 1`] = `
   </span>
   7, 98, 99]
   <span
-    class="bp3-icon bp3-icon-more action-icon"
+    aria-hidden="true"
+    class="bp4-icon bp4-icon-more action-icon"
     icon="more"
   >
     <svg
@@ -21,9 +22,6 @@ exports[`table cell matches snapshot array long 1`] = `
       viewBox="0 0 16 16"
       width="16"
     >
-      <desc>
-        more
-      </desc>
       <path
         d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
         fill-rule="evenodd"
@@ -33,7 +31,7 @@ exports[`table cell matches snapshot array long 1`] = `
 </span>
 `;
 
-exports[`table cell matches snapshot array short 1`] = `
+exports[`TableCell matches snapshot array short 1`] = `
 <span
   class="table-cell plain"
 >
@@ -41,7 +39,7 @@ exports[`table cell matches snapshot array short 1`] = `
 </span>
 `;
 
-exports[`table cell matches snapshot null 1`] = `
+exports[`TableCell matches snapshot null 1`] = `
 <span
   class="table-cell null"
 >
@@ -49,7 +47,7 @@ exports[`table cell matches snapshot null 1`] = `
 </span>
 `;
 
-exports[`table cell matches snapshot object 1`] = `
+exports[`TableCell matches snapshot object 1`] = `
 <span
   class="table-cell plain"
 >
@@ -57,7 +55,7 @@ exports[`table cell matches snapshot object 1`] = `
 </span>
 `;
 
-exports[`table cell matches snapshot simple 1`] = `
+exports[`TableCell matches snapshot simple 1`] = `
 <span
   class="table-cell plain"
 >
@@ -65,7 +63,7 @@ exports[`table cell matches snapshot simple 1`] = `
 </span>
 `;
 
-exports[`table cell matches snapshot truncate 1`] = `
+exports[`TableCell matches snapshot truncate 1`] = `
 <span
   class="table-cell truncated"
 >
@@ -77,7 +75,8 @@ exports[`table cell matches snapshot truncate 1`] = `
   </span>
   test_test_
   <span
-    class="bp3-icon bp3-icon-more action-icon"
+    aria-hidden="true"
+    class="bp4-icon bp4-icon-more action-icon"
     icon="more"
   >
     <svg
@@ -86,9 +85,6 @@ exports[`table cell matches snapshot truncate 1`] = `
       viewBox="0 0 16 16"
       width="16"
     >
-      <desc>
-        more
-      </desc>
       <path
         d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
         fill-rule="evenodd"
@@ -98,7 +94,7 @@ exports[`table cell matches snapshot truncate 1`] = `
 </span>
 `;
 
-exports[`table cell matches snapshot unlimited (absolute max) 1`] = `
+exports[`TableCell matches snapshot unlimited (absolute max) 1`] = `
 <span
   class="table-cell plain"
 >
@@ -106,7 +102,7 @@ exports[`table cell matches snapshot unlimited (absolute max) 1`] = `
 </span>
 `;
 
-exports[`table cell matches snapshot unlimited 1`] = `
+exports[`TableCell matches snapshot unlimited 1`] = `
 <span
   class="table-cell plain"
 >

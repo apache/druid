@@ -26,11 +26,10 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.QueryableIndex;
@@ -95,7 +94,7 @@ public class ExpressionVectorSelectorsTest
       "concat(string1, nonexistent)"
   );
 
-  private static final int ROWS_PER_SEGMENT = 100_000;
+  private static final int ROWS_PER_SEGMENT = 10_000;
 
   private static QueryableIndex INDEX;
   private static Closer CLOSER;
@@ -133,7 +132,7 @@ public class ExpressionVectorSelectorsTest
     return EXPRESSIONS.stream().map(x -> new Object[]{x}).collect(Collectors.toList());
   }
 
-  private ExprType outputType;
+  private ExpressionType outputType;
   private String expression;
 
   public ExpressionVectorSelectorsTest(String expression)
@@ -145,19 +144,9 @@ public class ExpressionVectorSelectorsTest
   public void setup()
   {
     Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
-    outputType = parsed.getOutputType(
-        new ColumnInspector()
-        {
-          @Nullable
-          @Override
-          public ColumnCapabilities getColumnCapabilities(String column)
-          {
-            return QueryableIndexStorageAdapter.getColumnCapabilities(INDEX, column);
-          }
-        }
-    );
+    outputType = parsed.getOutputType(INDEX);
     if (outputType == null) {
-      outputType = ExprType.STRING;
+      outputType = ExpressionType.STRING;
     }
   }
 
@@ -169,7 +158,7 @@ public class ExpressionVectorSelectorsTest
 
   public static void sanityTestVectorizedExpressionSelectors(
       String expression,
-      @Nullable ExprType outputType,
+      @Nullable ExpressionType outputType,
       QueryableIndex index,
       Closer closer,
       int rowsPerSegment
@@ -181,7 +170,7 @@ public class ExpressionVectorSelectorsTest
             new ExpressionVirtualColumn(
                 "v",
                 expression,
-                ExprType.toValueType(outputType),
+                ExpressionType.toColumnType(outputType),
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -220,7 +209,7 @@ public class ExpressionVectorSelectorsTest
       }
       while (!cursor.isDone()) {
         boolean[] nulls;
-        switch (outputType) {
+        switch (outputType.getType()) {
           case LONG:
             nulls = selector.getNullVector();
             long[] longs = selector.getLongVector();

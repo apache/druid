@@ -19,17 +19,27 @@
 
 package org.apache.druid.utils;
 
+import javax.annotation.Nullable;
+
 public final class Throwables
 {
-  public static boolean isThrowable(Throwable t, Class<? extends Throwable> searchFor)
+  /**
+   * searches for a throwable in the cause chain that is of same type as {@param searchFor}. The class of returned
+   * throwable will either be same as {@param searchFor} or a sub-class of {@param searchFor}.
+   * @param t - the throwable in which to search
+   * @param searchFor - Class of throwable to search for
+   * @return null if not found otherwise the cause exception that is of same type as searchFor
+   */
+  @Nullable
+  public static Throwable getCauseOfType(Throwable t, Class<? extends Throwable> searchFor)
   {
-    if (t.getClass().isAssignableFrom(searchFor)) {
-      return true;
+    if (searchFor.isAssignableFrom(t.getClass())) {
+      return t;
     } else {
       if (t.getCause() != null) {
-        return isThrowable(t.getCause(), searchFor);
+        return getCauseOfType(t.getCause(), searchFor);
       } else {
-        return false;
+        return null;
       }
     }
   }

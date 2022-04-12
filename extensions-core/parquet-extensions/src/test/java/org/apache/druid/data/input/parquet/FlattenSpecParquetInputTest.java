@@ -116,6 +116,7 @@ public class FlattenSpecParquetInputTest extends BaseParquetInputTest
     Assert.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
     Assert.assertEquals("listDim1v1", rows.get(0).getDimension("list").get(0));
     Assert.assertEquals("listDim1v2", rows.get(0).getDimension("list").get(1));
+    Assert.assertEquals("2", rows.get(0).getDimension("listLength").get(0));
     Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
   }
 

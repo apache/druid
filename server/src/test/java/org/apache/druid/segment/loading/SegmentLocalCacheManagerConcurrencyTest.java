@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -125,7 +126,7 @@ public class SegmentLocalCacheManagerConcurrencyTest
           localStorageFolder,
           segmentPath
       );
-      localSegmentFile.mkdirs();
+      FileUtils.mkdirp(localSegmentFile);
       final File indexZip = new File(localSegmentFile, "index.zip");
       indexZip.createNewFile();
 

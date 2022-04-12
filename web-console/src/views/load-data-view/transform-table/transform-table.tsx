@@ -22,14 +22,19 @@ import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
 import { Transform } from '../../../druid-models';
-import { caseInsensitiveContains, filterMap } from '../../../utils';
+import {
+  caseInsensitiveContains,
+  filterMap,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+} from '../../../utils';
 import { escapeColumnName } from '../../../utils/druid-expression';
-import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
+import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './transform-table.scss';
 
 export function transformTableSelectedColumnName(
-  sampleData: HeaderAndRows,
+  sampleData: SampleHeaderAndRows,
   selectedTransform: Partial<Transform> | undefined,
 ): string | undefined {
   if (!selectedTransform) return;
@@ -39,7 +44,7 @@ export function transformTableSelectedColumnName(
 }
 
 export interface TransformTableProps {
-  sampleData: HeaderAndRows;
+  sampleData: SampleHeaderAndRows;
   columnFilter: string;
   transformedColumnsOnly: boolean;
   transforms: Transform[];
@@ -61,6 +66,10 @@ export const TransformTable = React.memo(function TransformTable(props: Transfor
     <ReactTable
       className="transform-table -striped -highlight"
       data={sampleData.rows}
+      sortable={false}
+      defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+      pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+      showPagination={sampleData.rows.length > STANDARD_TABLE_PAGE_SIZE}
       columns={filterMap(sampleData.header, (columnName, i) => {
         if (!caseInsensitiveContains(columnName, columnFilter)) return;
         const timestamp = columnName === '__time';
@@ -106,9 +115,6 @@ export const TransformTable = React.memo(function TransformTable(props: Transfor
           },
         };
       })}
-      defaultPageSize={50}
-      showPagination={false}
-      sortable={false}
     />
   );
 });

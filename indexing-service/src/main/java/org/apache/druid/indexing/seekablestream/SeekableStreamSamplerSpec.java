@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.client.indexing.SamplerSpec;
 import org.apache.druid.data.input.ByteBufferInputRowParser;
@@ -38,6 +39,7 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
+import org.apache.druid.indexing.overlord.sampler.SamplerException;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
@@ -92,9 +94,18 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
       );
       inputFormat = null;
     } else {
+      RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier;
+
+      try {
+        recordSupplier = createRecordSupplier();
+      }
+      catch (Exception e) {
+        throw new SamplerException(e, "Unable to create RecordSupplier: %s", Throwables.getRootCause(e).getMessage());
+      }
+
       inputSource = new RecordSupplierInputSource<>(
           ioConfig.getStream(),
-          createRecordSupplier(),
+          recordSupplier,
           ioConfig.isUseEarliestSequenceNumber()
       );
       inputFormat = Preconditions.checkNotNull(

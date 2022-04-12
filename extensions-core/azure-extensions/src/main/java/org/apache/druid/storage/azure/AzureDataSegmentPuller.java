@@ -53,7 +53,7 @@ public class AzureDataSegmentPuller
       throws SegmentLoadingException
   {
     try {
-      org.apache.commons.io.FileUtils.forceMkdir(outDir);
+      FileUtils.mkdirp(outDir);
 
       log.info(
           "Loading container: [%s], with blobPath: [%s] and outDir: [%s]", containerName, blobPath, outDir

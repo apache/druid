@@ -26,8 +26,8 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -54,10 +54,10 @@ public class TDigestSketchAggregatorFactoryTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("count", ValueType.LONG)
-                    .add("tdigest", ValueType.COMPLEX)
-                    .add("tdigest-access", ValueType.COMPLEX)
-                    .add("tdigest-finalize", ValueType.COMPLEX)
+                    .add("count", ColumnType.LONG)
+                    .add("tdigest", TDigestSketchAggregatorFactory.TYPE)
+                    .add("tdigest-access", TDigestSketchAggregatorFactory.TYPE)
+                    .add("tdigest-finalize", TDigestSketchAggregatorFactory.TYPE)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );

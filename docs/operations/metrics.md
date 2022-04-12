@@ -23,9 +23,7 @@ title: "Metrics"
   -->
 
 
-Druid generates metrics related to queries, ingestion, and coordination.
-
-Metrics are emitted as JSON objects to a runtime log file or over HTTP (to a service such as Apache Kafka). Metric emission is disabled by default.
+You can configure Druid to [emit metrics](../configuration/index.md#enabling-metrics) that are essential for monitoring query execution, ingestion, coordination, and so on.
 
 All Druid metrics share a common set of fields:
 
@@ -37,10 +35,7 @@ All Druid metrics share a common set of fields:
 
 Metrics may have additional dimensions beyond those listed above.
 
-Most metric values reset each emission period. By default druid emission period is 1 minute, this can be changed by setting the property `druid.monitoring.emissionPeriod`.
-
-Available Metrics
------------------
+> Most metric values reset each emission period, as specified in `druid.monitoring.emissionPeriod`.
 
 ## Query metrics
 
@@ -49,19 +44,20 @@ Available Metrics
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
 |`query/time`|Milliseconds taken to complete a query.|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|< 1s|
-|`query/bytes`|number of bytes returned in query response.|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.| |
+|`query/bytes`|The total number of bytes returned to the requesting client in the query response from the broker.  Other services report the total bytes for their portion of the query. |Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`. Aggregation Queries: `numMetrics`, `numComplexMetrics`. GroupBy: `numDimensions`. TopN: `threshold`, `dimension`.| |
 |`query/node/time`|Milliseconds taken to query individual historical/realtime processes.|id, status, server.|< 1s|
-|`query/node/bytes`|number of bytes returned from querying individual historical/realtime processes.|id, status, server.| |
+|`query/node/bytes`|Number of bytes returned from querying individual historical/realtime processes.|id, status, server.| |
 |`query/node/ttfb`|Time to first byte. Milliseconds elapsed until Broker starts receiving the response from individual historical/realtime processes.|id, status, server.|< 1s|
 |`query/node/backpressure`|Milliseconds that the channel to this process has spent suspended due to backpressure.|id, status, server.| |
-|`query/count`|number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/interrupted/count`|number of queries interrupted due to cancellation.|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/timeout/count`|number of timed out queries.|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/segments/count`|This metric is not enabled by default. See the `QueryMetrics` Interface for reference regarding enabling this metric. Number of segments that will be touched by the query. In the broker, it makes a plan to distribute the query to realtime tasks and historicals based on a snapshot of segment distribution state. If there are some segments moved after this snapshot is created, certain historicals and realtime tasks can report those segments as missing to the broker. The broker will re-send the query to the new servers that serve those segments after move. In this case, those segments can be counted more than once in this metric.|Varies.|
+|`query/count`|Number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/success/count`|Number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/failed/count`|Number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/interrupted/count`|Number of queries interrupted due to cancellation.|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/timeout/count`|Number of timed out queries.|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/segments/count`|This metric is not enabled by default. See the `QueryMetrics` Interface for reference regarding enabling this metric. Number of segments that will be touched by the query. In the broker, it makes a plan to distribute the query to realtime tasks and historicals based on a snapshot of segment distribution state. If there are some segments moved after this snapshot is created, certain historicals and realtime tasks can report those segments as missing to the broker. The broker will re-send the query to the new servers that serve those segments after move. In this case, those segments can be counted more than once in this metric.|Varies.||
+|`query/priority`|Assigned lane and priority, only if Laning strategy is enabled. Refer to [Laning strategies](../configuration/index.md#laning-strategies)|lane, dataSource, type|0|
 |`sqlQuery/time`|Milliseconds taken to complete a SQL query.|id, nativeQueryIds, dataSource, remoteAddress, success.|< 1s|
-|`sqlQuery/bytes`|number of bytes returned in SQL query response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
+|`sqlQuery/bytes`|Number of bytes returned in the SQL query response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
 
 ### Historical
 
@@ -73,11 +69,11 @@ Available Metrics
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
 |`query/segmentAndCache/time`|Milliseconds taken to query individual segment or hit the cache (if it is enabled on the Historical process).|id, segment.|several hundred milliseconds|
 |`query/cpu/time`|Microseconds of CPU time taken to complete a query|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|Varies|
-|`query/count`|number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/interrupted/count`|number of queries interrupted due to cancellation.|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/timeout/count`|number of timed out queries.|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/count`|Total number of queries|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/success/count`|Number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/failed/count`|Number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/interrupted/count`|Number of queries interrupted due to cancellation.|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/timeout/count`|Number of timed out queries.|This metric is only available if the QueryCountStatsMonitor module is included.||
 
 ### Real-time
 
@@ -86,17 +82,24 @@ Available Metrics
 |`query/time`|Milliseconds taken to complete a query.|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|< 1s|
 |`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|id, segment.|several hundred milliseconds|
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
-|`query/count`|number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/interrupted/count`|number of queries interrupted due to cancellation.|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/timeout/count`|number of timed out queries.|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/count`|Number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/success/count`|Number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/failed/count`|Number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/interrupted/count`|Number of queries interrupted due to cancellation.|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/timeout/count`|Number of timed out queries.|This metric is only available if the QueryCountStatsMonitor module is included.||
 
 ### Jetty
 
 |Metric|Description|Normal Value|
 |------|-----------|------------|
 |`jetty/numOpenConnections`|Number of open jetty connections.|Not much higher than number of jetty threads.|
+|`jetty/threadPool/total`|Number of total workable threads allocated.|The number should equal to threadPoolNumIdleThreads + threadPoolNumBusyThreads.|
+|`jetty/threadPool/idle`|Number of idle threads.|Less than or equal to threadPoolNumTotalThreads. Non zero number means there is less work to do than configured capacity.|
+|`jetty/threadPool/busy`|Number of busy threads that has work to do from the worker queue.|Less than or equal to threadPoolNumTotalThreads.|
+|`jetty/threadPool/isLowOnThreads`|A rough indicator of whether number of total workable threads allocated is enough to handle the works in the work queue.|0|
+|`jetty/threadPool/min`|Number of minimum threads allocatable.|druid.server.http.numThreads plus a small fixed number of threads allocated for Jetty acceptors and selectors.|
+|`jetty/threadPool/max`|Number of maximum threads allocatable.|druid.server.http.numThreads plus a small fixed number of threads allocated for Jetty acceptors and selectors.|
+|`jetty/threadPool/queueSize`|Size of the worker queue.|Not much higher than druid.server.http.queueSize|
 
 ### Cache
 
@@ -139,9 +142,11 @@ If SQL is enabled, the Broker will emit the following metrics for SQL.
 |`sqlQuery/time`|Milliseconds taken to complete a SQL.|id, nativeQueryIds, dataSource, remoteAddress, success.|< 1s|
 |`sqlQuery/bytes`|number of bytes returned in SQL response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
 
-## Ingestion Metrics (Kafka Indexing Service)
+## Ingestion metrics
 
-These metrics are applicable for the Kafka Indexing Service.
+### Ingestion metrics for Kafka
+
+These metrics apply to the [Kafka indexing service](../development/extensions-core/kafka-ingestion.md).
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
@@ -149,9 +154,9 @@ These metrics are applicable for the Kafka Indexing Service.
 |`ingest/kafka/maxLag`|Max lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
 |`ingest/kafka/avgLag`|Average lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
 
-## Ingestion Metrics (Kinesis Indexing Service)
+### Ingestion metrics for Kinesis
 
-These metrics are applicable for the Kinesis Indexing Service.
+These metrics apply to the [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md).
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
@@ -159,13 +164,14 @@ These metrics are applicable for the Kinesis Indexing Service.
 |`ingest/kinesis/maxLag/time`|Max lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, up to max Kinesis retention period in milliseconds |
 |`ingest/kinesis/avgLag/time`|Average lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, up to max Kinesis retention period in milliseconds |
 
-## Ingestion metrics (Realtime process)
+### Other ingestion metrics
 
-These metrics are only available if the RealtimeMetricsMonitor is included in the monitors list for the Realtime process. These metrics are deltas for each emission period.
+Streaming ingestion tasks and certain types of
+batch ingestion emit the following metrics. These metrics are deltas for each emission period.
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`ingest/events/thrownAway`|Number of events rejected because they are outside the windowPeriod.|dataSource, taskId, taskType.|0|
+|`ingest/events/thrownAway`|Number of events rejected because they are either null, or filtered by the transform spec, or outside the windowPeriod .|dataSource, taskId, taskType.|0|
 |`ingest/events/unparseable`|Number of events rejected because the events are unparseable.|dataSource, taskId, taskType.|0|
 |`ingest/events/duplicate`|Number of events rejected because the events are duplicated.|dataSource, taskId, taskType.|0|
 |`ingest/events/processed`|Number of events successfully processed per emission period.|dataSource, taskId, taskType.|Equal to your # of events per emission period.|
@@ -202,11 +208,12 @@ Note: If the JVM does not support CPU time measurement for the current thread, i
 |`task/running/count`|Number of current running tasks. This metric is only available if the TaskCountStatsMonitor module is included.|dataSource.|Varies.|
 |`task/pending/count`|Number of current pending tasks. This metric is only available if the TaskCountStatsMonitor module is included.|dataSource.|Varies.|
 |`task/waiting/count`|Number of current waiting tasks. This metric is only available if the TaskCountStatsMonitor module is included.|dataSource.|Varies.|
-|`taskSlot/total/count`|Number of total task slots per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.| |Varies.|
-|`taskSlot/idle/count`|Number of idle task slots per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.| |Varies.|
-|`taskSlot/used/count`|Number of busy task slots per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.| |Varies.|
-|`taskSlot/lazy/count`|Number of total task slots in lazy marked MiddleManagers and Indexers per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.| |Varies.|
-|`taskSlot/blacklisted/count`|Number of total task slots in blacklisted MiddleManagers and Indexers per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.| |Varies.|
+|`taskSlot/total/count`|Number of total task slots per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.|category.|Varies.|
+|`taskSlot/idle/count`|Number of idle task slots per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.|category.|Varies.|
+|`taskSlot/used/count`|Number of busy task slots per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.|category.|Varies.|
+|`taskSlot/lazy/count`|Number of total task slots in lazy marked MiddleManagers and Indexers per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.|category.|Varies.|
+|`taskSlot/blacklisted/count`|Number of total task slots in blacklisted MiddleManagers and Indexers per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.|category.|Varies.|
+|`task/segmentAvailability/wait/time`|The amount of milliseconds a batch indexing task waited for newly created segments to become available for querying.|dataSource, taskType, taskId, segmentAvailabilityConfirmed|Varies.|
 
 ## Shuffle metrics (Native parallel task)
 
@@ -324,8 +331,8 @@ These metrics are only available if the SysMonitor module is included.
 |`sys/swap/pageOut`|Paged out swap.||Varies.|
 |`sys/disk/write/count`|Writes to disk.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
 |`sys/disk/read/count`|Reads from disk.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
-|`sys/disk/write/size`|Bytes written to disk. Can we used to determine how much paging is occurring with regards to segments.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
-|`sys/disk/read/size`|Bytes read from disk. Can we used to determine how much paging is occurring with regards to segments.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
+|`sys/disk/write/size`|Bytes written to disk. One indicator of the amount of paging occurring for segments.|`fsDevName`,`fsDirName`,`fsTypeName`, `fsSysTypeName`, `fsOptions`.|Varies.|
+|`sys/disk/read/size`|Bytes read from disk. One indicator of the amount of paging occurring for segments.|`fsDevName`,`fsDirName`, `fsTypeName`, `fsSysTypeName`, `fsOptions`.|Varies.|
 |`sys/net/write/size`|Bytes written to the network.|netName, netAddress, netHwaddr|Varies.|
 |`sys/net/read/size`|Bytes read from the network.|netName, netAddress, netHwaddr|Varies.|
 |`sys/fs/used`|Filesystem bytes used.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|< max|
@@ -335,3 +342,17 @@ These metrics are only available if the SysMonitor module is included.
 |`sys/storage/used`|Disk space used.|fsDirName.|Varies.|
 |`sys/cpu`|CPU used.|cpuName, cpuTime.|Varies.|
 
+## Cgroup
+
+These metrics are available on operating systems with the cgroup kernel feature. All the values are derived by reading from `/sys/fs/cgroup`.
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`cgroup/cpu/shares`|Relative value of CPU time available to this process. Read from `cpu.shares`.||Varies.|
+|`cgroup/cpu/cores_quota`|Number of cores available to this process. Derived from `cpu.cfs_quota_us`/`cpu.cfs_period_us`.||Varies. A value of -1 indicates there is no explicit quota set.|
+|`cgroup/memory/*`|Memory stats for this process (e.g. `cache`, `total_swap`, etc.). Each stat produces a separate metric. Read from `memory.stat`.||Varies.|
+|`cgroup/memory_numa/*/pages`|Memory stats, per NUMA node, for this process (e.g. `total`, `unevictable`, etc.). Each stat produces a separate metric. Read from `memory.num_stat`.|`numaZone`|Varies.|
+|`cgroup/cpuset/cpu_count`|Total number of CPUs available to the process. Derived from `cpuset.cpus`.||Varies.|
+|`cgroup/cpuset/effective_cpu_count`|Total number of active CPUs available to the process. Derived from `cpuset.effective_cpus`.||Varies.|
+|`cgroup/cpuset/mems_count`|Total number of memory nodes available to the process. Derived from `cpuset.mems`.||Varies.|
+|`cgroup/cpuset/effective_mems_count`|Total number of active memory nodes available to the process. Derived from `cpuset.effective_mems`.||Varies.|

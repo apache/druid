@@ -25,33 +25,53 @@ title: "Logging"
 
 Apache Druid processes will emit logs that are useful for debugging to the console. Druid processes also emit periodic metrics about their state. For more about metrics, see [Configuration](../configuration/index.md#enabling-metrics). Metric logs are printed to the console by default, and can be disabled with `-Ddruid.emitter.logging.logLevel=debug`.
 
-Druid uses [log4j2](http://logging.apache.org/log4j/2.x/) for logging. Logging can be configured with a log4j2.xml file. Add the path to the directory containing the log4j2.xml file (e.g. the _common/ dir) to your classpath if you want to override default Druid log configuration. Note that this directory should be earlier in the classpath than the druid jars. The easiest way to do this is to prefix the classpath with the config dir.
+Druid uses [log4j2](http://logging.apache.org/log4j/2.x/) for logging. The default configuration file log4j2.xml ships with Druid under conf/druid/{config}/_common/log4j2.xml .
 
-To enable java logging to go through log4j2, set the `-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager` server parameter.
+By default, Druid uses `RollingRandomAccessFile` for rollover daily, and keeps log files up to 7 days. 
+If that's not suitable in your case, you could modify the log4j2.xml to meet your need.
 
-An example log4j2.xml ships with Druid under config/_common/log4j2.xml, and a sample file is also shown below:
+An example log4j2.xml file is shown below:
 
 ```
 <?xml version="1.0" encoding="UTF-8" ?>
 <Configuration status="WARN">
-  <Appenders>
-    <Console name="Console" target="SYSTEM_OUT">
-      <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
-    </Console>
-  </Appenders>
+  <Console name="Console" target="SYSTEM_OUT">
+    <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+  </Console>
+    
+  <RollingRandomAccessFile name="FileAppender"
+                           fileName="${sys:druid.log.path}/${sys:druid.node.type}.log"
+                           filePattern="${sys:druid.log.path}/${sys:druid.node.type}.%d{yyyyMMdd}.log">
+    <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+    <Policies>
+        <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+    </Policies>
+    <DefaultRolloverStrategy>
+      <Delete basePath="${sys:druid.log.path}/" maxDepth="1">
+        <IfFileName glob="*.log" />
+        <IfLastModified age="7d" />
+      </Delete>
+    </DefaultRolloverStrategy>
+  </RollingRandomAccessFile>
   <Loggers>
     <Root level="info">
-      <AppenderRef ref="Console"/>
+      <AppenderRef ref="FileAppender"/>
     </Root>
 
     <!-- Uncomment to enable logging of all HTTP requests
     <Logger name="org.apache.druid.jetty.RequestLog" additivity="false" level="DEBUG">
-        <AppenderRef ref="Console"/>
+        <AppenderRef ref="FileAppender"/>
     </Logger>
     -->
   </Loggers>
 </Configuration>
 ```
+
+## How to change log directory
+By default, Druid outputs the logs to a directory `log` under the directory where Druid is launched from.
+For example, if Druid is started from its `bin` directory, there will be a subdirectory `log` generated under `bin` directory to hold the log files.
+If you want to change the log directory, set environment variable `DRUID_LOG_DIR` to the right directory before you start Druid.
+
 
 ## My logs are really chatty, can I set them to asynchronously write?
 
@@ -65,7 +85,9 @@ Yes, using a `log4j2.xml` similar to the following causes some of the more chatt
       <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
     </Console>
   </Appenders>
-  <Loggers>
+  
+<Loggers>
+    <!-- AsyncLogger instead of Logger -->
     <AsyncLogger name="org.apache.druid.curator.inventory.CuratorInventoryManager" level="debug" additivity="false">
       <AppenderRef ref="Console"/>
     </AsyncLogger>

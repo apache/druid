@@ -80,7 +80,7 @@ As long as the service is set to populate the cache, you can set cache options f
   }
 }
 ```
-In this example the user has set `populateCache` to `false` to avoid filling the result cache with results for segments that are over a year old. For more information, see [Druid SQL client APIs](./sql.md#client-apis).
+In this example the user has set `populateCache` to `false` to avoid filling the result cache with results for segments that are over a year old. For more information, see [Druid SQL client APIs](./sql-api.md).
 
 
 

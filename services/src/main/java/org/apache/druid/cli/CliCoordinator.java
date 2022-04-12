@@ -21,9 +21,11 @@ package org.apache.druid.cli;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.rvesse.airline.annotations.Command;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
@@ -32,7 +34,6 @@ import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
-import io.airlift.airline.Command;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
@@ -155,6 +156,14 @@ public class CliCoordinator extends ServerRunnable
   }
 
   @Override
+  protected Set<NodeRole> getNodeRoles(Properties properties)
+  {
+    return isOverlord(properties)
+           ? ImmutableSet.of(NodeRole.COORDINATOR, NodeRole.OVERLORD)
+           : ImmutableSet.of(NodeRole.COORDINATOR);
+  }
+
+  @Override
   protected List<? extends Module> getModules()
   {
     List<Module> modules = new ArrayList<>();
@@ -255,6 +264,7 @@ public class CliCoordinator extends ServerRunnable
             }
             conditionalIndexingServiceDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.on",
+                "true",
                 Predicates.equalTo("true"),
                 KillUnusedSegments.class
             );
@@ -274,21 +284,25 @@ public class CliCoordinator extends ServerRunnable
             );
             conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.supervisor.on",
+                "true",
                 Predicates.equalTo("true"),
                 KillSupervisors.class
             );
             conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.audit.on",
+                "true",
                 Predicates.equalTo("true"),
                 KillAuditLog.class
             );
             conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.rule.on",
+                "true",
                 Predicates.equalTo("true"),
                 KillRules.class
             );
             conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.datasource.on",
+                "true",
                 Predicates.equalTo("true"),
                 KillDatasourceMetadata.class
             );
@@ -298,10 +312,10 @@ public class CliCoordinator extends ServerRunnable
                 KillCompactionConfig.class
             );
 
-            bindNodeRoleAndAnnouncer(
+            bindAnnouncer(
                 binder,
                 Coordinator.class,
-                DiscoverySideEffectsProvider.builder(NodeRole.COORDINATOR).build()
+                DiscoverySideEffectsProvider.create()
             );
 
             Jerseys.addResource(binder, SelfDiscoveryResource.class);
@@ -435,7 +449,7 @@ public class CliCoordinator extends ServerRunnable
           if (Strings.isNullOrEmpty(props.getProperty(groupPeriodPropKey))) {
             throw new IAE("Run period for coordinator custom duty group must be set for group %s", coordinatorCustomDutyGroupName);
           }
-          Duration groupPeriod = jsonMapper.readValue(props.getProperty(groupPeriodPropKey), Duration.class);
+          Duration groupPeriod = new Duration(props.getProperty(groupPeriodPropKey));
           coordinatorCustomDutyGroups.add(new CoordinatorCustomDutyGroup(coordinatorCustomDutyGroupName, groupPeriod, coordinatorCustomDuties));
         }
         return new CoordinatorCustomDutyGroups(coordinatorCustomDutyGroups);

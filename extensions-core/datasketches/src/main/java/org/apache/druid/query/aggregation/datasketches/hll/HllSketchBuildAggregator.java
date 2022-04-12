@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -102,10 +103,14 @@ public class HllSketchBuildAggregator implements Aggregator
     } else if (value instanceof String) {
       sketch.update(((String) value).toCharArray());
     } else if (value instanceof List) {
-      // noinspection unchecked
-      List<String> list = (List<String>) value;
-      for (String v : list) {
-        sketch.update(v.toCharArray());
+      // noinspection rawtypes
+      for (Object entry : (List) value) {
+        if (entry != null) {
+          final String asString = entry.toString();
+          if (!NullHandling.isNullOrEquivalent(asString)) {
+            sketch.update(asString);
+          }
+        }
       }
     } else if (value instanceof char[]) {
       sketch.update((char[]) value);

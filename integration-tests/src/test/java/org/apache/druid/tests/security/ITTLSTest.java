@@ -258,7 +258,7 @@ public class ITTLSTest
         config.getCustomCertCheckRouterTLSUrl() + "/druid/v2",
         "Custom cert check",
         ISE.class,
-        "Error while making request to url[https://127.0.0.1:9091/druid/v2] status[400 Bad Request] content[{\"error\":\"No content to map due to end-of-input",
+        "Error while making request to url[https://127.0.0.1:9091/druid/v2] status[400 Bad Request] content[{\"error\":\"Unknown exception\",\"errorMessage\":\"No content to map due to end-of-input",
         true
     );
 

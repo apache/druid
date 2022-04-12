@@ -27,6 +27,7 @@ import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
@@ -51,6 +52,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -122,11 +124,10 @@ public class DoubleStorageTest
   private static final InputRowParser<Map<String, Object>> ROW_PARSER = new MapInputRowParser(
       new JSONParseSpec(
           new TimestampSpec(TIME_COLUMN, "auto", null),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)),
-              ImmutableList.of(DIM_FLOAT_NAME),
-              ImmutableList.of()
-          ),
+          DimensionsSpec.builder()
+                        .setDimensions(DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)))
+                        .setDimensionExclusions(ImmutableList.of(DIM_FLOAT_NAME))
+                        .build(),
           null,
           null,
           null
@@ -155,7 +156,8 @@ public class DoubleStorageTest
         ImmutableMap.of(
             TIME_COLUMN,
             new ColumnAnalysis(
-                ValueType.LONG.toString(),
+                ColumnType.LONG,
+                ValueType.LONG.name(),
                 false,
                 false,
                 100,
@@ -166,7 +168,8 @@ public class DoubleStorageTest
             ),
             DIM_NAME,
             new ColumnAnalysis(
-                ValueType.STRING.toString(),
+                ColumnType.STRING,
+                ValueType.STRING.name(),
                 false,
                 false,
                 120,
@@ -177,7 +180,8 @@ public class DoubleStorageTest
             ),
             DIM_FLOAT_NAME,
             new ColumnAnalysis(
-                ValueType.DOUBLE.toString(),
+                ColumnType.DOUBLE,
+                ValueType.DOUBLE.name(),
                 false,
                 false,
                 80,
@@ -200,7 +204,8 @@ public class DoubleStorageTest
         ImmutableMap.of(
             TIME_COLUMN,
             new ColumnAnalysis(
-                ValueType.LONG.toString(),
+                ColumnType.LONG,
+                ValueType.LONG.name(),
                 false,
                 false,
                 100,
@@ -211,7 +216,8 @@ public class DoubleStorageTest
             ),
             DIM_NAME,
             new ColumnAnalysis(
-                ValueType.STRING.toString(),
+                ColumnType.STRING,
+                ValueType.STRING.name(),
                 false,
                 false,
                 120,
@@ -222,7 +228,8 @@ public class DoubleStorageTest
             ),
             DIM_FLOAT_NAME,
             new ColumnAnalysis(
-                ValueType.FLOAT.toString(),
+                ColumnType.FLOAT,
+                ValueType.FLOAT.name(),
                 false,
                 false,
                 80,
@@ -344,7 +351,7 @@ public class DoubleStorageTest
     }
     File someTmpFile = File.createTempFile("billy", "yay");
     someTmpFile.delete();
-    someTmpFile.mkdirs();
+    FileUtils.mkdirp(someTmpFile);
     INDEX_MERGER_V9.persist(index, someTmpFile, new IndexSpec(), null);
     someTmpFile.delete();
     return INDEX_IO.loadIndex(someTmpFile);
