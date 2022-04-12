@@ -168,7 +168,7 @@ If no used segments are found for the given inputs, this API returns `204 No Con
 #### Metadata store information
 
 > Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
-> [`sys.segments`](../querying/sql.md#segments-table) table.
+> [`sys.segments`](../querying/sql-metadata-tables.md#segments-table) table.
 
 ##### GET
 
@@ -242,7 +242,7 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 
 * `/druid/coordinator/v1/datasources`
 
-Returns a list of datasource names found in the cluster as seen by the coordinator. This view is updated every [`druid.coordinator.period`](../configuration/index.html#coordinator-operation).
+Returns a list of datasource names found in the cluster as seen by the coordinator. This view is updated every [`druid.coordinator.period`](../configuration/index.md#coordinator-operation).
 
 * `/druid/coordinator/v1/datasources?simple`
 
@@ -659,7 +659,7 @@ Returns a list of objects of the currently active supervisors.
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
-|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.md#operations) for details.|
+|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-supervisor-operations.md) for details.|
 |`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details), e.g. [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md))|
 |`healthy`|Boolean|true or false indicator of overall supervisor health|
 |`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
@@ -671,7 +671,7 @@ Returns a list of objects of the currently active supervisors and their current 
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
-|`state`|String|basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.md#operations) for details.|
+|`state`|String|basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-supervisor-operations.md) for details.|
 |`detailedState`|String|supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md))|
 |`healthy`|Boolean|true or false indicator of overall supervisor health|
 |`suspended`|Boolean|true or false indicator of whether the supervisor is in suspended state|
@@ -871,9 +871,9 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 ##### GET
 
 > Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
-> [`INFORMATION_SCHEMA.TABLES`](../querying/sql.md#tables-table),
-> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql.md#columns-table), and
-> [`sys.segments`](../querying/sql.md#segments-table) tables.
+> [`INFORMATION_SCHEMA.TABLES`](../querying/sql-metadata-tables.md#tables-table),
+> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql-metadata-tables.md#columns-table), and
+> [`sys.segments`](../querying/sql-metadata-tables.md#segments-table) tables.
 
 * `/druid/v2/datasources`
 
@@ -892,7 +892,7 @@ druid.query.segmentMetadata.defaultHistory
 Returns the dimensions of the datasource.
 
 > This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.md) instead
-> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql.md#metadata-tables)
+> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql-metadata-tables.md)
 > if you're using SQL.
 
 * `/druid/v2/datasources/{dataSourceName}/metrics`
@@ -900,7 +900,7 @@ Returns the dimensions of the datasource.
 Returns the metrics of the datasource.
 
 > This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.md) instead
-> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql.md#metadata-tables)
+> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql-metadata-tables.md)
 > if you're using SQL.
 
 * `/druid/v2/datasources/{dataSourceName}/candidates?intervals={comma-separated-intervals}&numCandidates={numCandidates}`
@@ -936,9 +936,9 @@ Returns segment information lists including server locations for the given query
 #### GET
 
 > Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
-> [`INFORMATION_SCHEMA.TABLES`](../querying/sql.md#tables-table),
-> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql.md#columns-table), and
-> [`sys.segments`](../querying/sql.md#segments-table) tables.
+> [`INFORMATION_SCHEMA.TABLES`](../querying/sql-metadata-tables.md#tables-table),
+> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql-metadata-tables.md#columns-table), and
+> [`sys.segments`](../querying/sql-metadata-tables.md#segments-table) tables.
 
 * `/druid/v2/datasources`
 

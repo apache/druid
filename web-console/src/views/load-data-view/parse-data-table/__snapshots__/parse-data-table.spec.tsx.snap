@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`parse data table matches snapshot 1`] = `
+exports[`ParseDataTable matches snapshot 1`] = `
 <div
   class="ReactTable parse-data-table -striped -highlight"
 >

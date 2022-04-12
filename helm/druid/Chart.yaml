@@ -14,8 +14,8 @@
 # limitations under the License.
 
 apiVersion: v2
-appVersion: 0.19.0
-description: DEPRECATED Apache Druid is a high performance real-time analytics database.
+appVersion: 0.22.0
+description: Apache Druid is a high performance real-time analytics database.
 name: druid
 dependencies:
   - name: zookeeper
@@ -33,7 +33,6 @@ dependencies:
 version: 0.3.0
 home: https://druid.apache.org/
 icon: https://druid.apache.org/img/favicon.png
-deprecated: true
 sources:
   - https://github.com/apache/druid
 keywords:

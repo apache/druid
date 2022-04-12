@@ -19,7 +19,7 @@
 import { Code, Intent, Switch } from '@blueprintjs/core';
 import { Tooltip2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
-import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
+import { QueryResult, QueryRunner, SqlExpression, SqlQuery } from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import memoizeOne from 'memoize-one';
@@ -41,6 +41,7 @@ import {
   LocalStorageKeys,
   localStorageSet,
   localStorageSetJson,
+  QueryAction,
   queryDruidSql,
   QueryManager,
   QueryState,
@@ -48,7 +49,7 @@ import {
   RowColumn,
   stringifyValue,
 } from '../../utils';
-import { isEmptyContext, QueryContext } from '../../utils/query-context';
+import { QueryContext } from '../../utils/query-context';
 import { QueryRecord, QueryRecordUtil } from '../../utils/query-history';
 
 import { ColumnTree } from './column-tree/column-tree';
@@ -66,6 +67,8 @@ import { QueryTimer } from './query-timer/query-timer';
 import { RunButton } from './run-button/run-button';
 
 import './query-view.scss';
+
+const LAST_DAY = SqlExpression.parse(`__time >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
 
 const parser = memoizeOne((sql: string): SqlQuery | undefined => {
   try {
@@ -109,6 +112,11 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
   static isJsonLike(queryString: string): boolean {
     return queryString.trim().startsWith('{');
+  }
+
+  static isSql(query: any): boolean {
+    if (typeof query === 'string') return true;
+    return typeof query.query === 'string';
   }
 
   static validRune(queryString: string): boolean {
@@ -193,9 +201,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       },
     });
 
-    const queryRunner = new QueryRunner((payload, isSql, cancelToken) => {
-      return Api.instance.post(`/druid/v2${isSql ? '/sql' : ''}`, payload, { cancelToken });
-    });
+    const queryRunner = new QueryRunner();
 
     this.queryManager = new QueryManager({
       processQuery: async (
@@ -203,38 +209,34 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         cancelToken,
       ): Promise<QueryResult> => {
         const { queryString, queryContext, wrapQueryLimit } = queryWithContext;
+        const query = QueryView.isJsonLike(queryString) ? Hjson.parse(queryString) : queryString;
+        const isSql = QueryView.isSql(query);
+        const extraQueryContext = { ...queryContext, ...(mandatoryQueryContext || {}) };
 
-        const isSql = !QueryView.isJsonLike(queryString);
+        if (isSql && typeof wrapQueryLimit !== 'undefined') {
+          extraQueryContext.sqlOuterLimit = wrapQueryLimit + 1;
+        }
 
-        const query = isSql ? queryString : Hjson.parse(queryString);
-
-        const queryId = uuidv4();
-
-        let context: Record<string, any> | undefined;
-        if (!isEmptyContext(queryContext) || wrapQueryLimit || mandatoryQueryContext) {
-          context = { ...queryContext, ...(mandatoryQueryContext || {}) };
-
-          if (isSql) {
-            context.sqlQueryId = queryId;
-          } else {
-            context.queryId = queryId;
-          }
-
-          if (typeof wrapQueryLimit !== 'undefined') {
-            context.sqlOuterLimit = wrapQueryLimit + 1;
-          }
+        const queryIdKey = isSql ? 'sqlQueryId' : 'queryId';
+        // Look for an existing queryId in the JSON itself or in the extra context object.
+        let cancelQueryId = query.context?.[queryIdKey] || extraQueryContext[queryIdKey];
+        if (!cancelQueryId) {
+          // If the queryId (sqlQueryId) is not explicitly set on the context generate one thus making it possible to cancel the query.
+          cancelQueryId = extraQueryContext[queryIdKey] = uuidv4();
         }
 
         void cancelToken.promise
           .then(() => {
-            return Api.instance.delete(`/druid/v2${isSql ? '/sql' : ''}/${queryId}`);
+            return Api.instance.delete(
+              `/druid/v2${isSql ? '/sql' : ''}/${Api.encodePath(cancelQueryId)}`,
+            );
           })
           .catch(() => {});
 
         try {
           return await queryRunner.runQuery({
             query,
-            extraQueryContext: context,
+            extraQueryContext,
             cancelToken,
           });
         } catch (e) {
@@ -474,7 +476,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             <QueryOutput
               runeMode={runeMode}
               queryResult={someQueryResult}
-              onQueryChange={this.handleQueryChange}
+              onQueryAction={this.handleQueryAction}
               onLoadMore={this.handleLoadMore}
             />
           )}
@@ -533,13 +535,18 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     }
   };
 
+  private readonly handleQueryAction = (queryAction: QueryAction): void => {
+    const { parsedQuery } = this.state;
+    if (!parsedQuery) return;
+    this.handleQueryChange(parsedQuery.apply(queryAction), true);
+  };
+
   private readonly handleQueryStringChange = (
     queryString: string,
     preferablyRun?: boolean,
   ): void => {
     const parsedQuery = parser(queryString);
-    const newSate = { queryString, parsedQuery };
-    this.setState(newSate, preferablyRun ? this.handleRunIfLive : undefined);
+    this.setState({ queryString, parsedQuery }, preferablyRun ? this.handleRunIfLive : undefined);
   };
 
   private readonly handleQueryContextChange = (queryContext: QueryContext) => {
@@ -631,6 +638,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             getParsedQuery={this.getParsedQuery}
             columnMetadataLoading={columnMetadataState.loading}
             columnMetadata={columnMetadataState.data}
+            defaultWhere={LAST_DAY}
             onQueryChange={this.handleQueryChange}
             defaultSchema={defaultSchema ? defaultSchema : 'druid'}
             defaultTable={defaultTable}

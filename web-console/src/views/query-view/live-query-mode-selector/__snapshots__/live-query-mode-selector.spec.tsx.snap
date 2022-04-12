@@ -1,42 +1,48 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`LiveQueryModeSelector matches snapshot auto 1`] = `
-<Blueprint3.Popover2
+<Blueprint4.Popover2
   boundary="clippingParents"
   captureDismiss={false}
   content={
-    <Blueprint3.Menu>
-      <Blueprint3.MenuItem
+    <Blueprint4.Menu>
+      <Blueprint4.MenuItem
+        active={false}
         className="auto auto-on"
         disabled={false}
         icon="tick"
         multiline={false}
         onClick={[Function]}
         popoverProps={Object {}}
+        selected={false}
         shouldDismissPopover={true}
         text="Auto"
       />
-      <Blueprint3.MenuItem
+      <Blueprint4.MenuItem
+        active={false}
         className="on"
         disabled={false}
         icon="blank"
         multiline={false}
         onClick={[Function]}
         popoverProps={Object {}}
+        selected={false}
         shouldDismissPopover={true}
         text="On"
       />
-      <Blueprint3.MenuItem
+      <Blueprint4.MenuItem
+        active={false}
         className="off"
         disabled={false}
         icon="blank"
         multiline={false}
         onClick={[Function]}
         popoverProps={Object {}}
+        selected={false}
         shouldDismissPopover={true}
         text="Off"
       />
-    </Blueprint3.Menu>
+    </Blueprint4.Menu>
   }
   defaultIsOpen={false}
   disabled={false}
@@ -51,11 +57,12 @@ exports[`LiveQueryModeSelector matches snapshot auto 1`] = `
   portalClassName="live-query-mode-selector-portal"
   position="bottom-left"
   positioningStrategy="absolute"
+  shouldReturnFocusOnClose={false}
   targetTagName="span"
   transitionDuration={300}
   usePortal={true}
 >
-  <Blueprint3.Button
+  <Blueprint4.Button
     className="live-query-mode-selector"
     minimal={true}
   >
@@ -68,47 +75,53 @@ exports[`LiveQueryModeSelector matches snapshot auto 1`] = `
     >
       Auto
     </span>
-  </Blueprint3.Button>
-</Blueprint3.Popover2>
+  </Blueprint4.Button>
+</Blueprint4.Popover2>
 `;
 
 exports[`LiveQueryModeSelector matches snapshot on 1`] = `
-<Blueprint3.Popover2
+<Blueprint4.Popover2
   boundary="clippingParents"
   captureDismiss={false}
   content={
-    <Blueprint3.Menu>
-      <Blueprint3.MenuItem
+    <Blueprint4.Menu>
+      <Blueprint4.MenuItem
+        active={false}
         className="auto auto-on"
         disabled={false}
         icon="blank"
         multiline={false}
         onClick={[Function]}
         popoverProps={Object {}}
+        selected={false}
         shouldDismissPopover={true}
         text="Auto"
       />
-      <Blueprint3.MenuItem
+      <Blueprint4.MenuItem
+        active={false}
         className="on"
         disabled={false}
         icon="tick"
         multiline={false}
         onClick={[Function]}
         popoverProps={Object {}}
+        selected={false}
         shouldDismissPopover={true}
         text="On"
       />
-      <Blueprint3.MenuItem
+      <Blueprint4.MenuItem
+        active={false}
         className="off"
         disabled={false}
         icon="blank"
         multiline={false}
         onClick={[Function]}
         popoverProps={Object {}}
+        selected={false}
         shouldDismissPopover={true}
         text="Off"
       />
-    </Blueprint3.Menu>
+    </Blueprint4.Menu>
   }
   defaultIsOpen={false}
   disabled={false}
@@ -123,11 +136,12 @@ exports[`LiveQueryModeSelector matches snapshot on 1`] = `
   portalClassName="live-query-mode-selector-portal"
   position="bottom-left"
   positioningStrategy="absolute"
+  shouldReturnFocusOnClose={false}
   targetTagName="span"
   transitionDuration={300}
   usePortal={true}
 >
-  <Blueprint3.Button
+  <Blueprint4.Button
     className="live-query-mode-selector"
     minimal={true}
   >
@@ -140,6 +154,6 @@ exports[`LiveQueryModeSelector matches snapshot on 1`] = `
     >
       On
     </span>
-  </Blueprint3.Button>
-</Blueprint3.Popover2>
+  </Blueprint4.Button>
+</Blueprint4.Popover2>
 `;

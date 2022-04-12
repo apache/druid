@@ -51,7 +51,7 @@ public class GoogleDataSegmentPuller implements URIDataPuller
     LOG.info("Pulling index at bucket[%s] path[%s] to outDir[%s]", bucket, path, outDir.getAbsolutePath());
 
     try {
-      org.apache.commons.io.FileUtils.forceMkdir(outDir);
+      FileUtils.mkdirp(outDir);
 
       final GoogleByteSource byteSource = new GoogleByteSource(storage, bucket, path);
       final FileUtils.FileCopyResult result = CompressionUtils.unzip(

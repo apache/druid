@@ -119,8 +119,8 @@ Like so: `DRUID_E2E_TEST_UNIFIED_CONSOLE_PORT=18081 npm run test-e2e`
 
 #### Running and debugging a single e2e test using Jest and Playwright
 
-- Run - `jest --config jest.e2e.config.js e2e-tests/tutorial-batch.spec.ts`.
-- Debug - `PWDEBUG=console jest --config jest.e2e.config.js e2e-tests/tutorial-batch.spec.ts`.
+- Run - `jest --config jest.e2e.config.js e2e-tests/tutorial-batch.spec.ts`
+- Debug - `PWDEBUG=console jest --config jest.e2e.config.js e2e-tests/tutorial-batch.spec.ts`
 
 ## Description of the directory structure
 

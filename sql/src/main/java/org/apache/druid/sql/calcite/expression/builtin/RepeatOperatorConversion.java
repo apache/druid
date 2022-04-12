@@ -67,14 +67,11 @@ public class RepeatOperatorConversion implements SqlOperatorConversion
     if (call.getOperands().size() != 2) {
       return null;
     }
-    return OperatorConversions.convertCall(
+    return OperatorConversions.convertDirectCall(
         plannerContext,
         rowSignature,
         rexNode,
-        druidExpressions -> DruidExpression.of(
-            null,
-            DruidExpression.functionCall("repeat", druidExpressions)
-        )
+        "repeat"
     );
   }
 }

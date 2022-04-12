@@ -56,8 +56,9 @@ public class QueryContexts
   public static final String JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY = "enableJoinFilterRewriteValueColumnFilters";
   public static final String REWRITE_JOIN_TO_FILTER_ENABLE_KEY = "enableRewriteJoinToFilter";
   public static final String JOIN_FILTER_REWRITE_MAX_SIZE_KEY = "joinFilterRewriteMaxSize";
-  // This flag control whether a sql join query with left scan should be attempted to be run as direct table access
-  // instead of being wrapped inside a query. With direct table access enabled, druid can push down the join operation to
+  public static final String MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
+  // This flag controls whether a SQL join query with left scan should be attempted to be run as direct table access
+  // instead of being wrapped inside a query. With direct table access enabled, Druid can push down the join operation to
   // data servers.
   public static final String SQL_JOIN_LEFT_SCAN_DIRECT = "enableJoinLeftTableScanDirect";
   public static final String USE_FILTER_CNF_KEY = "useFilterCNF";
@@ -68,6 +69,7 @@ public class QueryContexts
   public static final String ENABLE_DEBUG = "debug";
   public static final String BY_SEGMENT_KEY = "bySegment";
   public static final String BROKER_SERVICE_NAME = "brokerService";
+  public static final String IN_SUB_QUERY_THRESHOLD_KEY = "inSubQueryThreshold";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
@@ -90,6 +92,7 @@ public class QueryContexts
   public static final boolean DEFAULT_USE_FILTER_CNF = false;
   public static final boolean DEFAULT_SECONDARY_PARTITION_PRUNING = true;
   public static final boolean DEFAULT_ENABLE_DEBUG = false;
+  public static final int DEFAULT_IN_SUB_QUERY_THRESHOLD = Integer.MAX_VALUE;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
@@ -334,6 +337,16 @@ public class QueryContexts
     return parseBoolean(queryContext, ENABLE_DEBUG, DEFAULT_ENABLE_DEBUG);
   }
 
+  public static int getInSubQueryThreshold(Map<String, Object> context)
+  {
+    return getInSubQueryThreshold(context, DEFAULT_IN_SUB_QUERY_THRESHOLD);
+  }
+
+  public static int getInSubQueryThreshold(Map<String, Object> context, int defaultValue)
+  {
+    return parseInt(context, IN_SUB_QUERY_THRESHOLD_KEY, defaultValue);
+  }
+
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)
   {
     Object obj = query.getContextValue(MAX_SCATTER_GATHER_BYTES_KEY);
@@ -437,6 +450,12 @@ public class QueryContexts
   static <T> int parseInt(Query<T> query, String key, int defaultValue)
   {
     final Object val = query.getContextValue(key);
+    return val == null ? defaultValue : Numbers.parseInt(val);
+  }
+
+  static int parseInt(Map<String, Object> context, String key, int defaultValue)
+  {
+    final Object val = context.get(key);
     return val == null ? defaultValue : Numbers.parseInt(val);
   }
 

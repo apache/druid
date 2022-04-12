@@ -33,8 +33,9 @@ enum DatasourceColumn {
   AVAILABILITY,
   SEGMENT_LOAD_DROP,
   TOTAL_DATA_SIZE,
-  SEGMENT_SIZE,
-  SEGMENT_GRANULARITY,
+  SEGMENT_ROWS,
+  // SEGMENT_SIZE, (Hidden by default)
+  // SEGMENT_GRANULARITY, (Hidden by default)
   TOTAL_ROWS,
   AVG_ROW_SIZE,
   REPLICATED_SIZE,
@@ -129,7 +130,7 @@ export class DatasourcesOverview {
   }
 
   private async waitForPopupMenu(): Promise<void> {
-    await this.page.waitForSelector('ul.bp3-menu');
+    await this.page.waitForSelector('ul.bp4-menu');
   }
 
   async triggerCompaction(): Promise<void> {

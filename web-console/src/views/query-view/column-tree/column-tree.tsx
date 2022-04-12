@@ -39,8 +39,11 @@ import { NumberMenuItems, StringMenuItems, TimeMenuItems } from './column-tree-m
 
 import './column-tree.scss';
 
-const LAST_DAY = SqlExpression.parse(`__time >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
 const COUNT_STAR = SqlFunction.COUNT_STAR.as('Count');
+
+function caseInsensitiveCompare(a: any, b: any): number {
+  return String(a).toLowerCase().localeCompare(String(b).toLowerCase());
+}
 
 function getCountExpression(columnNames: string[]): SqlExpression {
   for (const columnName of columnNames) {
@@ -69,11 +72,20 @@ interface HandleColumnClickOptions {
   columnName: string;
   columnType: string;
   parsedQuery: SqlQuery | undefined;
+  defaultWhere: SqlExpression | undefined;
   onQueryChange: (query: SqlQuery, run: boolean) => void;
 }
 
 function handleColumnShow(options: HandleColumnClickOptions): void {
-  const { columnSchema, columnTable, columnName, columnType, parsedQuery, onQueryChange } = options;
+  const {
+    columnSchema,
+    columnTable,
+    columnName,
+    columnType,
+    parsedQuery,
+    defaultWhere,
+    onQueryChange,
+  } = options;
 
   let from: SqlExpression;
   let where: SqlExpression | undefined;
@@ -84,7 +96,7 @@ function handleColumnShow(options: HandleColumnClickOptions): void {
     aggregates = parsedQuery.getAggregateSelectExpressions();
   } else if (columnSchema === 'druid') {
     from = SqlTableRef.create(columnTable);
-    where = LAST_DAY;
+    where = defaultWhere;
   } else {
     from = SqlTableRef.create(columnTable, columnSchema);
   }
@@ -118,9 +130,11 @@ export interface ColumnTreeProps {
   columnMetadataLoading: boolean;
   columnMetadata?: readonly ColumnMetadata[];
   getParsedQuery: () => SqlQuery | undefined;
+  defaultWhere?: SqlExpression;
   onQueryChange: (query: SqlQuery, run?: boolean) => void;
   defaultSchema?: string;
   defaultTable?: string;
+  highlightTable?: string;
 }
 
 export interface ColumnTreeState {
@@ -154,7 +168,14 @@ export function getJoinColumns(parsedQuery: SqlQuery, _table: string) {
 
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
-    const { columnMetadata, defaultSchema, defaultTable, onQueryChange } = props;
+    const {
+      columnMetadata,
+      defaultSchema,
+      defaultTable,
+      defaultWhere,
+      onQueryChange,
+      highlightTable,
+    } = props;
 
     if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
       const columnTree = groupBy(
@@ -169,6 +190,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
             (metadata, tableName): TreeNodeInfo => ({
               id: tableName,
               icon: IconNames.TH,
+              className: tableName === highlightTable ? 'highlight' : undefined,
               label: (
                 <Popover2
                   position={Position.RIGHT}
@@ -195,7 +217,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                           if (parsedQuery && parsedQuery.getFirstTableName() === tableName) {
                             return parsedQuery.getWhereExpression();
                           } else if (schemaName === 'druid') {
-                            return defaultToAllTime ? undefined : LAST_DAY;
+                            return defaultToAllTime ? undefined : defaultWhere;
                           } else {
                             return;
                           }
@@ -210,7 +232,10 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 onQueryChange(
                                   getQueryOnTable()
                                     .changeSelectExpressions(
-                                      metadata.map(child => SqlRef.column(child.COLUMN_NAME)),
+                                      metadata
+                                        .map(child => child.COLUMN_NAME)
+                                        .sort(caseInsensitiveCompare)
+                                        .map(columnName => SqlRef.column(columnName)),
                                     )
                                     .changeWhereExpression(getWhere()),
                                   true,
@@ -376,6 +401,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                         columnName: columnData.COLUMN_NAME,
                                         columnType: columnData.DATA_TYPE,
                                         parsedQuery,
+                                        defaultWhere,
                                         onQueryChange: onQueryChange,
                                       });
                                     }}
@@ -429,9 +455,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                     ),
                   }),
                 )
-                .sort((a, b) =>
-                  String(a.id).toLowerCase().localeCompare(String(b.id).toLowerCase()),
-                ),
+                .sort((a, b) => caseInsensitiveCompare(a.id, b.id)),
             }),
           ),
         }),

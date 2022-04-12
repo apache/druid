@@ -89,6 +89,21 @@ setJavaKey() {
     echo $value >> $file
 }
 
+# This is to allow configuration via a Kubernetes configMap without
+# e.g. using subPath (you can also mount the configMap on /tmp/conf/druid)
+if [ -n "$DRUID_CONFIG_COMMON" ]
+then
+    cp -f "$DRUID_CONFIG_COMMON" $COMMON_CONF_DIR/common.runtime.properties
+fi
+
+SCONFIG=$(printf "%s_%s" DRUID_CONFIG ${SERVICE})
+SCONFIG=$(eval echo \$$(echo $SCONFIG))
+
+if [ -n "${SCONFIG}" ]
+then
+    cp -f "${SCONFIG}" $SERVICE_CONF_DIR/runtime.properties
+fi
+
 ## Setup host names
 if [ -n "${ZOOKEEPER}" ];
 then
@@ -116,21 +131,6 @@ do
     echo "$var=$val" >>$COMMON_CONF_DIR/jets3t.properties
 done
 
-# This is to allow configuration via a Kubernetes configMap without
-# e.g. using subPath (you can also mount the configMap on /tmp/conf/druid)
-if [ -n "$DRUID_CONFIG_COMMON" ]
-then
-    cp -f "$DRUID_CONFIG_COMMON" $COMMON_CONF_DIR/common.runtime.properties
-fi
-
-SCONFIG=$(printf "%s_%s" DRUID_CONFIG ${SERVICE})
-SCONFIG=$(eval echo \$$(echo $SCONFIG))
-
-if [ -n "${SCONFIG}" ]
-then
-    cp -f "${SCONFIG}" $SERVICE_CONF_DIR/runtime.properties
-fi
-
 # Now do the java options
 
 if [ -n "$DRUID_XMX" ]; then setJavaKey ${SERVICE} -Xmx -Xmx${DRUID_XMX}; fi
@@ -139,7 +139,10 @@ if [ -n "$DRUID_MAXNEWSIZE" ]; then setJavaKey ${SERVICE} -XX:MaxNewSize -XX:Max
 if [ -n "$DRUID_NEWSIZE" ]; then setJavaKey ${SERVICE} -XX:NewSize -XX:NewSize=${DRUID_NEWSIZE}; fi
 if [ -n "$DRUID_MAXDIRECTMEMORYSIZE" ]; then setJavaKey ${SERVICE} -XX:MaxDirectMemorySize -XX:MaxDirectMemorySize=${DRUID_MAXDIRECTMEMORYSIZE}; fi
 
-JAVA_OPTS="$JAVA_OPTS $(cat $SERVICE_CONF_DIR/jvm.config | xargs)"
+# Combine options from jvm.config and those given as JAVA_OPTS
+# If a value is specified in both then JAVA_OPTS will take precedence when using OpenJDK
+# However this behavior is not part of the spec and is thus implementation specific
+JAVA_OPTS="$(cat $SERVICE_CONF_DIR/jvm.config | xargs) $JAVA_OPTS"
 
 if [ -n "$DRUID_LOG_LEVEL" ]
 then

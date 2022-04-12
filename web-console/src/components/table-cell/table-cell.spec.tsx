@@ -21,7 +21,7 @@ import React from 'react';
 
 import { TableCell } from './table-cell';
 
-describe('table cell', () => {
+describe('TableCell', () => {
   it('matches snapshot null', () => {
     const tableCell = <TableCell value={null} />;
 

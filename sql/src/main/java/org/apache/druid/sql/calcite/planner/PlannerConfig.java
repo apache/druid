@@ -21,6 +21,8 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Numbers;
+import org.apache.druid.java.util.common.UOE;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 
@@ -33,6 +35,9 @@ public class PlannerConfig
   public static final String CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT = "useGroupingSetForExactDistinct";
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
   public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
+  public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
+  public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
+  public static final int NUM_FILTER_NOT_USED = -1;
 
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
@@ -70,9 +75,20 @@ public class PlannerConfig
   @JsonProperty
   private boolean authorizeSystemTablesDirectly = false;
 
+  @JsonProperty
+  private boolean useNativeQueryExplain = false;
+
+  @JsonProperty
+  private int maxNumericInFilters = NUM_FILTER_NOT_USED;
+
   public long getMetadataSegmentPollPeriod()
   {
     return metadataSegmentPollPeriod;
+  }
+
+  public int getMaxNumericInFilters()
+  {
+    return maxNumericInFilters;
   }
 
   public boolean isMetadataSegmentCacheEnable()
@@ -137,6 +153,11 @@ public class PlannerConfig
     return authorizeSystemTablesDirectly;
   }
 
+  public boolean isUseNativeQueryExplain()
+  {
+    return useNativeQueryExplain;
+  }
+
   public PlannerConfig withOverrides(final Map<String, Object> context)
   {
     if (context == null) {
@@ -166,6 +187,19 @@ public class PlannerConfig
         CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER,
         computeInnerJoinCostAsFilter
     );
+    newConfig.useNativeQueryExplain = getContextBoolean(
+        context,
+        CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
+        isUseNativeQueryExplain()
+    );
+    final int systemConfigMaxNumericInFilters = getMaxNumericInFilters();
+    final int queryContextMaxNumericInFilters = getContextInt(
+        context,
+        CTX_MAX_NUMERIC_IN_FILTERS,
+        getMaxNumericInFilters()
+    );
+    newConfig.maxNumericInFilters = validateMaxNumericInFilters(queryContextMaxNumericInFilters,
+                                                                systemConfigMaxNumericInFilters);
     newConfig.requireTimeCondition = isRequireTimeCondition();
     newConfig.sqlTimeZone = getSqlTimeZone();
     newConfig.awaitInitializationOnStart = isAwaitInitializationOnStart();
@@ -174,6 +208,46 @@ public class PlannerConfig
     newConfig.serializeComplexValues = shouldSerializeComplexValues();
     newConfig.authorizeSystemTablesDirectly = isAuthorizeSystemTablesDirectly();
     return newConfig;
+  }
+
+  private int validateMaxNumericInFilters(int queryContextMaxNumericInFilters, int systemConfigMaxNumericInFilters)
+  {
+    // if maxNumericInFIlters through context == 0 catch exception
+    // else if query context exceeds system set value throw error
+    if (queryContextMaxNumericInFilters == 0) {
+      throw new UOE("[%s] must be greater than 0", CTX_MAX_NUMERIC_IN_FILTERS);
+    } else if (queryContextMaxNumericInFilters > systemConfigMaxNumericInFilters
+               && systemConfigMaxNumericInFilters != NUM_FILTER_NOT_USED) {
+      throw new UOE(
+          "Expected parameter[%s] cannot exceed system set value of [%d]",
+          CTX_MAX_NUMERIC_IN_FILTERS,
+          systemConfigMaxNumericInFilters
+      );
+    }
+    // if system set value is not present, thereby inferring default of -1
+    if (systemConfigMaxNumericInFilters == NUM_FILTER_NOT_USED) {
+      return systemConfigMaxNumericInFilters;
+    }
+    // all other cases return the valid query context value
+    return queryContextMaxNumericInFilters;
+  }
+
+  private static int getContextInt(
+      final Map<String, Object> context,
+      final String parameter,
+      final int defaultValue
+  )
+  {
+    final Object value = context.get(parameter);
+    if (value == null) {
+      return defaultValue;
+    } else if (value instanceof String) {
+      return Numbers.parseInt(value);
+    } else if (value instanceof Integer) {
+      return (Integer) value;
+    } else {
+      throw new IAE("Expected parameter[%s] to be integer", parameter);
+    }
   }
 
   private static boolean getContextBoolean(
@@ -213,7 +287,8 @@ public class PlannerConfig
            metadataSegmentPollPeriod == that.metadataSegmentPollPeriod &&
            serializeComplexValues == that.serializeComplexValues &&
            Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod) &&
-           Objects.equals(sqlTimeZone, that.sqlTimeZone);
+           Objects.equals(sqlTimeZone, that.sqlTimeZone) &&
+           useNativeQueryExplain == that.useNativeQueryExplain;
   }
 
   @Override
@@ -230,7 +305,8 @@ public class PlannerConfig
         sqlTimeZone,
         metadataSegmentCacheEnable,
         metadataSegmentPollPeriod,
-        serializeComplexValues
+        serializeComplexValues,
+        useNativeQueryExplain
     );
   }
 
@@ -248,6 +324,7 @@ public class PlannerConfig
            ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
            ", sqlTimeZone=" + sqlTimeZone +
            ", serializeComplexValues=" + serializeComplexValues +
+           ", useNativeQueryExplain=" + useNativeQueryExplain +
            '}';
   }
 }

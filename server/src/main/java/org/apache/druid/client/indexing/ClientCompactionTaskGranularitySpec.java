@@ -40,15 +40,18 @@ public class ClientCompactionTaskGranularitySpec
 {
   private final Granularity segmentGranularity;
   private final Granularity queryGranularity;
+  private final Boolean rollup;
 
   @JsonCreator
   public ClientCompactionTaskGranularitySpec(
       @JsonProperty("segmentGranularity") Granularity segmentGranularity,
-      @JsonProperty("queryGranularity") Granularity queryGranularity
+      @JsonProperty("queryGranularity") Granularity queryGranularity,
+      @JsonProperty("rollup") Boolean rollup
   )
   {
     this.queryGranularity = queryGranularity;
     this.segmentGranularity = segmentGranularity;
+    this.rollup = rollup;
   }
 
   @JsonProperty
@@ -63,9 +66,15 @@ public class ClientCompactionTaskGranularitySpec
     return queryGranularity;
   }
 
+  @JsonProperty
+  public Boolean isRollup()
+  {
+    return rollup;
+  }
+
   public ClientCompactionTaskGranularitySpec withSegmentGranularity(Granularity segmentGranularity)
   {
-    return new ClientCompactionTaskGranularitySpec(segmentGranularity, queryGranularity);
+    return new ClientCompactionTaskGranularitySpec(segmentGranularity, queryGranularity, rollup);
   }
 
   @Override
@@ -79,13 +88,14 @@ public class ClientCompactionTaskGranularitySpec
     }
     ClientCompactionTaskGranularitySpec that = (ClientCompactionTaskGranularitySpec) o;
     return Objects.equals(segmentGranularity, that.segmentGranularity) &&
-           Objects.equals(queryGranularity, that.queryGranularity);
+           Objects.equals(queryGranularity, that.queryGranularity) &&
+           Objects.equals(rollup, that.rollup);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(segmentGranularity, queryGranularity);
+    return Objects.hash(segmentGranularity, queryGranularity, rollup);
   }
 
   @Override
@@ -94,6 +104,7 @@ public class ClientCompactionTaskGranularitySpec
     return "ClientCompactionTaskGranularitySpec{" +
            "segmentGranularity=" + segmentGranularity +
            ", queryGranularity=" + queryGranularity +
+           ", rollup=" + rollup +
            '}';
   }
 }

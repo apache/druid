@@ -41,7 +41,7 @@ public class NullableFloatGroupByVectorColumnSelector implements GroupByVectorCo
   }
 
   @Override
-  public void writeKeys(
+  public int writeKeys(
       final WritableMemory keySpace,
       final int keySize,
       final int keyOffset,
@@ -63,6 +63,8 @@ public class NullableFloatGroupByVectorColumnSelector implements GroupByVectorCo
         keySpace.putFloat(j + 1, vector[i]);
       }
     }
+
+    return 0;
   }
 
   @Override
@@ -78,5 +80,11 @@ public class NullableFloatGroupByVectorColumnSelector implements GroupByVectorCo
     } else {
       resultRow.set(resultRowPosition, keyMemory.getFloat(keyOffset + 1));
     }
+  }
+
+  @Override
+  public void reset()
+  {
+    // Nothing to do.
   }
 }

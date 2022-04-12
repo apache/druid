@@ -25,10 +25,12 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.HistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Map;
 import java.util.Objects;
@@ -71,11 +73,12 @@ public class BucketsPostAggregator extends ApproximateHistogramPostAggregator
 
   /**
    * actual type is {@link Histogram}
+   * @param signature
    */
   @Override
-  public ValueType getType()
+  public ColumnType getType(ColumnInspector signature)
   {
-    return ValueType.COMPLEX;
+    return HistogramAggregatorFactory.TYPE;
   }
 
   @Override

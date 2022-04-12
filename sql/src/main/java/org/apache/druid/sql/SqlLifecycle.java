@@ -21,7 +21,6 @@ package org.apache.druid.sql;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.sql.parser.SqlParseException;
@@ -47,7 +46,7 @@ import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ForbiddenException;
-import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -194,7 +193,7 @@ public class SqlLifecycle
     Access access = doAuthorize(
         AuthorizationUtils.authorizeAllResourceActions(
             authenticationResult,
-            Iterables.transform(validationResult.getResources(), AuthorizationUtils.RESOURCE_READ_RA_GENERATOR),
+            validationResult.getResourceActions(),
             plannerFactory.getAuthorizerMapper()
         )
     );
@@ -216,7 +215,7 @@ public class SqlLifecycle
     Access access = doAuthorize(
         AuthorizationUtils.authorizeAllResourceActions(
             req,
-            Iterables.transform(validationResult.getResources(), AuthorizationUtils.RESOURCE_READ_RA_GENERATOR),
+            validationResult.getResourceActions(),
             plannerFactory.getAuthorizerMapper()
         )
     );
@@ -225,13 +224,13 @@ public class SqlLifecycle
 
   private ValidationResult validate(AuthenticationResult authenticationResult)
   {
-    try (DruidPlanner planner = plannerFactory.createPlanner(queryContext)) {
+    try (DruidPlanner planner = plannerFactory.createPlanner(sql, queryContext)) {
       // set planner context for logs/metrics in case something explodes early
       this.plannerContext = planner.getPlannerContext();
       this.plannerContext.setAuthenticationResult(authenticationResult);
       // set parameters on planner context, if parameters have already been set
       this.plannerContext.setParameters(parameters);
-      this.validationResult = planner.validate(sql);
+      this.validationResult = planner.validate();
       return validationResult;
     }
     // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
@@ -266,7 +265,6 @@ public class SqlLifecycle
    * Prepare the query lifecycle for execution, without completely planning into something that is executable, but
    * including some initial parsing and validation and any dyanmic parameter type resolution, to support prepared
    * statements via JDBC.
-   *
    */
   public PrepareResult prepare() throws RelConversionException
   {
@@ -277,7 +275,7 @@ public class SqlLifecycle
     }
     Preconditions.checkNotNull(plannerContext, "Cannot prepare, plannerContext is null");
     try (DruidPlanner planner = plannerFactory.createPlannerWithContext(plannerContext)) {
-      this.prepareResult = planner.prepare(sql);
+      this.prepareResult = planner.prepare();
       return prepareResult;
     }
     // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
@@ -299,7 +297,7 @@ public class SqlLifecycle
     transition(State.AUTHORIZED, State.PLANNED);
     Preconditions.checkNotNull(plannerContext, "Cannot plan, plannerContext is null");
     try (DruidPlanner planner = plannerFactory.createPlannerWithContext(plannerContext)) {
-      this.plannerResult = planner.plan(sql);
+      this.plannerResult = planner.plan();
     }
     // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
     catch (SqlParseException e) {
@@ -379,10 +377,9 @@ public class SqlLifecycle
     return validate(authenticationResult);
   }
 
-  public Set<Resource> getAuthorizedResources()
+  public Set<ResourceAction> getRequiredResourceActions()
   {
-    assert validationResult != null;
-    return validationResult.getResources();
+    return Preconditions.checkNotNull(validationResult, "validationResult").getResourceActions();
   }
 
   /**
@@ -449,7 +446,11 @@ public class SqlLifecycle
       if (validationResult != null) {
         metricBuilder.setDimension(
             "dataSource",
-            validationResult.getResources().stream().map(Resource::getName).collect(Collectors.toList()).toString()
+            validationResult.getResourceActions()
+                            .stream()
+                            .map(action -> action.getResource().getName())
+                            .collect(Collectors.toList())
+                            .toString()
         );
       }
       metricBuilder.setDimension("remoteAddress", StringUtils.nullToEmptyNonDruidDataString(remoteAddress));

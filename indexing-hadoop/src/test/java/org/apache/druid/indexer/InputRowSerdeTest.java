@@ -37,7 +37,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -104,13 +104,13 @@ public class InputRowSerdeTest
 
     final AggregatorFactory mockedAggregatorFactory = EasyMock.createMock(AggregatorFactory.class);
     EasyMock.expect(mockedAggregatorFactory.factorize(EasyMock.anyObject(ColumnSelectorFactory.class))).andReturn(mockedAggregator);
-    EasyMock.expect(mockedAggregatorFactory.getType()).andReturn(ValueType.DOUBLE).anyTimes();
+    EasyMock.expect(mockedAggregatorFactory.getIntermediateType()).andReturn(ColumnType.DOUBLE).anyTimes();
     EasyMock.expect(mockedAggregatorFactory.getName()).andReturn("mockedAggregator").anyTimes();
 
     final AggregatorFactory mockedNullAggregatorFactory = EasyMock.createMock(AggregatorFactory.class);
     EasyMock.expect(mockedNullAggregatorFactory.factorize(EasyMock.anyObject(ColumnSelectorFactory.class))).andReturn(mockedNullAggregator);
     EasyMock.expect(mockedNullAggregatorFactory.getName()).andReturn("mockedNullAggregator").anyTimes();
-    EasyMock.expect(mockedNullAggregatorFactory.getType()).andReturn(ValueType.DOUBLE).anyTimes();
+    EasyMock.expect(mockedNullAggregatorFactory.getIntermediateType()).andReturn(ColumnType.DOUBLE).anyTimes();
 
     EasyMock.replay(mockedAggregatorFactory, mockedNullAggregatorFactory);
 
@@ -137,9 +137,7 @@ public class InputRowSerdeTest
             new LongDimensionSchema("d3"),
             new FloatDimensionSchema("d4"),
             new DoubleDimensionSchema("d5")
-        ),
-        null,
-        null
+        )
     );
 
     byte[] data = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories)
@@ -188,9 +186,7 @@ public class InputRowSerdeTest
             new LongDimensionSchema("d3"),
             new FloatDimensionSchema("d4"),
             new DoubleDimensionSchema("d5")
-        ),
-        null,
-        null
+        )
     );
 
     InputRowSerde.SerializeResult result = InputRowSerde.toBytes(
@@ -220,9 +216,7 @@ public class InputRowSerdeTest
     DimensionsSpec dimensionsSpec = new DimensionsSpec(
         Collections.singletonList(
             new LongDimensionSchema("d1")
-        ),
-        null,
-        null
+        )
     );
     result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories);
     Assert.assertEquals(
@@ -233,9 +227,7 @@ public class InputRowSerdeTest
     dimensionsSpec = new DimensionsSpec(
         Collections.singletonList(
             new FloatDimensionSchema("d1")
-        ),
-        null,
-        null
+        )
     );
     result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories);
     Assert.assertEquals(
@@ -246,9 +238,7 @@ public class InputRowSerdeTest
     dimensionsSpec = new DimensionsSpec(
         Collections.singletonList(
             new DoubleDimensionSchema("d1")
-        ),
-        null,
-        null
+        )
     );
     result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories);
     Assert.assertEquals(
@@ -280,9 +270,7 @@ public class InputRowSerdeTest
             new LongDimensionSchema("d3"),
             new FloatDimensionSchema("d4"),
             new DoubleDimensionSchema("d5")
-        ),
-        null,
-        null
+        )
     );
 
     byte[] result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, new AggregatorFactory[0]).getSerializedRow();

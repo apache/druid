@@ -31,15 +31,20 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.context.ResponseContextDeserializer;
 import org.joda.time.DateTimeZone;
 
 import java.io.IOException;
 import java.nio.ByteOrder;
 
 /**
+ *
  */
+@SuppressWarnings("serial")
 public class DruidDefaultSerializersModule extends SimpleModule
 {
+  @SuppressWarnings("rawtypes")
   public DruidDefaultSerializersModule()
   {
     super("Druid default serializers");
@@ -78,6 +83,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
         Sequence.class,
         new JsonSerializer<Sequence>()
         {
+          @SuppressWarnings("unchecked")
           @Override
           public void serialize(Sequence value, final JsonGenerator jgen, SerializerProvider provider)
               throws IOException
@@ -108,6 +114,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
         Yielder.class,
         new JsonSerializer<Yielder>()
         {
+          @SuppressWarnings("unchecked")
           @Override
           public void serialize(Yielder yielder, final JsonGenerator jgen, SerializerProvider provider)
               throws IOException
@@ -142,5 +149,6 @@ public class DruidDefaultSerializersModule extends SimpleModule
           }
         }
     );
+    addDeserializer(ResponseContext.class, new ResponseContextDeserializer());
   }
 }

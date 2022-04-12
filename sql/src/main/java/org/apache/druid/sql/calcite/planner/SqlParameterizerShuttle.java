@@ -26,6 +26,7 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.util.TimestampString;
+import org.apache.druid.java.util.common.IAE;
 
 /**
  * Replaces all {@link SqlDynamicParam} encountered in an {@link SqlNode} tree with a {@link SqlLiteral} if a value
@@ -51,6 +52,9 @@ public class SqlParameterizerShuttle extends SqlShuttle
     try {
       if (plannerContext.getParameters().size() > param.getIndex()) {
         TypedValue paramBinding = plannerContext.getParameters().get(param.getIndex());
+        if (paramBinding == null) {
+          throw new IAE("Parameter at position[%s] is not bound", param.getIndex());
+        }
         if (paramBinding.value == null) {
           return SqlLiteral.createNull(param.getParserPosition());
         }
@@ -67,6 +71,8 @@ public class SqlParameterizerShuttle extends SqlShuttle
         }
 
         return typeName.createLiteral(paramBinding.value, param.getParserPosition());
+      } else {
+        throw new IAE("Parameter at position[%s] is not bound", param.getIndex());
       }
     }
     catch (ClassCastException ignored) {

@@ -19,18 +19,24 @@
 
 package org.apache.druid.server.coordinator.duty;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
+import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
+import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
-import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CompactionStatistics;
@@ -52,7 +58,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class CompactSegments implements CoordinatorDuty
+public class CompactSegments implements CoordinatorCustomDuty
 {
   static final String COMPACTION_TASK_COUNT = "compactTaskCount";
   static final String AVAILABLE_COMPACTION_TASK_SLOT = "availableCompactionTaskSlot";
@@ -86,10 +92,11 @@ public class CompactSegments implements CoordinatorDuty
   private final AtomicReference<Map<String, AutoCompactionSnapshot>> autoCompactionSnapshotPerDataSource = new AtomicReference<>();
 
   @Inject
+  @JsonCreator
   public CompactSegments(
-      DruidCoordinatorConfig config,
-      ObjectMapper objectMapper,
-      IndexingServiceClient indexingServiceClient
+      @JacksonInject DruidCoordinatorConfig config,
+      @JacksonInject ObjectMapper objectMapper,
+      @JacksonInject IndexingServiceClient indexingServiceClient
   )
   {
     this.policy = new NewestSegmentFirstPolicy(objectMapper);
@@ -98,6 +105,18 @@ public class CompactSegments implements CoordinatorDuty
     autoCompactionSnapshotPerDataSource.set(new HashMap<>());
 
     LOG.info("Scheduling compaction with skipLockedIntervals [%s]", skipLockedIntervals);
+  }
+
+  @VisibleForTesting
+  public boolean isSkipLockedIntervals()
+  {
+    return skipLockedIntervals;
+  }
+
+  @VisibleForTesting
+  IndexingServiceClient getIndexingServiceClient()
+  {
+    return indexingServiceClient;
   }
 
   @Override
@@ -170,8 +189,21 @@ public class CompactSegments implements CoordinatorDuty
         final CompactionSegmentIterator iterator =
             policy.reset(compactionConfigs, dataSources, intervalsToSkipCompaction);
 
+        int totalCapacity;
+        if (dynamicConfig.isUseAutoScaleSlots()) {
+          try {
+            totalCapacity = indexingServiceClient.getTotalWorkerCapacityWithAutoScale();
+          }
+          catch (Exception e) {
+            LOG.warn("Failed to get total worker capacity with auto scale slots. Falling back to current capacity count");
+            totalCapacity = indexingServiceClient.getTotalWorkerCapacity();
+          }
+        } else {
+          totalCapacity = indexingServiceClient.getTotalWorkerCapacity();
+        }
+
         final int compactionTaskCapacity = (int) Math.min(
-            indexingServiceClient.getTotalWorkerCapacity() * dynamicConfig.getCompactionTaskSlotRatio(),
+            totalCapacity * dynamicConfig.getCompactionTaskSlotRatio(),
             dynamicConfig.getMaxCompactionTaskSlots()
         );
         final int numAvailableCompactionTaskSlots;
@@ -297,7 +329,7 @@ public class CompactSegments implements CoordinatorDuty
   private static boolean useRangePartitions(ClientCompactionTaskQueryTuningConfig tuningConfig)
   {
     // dynamic partitionsSpec will be used if getPartitionsSpec() returns null
-    return tuningConfig.getPartitionsSpec() instanceof SingleDimensionPartitionsSpec;
+    return tuningConfig.getPartitionsSpec() instanceof DimensionRangePartitionsSpec;
   }
 
   private static List<TaskStatusPlus> filterNonCompactionTasks(List<TaskStatusPlus> taskStatuses)
@@ -341,14 +373,53 @@ public class CompactSegments implements CoordinatorDuty
         snapshotBuilder.incrementSegmentCountCompacted(segmentsToCompact.size());
 
         final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
-        ClientCompactionTaskGranularitySpec queryGranularitySpec;
-        if (config.getGranularitySpec() != null) {
-          queryGranularitySpec = new ClientCompactionTaskGranularitySpec(
-              config.getGranularitySpec().getSegmentGranularity(),
-              config.getGranularitySpec().getQueryGranularity()
+
+        // Create granularitySpec to send to compaction task
+        ClientCompactionTaskGranularitySpec granularitySpec;
+        Granularity segmentGranularityToUse = null;
+        if (config.getGranularitySpec() == null || config.getGranularitySpec().getSegmentGranularity() == null) {
+          // Determines segmentGranularity from the segmentsToCompact
+          // Each batch of segmentToCompact from CompactionSegmentIterator will contains the same interval as
+          // segmentGranularity is not set in the compaction config
+          Interval interval = segmentsToCompact.get(0).getInterval();
+          if (segmentsToCompact.stream().allMatch(segment -> interval.overlaps(segment.getInterval()))) {
+            try {
+              segmentGranularityToUse = GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity();
+            }
+            catch (IAE iae) {
+              // This case can happen if the existing segment interval result in complicated periods.
+              // Fall back to setting segmentGranularity as null
+              LOG.warn("Cannot determine segmentGranularity from interval [%s]", interval);
+            }
+          } else {
+            LOG.warn("segmentsToCompact does not have the same interval. Fallback to not setting segmentGranularity for auto compaction task");
+          }
+        } else {
+          segmentGranularityToUse = config.getGranularitySpec().getSegmentGranularity();
+        }
+        granularitySpec = new ClientCompactionTaskGranularitySpec(
+            segmentGranularityToUse,
+            config.getGranularitySpec() != null ? config.getGranularitySpec().getQueryGranularity() : null,
+            config.getGranularitySpec() != null ? config.getGranularitySpec().isRollup() : null
+
+        );
+
+        // Create dimensionsSpec to send to compaction task
+        ClientCompactionTaskDimensionsSpec dimensionsSpec;
+        if (config.getDimensionsSpec() != null) {
+          dimensionsSpec = new ClientCompactionTaskDimensionsSpec(
+              config.getDimensionsSpec().getDimensions()
           );
         } else {
-          queryGranularitySpec = null;
+          dimensionsSpec = null;
+        }
+
+        // Create transformSpec to send to compaction task
+        ClientCompactionTaskTransformSpec transformSpec = null;
+        if (config.getTransformSpec() != null) {
+          transformSpec = new ClientCompactionTaskTransformSpec(
+              config.getTransformSpec().getFilter()
+          );
         }
 
         Boolean dropExisting = null;
@@ -362,7 +433,10 @@ public class CompactSegments implements CoordinatorDuty
             segmentsToCompact,
             config.getTaskPriority(),
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
-            queryGranularitySpec,
+            granularitySpec,
+            dimensionsSpec,
+            config.getMetricsSpec(),
+            transformSpec,
             dropExisting,
             newAutoCompactionContext(config.getTaskContext())
         );

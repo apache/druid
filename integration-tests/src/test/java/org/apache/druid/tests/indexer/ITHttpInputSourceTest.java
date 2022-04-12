@@ -36,8 +36,6 @@ public class ITHttpInputSourceTest extends AbstractITBatchIndexTest
   private static final String INDEX_TASK = "/indexer/wikipedia_http_inputsource_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_http_inputsource_queries.json";
 
-  // Ignore while we debug...
-  @Test(enabled = false)
   public void doTest() throws IOException
   {
     final String indexDatasource = "wikipedia_http_inputsource_test_" + UUID.randomUUID();

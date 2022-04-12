@@ -21,7 +21,7 @@ package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 /**
  * many strings enter, one string leaves...
@@ -44,9 +44,9 @@ public abstract class StringOutMultiStringInVectorProcessor implements ExprVecto
   }
 
   @Override
-  public ExprType getOutputType()
+  public ExpressionType getOutputType()
   {
-    return ExprType.STRING;
+    return ExpressionType.STRING;
   }
 
   @Override

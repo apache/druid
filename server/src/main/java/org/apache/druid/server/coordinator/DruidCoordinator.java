@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
@@ -158,7 +159,7 @@ public class DruidCoordinator
   private final BalancerStrategyFactory factory;
   private final LookupCoordinatorManager lookupCoordinatorManager;
   private final DruidLeaderSelector coordLeaderSelector;
-
+  private final ObjectMapper objectMapper;
   private final CompactSegments compactSegments;
 
   private volatile boolean started = false;
@@ -168,7 +169,7 @@ public class DruidCoordinator
   private int cachedBalancerThreadNumber;
   private ListeningExecutorService balancerExec;
 
-  private static final String HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP = "HistoricalManagementDuties";
+  public static final String HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP = "HistoricalManagementDuties";
   private static final String METADATA_STORE_MANAGEMENT_DUTIES_DUTY_GROUP = "MetadataStoreManagementDuties";
   private static final String INDEXING_SERVICE_DUTIES_DUTY_GROUP = "IndexingServiceDuties";
   private static final String COMPACT_SEGMENTS_DUTIES_DUTY_GROUP = "CompactSegmentsDuties";
@@ -194,7 +195,7 @@ public class DruidCoordinator
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
-      CompactSegments compactSegments,
+      ObjectMapper objectMapper,
       ZkEnablementConfig zkEnablementConfig
   )
   {
@@ -219,7 +220,7 @@ public class DruidCoordinator
         factory,
         lookupCoordinatorManager,
         coordLeaderSelector,
-        compactSegments,
+        objectMapper,
         zkEnablementConfig
     );
   }
@@ -245,7 +246,7 @@ public class DruidCoordinator
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
       DruidLeaderSelector coordLeaderSelector,
-      CompactSegments compactSegments,
+      ObjectMapper objectMapper,
       ZkEnablementConfig zkEnablementConfig
   )
   {
@@ -276,8 +277,8 @@ public class DruidCoordinator
     this.factory = factory;
     this.lookupCoordinatorManager = lookupCoordinatorManager;
     this.coordLeaderSelector = coordLeaderSelector;
-
-    this.compactSegments = compactSegments;
+    this.objectMapper = objectMapper;
+    this.compactSegments = initializeCompactSegmentsDuty();
   }
 
   public boolean isLeader()
@@ -420,7 +421,7 @@ public class DruidCoordinator
   public void markSegmentAsUnused(DataSegment segment)
   {
     log.debug("Marking segment[%s] as unused", segment.getId());
-    segmentsMetadataManager.markSegmentAsUnused(segment.getId().toString());
+    segmentsMetadataManager.markSegmentAsUnused(segment.getId());
   }
 
   public String getCurrentLeader()
@@ -764,19 +765,21 @@ public class DruidCoordinator
         new RunRules(DruidCoordinator.this),
         new UnloadUnusedSegments(),
         new MarkAsUnusedOvershadowedSegments(DruidCoordinator.this),
-        new BalanceSegments(DruidCoordinator.this),
-        new EmitClusterStatsAndMetrics(DruidCoordinator.this)
+        new BalanceSegments(DruidCoordinator.this)
     );
   }
 
-  private List<CoordinatorDuty> makeIndexingServiceDuties()
+  @VisibleForTesting
+  List<CoordinatorDuty> makeIndexingServiceDuties()
   {
     List<CoordinatorDuty> duties = new ArrayList<>();
     duties.add(new LogUsedSegments());
     duties.addAll(indexingServiceDuties);
     // CompactSegmentsDuty should be the last duty as it can take a long time to complete
-    duties.addAll(makeCompactSegmentsDuty());
-
+    // We do not have to add compactSegments if it is already enabled in the custom duty group
+    if (getCompactSegmentsDutyFromCustomGroups().isEmpty()) {
+      duties.addAll(makeCompactSegmentsDuty());
+    }
     log.debug(
         "Done making indexing service duties %s",
         duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
@@ -797,6 +800,31 @@ public class DruidCoordinator
     return ImmutableList.copyOf(duties);
   }
 
+  @VisibleForTesting
+  CompactSegments initializeCompactSegmentsDuty()
+  {
+    List<CompactSegments> compactSegmentsDutyFromCustomGroups = getCompactSegmentsDutyFromCustomGroups();
+    if (compactSegmentsDutyFromCustomGroups.isEmpty()) {
+      return new CompactSegments(config, objectMapper, indexingServiceClient);
+    } else {
+      if (compactSegmentsDutyFromCustomGroups.size() > 1) {
+        log.warn("More than one compactSegments duty is configured in the Coordinator Custom Duty Group. The first duty will be picked up.");
+      }
+      return compactSegmentsDutyFromCustomGroups.get(0);
+    }
+  }
+
+  @VisibleForTesting
+  List<CompactSegments> getCompactSegmentsDutyFromCustomGroups()
+  {
+    return customDutyGroups.getCoordinatorCustomDutyGroups()
+                           .stream()
+                           .flatMap(coordinatorCustomDutyGroup -> coordinatorCustomDutyGroup.getCustomDutyList().stream())
+                           .filter(duty -> duty instanceof CompactSegments)
+                           .map(duty -> (CompactSegments) duty)
+                           .collect(Collectors.toList());
+  }
+
   private List<CoordinatorDuty> makeCompactSegmentsDuty()
   {
     return ImmutableList.of(compactSegments);
@@ -812,7 +840,17 @@ public class DruidCoordinator
 
     protected DutiesRunnable(List<? extends CoordinatorDuty> duties, final int startingLeaderCounter, String alias)
     {
-      this.duties = duties;
+      // Automatically add EmitClusterStatsAndMetrics duty to the group if it does not already exists
+      // This is to avoid human coding error (forgetting to add the EmitClusterStatsAndMetrics duty to the group)
+      // causing metrics from the duties to not being emitted.
+      if (duties.stream().noneMatch(duty -> duty instanceof EmitClusterStatsAndMetrics)) {
+        boolean isContainCompactSegmentDuty = duties.stream().anyMatch(duty -> duty instanceof CompactSegments);
+        List<CoordinatorDuty> allDuties = new ArrayList<>(duties);
+        allDuties.add(new EmitClusterStatsAndMetrics(DruidCoordinator.this, alias, isContainCompactSegmentDuty));
+        this.duties = allDuties;
+      } else {
+        this.duties = duties;
+      }
       this.startingLeaderCounter = startingLeaderCounter;
       this.dutiesRunnableAlias = alias;
     }
@@ -928,6 +966,12 @@ public class DruidCoordinator
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
       }
+    }
+
+    @VisibleForTesting
+    public List<? extends CoordinatorDuty> getDuties()
+    {
+      return duties;
     }
   }
 

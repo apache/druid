@@ -34,6 +34,7 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.RowAdapters;
@@ -52,6 +53,7 @@ import org.apache.druid.sql.calcite.schema.NamedDruidSchema;
 import org.apache.druid.sql.calcite.schema.NamedViewSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.table.RowSignatures;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -71,8 +73,10 @@ import java.util.stream.Collectors;
 class ExpressionTestHelper
 {
   private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
+      "SELECT 1", // The actual query isn't important for this test
       CalciteTests.createOperatorTable(),
       CalciteTests.createExprMacroTable(),
+      CalciteTests.getJsonMapper(),
       new PlannerConfig(),
       new DruidSchemaCatalog(
           EasyMock.createMock(SchemaPlus.class),
@@ -203,7 +207,7 @@ class ExpressionTestHelper
                               .map(ExpressionTestHelper::quoteIfNeeded)
                               .collect(Collectors.joining(","));
     List<String> elements = Arrays.asList(functionName, "(", argsString, ")");
-    return DruidExpression.fromExpression(String.join(noDelimiter, elements));
+    return CalciteTestBase.makeExpression(String.join(noDelimiter, elements));
   }
 
   private static String quoteIfNeeded(@Nullable Object arg)
@@ -251,14 +255,45 @@ class ExpressionTestHelper
     testExpression(rexBuilder.makeCall(op, exprs), expectedExpression, expectedResult);
   }
 
+  /**
+   * @deprecated use {@link #testExpression(SqlOperator, RexNode, DruidExpression, Object)} instead which does a
+   * deep comparison of {@link DruidExpression} instead of just comparing the output of
+   * {@link DruidExpression#getExpression()}
+   */
+  @Deprecated
+  void testExpressionString(
+      final SqlOperator op,
+      final List<? extends RexNode> exprs,
+      final DruidExpression expectedExpression,
+      final Object expectedResult
+  )
+  {
+    testExpression(rexBuilder.makeCall(op, exprs), expectedExpression, expectedResult, false);
+  }
+
   void testExpression(
       final RexNode rexNode,
       final DruidExpression expectedExpression,
       final Object expectedResult
   )
   {
+    testExpression(rexNode, expectedExpression, expectedResult, true);
+  }
+
+  void testExpression(
+      final RexNode rexNode,
+      final DruidExpression expectedExpression,
+      final Object expectedResult,
+      final boolean deepCompare
+  )
+  {
     DruidExpression expression = Expressions.toDruidExpression(PLANNER_CONTEXT, rowSignature, rexNode);
-    Assert.assertEquals("Expression for: " + rexNode, expectedExpression, expression);
+    Assert.assertNotNull(expression);
+    if (deepCompare) {
+      Assert.assertEquals("Expression for: " + rexNode, expectedExpression, expression);
+    } else {
+      Assert.assertEquals("Expression for: " + rexNode, expectedExpression.getExpression(), expression.getExpression());
+    }
 
     ExprEval<?> result = Parser.parse(expression.getExpression(), PLANNER_CONTEXT.getExprMacroTable())
                                .eval(InputBindings.withMap(bindings));
@@ -275,7 +310,7 @@ class ExpressionTestHelper
   )
   {
     final RexNode rexNode = rexBuilder.makeCall(op, exprs);
-    final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(rowSignature);
+    final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(rowSignature, TestExprMacroTable.INSTANCE);
 
     final DimFilter filter = Expressions.toFilter(PLANNER_CONTEXT, rowSignature, virtualColumnRegistry, rexNode);
     Assert.assertEquals("Filter for: " + rexNode, expectedFilter, filter);

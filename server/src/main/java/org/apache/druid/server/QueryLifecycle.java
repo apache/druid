@@ -318,9 +318,9 @@ public class QueryLifecycle
       if (e != null) {
         statsMap.put("exception", e.toString());
         if (QueryContexts.isDebug(baseQuery)) {
-          log.error(e, "Exception while processing queryId [%s]", baseQuery.getId());
+          log.warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
         } else {
-          log.noStackTrace().error(e, "Exception while processing queryId [%s]", baseQuery.getId());
+          log.noStackTrace().warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
         }
         if (e instanceof QueryInterruptedException || e instanceof QueryTimeoutException) {
           // Mimic behavior from QueryResource, where this code was originally taken from.

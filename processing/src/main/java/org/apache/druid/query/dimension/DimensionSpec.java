@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
@@ -51,7 +51,7 @@ public interface DimensionSpec extends Cacheable
 
   String getOutputName();
 
-  ValueType getOutputType();
+  ColumnType getOutputType();
 
   //ExtractionFn can be implemented with decorate(..) fn
   @Deprecated

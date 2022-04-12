@@ -24,7 +24,7 @@ fi
 
 if [ -z "$DOCKER_HOST_IP" ]; then
   # Another Mac specific way, when the machine isn't able to resolve its own name
-  DOCKER_HOST_IP="$(ifconfig | fgrep 'inet ' | fgrep -v 127.0.0.1 | awk '{print $2}')"
+  DOCKER_HOST_IP="$(ifconfig | fgrep 'inet ' | fgrep -v 127.0.0.1 | awk '{print $2}' | tail -n1)"
 fi
 
 if [ -z "$DOCKER_HOST_IP" ]; then

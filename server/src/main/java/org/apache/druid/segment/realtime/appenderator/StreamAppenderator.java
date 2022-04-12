@@ -55,6 +55,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
@@ -136,6 +137,7 @@ public class StreamAppenderator implements Appenderator
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline;
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
+  private final boolean useMaxMemoryEstimates;
 
   private final QuerySegmentWalker texasRanger;
   // This variable updated in add(), persist(), and drop()
@@ -184,7 +186,8 @@ public class StreamAppenderator implements Appenderator
       IndexMerger indexMerger,
       Cache cache,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   )
   {
     this.myId = id;
@@ -211,6 +214,7 @@ public class StreamAppenderator implements Appenderator
 
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
+    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
   }
 
   @Override
@@ -228,7 +232,6 @@ public class StreamAppenderator implements Appenderator
   @Override
   public Object startJob()
   {
-    tuningConfig.getBasePersistDirectory().mkdirs();
     lockBasePersistDirectory();
     final Object retVal = bootstrapSinksFromDisk();
     initializeExecutors();
@@ -464,6 +467,7 @@ public class StreamAppenderator implements Appenderator
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
+          useMaxMemoryEstimates,
           null
       );
       bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed(retVal));
@@ -859,6 +863,8 @@ public class StreamAppenderator implements Appenderator
             schema.getDimensionsSpec(),
             mergedTarget,
             tuningConfig.getIndexSpec(),
+            tuningConfig.getIndexSpecForIntermediatePersists(),
+            new BaseProgressIndicator(),
             tuningConfig.getSegmentWriteOutMediumFactory(),
             tuningConfig.getMaxColumnsToMerge()
         );
@@ -1022,6 +1028,8 @@ public class StreamAppenderator implements Appenderator
   {
     if (basePersistDirLock == null) {
       try {
+        FileUtils.mkdirp(tuningConfig.getBasePersistDirectory());
+
         basePersistDirLockChannel = FileChannel.open(
             computeLockFile().toPath(),
             StandardOpenOption.CREATE,
@@ -1219,6 +1227,7 @@ public class StreamAppenderator implements Appenderator
             tuningConfig.getAppendableIndexSpec(),
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,
+            useMaxMemoryEstimates,
             null,
             hydrants
         );
@@ -1397,7 +1406,7 @@ public class StreamAppenderator implements Appenderator
   private File createPersistDirIfNeeded(SegmentIdWithShardSpec identifier) throws IOException
   {
     final File persistDir = computePersistDir(identifier);
-    org.apache.commons.io.FileUtils.forceMkdir(persistDir);
+    FileUtils.mkdirp(persistDir);
 
     objectMapper.writeValue(computeIdentifierFile(identifier), identifier);
 

@@ -92,7 +92,7 @@ public class VectorValueMatcherColumnProcessorFactory implements VectorColumnPro
       final VectorObjectSelector selector
   )
   {
-    if (ValueType.STRING.equals(capabilities.getType())) {
+    if (capabilities.is(ValueType.STRING)) {
       return new StringObjectVectorValueMatcher(selector);
     }
     return new ObjectVectorValueMatcher(selector);

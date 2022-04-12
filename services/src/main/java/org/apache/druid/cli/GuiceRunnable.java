@@ -19,11 +19,20 @@
 
 package org.apache.druid.cli;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.google.inject.TypeLiteral;
+import com.google.inject.multibindings.MapBinder;
+import com.google.inject.multibindings.Multibinder;
+import org.apache.druid.discovery.DruidService;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
@@ -41,6 +50,7 @@ public abstract class GuiceRunnable implements Runnable
 {
   private final Logger log;
 
+  private Properties properties;
   private Injector baseInjector;
 
   public GuiceRunnable(Logger log)
@@ -56,20 +66,60 @@ public abstract class GuiceRunnable implements Runnable
   public abstract void run();
 
   @Inject
-  public void configure(Injector injector)
+  public void configure(Properties properties, Injector injector)
   {
+    this.properties = properties;
     this.baseInjector = injector;
+  }
+
+  protected Properties getProperties()
+  {
+    return properties;
   }
 
   protected abstract List<? extends Module> getModules();
 
   public Injector makeInjector()
   {
+    // Pass an empty set of nodeRoles for non-ServerRunnables.
+    // They will still load all modules except for the ones annotated with `LoadOn`.
+    return makeInjector(ImmutableSet.of());
+  }
+
+  public Injector makeInjector(Set<NodeRole> nodeRoles)
+  {
+    Module registerNodeRoleModule = registerNodeRoleModule(nodeRoles);
     try {
-      return Initialization.makeInjectorWithModules(baseInjector, getModules());
+      return Initialization.makeInjectorWithModules(
+          nodeRoles,
+          baseInjector.createChildInjector(registerNodeRoleModule),
+          Iterables.concat(
+              // bind nodeRoles for the new injector as well
+              ImmutableList.of(registerNodeRoleModule),
+              getModules()
+          )
+      );
     }
     catch (Exception e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  static Module registerNodeRoleModule(Set<NodeRole> nodeRoles)
+  {
+    if (nodeRoles.isEmpty()) {
+      return binder -> {};
+    } else {
+      return binder -> {
+        Multibinder<NodeRole> selfBinder = Multibinder.newSetBinder(binder, NodeRole.class, Self.class);
+        nodeRoles.forEach(nodeRole -> selfBinder.addBinding().toInstance(nodeRole));
+
+        MapBinder.newMapBinder(
+            binder,
+            new TypeLiteral<NodeRole>(){},
+            new TypeLiteral<Set<Class<? extends DruidService>>>(){}
+        );
+      };
     }
   }
 

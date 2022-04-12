@@ -19,6 +19,8 @@
 
 package org.apache.druid.timeline.partition;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -33,6 +35,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +44,8 @@ import java.util.Map;
  */
 public class SingleDimensionShardSpecTest
 {
+  private final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
   @Test
   public void testIsInChunk()
   {
@@ -148,6 +153,42 @@ public class SingleDimensionShardSpecTest
     Assert.assertTrue(shardSpec.sharePartitionSpace(new HashBasedNumberedPartialShardSpec(null, 0, 1, null)));
     Assert.assertTrue(shardSpec.sharePartitionSpace(new SingleDimensionPartialShardSpec("dim", 0, null, null, 1)));
     Assert.assertFalse(shardSpec.sharePartitionSpace(new NumberedOverwritePartialShardSpec(0, 2, 1)));
+  }
+
+  @Test
+  public void testSerde() throws IOException
+  {
+    testSerde(new SingleDimensionShardSpec("dim", null, null, 10, null));
+    testSerde(new SingleDimensionShardSpec("dim", "abc", null, 5, 10));
+    testSerde(new SingleDimensionShardSpec("dim", null, "xyz", 10, 1));
+    testSerde(new SingleDimensionShardSpec("dim", "abc", "xyz", 10, null));
+  }
+
+  @Test
+  public void testDeserialize() throws JsonProcessingException
+  {
+    final String json = "{\"type\": \"single\","
+                        + " \"dimension\": \"dim\","
+                        + " \"start\": \"abc\","
+                        + "\"end\": \"xyz\","
+                        + "\"partitionNum\": 5,"
+                        + "\"numCorePartitions\": 10}";
+    ShardSpec shardSpec = OBJECT_MAPPER.readValue(json, ShardSpec.class);
+    Assert.assertTrue(shardSpec instanceof SingleDimensionShardSpec);
+    Assert.assertEquals(ShardSpec.Type.SINGLE, shardSpec.getType());
+
+    SingleDimensionShardSpec singleDimShardSpec = (SingleDimensionShardSpec) shardSpec;
+    Assert.assertEquals(
+        new SingleDimensionShardSpec("dim", "abc", "xyz", 5, 10),
+        singleDimShardSpec
+    );
+  }
+
+  private void testSerde(SingleDimensionShardSpec shardSpec) throws IOException
+  {
+    String json = OBJECT_MAPPER.writeValueAsString(shardSpec);
+    SingleDimensionShardSpec deserializedSpec = OBJECT_MAPPER.readValue(json, SingleDimensionShardSpec.class);
+    Assert.assertEquals(shardSpec, deserializedSpec);
   }
 
   private static RangeSet<String> rangeSet(List<Range<String>> ranges)

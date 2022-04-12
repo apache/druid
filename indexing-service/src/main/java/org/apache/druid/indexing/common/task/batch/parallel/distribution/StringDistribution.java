@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 
 /**
@@ -35,17 +36,17 @@ public interface StringDistribution
   /**
    * Record occurrence of {@link String}
    */
-  void put(String element);
+  void put(StringTuple element);
 
   /**
    * Record occurrence of {@link String} if it will become the new minimum element.
    */
-  void putIfNewMin(String element);
+  void putIfNewMin(StringTuple element);
 
   /**
    * Record occurrence of {@link String} if it will become the new maximum element;
    */
-  void putIfNewMax(String element);
+  void putIfNewMax(StringTuple element);
 
   /**
    * Split the distribution in the fewest number of evenly-sized partitions while honoring a max

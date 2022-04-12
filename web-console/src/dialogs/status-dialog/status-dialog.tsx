@@ -23,6 +23,7 @@ import ReactTable, { Filter } from 'react-table';
 import { Loader } from '../../components';
 import { useQueryManager } from '../../hooks';
 import { Api, UrlBaser } from '../../singletons';
+import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../utils';
 
 import './status-dialog.scss';
 
@@ -72,6 +73,12 @@ export const StatusDialog = React.memo(function StatusDialog(props: StatusDialog
         </div>
         <ReactTable
           data={response.modules}
+          loading={responseState.loading}
+          filterable
+          defaultFilterMethod={anywhereMatcher}
+          defaultPageSize={SMALL_TABLE_PAGE_SIZE}
+          pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
+          showPagination={response.modules.length > SMALL_TABLE_PAGE_SIZE}
           columns={[
             {
               columns: [
@@ -92,9 +99,6 @@ export const StatusDialog = React.memo(function StatusDialog(props: StatusDialog
               ],
             },
           ]}
-          loading={responseState.loading}
-          filterable
-          defaultFilterMethod={anywhereMatcher}
         />
       </div>
     );

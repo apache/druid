@@ -118,19 +118,18 @@ Where the file `supervisor-spec.json` contains a Kinesis supervisor spec:
 
 |Field|Description|Required|
 |--------|-----------|---------|
-|`type`|The supervisor type, this should always be `kinesis`.|yes|
+|`type`|The supervisor type; this should always be `kinesis`.|yes|
 |`spec`|Container object for the supervisor configuration.|yes|
 |`dataSchema`|The schema that will be used by the Kinesis indexing task during ingestion. See [`dataSchema`](../../ingestion/ingestion-spec.md#dataschema).|yes|
 |`ioConfig`|A `KinesisSupervisorIOConfig` object for configuring Kafka connection and I/O-related settings for the supervisor and indexing task. See [KinesisSupervisorIOConfig](#kinesissupervisorioconfig) below.|yes|
 |`tuningConfig`|A `KinesisSupervisorTuningConfig` object for configuring performance-related settings for the supervisor and indexing tasks. See [KinesisSupervisorTuningConfig](#kinesissupervisortuningconfig) below.|no|
-
 
 ### KinesisSupervisorIOConfig
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |`stream`|String|The Kinesis stream to read.|yes|
-|`inputFormat`|Object|[`inputFormat`](../../ingestion/data-formats.md#input-format) to specify how to parse input data. See [the below section](#specifying-data-format) for details about specifying the input format.|yes|
+|`inputFormat`|Object|[`inputFormat`](../../ingestion/data-formats.md#input-format) to specify how to parse input data. See [Specifying data format](#specifying-data-format) for details about specifying the input format.|yes|
 |`endpoint`|String|The AWS Kinesis stream endpoint for a region. You can find a list of endpoints [here](http://docs.aws.amazon.com/general/latest/gr/rande.html#ak_region).|no (default == kinesis.us-east-1.amazonaws.com)|
 |`replicas`|Integer|The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against process failure.|no (default == 1)|
 |`taskCount`|Integer|The maximum number of *reading* tasks in a *replica set*. This means that the maximum number of reading tasks will be `taskCount * replicas` and the total number of tasks (*reading* + *publishing*) will be higher than this. See [Capacity Planning](#capacity-planning) below for more details. The number of reading tasks will be less than `taskCount` if `taskCount > {numKinesisShards}`.|no (default == 1)|
@@ -140,7 +139,7 @@ Where the file `supervisor-spec.json` contains a Kinesis supervisor spec:
 |`useEarliestSequenceNumber`|Boolean|If a supervisor is managing a dataSource for the first time, it will obtain a set of starting sequence numbers from Kinesis. This flag determines whether it retrieves the earliest or latest sequence numbers in Kinesis. Under normal circumstances, subsequent tasks will start from where the previous segments ended so this flag will only be used on first run.|no (default == false)|
 |`completionTimeout`|ISO8601 Period|The length of time to wait before declaring a publishing task as failed and terminating it. If this is set too low, your tasks may never publish. The publishing clock for a task begins roughly after `taskDuration` elapses.|no (default == PT6H)|
 |`lateMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps earlier than this period before the task was created; for example if this is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps earlier than *2016-01-01T11:00Z* will be dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a realtime and a nightly batch ingestion pipeline).|no (default == none)|
-|`earlyMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps later than this period after the task reached its taskDuration; for example if this is set to `PT1H`, the taskDuration is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps later than *2016-01-01T14:00Z* will be dropped. **Note:** Tasks sometimes run past their task duration, for example, in cases of supervisor failover. Setting earlyMessageRejectionPeriod too low may cause messages to be dropped unexpectedly whenever a task runs past its originally configured task duration.|no (default == none)|
+|`earlyMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps later than this period after the task reached its taskDuration; for example if this is set to `PT1H`, the taskDuration is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*. Messages with timestamps later than *2016-01-01T14:00Z* will be dropped. **Note:** Tasks sometimes run past their task duration, for example, in cases of supervisor failover. Setting `earlyMessageRejectionPeriod` too low may cause messages to be dropped unexpectedly whenever a task runs past its originally configured task duration.|no (default == none)|
 |`recordsPerFetch`|Integer|The number of records to request per call to fetch records from Kinesis. See [Determining fetch settings](#determining-fetch-settings).|no (default == 4000)|
 |`fetchDelayMillis`|Integer|Time in milliseconds to wait between subsequent calls to fetch records from Kinesis. See [Determining fetch settings](#determining-fetch-settings).|no (default == 0)|
 |`awsAssumedRoleArn`|String|The AWS assumed role to use for additional permissions.|no|
@@ -154,7 +153,7 @@ Where the file `supervisor-spec.json` contains a Kinesis supervisor spec:
 
 | Property | Description | Required |
 | ------------- | ------------- | ------------- |
-| `enableTaskAutoScaler` | Enable or disable the auto scaler. When false or or absent Druid disables the `autoScaler` even when `autoScalerConfig` is not null| no (default == false) |
+| `enableTaskAutoScaler` | Enable or disable the auto scaler. When false or absent, Druid disables the `autoScaler` even when `autoScalerConfig` is not null.| no (default == false) |
 | `taskCountMax` | Maximum number of Kinesis ingestion tasks. Must be greater than or equal to `taskCountMin`. If greater than `{numKinesisShards}`, the maximum number of reading tasks is `{numKinesisShards}` and `taskCountMax` is ignored.  | yes |
 | `taskCountMin` | Minimum number of Kinesis ingestion tasks. When you enable the auto scaler, Druid ignores the value of taskCount in `IOConfig` and uses`taskCountMin` for the initial number of tasks to launch.| yes |
 | `minTriggerScaleActionFrequencyMillis` | Minimum time interval between two scale actions | no (default == 600000) |
@@ -260,13 +259,17 @@ The following example demonstrates a supervisor spec with `lagBased` autoScaler 
 #### Specifying data format
 
 Kinesis indexing service supports both [`inputFormat`](../../ingestion/data-formats.md#input-format) and [`parser`](../../ingestion/data-formats.md#parser) to specify the data format.
-The `inputFormat` is a new and recommended way to specify the data format for Kinesis indexing service,
-but unfortunately, it doesn't support all data formats supported by the legacy `parser`.
-(They will be supported in the future.)
+Use the `inputFormat` to specify the data format for Kinesis indexing service unless you need a format only supported by the legacy `parser`.
 
-The supported `inputFormat`s include [`csv`](../../ingestion/data-formats.md#csv),
-[`delimited`](../../ingestion/data-formats.md#tsv-delimited), [`json`](../../ingestion/data-formats.md#json), [`avro_stream`](../../ingestion/data-formats.md#avro-stream), [`protobuf`](../../ingestion/data-formats.md#protobuf).
-You can also read [`thrift`](../extensions-contrib/thrift.md) formats using `parser`.
+Supported `inputFormat`s include:
+- `csv`
+- `delimited`
+- `json`
+- `avro_stream`
+- `avro_ocf`
+- `protobuf`
+
+For more information, see [Data formats](../../ingestion/data-formats.md). You can also read [`thrift`](../extensions-contrib/thrift.md) formats using `parser`.
 
 <a name="tuningconfig"></a>
 
@@ -626,12 +629,9 @@ determines the number of records to be processed per each ingestion loop in the 
 See [issue](https://github.com/apache/druid/issues/6714)
 
 The Kinesis indexing service supports de-aggregation of multiple rows packed into a single record by the Kinesis
-Producer Library's aggregate method for more efficient data transfer. Currently, enabling the de-aggregate functionality
-requires the user to manually provide the Kinesis Client Library on the classpath, since this library has a license not
-compatible with Apache projects.
+Producer Library's aggregate method for more efficient data transfer.
 
-To enable this feature, add the `amazon-kinesis-client` (tested on version `1.9.2`) jar file ([link](https://mvnrepository.com/artifact/com.amazonaws/amazon-kinesis-client/1.9.2)) under `dist/druid/extensions/druid-kinesis-indexing-service/`.
-Then when submitting a supervisor-spec, set `deaggregate` to true.
+To enable this feature, set `deaggregate` to true when submitting a supervisor-spec.
 
 ## Resharding
 

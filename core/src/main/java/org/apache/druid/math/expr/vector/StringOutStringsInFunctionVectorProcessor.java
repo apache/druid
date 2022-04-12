@@ -19,7 +19,7 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
 
@@ -33,8 +33,8 @@ public abstract class StringOutStringsInFunctionVectorProcessor
   )
   {
     super(
-        CastToTypeVectorProcessor.cast(left, ExprType.STRING),
-        CastToTypeVectorProcessor.cast(right, ExprType.STRING),
+        CastToTypeVectorProcessor.cast(left, ExpressionType.STRING),
+        CastToTypeVectorProcessor.cast(right, ExpressionType.STRING),
         maxVectorSize,
         new String[maxVectorSize]
     );
@@ -62,8 +62,8 @@ public abstract class StringOutStringsInFunctionVectorProcessor
   }
 
   @Override
-  public ExprType getOutputType()
+  public ExpressionType getOutputType()
   {
-    return ExprType.STRING;
+    return ExpressionType.STRING;
   }
 }

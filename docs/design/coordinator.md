@@ -98,6 +98,13 @@ Compaction tasks might fail due to the following reasons.
 
 Once a compaction task fails, the Coordinator simply checks the segments in the interval of the failed task again, and issues another compaction task in the next run.
 
+Note that Compacting Segments Coordinator Duty is automatically enabled and run as part of the Indexing Service Duties group. However, Compacting Segments Coordinator Duty can be configured to run in isolation as a separate coordinator duty group. This allows changing the period of Compacting Segments Coordinator Duty without impacting the period of other Indexing Service Duties. This can be done by setting the following properties (for more details see [custom pluggable Coordinator Duty](../development/modules.md#adding-your-own-custom-pluggable-coordinator-duty)):
+```
+druid.coordinator.dutyGroups=[<SOME_GROUP_NAME>]
+druid.coordinator.<SOME_GROUP_NAME>.duties=["compactSegments"]
+druid.coordinator.<SOME_GROUP_NAME>.period=<PERIOD_TO_RUN_COMPACTING_SEGMENTS_DUTY>
+```
+
 ### Segment search policy
 
 #### Recent segment first policy

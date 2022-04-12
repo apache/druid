@@ -21,7 +21,7 @@ import React from 'react';
 
 import { EditContextDialog } from './edit-context-dialog';
 
-describe('clipboard dialog', () => {
+describe('EditContextDialog', () => {
   it('matches snapshot', () => {
     const compactionDialog = (
       <EditContextDialog queryContext={{}} onQueryContextChange={() => null} onClose={() => {}} />

@@ -66,6 +66,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 public class DruidSegmentReaderTest extends NullHandlingTest
 {
@@ -80,7 +81,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
   public void setUp() throws IOException
   {
     // Write a segment with two rows in it, with columns: s (string), d (double), cnt (long), met_s (complex).
-    final IncrementalIndex<?> incrementalIndex =
+    final IncrementalIndex incrementalIndex =
         IndexBuilder.create()
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -239,11 +240,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         makeInputEntity(Intervals.of("2000/P1D")),
         indexIO,
         new TimestampSpec("__time", "millis", DateTimes.of("1971")),
-        new DimensionsSpec(
-            ImmutableList.of(),
-            ImmutableList.of("__time", "s", "cnt", "met_s"),
-            ImmutableList.of()
-        ),
+        DimensionsSpec.builder().setDimensionExclusions(ImmutableList.of("__time", "s", "cnt", "met_s")).build(),
         ColumnsFilter.all(),
         null,
         temporaryFolder.newFolder()
@@ -615,6 +612,12 @@ public class DruidSegmentReaderTest extends NullHandlingTest
 
           @Override
           public boolean release(DataSegment segment)
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
           {
             throw new UnsupportedOperationException();
           }

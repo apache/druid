@@ -90,16 +90,24 @@ public interface InputEntity
   {
     final File tempFile = File.createTempFile("druid-input-entity", ".tmp", temporaryDirectory);
     LOG.debug("Fetching entity into file[%s]", tempFile.getAbsolutePath());
-    try (InputStream is = open()) {
-      FileUtils.copyLarge(
-          is,
-          tempFile,
-          fetchBuffer,
-          getRetryCondition(),
-          DEFAULT_MAX_NUM_FETCH_TRIES,
-          StringUtils.format("Failed to fetch into [%s]", tempFile.getAbsolutePath())
-      );
+
+    final URI uri = getUri();
+    final String message;
+
+    if (uri == null) {
+      message = StringUtils.format("Failed to fetch entity into local file [%s]", tempFile.getAbsolutePath());
+    } else {
+      message = StringUtils.format("Failed to fetch entity [%s] into local file [%s]", uri, tempFile.getAbsolutePath());
     }
+
+    FileUtils.copyLarge(
+        this::open,
+        tempFile,
+        fetchBuffer,
+        getRetryCondition(),
+        DEFAULT_MAX_NUM_FETCH_TRIES,
+        message
+    );
 
     return new CleanableFile()
     {

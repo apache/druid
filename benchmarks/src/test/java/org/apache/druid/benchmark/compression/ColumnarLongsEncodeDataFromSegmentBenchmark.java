@@ -128,9 +128,8 @@ public class ColumnarLongsEncodeDataFromSegmentBenchmark extends BaseColumnarLon
         Iterables.addAll(columnNames, index.getColumnNames());
         final ColumnHolder column = index.getColumnHolder(columnName);
         final ColumnCapabilities capabilities = column.getCapabilities();
-        final ValueType columnType = capabilities.getType();
         try (Writer writer = Files.newBufferedWriter(dataFile.toPath(), StandardCharsets.UTF_8)) {
-          if (columnType != ValueType.LONG) {
+          if (!capabilities.is(ValueType.LONG)) {
             throw new RuntimeException("Invalid column type, expected 'Long'");
           }
           LongsColumn theColumn = (LongsColumn) column.getColumn();

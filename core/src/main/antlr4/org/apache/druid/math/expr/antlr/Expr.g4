@@ -36,6 +36,7 @@ expr : NULL                                                         # null
      | '<LONG>' '[' (numericElement (',' numericElement)*)? ']'     # explicitLongArray
      | '<DOUBLE>'? '[' (numericElement (',' numericElement)*)? ']'  # doubleArray
      | '<STRING>' '[' (literalElement (',' literalElement)*)? ']'   # explicitStringArray
+     | ARRAY_TYPE '[' (literalElement (',' literalElement)*)? ']'   # explicitArray
      ;
 
 lambda : (IDENTIFIER | '(' ')' | '(' IDENTIFIER (',' IDENTIFIER)* ')') '->' expr
@@ -51,6 +52,8 @@ longElement : (LONG | NULL);
 numericElement : (LONG | DOUBLE | NULL);
 
 literalElement : (STRING | LONG | DOUBLE | NULL);
+
+ARRAY_TYPE : 'ARRAY<' ( 'LONG' | 'DOUBLE' | 'STRING' | ('COMPLEX<' IDENTIFIER '>')| ARRAY_TYPE ) '>';
 
 NULL : 'null';
 LONG : [0-9]+;

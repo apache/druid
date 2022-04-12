@@ -57,7 +57,7 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
   private long count = 0;
   private ScanQuery query;
 
-  public ScanQueryLimitRowIterator(
+  ScanQueryLimitRowIterator(
       QueryRunner<ScanResultValue> baseRunner,
       QueryPlus<ScanResultValue> queryPlus,
       ResponseContext responseContext
@@ -98,7 +98,7 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
 
     // We want to perform multi-event ScanResultValue limiting if we are not time-ordering or are at the
     // inner-level if we are time-ordering
-    if (query.getOrder() == ScanQuery.Order.NONE ||
+    if (query.getTimeOrder() == ScanQuery.Order.NONE ||
         !query.getContextBoolean(ScanQuery.CTX_KEY_OUTERMOST, true)) {
       ScanResultValue batch = yielder.get();
       List events = (List) batch.getEvents();

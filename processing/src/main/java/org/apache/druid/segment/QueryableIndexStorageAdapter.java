@@ -36,7 +36,6 @@ import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.Indexed;
@@ -169,29 +168,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Nullable
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    return getColumnCapabilities(index, column);
-  }
-
-  @Override
-  @Nullable
-  public String getColumnTypeName(String columnName)
-  {
-    final ColumnHolder columnHolder = index.getColumnHolder(columnName);
-
-    if (columnHolder == null) {
-      return null;
-    }
-
-    try (final BaseColumn col = columnHolder.getColumn()) {
-      if (col instanceof ComplexColumn) {
-        return ((ComplexColumn) col).getTypeName();
-      } else {
-        return columnHolder.getCapabilities().getType().toString();
-      }
-    }
-    catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
+    return index.getColumnCapabilities(column);
   }
 
   @Override
@@ -301,21 +278,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         ).build(gran),
         Objects::nonNull
     );
-  }
-
-  @Nullable
-  public static ColumnCapabilities getColumnCapabilities(ColumnSelector index, String columnName)
-  {
-    final ColumnHolder columnHolder = index.getColumnHolder(columnName);
-    if (columnHolder == null) {
-      return null;
-    }
-    return columnHolder.getCapabilities();
-  }
-
-  public static ColumnInspector getColumnInspectorForIndex(ColumnSelector index)
-  {
-    return column -> getColumnCapabilities(index, column);
   }
 
   @Override

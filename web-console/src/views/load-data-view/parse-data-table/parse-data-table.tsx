@@ -24,13 +24,18 @@ import ReactTable from 'react-table';
 import { TableCell } from '../../../components';
 import { TableCellUnparseable } from '../../../components/table-cell-unparseable/table-cell-unparseable';
 import { FlattenField } from '../../../druid-models';
-import { caseInsensitiveContains, filterMap } from '../../../utils';
-import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
+import {
+  caseInsensitiveContains,
+  filterMap,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+} from '../../../utils';
+import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './parse-data-table.scss';
 
 export interface ParseDataTableProps {
-  sampleData: HeaderAndRows;
+  sampleData: SampleHeaderAndRows;
   columnFilter: string;
   canFlatten: boolean;
   flattenedColumnsOnly: boolean;
@@ -52,6 +57,10 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
     <ReactTable
       className="parse-data-table -striped -highlight"
       data={sampleData.rows}
+      sortable={false}
+      defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+      pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+      showPagination={sampleData.rows.length > STANDARD_TABLE_PAGE_SIZE}
       columns={filterMap(sampleData.header, (columnName, i) => {
         if (!caseInsensitiveContains(columnName, columnFilter)) return;
         const flattenFieldIndex = flattenFields.findIndex(f => f.name === columnName);
@@ -100,9 +109,6 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
           );
         }
       }}
-      defaultPageSize={50}
-      showPagination={false}
-      sortable={false}
     />
   );
 });

@@ -205,7 +205,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   @Test
   public void testSqlQueryProxy() throws Exception
   {
-    final SqlQuery query = new SqlQuery("SELECT * FROM foo", ResultFormat.ARRAY, false, null, null);
+    final SqlQuery query = new SqlQuery("SELECT * FROM foo", ResultFormat.ARRAY, false, false, false, null, null);
     final QueryHostFinder hostFinder = EasyMock.createMock(QueryHostFinder.class);
     EasyMock.expect(hostFinder.findServerSql(query))
             .andReturn(new TestServer("http", "1.2.3.4", 9999)).once();
