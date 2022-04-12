@@ -28,6 +28,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
@@ -570,6 +573,102 @@ public class EvalTest extends InitializedNullHandlingTest
       Assert.assertNull(eval("null && 0", bindings).value());
       assertEquals(0L, eval("0 && null", bindings).value());
       assertNull(eval("null && null", bindings).value());
+    }
+    finally {
+      // reset
+      ExpressionProcessing.initializeForTests(null);
+    }
+  }
+
+  @Test
+  public void testMoreBooleanStuff()
+  {
+    Map<String, Object> bindingsMap = new HashMap<>();
+    bindingsMap.put("l1", 100L);
+    bindingsMap.put("l2", 0L);
+    bindingsMap.put("d1", 1.1);
+    bindingsMap.put("d2", 0.0);
+    bindingsMap.put("s1", "true");
+    bindingsMap.put("s2", "false");
+    bindingsMap.put("b1", true);
+    bindingsMap.put("b2", false);
+    Expr.ObjectBinding bindings = InputBindings.withMap(bindingsMap);
+
+    try {
+      ExpressionProcessing.initializeForStrictBooleansTests(true);
+      assertEquals(1L, eval("s1 && s1", bindings).value());
+      assertEquals(0L, eval("s1 && s2", bindings).value());
+      assertEquals(0L, eval("s2 && s1", bindings).value());
+      assertEquals(0L, eval("s2 && s2", bindings).value());
+
+      assertEquals(1L, eval("s1 || s1", bindings).value());
+      assertEquals(1L, eval("s1 || s2", bindings).value());
+      assertEquals(1L, eval("s2 || s1", bindings).value());
+      assertEquals(0L, eval("s2 || s2", bindings).value());
+
+      assertEquals(1L, eval("l1 && l1", bindings).value());
+      assertEquals(0L, eval("l1 && l2", bindings).value());
+      assertEquals(0L, eval("l2 && l1", bindings).value());
+      assertEquals(0L, eval("l2 && l2", bindings).value());
+
+      assertEquals(1L, eval("b1 && b1", bindings).value());
+      assertEquals(0L, eval("b1 && b2", bindings).value());
+      assertEquals(0L, eval("b2 && b1", bindings).value());
+      assertEquals(0L, eval("b2 && b2", bindings).value());
+
+      assertEquals(1L, eval("d1 && d1", bindings).value());
+      assertEquals(0L, eval("d1 && d2", bindings).value());
+      assertEquals(0L, eval("d2 && d1", bindings).value());
+      assertEquals(0L, eval("d2 && d2", bindings).value());
+
+      assertEquals(1L, eval("b1", bindings).value());
+      assertEquals(1L, eval("if(b1,1,0)", bindings).value());
+      assertEquals(1L, eval("if(l1,1,0)", bindings).value());
+      assertEquals(1L, eval("if(d1,1,0)", bindings).value());
+      assertEquals(1L, eval("if(s1,1,0)", bindings).value());
+      assertEquals(0L, eval("if(b2,1,0)", bindings).value());
+      assertEquals(0L, eval("if(l2,1,0)", bindings).value());
+      assertEquals(0L, eval("if(d2,1,0)", bindings).value());
+      assertEquals(0L, eval("if(s2,1,0)", bindings).value());
+    }
+    finally {
+      // reset
+      ExpressionProcessing.initializeForTests(null);
+    }
+
+    try {
+      // turn on legacy insanity mode
+      ExpressionProcessing.initializeForStrictBooleansTests(false);
+
+      assertEquals("true", eval("s1 && s1", bindings).value());
+      assertEquals("false", eval("s1 && s2", bindings).value());
+      assertEquals("false", eval("s2 && s1", bindings).value());
+      assertEquals("false", eval("s2 && s2", bindings).value());
+
+      assertEquals("true", eval("b1 && b1", bindings).value());
+      assertEquals("false", eval("b1 && b2", bindings).value());
+      assertEquals("false", eval("b2 && b1", bindings).value());
+      assertEquals("false", eval("b2 && b2", bindings).value());
+
+      assertEquals(100L, eval("l1 && l1", bindings).value());
+      assertEquals(0L, eval("l1 && l2", bindings).value());
+      assertEquals(0L, eval("l2 && l1", bindings).value());
+      assertEquals(0L, eval("l2 && l2", bindings).value());
+
+      assertEquals(1.1, eval("d1 && d1", bindings).value());
+      assertEquals(0.0, eval("d1 && d2", bindings).value());
+      assertEquals(0.0, eval("d2 && d1", bindings).value());
+      assertEquals(0.0, eval("d2 && d2", bindings).value());
+
+      assertEquals("true", eval("b1", bindings).value());
+      assertEquals(1L, eval("if(b1,1,0)", bindings).value());
+      assertEquals(1L, eval("if(l1,1,0)", bindings).value());
+      assertEquals(1L, eval("if(d1,1,0)", bindings).value());
+      assertEquals(1L, eval("if(s1,1,0)", bindings).value());
+      assertEquals(0L, eval("if(b2,1,0)", bindings).value());
+      assertEquals(0L, eval("if(l2,1,0)", bindings).value());
+      assertEquals(0L, eval("if(d2,1,0)", bindings).value());
+      assertEquals(0L, eval("if(s2,1,0)", bindings).value());
     }
     finally {
       // reset

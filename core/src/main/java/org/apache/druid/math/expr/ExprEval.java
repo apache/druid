@@ -348,6 +348,12 @@ public abstract class ExprEval<T>
       }
       return new LongExprEval((Number) val);
     }
+    if (val instanceof Boolean) {
+      if (ExpressionProcessing.useStrictBooleans()) {
+        return new LongExprEval(Evals.asLong((Boolean) val));
+      }
+      return new StringExprEval(String.valueOf(val));
+    }
     if (val instanceof Long[]) {
       return new ArrayExprEval(ExpressionType.LONG_ARRAY, (Long[]) val);
     }
@@ -412,6 +418,9 @@ public abstract class ExprEval<T>
       case LONG:
         if (value instanceof Number) {
           return ofLong((Number) value);
+        }
+        if (value instanceof Boolean) {
+          return ofLongBoolean((Boolean) value);
         }
         if (value instanceof String) {
           return ofLong(ExprEval.computeNumber((String) value));
