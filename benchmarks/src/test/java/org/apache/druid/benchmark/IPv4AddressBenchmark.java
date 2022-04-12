@@ -1,12 +1,12 @@
 package org.apache.druid.benchmark;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Random;
 
 import com.google.common.net.InetAddresses;
 import inet.ipaddr.IPAddress;
 import inet.ipaddr.IPAddressString;
-import inet.ipaddr.IPAddressStringParameters;
 import inet.ipaddr.ipv4.IPv4Address;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.expression.ExprUtils;
@@ -29,7 +29,6 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import org.apache.commons.net.util.SubnetUtils;
 
-import javax.annotation.Nullable;
 import java.net.Inet4Address;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -44,10 +43,13 @@ import java.util.regex.Pattern;
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 public class IPv4AddressBenchmark
 {
-  private static final IPAddressStringParameters IPV4_ADDRESS_PARAMS = new IPAddressStringParameters.Builder().allowSingleSegment(false).allow_inet_aton(false).allowIPv6(false).allowPrefix(false).allowEmpty(false).toParams();
-
-  private static List<String> IPV4_ADDRESSES;
+  // Different representations of IPv4 addresses.
+  private static List<String> IPV4_ADDRESS_STRS;
+  private static List<IPv4Address> IPV4_ADDRESSES;
+  private static List<Inet4Address> INET4_ADDRESSES;
+  private static List<Long> IPV4_ADDRESS_LONGS;
   private static List<String> IPV4_SUBNETS;
+
 
   @Param({"10", "100", "1000"})
   public int numOfAddresses;
@@ -55,16 +57,25 @@ public class IPv4AddressBenchmark
   @Setup
   public void setUp()
   {
+    IPV4_ADDRESS_STRS = new ArrayList<>(numOfAddresses);
     IPV4_ADDRESSES = new ArrayList<>(numOfAddresses);
+    INET4_ADDRESSES = new ArrayList<>(numOfAddresses);
     IPV4_SUBNETS = new ArrayList<>(numOfAddresses);
+    IPV4_ADDRESS_LONGS = new ArrayList<>(numOfAddresses);
 
     for (int i = 0; i < numOfAddresses; i++) {
       Random r = new Random();
       String genIpAddress = r.nextInt(256) + "." + r.nextInt(256) + "." + r.nextInt(256) + "." + r.nextInt(256);
       IPAddressString ipAddressString = new IPAddressString(genIpAddress);
       IPAddress prefixBlock = ipAddressString.getAddress().applyPrefixLength(r.nextInt(32)).toPrefixBlock();
-      IPV4_ADDRESSES.add(ipAddressString.toString());
+      IPV4_ADDRESS_STRS.add(ipAddressString.toString());
       IPV4_SUBNETS.add(prefixBlock.toString());
+
+      IPv4Address iPv4Address = ipAddressString.getAddress().toIPv4();
+
+      IPV4_ADDRESSES.add(iPv4Address);
+      INET4_ADDRESSES.add(iPv4Address.toInetAddress());
+      IPV4_ADDRESS_LONGS.add(iPv4Address.longValue());
     }
   }
 
@@ -73,9 +84,9 @@ public class IPv4AddressBenchmark
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   public void stringContainsUsingIpAddr()
   {
-    for (int i = 0; i < IPV4_ADDRESSES.size(); i++) {
+    for (int i = 0; i < IPV4_ADDRESS_STRS.size(); i++) {
       String v4Subnet = IPV4_SUBNETS.get(i);
-      String v4Address = IPV4_ADDRESSES.get(i);
+      String v4Address = IPV4_ADDRESS_STRS.get(i);
 
       IPAddressString subnetString = new IPAddressString(v4Subnet);
       IPv4Address iPv4Address = IPv4AddressExprUtils.parse(v4Address);
@@ -83,24 +94,6 @@ public class IPv4AddressBenchmark
         subnetString.contains(iPv4Address.toAddressString());
       }
     }
-  }
-
-  static long parseStrToLong(@Nullable String string)
-  {
-    IPAddressString ipAddressString = new IPAddressString(string, IPV4_ADDRESS_PARAMS);
-    if (ipAddressString.isIPv4()) {
-      return ipAddressString.getAddress().toIPv4().longValue();
-    }
-    return -1;
-  }
-
-  static IPv4Address parseStrToIpAddress(@Nullable String string)
-  {
-    IPAddressString ipAddressString = new IPAddressString(string, IPV4_ADDRESS_PARAMS);
-    if (ipAddressString.isIPv4()) {
-      return ipAddressString.getAddress().toIPv4();
-    }
-    return null;
   }
 
   private static final Pattern IPV4_PATTERN = Pattern.compile(
@@ -117,9 +110,9 @@ public class IPv4AddressBenchmark
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   public void stringContainsUsingSubnetUtils() throws IAE
   {
-    for (int i = 0; i < IPV4_ADDRESSES.size(); i++) {
+    for (int i = 0; i < IPV4_ADDRESS_STRS.size(); i++) {
       String v4Subnet = IPV4_SUBNETS.get(i);
-      String v4Address = IPV4_ADDRESSES.get(i);
+      String v4Address = IPV4_ADDRESS_STRS.get(i);
 
       SubnetUtils.SubnetInfo subnetInfo = getSubnetInfo(v4Subnet);
       if (isValidAddress(v4Address)) {
@@ -133,9 +126,9 @@ public class IPv4AddressBenchmark
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   public void parseLongUsingIpAddr()
   {
-    for (String v4Address : IPV4_ADDRESSES) {
-      long v4AddressLong = parseStrToLong(v4Address);
-      IPv4AddressExprUtils.parse(v4AddressLong);
+    for (Long v4Address : IPV4_ADDRESS_LONGS) {
+      IPv4AddressExprUtils.parse(v4Address);
+
     }
   }
 
@@ -153,9 +146,8 @@ public class IPv4AddressBenchmark
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   public void parseLongUsingSubnetUtils()
   {
-    for (String v4Address : IPV4_ADDRESSES) {
-      long v4AddressLong = parseStrToLong(v4Address);
-      parseUsingSubnetUtils(v4AddressLong);
+    for (Long v4Address : IPV4_ADDRESS_LONGS) {
+      parseUsingSubnetUtils(v4Address);
     }
   }
 
@@ -168,22 +160,20 @@ public class IPv4AddressBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
-  public void parseToLongUsingSubnetUtils()
+  public void toLongUsingSubnetUtils()
   {
-    for (String v4Address : IPV4_ADDRESSES) {
-      IPv4Address iPv4Address = parseStrToIpAddress(v4Address);
-      toLongUsingSubnetUtils(iPv4Address.toInetAddress());
+    for (Inet4Address v4InetAddress : INET4_ADDRESSES) {
+      toLongUsingSubnetUtils(v4InetAddress);
     }
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
-  public void parseToLongUsingIpAddr()
+  public void toLongUsingIpAddr()
   {
-    for (String v4Address : IPV4_ADDRESSES) {
-      IPv4Address iPv4Address = parseStrToIpAddress(v4Address);
-      IPv4AddressExprUtils.toLong(iPv4Address);
+    for (IPv4Address v4Address : IPV4_ADDRESSES) {
+      IPv4AddressExprUtils.toLong(v4Address);
     }
   }
 
@@ -192,13 +182,11 @@ public class IPv4AddressBenchmark
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   public void longContainsUsingSubnetUtils()
   {
-    for (int i = 0; i < IPV4_ADDRESSES.size(); i++) {
+    for (int i = 0; i < IPV4_ADDRESS_LONGS.size(); i++) {
+      long v4Long = IPV4_ADDRESS_LONGS.get(i);
       String v4Subnet = IPV4_SUBNETS.get(i);
-      String v4Address = IPV4_ADDRESSES.get(i);
-
-      IPv4Address iPv4Address = parseStrToIpAddress(v4Address);
-      long v4Long = toLongUsingSubnetUtils(iPv4Address.toInetAddress());
       SubnetUtils.SubnetInfo subnetInfo = getSubnetInfo(v4Subnet);
+
       if (!IPv4AddressExprUtils.overflowsUnsignedInt(v4Long)) {
         subnetInfo.isInRange((int) v4Long);
       }
@@ -210,15 +198,46 @@ public class IPv4AddressBenchmark
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   public void longContainsUsingIpAddr()
   {
-    for (int i = 0; i < IPV4_ADDRESSES.size(); i++) {
+    for (int i = 0; i < IPV4_ADDRESS_LONGS.size(); i++) {
+      long v4Long = IPV4_ADDRESS_LONGS.get(i);
       String v4Subnet = IPV4_SUBNETS.get(i);
-      String v4Address = IPV4_ADDRESSES.get(i);
 
-      IPv4Address iPv4Address = parseStrToIpAddress(v4Address);
+      IPv4Address iPv4Address = IPv4AddressExprUtils.parse(v4Long);
       IPAddressString subnetString = new IPAddressString(v4Subnet);
       if(iPv4Address != null) {
         subnetString.contains(iPv4Address.toAddressString());
       }
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  public void parseStringUsingIpAddr()
+  {
+    for (String ipv4Addr : IPV4_ADDRESS_STRS) {
+      IPv4AddressExprUtils.parse(ipv4Addr);
+    }
+  }
+
+  private Inet4Address parseUsingSubnetUtils(String string)
+  {
+      if (isValidAddress(string)) {
+        InetAddress address = InetAddresses.forString(string);
+        if (address instanceof Inet4Address) {
+          return (Inet4Address) address;
+        }
+      }
+    return null;
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  public void parseStringUsingSubnetUtils()
+  {
+    for (String ipv4Addr : IPV4_ADDRESS_STRS) {
+      parseUsingSubnetUtils(ipv4Addr);
     }
   }
 
