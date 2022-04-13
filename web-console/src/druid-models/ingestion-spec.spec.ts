@@ -549,28 +549,72 @@ describe('ingestion-spec', () => {
       expect(guessInputFormat(['{"a":1}']).type).toEqual('json');
     });
 
-    it('works for TSV', () => {
-      expect(guessInputFormat(['A\tB\tX\tY']).type).toEqual('tsv');
+    it('works for CSV (with header)', () => {
+      expect(guessInputFormat(['A,B,"X,1",Y'])).toEqual({
+        type: 'csv',
+        findColumnsFromHeader: true,
+      });
     });
 
-    it('works for CSV', () => {
-      expect(guessInputFormat(['A,B,X,Y']).type).toEqual('csv');
+    it('works for CSV (no header)', () => {
+      expect(guessInputFormat(['"A,1","B,2",1,2'])).toEqual({
+        type: 'csv',
+        findColumnsFromHeader: false,
+        columns: ['column1', 'column2', 'column3', 'column4'],
+      });
+    });
+
+    it('works for TSV (with header)', () => {
+      expect(guessInputFormat(['A\tB\tX\tY'])).toEqual({
+        type: 'tsv',
+        findColumnsFromHeader: true,
+      });
+    });
+
+    it('works for TSV (no header)', () => {
+      expect(guessInputFormat(['A\tB\t1\t2\t3\t4\t5\t6\t7\t8\t9'])).toEqual({
+        type: 'tsv',
+        findColumnsFromHeader: false,
+        columns: [
+          'column01',
+          'column02',
+          'column03',
+          'column04',
+          'column05',
+          'column06',
+          'column07',
+          'column08',
+          'column09',
+          'column10',
+          'column11',
+        ],
+      });
     });
 
     it('works for TSV with ;', () => {
       const inputFormat = guessInputFormat(['A;B;X;Y']);
-      expect(inputFormat.type).toEqual('tsv');
-      expect(inputFormat.delimiter).toEqual(';');
+      expect(inputFormat).toEqual({
+        type: 'tsv',
+        delimiter: ';',
+        findColumnsFromHeader: true,
+      });
     });
 
     it('works for TSV with |', () => {
       const inputFormat = guessInputFormat(['A|B|X|Y']);
-      expect(inputFormat.type).toEqual('tsv');
-      expect(inputFormat.delimiter).toEqual('|');
+      expect(inputFormat).toEqual({
+        type: 'tsv',
+        delimiter: '|',
+        findColumnsFromHeader: true,
+      });
     });
 
     it('works for regex', () => {
-      expect(guessInputFormat(['A/B/X/Y']).type).toEqual('regex');
+      expect(guessInputFormat(['A/B/X/Y'])).toEqual({
+        type: 'regex',
+        pattern: '([\\s\\S]*)',
+        columns: ['line'],
+      });
     });
   });
 });
