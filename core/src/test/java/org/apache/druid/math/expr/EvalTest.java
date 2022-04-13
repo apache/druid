@@ -22,12 +22,17 @@ package org.apache.druid.math.expr;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.TypeStrategies;
+import org.apache.druid.segment.column.TypeStrategiesTest;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -38,6 +43,16 @@ import static org.junit.Assert.assertNull;
  */
 public class EvalTest extends InitializedNullHandlingTest
 {
+
+  @BeforeClass
+  public static void setupClass()
+  {
+    TypeStrategies.registerComplex(
+        TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
+        new TypeStrategiesTest.NullableLongPairTypeStrategy()
+    );
+  }
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -581,7 +596,7 @@ public class EvalTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testMoreBooleanStuff()
+  public void testBooleanInputs()
   {
     Map<String, Object> bindingsMap = new HashMap<>();
     bindingsMap.put("l1", 100L);
@@ -674,5 +689,129 @@ public class EvalTest extends InitializedNullHandlingTest
       // reset
       ExpressionProcessing.initializeForTests(null);
     }
+  }
+
+  @Test
+  public void testEvalOfType()
+  {
+    // strings
+    ExprEval eval = ExprEval.ofType(ExpressionType.STRING, "stringy");
+    Assert.assertEquals(ExpressionType.STRING, eval.type());
+    Assert.assertEquals("stringy", eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.STRING, 1L);
+    Assert.assertEquals(ExpressionType.STRING, eval.type());
+    Assert.assertEquals("1", eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.STRING, 1.0);
+    Assert.assertEquals(ExpressionType.STRING, eval.type());
+    Assert.assertEquals("1.0", eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.STRING, true);
+    Assert.assertEquals(ExpressionType.STRING, eval.type());
+    Assert.assertEquals("true", eval.value());
+
+    // longs
+    eval = ExprEval.ofType(ExpressionType.LONG, 1L);
+    Assert.assertEquals(ExpressionType.LONG, eval.type());
+    Assert.assertEquals(1L, eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.LONG, 1.0);
+    Assert.assertEquals(ExpressionType.LONG, eval.type());
+    Assert.assertEquals(1L, eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.LONG, "1");
+    Assert.assertEquals(ExpressionType.LONG, eval.type());
+    Assert.assertEquals(1L, eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.LONG, true);
+    Assert.assertEquals(ExpressionType.LONG, eval.type());
+    Assert.assertEquals(1L, eval.value());
+
+    // doubles
+    eval = ExprEval.ofType(ExpressionType.DOUBLE, 1L);
+    Assert.assertEquals(ExpressionType.DOUBLE, eval.type());
+    Assert.assertEquals(1.0, eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.DOUBLE, 1.0);
+    Assert.assertEquals(ExpressionType.DOUBLE, eval.type());
+    Assert.assertEquals(1.0, eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.DOUBLE, "1");
+    Assert.assertEquals(ExpressionType.DOUBLE, eval.type());
+    Assert.assertEquals(1.0, eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.DOUBLE, true);
+    Assert.assertEquals(ExpressionType.DOUBLE, eval.type());
+    Assert.assertEquals(1.0, eval.value());
+
+    // complex
+    TypeStrategiesTest.NullableLongPair pair = new TypeStrategiesTest.NullableLongPair(1L, 2L);
+    ExpressionType type = ExpressionType.fromColumnType(TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE);
+
+    eval = ExprEval.ofType(type, pair);
+    Assert.assertEquals(type, eval.type());
+    Assert.assertEquals(pair, eval.value());
+
+    ByteBuffer buffer = ByteBuffer.allocate(TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getStrategy().estimateSizeBytes(pair));
+    TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getStrategy().write(buffer, pair, buffer.limit());
+    byte[] pairBytes = buffer.array();
+    eval = ExprEval.ofType(type, pairBytes);
+    Assert.assertEquals(type, eval.type());
+    Assert.assertEquals(pair, eval.value());
+
+    eval = ExprEval.ofType(type, StringUtils.encodeBase64String(pairBytes));
+    Assert.assertEquals(type, eval.type());
+    Assert.assertEquals(pair, eval.value());
+
+    // arrays fall back to using 'bestEffortOf', but cast it to the expected output type
+    eval = ExprEval.ofType(ExpressionType.LONG_ARRAY, new Object[] {"1", "2", "3"});
+    Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[] {1L, 2L, 3L}, (Object[]) eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.LONG_ARRAY, new Object[] {1L, 2L, 3L});
+    Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[] {1L, 2L, 3L}, (Object[]) eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.LONG_ARRAY, new Object[] {1.0, 2.0, 3.0});
+    Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[] {1L, 2L, 3L}, (Object[]) eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.LONG_ARRAY, new Object[] {1.0, 2L, "3", true, false});
+    Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[] {1L, 2L, 3L, 1L, 0L}, (Object[]) eval.value());
+
+    // etc
+    eval = ExprEval.ofType(ExpressionType.DOUBLE_ARRAY, new Object[] {"1", "2", "3"});
+    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[] {1.0, 2.0, 3.0}, (Object[]) eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.DOUBLE_ARRAY, new Object[] {1L, 2L, 3L});
+    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[] {1.0, 2.0, 3.0}, (Object[]) eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.DOUBLE_ARRAY, new Object[] {1.0, 2.0, 3.0});
+    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[] {1.0, 2.0, 3.0}, (Object[]) eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.DOUBLE_ARRAY, new Object[] {1.0, 2L, "3", true, false});
+    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[] {1.0, 2.0, 3.0, 1.0, 0.0}, (Object[]) eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.STRING_ARRAY, new Object[] {"1", "2", "3"});
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[] {"1", "2", "3"}, (Object[]) eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.STRING_ARRAY, new Object[] {1L, 2L, 3L});
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[] {"1", "2", "3"}, (Object[]) eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.STRING_ARRAY, new Object[] {1.0, 2.0, 3.0});
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[] {"1.0", "2.0", "3.0"}, (Object[]) eval.value());
+
+    eval = ExprEval.ofType(ExpressionType.STRING_ARRAY, new Object[] {1.0, 2L, "3", true, false});
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[] {"1.0", "2", "3", "true", "false"}, (Object[]) eval.value());
   }
 }
