@@ -51,6 +51,7 @@ import {
   formatBytes,
   formatInteger,
   getNeedleAndMode,
+  hasPopoverOpen,
   isNumberLikeNaN,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
@@ -893,7 +894,10 @@ END AS "time_span"`,
         >
           <ViewControlBar label="Segments">
             <RefreshButton
-              onRefresh={auto => this.segmentsQueryManager.rerunLastQuery(auto)}
+              onRefresh={auto => {
+                if (auto && hasPopoverOpen()) return;
+                this.segmentsQueryManager.rerunLastQuery(auto);
+              }}
               localStorageKey={LocalStorageKeys.SEGMENTS_REFRESH_RATE}
             />
             <Label>Group by</Label>
