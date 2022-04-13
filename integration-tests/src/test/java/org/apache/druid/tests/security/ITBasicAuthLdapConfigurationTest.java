@@ -53,6 +53,7 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   private static final String LDAP_AUTHORIZER = "ldapauth";
 
   private static final String EXPECTED_AVATICA_AUTH_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: QueryInterruptedException: User LDAP authentication failed. -> BasicSecurityAuthenticationException: User LDAP authentication failed.";
+  private static final String EXPECTED_AVATICA_AUTHZ_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: RuntimeException: org.apache.druid.server.security.ForbiddenException: Allowed:false, Message: -> ForbiddenException: Allowed:false, Message:";
 
   @Inject
   IntegrationTestingConfig config;
@@ -201,6 +202,12 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   protected String getExpectedAvaticaAuthError()
   {
     return EXPECTED_AVATICA_AUTH_ERROR;
+  }
+
+  @Override
+  protected String getExpectedAvaticaAuthzError()
+  {
+    return EXPECTED_AVATICA_AUTHZ_ERROR;
   }
 
   private void createRoleWithPermissionsAndGroupMapping(

@@ -215,6 +215,7 @@ public abstract class AbstractAuthConfigurationTest
   protected abstract String getAuthenticatorName();
   protected abstract String getAuthorizerName();
   protected abstract String getExpectedAvaticaAuthError();
+  protected abstract String getExpectedAvaticaAuthzError();
 
   @Test
   public void test_systemSchemaAccess_admin() throws Exception
@@ -487,15 +488,15 @@ public abstract class AbstractAuthConfigurationTest
   {
     final Properties properties = getAvaticaConnectionPropertiesForUser("datasourceOnlyUser", "helloworld");
     properties.setProperty("auth_test_ctx", "should-be-denied");
-    testAvaticaAuthFailure(properties, getRouterAvacticaUrl());
+    testAvaticaAuthzFailure(properties, getRouterAvacticaUrl());
   }
 
   @Test
-  public void test_avaticaQueryWithContext_datasourceAndContextParamsUser_succeed() throws Exception
+  public void test_avaticaQueryWithContext_datasourceAndContextParamsUser_succeed()
   {
     final Properties properties = getAvaticaConnectionPropertiesForUser("datasourceAndContextParamsUser", "helloworld");
     properties.setProperty("auth_test_ctx", "should-be-allowed");
-    testAvaticaAuthFailure(properties, getRouterAvacticaUrl());
+    testAvaticaQuery(properties, getRouterAvacticaUrl());
   }
 
   @Test
@@ -515,7 +516,7 @@ public abstract class AbstractAuthConfigurationTest
   {
     final String query = "select count(*) from auth_test";
     StatusResponseHolder responseHolder = makeSQLQueryRequest(
-        datasourceOnlyUserClient,
+        datasourceAndContextParamsClient,
         query,
         ImmutableMap.of("auth_test_ctx", "should-be-allowed"),
         HttpResponseStatus.OK
@@ -632,6 +633,17 @@ public abstract class AbstractAuthConfigurationTest
 
   protected void testAvaticaAuthFailure(Properties connectionProperties, String url) throws Exception
   {
+    testAvaticaAuthFailure(connectionProperties, url, getExpectedAvaticaAuthError());
+  }
+
+  protected void testAvaticaAuthzFailure(Properties connectionProperties, String url) throws Exception
+  {
+    testAvaticaAuthFailure(connectionProperties, url, getExpectedAvaticaAuthzError());
+  }
+
+  protected void testAvaticaAuthFailure(Properties connectionProperties, String url, String expectedError)
+      throws Exception
+  {
     LOG.info("URL: " + url);
     try {
       Connection connection = DriverManager.getConnection(url, connectionProperties);
@@ -643,7 +655,7 @@ public abstract class AbstractAuthConfigurationTest
     catch (AvaticaSqlException ase) {
       Assert.assertEquals(
           ase.getErrorMessage(),
-          getExpectedAvaticaAuthError()
+          expectedError
       );
       return;
     }
