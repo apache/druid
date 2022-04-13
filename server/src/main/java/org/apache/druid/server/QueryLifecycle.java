@@ -72,7 +72,7 @@ import java.util.concurrent.TimeUnit;
  * ensures that a query goes through the following stages, in the proper order:
  *
  * <ol>
- * <li>Initialization ({@link #initialize(QueryHolder, QueryContext)})</li>
+ * <li>Initialization ({@link #initialize(QueryPlus)})</li>
  * <li>Authorization ({@link #authorize(HttpServletRequest)}</li>
  * <li>Execution ({@link #execute()}</li>
  * <li>Logging ({@link #emitLogsAndMetrics(Throwable, String, long)}</li>
@@ -101,33 +101,9 @@ public class QueryLifecycle
 
   /**
    * A holder for the user query to run.
-   *
-   * The holder has a state for query context.
-   * The query context in {@link QueryHolder#delegate#context} is not valid until they are authorized.
-   * {@link #context} should be used instead to get query context until authorized.
-   *
-   * Variable state change flow:
-   *
-   * - Initialized to null.
-   * - Set in {@link #initialize}.
-   * - Updated with context after authorization in {@link #doAuthorize}.
    */
   @MonotonicNonNull
-  private QueryHolder<?> baseQuery;
-
-  /**
-   * A separate query context holder that is used only until query context params are authorized.
-   * Once authorized, {@link #baseQuery#context} should be used instead to get query context.
-   *
-   * Variable state change flow:
-   *
-   * - Initialized to null.
-   * - Set in {@link #initialize}.
-   * - Set to null after authorization in {@link #doAuthorize}. It is no longer valid once it is set to null and
-   *   query context should be retrieved from {@link #baseQuery} instead.
-   */
-  @Nullable
-  private QueryContext context;
+  private QueryPlus<?> baseQuery;
 
   public QueryLifecycle(
       final QueryToolChestWarehouse warehouse,
@@ -173,7 +149,7 @@ public class QueryLifecycle
       final Access authorizationResult
   )
   {
-    initialize(new QueryHolder<>(query), new QueryContext(query.getContext()));
+    initialize(QueryPlus.wrap(query));
 
     final Sequence<T> results;
 
@@ -210,16 +186,15 @@ public class QueryLifecycle
    * @param baseQuery the query
    */
   @SuppressWarnings("unchecked")
-  public void initialize(final QueryHolder<?> baseQuery, final QueryContext context)
+  public void initialize(final QueryPlus<?> baseQuery)
   {
     transition(State.NEW, State.INITIALIZED);
 
-    context.addDefaultParam(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
-    context.addDefaultParams(defaultQueryConfig.getContext());
+    baseQuery.getQueryContext().addDefaultParam(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
+    baseQuery.getQueryContext().addDefaultParams(defaultQueryConfig.getContext());
 
     this.baseQuery = baseQuery;
-    this.context = context;
-    this.toolChest = warehouse.getToolChest(baseQuery.getDelegate());
+    this.toolChest = warehouse.getToolChest(baseQuery.getQuery());
   }
 
   /**
@@ -235,12 +210,12 @@ public class QueryLifecycle
     transition(State.INITIALIZED, State.AUTHORIZING);
     final Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
         Iterables.transform(
-            baseQuery.getDataSource().getTableNames(),
+            baseQuery.getQuery().getDataSource().getTableNames(),
             AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
         ),
         authConfig.authorizeQueryContextParams()
         ? Iterables.transform(
-            Preconditions.checkNotNull(context, "context").getUserParams().keySet(),
+            baseQuery.getQueryContext().getUserParams().keySet(),
             contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
         )
         : Collections.emptyList()
@@ -275,9 +250,6 @@ public class QueryLifecycle
     }
 
     this.authenticationResult = authenticationResult;
-    // we have authorized query context params. now we can simply use the Query object to get context.
-    this.baseQuery = baseQuery.withContext(context);
-    this.context = null;
 
     return authorizationResult;
   }
@@ -295,9 +267,9 @@ public class QueryLifecycle
 
     final ResponseContext responseContext = DirectDruidClient.makeResponseContextForQuery();
 
-    final Sequence res = QueryPlus.wrap(baseQuery.getDelegateWithValidContext())
-                                  .withIdentity(authenticationResult.getIdentity())
-                                  .run(texasRanger, responseContext);
+    final Sequence res = baseQuery
+        .withIdentity(authenticationResult.getIdentity())
+        .run(texasRanger, responseContext);
 
     return new QueryResponse(res == null ? Sequences.empty() : res, responseContext);
   }
@@ -328,9 +300,7 @@ public class QueryLifecycle
     state = State.DONE;
 
     final boolean success = e == null;
-    final Query<?> query = baseQuery.isValidContext()
-                           ? baseQuery.getDelegate()
-                           : baseQuery.withContext(Preconditions.checkNotNull(context, "context")).getDelegate();
+    final Query<?> query = baseQuery.getQuery();
 
     try {
       final long queryTimeNs = System.nanoTime() - startNs;
@@ -406,14 +376,12 @@ public class QueryLifecycle
   @Nullable
   public Query<?> getQuery()
   {
-    return baseQuery == null ? null : baseQuery.getDelegate();
+    return baseQuery == null ? null : baseQuery.getQuery();
   }
 
   public String getQueryId()
   {
-    return baseQuery.isValidContext()
-           ? baseQuery.getDelegate().getId()
-           : Preconditions.checkNotNull(context, "context").getAsString(BaseQuery.QUERY_ID);
+    return baseQuery.getQueryContext().getAsString(BaseQuery.QUERY_ID);
   }
 
   public String threadName(String currThreadName)
@@ -421,15 +389,15 @@ public class QueryLifecycle
     return StringUtils.format(
         "%s[%s_%s_%s]",
         currThreadName,
-        baseQuery.getType(),
-        baseQuery.getDataSource().getTableNames(),
+        baseQuery.getQuery().getType(),
+        baseQuery.getQuery().getDataSource().getTableNames(),
         getQueryId()
     );
   }
 
   private boolean isSerializeDateTimeAsLong()
   {
-    final Query<?> query = baseQuery.getDelegateWithValidContext();
+    final Query<?> query = baseQuery.getQuery();
     final boolean shouldFinalize = QueryContexts.isFinalize(query, true);
     return QueryContexts.isSerializeDateTimeAsLong(query, false)
            || (!shouldFinalize && QueryContexts.isSerializeDateTimeAsLongInner(query, false));
@@ -439,7 +407,7 @@ public class QueryLifecycle
   {
     return ioReaderWriter.getResponseWriter().newOutputWriter(
         getToolChest(),
-        baseQuery.getDelegateWithValidContext(),
+        baseQuery.getQuery(),
         isSerializeDateTimeAsLong()
     );
   }
@@ -497,14 +465,8 @@ public class QueryLifecycle
   }
 
   @VisibleForTesting
-  QueryHolder<?> getBaseQuery()
+  QueryPlus<?> getBaseQuery()
   {
     return baseQuery;
-  }
-
-  @VisibleForTesting
-  QueryContext getContext()
-  {
-    return context;
   }
 }

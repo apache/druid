@@ -17,11 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.server;
+package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Numbers;
-import org.apache.druid.query.QueryContexts;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -51,6 +50,12 @@ public class QueryContext
   private final Map<String, Object> userParams;
   private final Map<String, Object> systemParams;
 
+  /**
+   * Cache of params merged.
+   */
+  @Nullable
+  private Map<String, Object> mergedParams;
+
   public QueryContext()
   {
     this(null);
@@ -61,6 +66,12 @@ public class QueryContext
     this.defaultParams = new TreeMap<>();
     this.userParams = userParams == null ? new TreeMap<>() : new TreeMap<>(userParams);
     this.systemParams = new TreeMap<>();
+    invalidateMergedParams();
+  }
+
+  private void invalidateMergedParams()
+  {
+    this.mergedParams = null;
   }
 
   public boolean isEmpty()
@@ -70,21 +81,25 @@ public class QueryContext
 
   public void addDefaultParam(String key, Object val)
   {
+    invalidateMergedParams();
     defaultParams.put(key, val);
   }
 
   public void addDefaultParams(Map<String, Object> defaultParams)
   {
+    invalidateMergedParams();
     this.defaultParams.putAll(defaultParams);
   }
 
   public void addSystemParam(String key, Object val)
   {
+    invalidateMergedParams();
     this.systemParams.put(key, val);
   }
 
   public Object removeUserParam(String key)
   {
+    invalidateMergedParams();
     return userParams.remove(key);
   }
 
@@ -179,9 +194,12 @@ public class QueryContext
 
   public Map<String, Object> getMergedParams()
   {
-    final Map<String, Object> merged = new TreeMap<>(defaultParams);
-    merged.putAll(userParams);
-    merged.putAll(systemParams);
-    return Collections.unmodifiableMap(merged);
+    if (mergedParams == null) {
+      final Map<String, Object> merged = new TreeMap<>(defaultParams);
+      merged.putAll(userParams);
+      merged.putAll(systemParams);
+      mergedParams = Collections.unmodifiableMap(merged);
+    }
+    return mergedParams;
   }
 }

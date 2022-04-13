@@ -29,6 +29,7 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.QueryMetrics;
+import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
@@ -203,22 +204,16 @@ public class QueryLifecycleTest
                                         .context(ImmutableMap.of("foo", "bar", "baz", "qux"))
                                         .build();
 
-    lifecycle.initialize(new QueryHolder<>(query), new QueryContext(query.getContext()));
+    lifecycle.initialize(QueryPlus.wrap(query));
 
-    // until it is authorized, the context in lifecycle should have the valid params
-    Assert.assertNotNull(lifecycle.getContext());
     Assert.assertEquals(
         ImmutableMap.of("foo", "bar", "baz", "qux"),
-        lifecycle.getBaseQuery().getDelegate().getContext()
+        lifecycle.getBaseQuery().getQueryContext().getUserParams()
     );
-    Assert.assertTrue(lifecycle.getContext().getMergedParams().containsKey("queryId"));
+    Assert.assertTrue(lifecycle.getBaseQuery().getQueryContext().getMergedParams().containsKey("queryId"));
+    Assert.assertTrue(lifecycle.getBaseQuery().getQuery().getContext().containsKey("queryId"));
 
     Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
-
-    // once it is authorized, baseQuery in lifecycle should have the valid params
-    Assert.assertNull(lifecycle.getContext());
-    Assert.assertTrue(lifecycle.getBaseQuery().isValidContext());
-    Assert.assertTrue(lifecycle.getBaseQuery().getDelegate().getContext().containsKey("queryId"));
   }
 
   @Test
@@ -246,7 +241,7 @@ public class QueryLifecycleTest
                                         .context(ImmutableMap.of("foo", "bar"))
                                         .build();
 
-    lifecycle.initialize(new QueryHolder<>(query), new QueryContext(query.getContext()));
+    lifecycle.initialize(QueryPlus.wrap(query));
     Assert.assertFalse(lifecycle.authorize(mockRequest()).isAllowed());
   }
 

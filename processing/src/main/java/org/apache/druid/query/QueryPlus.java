@@ -20,7 +20,6 @@
 package org.apache.druid.query;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.context.ResponseContext;
@@ -28,7 +27,7 @@ import org.apache.druid.query.context.ResponseContext;
 import javax.annotation.Nullable;
 
 /**
- * An immutable composite object of {@link Query} + extra stuff needed in {@link QueryRunner}s.
+ * An immutable composite object of {@link Query} + {@link QueryContext} + extra stuff needed in {@link QueryRunner}s.
  */
 @PublicApi
 public final class QueryPlus<T>
@@ -40,23 +39,37 @@ public final class QueryPlus<T>
   public static <T> QueryPlus<T> wrap(Query<T> query)
   {
     Preconditions.checkNotNull(query);
-    return new QueryPlus<>(query, null, null);
+    return new QueryPlus<>(query, new QueryContext(query.getContext()), null, null);
   }
 
-  private final Query<T> query;
+  private Query<T> query;
+  private final QueryContext queryContext;
   private final QueryMetrics<?> queryMetrics;
   private final String identity;
 
-  private QueryPlus(Query<T> query, QueryMetrics<?> queryMetrics, String identity)
+  private QueryPlus(Query<T> query, QueryContext queryContext, QueryMetrics<?> queryMetrics, String identity)
   {
     this.query = query;
+    this.queryContext = queryContext;
     this.queryMetrics = queryMetrics;
     this.identity = identity;
   }
 
   public Query<T> getQuery()
   {
-    return query;
+    // Intentionally checks the object equality to see if they are the same instance.
+    //noinspection ObjectEquality
+    if (queryContext.getMergedParams() == query.getContext()) {
+      return query;
+    } else {
+      query = query.withContext(queryContext.getMergedParams());
+      return query;
+    }
+  }
+
+  public QueryContext getQueryContext()
+  {
+    return queryContext;
   }
 
   @Nullable
@@ -71,7 +84,7 @@ public final class QueryPlus<T>
    */
   public QueryPlus<T> withIdentity(String identity)
   {
-    return new QueryPlus<>(query, queryMetrics, identity);
+    return new QueryPlus<>(query, queryContext, queryMetrics, identity);
   }
 
   /**
@@ -95,7 +108,7 @@ public final class QueryPlus<T>
         metrics.identity(identity);
       }
 
-      return new QueryPlus<>(query, metrics, identity);
+      return new QueryPlus<>(query, queryContext, metrics, identity);
     }
   }
 
@@ -120,7 +133,7 @@ public final class QueryPlus<T>
     if (queryMetrics == null) {
       return this;
     } else {
-      return new QueryPlus<>(query, null, identity);
+      return new QueryPlus<>(query, queryContext, null, identity);
     }
   }
 
@@ -129,11 +142,8 @@ public final class QueryPlus<T>
    */
   public QueryPlus<T> withMaxQueuedBytes(long maxQueuedBytes)
   {
-    return new QueryPlus<>(
-        query.withOverriddenContext(ImmutableMap.of(QueryContexts.MAX_QUEUED_BYTES_KEY, maxQueuedBytes)),
-        queryMetrics,
-        identity
-    );
+    queryContext.addSystemParam(QueryContexts.MAX_QUEUED_BYTES_KEY, maxQueuedBytes);
+    return this;
   }
 
   /**
@@ -141,16 +151,17 @@ public final class QueryPlus<T>
    */
   public <U> QueryPlus<U> withQuery(Query<U> replacementQuery)
   {
-    return new QueryPlus<>(replacementQuery, queryMetrics, identity);
+    return new QueryPlus<>(replacementQuery, new QueryContext(replacementQuery.getContext()), queryMetrics, identity);
   }
 
   public Sequence<T> run(QuerySegmentWalker walker, ResponseContext context)
   {
-    return query.getRunner(walker).run(this, context);
+    return getQuery().getRunner(walker).run(this, context);
   }
 
   public QueryPlus<T> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
   {
-    return new QueryPlus<>(query.optimizeForSegment(optimizationContext), queryMetrics, identity);
+    final Query<T> optimized = query.optimizeForSegment(optimizationContext);
+    return new QueryPlus<>(optimized, new QueryContext(optimized.getContext()), queryMetrics, identity);
   }
 }

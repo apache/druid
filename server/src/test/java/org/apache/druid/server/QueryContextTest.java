@@ -20,6 +20,7 @@
 package org.apache.druid.server;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.query.QueryContext;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -186,5 +187,24 @@ public class QueryContextTest
         ),
         context.getMergedParams()
     );
+  }
+
+  @Test
+  public void testGetMergedParams()
+  {
+    final QueryContext context = new QueryContext(
+        ImmutableMap.of(
+            "user1", "userVal1",
+            "conflict", "userVal2"
+        )
+    );
+    context.addDefaultParams(
+        ImmutableMap.of(
+            "default1", "defaultVal1",
+            "conflict", "defaultVal2"
+        )
+    );
+
+    Assert.assertSame(context.getMergedParams(), context.getMergedParams());
   }
 }

@@ -37,7 +37,6 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
-import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -49,6 +48,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryUnsupportedException;
@@ -185,8 +185,8 @@ public class QueryResource implements QueryCountStatsProvider
 
     final String currThreadName = Thread.currentThread().getName();
     try {
-      final NonnullPair<QueryHolder<?>, QueryContext> pair = readQuery(req, in, ioReaderWriter);
-      queryLifecycle.initialize(pair.lhs, pair.rhs);
+      final QueryPlus<?> query = readQuery(req, in, ioReaderWriter);
+      queryLifecycle.initialize(query);
       final String queryId = queryLifecycle.getQueryId();
       final String queryThreadName = queryLifecycle.threadName(currThreadName);
       Thread.currentThread().setName(queryThreadName);
@@ -358,27 +358,27 @@ public class QueryResource implements QueryCountStatsProvider
     }
   }
 
-  private NonnullPair<QueryHolder<?>, QueryContext> readQuery(
+  private QueryPlus<?> readQuery(
       final HttpServletRequest req,
       final InputStream in,
       final ResourceIOReaderWriter ioReaderWriter
   ) throws IOException
   {
-    final Query<?> baseQuery;
+    final Query<?> query;
     try {
-      baseQuery = ioReaderWriter.getRequestMapper().readValue(in, Query.class);
+      query = ioReaderWriter.getRequestMapper().readValue(in, Query.class);
     }
     catch (JsonParseException e) {
       throw new BadJsonQueryException(e);
     }
-    final QueryContext context = new QueryContext(baseQuery.getContext());
+    final QueryPlus<?> baseQuery = QueryPlus.wrap(query);
     String prevEtag = getPreviousEtag(req);
 
     if (prevEtag != null) {
-      context.addSystemParam(HEADER_IF_NONE_MATCH, prevEtag);
+      baseQuery.getQueryContext().addSystemParam(HEADER_IF_NONE_MATCH, prevEtag);
     }
 
-    return new NonnullPair<>(new QueryHolder<>(baseQuery), context);
+    return baseQuery;
   }
 
   private static String getPreviousEtag(final HttpServletRequest req)

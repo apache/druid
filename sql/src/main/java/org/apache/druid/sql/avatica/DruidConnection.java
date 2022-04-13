@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.QueryContext;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.SqlLifecycleFactory;
 
 import java.util.Map;
