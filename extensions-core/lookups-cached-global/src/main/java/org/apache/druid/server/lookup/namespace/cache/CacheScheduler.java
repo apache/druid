@@ -188,13 +188,14 @@ public final class CacheScheduler
 
     private void updateCache()
     {
+      boolean updatedCacheSuccessfully = false;
       try {
         // Ensures visibility of the whole EntryImpl's state (fields and their state).
         startLatch.await();
         CacheState currentCacheState = cacheStateHolder.get();
         if (!Thread.currentThread().isInterrupted() && currentCacheState != NoCache.ENTRY_CLOSED) {
           final String currentVersion = currentVersionOrNull(currentCacheState);
-          tryUpdateCache(currentVersion);
+          updatedCacheSuccessfully = tryUpdateCache(currentVersion);
         }
       }
       catch (Throwable t) {
@@ -204,16 +205,18 @@ public final class CacheScheduler
         catch (Exception e) {
           t.addSuppressed(e);
         }
-        if (!firstLoadFinishedSuccessfully.isDone()) {
-          firstLoadFinishedSuccessfully.complete(false);
-        }
         if (Thread.currentThread().isInterrupted() || t instanceof InterruptedException || t instanceof Error) {
           throw new RuntimeException(t);
         }
       }
+      finally {
+        if (!firstLoadFinishedSuccessfully.isDone()) {
+          firstLoadFinishedSuccessfully.complete(updatedCacheSuccessfully);
+        }
+      }
     }
 
-    private void tryUpdateCache(String currentVersion) throws Exception
+    private boolean tryUpdateCache(String currentVersion) throws Exception
     {
       boolean updatedCacheSuccessfully = false;
       CacheHandler newCache = null;
@@ -259,11 +262,7 @@ public final class CacheScheduler
           throw t;
         }
       }
-      finally {
-        if (!firstLoadFinishedSuccessfully.isDone()) {
-          firstLoadFinishedSuccessfully.complete(updatedCacheSuccessfully);
-        }
-      }
+      return updatedCacheSuccessfully;
     }
 
     private String currentVersionOrNull(CacheState currentCacheState)
