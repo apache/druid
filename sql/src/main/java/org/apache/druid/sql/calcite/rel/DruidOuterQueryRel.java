@@ -114,20 +114,12 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
   @Override
   public DruidQuery toDruidQueryForExplaining()
   {
-    final RowSignature sourceRowSignature;
-    if (sourceRel instanceof DruidRel) {
-      final DruidQuery subQuery = ((DruidRel) sourceRel).toDruidQueryForExplaining();
-      sourceRowSignature = subQuery.getOutputRowSignature();
-    } else {
-      // fallback for cases other than group by inner query with order by with alias on __time column
-      sourceRowSignature = RowSignatures.fromRelDataType(
-          sourceRel.getRowType().getFieldNames(),
-          sourceRel.getRowType()
-      );
-    }
     return partialQuery.build(
         DUMMY_DATA_SOURCE,
-        sourceRowSignature,
+        RowSignatures.fromRelDataType(
+            sourceRel.getRowType().getFieldNames(),
+            sourceRel.getRowType()
+        ),
         getPlannerContext(),
         getCluster().getRexBuilder(),
         false
