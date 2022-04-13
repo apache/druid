@@ -398,7 +398,7 @@ Enabling process termination on out-of-memory errors is useful as well, since th
 
 `-XX:+ExitOnOutOfMemoryError`
 
-#### Other useful JVM flags
+#### Other generally useful JVM flags
 
 ```
 -Duser.timezone=UTC
@@ -423,7 +423,7 @@ Enabling process termination on out-of-memory errors is useful as well, since th
 -XX:HeapDumpPath=/var/logs/druid/historical.hprof
 -XX:MaxDirectMemorySize=1g
 ```
-> Please note that the flag settings above represent sample, general guidelines only. Be careful to use values appropriate 
+> Please note that the flag settings above represent sample, general guidelines only. Be careful to use values appropriate
 for your specific scenario and be sure to test any changes in staging environments.
 
 `ExitOnOutOfMemoryError` flag is only supported starting JDK 8u92 . For older versions, `-XX:OnOutOfMemoryError='kill -9 %p'` can be used.
@@ -467,4 +467,3 @@ The limit on the number of open files can be set permanently by editing `/etc/se
 ##### max_map_count
 
 Historical processes and to a lesser extent, MiddleManager and Indexer processes memory map segment files, so depending on the number of segments per server, `/proc/sys/vm/max_map_count` might also need to be adjusted. Depending on the variant of Linux, this might be done via `sysctl` by placing a file in `/etc/sysctl.d/` that sets `vm.max_map_count`.
-

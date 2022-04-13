@@ -162,7 +162,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           timeline = timelineWithConfiguredSegmentGranularity;
         }
         final List<Interval> searchIntervals =
-            findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest(), configuredSegmentGranularity, skipIntervals.get(dataSource));
+            findInitialSearchInterval(dataSource, timeline, config.getSkipOffsetFromLatest(), configuredSegmentGranularity, skipIntervals.get(dataSource));
         if (!searchIntervals.isEmpty()) {
           timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals, originalTimeline));
         }
@@ -595,7 +595,8 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
    *
    * @return found interval to search or null if it's not found
    */
-  private static List<Interval> findInitialSearchInterval(
+  private List<Interval> findInitialSearchInterval(
+      String dataSourceName,
       VersionedIntervalTimeline<String, DataSegment> timeline,
       Period skipOffset,
       Granularity configuredSegmentGranularity,
@@ -613,6 +614,12 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         configuredSegmentGranularity,
         skipIntervals
     );
+
+    // Calcuate stats of all skipped segments
+    for (Interval skipInterval : fullSkipIntervals) {
+      final List<DataSegment> segments = new ArrayList<>(timeline.findNonOvershadowedObjectsInInterval(skipInterval, Partitions.ONLY_COMPLETE));
+      collectSegmentStatistics(skippedSegments, dataSourceName, new SegmentsToCompact(segments));
+    }
 
     final Interval totalInterval = new Interval(first.getInterval().getStart(), last.getInterval().getEnd());
     final List<Interval> filteredInterval = filterSkipIntervals(totalInterval, fullSkipIntervals);
