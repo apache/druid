@@ -29,7 +29,6 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.QueryMetrics;
-import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
@@ -204,14 +203,14 @@ public class QueryLifecycleTest
                                         .context(ImmutableMap.of("foo", "bar", "baz", "qux"))
                                         .build();
 
-    lifecycle.initialize(QueryPlus.wrap(query));
+    lifecycle.initialize(query);
 
     Assert.assertEquals(
         ImmutableMap.of("foo", "bar", "baz", "qux"),
-        lifecycle.getBaseQuery().getQueryContext().getUserParams()
+        lifecycle.getQuery().getQueryContext().getUserParams()
     );
-    Assert.assertTrue(lifecycle.getBaseQuery().getQueryContext().getMergedParams().containsKey("queryId"));
-    Assert.assertTrue(lifecycle.getBaseQuery().getQuery().getContext().containsKey("queryId"));
+    Assert.assertTrue(lifecycle.getQuery().getQueryContext().getMergedParams().containsKey("queryId"));
+    Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("queryId"));
 
     Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
   }
@@ -241,7 +240,7 @@ public class QueryLifecycleTest
                                         .context(ImmutableMap.of("foo", "bar"))
                                         .build();
 
-    lifecycle.initialize(QueryPlus.wrap(query));
+    lifecycle.initialize(query);
     Assert.assertFalse(lifecycle.authorize(mockRequest()).isAllowed());
   }
 

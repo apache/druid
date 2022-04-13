@@ -20,11 +20,9 @@
 package org.apache.druid.query.timeseries;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.Druids.TimeseriesQueryBuilder;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -102,26 +100,5 @@ public class TimeseriesQueryTest
               .build();
 
     Assert.assertEquals(ImmutableSet.of("__time", "fieldFromVirtualColumn", "aField"), query.getRequiredColumns());
-  }
-
-  @Test
-  public void testWithContext()
-  {
-    final TimeseriesQueryBuilder builder = Druids
-        .newTimeseriesQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
-        .granularity(QueryRunnerTestHelper.DAY_GRAN)
-        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
-        .aggregators(QueryRunnerTestHelper.ROWS_COUNT, QueryRunnerTestHelper.INDEX_DOUBLE_SUM)
-        .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
-        .descending(descending);
-    final TimeseriesQuery query = builder
-        .context(ImmutableMap.of("to-overwrite", "val", "to-overwrite2", "val"))
-        .build();
-    final TimeseriesQuery queryWithContext = query.withContext(ImmutableMap.of("key", "val"));
-    Assert.assertEquals(
-        builder.context(ImmutableMap.of("key", "val")).build(),
-        queryWithContext
-    );
   }
 }

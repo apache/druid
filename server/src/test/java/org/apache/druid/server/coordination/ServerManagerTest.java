@@ -592,12 +592,6 @@ public class ServerManagerTest
           }
 
           @Override
-          public Query<Object> withContext(Map<String, Object> context)
-          {
-            return null;
-          }
-
-          @Override
           public Query<Object> withQuerySegmentSpec(QuerySegmentSpec spec)
           {
             return null;

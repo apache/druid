@@ -20,10 +20,8 @@
 package org.apache.druid.query.search;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.Druids.SearchQueryBuilder;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -108,23 +106,5 @@ public class SearchQueryTest
 
     Assert.assertEquals(query.toString(), serdeQuery2.toString());
     Assert.assertEquals(query, serdeQuery2);
-  }
-
-  @Test
-  public void testWithContext()
-  {
-    final SearchQueryBuilder builder = Druids.newSearchQueryBuilder()
-                                     .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
-                                     .granularity(QueryRunnerTestHelper.ALL_GRAN)
-                                     .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
-                                     .dimensions(new LegacyDimensionSpec(QueryRunnerTestHelper.QUALITY_DIMENSION))
-                                     .query("a");
-
-    final SearchQuery query = builder.context(ImmutableMap.of("to-overwrite", "val", "to-overwrite2", "val")).build();
-    final SearchQuery queryWithContext = query.withContext(ImmutableMap.of("key", "val"));
-    Assert.assertEquals(
-        builder.context(ImmutableMap.of("key", "val")).build(),
-        queryWithContext
-    );
   }
 }

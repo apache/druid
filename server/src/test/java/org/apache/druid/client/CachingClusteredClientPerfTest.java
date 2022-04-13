@@ -236,12 +236,6 @@ public class CachingClusteredClientPerfTest
     }
 
     @Override
-    public Query<SegmentDescriptor> withContext(Map<String, Object> context)
-    {
-      return this;
-    }
-
-    @Override
     public Query<SegmentDescriptor> withQuerySegmentSpec(QuerySegmentSpec spec)
     {
       this.spec = spec;

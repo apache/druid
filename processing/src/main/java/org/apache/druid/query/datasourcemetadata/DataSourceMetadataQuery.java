@@ -80,12 +80,6 @@ public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadata
   }
 
   @Override
-  public DataSourceMetadataQuery withContext(Map<String, Object> context)
-  {
-    return Druids.DataSourceMetadataQueryBuilder.copy(this).context(context).build();
-  }
-
-  @Override
   public DataSourceMetadataQuery withQuerySegmentSpec(QuerySegmentSpec spec)
   {
     return Druids.DataSourceMetadataQueryBuilder.copy(this).intervals(spec).build();

@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.Numbers;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 
 /**
@@ -40,7 +41,7 @@ import java.util.TreeMap;
  * You can use {@code getX} methods or {@link #getMergedParams()} to compute the context params
  * merging 3 types of params above.
  *
- * Currently, this class is used only for query context parameter authorization in query entires,
+ * Currently, this class is mainly used for query context parameter authorization in query entires,
  * such as HTTP query endpoints or JDBC endpoint. Its usage can be expanded in the future if we
  * want to track user parameters and separate them from others during query processing.
  */
@@ -202,4 +203,25 @@ public class QueryContext
     }
     return mergedParams;
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    QueryContext context = (QueryContext) o;
+    return getMergedParams().equals(context.getMergedParams());
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(getMergedParams());
+  }
+
+  // TODO: toString?
 }

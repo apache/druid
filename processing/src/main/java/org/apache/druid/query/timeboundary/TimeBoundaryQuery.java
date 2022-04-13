@@ -102,12 +102,6 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   }
 
   @Override
-  public Query<Result<TimeBoundaryResultValue>> withContext(Map<String, Object> context)
-  {
-    return Druids.TimeBoundaryQueryBuilder.copy(this).context(context).build();
-  }
-
-  @Override
   public TimeBoundaryQuery withQuerySegmentSpec(QuerySegmentSpec spec)
   {
     return Druids.TimeBoundaryQueryBuilder.copy(this).intervals(spec).build();

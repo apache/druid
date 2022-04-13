@@ -94,7 +94,10 @@ public interface Query<T>
 
   DateTimeZone getTimezone();
 
+  @Deprecated
   Map<String, Object> getContext();
+
+  QueryContext getQueryContext();
 
   <ContextType> ContextType getContextValue(String key);
 
@@ -118,8 +121,6 @@ public interface Query<T>
   Ordering<T> getResultOrdering();
 
   Query<T> withOverriddenContext(Map<String, Object> contextOverride);
-
-  Query<T> withContext(Map<String, Object> context);
 
   /**
    * Returns a new query, identical to this one, but with a different associated {@link QuerySegmentSpec}.
@@ -160,7 +161,7 @@ public interface Query<T>
   @Nullable
   default String getSqlQueryId()
   {
-    return null;
+    return getContextValue(BaseQuery.SQL_QUERY_ID);
   }
 
   /**

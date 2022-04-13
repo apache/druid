@@ -51,17 +51,6 @@ public class TestQuery extends BaseQuery
   }
 
   @Override
-  public Query withContext(Map context)
-  {
-    return new TestQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        isDescending(),
-        context
-    );
-  }
-
-  @Override
   public Query withQuerySegmentSpec(QuerySegmentSpec spec)
   {
     return null;

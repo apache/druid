@@ -20,7 +20,6 @@
 package org.apache.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.client.DirectDruidClient;
@@ -72,7 +71,7 @@ import java.util.concurrent.TimeUnit;
  * ensures that a query goes through the following stages, in the proper order:
  *
  * <ol>
- * <li>Initialization ({@link #initialize(QueryPlus)})</li>
+ * <li>Initialization ({@link #initialize(Query)})</li>
  * <li>Authorization ({@link #authorize(HttpServletRequest)}</li>
  * <li>Execution ({@link #execute()}</li>
  * <li>Logging ({@link #emitLogsAndMetrics(Throwable, String, long)}</li>
@@ -103,7 +102,7 @@ public class QueryLifecycle
    * A holder for the user query to run.
    */
   @MonotonicNonNull
-  private QueryPlus<?> baseQuery;
+  private Query<?> baseQuery;
 
   public QueryLifecycle(
       final QueryToolChestWarehouse warehouse,
@@ -149,7 +148,7 @@ public class QueryLifecycle
       final Access authorizationResult
   )
   {
-    initialize(QueryPlus.wrap(query));
+    initialize(query);
 
     final Sequence<T> results;
 
@@ -186,7 +185,7 @@ public class QueryLifecycle
    * @param baseQuery the query
    */
   @SuppressWarnings("unchecked")
-  public void initialize(final QueryPlus<?> baseQuery)
+  public void initialize(final Query baseQuery)
   {
     transition(State.NEW, State.INITIALIZED);
 
@@ -194,7 +193,7 @@ public class QueryLifecycle
     baseQuery.getQueryContext().addDefaultParams(defaultQueryConfig.getContext());
 
     this.baseQuery = baseQuery;
-    this.toolChest = warehouse.getToolChest(baseQuery.getQuery());
+    this.toolChest = warehouse.getToolChest(baseQuery);
   }
 
   /**
@@ -210,7 +209,7 @@ public class QueryLifecycle
     transition(State.INITIALIZED, State.AUTHORIZING);
     final Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
         Iterables.transform(
-            baseQuery.getQuery().getDataSource().getTableNames(),
+            baseQuery.getDataSource().getTableNames(),
             AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
         ),
         authConfig.authorizeQueryContextParams()
@@ -267,9 +266,9 @@ public class QueryLifecycle
 
     final ResponseContext responseContext = DirectDruidClient.makeResponseContextForQuery();
 
-    final Sequence res = baseQuery
-        .withIdentity(authenticationResult.getIdentity())
-        .run(texasRanger, responseContext);
+    final Sequence res = QueryPlus.wrap(baseQuery)
+                                  .withIdentity(authenticationResult.getIdentity())
+                                  .run(texasRanger, responseContext);
 
     return new QueryResponse(res == null ? Sequences.empty() : res, responseContext);
   }
@@ -294,13 +293,12 @@ public class QueryLifecycle
     }
 
     if (state == State.DONE) {
-      log.warn("Tried to emit logs and metrics twice for query[%s]!", getQueryId());
+      log.warn("Tried to emit logs and metrics twice for query[%s]!", baseQuery.getId());
     }
 
     state = State.DONE;
 
     final boolean success = e == null;
-    final Query<?> query = baseQuery.getQuery();
 
     try {
       final long queryTimeNs = System.nanoTime() - startNs;
@@ -308,7 +306,7 @@ public class QueryLifecycle
       QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
           queryMetricsFactory,
           toolChest,
-          query,
+          baseQuery,
           StringUtils.nullToEmptyNonDruidDataString(remoteAddress)
       );
       queryMetrics.success(success);
@@ -335,10 +333,10 @@ public class QueryLifecycle
 
       if (e != null) {
         statsMap.put("exception", e.toString());
-        if (QueryContexts.isDebug(query)) {
-          log.warn(e, "Exception while processing queryId [%s]", query.getId());
+        if (QueryContexts.isDebug(baseQuery)) {
+          log.warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
         } else {
-          log.noStackTrace().warn(e, "Exception while processing queryId [%s]", query.getId());
+          log.noStackTrace().warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
         }
         if (e instanceof QueryInterruptedException || e instanceof QueryTimeoutException) {
           // Mimic behavior from QueryResource, where this code was originally taken from.
@@ -349,7 +347,7 @@ public class QueryLifecycle
 
       requestLogger.logNativeQuery(
           RequestLogLine.forNative(
-              query,
+              baseQuery,
               DateTimes.utc(startMs),
               StringUtils.nullToEmptyNonDruidDataString(remoteAddress),
               new QueryStats(statsMap)
@@ -357,7 +355,7 @@ public class QueryLifecycle
       );
     }
     catch (Exception ex) {
-      log.error(ex, "Unable to log query [%s]!", query);
+      log.error(ex, "Unable to log query [%s]!", baseQuery);
     }
   }
 
@@ -376,12 +374,12 @@ public class QueryLifecycle
   @Nullable
   public Query<?> getQuery()
   {
-    return baseQuery == null ? null : baseQuery.getQuery();
+    return baseQuery;
   }
 
   public String getQueryId()
   {
-    return baseQuery.getQueryContext().getAsString(BaseQuery.QUERY_ID);
+    return baseQuery.getId();
   }
 
   public String threadName(String currThreadName)
@@ -389,25 +387,24 @@ public class QueryLifecycle
     return StringUtils.format(
         "%s[%s_%s_%s]",
         currThreadName,
-        baseQuery.getQuery().getType(),
-        baseQuery.getQuery().getDataSource().getTableNames(),
+        baseQuery.getType(),
+        baseQuery.getDataSource().getTableNames(),
         getQueryId()
     );
   }
 
   private boolean isSerializeDateTimeAsLong()
   {
-    final Query<?> query = baseQuery.getQuery();
-    final boolean shouldFinalize = QueryContexts.isFinalize(query, true);
-    return QueryContexts.isSerializeDateTimeAsLong(query, false)
-           || (!shouldFinalize && QueryContexts.isSerializeDateTimeAsLongInner(query, false));
+    final boolean shouldFinalize = QueryContexts.isFinalize(baseQuery, true);
+    return QueryContexts.isSerializeDateTimeAsLong(baseQuery, false)
+           || (!shouldFinalize && QueryContexts.isSerializeDateTimeAsLongInner(baseQuery, false));
   }
 
   public ObjectWriter newOutputWriter(ResourceIOReaderWriter ioReaderWriter)
   {
     return ioReaderWriter.getResponseWriter().newOutputWriter(
         getToolChest(),
-        baseQuery.getQuery(),
+        baseQuery,
         isSerializeDateTimeAsLong()
     );
   }
@@ -462,11 +459,5 @@ public class QueryLifecycle
     {
       return responseContext;
     }
-  }
-
-  @VisibleForTesting
-  QueryPlus<?> getBaseQuery()
-  {
-    return baseQuery;
   }
 }

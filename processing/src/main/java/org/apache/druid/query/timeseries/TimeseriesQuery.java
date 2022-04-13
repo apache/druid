@@ -198,12 +198,6 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return Druids.TimeseriesQueryBuilder.copy(this).context(newContext).build();
   }
 
-  @Override
-  public TimeseriesQuery withContext(Map<String, Object> context)
-  {
-    return Druids.TimeseriesQueryBuilder.copy(this).context(context).build();
-  }
-
   public TimeseriesQuery withDimFilter(DimFilter dimFilter)
   {
     return Druids.TimeseriesQueryBuilder.copy(this).filters(dimFilter).build();

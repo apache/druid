@@ -57,7 +57,7 @@ public class ScanQuerySpecTest
         + "\"limit\":3,"
         + "\"filter\":null,"
         + "\"columns\":[\"market\",\"quality\",\"index\"],"
-        + "\"context\":null,"
+        + "\"context\":{},"
         + "\"descending\":false,"
         + "\"granularity\":{\"type\":\"all\"}}";
 
@@ -96,7 +96,7 @@ public class ScanQuerySpecTest
         + "\"order\":\"ascending\","
         + "\"filter\":null,"
         + "\"columns\":[\"market\",\"quality\",\"index\",\"__time\"],"
-        + "\"context\":null,"
+        + "\"context\":{},"
         + "\"descending\":false,"
         + "\"granularity\":{\"type\":\"all\"}}";
 
@@ -139,7 +139,7 @@ public class ScanQuerySpecTest
         + "\"orderBy\":[{\"columnName\":\"quality\",\"order\":\"ascending\"}],"
         + "\"filter\":null,"
         + "\"columns\":[\"market\",\"quality\",\"index\",\"__time\"],"
-        + "\"context\":null,"
+        + "\"context\":{},"
         + "\"descending\":false,"
         + "\"granularity\":{\"type\":\"all\"}}";
 

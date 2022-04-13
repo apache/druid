@@ -48,7 +48,6 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
-import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryUnsupportedException;
@@ -185,7 +184,7 @@ public class QueryResource implements QueryCountStatsProvider
 
     final String currThreadName = Thread.currentThread().getName();
     try {
-      final QueryPlus<?> query = readQuery(req, in, ioReaderWriter);
+      final Query<?> query = readQuery(req, in, ioReaderWriter);
       queryLifecycle.initialize(query);
       final String queryId = queryLifecycle.getQueryId();
       final String queryThreadName = queryLifecycle.threadName(currThreadName);
@@ -358,20 +357,19 @@ public class QueryResource implements QueryCountStatsProvider
     }
   }
 
-  private QueryPlus<?> readQuery(
+  private Query<?> readQuery(
       final HttpServletRequest req,
       final InputStream in,
       final ResourceIOReaderWriter ioReaderWriter
   ) throws IOException
   {
-    final Query<?> query;
+    final Query<?> baseQuery;
     try {
-      query = ioReaderWriter.getRequestMapper().readValue(in, Query.class);
+      baseQuery = ioReaderWriter.getRequestMapper().readValue(in, Query.class);
     }
     catch (JsonParseException e) {
       throw new BadJsonQueryException(e);
     }
-    final QueryPlus<?> baseQuery = QueryPlus.wrap(query);
     String prevEtag = getPreviousEtag(req);
 
     if (prevEtag != null) {

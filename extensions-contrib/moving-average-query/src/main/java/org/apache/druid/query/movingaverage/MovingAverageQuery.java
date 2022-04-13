@@ -254,27 +254,6 @@ public class MovingAverageQuery extends BaseQuery<Row>
     return granularity;
   }
 
-  @Override
-  public MovingAverageQuery withContext(Map<String, Object> context)
-  {
-    return new MovingAverageQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        dimFilter,
-        granularity,
-        dimensions,
-        aggregatorSpecs,
-        averagerSpecs,
-        postAggregatorSpecs,
-        postAveragerSpecs,
-        havingSpec,
-        limitSpec,
-        groupByQueryForLimitSpec,
-        limitFn,
-        context
-    );
-  }
-
   @JsonProperty
   public List<DimensionSpec> getDimensions()
   {

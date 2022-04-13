@@ -20,14 +20,12 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.Druids.ScanQueryBuilder;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -91,22 +89,6 @@ public class ScanQueryTest
         "segmentId",
         Collections.singletonList("yah"),
         events3
-    );
-  }
-
-  @Test
-  public void testWithContext()
-  {
-    final ScanQueryBuilder builder = Druids.newScanQueryBuilder()
-                                           .order(ScanQuery.Order.ASCENDING)
-                                           .columns(ImmutableList.of("__time", "quality"))
-                                           .dataSource("source")
-                                           .intervals(intervalSpec);
-    final ScanQuery query = builder.context(ImmutableMap.of("to-overwrite", "val", "to-overwrite2", "val")).build();
-    final ScanQuery queryWithContext = query.withContext(ImmutableMap.of("key", "val"));
-    Assert.assertEquals(
-        builder.context(ImmutableMap.of("key", "val")).build(),
-        queryWithContext
     );
   }
 

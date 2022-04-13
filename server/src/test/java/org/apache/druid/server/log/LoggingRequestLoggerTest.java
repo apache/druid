@@ -346,12 +346,6 @@ class FakeQuery extends BaseQuery
   }
 
   @Override
-  public Query withContext(Map context)
-  {
-    throw new UnsupportedOperationException("shouldn't be here");
-  }
-
-  @Override
   public Query withQuerySegmentSpec(QuerySegmentSpec spec)
   {
     throw new UnsupportedOperationException("shouldn't be here");

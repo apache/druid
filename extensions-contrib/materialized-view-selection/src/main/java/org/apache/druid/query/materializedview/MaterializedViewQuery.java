@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.filter.DimFilter;
@@ -146,6 +147,12 @@ public class MaterializedViewQuery<T> implements Query<T>
   }
 
   @Override
+  public QueryContext getQueryContext()
+  {
+    return query.getQueryContext();
+  }
+
+  @Override
   public <ContextType> ContextType getContextValue(String key)
   {
     return (ContextType) query.getContextValue(key);
@@ -179,12 +186,6 @@ public class MaterializedViewQuery<T> implements Query<T>
   public MaterializedViewQuery withOverriddenContext(Map<String, Object> contextOverride) 
   {
     return new MaterializedViewQuery(query.withOverriddenContext(contextOverride), optimizer);
-  }
-
-  @Override
-  public MaterializedViewQuery withContext(Map<String, Object> context)
-  {
-    return new MaterializedViewQuery<>(query.withContext(context), optimizer);
   }
 
   @Override

@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.Druids.DataSourceMetadataQueryBuilder;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -70,21 +69,6 @@ public class DataSourceMetadataQueryTest
     Query<?> serdeQuery = JSON_MAPPER.readValue(json, Query.class);
 
     Assert.assertEquals(query, serdeQuery);
-  }
-
-  @Test
-  public void testWithContext()
-  {
-    final DataSourceMetadataQueryBuilder builder = Druids.newDataSourceMetadataQueryBuilder()
-                                                         .dataSource("testing");
-    final DataSourceMetadataQuery query = builder
-        .context(ImmutableMap.of("to-overwrite", "val", "to-overwrite2", "val"))
-        .build();
-    final DataSourceMetadataQuery queryWithContext = query.withContext(ImmutableMap.of("key", "val"));
-    Assert.assertEquals(
-        builder.context(ImmutableMap.of("key", "val")).build(),
-        queryWithContext
-    );
   }
 
   @Test
