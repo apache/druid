@@ -113,12 +113,15 @@ public class SegmentsCostCache
   private static final long BUCKET_INTERVAL = TimeUnit.DAYS.toMillis(15);
   private static final DurationGranularity BUCKET_GRANULARITY = new DurationGranularity(BUCKET_INTERVAL, 0);
 
+  private static final Comparator<Interval> INTERVAL_COMPARATOR = Comparators.intervalsByStartThenEnd();
+
   private static final Comparator<DataSegment> SEGMENT_INTERVAL_COMPARATOR =
       Comparator.comparing(DataSegment::getInterval, Comparators.intervalsByStartThenEnd());
 
   private static final Comparator<Bucket> BUCKET_INTERVAL_COMPARATOR =
       Comparator.comparing(Bucket::getInterval, Comparators.intervalsByStartThenEnd());
 
+  private static final Ordering<Interval> INTERVAL_ORDERING = Ordering.from(Comparators.intervalsByStartThenEnd());
   private static final Ordering<DataSegment> SEGMENT_ORDERING = Ordering.from(SEGMENT_INTERVAL_COMPARATOR);
   private static final Ordering<Bucket> BUCKET_ORDERING = Ordering.from(BUCKET_INTERVAL_COMPARATOR);
 
@@ -214,18 +217,18 @@ public class SegmentsCostCache
   {
     private final Interval interval;
     private final Interval calculationInterval;
-    private final ArrayList<DataSegment> sortedSegments;
+    private final ArrayList<Interval> sortedIntervals;
     private final double[] leftSum;
     private final double[] rightSum;
 
-    Bucket(Interval interval, ArrayList<DataSegment> sortedSegments, double[] leftSum, double[] rightSum)
+    Bucket(Interval interval, ArrayList<Interval> sortedIntervals, double[] leftSum, double[] rightSum)
     {
       this.interval = Preconditions.checkNotNull(interval, "interval");
-      this.sortedSegments = Preconditions.checkNotNull(sortedSegments, "sortedSegments");
+      this.sortedIntervals = Preconditions.checkNotNull(sortedIntervals, "sortedSegments");
       this.leftSum = Preconditions.checkNotNull(leftSum, "leftSum");
       this.rightSum = Preconditions.checkNotNull(rightSum, "rightSum");
-      Preconditions.checkArgument(sortedSegments.size() == leftSum.length && sortedSegments.size() == rightSum.length);
-      Preconditions.checkArgument(SEGMENT_ORDERING.isOrdered(sortedSegments));
+      Preconditions.checkArgument(sortedIntervals.size() == leftSum.length && sortedIntervals.size() == rightSum.length);
+      Preconditions.checkArgument(INTERVAL_ORDERING.isOrdered(sortedIntervals));
       this.calculationInterval = new Interval(
           interval.getStart().minus(LIFE_THRESHOLD),
           interval.getEnd().plus(LIFE_THRESHOLD)
@@ -245,15 +248,15 @@ public class SegmentsCostCache
     double cost(DataSegment dataSegment)
     {
       // cost is calculated relatively to bucket start (which is considered as 0)
-      double t0 = convertStart(dataSegment, interval);
-      double t1 = convertEnd(dataSegment, interval);
+      double t0 = convertStart(dataSegment.getInterval(), interval);
+      double t1 = convertEnd(dataSegment.getInterval(), interval);
 
       // avoid calculation for segments outside of LIFE_THRESHOLD
       if (!inCalculationInterval(dataSegment)) {
         throw new ISE("Segment is not within calculation interval");
       }
 
-      int index = Collections.binarySearch(sortedSegments, dataSegment, SEGMENT_INTERVAL_COMPARATOR);
+      int index = Collections.binarySearch(sortedIntervals, dataSegment.getInterval(), INTERVAL_COMPARATOR);
       index = (index >= 0) ? index : -index - 1;
       return addLeftCost(dataSegment, t0, t1, index) + rightCost(dataSegment, t0, t1, index);
     }
@@ -264,9 +267,9 @@ public class SegmentsCostCache
       // add to cost all left-overlapping segments
       int leftIndex = index - 1;
       while (leftIndex >= 0
-             && sortedSegments.get(leftIndex).getInterval().overlaps(dataSegment.getInterval())) {
-        double start = convertStart(sortedSegments.get(leftIndex), interval);
-        double end = convertEnd(sortedSegments.get(leftIndex), interval);
+             && sortedIntervals.get(leftIndex).overlaps(dataSegment.getInterval())) {
+        double start = convertStart(sortedIntervals.get(leftIndex), interval);
+        double end = convertEnd(sortedIntervals.get(leftIndex), interval);
         leftCost += CostBalancerStrategy.intervalCost(end - start, t0 - start, t1 - start);
         --leftIndex;
       }
@@ -282,28 +285,28 @@ public class SegmentsCostCache
       double rightCost = 0.0;
       // add all right-overlapping segments
       int rightIndex = index;
-      while (rightIndex < sortedSegments.size() &&
-             sortedSegments.get(rightIndex).getInterval().overlaps(dataSegment.getInterval())) {
-        double start = convertStart(sortedSegments.get(rightIndex), interval);
-        double end = convertEnd(sortedSegments.get(rightIndex), interval);
+      while (rightIndex < sortedIntervals.size() &&
+             sortedIntervals.get(rightIndex).overlaps(dataSegment.getInterval())) {
+        double start = convertStart(sortedIntervals.get(rightIndex), interval);
+        double end = convertEnd(sortedIntervals.get(rightIndex), interval);
         rightCost += CostBalancerStrategy.intervalCost(t1 - t0, start - t0, end - t0);
         ++rightIndex;
       }
       // add right-non-overlapping segments
-      if (rightIndex < sortedSegments.size()) {
+      if (rightIndex < sortedIntervals.size()) {
         rightCost += rightSum[rightIndex] * (FastMath.exp(t0) - FastMath.exp(t1));
       }
       return rightCost;
     }
 
-    private static double convertStart(DataSegment dataSegment, Interval interval)
+    private static double convertStart(Interval interval, Interval reference)
     {
-      return toLocalInterval(dataSegment.getInterval().getStartMillis(), interval);
+      return toLocalInterval(interval.getStartMillis(), reference);
     }
 
-    private static double convertEnd(DataSegment dataSegment, Interval interval)
+    private static double convertEnd(Interval interval, Interval reference)
     {
-      return toLocalInterval(dataSegment.getInterval().getEndMillis(), interval);
+      return toLocalInterval(interval.getEndMillis(), reference);
     }
 
     private static double toLocalInterval(long millis, Interval interval)
@@ -333,8 +336,8 @@ public class SegmentsCostCache
         }
 
         // all values are pre-computed relatively to bucket start (which is considered as 0)
-        double t0 = convertStart(dataSegment, interval);
-        double t1 = convertEnd(dataSegment, interval);
+        double t0 = convertStart(dataSegment.getInterval(), interval);
+        double t1 = convertEnd(dataSegment.getInterval(), interval);
 
         double leftValue = FastMath.exp(t0) - FastMath.exp(t1);
         double rightValue = FastMath.exp(-t1) - FastMath.exp(-t0);
@@ -371,8 +374,8 @@ public class SegmentsCostCache
           return this;
         }
 
-        double t0 = convertStart(dataSegment, interval);
-        double t1 = convertEnd(dataSegment, interval);
+        double t0 = convertStart(dataSegment.getInterval(), interval);
+        double t1 = convertEnd(dataSegment.getInterval(), interval);
 
         double leftValue = FastMath.exp(t0) - FastMath.exp(t1);
         double rightValue = FastMath.exp(-t1) - FastMath.exp(-t0);
@@ -390,22 +393,22 @@ public class SegmentsCostCache
 
       public Bucket build()
       {
-        ArrayList<DataSegment> segmentsList = new ArrayList<>();
+        ArrayList<Interval> intervalsList = new ArrayList<>();
         double[] leftSum = new double[treap.root.size];
         double[] rightSum = new double[treap.root.size];
         int i = 0;
         for (SegmentAndSum segmentAndSum : treap.toList()) {
-          segmentsList.add(segmentAndSum.dataSegment);
+          intervalsList.add(segmentAndSum.dataSegment.getInterval());
           leftSum[i] = segmentAndSum.leftSum;
           rightSum[i] = segmentAndSum.rightSum;
           ++i;
         }
-        long bucketEndMillis = segmentsList
+        long bucketEndMillis = intervalsList
             .stream()
-            .mapToLong(s -> s.getInterval().getEndMillis())
+            .mapToLong(interval -> interval.getEndMillis())
             .max()
             .orElseGet(interval::getEndMillis);
-        return new Bucket(Intervals.utc(interval.getStartMillis(), bucketEndMillis), segmentsList, leftSum, rightSum);
+        return new Bucket(Intervals.utc(interval.getStartMillis(), bucketEndMillis), intervalsList, leftSum, rightSum);
       }
     }
   }
