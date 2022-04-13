@@ -63,18 +63,11 @@ public abstract class BaseDimensionRangeShardSpec implements ShardSpec
     }
     final Comparator<StringTuple> startComparator = Comparators.naturalNullsFirst();
     final Comparator<StringTuple> endComparator = Ordering.natural().nullsLast();
-    final Comparator<BaseDimensionRangeShardSpec> shardSpecComparator = new Comparator<BaseDimensionRangeShardSpec>()
-    {
-      @Override
-      public int compare(BaseDimensionRangeShardSpec o1, BaseDimensionRangeShardSpec o2)
-      {
-        int startComparison = startComparator.compare(o1.start, o2.start);
-        if (startComparison != 0) {
-          return startComparison;
-        }
-        return endComparator.compare(o1.end, o2.end);
-      }
-    };
+
+    final Comparator<BaseDimensionRangeShardSpec> shardSpecComparator = Comparator
+        .comparing((BaseDimensionRangeShardSpec spec) -> spec.start, startComparator)
+        .thenComparing(spec -> spec.end, endComparator);
+
     Arrays.sort(rangeShardSpecs, shardSpecComparator);
 
     return (long timestamp, InputRow row) -> {
