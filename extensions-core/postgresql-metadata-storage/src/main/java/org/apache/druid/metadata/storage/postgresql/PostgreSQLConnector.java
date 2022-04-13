@@ -144,6 +144,12 @@ public class PostgreSQLConnector extends SQLMetadataConnector
     return DEFAULT_STREAMING_RESULT_SIZE;
   }
 
+  @Override
+  public String withFetchLimit(int limit)
+  {
+    return String.format("LIMIT %d", limit);
+  }
+
   protected boolean canUpsert(Handle handle) throws SQLException
   {
     if (canUpsert == null) {

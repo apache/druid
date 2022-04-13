@@ -22,8 +22,8 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 
-public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType, TaskRunnerWorkerItem>
-    extends SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType, TaskRunnerWorkerItem>
+public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
+    extends SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
 {
   public PostgreSQLMetadataStorageActionHandler(
       SQLMetadataConnector connector,

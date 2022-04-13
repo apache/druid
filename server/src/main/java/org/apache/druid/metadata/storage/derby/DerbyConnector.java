@@ -115,6 +115,12 @@ public class DerbyConnector extends SQLMetadataConnector
   }
 
   @Override
+  public String withFetchLimit(int limit)
+  {
+    return String.format("FETCH NEXT %d ROWS ONLY", limit);
+  }
+
+  @Override
   public void exportTable(
       String tableName,
       String outputPath

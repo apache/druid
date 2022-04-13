@@ -212,6 +212,12 @@ public class SQLServerConnector extends SQLMetadataConnector
         .isEmpty();
   }
 
+  @Override
+  public String withFetchLimit(int limit)
+  {
+    return String.format("FETCH NEXT %d ROWS ONLY", limit);
+  }
+
   /**
    *
    * {@inheritDoc}

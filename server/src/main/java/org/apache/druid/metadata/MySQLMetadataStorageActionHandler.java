@@ -21,8 +21,8 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class MySQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType, TaskRunnerWorkItem>
-    extends SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType, TaskRunnerWorkItem>
+public class MySQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
+    extends SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
 {
   MySQLMetadataStorageActionHandler(
       SQLMetadataConnector connector,

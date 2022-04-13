@@ -21,7 +21,6 @@ package org.apache.druid.metadata;
 
 import com.google.common.base.Optional;
 import org.apache.druid.indexer.TaskInfo;
-import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.joda.time.DateTime;
 
@@ -31,7 +30,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType, TaskRunnerWorkItem>
+public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
 {
   /**
    * Creates a new entry.
@@ -42,6 +41,8 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param entry object representing this entry
    * @param active active or inactive flag
    * @param status status object associated wit this object, can be null
+   * @param type entry type
+   * @param groupId entry group id
    * @throws EntryExistsException
    */
   void insert(
@@ -50,20 +51,10 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
       @NotNull String dataSource,
       @NotNull EntryType entry,
       boolean active,
-      @Nullable StatusType status
-  ) throws EntryExistsException;
-
-  void insertTask(
-      @NotNull String id,
-      @NotNull DateTime timestamp,
-      @NotNull String dataSource,
-      @NotNull EntryType entry,
+      @Nullable StatusType status,
       @NotNull String type,
-      @NotNull String groupId,
-      boolean active,
-      @Nullable StatusType status
+      @NotNull String groupId
   ) throws EntryExistsException;
-
 
   /**
    * Sets or updates the status for any active entry with the given id.
@@ -96,24 +87,6 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   TaskInfo<EntryType, StatusType> getTaskInfo(String entryId);
 
   /**
-   * Returns a list of {@link TaskStatusPlus} from metadata store matching the given filters.
-   *
-   * If {@code taskLookups} includes {@link TaskLookupType#ACTIVE}, it returns all active tasks in the metadata store.
-   * If {@code taskLookups} includes {@link TaskLookupType#COMPLETE}, it returns all complete tasks in the metadata
-   * store. For complete tasks, additional filters in {@code CompleteTaskLookup} can be applied.
-   * All lookups should be processed atomically if there are more than one lookup is given.
-   *
-   * @param taskLookups task lookup type and filters.
-   * @param datasource  datasource filter
-   * @param runnerWorkItems map of id to work items for running tasks
-   */
-  List<TaskStatusPlus> getTaskStatusPlusList(
-      Map<TaskLookupType, TaskLookup> taskLookups,
-      @Nullable String datasource,
-      Map<String, ? extends TaskRunnerWorkItem> runnerWorkItems
-  );
-
-  /**
    * Returns a list of {@link TaskInfo} from metadata store that matches to the given filters.
    *
    * If {@code taskLookups} includes {@link TaskLookupType#ACTIVE}, it returns all active tasks in the metadata store.
@@ -130,19 +103,25 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   );
 
   /**
-   * Returns a list of {@link TaskInfo} from metadata store that matches to the given filters.
+   * Returns a list of {@link TaskInfo} from metadata store that matches the given filters.
    *
    * If {@code taskLookups} includes {@link TaskLookupType#ACTIVE}, it returns all active tasks in the metadata store.
    * If {@code taskLookups} includes {@link TaskLookupType#COMPLETE}, it returns all complete tasks in the metadata
    * store. For complete tasks, additional filters in {@code CompleteTaskLookup} can be applied.
    * All lookups should be processed atomically if there are more than one lookup is given.
    *
+   * taskMigrationComplete indicates if migration was completed before the time of calling.
+   * If yes, use the newly created type and group_id columns in the query for task summaries
+   * Else, fetch the payload and deserialize it to obtain the above fields
+   *
    * @param taskLookups task lookup type and filters.
    * @param datasource  datasource filter
+   * @param taskMigrationComplete indicates which query to use based on migration status
    */
   List<TaskInfo<Map<String, String>, StatusType>> getTaskSummaryList(
       Map<TaskLookupType, TaskLookup> taskLookups,
-      @Nullable String datasource
+      @Nullable String datasource,
+      boolean taskMigrationComplete
   );
 
   default List<TaskInfo<EntryType, StatusType>> getTaskInfos(

@@ -53,7 +53,7 @@ public class SQLMetadataStorageActionHandlerTest
   public final ExpectedException thrown = ExpectedException.none();
 
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
-  private SQLMetadataStorageActionHandler<Map<String, Integer>, Map<String, Integer>, Map<String, String>, Map<String, Integer>, Map<String, String>> handler;
+  private SQLMetadataStorageActionHandler<Map<String, Integer>, Map<String, Integer>, Map<String, String>, Map<String, Integer>> handler;
 
   @Before
   public void setUp()
@@ -65,7 +65,7 @@ public class SQLMetadataStorageActionHandlerTest
     final String logTable = "logs";
     final String lockTable = "locks";
 
-    connector.createEntryTable(entryTable);
+    connector.prepareEntryTable(entryTable);
     connector.createLockTable(lockTable, entryType);
     connector.createLogTable(logTable, entryType);
 
@@ -120,7 +120,7 @@ public class SQLMetadataStorageActionHandlerTest
 
     final String entryId = "1234";
 
-    handler.insert(entryId, DateTimes.of("2014-01-02T00:00:00.123"), "testDataSource", entry, true, null);
+    handler.insert(entryId, DateTimes.of("2014-01-02T00:00:00.123"), "testDataSource", entry, true, null, "type", "group");
 
     Assert.assertEquals(
         Optional.of(entry),
@@ -198,7 +198,7 @@ public class SQLMetadataStorageActionHandlerTest
       final Map<String, Integer> entry = ImmutableMap.of("a", i);
       final Map<String, Integer> status = ImmutableMap.of("count", i * 10);
 
-      handler.insert(entryId, DateTimes.of(StringUtils.format("2014-01-%02d", i)), "test", entry, false, status);
+      handler.insert(entryId, DateTimes.of(StringUtils.format("2014-01-%02d", i)), "test", entry, false, status, "type", "group");
     }
 
     final List<TaskInfo<Map<String, Integer>, Map<String, Integer>>> statuses = handler.getTaskInfos(
@@ -223,7 +223,7 @@ public class SQLMetadataStorageActionHandlerTest
       final Map<String, Integer> entry = ImmutableMap.of("a", i);
       final Map<String, Integer> status = ImmutableMap.of("count", i * 10);
 
-      handler.insert(entryId, DateTimes.of(StringUtils.format("2014-01-%02d", i)), "test", entry, false, status);
+      handler.insert(entryId, DateTimes.of(StringUtils.format("2014-01-%02d", i)), "test", entry, false, status, "type", "group");
     }
 
     final List<TaskInfo<Map<String, Integer>, Map<String, Integer>>> statuses = handler.getTaskInfos(
@@ -247,10 +247,10 @@ public class SQLMetadataStorageActionHandlerTest
     Map<String, Integer> entry = ImmutableMap.of("a", 1);
     Map<String, Integer> status = ImmutableMap.of("count", 42);
 
-    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group");
 
     thrown.expect(EntryExistsException.class);
-    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group");
   }
 
   @Test
@@ -260,7 +260,7 @@ public class SQLMetadataStorageActionHandlerTest
     Map<String, Integer> entry = ImmutableMap.of("a", 1);
     Map<String, Integer> status = ImmutableMap.of("count", 42);
 
-    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group");
 
     Assert.assertEquals(
         ImmutableList.of(),
@@ -292,7 +292,7 @@ public class SQLMetadataStorageActionHandlerTest
     Map<String, Integer> entry = ImmutableMap.of("a", 1);
     Map<String, Integer> status = ImmutableMap.of("count", 42);
 
-    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group");
 
     Assert.assertEquals(
         ImmutableMap.<Long, Map<String, Integer>>of(),
@@ -337,7 +337,7 @@ public class SQLMetadataStorageActionHandlerTest
     Map<String, Integer> entry = ImmutableMap.of("a", 1);
     Map<String, Integer> status = ImmutableMap.of("count", 42);
 
-    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group");
 
     Assert.assertEquals(
         ImmutableMap.<Long, Map<String, Integer>>of(),
@@ -367,7 +367,7 @@ public class SQLMetadataStorageActionHandlerTest
     Map<String, Integer> entry = ImmutableMap.of("a", 1);
     Map<String, Integer> status = ImmutableMap.of("count", 42);
 
-    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group");
 
     Assert.assertEquals(
         ImmutableMap.<Long, Map<String, Integer>>of(),
@@ -394,19 +394,19 @@ public class SQLMetadataStorageActionHandlerTest
     final String entryId1 = "1234";
     Map<String, Integer> entry1 = ImmutableMap.of("numericId", 1234);
     Map<String, Integer> status1 = ImmutableMap.of("count", 42, "temp", 1);
-    handler.insert(entryId1, DateTimes.of("2014-01-01T00:00:00.123"), "testDataSource", entry1, false, status1);
+    handler.insert(entryId1, DateTimes.of("2014-01-01T00:00:00.123"), "testDataSource", entry1, false, status1, "type", "group");
     Assert.assertTrue(handler.addLog(entryId1, ImmutableMap.of("logentry", "created")));
 
     final String entryId2 = "ABC123";
     Map<String, Integer> entry2 = ImmutableMap.of("a", 1);
     Map<String, Integer> status2 = ImmutableMap.of("count", 42);
-    handler.insert(entryId2, DateTimes.of("2014-01-01T00:00:00.123"), "test", entry2, true, status2);
+    handler.insert(entryId2, DateTimes.of("2014-01-01T00:00:00.123"), "test", entry2, true, status2, "type", "group");
     Assert.assertTrue(handler.addLog(entryId2, ImmutableMap.of("logentry", "created")));
 
     final String entryId3 = "DEF5678";
     Map<String, Integer> entry3 = ImmutableMap.of("numericId", 5678);
     Map<String, Integer> status3 = ImmutableMap.of("count", 21, "temp", 2);
-    handler.insert(entryId3, DateTimes.of("2014-01-02T12:00:00.123"), "testDataSource", entry3, false, status3);
+    handler.insert(entryId3, DateTimes.of("2014-01-02T12:00:00.123"), "testDataSource", entry3, false, status3, "type", "group");
     Assert.assertTrue(handler.addLog(entryId3, ImmutableMap.of("logentry", "created")));
 
     Assert.assertEquals(Optional.of(entry1), handler.getEntry(entryId1));

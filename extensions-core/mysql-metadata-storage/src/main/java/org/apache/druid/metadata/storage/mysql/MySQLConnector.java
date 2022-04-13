@@ -178,6 +178,12 @@ public class MySQLConnector extends SQLMetadataConnector
   }
 
   @Override
+  public String withFetchLimit(int limit)
+  {
+    return String.format("LIMIT %d", limit);
+  }
+
+  @Override
   public boolean tableExists(Handle handle, String tableName)
   {
     String databaseCharset = handle

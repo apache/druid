@@ -83,11 +83,11 @@ public interface MetadataStorageConnector
 
   void createTaskTables();
 
-  void createNewTaskTables();
-
   void createAuditTable();
 
   void createSupervisorsTable();
+
+  boolean migrateTaskTable() throws Exception;
 
   void deleteAllRecords(String tableName);
 }

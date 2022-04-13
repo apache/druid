@@ -171,6 +171,12 @@ public class SQLMetadataConnectorTest
     }
 
     @Override
+    public String withFetchLimit(int limit)
+    {
+      return "";
+    }
+
+    @Override
     public String getQuoteString()
     {
       return null;

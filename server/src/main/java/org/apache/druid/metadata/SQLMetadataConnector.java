@@ -45,6 +45,7 @@ import org.skife.jdbi.v2.util.ByteArrayMapper;
 import org.skife.jdbi.v2.util.IntegerMapper;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -55,6 +56,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 
 public abstract class SQLMetadataConnector implements MetadataStorageConnector
@@ -133,6 +135,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   public abstract boolean tableExists(Handle handle, String tableName);
+
+  public abstract String withFetchLimit(int limit);
 
   public <T> T retryWithHandle(
       final HandleCallback<T> callback,
@@ -332,102 +336,22 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         )
     );
   }
-
-  public void createNewEntryTable(final String tableName)
-  {
-    try {
-      retryWithHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws SQLException
-            {
-              if (!tableExists(handle, tableName)) {
-                log.info("Creating table[%s]", tableName);
-                List<String> sql = ImmutableList.of(
-                    StringUtils.format(
-                        "CREATE TABLE %1$s (\n"
-                        + "  id VARCHAR(255) NOT NULL,\n"
-                        + "  created_date VARCHAR(255) NOT NULL,\n"
-                        + "  datasource VARCHAR(255) %3$s NOT NULL,\n"
-                        + "  payload %2$s NOT NULL,\n"
-                        + "  status_payload %2$s NOT NULL,\n"
-                        + "  active BOOLEAN NOT NULL DEFAULT FALSE,\n"
-                        + "  PRIMARY KEY (id)\n"
-                        + ")",
-                        tableName, getPayloadType(), getCollation()
-                    ),
-                    StringUtils.format("CREATE INDEX idx_%1$s_active_created_date ON %1$s(active, created_date)",
-                                       tableName)
-                );
-                final Batch batch = handle.createBatch();
-                for (String s : sql) {
-                  batch.add(s);
-                }
-                batch.execute();
-              } else {
-                log.info("Table[%s] already exists", tableName);
-              }
-
-              if (!tableContainsColumn(handle, tableName, "type")) {
-                Connection connection = handle.getConnection();
-
-                log.info("Table schema of [%s] is being altered", tableName);
-
-                Statement statement = connection.createStatement();
-                statement.execute(StringUtils.format("ALTER TABLE %1$s ADD COLUMN type VARCHAR(255)", tableName));
-                statement.execute(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255)", tableName));
-
-                connection.setAutoCommit(false);
-                try {
-                  log.info("Populate fields task and group_id of [%s] from payload", tableName);
-                  ObjectMapper objectMapper = new ObjectMapper();
-                  statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_UPDATABLE);
-                  String prevId = "''";
-                  while (prevId != null) {
-                    String sql = StringUtils.format(
-                        "SELECT * FROM %1$s WHERE id > %2$s ORDER BY id LIMIT 100",
-                        tableName,
-                        prevId
-                    );
-                    ResultSet resultSet = statement.executeQuery(sql);
-                    prevId = null;
-                    while (resultSet.next()) {
-                      ObjectNode payload = objectMapper.readValue(resultSet.getBytes("payload"), ObjectNode.class);
-                      resultSet.updateString("type", payload.get("type").asText());
-                      resultSet.updateString("group_id", payload.get("groupId").asText());
-                      prevId = "'" + resultSet.getString("id") + "'";
-                      resultSet.updateRow();
-                    }
-                  }
-                  connection.commit();
-                }
-                catch (Exception e) {
-                  connection.rollback();
-                  statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_UPDATABLE);
-                  statement.execute(StringUtils.format("ALTER TABLE %1$s DROP COLUMN type", tableName));
-                  statement.execute(StringUtils.format("ALTER TABLE %1$s DROP COLUMN group_id", tableName));
-                  throw new SQLException(e);
-                }
-                finally {
-                  connection.close();
-                }
-              }
-              return null;
-            }
-          }
-      );
-    }
-    catch (Exception e) {
-      log.error(e, "Exception preparing table");
-    }
-  }
-
+  
   public boolean tableContainsColumn(Handle handle, String table, String column) throws SQLException
   {
     DatabaseMetaData databaseMetaData = handle.getConnection().getMetaData();
-    ResultSet columns = databaseMetaData.getColumns(null, null, table.toUpperCase(), column.toUpperCase());
+    ResultSet columns = databaseMetaData.getColumns(null,
+                                                    null,
+                                                    table.toUpperCase(Locale.ENGLISH),
+                                                    column.toUpperCase(Locale.ENGLISH)
+    );
     return columns.next();
+  }
+  
+  public void prepareEntryTable(final String tableName)
+  {
+    createEntryTable(tableName);
+    alterEntryTable(tableName);
   }
 
   public void createEntryTable(final String tableName)
@@ -450,6 +374,77 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             StringUtils.format("CREATE INDEX idx_%1$s_active_created_date ON %1$s(active, created_date)", tableName)
         )
     );
+  }
+
+  public void alterEntryTable(final String tableName)
+  {
+    try {
+      retryWithHandle(
+          new HandleCallback<Void>()
+          {
+            @Override
+            public Void withHandle(Handle handle)
+            {
+              log.info("Altering table[%s]", tableName);
+              final Batch batch = handle.createBatch();
+              batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN type VARCHAR(255)", tableName));
+              batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255)", tableName));
+              batch.execute();
+              return null;
+            }
+          }
+      );
+    }
+    catch (Exception e) {
+      log.warn(e, "Exception altering table");
+    }
+  }
+
+  @Override
+  public boolean migrateTaskTable()
+  {
+    final MetadataStorageTablesConfig tablesConfig = tablesConfigSupplier.get();
+    final String entryType = tablesConfig.getTaskEntryType();
+    final String tableName = tablesConfig.getEntryTable(entryType);
+    log.info("Populate fields task and group_id of task entry table [%s] from payload", tableName);
+    try {
+      retryWithHandle(
+          new HandleCallback<Void>()
+          {
+            @Override
+            public Void withHandle(Handle handle) throws SQLException, IOException
+            {
+              ObjectMapper objectMapper = new ObjectMapper();
+              Connection connection = handle.getConnection();
+              Statement statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_UPDATABLE);
+              String prevId = "''";
+              while (prevId != null) {
+                String sql = StringUtils.format(
+                    "SELECT * FROM %1$s WHERE id > %2$s AND active = false AND type IS null ORDER BY id ASC %3$s",
+                    tableName,
+                    prevId,
+                    withFetchLimit(100)
+                );
+                ResultSet resultSet = statement.executeQuery(sql);
+                prevId = null;
+                while (resultSet.next()) {
+                  ObjectNode payload = objectMapper.readValue(resultSet.getBytes("payload"), ObjectNode.class);
+                  resultSet.updateString("type", payload.get("type").asText());
+                  resultSet.updateString("group_id", payload.get("groupId").asText());
+                  prevId = "'" + resultSet.getString("id") + "'";
+                  resultSet.updateRow();
+                }
+              }
+              return null;
+            }
+          }
+      );
+      return true;
+    }
+    catch (Exception e) {
+      log.warn(e, "Exception migrating task table [%s]", tableName);
+      return false;
+    }
   }
 
   public void createLogTable(final String tableName, final String entryTypeName)
@@ -680,19 +675,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     if (config.get().isCreateTables()) {
       final MetadataStorageTablesConfig tablesConfig = tablesConfigSupplier.get();
       final String entryType = tablesConfig.getTaskEntryType();
-      createEntryTable(tablesConfig.getEntryTable(entryType));
-      createLogTable(tablesConfig.getLogTable(entryType), entryType);
-      createLockTable(tablesConfig.getLockTable(entryType), entryType);
-    }
-  }
-
-  @Override
-  public void createNewTaskTables()
-  {
-    if (config.get().isCreateTables()) {
-      final MetadataStorageTablesConfig tablesConfig = tablesConfigSupplier.get();
-      final String entryType = tablesConfig.getTaskEntryType();
-      createNewEntryTable(tablesConfig.getEntryTable(entryType));
+      prepareEntryTable(tablesConfig.getEntryTable(entryType));
       createLogTable(tablesConfig.getLogTable(entryType), entryType);
       createLockTable(tablesConfig.getLockTable(entryType), entryType);
     }
