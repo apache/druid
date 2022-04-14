@@ -122,7 +122,6 @@ public class SegmentsCostCache
       Comparator.comparing(Bucket::getInterval, Comparators.intervalsByStartThenEnd());
 
   private static final Ordering<Interval> INTERVAL_ORDERING = Ordering.from(Comparators.intervalsByStartThenEnd());
-  private static final Ordering<DataSegment> SEGMENT_ORDERING = Ordering.from(SEGMENT_INTERVAL_COMPARATOR);
   private static final Ordering<Bucket> BUCKET_ORDERING = Ordering.from(BUCKET_INTERVAL_COMPARATOR);
 
   private final ArrayList<Bucket> sortedBuckets;
@@ -221,6 +220,13 @@ public class SegmentsCostCache
     private final double[] leftSum;
     private final double[] rightSum;
 
+    private final double[] cumStart;
+    private final double[] cumStartExp;
+    private final double[] cumStartExpInv;
+    private final double[] cumEnd;
+    private final double[] cumEndExp;
+    private final double[] cumEndExpInv;
+
     Bucket(Interval interval, ArrayList<Interval> sortedIntervals, double[] leftSum, double[] rightSum)
     {
       this.interval = Preconditions.checkNotNull(interval, "interval");
@@ -233,6 +239,26 @@ public class SegmentsCostCache
           interval.getStart().minus(LIFE_THRESHOLD),
           interval.getEnd().plus(LIFE_THRESHOLD)
       );
+
+      int n = leftSum.length;
+
+      cumStart = new double[n + 1];
+      cumStartExp = new double[n + 1];
+      cumStartExpInv = new double[n + 1];
+      cumEnd = new double[n + 1];
+      cumEndExp = new double[n + 1];
+      cumEndExpInv = new double[n + 1];
+      for (int i = 0; i < n; i++) {
+        double start = convertStart(sortedIntervals.get(i), interval);
+        cumStart[i + 1] = cumStart[i] + start;
+        cumStartExp[i + 1] = cumStartExp[i] + FastMath.exp(start);
+        cumStartExpInv[i + 1] = cumStartExpInv[i] + FastMath.exp(-start);
+
+        double end = convertEnd(sortedIntervals.get(i), interval);
+        cumEnd[i + 1] = cumEnd[i] + end;
+        cumEndExp[i + 1] = cumEndExp[i] + FastMath.exp(end);
+        cumEndExpInv[i + 1] = cumEndExpInv[i] + FastMath.exp(-end);
+      }
     }
 
     Interval getInterval()
@@ -245,7 +271,7 @@ public class SegmentsCostCache
       return calculationInterval.overlaps(dataSegment.getInterval());
     }
 
-    double cost(DataSegment dataSegment)
+    double costOld(DataSegment dataSegment)
     {
       // cost is calculated relatively to bucket start (which is considered as 0)
       double t0 = convertStart(dataSegment.getInterval(), interval);
@@ -258,10 +284,10 @@ public class SegmentsCostCache
 
       int index = Collections.binarySearch(sortedIntervals, dataSegment.getInterval(), INTERVAL_COMPARATOR);
       index = (index >= 0) ? index : -index - 1;
-      return addLeftCost(dataSegment, t0, t1, index) + rightCost(dataSegment, t0, t1, index);
+      return leftCostOld(dataSegment, t0, t1, index) + rightCostOld(dataSegment, t0, t1, index);
     }
 
-    private double addLeftCost(DataSegment dataSegment, double t0, double t1, int index)
+    private double leftCostOld(DataSegment dataSegment, double t0, double t1, int index)
     {
       double leftCost = 0.0;
       // add to cost all left-overlapping segments
@@ -280,7 +306,7 @@ public class SegmentsCostCache
       return leftCost;
     }
 
-    private double rightCost(DataSegment dataSegment, double t0, double t1, int index)
+    private double rightCostOld(DataSegment dataSegment, double t0, double t1, int index)
     {
       double rightCost = 0.0;
       // add all right-overlapping segments
@@ -297,6 +323,100 @@ public class SegmentsCostCache
         rightCost += rightSum[rightIndex] * (FastMath.exp(t0) - FastMath.exp(t1));
       }
       return rightCost;
+    }
+
+    double cost(DataSegment dataSegment)
+    {
+      // cost is calculated relatively to bucket start (which is considered as 0)
+      double t0 = convertStart(dataSegment.getInterval(), interval);
+      double t1 = convertEnd(dataSegment.getInterval(), interval);
+
+      // avoid calculation for segments outside of LIFE_THRESHOLD
+      if (!inCalculationInterval(dataSegment)) {
+        throw new ISE("Segment is not within calculation interval");
+      }
+
+      int index = Collections.binarySearch(sortedIntervals, dataSegment.getInterval(), INTERVAL_COMPARATOR);
+      index = (index >= 0) ? index : -index - 1;
+      return leftCostOld(dataSegment, t0, t1, index) + rightCostOld(dataSegment, t0, t1, index);
+    }
+
+    private double leftCost(DataSegment dataSegment, double t0, double t1, int index)
+    {
+      if (index - 1 < 0) {
+        return 0;
+      }
+      double exp0 = FastMath.exp(t0);
+      double expInv0 = 1 / exp0;
+      double exp1 = FastMath.exp(t1);
+      double expInv1 = 1 / exp1;
+      double leftCost = 0.0;
+      // add to cost all left-overlapping segments
+      int rightBound = index - 1;
+      int leftBound = leftBoundary(0, index - 1, dataSegment.getInterval());
+      leftCost += 2 * (cumEnd[rightBound + 1] - cumEnd[leftBound]);
+      leftCost -= 2 * (rightBound - leftBound + 1) * t0;
+      leftCost += expInv1 * (cumStartExp[rightBound + 1] - cumStartExp[leftBound]);
+      leftCost += exp0 * (cumEndExpInv[rightBound + 1] - cumEndExpInv[leftBound]);
+      leftCost -= expInv0 * (cumStartExp[rightBound + 1] - cumStartExp[leftBound]);
+      leftCost -= expInv1 * (cumEndExp[rightBound + 1] - cumEndExp[leftBound]);
+      // add left-non-overlapping segments
+      if (leftBound > 0) {
+        leftCost += leftSum[leftBound - 1] * (expInv1 - expInv0);
+      }
+      return leftCost;
+    }
+
+    private double rightCost(DataSegment dataSegment, double t0, double t1, int index)
+    {
+      int n = leftSum.length;
+      if (index >= n) {
+        return 0;
+      }
+      double exp0 = FastMath.exp(t0);
+      double exp1 = FastMath.exp(t1);
+      double expInv1 = 1 / exp1;
+      double rightCost = 0.0;
+      int leftBound = index;
+      int rightBound = rightBoundary(index, n - 1, dataSegment.getInterval());
+      // add all right-overlapping segments
+      rightCost += 2 * (rightBound - leftBound + 1) * t1;
+      rightCost -= 2 * (cumStart[rightBound + 1] - cumStart[leftBound]);
+      rightCost += exp0 * (cumEndExpInv[rightBound + 1] - cumEndExpInv[leftBound]);
+      rightCost += expInv1 * (cumStartExp[rightBound + 1] - cumStartExp[leftBound]);
+      rightCost -= exp0 * (cumStartExpInv[rightBound + 1] - cumStartExpInv[leftBound]);
+      rightCost -= exp1 * (cumEndExpInv[rightBound + 1] - cumEndExpInv[leftBound]);
+      // add right-non-overlapping segments
+      if (rightBound + 1 < n) {
+        rightCost += rightSum[rightBound + 1] * (exp0 - exp1);
+      }
+      return rightCost;
+    }
+
+    private int leftBoundary(int l, int r, Interval interval)
+    {
+      if (l == r) {
+        return interval.overlaps(sortedIntervals.get(l)) ? l : r + 1;
+      }
+      int m = (l + r) / 2;
+      if (interval.overlaps(sortedIntervals.get(m))) {
+        return leftBoundary(l, m, interval);
+      } else {
+        return leftBoundary(m + 1, r, interval);
+      }
+    }
+
+    private int rightBoundary(int l, int r, Interval interval)
+    {
+      if (l == r) {
+        return interval.overlaps(sortedIntervals.get(r)) ? r : l - 1;
+      }
+      int m = (l + r + 1) / 2;
+      if (interval.overlaps(sortedIntervals.get(m))) {
+        return rightBoundary(m, r, interval);
+      } else {
+        return rightBoundary(l, m - 1, interval);
+      }
     }
 
     private static double convertStart(Interval interval, Interval reference)
