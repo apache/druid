@@ -22,7 +22,6 @@ package org.apache.druid.query;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
-import org.apache.druid.query.QueryContext;
 import org.junit.Assert;
 import org.junit.Test;
 
