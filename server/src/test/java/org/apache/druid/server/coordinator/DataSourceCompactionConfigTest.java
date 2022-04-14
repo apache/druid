@@ -461,7 +461,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        new UserCompactionTaskIOConfig(true),
+        new UserCompactionTaskIOConfig(true, null),
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -492,7 +492,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        new UserCompactionTaskIOConfig(null),
+        new UserCompactionTaskIOConfig(null, null),
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);

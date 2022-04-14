@@ -88,7 +88,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       @Nullable ClientCompactionTaskDimensionsSpec dimensionsSpec,
       @Nullable AggregatorFactory[] metricsSpec,
       @Nullable ClientCompactionTaskTransformSpec transformSpec,
-      @Nullable Boolean dropExisting,
+      @Nullable ClientCompactionIOConfig clientCompactionIOConfig,
       @Nullable Map<String, Object> context
   )
   {
@@ -104,11 +104,10 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
     context.put("priority", compactionTaskPriority);
 
     final String taskId = IdUtils.newTaskId(idPrefix, ClientCompactionTaskQuery.TYPE, dataSource, null);
-    final Granularity segmentGranularity = granularitySpec == null ? null : granularitySpec.getSegmentGranularity();
     final ClientTaskQuery taskQuery = new ClientCompactionTaskQuery(
         taskId,
         dataSource,
-        new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments, segmentGranularity), dropExisting),
+        clientCompactionIOConfig,
         tuningConfig,
         granularitySpec,
         dimensionsSpec,

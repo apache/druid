@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.duty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.commons.lang.ArrayUtils;
@@ -85,6 +86,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   private final Map<String, DataSourceCompactionConfig> compactionConfigs;
   private final Map<String, CompactionStatistics> compactedSegments = new HashMap<>();
   private final Map<String, CompactionStatistics> skippedSegments = new HashMap<>();
+  // original input datasource -> schema of materized view table
+  private final Map<String, List<DataSourceCompactionConfig>> materizedViewConfigMap = new HashMap<>();
+  private final Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
 
   // dataSource -> intervalToFind
   // searchIntervals keeps track of the current state of which interval should be considered to search segments to
@@ -102,13 +106,22 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
   NewestSegmentFirstIterator(
       ObjectMapper objectMapper,
-      Map<String, DataSourceCompactionConfig> compactionConfigs,
+      Map<String, DataSourceCompactionConfig> allCompactionConfigs,
       Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources,
       Map<String, List<Interval>> skipIntervals
   )
   {
     this.objectMapper = objectMapper;
-    this.compactionConfigs = compactionConfigs;
+    this.compactionConfigs = new HashMap<>();
+    for (Map.Entry<String, DataSourceCompactionConfig> configEntry : allCompactionConfigs.entrySet()) {
+      DataSourceCompactionConfig compactionConfig = configEntry.getValue();
+      if (compactionConfig.getIoConfig() != null && compactionConfig.getIoConfig().getInputDataSource() != null && !compactionConfig.getIoConfig().getInputDataSource().equals(compactionConfig.getDataSource())) {
+        materizedViewConfigMap.computeIfAbsent(compactionConfig.getIoConfig().getInputDataSource(), k -> new ArrayList<>()).add(compactionConfig);
+      } else {
+        compactionConfigs.put(configEntry.getKey(), compactionConfig);
+      }
+    }
+    this.dataSources = dataSources;
     this.timelineIterators = Maps.newHashMapWithExpectedSize(dataSources.size());
 
     dataSources.forEach((String dataSource, VersionedIntervalTimeline<String, DataSegment> timeline) -> {
@@ -214,7 +227,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
     final String dataSource = resultSegments.get(0).getDataSource();
 
-    updateQueue(dataSource, compactionConfigs.get(dataSource));
+    if (compactionConfigs.containsKey(dataSource)) {
+      updateQueue(dataSource, compactionConfigs.get(dataSource));
+    }
 
     return resultSegments;
   }
@@ -235,14 +250,17 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       return;
     }
 
-    final SegmentsToCompact segmentsToCompact = findSegmentsToCompact(
+    final List<SegmentsToCompact> segmentsToCompactList = findSegmentsToCompact(
         dataSourceName,
         compactibleTimelineObjectHolderCursor,
         config
     );
 
-    if (!segmentsToCompact.isEmpty()) {
-      queue.add(new QueueEntry(segmentsToCompact.segments));
+    for (SegmentsToCompact segmentsToCompact : segmentsToCompactList)
+    {
+      if (!segmentsToCompact.isEmpty()) {
+        queue.add(new QueueEntry(segmentsToCompact.segments));
+      }
     }
   }
 
@@ -518,7 +536,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
    *
    * @return segments to compact
    */
-  private SegmentsToCompact findSegmentsToCompact(
+  private List<SegmentsToCompact> findSegmentsToCompact(
       final String dataSourceName,
       final CompactibleTimelineObjectHolderCursor compactibleTimelineObjectHolderCursor,
       final DataSourceCompactionConfig config
@@ -527,6 +545,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     final long inputSegmentSize = config.getInputSegmentSizeBytes();
 
     while (compactibleTimelineObjectHolderCursor.hasNext()) {
+      List<SegmentsToCompact> segmentsToCompactList = new ArrayList<>();
       List<DataSegment> segments = compactibleTimelineObjectHolderCursor.next();
       final SegmentsToCompact candidates = new SegmentsToCompact(segments);
       if (!candidates.isEmpty()) {
@@ -546,7 +565,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
             }
             intervalsCompacted.add(interval);
           }
-          return candidates;
+          segmentsToCompactList.add(candidates);
         } else {
           if (!needsCompaction) {
             // Collect statistic for segments that is already compacted
@@ -565,12 +584,60 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
             );
           }
         }
+
+        if (materizedViewConfigMap.containsKey(dataSourceName)) {
+          for (DataSourceCompactionConfig materizedViewConfig : materizedViewConfigMap.get(dataSourceName)) {
+            String materizedViewDatasource = materizedViewConfig.getDataSource();
+            // materizedViewDatasource does not exist
+            if (!dataSources.containsKey(materizedViewDatasource)) {
+              List<DataSegment> segmentsTransformed = new ArrayList<>();
+              for (DataSegment segment : segments) {
+                segmentsTransformed.add(new DataSegment(materizedViewDatasource, segment.getInterval(), segment.getVersion(), segment.getLoadSpec(), segment.getDimensions(), segment.getMetrics(), segment.getShardSpec(), segment.getLastCompactionState(), segment.getBinaryVersion(), segment.getSize()));
+              }
+              segmentsToCompactList.add(new SegmentsToCompact(segmentsTransformed));
+              continue;
+            }
+            VersionedIntervalTimeline<String, DataSegment> timeline = dataSources.get(materizedViewDatasource);
+            Interval interval = JodaUtils.umbrellaInterval(segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()));
+            if (materizedViewConfig.getGranularitySpec() != null && materizedViewConfig.getGranularitySpec().getSegmentGranularity() != null) {
+              interval = JodaUtils.umbrellaInterval(materizedViewConfig.getGranularitySpec().getSegmentGranularity().getIterable(interval));
+            }
+            Set<DataSegment> segmentsInMaterizedViewDatasource = timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
+            // interval in materizedViewDatasource does not exist
+            if (segmentsInMaterizedViewDatasource.isEmpty()) {
+              List<DataSegment> segmentsTransformed = new ArrayList<>();
+              for (DataSegment segment : segments) {
+                segmentsTransformed.add(new DataSegment(materizedViewDatasource, segment.getInterval(), segment.getVersion(), segment.getLoadSpec(), segment.getDimensions(), segment.getMetrics(), segment.getShardSpec(), segment.getLastCompactionState(), segment.getBinaryVersion(), segment.getSize()));
+              }
+              segmentsToCompactList.add(new SegmentsToCompact(segmentsTransformed));
+              continue;
+            }
+            // if current schema same as new schema?
+            final boolean materizedViewNeedsCompaction = needsCompaction(
+                materizedViewConfig,
+                new SegmentsToCompact(new ArrayList<>(segmentsInMaterizedViewDatasource))
+            );
+            if (materizedViewNeedsCompaction) {
+              List<DataSegment> segmentsTransformed = new ArrayList<>();
+              for (DataSegment segment : segments) {
+                segmentsTransformed.add(new DataSegment(materizedViewDatasource, segment.getInterval(), segment.getVersion(), segment.getLoadSpec(), segment.getDimensions(), segment.getMetrics(), segment.getShardSpec(), segment.getLastCompactionState(), segment.getBinaryVersion(), segment.getSize()));
+              }
+              segmentsToCompactList.add(new SegmentsToCompact(segmentsTransformed));
+              continue;
+            }
+            //TODO if interval exist, check if original datasource changed?
+
+          }
+        }
+        if (!segmentsToCompactList.isEmpty()) {
+          return segmentsToCompactList;
+        }
       } else {
         throw new ISE("No segment is found?");
       }
     }
     log.info("All segments look good! Nothing to compact");
-    return new SegmentsToCompact();
+    return ImmutableList.of(new SegmentsToCompact());
   }
 
   private void collectSegmentStatistics(

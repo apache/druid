@@ -884,6 +884,7 @@ public class CompactionTaskTest
   public void testCreateIngestionSchema() throws IOException, SegmentLoadingException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -958,6 +959,7 @@ public class CompactionTaskTest
         null
     );
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1033,6 +1035,7 @@ public class CompactionTaskTest
         null
     );
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1108,6 +1111,7 @@ public class CompactionTaskTest
         null
     );
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1173,6 +1177,7 @@ public class CompactionTaskTest
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1218,6 +1223,7 @@ public class CompactionTaskTest
     };
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1256,6 +1262,7 @@ public class CompactionTaskTest
   public void testCreateIngestionSchemaWithCustomSegments() throws IOException, SegmentLoadingException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(SEGMENTS)),
@@ -1300,6 +1307,7 @@ public class CompactionTaskTest
     // Remove one segment in the middle
     segments.remove(segments.size() / 2);
     CompactionTask.createIngestionSchema(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
@@ -1325,6 +1333,7 @@ public class CompactionTaskTest
     indexIO.removeMetadata(Iterables.getFirst(indexIO.getQueryableIndexMap().keySet(), null));
     final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
     CompactionTask.createIngestionSchema(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
@@ -1362,6 +1371,7 @@ public class CompactionTaskTest
   public void testSegmentGranularityAndNullQueryGranularity() throws IOException, SegmentLoadingException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1401,6 +1411,7 @@ public class CompactionTaskTest
   public void testQueryGranularityAndNullSegmentGranularity() throws IOException, SegmentLoadingException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1438,6 +1449,7 @@ public class CompactionTaskTest
   public void testQueryGranularityAndSegmentGranularityNonNull() throws IOException, SegmentLoadingException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1481,6 +1493,7 @@ public class CompactionTaskTest
   public void testNullGranularitySpec() throws IOException, SegmentLoadingException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1519,6 +1532,7 @@ public class CompactionTaskTest
       throws IOException, SegmentLoadingException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1557,6 +1571,7 @@ public class CompactionTaskTest
       throws IOException, SegmentLoadingException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1582,6 +1597,7 @@ public class CompactionTaskTest
       throws IOException, SegmentLoadingException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),

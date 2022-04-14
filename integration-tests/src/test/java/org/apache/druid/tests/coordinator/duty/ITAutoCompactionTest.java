@@ -1381,7 +1381,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         dimensionsSpec,
         metricsSpec,
         transformSpec,
-        !dropExisting ? null : new UserCompactionTaskIOConfig(true),
+        !dropExisting ? null : new UserCompactionTaskIOConfig(true, null),
         null
     );
     compactionResource.submitCompactionConfig(compactionConfig);

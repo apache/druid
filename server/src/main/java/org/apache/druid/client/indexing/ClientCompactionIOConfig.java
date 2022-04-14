@@ -37,15 +37,18 @@ public class ClientCompactionIOConfig
 
   private final ClientCompactionIntervalSpec inputSpec;
   private final boolean dropExisting;
+  private final String inputDataSource;
 
   @JsonCreator
   public ClientCompactionIOConfig(
       @JsonProperty("inputSpec") ClientCompactionIntervalSpec inputSpec,
-      @JsonProperty("dropExisting") @Nullable Boolean dropExisting
+      @JsonProperty("dropExisting") @Nullable Boolean dropExisting,
+      @JsonProperty("inputDataSource") @Nullable String inputDataSource
   )
   {
     this.inputSpec = inputSpec;
     this.dropExisting = dropExisting == null ? IOConfig.DEFAULT_DROP_EXISTING : dropExisting;
+    this.inputDataSource = inputDataSource;
   }
 
   @JsonProperty
@@ -66,6 +69,12 @@ public class ClientCompactionIOConfig
     return dropExisting;
   }
 
+  @JsonProperty
+  public String getInputDataSource()
+  {
+    return inputDataSource;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -77,13 +86,14 @@ public class ClientCompactionIOConfig
     }
     ClientCompactionIOConfig that = (ClientCompactionIOConfig) o;
     return dropExisting == that.dropExisting &&
-           Objects.equals(inputSpec, that.inputSpec);
+           Objects.equals(inputSpec, that.inputSpec) &&
+           Objects.equals(inputDataSource, that.inputDataSource);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(inputSpec, dropExisting);
+    return Objects.hash(inputSpec, dropExisting, inputDataSource);
   }
 
   @Override
@@ -92,6 +102,7 @@ public class ClientCompactionIOConfig
     return "ClientCompactionIOConfig{" +
            "inputSpec=" + inputSpec +
            ", dropExisting=" + dropExisting +
+           ", inputDataSource='" + inputDataSource + '\'' +
            '}';
   }
 }

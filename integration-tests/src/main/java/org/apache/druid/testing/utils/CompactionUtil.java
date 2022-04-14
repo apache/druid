@@ -73,7 +73,7 @@ public class CompactionUtil
         null,
         null,
         null,
-        new UserCompactionTaskIOConfig(true),
+        new UserCompactionTaskIOConfig(true, null),
         null
     );
   }

@@ -1,3 +1,4 @@
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -806,12 +807,12 @@ public class CompactSegmentsTest
             null,
             null,
             null,
-            new UserCompactionTaskIOConfig(true),
+            new UserCompactionTaskIOConfig(true, null),
             null
         )
     );
     doCompactSegments(compactSegments, compactionConfigs);
-    ArgumentCaptor<Boolean> dropExistingCapture = ArgumentCaptor.forClass(Boolean.class);
+    ArgumentCaptor<ClientCompactionIOConfig> clientCompactionIOConfigArgumentCaptor = ArgumentCaptor.forClass(ClientCompactionIOConfig.class);
     Mockito.verify(mockIndexingServiceClient).compactSegments(
         ArgumentMatchers.anyString(),
         ArgumentMatchers.any(),
@@ -821,10 +822,10 @@ public class CompactSegmentsTest
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
-        dropExistingCapture.capture(),
+        clientCompactionIOConfigArgumentCaptor.capture(),
         ArgumentMatchers.any()
     );
-    Assert.assertEquals(true, dropExistingCapture.getValue());
+    Assert.assertTrue(clientCompactionIOConfigArgumentCaptor.getValue().isDropExisting());
   }
 
   @Test
@@ -870,7 +871,7 @@ public class CompactSegmentsTest
         )
     );
     doCompactSegments(compactSegments, compactionConfigs);
-    ArgumentCaptor<Boolean> dropExistingCapture = ArgumentCaptor.forClass(Boolean.class);
+    ArgumentCaptor<ClientCompactionIOConfig> clientCompactionIOConfigArgumentCaptor = ArgumentCaptor.forClass(ClientCompactionIOConfig.class);
     Mockito.verify(mockIndexingServiceClient).compactSegments(
         ArgumentMatchers.anyString(),
         ArgumentMatchers.any(),
@@ -880,10 +881,10 @@ public class CompactSegmentsTest
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
-        dropExistingCapture.capture(),
+        clientCompactionIOConfigArgumentCaptor.capture(),
         ArgumentMatchers.any()
     );
-    Assert.assertNull(dropExistingCapture.getValue());
+    Assert.assertNull(clientCompactionIOConfigArgumentCaptor.getValue());
   }
 
   @Test
@@ -1170,6 +1171,7 @@ public class CompactSegmentsTest
                     Intervals.of("2000/2099"),
                     "testSha256OfSortedSegmentIds"
                 ),
+                null,
                 null
             ),
             null,

@@ -45,7 +45,7 @@ public interface IndexingServiceClient
       @Nullable ClientCompactionTaskDimensionsSpec dimensionsSpec,
       @Nullable AggregatorFactory[] metricsSpec,
       @Nullable ClientCompactionTaskTransformSpec transformSpec,
-      @Nullable Boolean dropExisting,
+      @Nullable ClientCompactionIOConfig clientCompactionIOConfig,
       @Nullable Map<String, Object> context
   );
 

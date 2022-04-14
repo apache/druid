@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
+import org.apache.druid.client.indexing.ClientCompactionIOConfig;
+import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
@@ -372,7 +374,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         snapshotBuilder.incrementIntervalCountCompacted(segmentsToCompact.stream().map(DataSegment::getInterval).distinct().count());
         snapshotBuilder.incrementSegmentCountCompacted(segmentsToCompact.size());
 
-        final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
+        DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
 
         // Create granularitySpec to send to compaction task
         ClientCompactionTaskGranularitySpec granularitySpec;
@@ -423,8 +425,10 @@ public class CompactSegments implements CoordinatorCustomDuty
         }
 
         Boolean dropExisting = null;
+        String inputDataSource = null;
         if (config.getIoConfig() != null) {
           dropExisting = config.getIoConfig().isDropExisting();
+          inputDataSource = config.getIoConfig().getInputDataSource();
         }
 
         // make tuningConfig
@@ -437,7 +441,7 @@ public class CompactSegments implements CoordinatorCustomDuty
             dimensionsSpec,
             config.getMetricsSpec(),
             transformSpec,
-            dropExisting,
+            new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segmentsToCompact, granularitySpec.getSegmentGranularity()), dropExisting, inputDataSource),
             newAutoCompactionContext(config.getTaskContext())
         );
 

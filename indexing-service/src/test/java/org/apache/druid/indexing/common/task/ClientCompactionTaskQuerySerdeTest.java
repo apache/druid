@@ -91,7 +91,8 @@ public class ClientCompactionTaskQuerySerdeTest
                 Intervals.of("2019/2020"),
                 "testSha256OfSortedSegmentIds"
             ),
-            true
+            true,
+            null
         ),
         new ClientCompactionTaskQueryTuningConfig(
             null,
@@ -311,7 +312,8 @@ public class ClientCompactionTaskQuerySerdeTest
                 Intervals.of("2019/2020"),
                 "testSha256OfSortedSegmentIds"
             ),
-            true
+            true,
+            null
         ),
         new ClientCompactionTaskQueryTuningConfig(
             100,
