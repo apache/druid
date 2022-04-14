@@ -45,6 +45,7 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -170,6 +171,40 @@ public class HeapMemoryTaskStorage implements TaskStorage
     return listBuilder.build();
   }
 
+  public List<TaskInfo<Map<String, String>, TaskStatus>> getActiveTaskSummary(@Nullable String dataSource)
+  {
+    final ImmutableList.Builder<TaskInfo<Map<String, String>, TaskStatus>> listBuilder = ImmutableList.builder();
+    for (final TaskStuff taskStuff : tasks.values()) {
+      if (taskStuff.getStatus().isRunnable()) {
+        if (dataSource == null || dataSource.equals(taskStuff.getDataSource())) {
+          TaskInfo<Task, TaskStatus> taskInfo = TaskStuff.toTaskInfo(taskStuff);
+        }
+      }
+    }
+    return listBuilder.build();
+  }
+
+  private TaskInfo<Map<String, String>, TaskStatus> taskSummary(TaskInfo<Task, TaskStatus> taskInfo)
+  {
+    Task task = taskInfo.getTask();
+    Map<String, String> taskMap = new HashMap<>();
+    String type = task.getType();
+    if (type != null) {
+      taskMap.put("type", type);
+    }
+    String groupId = task.getGroupId();
+    if (groupId != null) {
+      taskMap.put("groupId", groupId);
+    }
+    return new TaskInfo<>(
+        taskInfo.getId(),
+        taskInfo.getCreatedTime(),
+        taskInfo.getStatus(),
+        taskInfo.getDataSource(),
+        taskMap
+    );
+  }
+
   public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
   {
     final ImmutableList.Builder<TaskInfo<Task, TaskStatus>> listBuilder = ImmutableList.builder();
@@ -239,7 +274,27 @@ public class HeapMemoryTaskStorage implements TaskStorage
       @Nullable String datasource
   )
   {
-    return Collections.emptyList();
+    final List<TaskInfo<Map<String, String>, TaskStatus>> tasks = new ArrayList<>();
+    taskLookups.forEach((type, lookup) -> {
+      if (type == TaskLookupType.COMPLETE) {
+        CompleteTaskLookup completeTaskLookup = (CompleteTaskLookup) lookup;
+        tasks.addAll(
+            getRecentlyCreatedAlreadyFinishedTaskInfo(
+                completeTaskLookup.hasTaskCreatedTimeFilter()
+                ? completeTaskLookup
+                : completeTaskLookup.withDurationBeforeNow(config.getRecentlyFinishedThreshold()),
+                datasource
+            ).stream()
+             .map(taskTaskStatusTaskInfo -> taskSummary(taskTaskStatusTaskInfo))
+             .collect(Collectors.toList())
+        );
+      } else {
+        tasks.addAll(getActiveTaskInfo(datasource).stream()
+                                                  .map(taskInfo -> taskSummary(taskInfo))
+                                                  .collect(Collectors.toList()));
+      }
+    });
+    return tasks;
   }
 
   private List<TaskInfo<Task, TaskStatus>> getRecentlyCreatedAlreadyFinishedTaskInfoSince(

@@ -35,6 +35,8 @@ import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
+import java.util.Locale;
+
 @ManageLifecycle
 public class DerbyConnector extends SQLMetadataConnector
 {
@@ -117,7 +119,7 @@ public class DerbyConnector extends SQLMetadataConnector
   @Override
   public String withFetchLimit(int limit)
   {
-    return String.format("FETCH NEXT %d ROWS ONLY", limit);
+    return String.format(Locale.ENGLISH, "FETCH NEXT %d ROWS ONLY", limit);
   }
 
   @Override

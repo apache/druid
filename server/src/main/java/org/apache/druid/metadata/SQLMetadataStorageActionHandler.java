@@ -27,7 +27,6 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import net.minidev.json.parser.JSONParser;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -64,7 +63,6 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
 
   private final SQLMetadataConnector connector;
   private final ObjectMapper jsonMapper;
-  private final JSONParser jsonParser;
   private final TypeReference<EntryType> entryType;
   private final TypeReference<StatusType> statusType;
   private final TypeReference<LogType> logType;
@@ -95,7 +93,6 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     //noinspection UnnecessaryFullyQualifiedName
     this.jsonMapper = jsonMapper.copy().addMixIn(org.apache.druid.metadata.PasswordProvider.class,
             org.apache.druid.metadata.PasswordProviderRedactionMixIn.class);
-    this.jsonParser = new JSONParser();
     this.entryType = types.getEntryType();
     this.statusType = types.getStatusType();
     this.logType = types.getLogType();

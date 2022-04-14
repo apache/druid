@@ -147,12 +147,6 @@ public class MetadataTaskStorage implements TaskStorage
 
     log.info("Inserting task %s with status: %s", task.getId(), status);
 
-    String dummy = "dummy";
-    while (dummy.length() < (int) 1e5) {
-      dummy += dummy;
-    }
-    task.getContext().put("dummy", dummy);
-
     try {
       handler.insert(
           task.getId(),

@@ -37,6 +37,7 @@ import org.skife.jdbi.v2.util.StringMapper;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.sql.SQLException;
+import java.util.Locale;
 
 public class MySQLConnector extends SQLMetadataConnector
 {
@@ -180,7 +181,7 @@ public class MySQLConnector extends SQLMetadataConnector
   @Override
   public String withFetchLimit(int limit)
   {
-    return String.format("LIMIT %d", limit);
+    return String.format(Locale.ENGLISH, "LIMIT %d", limit);
   }
 
   @Override

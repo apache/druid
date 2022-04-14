@@ -35,7 +35,7 @@ public class TaskStatusPlus
   private final DateTime createdTime;
   private final DateTime queueInsertionTime;
   private final TaskState statusCode;
-  private RunnerTaskState runnerTaskState;
+  private final RunnerTaskState runnerTaskState;
   private final Long duration;
   private final TaskLocation location;
   private final String dataSource;
@@ -195,14 +195,6 @@ public class TaskStatusPlus
   public String getErrorMsg()
   {
     return errorMsg;
-  }
-
-  public void setRunnerTaskState(RunnerTaskState runnerTaskState)
-  {
-    if (this.runnerTaskState != null) {
-      throw new IllegalAccessError("Cannot set runnerTaskState since it has already been set");
-    }
-    this.runnerTaskState = runnerTaskState;
   }
 
   @Override

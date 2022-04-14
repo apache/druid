@@ -29,10 +29,8 @@ import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
-import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.apache.druid.timeline.DataSegment;
-import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -85,29 +83,12 @@ public class TaskStorageQueryAdapter
     );
   }
 
-  public List<TaskInfo<Task, TaskStatus>> getCompletedTaskInfoByCreatedTimeDuration(
-      @Nullable Integer maxTaskStatuses,
-      @Nullable Duration duration,
-      @Nullable String dataSource
-  )
-  {
-    return storage.getTaskInfos(CompleteTaskLookup.of(maxTaskStatuses, duration), dataSource);
-  }
-
   public List<TaskInfo<Map<String, String>, TaskStatus>> getTaskSummaryList(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String dataSource
   )
   {
     return storage.getTaskSummaryList(taskLookups, dataSource);
-  }
-
-  public List<TaskInfo<Task, TaskStatus>> getTaskInfos(
-      Map<TaskLookupType, TaskLookup> taskLookups,
-      @Nullable String dataSource
-  )
-  {
-    return storage.getTaskInfos(taskLookups, dataSource);
   }
 
   public Optional<Task> getTask(final String taskid)
