@@ -31,7 +31,7 @@ import java.util.TreeMap;
 /**
  * Holder for query context parameters. There are 3 ways to set context params today.
  *
- * - Default parameters. These are set mostly via {@link org.apache.druid.query.DefaultQueryConfig#context}.
+ * - Default parameters. These are set mostly via {@link DefaultQueryConfig#context}.
  *   Auto-generated queryId or sqlQueryId are also set as default parameters. These default parameters can
  *   be overridden by user or system parameters.
  * - User parameters. These are the params set by the user. User params override default parameters but

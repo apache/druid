@@ -27,6 +27,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AllowAllAuthenticator;
@@ -116,7 +117,7 @@ public class DruidStatementTest extends CalciteTestBase
     final DruidStatement statement = new DruidStatement(
         "",
         0,
-        null,
+        new QueryContext(),
         sqlLifecycleFactory.factorize(),
         () -> {}
     ).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
@@ -162,7 +163,7 @@ public class DruidStatementTest extends CalciteTestBase
     final DruidStatement statement = new DruidStatement(
         "",
         0,
-        null,
+        new QueryContext(),
         sqlLifecycleFactory.factorize(),
         () -> {}
     ).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
@@ -195,7 +196,7 @@ public class DruidStatementTest extends CalciteTestBase
     final DruidStatement statement = new DruidStatement(
         "",
         0,
-        null,
+        new QueryContext(),
         sqlLifecycleFactory.factorize(),
         () -> {}
     ).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
@@ -233,7 +234,7 @@ public class DruidStatementTest extends CalciteTestBase
     final DruidStatement statement = new DruidStatement(
         "",
         0,
-        null,
+        new QueryContext(),
         sqlLifecycleFactory.factorize(),
         () -> {}
     ).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);

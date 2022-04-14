@@ -17,9 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.server;
+package org.apache.druid.query;
 
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.query.QueryContext;
 import org.junit.Assert;
 import org.junit.Test;
@@ -27,10 +29,34 @@ import org.junit.Test;
 public class QueryContextTest
 {
   @Test
+  public void testEquals()
+  {
+    EqualsVerifier.configure()
+                  .suppress(Warning.NONFINAL_FIELDS, Warning.ALL_FIELDS_SHOULD_BE_USED)
+                  .usingGetClass()
+                  .forClass(QueryContext.class)
+                  .withNonnullFields("defaultParams", "userParams", "systemParams")
+                  .verify();
+  }
+
+  @Test
   public void testEmptyParam()
   {
     final QueryContext context = new QueryContext();
     Assert.assertEquals(ImmutableMap.of(), context.getMergedParams());
+  }
+
+  @Test
+  public void testIsEmpty()
+  {
+    Assert.assertTrue(new QueryContext().isEmpty());
+    Assert.assertFalse(new QueryContext(ImmutableMap.of("k", "v")).isEmpty());
+    QueryContext context = new QueryContext();
+    context.addDefaultParam("k", "v");
+    Assert.assertFalse(context.isEmpty());
+    context = new QueryContext();
+    context.addSystemParam("k", "v");
+    Assert.assertFalse(context.isEmpty());
   }
 
   @Test
