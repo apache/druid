@@ -19,10 +19,15 @@
 
 package org.apache.druid.timeline.partition;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.java.util.common.DateTimes;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -38,6 +43,98 @@ public class DimensionRangeShardSpecTest
 {
 
   private final List<String> dimensions = new ArrayList<>();
+
+  @Test
+  public void testShardSpecLookup()
+  {
+    setDimensions("dim1", "dim2");
+
+    final List<ShardSpec> shardSpecs = ImmutableList.of(
+        new DimensionRangeShardSpec(dimensions, null, StringTuple.create("India", "Delhi"), 1, 1),
+        new DimensionRangeShardSpec(
+            dimensions,
+            StringTuple.create("India", "Delhi"),
+            StringTuple.create("Spain", "Valencia"),
+            2,
+            1
+        ),
+        new DimensionRangeShardSpec(dimensions, StringTuple.create("Spain", "Valencia"), null, 3, 1)
+    );
+    final ShardSpecLookup lookup = shardSpecs.get(0).getLookup(shardSpecs);
+    final long currentTime = DateTimes.nowUtc().getMillis();
+
+    Assert.assertEquals(
+        shardSpecs.get(0),
+        lookup.getShardSpec(
+            currentTime,
+            createRow("France", "Paris")
+        )
+    );
+
+    Assert.assertEquals(
+        shardSpecs.get(0),
+        lookup.getShardSpec(
+            currentTime,
+            createRow("India", null)
+        )
+    );
+
+    Assert.assertEquals(
+        shardSpecs.get(0),
+        lookup.getShardSpec(
+            currentTime,
+            createRow(null, null)
+        )
+    );
+
+    Assert.assertEquals(
+        shardSpecs.get(1),
+        lookup.getShardSpec(
+            currentTime,
+            createRow("India", "Delhi")
+        )
+    );
+
+    Assert.assertEquals(
+        shardSpecs.get(1),
+        lookup.getShardSpec(
+            currentTime,
+            createRow("India", "Kolkata")
+        )
+    );
+
+    Assert.assertEquals(
+        shardSpecs.get(1),
+        lookup.getShardSpec(
+            currentTime,
+            createRow("Spain", null)
+        )
+    );
+
+    Assert.assertEquals(
+        shardSpecs.get(2),
+        lookup.getShardSpec(
+            currentTime,
+            createRow("Spain", "Valencia")
+        )
+    );
+
+    Assert.assertEquals(
+        shardSpecs.get(2),
+        lookup.getShardSpec(
+            currentTime,
+            createRow("United Kingdom", "London")
+        )
+    );
+
+    Assert.assertEquals(
+        shardSpecs.get(2),
+        lookup.getShardSpec(
+            currentTime,
+            createRow("United Kingdom", null)
+        )
+    );
+  }
 
   @Test
   public void testPossibleInDomain_withNullStart()
@@ -351,5 +448,14 @@ public class DimensionRangeShardSpecTest
   {
     dimensions.clear();
     dimensions.addAll(Arrays.asList(dimensionNames));
+  }
+
+  private InputRow createRow(String... values)
+  {
+    Map<String, Object> valueMap = new HashMap<>();
+    for (int i = 0; i < dimensions.size(); ++i) {
+      valueMap.put(dimensions.get(i), values[i]);
+    }
+    return new MapBasedInputRow(DateTimes.nowUtc(), dimensions, valueMap);
   }
 }
