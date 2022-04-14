@@ -19,7 +19,11 @@
 
 package org.apache.druid.indexing.input;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.IntermediateRowParsingReader;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.util.List;
@@ -29,13 +33,18 @@ import java.util.NoSuchElementException;
 /**
  * This class will return an empty iterator since a tombstone has no data rows...
  */
-public class DruidTombstoneSegmentReader extends DruidSegmentReaderBase
+public class DruidTombstoneSegmentReader extends IntermediateRowParsingReader<Map<String, Object>>
 {
+  private DruidSegmentInputEntity source;
+
   public DruidTombstoneSegmentReader(
       InputEntity source
   )
   {
-    super(source);
+    this.source = (DruidSegmentInputEntity) source;
+    if (!this.source.isFromTombstone()) {
+      throw new IAE("DruidSegmentInputEntity must be created from a tombstone but is not.");
+    }
   }
 
   @Override
@@ -63,10 +72,11 @@ public class DruidTombstoneSegmentReader extends DruidSegmentReaderBase
     };
   }
 
+  @VisibleForTesting
   @Override
-  protected List<Map<String, Object>> toMap(Map<String, Object> intermediateRow)
+  protected List<InputRow> parseInputRows(Map<String, Object> intermediateRow)
   {
-    throw new UnsupportedOperationException(getClass().getName().toString());
+    throw new UnsupportedOperationException(getClass().getName());
   }
 
 }

@@ -63,13 +63,11 @@ public class DruidSegmentInputFormat implements InputFormat
         + source.getClass().getName() + " provided."
     );
 
-    InputEntityReader retVal = null;
-    // source is tombstone case
-    if ((source instanceof DruidSegmentInputEntity) && ((DruidSegmentInputEntity) source).isFromTombstone()) {
+    final InputEntityReader retVal;
+    // Cast is safe here because of the precondition above passed
+    if (((DruidSegmentInputEntity) source).isFromTombstone()) {
       retVal = new DruidTombstoneSegmentReader(source);
-    }
-    // source is not tombstone:
-    if (retVal == null) {
+    } else {
       retVal = new DruidSegmentReader(
           source,
           indexIO,

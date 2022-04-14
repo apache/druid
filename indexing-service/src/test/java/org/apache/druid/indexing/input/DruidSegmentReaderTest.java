@@ -197,7 +197,6 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         makeTombstoneInputEntity(Intervals.of("2000/P1D"))
     );
 
-    Assert.assertTrue(((DruidSegmentInputEntity) reader.source()).isFromTombstone());
     Assert.assertFalse(reader.intermediateRowIterator().hasNext());
     Assert.assertEquals(
         Collections.emptyList(),
@@ -205,17 +204,26 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     );
   }
 
-
   @Test
   public void testDruidTombstoneSegmentReaderBadEntity()
   {
-    Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+    assertThrows(ClassCastException.class, () -> {
       new DruidTombstoneSegmentReader(
           new FileEntity(null));
     });
-    String expectedMessage = "Bad input entity type: org.apache.druid.data.input.impl.FileEntity";
+  }
+
+  @Test
+  public void testDruidTombstoneSegmentReaderNotCreatedFromTombstone()
+  {
+    Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+      new DruidTombstoneSegmentReader(makeInputEntity(Intervals.of("2000/P1D")));
+    });
+    String expectedMessage =
+        "DruidSegmentInputEntity must be created from a tombstone but is not.";
     String actualMessage = exception.getMessage();
     Assert.assertEquals(expectedMessage, actualMessage);
+
   }
 
   @Test
@@ -724,8 +732,9 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         interval
     );
   }
-  
-  private List<InputRow> readRows(final DruidSegmentReaderBase reader) throws IOException
+
+
+  private List<InputRow> readRows(DruidSegmentReader reader) throws IOException
   {
     final List<InputRow> rows = new ArrayList<>();
     try (final CloseableIterator<Map<String, Object>> iterator = reader.intermediateRowIterator()) {
@@ -735,6 +744,18 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     }
     return rows;
   }
+
+  private List<InputRow> readRows(DruidTombstoneSegmentReader reader) throws IOException
+  {
+    final List<InputRow> rows = new ArrayList<>();
+    try (final CloseableIterator<Map<String, Object>> iterator = reader.intermediateRowIterator()) {
+      while (iterator.hasNext()) {
+        rows.addAll(reader.parseInputRows(iterator.next()));
+      }
+    }
+    return rows;
+  }
+
 
   private static HyperLogLogCollector makeHLLC(final String... values)
   {
