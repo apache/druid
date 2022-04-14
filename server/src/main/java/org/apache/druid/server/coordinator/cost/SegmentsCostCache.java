@@ -271,60 +271,6 @@ public class SegmentsCostCache
       return calculationInterval.overlaps(dataSegment.getInterval());
     }
 
-    double costOld(DataSegment dataSegment)
-    {
-      // cost is calculated relatively to bucket start (which is considered as 0)
-      double t0 = convertStart(dataSegment.getInterval(), interval);
-      double t1 = convertEnd(dataSegment.getInterval(), interval);
-
-      // avoid calculation for segments outside of LIFE_THRESHOLD
-      if (!inCalculationInterval(dataSegment)) {
-        throw new ISE("Segment is not within calculation interval");
-      }
-
-      int index = Collections.binarySearch(sortedIntervals, dataSegment.getInterval(), INTERVAL_COMPARATOR);
-      index = (index >= 0) ? index : -index - 1;
-      return leftCostOld(dataSegment, t0, t1, index) + rightCostOld(dataSegment, t0, t1, index);
-    }
-
-    private double leftCostOld(DataSegment dataSegment, double t0, double t1, int index)
-    {
-      double leftCost = 0.0;
-      // add to cost all left-overlapping segments
-      int leftIndex = index - 1;
-      while (leftIndex >= 0
-             && sortedIntervals.get(leftIndex).overlaps(dataSegment.getInterval())) {
-        double start = convertStart(sortedIntervals.get(leftIndex), interval);
-        double end = convertEnd(sortedIntervals.get(leftIndex), interval);
-        leftCost += CostBalancerStrategy.intervalCost(end - start, t0 - start, t1 - start);
-        --leftIndex;
-      }
-      // add left-non-overlapping segments
-      if (leftIndex >= 0) {
-        leftCost += leftSum[leftIndex] * (FastMath.exp(-t1) - FastMath.exp(-t0));
-      }
-      return leftCost;
-    }
-
-    private double rightCostOld(DataSegment dataSegment, double t0, double t1, int index)
-    {
-      double rightCost = 0.0;
-      // add all right-overlapping segments
-      int rightIndex = index;
-      while (rightIndex < sortedIntervals.size() &&
-             sortedIntervals.get(rightIndex).overlaps(dataSegment.getInterval())) {
-        double start = convertStart(sortedIntervals.get(rightIndex), interval);
-        double end = convertEnd(sortedIntervals.get(rightIndex), interval);
-        rightCost += CostBalancerStrategy.intervalCost(t1 - t0, start - t0, end - t0);
-        ++rightIndex;
-      }
-      // add right-non-overlapping segments
-      if (rightIndex < sortedIntervals.size()) {
-        rightCost += rightSum[rightIndex] * (FastMath.exp(t0) - FastMath.exp(t1));
-      }
-      return rightCost;
-    }
-
     double cost(DataSegment dataSegment)
     {
       // cost is calculated relatively to bucket start (which is considered as 0)
@@ -338,7 +284,7 @@ public class SegmentsCostCache
 
       int index = Collections.binarySearch(sortedIntervals, dataSegment.getInterval(), INTERVAL_COMPARATOR);
       index = (index >= 0) ? index : -index - 1;
-      return leftCostOld(dataSegment, t0, t1, index) + rightCostOld(dataSegment, t0, t1, index);
+      return leftCost(dataSegment, t0, t1, index) + rightCost(dataSegment, t0, t1, index);
     }
 
     private double leftCost(DataSegment dataSegment, double t0, double t1, int index)
