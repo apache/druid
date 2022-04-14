@@ -38,15 +38,18 @@ public class CompactionIOConfig implements IOConfig
 {
   private final CompactionInputSpec inputSpec;
   private final boolean dropExisting;
+  private final String inputDataSource;
 
   @JsonCreator
   public CompactionIOConfig(
       @JsonProperty("inputSpec") CompactionInputSpec inputSpec,
-      @JsonProperty("dropExisting") @Nullable Boolean dropExisting
+      @JsonProperty("dropExisting") @Nullable Boolean dropExisting,
+      @JsonProperty("inputDataSource") @Nullable String inputDataSource
   )
   {
     this.inputSpec = inputSpec;
     this.dropExisting = dropExisting == null ? DEFAULT_DROP_EXISTING : dropExisting;
+    this.inputDataSource = inputDataSource;
   }
 
   @JsonProperty
@@ -61,6 +64,12 @@ public class CompactionIOConfig implements IOConfig
     return dropExisting;
   }
 
+  @JsonProperty
+  public String getInputDataSource()
+  {
+    return inputDataSource;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -72,13 +81,14 @@ public class CompactionIOConfig implements IOConfig
     }
     CompactionIOConfig that = (CompactionIOConfig) o;
     return dropExisting == that.dropExisting &&
-           Objects.equals(inputSpec, that.inputSpec);
+           Objects.equals(inputSpec, that.inputSpec) &&
+           Objects.equals(inputDataSource, that.inputDataSource);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(inputSpec, dropExisting);
+    return Objects.hash(inputSpec, dropExisting, inputDataSource);
   }
 
   @Override
@@ -87,6 +97,7 @@ public class CompactionIOConfig implements IOConfig
     return "CompactionIOConfig{" +
            "inputSpec=" + inputSpec +
            ", dropExisting=" + dropExisting +
+           ", inputDataSource='" + inputDataSource + '\'' +
            '}';
   }
 }

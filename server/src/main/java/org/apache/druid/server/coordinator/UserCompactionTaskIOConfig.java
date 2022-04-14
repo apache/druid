@@ -37,19 +37,28 @@ import java.util.Objects;
 public class UserCompactionTaskIOConfig
 {
   private final boolean dropExisting;
+  private final String inputDataSource;
 
   @JsonCreator
   public UserCompactionTaskIOConfig(
-      @JsonProperty("dropExisting") @Nullable Boolean dropExisting
+      @JsonProperty("dropExisting") @Nullable Boolean dropExisting,
+      @JsonProperty("inputDataSource") @Nullable String inputDataSource
   )
   {
     this.dropExisting = dropExisting == null ? IOConfig.DEFAULT_DROP_EXISTING : dropExisting;
+    this.inputDataSource = inputDataSource;
   }
 
   @JsonProperty
   public boolean isDropExisting()
   {
     return dropExisting;
+  }
+
+  @JsonProperty
+  public String getInputDataSource()
+  {
+    return inputDataSource;
   }
 
   @Override
@@ -62,13 +71,14 @@ public class UserCompactionTaskIOConfig
       return false;
     }
     UserCompactionTaskIOConfig that = (UserCompactionTaskIOConfig) o;
-    return dropExisting == that.dropExisting;
+    return dropExisting == that.dropExisting &&
+           Objects.equals(inputDataSource, that.inputDataSource);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dropExisting);
+    return Objects.hash(dropExisting, inputDataSource);
   }
 
   @Override
@@ -76,6 +86,7 @@ public class UserCompactionTaskIOConfig
   {
     return "UserCompactionTaskIOConfig{" +
            "dropExisting=" + dropExisting +
+           ", inputDataSource='" + inputDataSource + '\'' +
            '}';
   }
 }

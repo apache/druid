@@ -31,6 +31,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import io.netty.util.internal.StringUtil;
 import org.apache.curator.shaded.com.google.common.base.Verify;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
@@ -205,11 +206,11 @@ public class CompactionTask extends AbstractBatchIndexTask
     if (ioConfig != null) {
       this.ioConfig = ioConfig;
     } else if (interval != null) {
-      this.ioConfig = new CompactionIOConfig(new CompactionIntervalSpec(interval, null), null);
+      this.ioConfig = new CompactionIOConfig(new CompactionIntervalSpec(interval, null), null, null);
     } else {
       // We already checked segments is not null or empty above.
       //noinspection ConstantConditions
-      this.ioConfig = new CompactionIOConfig(SpecificSegmentsSpec.fromSegments(segments), null);
+      this.ioConfig = new CompactionIOConfig(SpecificSegmentsSpec.fromSegments(segments), null, null);
     }
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
     this.transformSpec = transformSpec;
@@ -234,7 +235,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       this.granularitySpec = granularitySpec;
     }
     this.tuningConfig = tuningConfig != null ? getTuningConfig(tuningConfig) : null;
-    this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
+    this.segmentProvider = new SegmentProvider(StringUtil.isNullOrEmpty(ioConfig.getInputDataSource()) ? dataSource : ioConfig.getInputDataSource(), this.ioConfig.getInputSpec());
     this.partitionConfigurationManager = new PartitionConfigurationManager(this.tuningConfig);
     this.segmentCacheManagerFactory = segmentCacheManagerFactory;
     this.retryPolicyFactory = retryPolicyFactory;
@@ -424,6 +425,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = createIngestionSchema(
+        getDataSource(),
         toolbox,
         getTaskLockHelper().getLockGranularityToUse(),
         segmentProvider,
@@ -435,7 +437,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         toolbox.getCoordinatorClient(),
         segmentCacheManagerFactory,
         retryPolicyFactory,
-        ioConfig.isDropExisting()
+        ioConfig
     );
     final List<ParallelIndexSupervisorTask> indexTaskSpecs = IntStream
         .range(0, ingestionSpecs.size())
@@ -531,6 +533,7 @@ public class CompactionTask extends AbstractBatchIndexTask
    */
   @VisibleForTesting
   static List<ParallelIndexIngestionSpec> createIngestionSchema(
+      final String dataSource,
       final TaskToolbox toolbox,
       final LockGranularity lockGranularityInUse,
       final SegmentProvider segmentProvider,
@@ -542,7 +545,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       final CoordinatorClient coordinatorClient,
       final SegmentCacheManagerFactory segmentCacheManagerFactory,
       final RetryPolicyFactory retryPolicyFactory,
-      final boolean dropExisting
+      final CompactionIOConfig compactionIOConfig
   ) throws IOException, SegmentLoadingException
   {
     NonnullPair<Map<DataSegment, File>, List<TimelineObjectHolder<String, DataSegment>>> pair = prepareSegments(
@@ -606,7 +609,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         // creates new granularitySpec and set segmentGranularity
         Granularity segmentGranularityToUse = GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity();
         final DataSchema dataSchema = createDataSchema(
-            segmentProvider.dataSource,
+            dataSource,
             segmentsToCompact,
             dimensionsSpec,
             transformSpec,
@@ -626,7 +629,7 @@ public class CompactionTask extends AbstractBatchIndexTask
                     coordinatorClient,
                     segmentCacheManagerFactory,
                     retryPolicyFactory,
-                    dropExisting
+                    compactionIOConfig
                 ),
                 compactionTuningConfig
             )
@@ -637,7 +640,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     } else {
       // given segment granularity
       final DataSchema dataSchema = createDataSchema(
-          segmentProvider.dataSource,
+          dataSource,
           queryableIndexAndSegments,
           dimensionsSpec,
           transformSpec,
@@ -655,7 +658,7 @@ public class CompactionTask extends AbstractBatchIndexTask
                   coordinatorClient,
                   segmentCacheManagerFactory,
                   retryPolicyFactory,
-                  dropExisting
+                  compactionIOConfig
               ),
               compactionTuningConfig
           )
@@ -670,13 +673,13 @@ public class CompactionTask extends AbstractBatchIndexTask
       CoordinatorClient coordinatorClient,
       SegmentCacheManagerFactory segmentCacheManagerFactory,
       RetryPolicyFactory retryPolicyFactory,
-      boolean dropExisting
+      CompactionIOConfig compactionIOConfig
   )
   {
     return new ParallelIndexIOConfig(
         null,
         new DruidInputSource(
-            dataSchema.getDataSource(),
+            StringUtil.isNullOrEmpty(compactionIOConfig.getInputDataSource()) ? dataSchema.getDataSource() : compactionIOConfig.getInputDataSource(),
             interval,
             null,
             null,
@@ -690,7 +693,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         ),
         null,
         false,
-        dropExisting
+        compactionIOConfig.isDropExisting()
     );
   }
 
@@ -1080,13 +1083,19 @@ public class CompactionTask extends AbstractBatchIndexTask
 
     public Builder inputSpec(CompactionInputSpec inputSpec)
     {
-      this.ioConfig = new CompactionIOConfig(inputSpec, null);
+      this.ioConfig = new CompactionIOConfig(inputSpec, null, null);
       return this;
     }
 
     public Builder inputSpec(CompactionInputSpec inputSpec, Boolean dropExisting)
     {
-      this.ioConfig = new CompactionIOConfig(inputSpec, dropExisting);
+      this.ioConfig = new CompactionIOConfig(inputSpec, dropExisting, null);
+      return this;
+    }
+
+    public Builder inputSpec(CompactionInputSpec inputSpec, Boolean dropExisting, String inputDataSource)
+    {
+      this.ioConfig = new CompactionIOConfig(inputSpec, dropExisting, inputDataSource);
       return this;
     }
 
