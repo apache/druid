@@ -750,7 +750,8 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
         .sql("INSERT INTO t SELECT added, channel || '-lol' FROM foo PARTITIONED BY ALL")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot ingest unnamed column"
+            "throw new ValidationException(\"Cannot ingest unnamed expressions that do not have an alias."
+            + " E.g. if you are ingesting \\\"func(X)\\\", then you can rewrite it as \\\"func(X) as myColumn\\\"\");"
         )
         .verify();
   }

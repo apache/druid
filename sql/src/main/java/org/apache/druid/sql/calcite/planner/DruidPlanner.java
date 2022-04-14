@@ -803,9 +803,9 @@ public class DruidPlanner implements Closeable
           if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
             throw new ValidationException("Cannot have ORDER BY on an INSERT query, use CLUSTERED BY instead.");
           }
-          validateSelectColumnForIngestion((SqlSelect) sqlOrderBy.query);
+          validateSelectColumnForIngestion(sqlOrderBy.query);
         } else {
-          validateSelectColumnForIngestion(((SqlSelect) query));
+          validateSelectColumnForIngestion(query);
         }
 
         ingestionGranularity = druidSqlInsert.getPartitionedBy();
@@ -843,15 +843,26 @@ public class DruidPlanner implements Closeable
       return new ParsedNodes(explain, druidSqlInsert, query, ingestionGranularity);
     }
 
-    private static void validateSelectColumnForIngestion(SqlSelect sqlSelect) throws ValidationException
+    private static void validateSelectColumnForIngestion(SqlNode sqlNode) throws ValidationException
     {
-      // Validate that all columns which do some computation in the select statement are named.
-      // If the column is named, the top level operator should be "AS".
-      for (SqlNode column : sqlSelect.getSelectList().getList()) {
-        if (column instanceof SqlBasicCall) {
-          SqlBasicCall basicCall = (SqlBasicCall) column;
-          if (!"AS".equalsIgnoreCase(basicCall.getOperator().getName())) {
-            throw new ValidationException("Cannot ingest unnamed columns.");
+      if (sqlNode instanceof SqlBasicCall) {
+        // If the sql node is a basic call, it could have select statements as operands.
+        // We need to recursivly check the operands for select statements.
+        SqlBasicCall sqlBasicCall = (SqlBasicCall) sqlNode;
+        for (SqlNode operand : sqlBasicCall.getOperandList()) {
+          validateSelectColumnForIngestion(operand);
+        }
+      } else if (sqlNode instanceof SqlSelect) {
+        // Validate that all columns which do some computation in the select statement are named.
+        // If the column is named, the top level operator should be "AS".
+        for (SqlNode column : ((SqlSelect) sqlNode).getSelectList().getList()) {
+          if (column instanceof SqlBasicCall) {
+            SqlBasicCall basicCall = (SqlBasicCall) column;
+            if (!"AS".equalsIgnoreCase(basicCall.getOperator().getName())) {
+              throw new ValidationException("Cannot ingest unnamed expressions that do not have an alias. "
+                                            + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
+                                            + "\"func(X) as myColumn\"");
+            }
           }
         }
       }
