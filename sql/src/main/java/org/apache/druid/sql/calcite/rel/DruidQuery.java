@@ -1199,14 +1199,19 @@ public class DruidQuery
       orderByColumns = Collections.emptyList();
     }
 
-    if (!queryFeatureInspector.feature(QueryFeature.SCAN_CAN_ORDER_BY_NON_TIME)
-        && (orderByColumns.size() > 1
-            || orderByColumns.stream()
-                             .anyMatch(orderBy -> !orderBy.getColumnName().equals(ColumnHolder.TIME_COLUMN_NAME)))) {
-      // Cannot handle this ordering.
-      // Scan cannot ORDER BY non-time columns.
-      plannerContext.setPlanningError("SQL query requires order by non-time column %s that is not supported.", orderByColumns);
-      return null;
+    if (!queryFeatureInspector.feature(QueryFeature.SCAN_CAN_ORDER_BY_NON_TIME) && !orderByColumns.isEmpty()) {
+      if (orderByColumns.size() > 1 || !ColumnHolder.TIME_COLUMN_NAME.equals(orderByColumns.get(0).getColumnName())) {
+        // Cannot handle this ordering.
+        // Scan cannot ORDER BY non-time columns.
+        plannerContext.setPlanningError("SQL query requires order by non-time column %s that is not supported.", orderByColumns);
+        return null;
+      }
+      if (!dataSource.isConcrete() ) {
+        // Cannot handle this ordering.
+        // Scan cannot ORDER BY non-time columns.
+        plannerContext.setPlanningError("SQL query requires order by non-time column on a datasource[%s], which is not supported.", dataSource);
+        return null;
+      }
     }
 
     // Compute the list of columns to select, sorted and deduped.

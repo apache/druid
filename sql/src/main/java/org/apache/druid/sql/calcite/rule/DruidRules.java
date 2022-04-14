@@ -225,14 +225,7 @@ public class DruidRules
                              .withSort(sort)
         );
         if (outerQueryRel.isValidDruidQuery()) {
-          try {
-            call.transformTo(outerQueryRel);
-          }
-          catch (Exception ex) {
-            if (Throwables.getCauseOfType(ex, CannotBuildQueryException.class) == null) {
-              throw ex;
-            }
-          }
+          call.transformTo(outerQueryRel);
         }
       }
     };
