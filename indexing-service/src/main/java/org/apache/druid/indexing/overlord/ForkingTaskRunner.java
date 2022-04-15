@@ -63,6 +63,7 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.server.metrics.MonitorsConfig;
+import org.apache.druid.server.metrics.TaskCountStatsProvider;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.joda.time.DateTime;
@@ -83,13 +84,14 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Runs tasks in separate processes using the "internal peon" verb.
  */
 public class ForkingTaskRunner
     extends BaseRestorableTaskRunner<ForkingTaskRunner.ForkingTaskRunnerWorkItem>
-    implements TaskLogStreamer
+    implements TaskLogStreamer, TaskCountStatsProvider
 {
   private static final EmittingLogger LOGGER = new EmittingLogger(ForkingTaskRunner.class);
   private static final String CHILD_PROPERTY_PREFIX = "druid.indexer.fork.property.";
@@ -103,6 +105,10 @@ public class ForkingTaskRunner
   private final WorkerConfig workerConfig;
 
   private volatile boolean stopping = false;
+
+  private static final AtomicLong FAILED_TASK_COUNT = new AtomicLong();
+  private static final AtomicLong RUNNING_TASK_COUNT = new AtomicLong();
+  private static final AtomicLong SUCCESSFUL_TASK_COUNT = new AtomicLong();
 
   @Inject
   public ForkingTaskRunner(
@@ -399,7 +405,11 @@ public class ForkingTaskRunner
                             )
                         );
                       }
-
+                      if (status.isSuccess()) {
+                        SUCCESSFUL_TASK_COUNT.incrementAndGet();
+                      } else {
+                        FAILED_TASK_COUNT.incrementAndGet();
+                      }
                       TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
                       return status;
                     }
@@ -483,10 +493,12 @@ public class ForkingTaskRunner
     Thread.currentThread().setName(StringUtils.format("%s-[%s]", priorThreadName, task.getId()));
 
     try (final OutputStream toLogfile = logSink.openStream()) {
+      RUNNING_TASK_COUNT.incrementAndGet();
       ByteStreams.copy(processHolder.process.getInputStream(), toLogfile);
       return processHolder.process.waitFor();
     }
     finally {
+      RUNNING_TASK_COUNT.decrementAndGet();
       Thread.currentThread().setName(priorThreadName);
       // Upload task logs
       taskLogPusher.pushTaskLog(task.getId(), logFile);
@@ -731,6 +743,36 @@ public class ForkingTaskRunner
   public Map<String, Long> getBlacklistedTaskSlotCount()
   {
     return ImmutableMap.of(workerConfig.getCategory(), 0L);
+  }
+
+  @Override
+  public Map<String, Long> getFailedTaskCount()
+  {
+    return ImmutableMap.of(workerConfig.getCategory(), FAILED_TASK_COUNT.get());
+  }
+
+  @Override
+  public Map<String, Long> getPendingTaskCount()
+  {
+    return null;
+  }
+
+  @Override
+  public Map<String, Long> getRunningTaskCount()
+  {
+    return ImmutableMap.of(workerConfig.getCategory(), RUNNING_TASK_COUNT.get());
+  }
+
+  @Override
+  public Map<String, Long> getSuccessfulTaskCount()
+  {
+    return ImmutableMap.of(workerConfig.getCategory(), SUCCESSFUL_TASK_COUNT.get());
+  }
+
+  @Override
+  public Map<String, Long> getWaitingTaskCount()
+  {
+    return null;
   }
 
   protected static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem
