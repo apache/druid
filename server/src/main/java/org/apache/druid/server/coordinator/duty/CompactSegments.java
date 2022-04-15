@@ -452,7 +452,7 @@ public class CompactSegments implements CoordinatorCustomDuty
             "coordinator-issued",
             segmentsToCompact,
             config.getTaskPriority(),
-            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment(), config.getMetricsSpec() != null),
             granularitySpec,
             dimensionsSpec,
             config.getMetricsSpec(),
