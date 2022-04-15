@@ -83,6 +83,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -703,6 +704,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             cardinalityRunner.getReports().values(),
             effectiveMaxRowsPerSegment
         );
+
+        // This is for potential debugging in case we suspect bad estimation of cardinalities etc,
+        LOG.info("intervalToNumShards: %s", intervalToNumShards.toString());
+
       } else {
         intervalToNumShards = CollectionUtils.mapValues(
             mergeCardinalityReports(cardinalityRunner.getReports().values()),
@@ -901,13 +906,36 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     // aggregate all the sub-reports
     Map<Interval, Union> finalCollectors = mergeCardinalityReports(reports);
+    return computeIntervalToNumShards(maxRowsPerSegment, finalCollectors);
+  }
 
+  @Nonnull
+  @VisibleForTesting
+  static Map<Interval, Integer> computeIntervalToNumShards(
+      int maxRowsPerSegment,
+      Map<Interval, Union> finalCollectors
+  )
+  {
     return CollectionUtils.mapValues(
         finalCollectors,
         union -> {
           final double estimatedCardinality = union.getEstimate();
-          // determine numShards based on maxRowsPerSegment and the cardinality
-          final long estimatedNumShards = Math.round(estimatedCardinality / maxRowsPerSegment);
+          final long estimatedNumShards;
+          if (estimatedCardinality <= 0) {
+            // I don't think we can use the estimate in any way being negative, seven sounds like a nice prime number
+            // it is ok if we end up not filling them all, the ingestion code handles that
+            // Seven on the other hand will at least create some shards rather than potentially a single huge one
+            estimatedNumShards = 7L;
+            LOG.warn("Estimated cardinality for union of estimates is zero or less: %.2f, setting num shards to %d",
+                     estimatedCardinality, estimatedNumShards
+            );
+          } else {
+            // determine numShards based on maxRowsPerSegment and the cardinality
+            estimatedNumShards = Math.round(estimatedCardinality / maxRowsPerSegment);
+          }
+          LOG.info("estimatedNumShards %d given estimated cardinality %.2f and maxRowsPerSegment %d",
+                   estimatedNumShards, estimatedCardinality, maxRowsPerSegment
+          );
           try {
             return Math.max(Math.toIntExact(estimatedNumShards), 1);
           }

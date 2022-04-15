@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.datasketches.hll.HllSketch;
+import org.apache.datasketches.hll.Union;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.Intervals;
@@ -31,11 +32,14 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+import static org.mockito.Mockito.mock;
 
 public class DimensionCardinalityReportTest
 {
@@ -293,4 +297,30 @@ public class DimensionCardinalityReportTest
         intervalToNumShards
     );
   }
+
+
+  @Test
+  public void testSupervisorDetermineNegativeNumShardsFromCardinalityReport()
+  {
+    Union negativeUnion = mock(Union.class);
+    Mockito.when(negativeUnion.getEstimate()).thenReturn(-1.0);
+    Interval interval = Intervals.of("2001-01-01/P1D");
+    Map<Interval, Union> intervalToUnion = ImmutableMap.of(interval, negativeUnion);
+    Map<Interval, Integer> intervalToNumShards =
+        ParallelIndexSupervisorTask.computeIntervalToNumShards(10, intervalToUnion);
+    Assert.assertEquals(new Integer(7), intervalToNumShards.get(interval));
+  }
+
+  @Test
+  public void testSupervisorDeterminePositiveNumShardsFromCardinalityReport()
+  {
+    Union negativeUnion = mock(Union.class);
+    Mockito.when(negativeUnion.getEstimate()).thenReturn(24.0);
+    Interval interval = Intervals.of("2001-01-01/P1D");
+    Map<Interval, Union> intervalToUnion = ImmutableMap.of(interval, negativeUnion);
+    Map<Interval, Integer> intervalToNumShards =
+        ParallelIndexSupervisorTask.computeIntervalToNumShards(6, intervalToUnion);
+    Assert.assertEquals(new Integer(4), intervalToNumShards.get(interval));
+  }
+
 }
