@@ -33,7 +33,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-public class SegmentsCostCacheTest
+public class SegmentsCostCacheV2Test
 {
 
   private static final String DATA_SOURCE = "dataSource";
@@ -43,9 +43,9 @@ public class SegmentsCostCacheTest
   @Test
   public void segmentCacheTest()
   {
-    SegmentsCostCache.Builder cacheBuilder = SegmentsCostCache.builder();
+    SegmentsCostCacheV2.Builder cacheBuilder = SegmentsCostCacheV2.builder();
     cacheBuilder.addSegment(createSegment(DATA_SOURCE, shifted1HInterval(REFERENCE_TIME, 0), 100));
-    SegmentsCostCache cache = cacheBuilder.build();
+    SegmentsCostCacheV2 cache = cacheBuilder.build();
     Assert.assertEquals(
         7.8735899489011E-4,
         cache.cost(createSegment(DATA_SOURCE, shifted1HInterval(REFERENCE_TIME, -2), 100)),
@@ -56,11 +56,11 @@ public class SegmentsCostCacheTest
   @Test
   public void notInCalculationIntervalCostTest()
   {
-    SegmentsCostCache.Builder cacheBuilder = SegmentsCostCache.builder();
+    SegmentsCostCacheV2.Builder cacheBuilder = SegmentsCostCacheV2.builder();
     cacheBuilder.addSegment(
         createSegment(DATA_SOURCE, shifted1HInterval(REFERENCE_TIME, 0), 100)
     );
-    SegmentsCostCache cache = cacheBuilder.build();
+    SegmentsCostCacheV2 cache = cacheBuilder.build();
     Assert.assertEquals(
         0,
         cache.cost(createSegment(DATA_SOURCE, shifted1HInterval(REFERENCE_TIME, (int) TimeUnit.DAYS.toHours(50)), 100)),
@@ -74,13 +74,13 @@ public class SegmentsCostCacheTest
     DataSegment segmentA = createSegment(DATA_SOURCE, shifted1HInterval(REFERENCE_TIME, 0), 100);
     DataSegment segmentB = createSegment(DATA_SOURCE, shifted1HInterval(REFERENCE_TIME, -2), 100);
 
-    SegmentsCostCache.Bucket.Builder prototype = SegmentsCostCache.Bucket.builder(new Interval(
+    SegmentsCostCacheV2.Bucket.Builder prototype = SegmentsCostCacheV2.Bucket.builder(new Interval(
         REFERENCE_TIME.minusHours(5),
         REFERENCE_TIME.plusHours(5)
     ));
 
     prototype.addSegment(segmentA);
-    SegmentsCostCache.Bucket bucket = prototype.build();
+    SegmentsCostCacheV2.Bucket bucket = prototype.build();
 
     double segmentCost = bucket.cost(segmentB);
     Assert.assertEquals(7.8735899489011E-4, segmentCost, EPSILON);
@@ -96,11 +96,11 @@ public class SegmentsCostCacheTest
         100
     );
 
-    SegmentsCostCache.Bucket.Builder prototype = SegmentsCostCache.Bucket.builder(
+    SegmentsCostCacheV2.Bucket.Builder prototype = SegmentsCostCacheV2.Bucket.builder(
         new Interval(REFERENCE_TIME.minusHours(5), REFERENCE_TIME.plusHours(5))
     );
     prototype.addSegment(segmentA);
-    SegmentsCostCache.Bucket bucket = prototype.build();
+    SegmentsCostCacheV2.Bucket bucket = prototype.build();
 
     Assert.assertTrue(bucket.inCalculationInterval(segmentA));
     Assert.assertFalse(bucket.inCalculationInterval(segmentB));
@@ -112,13 +112,13 @@ public class SegmentsCostCacheTest
     DataSegment segmentA = createSegment(DATA_SOURCE, shifted1HInterval(REFERENCE_TIME, 0), 100);
     DataSegment segmentB = createSegment(DATA_SOURCE, shifted1HInterval(REFERENCE_TIME, 0), 100);
 
-    SegmentsCostCache.Bucket.Builder prototype = SegmentsCostCache.Bucket.builder(new Interval(
+    SegmentsCostCacheV2.Bucket.Builder prototype = SegmentsCostCacheV2.Bucket.builder(new Interval(
         REFERENCE_TIME.minusHours(5),
         REFERENCE_TIME.plusHours(5)
     ));
 
     prototype.addSegment(segmentA);
-    SegmentsCostCache.Bucket bucket = prototype.build();
+    SegmentsCostCacheV2.Bucket bucket = prototype.build();
 
     double segmentCost = bucket.cost(segmentB);
     Assert.assertEquals(8.26147353873985E-4, segmentCost, EPSILON);
@@ -131,14 +131,14 @@ public class SegmentsCostCacheTest
     DataSegment segmentB = createSegment(DATA_SOURCE, shifted1HInterval(REFERENCE_TIME, 0), 100);
     DataSegment segmentC = createSegment(DATA_SOURCE, shifted1HInterval(REFERENCE_TIME, 2), 100);
 
-    SegmentsCostCache.Bucket.Builder prototype = SegmentsCostCache.Bucket.builder(new Interval(
+    SegmentsCostCacheV2.Bucket.Builder prototype = SegmentsCostCacheV2.Bucket.builder(new Interval(
         REFERENCE_TIME.minusHours(5),
         REFERENCE_TIME.plusHours(5)
     ));
 
     prototype.addSegment(segmentA);
     prototype.addSegment(segmentC);
-    SegmentsCostCache.Bucket bucket = prototype.build();
+    SegmentsCostCacheV2.Bucket bucket = prototype.build();
 
     double segmentCost = bucket.cost(segmentB);
 
@@ -156,7 +156,7 @@ public class SegmentsCostCacheTest
 
     DataSegment referenceSegment = createSegment("ANOTHER_DATA_SOURCE", shifted1HInterval(REFERENCE_TIME, 5), 100);
 
-    SegmentsCostCache.Bucket.Builder prototype = SegmentsCostCache.Bucket.builder(new Interval(
+    SegmentsCostCacheV2.Bucket.Builder prototype = SegmentsCostCacheV2.Bucket.builder(new Interval(
         REFERENCE_TIME.minusHours(1),
         REFERENCE_TIME.plusHours(25)
     ));
@@ -164,7 +164,7 @@ public class SegmentsCostCacheTest
     long start = System.currentTimeMillis();
 
     dataSegments.forEach(prototype::addSegment);
-    SegmentsCostCache.Bucket bucket = prototype.build();
+    SegmentsCostCacheV2.Bucket bucket = prototype.build();
 
     long end = System.currentTimeMillis();
     System.out.println(end - start);
