@@ -132,8 +132,8 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   protected void setupDatasourceAndContextParamsUser() throws Exception
   {
     createRoleWithPermissionsAndGroupMapping(
-        "datasourceWithContextParamsGroup",
-        ImmutableMap.of("datasourceWithContextParamsRole", DATASOURCE_QUERY_CONTEXT_PERMISSIONS)
+        "datasourceAndContextParamsGroup",
+        ImmutableMap.of("datasourceAndContextParamsRole", DATASOURCE_QUERY_CONTEXT_PERMISSIONS)
     );
   }
 
