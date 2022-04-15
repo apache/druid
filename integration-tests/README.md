@@ -125,8 +125,8 @@ Druid routers for security group integration test (permissive tls, no client aut
 
 ### Running tests from IntelliJ
 
-A prerequisite to run tests from intellij you need a cluster up and running. Modify the run configuration's `VM options`
-to the values below.
+Before running tests from IntelliJ, ensure you have a Druid cluster running.
+Modify the tests run configurations to be the following Vm options:
 
 ```
 -Duser.timezone=UTC
@@ -140,9 +140,9 @@ to the values below.
 -Ddruid.client.https.keyManagerPassword=druid123
 -Ddruid.client.https.keyStorePassword=druid123
 ```
-and to run the test you need to run the test from the test configuration often times found around the top right corner
-of IntelliJ IDE.
-These values shown above are for the docker compose cluster. For other clusters the values will need to be changed.
+
+Run tests from the test configuration often found in the top right corner of the IntelliJ IDE.
+The values shown above are for the default docker compose cluster. For other clusters the values will need to be changed.
 
 ## Docker Compose files
 
