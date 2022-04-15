@@ -1801,7 +1801,7 @@ public class CompactSegmentsTest
     );
     Assert.assertNotNull(clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue());
     Assert.assertNotNull(clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue().getAppendableIndexSpec());
-    Assert.assertTrue(((OnheapIncrementalIndex.Spec)clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue().getAppendableIndexSpec()).isPreserveExistingMetrics());
+    Assert.assertTrue(((OnheapIncrementalIndex.Spec) clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue().getAppendableIndexSpec()).isPreserveExistingMetrics());
   }
 
   @Test
@@ -1863,7 +1863,7 @@ public class CompactSegmentsTest
     );
     Assert.assertNotNull(clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue());
     Assert.assertNotNull(clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue().getAppendableIndexSpec());
-    Assert.assertFalse(((OnheapIncrementalIndex.Spec)clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue().getAppendableIndexSpec()).isPreserveExistingMetrics());
+    Assert.assertFalse(((OnheapIncrementalIndex.Spec) clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue().getAppendableIndexSpec()).isPreserveExistingMetrics());
   }
 
   private void verifySnapshot(

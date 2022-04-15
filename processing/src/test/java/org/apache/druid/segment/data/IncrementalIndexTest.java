@@ -861,7 +861,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
           } else {
             Assert.assertEquals(1, row.getMetric("count").intValue());
             // The rows does not have the dim "x", hence metric is null (useDefaultValueForNull=false) or 0 (useDefaultValueForNull=true)
-            Assert.assertEquals(NullHandling.sqlCompatible() ? null : 0L, row.getMetric("sum_of_x"));
+            Assert.assertEquals(NullHandling.sqlCompatible() ? null : 0.0f, row.getMetric("sum_of_x"));
           }
         }
       }
