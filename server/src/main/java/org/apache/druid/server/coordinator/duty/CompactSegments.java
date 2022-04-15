@@ -427,6 +427,26 @@ public class CompactSegments implements CoordinatorCustomDuty
           dropExisting = config.getIoConfig().isDropExisting();
         }
 
+        // If all the segments found to be compacted are tombstones then dropExisting
+        // needs to be forced to true. This forcing needs to  happen in the case that
+        // the flag is null, or it is false. It is needed when it is null to avoid the
+        // possibility of the code deciding to default it to false later.
+        // Forcing the flag to true will enable the task ingestion code to generate new, compacted, tombstones to
+        // cover the tombstones found to be compacted as well as to mark them
+        // as compacted (update their lastCompactionState). If we don't force the
+        // flag then every time this compact duty runs it will find the same tombstones
+        // in the interval since their lastCompactionState
+        // was not set repeating this over and over and the duty will not make progress; it
+        // will become stuck on this set of tombstones.
+        // This forcing code should be revised
+        // when/if the autocompaction code policy to decide which segments to compact changes
+        if (dropExisting == null || !dropExisting) {
+          if (segmentsToCompact.stream().allMatch(dataSegment -> dataSegment.isTombstone())) {
+            dropExisting = true;
+            LOG.info("Forcing dropExisting to %s since all segments to compact are tombstones", dropExisting);
+          }
+        }
+
         // make tuningConfig
         final String taskId = indexingServiceClient.compactSegments(
             "coordinator-issued",
