@@ -649,6 +649,42 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testLatestVectorAggregators() throws Exception
+  {
+    // Cannot vectorize LATEST aggregator.
+    //skipVectorize();
+
+    testQuery(
+        "SELECT "
+        + "LATEST(cnt), LATEST(cnt + 1), LATEST(m1), LATEST(m1+1) "
+        + "FROM druid.numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "(\"cnt\" + 1)", ColumnType.LONG),
+                      expressionVirtualColumn("v1", "(\"m1\" + 1)", ColumnType.FLOAT)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new LongLastAggregatorFactory("a0", "cnt", null),
+                          new LongLastAggregatorFactory("a1", "v0", null),
+                          new FloatLastAggregatorFactory("a2", "m1", null),
+                          new FloatLastAggregatorFactory("a3", "v1", null)
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 2L, 6.0f, 7.0f}
+        )
+    );
+  }
+
+  @Test
   public void testLatestAggregators() throws Exception
   {
     // Cannot vectorize LATEST aggregator.
