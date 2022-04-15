@@ -588,20 +588,27 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         if (materizedViewConfigMap.containsKey(dataSourceName)) {
           for (DataSourceCompactionConfig materizedViewConfig : materizedViewConfigMap.get(dataSourceName)) {
             String materizedViewDatasource = materizedViewConfig.getDataSource();
+            Interval interval = JodaUtils.umbrellaInterval(segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()));
+            if (materizedViewConfig.getGranularitySpec() != null && materizedViewConfig.getGranularitySpec().getSegmentGranularity() != null) {
+              interval = JodaUtils.umbrellaInterval(materizedViewConfig.getGranularitySpec().getSegmentGranularity().getIterable(interval));
+            }
+            Set<Interval> intervalsCompacted = intervalCompactedForDatasource.computeIfAbsent(materizedViewDatasource, k -> new HashSet<>());
+            // Skip this candidates if we have compacted the interval already
+            if (intervalsCompacted.contains(interval)) {
+              continue;
+            }
             // materizedViewDatasource does not exist
             if (!dataSources.containsKey(materizedViewDatasource)) {
               List<DataSegment> segmentsTransformed = new ArrayList<>();
               for (DataSegment segment : segments) {
                 segmentsTransformed.add(new DataSegment(materizedViewDatasource, segment.getInterval(), segment.getVersion(), segment.getLoadSpec(), segment.getDimensions(), segment.getMetrics(), segment.getShardSpec(), segment.getLastCompactionState(), segment.getBinaryVersion(), segment.getSize()));
               }
+              intervalsCompacted.add(interval);
               segmentsToCompactList.add(new SegmentsToCompact(segmentsTransformed));
               continue;
             }
             VersionedIntervalTimeline<String, DataSegment> timeline = dataSources.get(materizedViewDatasource);
-            Interval interval = JodaUtils.umbrellaInterval(segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()));
-            if (materizedViewConfig.getGranularitySpec() != null && materizedViewConfig.getGranularitySpec().getSegmentGranularity() != null) {
-              interval = JodaUtils.umbrellaInterval(materizedViewConfig.getGranularitySpec().getSegmentGranularity().getIterable(interval));
-            }
+
             Set<DataSegment> segmentsInMaterizedViewDatasource = timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
             // interval in materizedViewDatasource does not exist
             if (segmentsInMaterizedViewDatasource.isEmpty()) {
@@ -609,6 +616,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
               for (DataSegment segment : segments) {
                 segmentsTransformed.add(new DataSegment(materizedViewDatasource, segment.getInterval(), segment.getVersion(), segment.getLoadSpec(), segment.getDimensions(), segment.getMetrics(), segment.getShardSpec(), segment.getLastCompactionState(), segment.getBinaryVersion(), segment.getSize()));
               }
+              intervalsCompacted.add(interval);
               segmentsToCompactList.add(new SegmentsToCompact(segmentsTransformed));
               continue;
             }
@@ -622,6 +630,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
               for (DataSegment segment : segments) {
                 segmentsTransformed.add(new DataSegment(materizedViewDatasource, segment.getInterval(), segment.getVersion(), segment.getLoadSpec(), segment.getDimensions(), segment.getMetrics(), segment.getShardSpec(), segment.getLastCompactionState(), segment.getBinaryVersion(), segment.getSize()));
               }
+              intervalsCompacted.add(interval);
               segmentsToCompactList.add(new SegmentsToCompact(segmentsTransformed));
               continue;
             }
