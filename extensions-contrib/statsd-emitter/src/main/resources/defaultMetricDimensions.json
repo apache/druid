@@ -65,7 +65,7 @@
 
   "taskSlot/total/count" : { "dimensions" : ["category"], "type" : "gauge" },
   "taskSlot/idle/count" : { "dimensions" : ["category"], "type" : "gauge" },
-  "taskSlot/busy/count" : { "dimensions" : ["category"], "type" : "gauge" },
+  "taskSlot/used/count" : { "dimensions" : ["category"], "type" : "gauge" },
   "taskSlot/lazy/count" : { "dimensions" : ["category"], "type" : "gauge" },
   "taskSlot/blacklisted/count" : { "dimensions" : ["category"], "type" : "gauge" },
 
