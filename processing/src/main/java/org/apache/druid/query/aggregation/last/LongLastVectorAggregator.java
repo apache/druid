@@ -57,12 +57,20 @@ public class LongLastVectorAggregator implements VectorAggregator
   {
     final long[] vector = timeSelector.getLongVector();
     final boolean[] nulls = valueSelector.getNullVector();
+    final long[] values = valueSelector.getLongVector();
     //the time vector is already sorted so the last element would be the latest
+    final boolean status;
+    if (nulls == null) {
+      status = true;
+    } else {
+      status = !nulls[endRow - 1];
+    }
+
     long latestTime = vector[endRow - 1];
     if (latestTime > lastTime) {
       lastTime = latestTime;
-      if (useDefault || nulls[endRow - 1] != false) {
-        lastValue = valueSelector.getLongVector()[endRow - 1];
+      if (useDefault || status) {
+        lastValue = values[endRow - 1];
         rhsNull = false;
       } else {
         rhsNull = true;
