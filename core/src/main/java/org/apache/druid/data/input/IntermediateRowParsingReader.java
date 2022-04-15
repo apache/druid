@@ -257,11 +257,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
    *
    * This should return a non-empty list with the same size of the list returned by {@link #parseInputRows} or the returned objects will be discarded
    */
-  protected List<Map<String, Object>> toMap(T intermediateRow) throws IOException
-  {
-    throw new UOE("toMap not implemented");
-  }
-
+  protected abstract List<Map<String, Object>> toMap(T intermediateRow) throws IOException;
 
   /**
    * A helper method which enriches the base parse exception message with additional information. The returned message

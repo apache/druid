@@ -79,4 +79,10 @@ public class DruidTombstoneSegmentReader extends IntermediateRowParsingReader<Ma
     throw new UnsupportedOperationException(getClass().getName());
   }
 
+  @Override
+  protected List<Map<String, Object>> toMap(Map<String, Object> intermediateRow)
+  {
+    throw new UnsupportedOperationException(getClass().getName());
+  }
+
 }
