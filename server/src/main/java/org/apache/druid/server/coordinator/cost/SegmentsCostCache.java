@@ -431,7 +431,7 @@ public class SegmentsCostCache
     @Override
     public boolean equals(Object obj)
     {
-      throw new UnsupportedOperationException("Use IntervalAndSum.compareTo()");
+      throw new UnsupportedOperationException("Use SegmentAndSum.compareTo()");
     }
 
     @Override
