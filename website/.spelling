@@ -396,6 +396,7 @@ rollups
 rsync
 runtime
 schemas
+schemaless
 searchable
 secondaryPartitionPruning
 seekable-stream
@@ -1957,7 +1958,6 @@ dimensionExclusions
 expr
 jackson-jq
 missingValue
-schemaless
 skipBytesInMemoryOverheadCheck
 spatialDimensions
 useFieldDiscovery

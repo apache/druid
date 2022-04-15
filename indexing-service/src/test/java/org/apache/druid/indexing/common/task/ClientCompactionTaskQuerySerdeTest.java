@@ -57,6 +57,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.BitmapSerde.DefaultBitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -93,6 +94,7 @@ public class ClientCompactionTaskQuerySerdeTest
             true
         ),
         new ClientCompactionTaskQueryTuningConfig(
+            null,
             null,
             40000,
             2000L,
@@ -249,7 +251,7 @@ public class ClientCompactionTaskQuerySerdeTest
             new ParallelIndexTuningConfig(
                 null,
                 null,
-                null,
+                new OnheapIncrementalIndex.Spec(true),
                 40000,
                 2000L,
                 null,
@@ -313,6 +315,7 @@ public class ClientCompactionTaskQuerySerdeTest
         ),
         new ClientCompactionTaskQueryTuningConfig(
             100,
+            new OnheapIncrementalIndex.Spec(true),
             40000,
             2000L,
             30000L,

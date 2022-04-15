@@ -36,6 +36,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.BitmapSerde.DefaultBitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Duration;
@@ -125,6 +126,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         new UserCompactionTaskQueryTuningConfig(
             null,
             null,
+            null,
             10000L,
             null,
             null,
@@ -172,6 +174,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         new UserCompactionTaskQueryTuningConfig(
             null,
             null,
+            null,
             10000L,
             null,
             null,
@@ -213,6 +216,47 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   {
     final UserCompactionTaskQueryTuningConfig tuningConfig = new UserCompactionTaskQueryTuningConfig(
         40000,
+        null,
+        2000L,
+        null,
+        new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), null),
+        new DynamicPartitionsSpec(1000, 20000L),
+        new IndexSpec(
+            new DefaultBitmapSerdeFactory(),
+            CompressionStrategy.LZ4,
+            CompressionStrategy.LZF,
+            LongEncodingStrategy.LONGS
+        ),
+        new IndexSpec(
+            new DefaultBitmapSerdeFactory(),
+            CompressionStrategy.LZ4,
+            CompressionStrategy.UNCOMPRESSED,
+            LongEncodingStrategy.AUTO
+        ),
+        2,
+        1000L,
+        TmpFileSegmentWriteOutMediumFactory.instance(),
+        100,
+        5,
+        1000L,
+        new Duration(3000L),
+        7,
+        1000,
+        100
+    );
+
+    final String json = OBJECT_MAPPER.writeValueAsString(tuningConfig);
+    final UserCompactionTaskQueryTuningConfig fromJson =
+        OBJECT_MAPPER.readValue(json, UserCompactionTaskQueryTuningConfig.class);
+    Assert.assertEquals(tuningConfig, fromJson);
+  }
+
+  @Test
+  public void testSerdeUserCompactionTuningConfigWithAppendableIndexSpec() throws IOException
+  {
+    final UserCompactionTaskQueryTuningConfig tuningConfig = new UserCompactionTaskQueryTuningConfig(
+        40000,
+        new OnheapIncrementalIndex.Spec(true),
         2000L,
         null,
         new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), null),

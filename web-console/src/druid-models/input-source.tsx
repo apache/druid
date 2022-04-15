@@ -41,6 +41,10 @@ export interface InputSource {
 
   // hdfs
   paths?: string;
+
+  // http
+  httpAuthenticationUsername?: any;
+  httpAuthenticationPassword?: any;
 }
 
 export function issueWithInputSource(inputSource: InputSource | undefined): string | undefined {

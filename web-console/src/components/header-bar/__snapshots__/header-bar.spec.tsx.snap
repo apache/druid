@@ -168,6 +168,16 @@ exports[`HeaderBar matches snapshot 1`] = `
                 shouldDismissPopover={true}
                 text="Force Overlord mode"
               />
+              <Blueprint4.MenuItem
+                active={false}
+                disabled={false}
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={Object {}}
+                selected={false}
+                shouldDismissPopover={true}
+                text="Force no management proxy mode"
+              />
             </React.Fragment>
           </Blueprint4.MenuItem>
         </Blueprint4.Menu>

@@ -45,6 +45,7 @@ export class Capabilities {
   static COORDINATOR_OVERLORD: Capabilities;
   static COORDINATOR: Capabilities;
   static OVERLORD: Capabilities;
+  static NO_PROXY: Capabilities;
 
   private readonly queryType: QueryType;
   private readonly coordinator: boolean;
@@ -96,7 +97,7 @@ export class Capabilities {
 
   static async detectNode(node: 'coordinator' | 'overlord'): Promise<boolean | undefined> {
     try {
-      await Api.instance.get(`/druid/${node === 'overlord' ? 'indexer' : node}/v1/isLeader`, {
+      await Api.instance.get(`/proxy/${node}/status`, {
         timeout: Capabilities.STATUS_TIMEOUT,
       });
     } catch (e) {
@@ -217,4 +218,9 @@ Capabilities.OVERLORD = new Capabilities({
   queryType: 'none',
   coordinator: false,
   overlord: true,
+});
+Capabilities.NO_PROXY = new Capabilities({
+  queryType: 'nativeAndSql',
+  coordinator: false,
+  overlord: false,
 });
