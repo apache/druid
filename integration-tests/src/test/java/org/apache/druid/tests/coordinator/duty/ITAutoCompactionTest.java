@@ -175,7 +175,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           false
       );
       // should now only have 1 row after compaction
-      // added = null, count = 3, sum_added = 93
+      // added = null, count = 3, sum_added = 93.0
       forceTriggerAutoCompaction(1);
 
       queryAndResultFields = ImmutableMap.of(
@@ -193,7 +193,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "sum_added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
-          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(93))))
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(93.0f))))
       );
       verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
       queryAndResultFields = ImmutableMap.of(
