@@ -203,8 +203,10 @@ public class SqlExpressionBenchmark
       "SELECT TIME_SHIFT(MILLIS_TO_TIMESTAMP(long5), 'PT1H', 1), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
       // 38: LATEST aggregator
       "SELECT LATEST(long1) FROM foo",
-      // 39: LATEST aggregator
-      "SELECT LATEST(double4) FROM foo"
+      // 39: LATEST aggregator double
+      "SELECT LATEST(double4) FROM foo",
+      // 40: LATEST aggregator double
+      "SELECT LATEST(float3) FROM foo"
   );
 
   @Param({"5000000"})
@@ -218,7 +220,7 @@ public class SqlExpressionBenchmark
 
   @Param({
       // non-expression reference
-     /* "0",
+      "0",
       "1",
       "2",
       "3",
@@ -256,9 +258,10 @@ public class SqlExpressionBenchmark
       "34",
       "35",
       "36",
-      "37",*/
+      "37",
       "38",
-      "39"
+      "39",
+      "40"
   })
   private String query;
 
