@@ -95,7 +95,7 @@ public class SegmentsCostCache
    */
   private static final double HALF_LIFE_HOURS = 24.0;
   private static final double LAMBDA = Math.log(2) / HALF_LIFE_HOURS;
-  private static final double NORMALIZATION_FACTOR = 1 / (LAMBDA * LAMBDA);
+  static final double NORMALIZATION_FACTOR = 1 / (LAMBDA * LAMBDA);
   private static final double MILLIS_FACTOR = TimeUnit.HOURS.toMillis(1) / LAMBDA;
 
   /**

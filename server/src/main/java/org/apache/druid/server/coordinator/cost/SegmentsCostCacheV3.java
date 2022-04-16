@@ -24,6 +24,7 @@ import com.google.common.collect.Ordering;
 import org.apache.commons.math3.util.FastMath;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.server.coordinator.CostBalancerStrategy;
@@ -32,6 +33,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -97,7 +99,7 @@ public class SegmentsCostCacheV3
    */
   private static final double HALF_LIFE_HOURS = 24.0;
   private static final double LAMBDA = Math.log(2) / HALF_LIFE_HOURS;
-  private static final double NORMALIZATION_FACTOR = 1 / (LAMBDA * LAMBDA);
+  static final double NORMALIZATION_FACTOR = 1 / (LAMBDA * LAMBDA);
   private static final double MILLIS_FACTOR = TimeUnit.HOURS.toMillis(1) / LAMBDA;
 
   /**
@@ -115,16 +117,9 @@ public class SegmentsCostCacheV3
   private static final long BUCKET_INTERVAL = TimeUnit.DAYS.toMillis(15);
   private static final DurationGranularity BUCKET_GRANULARITY = new DurationGranularity(BUCKET_INTERVAL, 0);
 
-  private static final Comparator<Interval> INTERVAL_START_COMPARATOR = Comparators.intervalsByStartThenEnd();
-
-  private static final Comparator<Interval> INTERVAL_END_COMPARATOR = Comparators.intervalsByEndThenStart();
-
   private static final Comparator<Bucket> BUCKET_INTERVAL_COMPARATOR =
       Comparator.comparing(Bucket::getInterval, Comparators.intervalsByStartThenEnd());
 
-  private static final Ordering<Interval> INTERVAL_START_ORDERING = Ordering.from(Comparators.intervalsByStartThenEnd());
-
-  private static final Ordering<Interval> INTERVAL_END_ORDERING = Ordering.from(Comparators.intervalsByEndThenStart());
   private static final Ordering<Bucket> BUCKET_ORDERING = Ordering.from(BUCKET_INTERVAL_COMPARATOR);
 
   private final ArrayList<Bucket> sortedBuckets;
@@ -219,53 +214,67 @@ public class SegmentsCostCacheV3
   {
     private final Interval interval;
     private final Interval calculationInterval;
-    private final List<Interval> intervalStartSortList;
-    private final List<Interval> intervalEndSortList;
 
-    private final double[] cumStart;
-    private final double[] cumStartExp;
-    private final double[] cumStartExpInv;
-    private final double[] cumEnd;
-    private final double[] cumEndExp;
-    private final double[] cumEndExpInv;
+    private final long START;
+    private final long END;
+    private final double END_VAL;
+    private final double END_EXP;
+    private final double END_EXP_INV;
 
-    Bucket(Interval interval, List<Interval> intervalStartSortList, List<Interval> intervalEndSortList)
+    private final long[] start;
+    private final long[] end;
+
+    private final double[] startValSum;
+    private final double[] startExpSum;
+    private final double[] startExpInvSum;
+
+    private final double[] endValSum;
+    private final double[] endExpSum;
+    private final double[] endExpInvSum;
+
+    Bucket(Interval interval, List<Pair<Long, Long>> intervals)
     {
       this.interval = Preconditions.checkNotNull(interval, "interval");
-      this.intervalStartSortList = Preconditions.checkNotNull(intervalStartSortList, "intervalStartSortList");
-      this.intervalEndSortList = Preconditions.checkNotNull(intervalEndSortList, "intervalEndSortList");
-      Preconditions.checkArgument(intervalStartSortList.size() == intervalEndSortList.size());
-      Preconditions.checkArgument(INTERVAL_START_ORDERING.isOrdered(intervalStartSortList));
-      Preconditions.checkArgument(INTERVAL_END_ORDERING.isOrdered(intervalEndSortList));
+
       this.calculationInterval = new Interval(
           interval.getStart().minus(LIFE_THRESHOLD),
           interval.getEnd().plus(LIFE_THRESHOLD)
       );
 
-      int n = intervalStartSortList.size();
-      double exp;
-      double expInv;
+      START = interval.getStartMillis();
+      END = interval.getEndMillis();
+      END_VAL = getVal(END);
+      END_EXP = FastMath.exp(END_VAL);
+      END_EXP_INV = FastMath.exp(-END_VAL);
 
-      cumStart = new double[n + 1];
-      cumStartExp = new double[n + 1];
-      cumStartExpInv = new double[n + 1];
-      cumEnd = new double[n + 1];
-      cumEndExp = new double[n + 1];
-      cumEndExpInv = new double[n + 1];
+      int n = intervals.size();
+      start = new long[n];
+      end = new long[n];
       for (int i = 0; i < n; i++) {
-        double start = convertStart(intervalStartSortList.get(i), interval);
-        exp = FastMath.exp(start);
-        expInv = FastMath.exp(-start);
-        cumStart[i + 1] = cumStart[i] + start;
-        cumStartExp[i + 1] = cumStartExp[i] + exp;
-        cumStartExpInv[i + 1] = cumStartExpInv[i] + expInv;
+        start[i] = intervals.get(i).lhs;
+        end[i] = intervals.get(i).rhs;
+      }
+      Arrays.sort(start);
+      Arrays.sort(end);
 
-        double end = convertEnd(intervalEndSortList.get(i), interval);
-        exp = FastMath.exp(end);
-        expInv = FastMath.exp(-end);
-        cumEnd[i + 1] = cumEnd[i] + end;
-        cumEndExp[i + 1] = cumEndExp[i] + exp;
-        cumEndExpInv[i + 1] = cumEndExpInv[i] + expInv;
+      startValSum = new double[n + 1];
+      startExpSum = new double[n + 1];
+      startExpInvSum = new double[n + 1];
+      for (int i = 0; i < n; i++) {
+        double val = getVal(start[i]);
+        startValSum[i + 1] = startValSum[i] + val;
+        startExpSum[i + 1] = startExpSum[i] + FastMath.exp(val);
+        startExpInvSum[i + 1] = startExpInvSum[i] + FastMath.exp(-val);
+      }
+
+      endValSum = new double[n + 1];
+      endExpSum = new double[n + 1];
+      endExpInvSum = new double[n + 1];
+      for (int i = 0; i < n; i++) {
+        double val = getVal(end[i]);
+        endValSum[i + 1] = endValSum[i] + val;
+        endExpSum[i + 1] = endExpSum[i] + FastMath.exp(val);
+        endExpInvSum[i + 1] = endExpInvSum[i] + FastMath.exp(-val);
       }
     }
 
@@ -281,116 +290,125 @@ public class SegmentsCostCacheV3
 
     double cost(DataSegment dataSegment)
     {
-      // cost is calculated relatively to bucket start (which is considered as 0)
-      double t0 = convertStart(dataSegment.getInterval(), interval);
-      double t1 = convertEnd(dataSegment.getInterval(), interval);
-
       // avoid calculation for segments outside of LIFE_THRESHOLD
       if (!inCalculationInterval(dataSegment)) {
         throw new ISE("Segment is not within calculation interval");
       }
 
-      int index = Collections.binarySearch(intervalStartSortList, dataSegment.getInterval(), INTERVAL_START_COMPARATOR);
-      index = (index >= 0) ? index : -index - 1;
-      double normalizedCost = leftCost(dataSegment, t0, t1, index) + rightCost(dataSegment, t0, t1, index);
-      double denormalizingFactor = 1;
-      return normalizedCost * denormalizingFactor;
+
+
+      long x = dataSegment.getInterval().getStartMillis();
+      long y = dataSegment.getInterval().getEndMillis();
+      double cost = 0;
+      cost += solve(x, y, start, startValSum, startExpSum, startExpInvSum);
+      cost -= solve(x, y, end, endValSum, endExpSum, endExpInvSum);
+      return cost;
     }
 
-    private double leftCost(DataSegment dataSegment, double t0, double t1, int index)
+    // Sum of cost (<val, END>, <x, y>) for all val in vals
+    private double solve(long x, long y, long[] vals, double[] sum, double[] expSum, double[] expInvSum)
     {
-      if (index - 1 < 0) {
-        return 0;
-      }
-      double exp0 = FastMath.exp(t0);
-      double expInv0 = 1 / exp0;
-      double exp1 = FastMath.exp(t1);
-      double expInv1 = 1 / exp1;
-      double leftCost = 0.0;
-      // add to cost all left-overlapping segments
-      int rightBound = index - 1;
-      int leftBound = leftBoundary(0, index - 1, dataSegment.getInterval(), intervalStartSortList);
-      leftCost += 2 * (cumEnd[rightBound + 1] - cumEnd[leftBound]);
-      leftCost -= 2 * (rightBound - leftBound + 1) * t0;
-      leftCost += expInv1 * (cumStartExp[rightBound + 1] - cumStartExp[leftBound]);
-      leftCost += exp0 * (cumEndExpInv[rightBound + 1] - cumEndExpInv[leftBound]);
-      leftCost -= expInv0 * (cumStartExp[rightBound + 1] - cumStartExp[leftBound]);
-      leftCost -= expInv1 * (cumEndExp[rightBound + 1] - cumEndExp[leftBound]);
-      // add left-non-overlapping segments
-      if (leftBound > 0) {
-        leftCost += cumStartExp[leftBound] * (expInv1 - expInv0);
-        leftCost -= cumEndExp[leftBound] * (expInv1 - expInv0);
-      }
-      return leftCost;
-    }
 
-    private double rightCost(DataSegment dataSegment, double t0, double t1, int index)
-    {
-      int n = intervalStartSortList.size();
-      if (index >= n) {
-        return 0;
-      }
-      double exp0 = FastMath.exp(t0);
-      double exp1 = FastMath.exp(t1);
-      double expInv1 = 1 / exp1;
-      double rightCost = 0.0;
-      int leftBound = index;
-      int rightBound = rightBoundary(index, n - 1, dataSegment.getInterval(), intervalStartSortList);
-      // add all right-overlapping segments
-      rightCost += 2 * (rightBound - leftBound + 1) * t1;
-      rightCost -= 2 * (cumStart[rightBound + 1] - cumStart[leftBound]);
-      rightCost += exp0 * (cumEndExpInv[rightBound + 1] - cumEndExpInv[leftBound]);
-      rightCost += expInv1 * (cumStartExp[rightBound + 1] - cumStartExp[leftBound]);
-      rightCost -= exp0 * (cumStartExpInv[rightBound + 1] - cumStartExpInv[leftBound]);
-      rightCost -= exp1 * (cumEndExpInv[rightBound + 1] - cumEndExpInv[leftBound]);
-      // add right-non-overlapping segments
-      rightBound++;
-      if (rightBound <= n) {
-        rightCost += (cumEndExpInv[n] - cumEndExpInv[rightBound]) * (exp0 - exp1);
-        rightCost -= (cumStartExpInv[n] - cumStartExpInv[rightBound]) * (exp0 - exp1);
-      }
-      return rightCost;
-    }
+      int n = vals.length;
 
-    private int leftBoundary(int l, int r, Interval interval, List<Interval> intervalList)
-    {
-      if (l == r) {
-        return interval.overlaps(intervalList.get(l)) ? l : r + 1;
-      }
-      int m = (l + r) / 2;
-      if (interval.overlaps(intervalList.get(m))) {
-        return leftBoundary(l, m, interval, intervalList);
+      double xVal = getVal(x);
+      double xExp = FastMath.exp(xVal);
+      double xExpInv = FastMath.exp(-xVal);
+
+      double yVal = getVal(y);
+      double yExp = FastMath.exp(yVal);
+      double yExpInv = FastMath.exp(-yVal);
+
+      double cost = 0;
+
+      if (END < x) {
+
+        // val , END , x , y
+        cost += expSum[n] * yExpInv;
+        cost -= expSum[n] * xExpInv;
+        cost += n * END_EXP * xExpInv;
+        cost -= n * END_EXP * yExpInv;
+
+      } else if (END > y) {
+
+        int l = lowerBound(0, n - 1, x, vals);
+        int r = upperBound(0, n - 1, y, vals);
+
+        // val < j , y , E
+        cost += 2 * (l + 1) * yVal;
+        cost -= 2 * (l + 1) * xVal;
+        cost += expSum[l + 1] * yExpInv;
+        cost -= expSum[l + 1] * xExpInv;
+        cost += (l + 1) * xExp * END_EXP_INV;
+        cost -= (l + 1) * yExp * END_EXP_INV;
+
+        // x <= val <= y , E
+        cost += 2 * (r - l - 1) * yVal;
+        cost -= 2 * (sum[r] - sum[l + 1]);
+        cost += (r - l - 1) * xExp * END_EXP_INV;
+        cost -= xExp * (expInvSum[r] - expInvSum[l + 1]);
+        cost -= (r - l - 1) * yExp * END_EXP_INV;
+        cost += (expSum[r] - expSum[l + 1]) * yExpInv;
+
+        // x , y < val , E
+        cost += (n - r) * xExp * END_EXP_INV;
+        cost -= xExp * (expInvSum[n] - expInvSum[r]);
+        cost -= (n - r) * yExp * END_EXP_INV;
+        cost += yExp * (expInvSum[n] - expInvSum[r]);
+
       } else {
-        return leftBoundary(m + 1, r, interval, intervalList);
+
+        int l = lowerBound(0, n - 1, x, vals);
+
+        // val < x , END , y
+        cost += 2 * (l + 1) * END_VAL;
+        cost -= 2 * (l + 1) * xVal;
+        cost += expSum[l + 1] * yExpInv;
+        cost -= expSum[l + 1] * xExpInv;
+        cost -= (l + 1) * END_EXP * yExpInv;
+        cost += (l + 1) * xExp * END_EXP_INV;
+
+        // x <= val , END , y
+        cost += 2 * (n - l - 1) * END_VAL;
+        cost -= 2 * (sum[n] - sum[l - 1]);
+        cost += (n - l + 1) * xExp * END_EXP_INV;
+        cost -= xExp * (expInvSum[n] - expInvSum[l - 1]);
+        cost += (expSum[n] - expSum[l - 1]) * yExpInv;
+        cost -= (n - l + 1) * END_EXP * yExpInv;
       }
+
+      return cost;
     }
 
-    private int rightBoundary(int l, int r, Interval interval, List<Interval> intervalList)
+    private double getVal(long millis)
+    {
+      return millis / MILLIS_FACTOR - START / MILLIS_FACTOR;
+    }
+
+    private int lowerBound(int l, int r, long x, long[] a)
     {
       if (l == r) {
-        return interval.overlaps(intervalList.get(r)) ? r : l - 1;
+        return a[l] < x ? r : l - 1;
       }
       int m = (l + r + 1) / 2;
-      if (interval.overlaps(intervalList.get(m))) {
-        return rightBoundary(m, r, interval, intervalList);
+      if (a[m] < x) {
+        return lowerBound(m, r, x, a);
       } else {
-        return rightBoundary(l, m - 1, interval, intervalList);
+        return lowerBound(l, m - 1, x, a);
       }
     }
 
-    private static double convertStart(Interval interval, Interval reference)
+    private int upperBound(int l, int r, long x, long[] a)
     {
-      return toLocalInterval(interval.getStartMillis(), reference);
-    }
-
-    private static double convertEnd(Interval interval, Interval reference)
-    {
-      return toLocalInterval(interval.getEndMillis(), reference);
-    }
-
-    private static double toLocalInterval(long millis, Interval interval)
-    {
-      return millis / MILLIS_FACTOR - interval.getStartMillis() / MILLIS_FACTOR;
+      if (l == r) {
+        return a[r] > x ? l : r + 1;
+      }
+      int m = (l + r) / 2;
+      if (a[m] > x) {
+        return upperBound(l, m, x, a);
+      } else {
+        return upperBound(m + 1, r, x, a);
+      }
     }
 
     public static Builder builder(Interval interval)
@@ -434,24 +452,19 @@ public class SegmentsCostCacheV3
 
       public Bucket build()
       {
-        List<Interval> intervalsStartSortList = segmentSet.stream()
-                                                          .map(SegmentId::getInterval)
-                                                          .sorted(INTERVAL_START_COMPARATOR)
-                                                          .collect(Collectors.toList());
+        long bucketEndMillis = interval.getEndMillis();
 
-        List<Interval> intervalsEndSortList = segmentSet.stream()
-                                                        .map(SegmentId::getInterval)
-                                                        .sorted(INTERVAL_END_COMPARATOR)
-                                                        .collect(Collectors.toList());
+        List<Pair<Long, Long>> intervals = new ArrayList<>();
 
-        long bucketEndMillis = intervalsEndSortList.get(intervalsEndSortList.size() - 1).getEndMillis();
-        bucketEndMillis = Long.max(bucketEndMillis, interval.getEndMillis());
+        for (SegmentId segment : segmentSet) {
+          Interval i = segment.getInterval();
+          intervals.add(Pair.of(i.getStartMillis(), i.getEndMillis()));
+          bucketEndMillis = Math.max(bucketEndMillis, i.getEndMillis());
+        }
 
         segmentSet.clear();
 
-        return new Bucket(Intervals.utc(interval.getStartMillis(), bucketEndMillis),
-                          intervalsStartSortList,
-                          intervalsEndSortList);
+        return new Bucket(Intervals.utc(interval.getStartMillis(), bucketEndMillis), intervals);
       }
     }
   }

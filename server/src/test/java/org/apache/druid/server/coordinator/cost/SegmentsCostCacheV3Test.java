@@ -34,13 +34,15 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.druid.server.coordinator.cost.SegmentsCostCacheV3.NORMALIZATION_FACTOR;
+
 public class SegmentsCostCacheV3Test
 {
 
   private static final Random random = new Random(23894);
   private static final String DATA_SOURCE = "dataSource";
   private static DateTime REFERENCE_TIME = DateTimes.of("2014-01-01T00:00:00");
-  private static final double EPSILON = 0.00000001;
+  private static final double EPSILON = 0.0000001;
 
   @Test
   public void notInCalculationIntervalCostTest()
@@ -176,7 +178,7 @@ public class SegmentsCostCacheV3Test
     }
 
     end = System.currentTimeMillis();
-    System.out.println("Avg cache cost time: " + (end - start) + " us");
+    System.out.println("Avg new cache cost time: " + (end - start) + " us");
 
     double cost = cache.cost(referenceSegment);
 
@@ -186,7 +188,7 @@ public class SegmentsCostCacheV3Test
   }
 
   @Test
-  public void correctnessTest()
+  public void bucketCorrectnessTest()
   {
     List<DataSegment> dataSegments = new ArrayList<>();
 
@@ -205,6 +207,65 @@ public class SegmentsCostCacheV3Test
       dataSegments.add(createSegment(DATA_SOURCE, shiftedXHInterval(REFERENCE_TIME, random.nextInt(40) - 20, 1), 100));
     }
 
+    // intervals not intersecting, lying to its left
+    for (int i = 0; i < 10; i++) {
+      dataSegments.add(createSegment(DATA_SOURCE, shiftedRandomInterval(REFERENCE_TIME, -90), 100));
+    }
+
+    // intervals not intersecting, lying to its right
+    for (int i = 0; i < 10; i++) {
+      dataSegments.add(createSegment(DATA_SOURCE, shiftedRandomInterval(REFERENCE_TIME, 60), 100));
+    }
+
+    DataSegment referenceSegment = createSegment("ANOTHER_DATA_SOURCE", shifted1HInterval(REFERENCE_TIME, 5), 100);
+
+    SegmentsCostCacheV3.Bucket.Builder prototype = SegmentsCostCacheV3.Bucket.builder(new Interval(
+        REFERENCE_TIME.minusHours(90), REFERENCE_TIME.plusHours(90)
+    ));
+
+    dataSegments.forEach(prototype::addSegment);
+    SegmentsCostCacheV3.Bucket bucket = prototype.build();
+
+    double origCost = 0;
+    for (DataSegment segment : dataSegments) {
+      origCost += CostBalancerStrategy.computeJointSegmentsCost(segment, referenceSegment);
+    }
+
+    double cost = bucket.cost(referenceSegment);
+
+    Assert.assertEquals(NORMALIZATION_FACTOR, origCost / cost, EPSILON);
+  }
+
+  @Test
+  public void overallCorrectnessTest()
+  {
+    List<DataSegment> dataSegments = new ArrayList<>();
+
+    // Same as reference interval
+    for (int i = 0; i < 100; i++) {
+      dataSegments.add(createSegment(DATA_SOURCE, shiftedXHInterval(REFERENCE_TIME, random.nextInt(20), 10), 100));
+    }
+
+    // Overlapping intervals of larger size that enclose the reference interval
+    for (int i = 0; i < 10; i++) {
+      dataSegments.add(createSegment(DATA_SOURCE, shiftedXHInterval(REFERENCE_TIME, random.nextInt(40) - 70, 100), 100));
+    }
+
+    // intervals of small size that are enclosed within the reference interval
+    for (int i = 0; i < 10; i++) {
+      dataSegments.add(createSegment(DATA_SOURCE, shiftedXHInterval(REFERENCE_TIME, random.nextInt(40) - 20, 1), 100));
+    }
+
+    // intervals not intersecting, lying to its left
+    for (int i = 0; i < 10; i++) {
+      dataSegments.add(createSegment(DATA_SOURCE, shiftedRandomInterval(REFERENCE_TIME, -90), 100));
+    }
+
+    // intervals not intersecting, lying to its right
+    for (int i = 0; i < 10; i++) {
+      dataSegments.add(createSegment(DATA_SOURCE, shiftedRandomInterval(REFERENCE_TIME, 60), 100));
+    }
+
     DataSegment referenceSegment = createSegment("ANOTHER_DATA_SOURCE", shifted1HInterval(REFERENCE_TIME, 5), 100);
 
     SegmentsCostCacheV3.Builder prototype = new SegmentsCostCacheV3.Builder();
@@ -219,8 +280,6 @@ public class SegmentsCostCacheV3Test
 
     double cost = cache.cost(referenceSegment);
 
-    System.out.println("Actual cost : " + origCost);
-    System.out.println("Cached cost : " + cost);
     Assert.assertEquals(1, origCost / cost, EPSILON);
   }
 
