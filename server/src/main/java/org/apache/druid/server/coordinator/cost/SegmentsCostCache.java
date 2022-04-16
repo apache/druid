@@ -93,9 +93,10 @@ public class SegmentsCostCache
    * The value of 1 day means that cost function of co-locating two segments which have 1 days between their intervals
    * is 0.5 of the cost, if the intervals are adjacent. If the distance is 2 days, then 0.25, etc.
    */
-  private static final double HALF_LIFE_DAYS = 1.0;
-  private static final double LAMBDA = Math.log(2) / HALF_LIFE_DAYS;
-  private static final double MILLIS_FACTOR = TimeUnit.DAYS.toMillis(1) / LAMBDA;
+  private static final double HALF_LIFE_HOURS = 24.0;
+  private static final double LAMBDA = Math.log(2) / HALF_LIFE_HOURS;
+  private static final double NORMALIZATION_FACTOR = 1 / (LAMBDA * LAMBDA);
+  private static final double MILLIS_FACTOR = TimeUnit.HOURS.toMillis(1) / LAMBDA;
 
   /**
    * LIFE_THRESHOLD is used to avoid calculations for segments that are "far"
@@ -156,7 +157,7 @@ public class SegmentsCostCache
       cost += bucket.cost(segment);
     }
 
-    return cost;
+    return cost * NORMALIZATION_FACTOR;
   }
 
   public static Builder builder()
@@ -262,16 +263,11 @@ public class SegmentsCostCache
       double leftCost = 0.0;
       // add to cost all left-overlapping segments
       int leftIndex = index - 1;
-      while (leftIndex >= 0
-             && sortedSegments.get(leftIndex).getInterval().overlaps(dataSegment.getInterval())) {
+      while (leftIndex >= 0) {
         double start = convertStart(sortedSegments.get(leftIndex), interval);
         double end = convertEnd(sortedSegments.get(leftIndex), interval);
         leftCost += CostBalancerStrategy.intervalCost(end - start, t0 - start, t1 - start);
         --leftIndex;
-      }
-      // add left-non-overlapping segments
-      if (leftIndex >= 0) {
-        leftCost += leftSum[leftIndex] * (FastMath.exp(-t1) - FastMath.exp(-t0));
       }
       return leftCost;
     }

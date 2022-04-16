@@ -95,9 +95,10 @@ public class SegmentsCostCacheV3
    * The value of 1 day means that cost function of co-locating two segments which have 1 days between their intervals
    * is 0.5 of the cost, if the intervals are adjacent. If the distance is 2 days, then 0.25, etc.
    */
-  private static final double HALF_LIFE_DAYS = 1.0;
-  private static final double LAMBDA = Math.log(2) / HALF_LIFE_DAYS;
-  private static final double MILLIS_FACTOR = TimeUnit.DAYS.toMillis(1) / LAMBDA;
+  private static final double HALF_LIFE_HOURS = 24.0;
+  private static final double LAMBDA = Math.log(2) / HALF_LIFE_HOURS;
+  private static final double NORMALIZATION_FACTOR = 1 / (LAMBDA * LAMBDA);
+  private static final double MILLIS_FACTOR = TimeUnit.HOURS.toMillis(1) / LAMBDA;
 
   /**
    * LIFE_THRESHOLD is used to avoid calculations for segments that are "far"
@@ -161,7 +162,7 @@ public class SegmentsCostCacheV3
       cost += bucket.cost(segment);
     }
 
-    return cost;
+    return cost * NORMALIZATION_FACTOR;
   }
 
   public static Builder builder()
@@ -291,7 +292,9 @@ public class SegmentsCostCacheV3
 
       int index = Collections.binarySearch(intervalStartSortList, dataSegment.getInterval(), INTERVAL_START_COMPARATOR);
       index = (index >= 0) ? index : -index - 1;
-      return leftCost(dataSegment, t0, t1, index) + rightCost(dataSegment, t0, t1, index);
+      double normalizedCost = leftCost(dataSegment, t0, t1, index) + rightCost(dataSegment, t0, t1, index);
+      double denormalizingFactor = 1;
+      return normalizedCost * denormalizingFactor;
     }
 
     private double leftCost(DataSegment dataSegment, double t0, double t1, int index)

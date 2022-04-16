@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.cost;
 
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.server.coordinator.CostBalancerStrategy;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -36,22 +37,10 @@ import java.util.concurrent.TimeUnit;
 public class SegmentsCostCacheTest
 {
 
+  private static final Random random = new Random(23894);
   private static final String DATA_SOURCE = "dataSource";
   private static DateTime REFERENCE_TIME = DateTimes.of("2014-01-01T00:00:00");
   private static final double EPSILON = 0.00000001;
-
-  @Test
-  public void segmentCacheTest()
-  {
-    SegmentsCostCache.Builder cacheBuilder = SegmentsCostCache.builder();
-    cacheBuilder.addSegment(createSegment(DATA_SOURCE, shifted1HInterval(REFERENCE_TIME, 0), 100));
-    SegmentsCostCache cache = cacheBuilder.build();
-    Assert.assertEquals(
-        7.8735899489011E-4,
-        cache.cost(createSegment(DATA_SOURCE, shifted1HInterval(REFERENCE_TIME, -2), 100)),
-        EPSILON
-    );
-  }
 
   @Test
   public void notInCalculationIntervalCostTest()
@@ -146,38 +135,114 @@ public class SegmentsCostCacheTest
   }
 
   @Test
-  public void randomSegmentsCostTest()
+  public void perfComparisonTest()
   {
+    final int N = 100000;
+
     List<DataSegment> dataSegments = new ArrayList<>(1000);
-    Random random = new Random(1);
-    for (int i = 0; i < 1000; ++i) {
-      dataSegments.add(createSegment(DATA_SOURCE, shifted1HInterval(REFERENCE_TIME, random.nextInt(20)), 100));
+    for (int i = 0; i < N; ++i) {
+      dataSegments.add(createSegment(DATA_SOURCE, shiftedRandomInterval(REFERENCE_TIME, 24 * random.nextInt(60)), 100));
+    }
+
+    DataSegment referenceSegment = createSegment("ANOTHER_DATA_SOURCE", shiftedRandomInterval(REFERENCE_TIME, 5), 100);
+
+    SegmentsCostCache.Builder prototype = new SegmentsCostCache.Builder();
+
+    long start;
+    long end;
+
+    start = System.currentTimeMillis();
+
+    dataSegments.forEach(prototype::addSegment);
+    SegmentsCostCache cache = prototype.build();
+
+    end = System.currentTimeMillis();
+    System.out.println("Insertion time for " + N + " segments: " + (end - start) + " ms");
+
+    start = System.currentTimeMillis();
+
+    double origCost = 0;
+    for (DataSegment segment : dataSegments) {
+      origCost += CostBalancerStrategy.computeJointSegmentsCost(segment, referenceSegment);
+    }
+
+    end = System.currentTimeMillis();
+    System.out.println("Avg cost time: " + ((end - start) * 1000) + " us");
+
+    start = System.currentTimeMillis();
+
+    for (int i = 0; i < 1000; i++) {
+      cache.cost(referenceSegment);
+    }
+
+    end = System.currentTimeMillis();
+    System.out.println("Avg cache cost time: " + (end - start) + " us");
+
+    double cost = cache.cost(referenceSegment);
+
+    System.out.println(origCost);
+    System.out.println(cost);
+    Assert.assertEquals(1, origCost / cost, EPSILON);
+  }
+
+  @Test
+  public void correctnessTest()
+  {
+    List<DataSegment> dataSegments = new ArrayList<>();
+
+    // Same as reference interval
+    for (int i = 0; i < 100; i++) {
+      dataSegments.add(createSegment(DATA_SOURCE, shiftedXHInterval(REFERENCE_TIME, random.nextInt(20), 10), 100));
+    }
+
+    // Overlapping intervals of larger size that enclose the reference interval
+    for (int i = 0; i < 10; i++) {
+      dataSegments.add(createSegment(DATA_SOURCE, shiftedXHInterval(REFERENCE_TIME, random.nextInt(40) - 70, 100), 100));
+    }
+
+    // intervals of small size that are enclosed within the reference interval
+    for (int i = 0; i < 10; i++) {
+      dataSegments.add(createSegment(DATA_SOURCE, shiftedXHInterval(REFERENCE_TIME, random.nextInt(40) - 20, 1), 100));
     }
 
     DataSegment referenceSegment = createSegment("ANOTHER_DATA_SOURCE", shifted1HInterval(REFERENCE_TIME, 5), 100);
 
-    SegmentsCostCache.Bucket.Builder prototype = SegmentsCostCache.Bucket.builder(new Interval(
-        REFERENCE_TIME.minusHours(1),
-        REFERENCE_TIME.plusHours(25)
-    ));
-
-    long start = System.currentTimeMillis();
+    SegmentsCostCache.Builder prototype = new SegmentsCostCache.Builder();
 
     dataSegments.forEach(prototype::addSegment);
-    SegmentsCostCache.Bucket bucket = prototype.build();
+    SegmentsCostCache cache = prototype.build();
 
-    long end = System.currentTimeMillis();
-    System.out.println(end - start);
+    double origCost = 0;
+    for (DataSegment segment : dataSegments) {
+      origCost += CostBalancerStrategy.computeJointSegmentsCost(segment, referenceSegment);
+    }
 
-    double cost = bucket.cost(referenceSegment);
-    Assert.assertEquals(0.7065117101966677, cost, EPSILON);
+    double cost = cache.cost(referenceSegment);
+
+    System.out.println("Actual cost : " + origCost);
+    System.out.println("Cached cost : " + cost);
+    Assert.assertEquals(1, origCost / cost, EPSILON);
+  }
+
+
+  private static Interval shiftedXHInterval(DateTime REFERENCE_TIME, int shiftInHours, int X)
+  {
+    return new Interval(
+        REFERENCE_TIME.plusHours(shiftInHours),
+        REFERENCE_TIME.plusHours(shiftInHours + X)
+    );
   }
 
   private static Interval shifted1HInterval(DateTime REFERENCE_TIME, int shiftInHours)
   {
+    return shiftedXHInterval(REFERENCE_TIME, shiftInHours, 1);
+  }
+
+  private static Interval shiftedRandomInterval(DateTime REFERENCE_TIME, int shiftInHours)
+  {
     return new Interval(
         REFERENCE_TIME.plusHours(shiftInHours),
-        REFERENCE_TIME.plusHours(shiftInHours + 1)
+        REFERENCE_TIME.plusHours(shiftInHours + random.nextInt(1000))
     );
   }
 
