@@ -314,10 +314,10 @@ public class DimensionCardinalityReportTest
   @Test
   public void testSupervisorDeterminePositiveNumShardsFromCardinalityReport()
   {
-    Union negativeUnion = mock(Union.class);
-    Mockito.when(negativeUnion.getEstimate()).thenReturn(24.0);
+    Union union = mock(Union.class);
+    Mockito.when(union.getEstimate()).thenReturn(24.0);
     Interval interval = Intervals.of("2001-01-01/P1D");
-    Map<Interval, Union> intervalToUnion = ImmutableMap.of(interval, negativeUnion);
+    Map<Interval, Union> intervalToUnion = ImmutableMap.of(interval, union);
     Map<Interval, Integer> intervalToNumShards =
         ParallelIndexSupervisorTask.computeIntervalToNumShards(6, intervalToUnion);
     Assert.assertEquals(new Integer(4), intervalToNumShards.get(interval));
