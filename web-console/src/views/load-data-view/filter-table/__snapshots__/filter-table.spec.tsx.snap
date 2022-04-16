@@ -64,11 +64,11 @@ exports[`FilterTable matches snapshot 1`] = `
             role="gridcell"
             style="flex: 100 0 auto; width: 100px;"
           >
-            <span
+            <div
               class="table-cell plain"
             >
               hello
-            </span>
+            </div>
           </div>
         </div>
       </div>

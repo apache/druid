@@ -42,6 +42,8 @@ export * from './show-json/show-json';
 export * from './show-log/show-log';
 export * from './suggestion-menu/suggestion-menu';
 export * from './table-cell/table-cell';
+export * from './table-clickable-cell/table-clickable-cell';
 export * from './table-column-selector/table-column-selector';
+export * from './table-filterable-cell/table-filterable-cell';
 export * from './timed-button/timed-button';
 export * from './view-control-bar/view-control-bar';

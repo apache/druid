@@ -57,20 +57,23 @@ export const LookupValuesTable = React.memo(function LookupValuesTable(
         pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
         showPagination={entries.length > SMALL_TABLE_PAGE_SIZE}
         filterable
-        columns={[
-          {
-            Header: 'Key',
-            accessor: 'k',
-          },
-          {
-            Header: 'Value',
-            accessor: 'v',
-          },
-        ]}
         noDataText={
           entriesState.getErrorMessage() ||
           'Lookup data not found. If this is a new lookup it might not have propagated yet.'
         }
+        columns={[
+          {
+            Header: 'Key',
+            accessor: 'k',
+            className: 'padded',
+            width: 300,
+          },
+          {
+            Header: 'Value',
+            accessor: 'v',
+            className: 'padded',
+          },
+        ]}
       />
     );
   }

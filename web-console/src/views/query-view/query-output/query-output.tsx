@@ -29,6 +29,7 @@ import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-d
 import {
   changePage,
   copyAndAlert,
+  dataTypeToColumnWidth,
   formatNumber,
   getNumericColumnBraces,
   Pagination,
@@ -270,12 +271,12 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
             <>
               {isComparable(value) && (
                 <>
-                  {filterOnMenuItem(IconNames.FILTER_KEEP, ex.greaterThanOrEqual(val), having)}
-                  {filterOnMenuItem(IconNames.FILTER_KEEP, ex.lessThanOrEqual(val), having)}
+                  {filterOnMenuItem(IconNames.FILTER, ex.greaterThanOrEqual(val), having)}
+                  {filterOnMenuItem(IconNames.FILTER, ex.lessThanOrEqual(val), having)}
                 </>
               )}
-              {filterOnMenuItem(IconNames.FILTER_KEEP, ex.equal(val), having)}
-              {filterOnMenuItem(IconNames.FILTER_REMOVE, ex.unequal(val), having)}
+              {filterOnMenuItem(IconNames.FILTER, ex.equal(val), having)}
+              {filterOnMenuItem(IconNames.FILTER, ex.unequal(val), having)}
             </>
           )}
           {showFullValueMenuItem}
@@ -351,14 +352,15 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
   return (
     <div className={classNames('query-output', { 'more-results': hasMoreResults })}>
       <ReactTable
+        className="-striped -highlight"
         data={queryResult.rows as any[][]}
+        ofText={hasMoreResults ? '' : 'of'}
         noDataText={queryResult.rows.length ? '' : 'Query returned no data'}
         page={pagination.page}
         pageSize={pagination.pageSize}
         onPageChange={page => changePagination(changePage(pagination, page))}
         onPageSizeChange={(pageSize, page) => changePagination({ page, pageSize })}
         sortable={false}
-        ofText={hasMoreResults ? '' : 'of'}
         defaultPageSize={SMALL_TABLE_PAGE_SIZE}
         pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
         showPagination={
@@ -366,17 +368,16 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         }
         columns={queryResult.header.map((column, i) => {
           const h = column.name;
+          const effectiveType = column.isTimeColumn() ? column.sqlType : column.nativeType;
+
           return {
             Header:
               i === renamingColumn && parsedQuery
                 ? () => <ColumnRenameInput initialName={h} onDone={renameColumnTo} />
                 : () => {
                     return (
-                      <Popover2
-                        className="clickable-cell"
-                        content={<Deferred content={() => getHeaderMenu(h, i)} />}
-                      >
-                        <div>
+                      <Popover2 content={<Deferred content={() => getHeaderMenu(h, i)} />}>
+                        <div className="clickable-cell">
                           {h}
                           {hasFilterOnHeader(h, i) && (
                             <Icon icon={IconNames.FILTER} iconSize={14} />
@@ -386,24 +387,24 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
                     );
                   },
             headerClassName: getHeaderClassName(h, i),
+            width: dataTypeToColumnWidth(effectiveType),
             accessor: String(i),
             Cell(row) {
               const value = row.value;
               return (
-                <div>
-                  <Popover2 content={<Deferred content={() => getCellMenu(h, i, value)} />}>
-                    {numericColumnBraces[i] ? (
-                      <BracedText
-                        text={formatNumber(value)}
-                        braces={numericColumnBraces[i]}
-                        padFractionalPart
-                        unselectableThousandsSeparator
-                      />
-                    ) : (
-                      <TableCell value={value} unlimited />
-                    )}
-                  </Popover2>
-                </div>
+                <Popover2 content={<Deferred content={() => getCellMenu(h, i, value)} />}>
+                  {numericColumnBraces[i] ? (
+                    <BracedText
+                      className="table-padding"
+                      text={formatNumber(value)}
+                      braces={numericColumnBraces[i]}
+                      padFractionalPart
+                      unselectableThousandsSeparator
+                    />
+                  ) : (
+                    <TableCell value={value} unlimited />
+                  )}
+                </Popover2>
               );
             },
             className:

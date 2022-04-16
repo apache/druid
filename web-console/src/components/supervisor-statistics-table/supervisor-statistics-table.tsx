@@ -86,11 +86,15 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
       {
         Header: 'Task ID',
         id: 'task_id',
+        className: 'padded',
         accessor: d => d.taskId,
+        width: 400,
       },
       {
         Header: 'Totals',
         id: 'total',
+        className: 'padded',
+        width: 200,
         accessor: d => {
           return deepGet(d, 'summary.totals.buildSegments') as StatsEntry;
         },
@@ -110,6 +114,8 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
             return {
               Header: interval,
               id: interval,
+              className: 'padded',
+              width: 200,
               accessor: d => {
                 return deepGet(d, `summary.movingAverages.buildSegments.${interval}`);
               },

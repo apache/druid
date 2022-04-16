@@ -16,30 +16,32 @@
  * limitations under the License.
  */
 
-@import '../variables';
+@import 'src/variables';
 
 .ReactTable {
-  .-pageJump {
-    .#{$bp-ns}-input {
-      position: relative;
-      top: -2px;
-      border: none;
+  .rt-tr {
+    min-height: 38px;
 
-      .#{$bp-ns}-dark & {
-        background-color: $dark-gray4;
-      }
+    .rt-th.padded,
+    .rt-td.padded,
+    .rt-expandable {
+      padding: $table-cell-v-padding $table-cell-h-padding;
     }
   }
 
-  .-pageSizeOptions {
-    .#{$bp-ns}-html-select select {
-      width: 90px;
-      position: relative;
-      top: -2px;
-      border: none;
+  &.padded-header .rt-thead .rt-th {
+    padding: $table-cell-v-padding $table-cell-h-padding;
+  }
 
-      .#{$bp-ns}-dark & {
-        background-color: $dark-gray4;
+  .braced-text.table-padding {
+    display: inline-block;
+    margin: $table-cell-v-padding $table-cell-h-padding;
+  }
+
+  .generic-filter-input {
+    &.hide-icon:not(:hover) {
+      .filter-mode-button {
+        visibility: hidden;
       }
     }
   }

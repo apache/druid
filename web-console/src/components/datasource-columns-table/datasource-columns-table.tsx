@@ -67,10 +67,14 @@ export const DatasourceColumnsTable = React.memo(function DatasourceColumnsTable
           {
             Header: 'Column name',
             accessor: 'COLUMN_NAME',
+            width: 300,
+            className: 'padded',
           },
           {
             Header: 'Data type',
             accessor: 'DATA_TYPE',
+            width: 200,
+            className: 'padded',
           },
         ]}
         noDataText={columnsState.getErrorMessage() || 'No column data found'}
