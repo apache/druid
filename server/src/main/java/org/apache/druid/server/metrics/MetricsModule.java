@@ -28,10 +28,12 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import io.timeandspace.cronscheduler.CronScheduler;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -93,13 +95,21 @@ public class MetricsModule implements Module
       MonitorsConfig monitorsConfig,
       Set<Class<? extends Monitor>> monitorSet,
       ServiceEmitter emitter,
-      Injector injector
+      Injector injector,
+      @Self Set<NodeRole> thisNodeRoles
   )
   {
     List<Monitor> monitors = new ArrayList<>();
 
     for (Class<? extends Monitor> monitorClass : Iterables.concat(monitorsConfig.getMonitors(), monitorSet)) {
-      monitors.add(injector.getInstance(monitorClass));
+      if (WorkerTaskCountStatsMonitor.class.equals(monitorClass)
+          && !(thisNodeRoles.contains(NodeRole.OVERLORD) || thisNodeRoles.contains(NodeRole.MIDDLE_MANAGER))) {
+          log.info("Not adding monitor [%s] for this node because none of node's role [%s] support it.",
+                   monitorClass, thisNodeRoles);
+      } else {
+        log.info("Adding monitor [%s]", monitorClass);
+        monitors.add(injector.getInstance(monitorClass));
+      }
     }
 
     if (!monitors.isEmpty()) {

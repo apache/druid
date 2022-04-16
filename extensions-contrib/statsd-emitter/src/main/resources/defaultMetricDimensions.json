@@ -63,6 +63,10 @@
   "task/pending/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "task/waiting/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
 
+  "middleManager/task/failed/count" : { "dimensions" : [], "type" : "count" },
+  "middleManager/task/running/count" : { "dimensions" : [], "type" : "gauge" },
+  "middleManager/task/success/count" : { "dimensions" : [], "type" : "count" },
+
   "taskSlot/total/count" : { "dimensions" : ["category"], "type" : "gauge" },
   "taskSlot/idle/count" : { "dimensions" : ["category"], "type" : "gauge" },
   "taskSlot/used/count" : { "dimensions" : ["category"], "type" : "gauge" },

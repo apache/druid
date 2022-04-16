@@ -62,8 +62,8 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
+import org.apache.druid.server.metrics.WorkerTaskCountStatsProvider;
 import org.apache.druid.server.metrics.MonitorsConfig;
-import org.apache.druid.server.metrics.TaskCountStatsProvider;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.joda.time.DateTime;
@@ -91,7 +91,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class ForkingTaskRunner
     extends BaseRestorableTaskRunner<ForkingTaskRunner.ForkingTaskRunnerWorkItem>
-    implements TaskLogStreamer, TaskCountStatsProvider
+    implements TaskLogStreamer, WorkerTaskCountStatsProvider
 {
   private static final EmittingLogger LOGGER = new EmittingLogger(ForkingTaskRunner.class);
   private static final String CHILD_PROPERTY_PREFIX = "druid.indexer.fork.property.";
@@ -746,33 +746,21 @@ public class ForkingTaskRunner
   }
 
   @Override
-  public Map<String, Long> getFailedTaskCount()
+  public Long getFailedTaskCount()
   {
-    return ImmutableMap.of(workerConfig.getCategory(), FAILED_TASK_COUNT.get());
+    return FAILED_TASK_COUNT.get();
   }
 
   @Override
-  public Map<String, Long> getPendingTaskCount()
+  public Long getRunningTaskCount()
   {
-    return null;
+    return RUNNING_TASK_COUNT.get();
   }
 
   @Override
-  public Map<String, Long> getRunningTaskCount()
+  public Long getSuccessfulTaskCount()
   {
-    return ImmutableMap.of(workerConfig.getCategory(), RUNNING_TASK_COUNT.get());
-  }
-
-  @Override
-  public Map<String, Long> getSuccessfulTaskCount()
-  {
-    return ImmutableMap.of(workerConfig.getCategory(), SUCCESSFUL_TASK_COUNT.get());
-  }
-
-  @Override
-  public Map<String, Long> getWaitingTaskCount()
-  {
-    return null;
+    return SUCCESSFUL_TASK_COUNT.get();
   }
 
   protected static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem

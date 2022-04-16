@@ -20,6 +20,7 @@
 package org.apache.druid.server.metrics;
 
 import com.google.inject.Inject;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
@@ -28,6 +29,8 @@ import java.util.Map;
 
 public class TaskCountStatsMonitor extends AbstractMonitor
 {
+  private static final EmittingLogger LOGGER = new EmittingLogger(TaskCountStatsMonitor.class);
+
   private final TaskCountStatsProvider statsProvider;
 
   @Inject
@@ -55,6 +58,7 @@ public class TaskCountStatsMonitor extends AbstractMonitor
     if (counts != null) {
       counts.forEach((k, v) -> {
         builder.setDimension("dataSource", k);
+        LOGGER.info("%s (datasource: %s): [%d]", key, k, v);
         emitter.emit(builder.build(key, v));
       });
     }
