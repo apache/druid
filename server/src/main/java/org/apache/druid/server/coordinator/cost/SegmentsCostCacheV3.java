@@ -24,6 +24,7 @@ import com.google.common.collect.Ordering;
 import org.apache.commons.math3.util.FastMath;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -82,18 +83,20 @@ import java.util.stream.Collectors;
  *      S_x1  S_x2  S_x3          S_x4  S_x5  S_x6          S_x7  S_x8  S_x9
  *         bucket1                  bucket2                    bucket3
  *
+ *
  * Reasons to store segments in Buckets:
  *
- *     1) Cost function tends to 0 as distance between segments' intervals increases; buckets
- *        are used to avoid redundant 0 calculations for thousands of times
- *     2) To reduce number of calculations when segment is added or removed from SegmentsCostCache
- *     3) To avoid infinite values during exponents calculations
+ * Unlike SegmentsCostCache updates are fast, and we can make do without buckets ideally.
+ * Unfortunately, large values for (time - bucketStart) cause overflows
+ * A threshold (say 1Y) is used for bucketing, and this allows us to compute cost within O(logN) for a bucket
  *
+ * If the interval duration exeeds it, we have to use CostBalancerStrategy#intervalCost over all the intervals
+ * This scenario has a complexity of O(M) where M is the number of "adhoc" buckets.
  */
 public class SegmentsCostCacheV3
 {
   /**
-   * HALF_LIFE_DAYS defines how fast joint cost function tends to 0 as distance between segments' intervals increasing.
+   * HALF_LIFE_HOURS defines how fast joint cost function tends to 0 as distance between segments' intervals increasing.
    * The value of 1 day means that cost function of co-locating two segments which have 1 days between their intervals
    * is 0.5 of the cost, if the intervals are adjacent. If the distance is 2 days, then 0.25, etc.
    */
@@ -104,17 +107,14 @@ public class SegmentsCostCacheV3
 
   /**
    * LIFE_THRESHOLD is used to avoid calculations for segments that are "far"
-   * from each other and thus cost(Y,Y) ~ 0 for these segments
+   * from each other and thus cost ~ 0 for these segments
    */
   private static final long LIFE_THRESHOLD = TimeUnit.DAYS.toMillis(30);
 
-  /**
-   * Bucket interval defines duration granularity for segment buckets. Number of buckets control the trade-off
-   * between updates (add/remove segment operation) and joint cost calculation:
-   *        1) updates complexity is increasing when number of buckets is decreasing (as buckets contain more segments)
-   *        2) joint cost calculation complexity is increasing with increasing of buckets number
-   */
-  private static final long BUCKET_INTERVAL = TimeUnit.DAYS.toMillis(15);
+  // The max interval that can be added to a bucket
+  private static final long INTERVAL_THRESHOLD = TimeUnit.DAYS.toMillis(366);
+  // exp(BUCKET_INTERVAL + INTERVAL_THRESHOLD + 2 * LIFE_THRESHOLD) must be within limits
+  private static final long BUCKET_INTERVAL = TimeUnit.DAYS.toMillis(90);
   private static final DurationGranularity BUCKET_GRANULARITY = new DurationGranularity(BUCKET_INTERVAL, 0);
 
   private static final Comparator<Bucket> BUCKET_INTERVAL_COMPARATOR =
@@ -124,19 +124,32 @@ public class SegmentsCostCacheV3
 
   private final ArrayList<Bucket> sortedBuckets;
   private final ArrayList<Interval> intervals;
+  private final ArrayList<Pair<Double, Double>> adhocNormalizedIntervals;
 
-  SegmentsCostCacheV3(ArrayList<Bucket> sortedBuckets)
+  private final int allGranularitySegmentCount;
+  private double allGranularitySegmentCost = -1;
+
+  SegmentsCostCacheV3(ArrayList<Bucket> sortedBuckets,
+                      ArrayList<Pair<Double, Double>> adhocNormalizedIntervals,
+                      int allGranularitySegmentCount)
   {
     this.sortedBuckets = Preconditions.checkNotNull(sortedBuckets, "buckets should not be null");
-    this.intervals = sortedBuckets.stream().map(Bucket::getInterval).collect(Collectors.toCollection(ArrayList::new));
     Preconditions.checkArgument(
         BUCKET_ORDERING.isOrdered(sortedBuckets),
         "buckets must be ordered by interval"
     );
+    this.intervals = sortedBuckets.stream().map(Bucket::getInterval).collect(Collectors.toCollection(ArrayList::new));
+    this.adhocNormalizedIntervals = Preconditions.checkNotNull(adhocNormalizedIntervals, "adhocIntervals should not be null");
+    this.allGranularitySegmentCount = allGranularitySegmentCount;
   }
 
   public double cost(DataSegment segment)
   {
+    boolean allGranularity = isAllGranularity(segment);
+    if (allGranularity && allGranularitySegmentCost >= 0) {
+      return allGranularitySegmentCost;
+    }
+
     double cost = 0.0;
     int index = Collections.binarySearch(intervals, segment.getInterval(), Comparators.intervalsByStartThenEnd());
     index = (index >= 0) ? index : -index - 1;
@@ -146,6 +159,7 @@ public class SegmentsCostCacheV3
       if (!bucket.inCalculationInterval(segment)) {
         break;
       }
+      // O(logN) -> N segments per bucket
       cost += bucket.cost(segment);
     }
 
@@ -154,10 +168,31 @@ public class SegmentsCostCacheV3
       if (!bucket.inCalculationInterval(segment)) {
         break;
       }
+      // O(logN) -> N segments per bucket
       cost += bucket.cost(segment);
     }
 
-    return cost * NORMALIZATION_FACTOR;
+    double start = segment.getInterval().getStartMillis() / MILLIS_FACTOR;
+    double end = segment.getInterval().getEndMillis() / MILLIS_FACTOR;
+
+    // O(1) -> for ALL granularity segments
+    double allStart = JodaUtils.MIN_INSTANT / MILLIS_FACTOR;
+    double allEnd = JodaUtils.MAX_INSTANT / MILLIS_FACTOR;
+    cost += allGranularitySegmentCount * CostBalancerStrategy.intervalCost(allEnd - allStart, start - allStart, end - allStart);
+
+    // O(M) -> M adhoc buckets
+    for (Pair<Double, Double> adhoc : adhocNormalizedIntervals) {
+      cost += CostBalancerStrategy.intervalCost(adhoc.rhs - adhoc.lhs, start - adhoc.lhs, end - adhoc.lhs);
+    }
+
+    cost *= NORMALIZATION_FACTOR;
+
+    // store cost for all granularity adhoc bucket for faster computation
+    if (allGranularity) {
+      allGranularitySegmentCost = cost;
+    }
+
+    return cost;
   }
 
   public static Builder builder()
@@ -165,48 +200,96 @@ public class SegmentsCostCacheV3
     return new Builder();
   }
 
+  private static boolean isAllGranularity(DataSegment segment) {
+    return segment.getInterval().getStartMillis() == JodaUtils.MIN_INSTANT
+           && segment.getInterval().getEndMillis() == JodaUtils.MAX_INSTANT;
+  }
+
+
   public static class Builder
   {
     private final NavigableMap<Interval, Bucket.Builder> buckets = new TreeMap<>(Comparators.intervalsByStartThenEnd());
 
+    private final HashSet<SegmentId> allGranularitySegments = new HashSet<>();
+    private final HashSet<SegmentId> adhocSegments = new HashSet<>();
+
     public Builder addSegment(DataSegment segment)
     {
-      Bucket.Builder builder = buckets.computeIfAbsent(getBucketInterval(segment), Bucket::builder);
-      builder.addSegment(segment);
+      if (isAllGranularity(segment)) {
+        if (!allGranularitySegments.add(segment.getId())) {
+          throw new ISE("expect new segment");
+        }
+      }
+      else if (isAdhoc(segment)) {
+        if (!adhocSegments.add(segment.getId())) {
+          throw new ISE("expect new segment");
+        }
+      }
+      else {
+        Bucket.Builder builder = buckets.computeIfAbsent(getBucketInterval(segment), Bucket::builder);
+        builder.addSegment(segment);
+      }
       return this;
     }
 
     public Builder removeSegment(DataSegment segment)
     {
-      Interval interval = getBucketInterval(segment);
-      buckets.computeIfPresent(
-          interval,
-          // If there are no move segments, returning null in computeIfPresent() removes the interval from the buckets
-          // map
-          (i, builder) -> builder.removeSegment(segment).isEmpty() ? null : builder
-      );
+      if (isAllGranularity(segment)) {
+        allGranularitySegments.remove(segment.getId());
+      }
+      if (isAdhoc(segment)) {
+        adhocSegments.remove(segment.getId());
+      }
+      else {
+        Interval interval = getBucketInterval(segment);
+        buckets.computeIfPresent(
+            interval,
+            // If there are no move segments, returning null in computeIfPresent() removes the interval from the buckets
+            // map
+            (i, builder) -> builder.removeSegment(segment).isEmpty() ? null : builder
+        );
+      }
       return this;
     }
 
     public boolean isEmpty()
     {
-      return buckets.isEmpty();
+      return buckets.isEmpty() && allGranularitySegments.isEmpty() && adhocSegments.isEmpty();
     }
 
     public SegmentsCostCacheV3 build()
     {
+      final int allGranularitySegmentCount = allGranularitySegments.size();
+      allGranularitySegments.clear();
+
+      final ArrayList<Pair<Double, Double>> adhocNormalizedIntervals = new ArrayList<>();
+      for (SegmentId segment : adhocSegments) {
+        double normalizedStart = segment.getInterval().getStartMillis() / MILLIS_FACTOR;
+        double normalizedEnd = segment.getInterval().getEndMillis() / MILLIS_FACTOR;
+        adhocNormalizedIntervals.add(Pair.of(normalizedStart, normalizedEnd));
+      }
+      adhocSegments.clear();
+
       return new SegmentsCostCacheV3(
           buckets
               .values()
               .stream()
               .map(Bucket.Builder::build)
-              .collect(Collectors.toCollection(ArrayList::new))
+              .collect(Collectors.toCollection(ArrayList::new)),
+          adhocNormalizedIntervals,
+          allGranularitySegmentCount
       );
     }
 
     private static Interval getBucketInterval(DataSegment segment)
     {
       return BUCKET_GRANULARITY.bucket(segment.getInterval().getStart());
+    }
+
+    private boolean isAdhoc(DataSegment segment) {
+      double duration = segment.getInterval().getEndMillis() / MILLIS_FACTOR
+                        - segment.getInterval().getStartMillis() / MILLIS_FACTOR;
+      return duration > INTERVAL_THRESHOLD / MILLIS_FACTOR;
     }
   }
 
@@ -241,12 +324,6 @@ public class SegmentsCostCacheV3
           interval.getEnd().plus(LIFE_THRESHOLD)
       );
 
-      START = interval.getStartMillis();
-      END = interval.getEndMillis();
-      END_VAL = getVal(END);
-      END_EXP = FastMath.exp(END_VAL);
-      END_EXP_INV = FastMath.exp(-END_VAL);
-
       int n = intervals.size();
       start = new long[n];
       end = new long[n];
@@ -257,24 +334,32 @@ public class SegmentsCostCacheV3
       Arrays.sort(start);
       Arrays.sort(end);
 
+      START = Math.max(interval.getStartMillis(), start[0]);
+      END = Math.min(interval.getEndMillis(), end[n - 1]);
+
+      END_VAL = getVal(END);
+      END_EXP = FastMath.exp(END_VAL);
+      END_EXP_INV = FastMath.exp(-END_VAL);
+
+
       startValSum = new double[n + 1];
       startExpSum = new double[n + 1];
       startExpInvSum = new double[n + 1];
       for (int i = 0; i < n; i++) {
-        double val = getVal(start[i]);
-        startValSum[i + 1] = startValSum[i] + val;
-        startExpSum[i + 1] = startExpSum[i] + FastMath.exp(val);
-        startExpInvSum[i + 1] = startExpInvSum[i] + FastMath.exp(-val);
+        double startVal = getVal(start[i]);
+        startValSum[i + 1] = startValSum[i] + startVal;
+        startExpSum[i + 1] = startExpSum[i] + FastMath.exp(startVal);
+        startExpInvSum[i + 1] = startExpInvSum[i] + FastMath.exp(-startVal);
       }
 
       endValSum = new double[n + 1];
       endExpSum = new double[n + 1];
       endExpInvSum = new double[n + 1];
       for (int i = 0; i < n; i++) {
-        double val = getVal(end[i]);
-        endValSum[i + 1] = endValSum[i] + val;
-        endExpSum[i + 1] = endExpSum[i] + FastMath.exp(val);
-        endExpInvSum[i + 1] = endExpInvSum[i] + FastMath.exp(-val);
+        double endVal = getVal(end[i]);
+        endValSum[i + 1] = endValSum[i] + endVal;
+        endExpSum[i + 1] = endExpSum[i] + FastMath.exp(endVal);
+        endExpInvSum[i + 1] = endExpInvSum[i] + FastMath.exp(-endVal);
       }
     }
 
@@ -295,13 +380,14 @@ public class SegmentsCostCacheV3
         throw new ISE("Segment is not within calculation interval");
       }
 
-
-
-      long x = dataSegment.getInterval().getStartMillis();
-      long y = dataSegment.getInterval().getEndMillis();
+      // The following bounds help avoid overflow. The cost beyond LIFE_THRESHOLD is insignificant anyway
+      long x = Math.max(dataSegment.getInterval().getStartMillis(), START - LIFE_THRESHOLD);
+      long y = Math.min(dataSegment.getInterval().getEndMillis(), END + LIFE_THRESHOLD);
       double cost = 0;
+
       cost += solve(x, y, start, startValSum, startExpSum, startExpInvSum);
       cost -= solve(x, y, end, endValSum, endExpSum, endExpInvSum);
+
       return cost;
     }
 
@@ -370,11 +456,11 @@ public class SegmentsCostCacheV3
 
         // x <= val , END , y
         cost += 2 * (n - l - 1) * END_VAL;
-        cost -= 2 * (sum[n] - sum[l - 1]);
-        cost += (n - l + 1) * xExp * END_EXP_INV;
-        cost -= xExp * (expInvSum[n] - expInvSum[l - 1]);
-        cost += (expSum[n] - expSum[l - 1]) * yExpInv;
-        cost -= (n - l + 1) * END_EXP * yExpInv;
+        cost -= 2 * (sum[n] - sum[l + 1]);
+        cost += (n - l - 1) * xExp * END_EXP_INV;
+        cost -= xExp * (expInvSum[n] - expInvSum[l + 1]);
+        cost += (expSum[n] - expSum[l + 1]) * yExpInv;
+        cost -= (n - l - 1) * END_EXP * yExpInv;
       }
 
       return cost;
