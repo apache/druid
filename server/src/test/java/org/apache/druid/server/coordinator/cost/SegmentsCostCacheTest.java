@@ -39,7 +39,7 @@ import static org.apache.druid.server.coordinator.cost.SegmentsCostCache.NORMALI
 public class SegmentsCostCacheTest
 {
 
-  private static final Random random = new Random(23894);
+  private static final Random RANDOM = new Random(23894);
   private static final String DATA_SOURCE = "dataSource";
   private static DateTime REFERENCE_TIME = DateTimes.of("2014-01-01T00:00:00");
   private static final double EPSILON = 0.0000001;
@@ -139,11 +139,11 @@ public class SegmentsCostCacheTest
   @Test
   public void perfComparisonTest()
   {
-    final int N = 100000;
+    final int n = 100000;
 
     List<DataSegment> dataSegments = new ArrayList<>(1000);
-    for (int i = 0; i < N; ++i) {
-      dataSegments.add(createSegment(DATA_SOURCE, shiftedRandomInterval(REFERENCE_TIME, 24 * random.nextInt(60)), 100));
+    for (int i = 0; i < n; ++i) {
+      dataSegments.add(createSegment(DATA_SOURCE, shiftedRandomInterval(REFERENCE_TIME, 24 * RANDOM.nextInt(60)), 100));
     }
 
     DataSegment referenceSegment = createSegment("ANOTHER_DATA_SOURCE", shiftedRandomInterval(REFERENCE_TIME, 5), 100);
@@ -159,7 +159,7 @@ public class SegmentsCostCacheTest
     SegmentsCostCache cache = prototype.build();
 
     end = System.currentTimeMillis();
-    System.out.println("Insertion time for " + N + " segments: " + (end - start) + " ms");
+    System.out.println("Insertion time for " + n + " segments: " + (end - start) + " ms");
 
     start = System.currentTimeMillis();
 
@@ -192,17 +192,17 @@ public class SegmentsCostCacheTest
 
     // Same as reference interval
     for (int i = 0; i < 100; i++) {
-      dataSegments.add(createSegment(DATA_SOURCE, shiftedXHInterval(REFERENCE_TIME, random.nextInt(20), 10), 100));
+      dataSegments.add(createSegment(DATA_SOURCE, shiftedXHInterval(REFERENCE_TIME, RANDOM.nextInt(20), 10), 100));
     }
 
     // Overlapping intervals of larger size that enclose the reference interval
     for (int i = 0; i < 10; i++) {
-      dataSegments.add(createSegment(DATA_SOURCE, shiftedXHInterval(REFERENCE_TIME, random.nextInt(40) - 70, 100), 100));
+      dataSegments.add(createSegment(DATA_SOURCE, shiftedXHInterval(REFERENCE_TIME, RANDOM.nextInt(40) - 70, 100), 100));
     }
 
     // intervals of small size that are enclosed within the reference interval
     for (int i = 0; i < 10; i++) {
-      dataSegments.add(createSegment(DATA_SOURCE, shiftedXHInterval(REFERENCE_TIME, random.nextInt(40) - 20, 1), 100));
+      dataSegments.add(createSegment(DATA_SOURCE, shiftedXHInterval(REFERENCE_TIME, RANDOM.nextInt(40) - 20, 1), 100));
     }
 
     // intervals not intersecting, lying to its left
@@ -241,17 +241,17 @@ public class SegmentsCostCacheTest
 
     // Same as reference interval
     for (int i = 0; i < 100; i++) {
-      dataSegments.add(createSegment(DATA_SOURCE, shiftedXHInterval(REFERENCE_TIME, random.nextInt(20), 10), 100));
+      dataSegments.add(createSegment(DATA_SOURCE, shiftedXHInterval(REFERENCE_TIME, RANDOM.nextInt(20), 10), 100));
     }
 
     // Overlapping intervals of larger size that enclose the reference interval
     for (int i = 0; i < 10; i++) {
-      dataSegments.add(createSegment(DATA_SOURCE, shiftedXHInterval(REFERENCE_TIME, random.nextInt(40) - 70, 100), 100));
+      dataSegments.add(createSegment(DATA_SOURCE, shiftedXHInterval(REFERENCE_TIME, RANDOM.nextInt(40) - 70, 100), 100));
     }
 
     // intervals of small size that are enclosed within the reference interval
     for (int i = 0; i < 10; i++) {
-      dataSegments.add(createSegment(DATA_SOURCE, shiftedXHInterval(REFERENCE_TIME, random.nextInt(40) - 20, 1), 100));
+      dataSegments.add(createSegment(DATA_SOURCE, shiftedXHInterval(REFERENCE_TIME, RANDOM.nextInt(40) - 20, 1), 100));
     }
 
     // intervals not intersecting, lying to its left
@@ -299,7 +299,7 @@ public class SegmentsCostCacheTest
   {
     return new Interval(
         REFERENCE_TIME.plusHours(shiftInHours),
-        REFERENCE_TIME.plusHours(shiftInHours + random.nextInt(1000))
+        REFERENCE_TIME.plusHours(shiftInHours + RANDOM.nextInt(1000))
     );
   }
 

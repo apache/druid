@@ -200,7 +200,8 @@ public class SegmentsCostCacheV3
     return new Builder();
   }
 
-  private static boolean isAllGranularity(DataSegment segment) {
+  private static boolean isAllGranularity(DataSegment segment)
+  {
     return segment.getInterval().getStartMillis() == JodaUtils.MIN_INSTANT
            && segment.getInterval().getEndMillis() == JodaUtils.MAX_INSTANT;
   }
@@ -219,13 +220,11 @@ public class SegmentsCostCacheV3
         if (!allGranularitySegments.add(segment.getId())) {
           throw new ISE("expect new segment");
         }
-      }
-      else if (isAdhoc(segment)) {
+      } else if (isAdhoc(segment)) {
         if (!adhocSegments.add(segment.getId())) {
           throw new ISE("expect new segment");
         }
-      }
-      else {
+      } else {
         Bucket.Builder builder = buckets.computeIfAbsent(getBucketInterval(segment), Bucket::builder);
         builder.addSegment(segment);
       }
@@ -239,8 +238,7 @@ public class SegmentsCostCacheV3
       }
       if (isAdhoc(segment)) {
         adhocSegments.remove(segment.getId());
-      }
-      else {
+      } else {
         Interval interval = getBucketInterval(segment);
         buckets.computeIfPresent(
             interval,
@@ -286,7 +284,8 @@ public class SegmentsCostCacheV3
       return BUCKET_GRANULARITY.bucket(segment.getInterval().getStart());
     }
 
-    private boolean isAdhoc(DataSegment segment) {
+    private boolean isAdhoc(DataSegment segment)
+    {
       double duration = segment.getInterval().getEndMillis() / MILLIS_FACTOR
                         - segment.getInterval().getStartMillis() / MILLIS_FACTOR;
       return duration > INTERVAL_THRESHOLD / MILLIS_FACTOR;
@@ -340,7 +339,6 @@ public class SegmentsCostCacheV3
       END_VAL = getVal(END);
       END_EXP = FastMath.exp(END_VAL);
       END_EXP_INV = FastMath.exp(-END_VAL);
-
 
       startValSum = new double[n + 1];
       startExpSum = new double[n + 1];
@@ -506,6 +504,7 @@ public class SegmentsCostCacheV3
     {
       protected final Interval interval;
       private final Set<SegmentId> segmentSet = new HashSet<>();
+
       public Builder(Interval interval)
       {
         this.interval = interval;
