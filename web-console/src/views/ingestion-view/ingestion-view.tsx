@@ -47,6 +47,7 @@ import {
   deepGet,
   formatDuration,
   getDruidErrorMessage,
+  hasPopoverOpen,
   LocalStorageBackedVisibility,
   localStorageGet,
   LocalStorageKeys,
@@ -1089,7 +1090,10 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             <ViewControlBar label="Supervisors">
               <RefreshButton
                 localStorageKey={LocalStorageKeys.SUPERVISORS_REFRESH_RATE}
-                onRefresh={auto => this.supervisorQueryManager.rerunLastQuery(auto)}
+                onRefresh={auto => {
+                  if (auto && hasPopoverOpen()) return;
+                  this.supervisorQueryManager.rerunLastQuery(auto);
+                }}
               />
               {this.renderBulkSupervisorActions()}
               <TableColumnSelector
@@ -1141,7 +1145,10 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               </ButtonGroup>
               <RefreshButton
                 localStorageKey={LocalStorageKeys.TASKS_REFRESH_RATE}
-                onRefresh={auto => this.taskQueryManager.rerunLastQuery(auto)}
+                onRefresh={auto => {
+                  if (auto && hasPopoverOpen()) return;
+                  this.taskQueryManager.rerunLastQuery(auto);
+                }}
               />
               {this.renderBulkTasksActions()}
               <TableColumnSelector

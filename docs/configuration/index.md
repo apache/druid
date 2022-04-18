@@ -970,6 +970,7 @@ A description of the compaction config is:
 |`granularitySpec`|Custom `granularitySpec`. See [Automatic compaction granularitySpec](#automatic-compaction-granularityspec)|No|
 |`dimensionsSpec`|Custom `dimensionsSpec`. See [Automatic compaction dimensionsSpec](#automatic-compaction-dimensions-spec)|No|
 |`transformSpec`|Custom `transformSpec`. See [Automatic compaction transformSpec](#automatic-compaction-transform-spec)|No|
+|`metricsSpec`|Custom [`metricsSpec`](../ingestion/ingestion-spec.md#metricsspec). The compaction task preserves any existing metrics regardless of whether `metricsSpec` is specified. If `metricsSpec` is specified, Druid does not reapply any aggregators matching the metric names specified in `metricsSpec` to rows that already have the associated metrics. For rows that do not already have the metric specified in `metricsSpec`, Druid applies the metric aggregator on the source column, then proceeds to combine the metrics across segments as usual. If `metricsSpec` is not specified, Druid automatically discovers the metrics in the existing segments and combines existing metrics with the same metric name across segments. Aggregators for metrics with the same name are assumed to be compatible for combining across segments, otherwise the compaction task may fail.|No|
 |`ioConfig`|IO config for compaction tasks. See below [Compaction Task IOConfig](#automatic-compaction-ioconfig).|no|
 
 An example of compaction config is:

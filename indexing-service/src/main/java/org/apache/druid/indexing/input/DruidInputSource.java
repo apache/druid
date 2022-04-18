@@ -237,7 +237,6 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
           //noinspection ConstantConditions
           return FluentIterable
               .from(partitionHolder)
-              .filter(chunk -> !chunk.getObject().isTombstone())
               .transform(chunk -> new DruidSegmentInputEntity(segmentCacheManager, chunk.getObject(), holder.getInterval()));
         }).iterator();
 

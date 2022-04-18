@@ -104,6 +104,64 @@ import static org.apache.druid.query.QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KE
 @RunWith(JUnitParamsRunner.class)
 public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 {
+
+  @Test
+  public void testInnerJoinWithLimitAndAlias() throws Exception
+  {
+    minTopNThreshold = 1;
+    Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
+    testQuery(
+        "select t1.b1 from (select __time as b1 from numfoo group by 1 order by 1) as t1 inner join (\n"
+        + "  select __time as b2 from foo group by 1 order by 1\n"
+        + ") as t2 on t1.b1 = t2.b2 ",
+        context, // turn on exact topN
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dataSource(
+                    JoinDataSource.create(
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDataSource(new TableDataSource("numfoo"))
+                                        .setDimensions(new DefaultDimensionSpec("__time", "_d0", ColumnType.LONG))
+                                        .setContext(context)
+                                        .build()
+                        ),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDataSource(new TableDataSource("foo"))
+                                        .setDimensions(new DefaultDimensionSpec("__time", "d0", ColumnType.LONG))
+                                        .setContext(context)
+                                        .build()
+                        ),
+                        "j0.",
+                        "(\"_d0\" == \"j0.d0\")",
+                        JoinType.INNER,
+                        null,
+                        ExprMacroTable.nil()
+                    )
+                )
+                .columns("_d0")
+                .context(context)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L},
+            new Object[]{946771200000L},
+            new Object[]{946857600000L},
+            new Object[]{978307200000L},
+            new Object[]{978393600000L},
+            new Object[]{978480000000L}
+        )
+    );
+  }
+
+
   @Test
   public void testExactTopNOnInnerJoinWithLimit() throws Exception
   {
