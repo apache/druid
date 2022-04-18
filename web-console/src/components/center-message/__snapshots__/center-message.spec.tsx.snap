@@ -2,7 +2,7 @@
 
 exports[`CenterMessage matches snapshot 1`] = `
 <div
-  class="center-message bp3-input"
+  class="center-message bp4-input"
 >
   <div
     class="center-message-inner"
