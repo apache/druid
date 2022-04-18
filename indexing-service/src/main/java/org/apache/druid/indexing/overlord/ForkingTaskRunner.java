@@ -106,9 +106,11 @@ public class ForkingTaskRunner
 
   private volatile boolean stopping = false;
 
+  private static final AtomicLong LAST_REPORTED_FAILED_TASK_COUNT = new AtomicLong();
   private static final AtomicLong FAILED_TASK_COUNT = new AtomicLong();
   private static final AtomicLong RUNNING_TASK_COUNT = new AtomicLong();
   private static final AtomicLong SUCCESSFUL_TASK_COUNT = new AtomicLong();
+  private static final AtomicLong LAST_REPORTED_SUCCESSFUL_TASK_COUNT = new AtomicLong();
 
   @Inject
   public ForkingTaskRunner(
@@ -702,18 +704,12 @@ public class ForkingTaskRunner
   @Override
   public Map<String, Long> getTotalTaskSlotCount()
   {
-    if (config.getPorts() != null && !config.getPorts().isEmpty()) {
-      return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(config.getPorts().size()));
-    }
-    return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(config.getEndPort() - config.getStartPort() + 1));
+    return ImmutableMap.of(workerConfig.getCategory(), getTotalTaskSlotCountLong());
   }
 
   public long getTotalTaskSlotCountLong()
   {
-    if (config.getPorts() != null && !config.getPorts().isEmpty()) {
-      return config.getPorts().size();
-    }
-    return config.getEndPort() - config.getStartPort() + 1;
+    return workerConfig.getCapacity();
   }
 
   @Override
@@ -746,21 +742,52 @@ public class ForkingTaskRunner
   }
 
   @Override
-  public Long getFailedTaskCount()
+  public Long getWorkerFailedTaskCount()
   {
-    return FAILED_TASK_COUNT.get();
+    long failedTaskCount = FAILED_TASK_COUNT.get();
+    long lastReportedFailedTaskCount = LAST_REPORTED_FAILED_TASK_COUNT.get();
+    LAST_REPORTED_FAILED_TASK_COUNT.set(failedTaskCount);
+    return failedTaskCount - lastReportedFailedTaskCount;
   }
 
   @Override
-  public Long getRunningTaskCount()
+  public Long getWorkerIdleTaskSlotCount()
   {
-    return RUNNING_TASK_COUNT.get();
+    return Math.max(getTotalTaskSlotCountLong() - getUsedTaskSlotCountLong(), 0);
   }
 
   @Override
-  public Long getSuccessfulTaskCount()
+  public Long getWorkerUsedTaskSlotCount()
   {
-    return SUCCESSFUL_TASK_COUNT.get();
+    return (long) portFinder.findUsedPortCount();
+    //return RUNNING_TASK_COUNT.get();
+  }
+
+  @Override
+  public Long getWorkerTotalTaskSlotCount()
+  {
+    return getTotalTaskSlotCountLong();
+  }
+
+  @Override
+  public String getWorkerCategory()
+  {
+    return workerConfig.getCategory();
+  }
+
+  @Override
+  public String getWorkerVersion()
+  {
+    return workerConfig.getVersion();
+  }
+
+  @Override
+  public Long getWorkerSuccessfulTaskCount()
+  {
+    long successfulTaskCount = SUCCESSFUL_TASK_COUNT.get();
+    long lastReportedSuccessfulTaskCount = LAST_REPORTED_SUCCESSFUL_TASK_COUNT.get();
+    LAST_REPORTED_SUCCESSFUL_TASK_COUNT.set(successfulTaskCount);
+    return successfulTaskCount - lastReportedSuccessfulTaskCount;
   }
 
   protected static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem
