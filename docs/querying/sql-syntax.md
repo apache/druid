@@ -67,6 +67,21 @@ The WHERE clause refers to columns in the FROM table, and will be translated to 
 WHERE clause can also reference a subquery, like `WHERE col1 IN (SELECT foo FROM ...)`. Queries like this are executed
 as a join on the subquery, described in the [Query translation](sql-translation.md#subqueries) section.
 
+Strings and numbers can be compared in the WHERE clause of a SQL query through implicit type conversion.
+For example, you can evaluate `WHERE stringDim = 1` for a string-typed dimension named `stringDim`.
+However, for optimal performance, you should explicitly cast the reference number as a string when comparing against a string dimension:
+```
+WHERE stringDim = '1'
+```
+
+Similarly, if you compare a string-typed dimension with reference to an array of numbers, cast the numbers to strings:
+```
+WHERE stringDim IN ('1', '2', '3')
+```
+
+Note that explicit type casting does not lead to significant performance improvement when comparing strings and numbers involving numeric dimensions since numeric dimensions are not indexed.
+
+
 ## GROUP BY
 
 The GROUP BY clause refers to columns in the FROM table. Using GROUP BY, DISTINCT, or any aggregation functions will
