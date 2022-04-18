@@ -20,31 +20,27 @@
 package org.apache.druid.query.aggregation.last;
 
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 
-public class DoubleLastVectorAggregator implements VectorAggregator
+public class DoubleLastVectorAggregator extends NumericLastVectorAggregator
 {
-  private final boolean useDefault = NullHandling.replaceWithDefault();
-  private final VectorValueSelector timeSelector;
-  private final VectorValueSelector valueSelector;
   double lastValue;
-  long lastTime;
-  boolean rhsNull;
 
   public DoubleLastVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
   {
-
-    this.timeSelector = timeSelector;
-    this.valueSelector = valueSelector;
-    lastTime = Long.MIN_VALUE;
-    rhsNull = !useDefault;
+    super(timeSelector, valueSelector);
     lastValue = 0;
+  }
+
+  @Override
+  void putValue(ByteBuffer buf, int position, int index)
+  {
+    lastValue = valueSelector.getLongVector()[index];
+    buf.putDouble(position, lastValue);
   }
 
   @Override
@@ -53,51 +49,11 @@ public class DoubleLastVectorAggregator implements VectorAggregator
     buf.putDouble(position, Double.NEGATIVE_INFINITY);
   }
 
-  @Override
-  public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
-  {
-    final long[] vector = timeSelector.getLongVector();
-    final boolean[] nulls = valueSelector.getNullVector();
-    boolean status = true;
-    if (nulls == null) {
-      status = true;
-    } else {
-      status = !nulls[endRow - 1];
-    }
-    //the time vector is already sorted so the last element would be the latest
-    long latestTime = vector[endRow - 1];
-    if (latestTime > lastTime) {
-      lastTime = latestTime;
-      if (useDefault || status) {
-        lastValue = valueSelector.getLongVector()[endRow - 1];
-        rhsNull = false;
-      } else {
-        rhsNull = true;
-      }
-    }
-    buf.putDouble(position, lastValue);
-  }
-
-  @Override
-  public void aggregate(ByteBuffer buf, int numRows, int[] positions, @Nullable int[] rows, int positionOffset)
-  {
-    final double[] vector = valueSelector.getDoubleVector();
-    final int pos = positions[numRows - 1] + positionOffset;
-    buf.putDouble(pos, vector[rows != null ? rows[numRows - 1] : numRows - 1]);
-
-  }
-
   @Nullable
   @Override
   public Object get(ByteBuffer buf, int position)
   {
     return new SerializablePair<>(lastTime, rhsNull ? null : lastValue);
-  }
-
-  @Override
-  public void close()
-  {
-    //nothing to close
   }
 }
 
