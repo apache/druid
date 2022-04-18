@@ -290,7 +290,7 @@ For example, a post to `/druid/coordinator/v1/lookups/config/realtime_customer1/
 
 This will replace the `site_id_customer1` lookup in the `realtime_customer1` with the definition above.
 
-Make sure to assign a unique version identifier each time you update a lookup extractor factory. If the version already exists, the call will fail.
+Assign a unique version identifier each time you update a lookup extractor factory. Otherwise the call will fail.
 
 ### Get all lookups
 
