@@ -27,5 +27,9 @@ coverage:
   # Documentation for commit status: https://docs.codecov.io/docs/commit-status
   # Consider enabling commit status to enforce minimum coverage thresholds after codecov reports look reliable.
   status:
-    project: off
-    patch: off
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true
