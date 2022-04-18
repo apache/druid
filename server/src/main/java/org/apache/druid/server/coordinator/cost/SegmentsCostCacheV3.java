@@ -258,7 +258,6 @@ public class SegmentsCostCacheV3
     public SegmentsCostCacheV3 build()
     {
       final int allGranularitySegmentCount = allGranularitySegments.size();
-      allGranularitySegments.clear();
 
       final ArrayList<Pair<Double, Double>> adhocNormalizedIntervals = new ArrayList<>();
       for (SegmentId segment : adhocSegments) {
@@ -266,7 +265,6 @@ public class SegmentsCostCacheV3
         double normalizedEnd = segment.getInterval().getEndMillis() / MILLIS_FACTOR;
         adhocNormalizedIntervals.add(Pair.of(normalizedStart, normalizedEnd));
       }
-      adhocSegments.clear();
 
       return new SegmentsCostCacheV3(
           buckets
@@ -546,8 +544,6 @@ public class SegmentsCostCacheV3
           intervals.add(Pair.of(i.getStartMillis(), i.getEndMillis()));
           bucketEndMillis = Math.max(bucketEndMillis, i.getEndMillis());
         }
-
-        segmentSet.clear();
 
         return new Bucket(Intervals.utc(interval.getStartMillis(), bucketEndMillis), intervals);
       }
