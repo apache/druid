@@ -21,9 +21,9 @@ package org.apache.druid.indexer;
 
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -114,7 +114,7 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
     final PartitionsSpec partitionsSpec = config.getPartitionsSpec();
     if (partitionsSpec instanceof HashedPartitionsSpec) {
       return new DetermineHashedPartitionsJob(config);
-    } else if (partitionsSpec instanceof SingleDimensionPartitionsSpec) {
+    } else if (partitionsSpec instanceof DimensionRangePartitionsSpec) {
       return new DeterminePartitionsJob(config);
     } else {
       throw new ISE("Unknown partitionsSpec[%s]", partitionsSpec);

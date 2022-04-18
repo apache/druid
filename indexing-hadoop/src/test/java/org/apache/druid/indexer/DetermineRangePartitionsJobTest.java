@@ -25,7 +25,7 @@ import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -33,14 +33,13 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
+import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -48,113 +47,48 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-@RunWith(Parameterized.class)
-public class DeterminePartitionsJobTest
-{
-  @Nullable
-  private static final Long NO_TARGET_ROWS_PER_SEGMENT = null;
-  @Nullable
-  private static final Long NO_MAX_ROWS_PER_SEGMENT = null;
 
-  private final HadoopDruidIndexerConfig config;
-  private final int expectedNumOfSegments;
-  private final int[] expectedNumOfShardsForEachSegment;
-  private final String[][][] expectedStartEndForEachShard;
-  private final File dataFile;
-  private final File tmpDir;
+@RunWith(Parameterized.class)
+public class DetermineRangePartitionsJobTest
+{
+  private HadoopDruidIndexerConfig config;
+  private int expectedNumOfSegments;
+  private int[] expectedNumOfShardsForEachSegment;
+  private String[][][][] expectedStartEndForEachShard;
+  private File dataFile;
+  private File tmpDir;
 
   @Parameterized.Parameters(name = "assumeGrouped={0}, "
-                                   + "targetRowsPerSegment={1}, "
-                                   + "maxRowsPerSegment={2}, "
-                                   + "interval={3}"
-                                   + "expectedNumOfSegments={4}, "
-                                   + "expectedNumOfShardsForEachSegment={5}, "
-                                   + "expectedStartEndForEachShard={6}, "
-                                   + "data={7}")
+                                   + "targetPartitionSize={1}, "
+                                   + "interval={2}"
+                                   + "expectedNumOfSegments={3}, "
+                                   + "expectedNumOfShardsForEachSegment={4}, "
+                                   + "expectedStartEndForEachShard={5}, "
+                                   + "data={6}, "
+                                   + "partitionDimensions={7}")
   public static Collection<Object[]> constructFeed()
   {
     return Arrays.asList(
         new Object[][]{
             {
-                // Test partitoning by targetRowsPerSegment
-                true,
-                2,
-                NO_MAX_ROWS_PER_SEGMENT,
-                "2014-10-22T00:00:00Z/P1D",
-                1,
-                new int[]{5},
-                new String[][][]{
-                    {
-                        {null, "c.example.com"},
-                        {"c.example.com", "e.example.com"},
-                        {"e.example.com", "g.example.com"},
-                        {"g.example.com", "i.example.com"},
-                        {"i.example.com", null}
-                    }
-                },
-                ImmutableList.of(
-                    "2014102200,a.example.com,CN,100",
-                    "2014102200,b.example.com,US,50",
-                    "2014102200,c.example.com,US,200",
-                    "2014102200,d.example.com,US,250",
-                    "2014102200,e.example.com,US,123",
-                    "2014102200,f.example.com,US,567",
-                    "2014102200,g.example.com,US,11",
-                    "2014102200,h.example.com,US,251",
-                    "2014102200,i.example.com,US,963",
-                    "2014102200,j.example.com,US,333"
-                )
-            },
-            {
-                true,
-                NO_TARGET_ROWS_PER_SEGMENT,
-                2,
-                "2014-10-22T00:00:00Z/P1D",
-                1,
-                new int[]{5},
-                new String[][][]{
-                    {
-                        {null, "c.example.com"},
-                        {"c.example.com", "e.example.com"},
-                        {"e.example.com", "g.example.com"},
-                        {"g.example.com", "i.example.com"},
-                        {"i.example.com", null}
-                    }
-                },
-                ImmutableList.of(
-                    "2014102200,a.example.com,CN,100",
-                    "2014102200,b.example.com,US,50",
-                    "2014102200,c.example.com,US,200",
-                    "2014102200,d.example.com,US,250",
-                    "2014102200,e.example.com,US,123",
-                    "2014102200,f.example.com,US,567",
-                    "2014102200,g.example.com,US,11",
-                    "2014102200,h.example.com,US,251",
-                    "2014102200,i.example.com,US,963",
-                    "2014102200,j.example.com,US,333"
-                )
-            },
-            {
                 false,
-                NO_TARGET_ROWS_PER_SEGMENT,
-                2,
+                3,
                 "2014-10-20T00:00:00Z/P1D",
                 1,
-                new int[]{5},
-                new String[][][]{
+                new int[]{4},
+                new String[][][][]{
                     {
-                        {null, "c.example.com"},
-                        {"c.example.com", "e.example.com"},
-                        {"e.example.com", "g.example.com"},
-                        {"g.example.com", "i.example.com"},
-                        {"i.example.com", null}
-                    }
+                        {null, {"d.example.com"}},
+                        {{"d.example.com"}, {"g.example.com"}},
+                        {{"g.example.com"}, {"j.example.com"}},
+                        {{"j.example.com"}, null},
+                        }
                 },
                 ImmutableList.of(
                     "2014102000,a.example.com,CN,100",
                     "2014102000,a.example.com,CN,100",
-                    "2014102000,b.example.com,US,50",
-                    "2014102000,b.example.com,US,50",
+                    "2014102000,b.exmaple.com,US,50",
+                    "2014102000,b.exmaple.com,US,50",
                     "2014102000,c.example.com,US,200",
                     "2014102000,c.example.com,US,200",
                     "2014102000,d.example.com,US,250",
@@ -171,77 +105,26 @@ public class DeterminePartitionsJobTest
                     "2014102000,i.example.com,US,963",
                     "2014102000,j.example.com,US,333",
                     "2014102000,j.example.com,US,333"
-                )
+                ),
+                ImmutableList.of("host")
             },
             {
                 true,
-                NO_TARGET_ROWS_PER_SEGMENT,
-                5,
-                "2014-10-20T00:00:00Z/P3D",
                 3,
-                new int[]{2, 2, 2},
-                new String[][][]{
-                    {
-                        {null, "f.example.com"},
-                        {"f.example.com", null}
-                    },
-                    {
-                        {null, "f.example.com"},
-                        {"f.example.com", null}
-                    },
-                    {
-                        {null, "f.example.com"},
-                        {"f.example.com", null}
-                    }
-                },
-                ImmutableList.of(
-                    "2014102000,a.example.com,CN,100",
-                    "2014102000,b.example.com,CN,50",
-                    "2014102000,c.example.com,CN,200",
-                    "2014102000,d.example.com,US,250",
-                    "2014102000,e.example.com,US,123",
-                    "2014102000,f.example.com,US,567",
-                    "2014102000,g.example.com,US,11",
-                    "2014102000,h.example.com,US,251",
-                    "2014102000,i.example.com,US,963",
-                    "2014102000,j.example.com,US,333",
-                    "2014102100,a.example.com,CN,100",
-                    "2014102100,b.example.com,CN,50",
-                    "2014102100,c.example.com,CN,200",
-                    "2014102100,d.example.com,US,250",
-                    "2014102100,e.example.com,US,123",
-                    "2014102100,f.example.com,US,567",
-                    "2014102100,g.example.com,US,11",
-                    "2014102100,h.example.com,US,251",
-                    "2014102100,i.example.com,US,963",
-                    "2014102100,j.example.com,US,333",
-                    "2014102200,a.example.com,CN,100",
-                    "2014102200,b.example.com,CN,50",
-                    "2014102200,c.example.com,CN,200",
-                    "2014102200,d.example.com,US,250",
-                    "2014102200,e.example.com,US,123",
-                    "2014102200,f.example.com,US,567",
-                    "2014102200,g.example.com,US,11",
-                    "2014102200,h.example.com,US,251",
-                    "2014102200,i.example.com,US,963",
-                    "2014102200,j.example.com,US,333"
-                )
-            },
-            {
-                true,
-                NO_TARGET_ROWS_PER_SEGMENT,
-                1000,
                 "2014-10-22T00:00:00Z/P1D",
                 1,
-                new int[]{1},
-                new String[][][]{
+                new int[]{4},
+                new String[][][][]{
                     {
-                        {null, null}
+                        {null, {"d.example.com", "US"}},
+                        {{"d.example.com", "US"}, {"g.example.com", "US"}},
+                        {{"g.example.com", "US"}, {"j.example.com", "US"}},
+                        {{"j.example.com", "US"}, null}
                     }
                 },
                 ImmutableList.of(
                     "2014102200,a.example.com,CN,100",
-                    "2014102200,b.example.com,US,50",
+                    "2014102200,b.exmaple.com,US,50",
                     "2014102200,c.example.com,US,200",
                     "2014102200,d.example.com,US,250",
                     "2014102200,e.example.com,US,123",
@@ -250,21 +133,117 @@ public class DeterminePartitionsJobTest
                     "2014102200,h.example.com,US,251",
                     "2014102200,i.example.com,US,963",
                     "2014102200,j.example.com,US,333"
-                )
+                ),
+                ImmutableList.of("host", "country")
+            },
+            {
+                false,
+                3,
+                "2014-10-20T00:00:00Z/P1D",
+                1,
+                new int[]{4},
+                new String[][][][]{
+                    {
+                        {null, {"d.example.com", "US"}},
+                        {{"d.example.com", "US"}, {"g.example.com", "US"}},
+                        {{"g.example.com", "US"}, {"j.example.com", "US"}},
+                        {{"j.example.com", "US"}, null}
+                    }
+                },
+                ImmutableList.of(
+                    "2014102000,a.example.com,CN,100",
+                    "2014102000,a.example.com,CN,100",
+                    "2014102000,b.exmaple.com,US,50",
+                    "2014102000,b.exmaple.com,US,50",
+                    "2014102000,c.example.com,US,200",
+                    "2014102000,c.example.com,US,200",
+                    "2014102000,d.example.com,US,250",
+                    "2014102000,d.example.com,US,250",
+                    "2014102000,e.example.com,US,123",
+                    "2014102000,e.example.com,US,123",
+                    "2014102000,f.example.com,US,567",
+                    "2014102000,f.example.com,US,567",
+                    "2014102000,g.example.com,US,11",
+                    "2014102000,g.example.com,US,11",
+                    "2014102000,h.example.com,US,251",
+                    "2014102000,h.example.com,US,251",
+                    "2014102000,i.example.com,US,963",
+                    "2014102000,i.example.com,US,963",
+                    "2014102000,j.example.com,US,333",
+                    "2014102000,j.example.com,US,333"
+                ),
+                ImmutableList.of("host", "country")
+            },
+            {
+                true,
+                6,
+                "2014-10-20T00:00:00Z/P3D",
+                3,
+                new int[]{2, 2, 2},
+                new String[][][][]{
+                    {
+                        {null, {"g.example.com", "US"}},
+                        {{"g.example.com", "US"}, null}
+                    },
+                    {
+                        {null, {"g.example.com", "US"}},
+                        {{"g.example.com", "US"}, null}
+                    },
+                    {
+                        {null, {"g.example.com", "US"}},
+                        {{"g.example.com", "US"}, null}
+                    }
+                },
+                ImmutableList.of(
+                    "2014102000,a.example.com,CN,100",
+                    "2014102000,b.exmaple.com,CN,50",
+                    "2014102000,c.example.com,CN,200",
+                    "2014102000,d.example.com,US,250",
+                    "2014102000,e.example.com,US,123",
+                    "2014102000,f.example.com,US,567",
+                    "2014102000,g.example.com,US,11",
+                    "2014102000,h.example.com,US,251",
+                    "2014102000,i.example.com,US,963",
+                    "2014102000,j.example.com,US,333",
+                    "2014102000,k.example.com,US,555",
+                    "2014102100,a.example.com,CN,100",
+                    "2014102100,b.exmaple.com,CN,50",
+                    "2014102100,c.example.com,CN,200",
+                    "2014102100,d.example.com,US,250",
+                    "2014102100,e.example.com,US,123",
+                    "2014102100,f.example.com,US,567",
+                    "2014102100,g.example.com,US,11",
+                    "2014102100,h.example.com,US,251",
+                    "2014102100,i.example.com,US,963",
+                    "2014102100,j.example.com,US,333",
+                    "2014102100,k.example.com,US,555",
+                    "2014102200,a.example.com,CN,100",
+                    "2014102200,b.exmaple.com,CN,50",
+                    "2014102200,c.example.com,CN,200",
+                    "2014102200,d.example.com,US,250",
+                    "2014102200,e.example.com,US,123",
+                    "2014102200,f.example.com,US,567",
+                    "2014102200,g.example.com,US,11",
+                    "2014102200,h.example.com,US,251",
+                    "2014102200,i.example.com,US,963",
+                    "2014102200,j.example.com,US,333",
+                    "2014102200,k.example.com,US,555"
+                ),
+                ImmutableList.of("host", "country")
             }
         }
     );
   }
 
-  public DeterminePartitionsJobTest(
+  public DetermineRangePartitionsJobTest(
       boolean assumeGrouped,
-      @Nullable Integer targetRowsPerSegment,
-      Integer maxRowsPerSegment,
+      Integer targetPartitionSize,
       String interval,
       int expectedNumOfSegments,
       int[] expectedNumOfShardsForEachSegment,
-      String[][][] expectedStartEndForEachShard,
-      List<String> data
+      String[][][][] expectedStartEndForEachShard,
+      List<String> data,
+      List<String> partitionDimensions
   ) throws IOException
   {
     this.expectedNumOfSegments = expectedNumOfSegments;
@@ -320,7 +299,12 @@ public class DeterminePartitionsJobTest
             new HadoopTuningConfig(
                 tmpDir.getCanonicalPath(),
                 null,
-                new SingleDimensionPartitionsSpec(targetRowsPerSegment, maxRowsPerSegment, null, assumeGrouped),
+                new DimensionRangePartitionsSpec(
+                    targetPartitionSize,
+                    null,
+                    partitionDimensions,
+                    assumeGrouped
+                ),
                 null,
                 null,
                 null,
@@ -368,10 +352,16 @@ public class DeterminePartitionsJobTest
       Assert.assertEquals(expectedNumOfShardsForEachSegment[segmentNum], specs.size());
 
       for (HadoopyShardSpec spec : specs) {
-        SingleDimensionShardSpec actualSpec = (SingleDimensionShardSpec) spec.getActualSpec();
+        DimensionRangeShardSpec actualSpec = (DimensionRangeShardSpec) spec.getActualSpec();
         Assert.assertEquals(shardNum, spec.getShardNum());
-        Assert.assertEquals(expectedStartEndForEachShard[segmentNum][partitionNum][0], actualSpec.getStart());
-        Assert.assertEquals(expectedStartEndForEachShard[segmentNum][partitionNum][1], actualSpec.getEnd());
+        Assert.assertArrayEquals(
+            expectedStartEndForEachShard[segmentNum][partitionNum][0],
+            actualSpec.getStartTuple() == null ? null : actualSpec.getStartTuple().toArray()
+        );
+        Assert.assertArrayEquals(
+            expectedStartEndForEachShard[segmentNum][partitionNum][1],
+            actualSpec.getEndTuple() == null ? null : actualSpec.getEndTuple().toArray()
+        );
         Assert.assertEquals(partitionNum, actualSpec.getPartitionNum());
         shardNum++;
         partitionNum++;

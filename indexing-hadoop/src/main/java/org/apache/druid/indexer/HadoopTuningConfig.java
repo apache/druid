@@ -74,7 +74,8 @@ public class HadoopTuningConfig implements TuningConfig
         null,
         null,
         null,
-        null
+        null,
+        1
     );
   }
   @Nullable
@@ -102,6 +103,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final int maxParseExceptions;
   private final boolean useYarnRMJobStatusFallback;
   private final long awaitSegmentAvailabilityTimeoutMillis;
+  private final int sampleForDeterminePartitionJob;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -130,7 +132,8 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       final @JsonProperty("useYarnRMJobStatusFallback") @Nullable Boolean useYarnRMJobStatusFallback,
-      final @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis
+      final @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis,
+      final @JsonProperty("sampleForDeterminePartitionJob") int sampleForDeterminePartitionJob
   )
   {
     this.workingPath = workingPath;
@@ -182,6 +185,7 @@ public class HadoopTuningConfig implements TuningConfig
     } else {
       this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
     }
+    this.sampleForDeterminePartitionJob = sampleForDeterminePartitionJob < 1 ? 1 : sampleForDeterminePartitionJob;
   }
 
   @Nullable
@@ -336,6 +340,12 @@ public class HadoopTuningConfig implements TuningConfig
     return awaitSegmentAvailabilityTimeoutMillis;
   }
 
+  @JsonProperty
+  public int getSampleForDeterminePartitionJob()
+  {
+    return sampleForDeterminePartitionJob;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -363,7 +373,8 @@ public class HadoopTuningConfig implements TuningConfig
         logParseExceptions,
         maxParseExceptions,
         useYarnRMJobStatusFallback,
-        awaitSegmentAvailabilityTimeoutMillis
+        awaitSegmentAvailabilityTimeoutMillis,
+        sampleForDeterminePartitionJob
     );
   }
 
@@ -394,7 +405,8 @@ public class HadoopTuningConfig implements TuningConfig
         logParseExceptions,
         maxParseExceptions,
         useYarnRMJobStatusFallback,
-        awaitSegmentAvailabilityTimeoutMillis
+        awaitSegmentAvailabilityTimeoutMillis,
+        sampleForDeterminePartitionJob
     );
   }
 
@@ -425,7 +437,8 @@ public class HadoopTuningConfig implements TuningConfig
         logParseExceptions,
         maxParseExceptions,
         useYarnRMJobStatusFallback,
-        awaitSegmentAvailabilityTimeoutMillis
+        awaitSegmentAvailabilityTimeoutMillis,
+        sampleForDeterminePartitionJob
     );
   }
 }

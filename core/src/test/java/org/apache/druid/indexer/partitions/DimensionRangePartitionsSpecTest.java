@@ -21,6 +21,10 @@ package org.apache.druid.indexer.partitions;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -139,6 +143,36 @@ public class DimensionRangePartitionsSpecTest
         .partitionDimensions(partitionDimensions)
         .build();
     Assert.assertEquals(partitionDimensions, spec.getPartitionDimensions());
+  }
+
+  @Test
+  public void testCreateShardSpec()
+  {
+    List<String> dimemsions = Arrays.asList("d1,", "d2");
+    DimensionRangePartitionsSpec partitionsSpec = new DimensionRangePartitionsSpec(5000000, null, dimemsions, false);
+    Assert.assertEquals(
+        new DimensionRangeShardSpec(dimemsions, null, StringTuple.create("v1", "v2"), 1, 1),
+        partitionsSpec.createShardSpec(dimemsions, null, StringTuple.create("v1", "v2"), 1, 1)
+    );
+  }
+
+  @Test
+  public void testGetDimensionGroupingSet()
+  {
+    List<String> dimemsions = Arrays.asList("d1,", "d2");
+    DimensionsSpec dimensionsSpec = DimensionsSpec
+        .builder()
+        .setDimensions(
+            Arrays.asList(
+                new StringDimensionSchema("d1"),
+                new StringDimensionSchema("d2")
+            )
+        ).build();
+    DimensionRangePartitionsSpec partitionsSpec = new DimensionRangePartitionsSpec(5000000, null, dimemsions, false);
+    Assert.assertEquals(
+        Collections.singletonList(dimemsions),
+        partitionsSpec.getDimensionGroupingSet(dimensionsSpec)
+    );
   }
 
   private static String serialize(Object object)
