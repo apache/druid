@@ -103,7 +103,7 @@ public class MetricsModule implements Module
 
     for (Class<? extends Monitor> monitorClass : Iterables.concat(monitorsConfig.getMonitors(), monitorSet)) {
       if (WorkerTaskCountStatsMonitor.class.equals(monitorClass)
-          && !(thisNodeRoles.contains(NodeRole.OVERLORD) || thisNodeRoles.contains(NodeRole.MIDDLE_MANAGER))) {
+          && !thisNodeRoles.contains(NodeRole.MIDDLE_MANAGER)) {
         log.info("Not adding monitor [%s] for this node because none of node's role [%s] support it.",
                  monitorClass, thisNodeRoles);
       } else {
