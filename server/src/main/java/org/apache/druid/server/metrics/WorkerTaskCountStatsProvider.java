@@ -19,29 +19,45 @@
 
 package org.apache.druid.server.metrics;
 
+/**
+ * Proides task / task count status at the level of individual worker nodes. These merics
+ * are repoerted by workers, like middle-managers.
+ */
 public interface WorkerTaskCountStatsProvider
 {
   /**
-   * Return the number of failed tasks run on middle-manager during emission period.
+   * The number of failed tasks run on worker during emission period.
    */
   Long getWorkerFailedTaskCount();
 
-  Long getWorkerIdleTaskSlotCount();
-
   /**
-   * Return the number of successful tasks run on middle-manager during emission period.
+   * The number of successful tasks run on worker during emission period.
    */
   Long getWorkerSuccessfulTaskCount();
 
+  /**
+   * The number of idle task slots on worker.
+   */
+  Long getWorkerIdleTaskSlotCount();
+
+  /**
+   * The number of total task slots on worker.
+   */
   Long getWorkerTotalTaskSlotCount();
 
   /**
-   * Return the number of current running tasks on middle-manager.
+   * The number of used task slots on worker.
    */
   Long getWorkerUsedTaskSlotCount();
 
 
+  /**
+   * The worker category.
+   */
   String getWorkerCategory();
 
+  /**
+   * The worker version.
+   */
   String getWorkerVersion();
 }
