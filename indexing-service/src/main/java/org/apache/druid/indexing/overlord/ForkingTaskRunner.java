@@ -108,7 +108,6 @@ public class ForkingTaskRunner
 
   private static final AtomicLong LAST_REPORTED_FAILED_TASK_COUNT = new AtomicLong();
   private static final AtomicLong FAILED_TASK_COUNT = new AtomicLong();
-  private static final AtomicLong RUNNING_TASK_COUNT = new AtomicLong();
   private static final AtomicLong SUCCESSFUL_TASK_COUNT = new AtomicLong();
   private static final AtomicLong LAST_REPORTED_SUCCESSFUL_TASK_COUNT = new AtomicLong();
 
@@ -495,12 +494,10 @@ public class ForkingTaskRunner
     Thread.currentThread().setName(StringUtils.format("%s-[%s]", priorThreadName, task.getId()));
 
     try (final OutputStream toLogfile = logSink.openStream()) {
-      RUNNING_TASK_COUNT.incrementAndGet();
       ByteStreams.copy(processHolder.process.getInputStream(), toLogfile);
       return processHolder.process.waitFor();
     }
     finally {
-      RUNNING_TASK_COUNT.decrementAndGet();
       Thread.currentThread().setName(priorThreadName);
       // Upload task logs
       taskLogPusher.pushTaskLog(task.getId(), logFile);
