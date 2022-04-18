@@ -94,7 +94,7 @@ public class ExpressionVectorSelectorsTest
       "concat(string1, nonexistent)"
   );
 
-  private static final int ROWS_PER_SEGMENT = 10_000;
+  private static final int ROWS_PER_SEGMENT = 50_000;
 
   private static QueryableIndex INDEX;
   private static Closer CLOSER;
@@ -108,7 +108,7 @@ public class ExpressionVectorSelectorsTest
 
     // Do not run the tests on ARM64.
     // SegmentGenerator#generate() fails with OutOfMemoryError on TravisCI ARM64
-    if (!"aarch64".equals(CPU_ARCH)) {
+//    if (!"aarch64".equals(CPU_ARCH)) {
       final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
 
       final DataSegment dataSegment = DataSegment.builder()
@@ -123,7 +123,7 @@ public class ExpressionVectorSelectorsTest
       INDEX = CLOSER.register(
           segmentGenerator.generate(dataSegment, schemaInfo, Granularities.HOUR, ROWS_PER_SEGMENT)
       );
-    }
+//    }
   }
 
   @AfterClass
@@ -150,7 +150,7 @@ public class ExpressionVectorSelectorsTest
   public void setup()
   {
     // Don't run the tests on ARM64. @BeforeClass fails with OutOfMemoryError on TravisCI
-    Assume.assumeFalse("aarch64".equals(CPU_ARCH));
+//    Assume.assumeFalse("aarch64".equals(CPU_ARCH));
 
     Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
     outputType = parsed.getOutputType(INDEX);
