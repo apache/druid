@@ -99,7 +99,7 @@ The parameters in the `tuningConfig` control the maximum number of rows present 
 
 This datasource only has 39,244 rows. 39,244 is below the default limit of 5,000,000 `maxRowsPerSegment` for dynamic partitioning. Therefore, Druid only creates one compacted segment per hour.
 
-Submit the task now:
+Submit the compaction task now:
 
 ```bash
 bin/post-index-task --file quickstart/tutorial/compaction-keep-granularity.json --url http://localhost:8081
