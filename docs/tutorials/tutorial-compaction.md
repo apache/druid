@@ -97,7 +97,7 @@ This compacts all segments for the interval `2015-09-12/2015-09-13` in the `comp
 
 The parameters in the `tuningConfig` control the maximum number of rows present in each compacted segment and thus affect the number of segments in the compacted set.
 
-In the data set, each hour only has 39244 rows. 39244 is below the default limit of 5000000 `maxRowsPerSegment` for dynamic partitioning. Therefore, Druid only creates one compacted segment per hour.
+This datasource only has 39,244 rows. 39,244 is below the default limit of 5,000,000 `maxRowsPerSegment` for dynamic partitioning. Therefore, Druid only creates one compacted segment per hour.
 
 Submit the task now:
 
