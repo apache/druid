@@ -19,14 +19,14 @@
 
 package org.apache.druid.cli;
 
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.inject.Inject;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
 import io.netty.util.SuppressForbidden;
 import io.tesla.aether.Repository;
 import io.tesla.aether.TeslaAether;
@@ -253,7 +253,7 @@ public class PullDependencies implements Runnable
   )
   public String proxyPassword = "";
 
-  @SuppressWarnings("unused")  // used by io.airlift:airline
+  @SuppressWarnings("unused")  // used by com.github.rvesse.airline
   public PullDependencies()
   {
     hadoopExclusions = Dependencies.builder()

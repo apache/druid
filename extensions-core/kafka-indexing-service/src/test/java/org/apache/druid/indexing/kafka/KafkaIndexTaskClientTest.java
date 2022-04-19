@@ -479,6 +479,34 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   }
 
   @Test
+  public void testPauseRetriesExhausted() throws Exception
+  {
+    client = new TestableKafkaIndexTaskClient(httpClient, OBJECT_MAPPER, taskInfoProvider, 2);
+    // ACCEPTED for first pause call and then OK for 3 status call
+    EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.ACCEPTED);
+    EasyMock.expect(responseHolder.getContent()).andReturn(null);
+    EasyMock.expect(responseHolder.getContent()).andReturn(OBJECT_MAPPER.writeValueAsString(Status.READING)).times(3);
+    EasyMock.expect(httpClient.go(
+        EasyMock.anyObject(),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
+        EasyMock.eq(TEST_HTTP_TIMEOUT)
+    )).andReturn(
+        okResponseHolder()
+    ).times(4);
+    replayAll();
+
+    try {
+      client.pause(TEST_ID);
+    }
+    catch (Exception ex) {
+      Assert.assertEquals("Task [test-id] failed to change its status from [READING] to [PAUSED], aborting", ex.getMessage());
+      verifyAll();
+      return;
+    }
+    Assert.fail("Expected an exception");
+  }
+
+  @Test
   public void testPauseWithSubsequentGetOffsets() throws Exception
   {
     Capture<Request> captured = Capture.newInstance();

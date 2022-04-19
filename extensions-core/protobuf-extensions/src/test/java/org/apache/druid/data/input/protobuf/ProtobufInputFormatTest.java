@@ -65,7 +65,7 @@ public class ProtobufInputFormatTest
         new StringDimensionSchema("id"),
         new StringDimensionSchema("someOtherId"),
         new StringDimensionSchema("isValid")
-    ), null, null);
+    ));
     flattenSpec = new JSONPathSpec(
         true,
         Lists.newArrayList(

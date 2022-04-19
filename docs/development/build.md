@@ -33,7 +33,9 @@ make sure it has `/master/` in the URL.
 
 ##### Installing Java and Maven
 
-- JDK 8, 8u92+. We recommend using an OpenJDK distribution that provides long-term support and open-source licensing,
+- JDK 8, 8u92+ or JDK 11
+    
+    We recommend using an OpenJDK distribution that provides long-term support and open-source licensing,
   like [Amazon Corretto](https://aws.amazon.com/corretto/) or [Azul Zulu](https://www.azul.com/downloads/zulu/).
 - [Maven version 3.x](http://maven.apache.org/download.cgi)
 

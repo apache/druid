@@ -27,11 +27,14 @@ import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
+import org.apache.druid.indexing.seekablestream.SettableByteEntity;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
+
+import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -39,15 +42,16 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 public class KafkaInputReader implements InputEntityReader
 {
   private static final Logger log = new Logger(KafkaInputReader.class);
 
   private final InputRowSchema inputRowSchema;
-  private final KafkaRecordEntity record;
-  private final KafkaHeaderReader headerParser;
-  private final InputEntityReader keyParser;
+  private final SettableByteEntity<KafkaRecordEntity> source;
+  private final Function<KafkaRecordEntity, KafkaHeaderReader> headerParserSupplier;
+  private final Function<KafkaRecordEntity, InputEntityReader> keyParserSupplier;
   private final InputEntityReader valueParser;
   private final String keyColumnName;
   private final String timestampColumnName;
@@ -55,27 +59,27 @@ public class KafkaInputReader implements InputEntityReader
   /**
    *
    * @param inputRowSchema Actual schema from the ingestion spec
-   * @param record kafka record containing header, key & value
-   * @param headerParser Header parser for parsing the header section, kafkaInputFormat allows users to skip header parsing section and hence an be null
-   * @param keyParser Key parser for key section, can be null as well
-   * @param valueParser Value parser is a required section in kafkaInputFormat, but because of tombstone records we can have a null parser here.
+   * @param source kafka record containing header, key & value that is wrapped inside SettableByteEntity
+   * @param headerParserSupplier Function to get Header parser for parsing the header section, kafkaInputFormat allows users to skip header parsing section and hence an be null
+   * @param keyParserSupplier Function to get Key parser for key section, can be null as well. Key parser supplier can also return a null key parser.
+   * @param valueParser Value parser is a required section in kafkaInputFormat. It cannot be null.
    * @param keyColumnName Default key column name
    * @param timestampColumnName Default kafka record's timestamp column name
    */
   public KafkaInputReader(
       InputRowSchema inputRowSchema,
-      KafkaRecordEntity record,
-      KafkaHeaderReader headerParser,
-      InputEntityReader keyParser,
+      SettableByteEntity<KafkaRecordEntity> source,
+      @Nullable Function<KafkaRecordEntity, KafkaHeaderReader> headerParserSupplier,
+      @Nullable Function<KafkaRecordEntity, InputEntityReader> keyParserSupplier,
       InputEntityReader valueParser,
       String keyColumnName,
       String timestampColumnName
   )
   {
     this.inputRowSchema = inputRowSchema;
-    this.record = record;
-    this.headerParser = headerParser;
-    this.keyParser = keyParser;
+    this.source = source;
+    this.headerParserSupplier = headerParserSupplier;
+    this.keyParserSupplier = keyParserSupplier;
     this.valueParser = valueParser;
     this.keyColumnName = keyColumnName;
     this.timestampColumnName = timestampColumnName;
@@ -145,8 +149,10 @@ public class KafkaInputReader implements InputEntityReader
   @Override
   public CloseableIterator<InputRow> read() throws IOException
   {
+    KafkaRecordEntity record = source.getEntity();
     Map<String, Object> mergeMap = new HashMap<>();
-    if (headerParser != null) {
+    if (headerParserSupplier != null) {
+      KafkaHeaderReader headerParser = headerParserSupplier.apply(record);
       List<Pair<String, Object>> headerList = headerParser.read();
       for (Pair<String, Object> ele : headerList) {
         mergeMap.put(ele.lhs, ele.rhs);
@@ -156,6 +162,7 @@ public class KafkaInputReader implements InputEntityReader
     // Add kafka record timestamp to the mergelist, we will skip record timestamp if the same key exists already in the header list
     mergeMap.putIfAbsent(timestampColumnName, record.getRecord().timestamp());
 
+    InputEntityReader keyParser = (keyParserSupplier == null) ? null : keyParserSupplier.apply(record);
     if (keyParser != null) {
       try (CloseableIterator<InputRow> keyIterator = keyParser.read()) {
         // Key currently only takes the first row and ignores the rest.
@@ -172,7 +179,8 @@ public class KafkaInputReader implements InputEntityReader
       }
     }
 
-    if (valueParser != null) {
+    // Ignore tombstone records that have null values.
+    if (record.getRecord().value() != null) {
       return buildBlendedRows(valueParser, mergeMap);
     } else {
       return buildRowsWithoutValuePayload(mergeMap);

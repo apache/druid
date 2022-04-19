@@ -28,6 +28,17 @@
   Reference: https://github.com/apache/druid/pull/7894/files
 -->
 <FindBugsFilter>
+    <Match>
+        <Or>
+            <Class name="org.apache.druid.sql.calcite.parser.SimpleCharStream"/>
+            <Class name="org.apache.druid.sql.calcite.parser.TokenMgrError"/>
+            <Class name="org.apache.druid.sql.calcite.parser.Token"/>
+            <Class name="org.apache.druid.sql.calcite.parser.DruidSqlParserImplTokenManager"/>
+            <Class name="org.apache.druid.sql.calcite.parser.DruidSqlParserImplConstants"/>
+            <Class name="org.apache.druid.sql.calcite.parser.DruidSqlParserImpl"/>
+            <Class name="org.apache.druid.sql.calcite.parser.DruidSqlParserImpl$JJCalls"/>
+        </Or>
+    </Match>
     <!-- Ignore "equals" bugs for JsonInclude filter classes. They rely on strange-looking "equals" methods. -->
     <Match>
         <And>

@@ -90,7 +90,8 @@ public class DruidSchemaInternRowSignatureBenchmark
           joinableFactory,
           config,
           escalator,
-          brokerInternalQueryConfig
+          brokerInternalQueryConfig,
+          null
       );
     }
 

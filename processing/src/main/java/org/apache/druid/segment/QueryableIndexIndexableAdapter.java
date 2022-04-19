@@ -397,7 +397,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       return BitmapValues.EMPTY;
     }
 
-    return new ImmutableBitmapValues(bitmaps.getBitmap(bitmaps.getIndex(value)));
+    return new ImmutableBitmapValues(bitmaps.getBitmapForValue(value));
   }
 
   @Override

@@ -59,6 +59,7 @@ public class CoordinatorCompactionConfigsResourceTest
       null,
       null,
       null,
+      null,
       ImmutableMap.of("key", "val")
   );
   private static final byte[] OLD_CONFIG_IN_BYTES = {1, 2, 3};
@@ -121,6 +122,7 @@ public class CoordinatorCompactionConfigsResourceTest
     Response result = coordinatorCompactionConfigsResource.setCompactionTaskLimit(
         compactionTaskSlotRatio,
         maxCompactionTaskSlots,
+        true,
         author,
         comment,
         mockHttpServletRequest
@@ -130,6 +132,7 @@ public class CoordinatorCompactionConfigsResourceTest
     Assert.assertEquals(oldConfigCaptor.getValue(), OLD_CONFIG_IN_BYTES);
     Assert.assertNotNull(newConfigCaptor.getValue());
     Assert.assertEquals(newConfigCaptor.getValue().getMaxCompactionTaskSlots(), maxCompactionTaskSlots);
+    Assert.assertTrue(newConfigCaptor.getValue().isUseAutoScaleSlots());
     Assert.assertEquals(compactionTaskSlotRatio, newConfigCaptor.getValue().getCompactionTaskSlotRatio(), 0);
   }
 
@@ -153,6 +156,7 @@ public class CoordinatorCompactionConfigsResourceTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, true),
+        null,
         null,
         null,
         null,
@@ -195,6 +199,7 @@ public class CoordinatorCompactionConfigsResourceTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
+        null,
         null,
         null,
         null,
@@ -276,6 +281,7 @@ public class CoordinatorCompactionConfigsResourceTest
     Response result = coordinatorCompactionConfigsResource.setCompactionTaskLimit(
         compactionTaskSlotRatio,
         maxCompactionTaskSlots,
+        true,
         author,
         comment,
         mockHttpServletRequest
@@ -284,6 +290,7 @@ public class CoordinatorCompactionConfigsResourceTest
     Assert.assertNull(oldConfigCaptor.getValue());
     Assert.assertNotNull(newConfigCaptor.getValue());
     Assert.assertEquals(newConfigCaptor.getValue().getMaxCompactionTaskSlots(), maxCompactionTaskSlots);
+    Assert.assertTrue(newConfigCaptor.getValue().isUseAutoScaleSlots());
     Assert.assertEquals(compactionTaskSlotRatio, newConfigCaptor.getValue().getCompactionTaskSlotRatio(), 0);
   }
 
@@ -318,6 +325,7 @@ public class CoordinatorCompactionConfigsResourceTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
+        null,
         null,
         null,
         null,

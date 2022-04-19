@@ -23,7 +23,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -266,11 +265,8 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
   public ColumnCapabilities getColumnCapabilities(final String columnName)
   {
     if (virtualColumns.exists(columnName)) {
-      return virtualColumns.getColumnCapabilities(
-          QueryableIndexStorageAdapter.getColumnInspectorForIndex(index),
-          columnName
-      );
+      return virtualColumns.getColumnCapabilities(index, columnName);
     }
-    return QueryableIndexStorageAdapter.getColumnCapabilities(index, columnName);
+    return index.getColumnCapabilities(columnName);
   }
 }

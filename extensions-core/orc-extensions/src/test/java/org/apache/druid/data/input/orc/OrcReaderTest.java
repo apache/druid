@@ -214,7 +214,7 @@ public class OrcReaderTest
   {
     final InputEntityReader reader = createReader(
         new TimestampSpec("time", "millis", null),
-        new DimensionsSpec(null, Collections.singletonList("time"), null),
+        DimensionsSpec.builder().setDimensionExclusions(Collections.singletonList("time")).build(),
         new OrcInputFormat(new JSONPathSpec(true, null), null, new Configuration()),
         "example/TestOrcFile.testDate1900.orc"
     );
@@ -240,7 +240,7 @@ public class OrcReaderTest
   {
     final InputEntityReader reader = createReader(
         new TimestampSpec("time", "millis", null),
-        new DimensionsSpec(null, Collections.singletonList("time"), null),
+        DimensionsSpec.builder().setDimensionExclusions(Collections.singletonList("time")).build(),
         new OrcInputFormat(new JSONPathSpec(true, null), null, new Configuration()),
         "example/TestOrcFile.testDate2038.orc"
     );

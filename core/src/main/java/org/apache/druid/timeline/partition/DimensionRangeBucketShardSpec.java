@@ -22,9 +22,7 @@ package org.apache.druid.timeline.partition;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.StringTuple;
-import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -40,14 +38,10 @@ import java.util.Objects;
  * @see BuildingSingleDimensionShardSpec
  * @see BuildingDimensionRangeShardSpec
  */
-public class DimensionRangeBucketShardSpec implements BucketNumberedShardSpec<BuildingDimensionRangeShardSpec>
+public class DimensionRangeBucketShardSpec extends BaseDimensionRangeShardSpec
+    implements BucketNumberedShardSpec<BuildingDimensionRangeShardSpec>
 {
   private final int bucketId;
-  private final List<String> dimensions;
-  @Nullable
-  private final StringTuple start;
-  @Nullable
-  private final StringTuple end;
 
   @JsonCreator
   public DimensionRangeBucketShardSpec(
@@ -57,6 +51,7 @@ public class DimensionRangeBucketShardSpec implements BucketNumberedShardSpec<Bu
       @JsonProperty("end") @Nullable StringTuple end
   )
   {
+    super(dimensions, start, end);
     // Verify that the tuple sizes and number of dimensions are the same
     Preconditions.checkArgument(
         start == null || start.size() == dimensions.size(),
@@ -68,9 +63,6 @@ public class DimensionRangeBucketShardSpec implements BucketNumberedShardSpec<Bu
     );
 
     this.bucketId = bucketId;
-    this.dimensions = dimensions;
-    this.start = start;
-    this.end = end;
   }
 
   @Override
@@ -117,24 +109,6 @@ public class DimensionRangeBucketShardSpec implements BucketNumberedShardSpec<Bu
         end,
         partitionId
     );
-  }
-
-  @Override
-  public ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs)
-  {
-    return (long timestamp, InputRow row) -> {
-      for (ShardSpec spec : shardSpecs) {
-        if (((DimensionRangeBucketShardSpec) spec).isInChunk(row)) {
-          return spec;
-        }
-      }
-      throw new ISE("row[%s] doesn't fit in any shard[%s]", row, shardSpecs);
-    };
-  }
-
-  private boolean isInChunk(InputRow inputRow)
-  {
-    return DimensionRangeShardSpec.isInChunk(dimensions, start, end, inputRow);
   }
 
   @Override

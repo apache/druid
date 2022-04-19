@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-@import '~@blueprintjs/core/src/common/colors';
 @import '../../variables';
 
 $control-bar-width: 300px;
@@ -108,7 +107,7 @@ $actual-icon-height: 400px;
         }
       }
 
-      .bp3-card {
+      .#{$bp-ns}-card {
         position: relative;
         display: inline-block;
         vertical-align: top;
@@ -129,7 +128,7 @@ $actual-icon-height: 400px;
           border: 2px solid $blue3;
           border-radius: $pt-border-radius;
 
-          .bp3-dark & {
+          .#{$bp-ns}-dark & {
             border: 2px solid $blue4;
           }
         }
@@ -306,7 +305,7 @@ $actual-icon-height: 400px;
   .control-buttons {
     text-align: right;
 
-    .bp3-button {
+    .#{$bp-ns}-button {
       margin-left: 15px;
     }
   }

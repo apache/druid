@@ -56,6 +56,7 @@ services:
       - druid-openldap
       - druid-metadata-storage
       - druid-zookeeper-kafka
+      - druid-overlord
 
   druid-overlord:
     extends:
@@ -68,7 +69,6 @@ services:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
       - druid-openldap
-      - druid-coordinator
       - druid-metadata-storage
       - druid-zookeeper-kafka
 

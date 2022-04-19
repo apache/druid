@@ -45,4 +45,18 @@ describe('FormattedInput', () => {
     const { container } = render(suggestibleInput);
     expect(container.firstChild).toMatchSnapshot();
   });
+
+  it('matches works with multiline', () => {
+    const suggestibleInput = (
+      <FormattedInput
+        value={`Here are some chars \t\r\n lol`}
+        onValueChange={() => {}}
+        formatter={JSON_STRING_FORMATTER}
+        multiline
+      />
+    );
+
+    const { container } = render(suggestibleInput);
+    expect(container.firstChild).toMatchSnapshot();
+  });
 });

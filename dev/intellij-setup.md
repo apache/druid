@@ -47,7 +47,7 @@ will generate a report to show the current code coverage on the code (not just y
 ## Git Checkstyle Verification Hook (Optional)
 Git Checkstyle pre-commit hook can be installed to automatically run checkstyle verification before committing, 
 saving cycle from avoiding the checkstyle failing later in Travis/CI environment.
-The hook can be setup easily by running the <DRUID_HOME>/setup-hooks.sh script.
+The hook can be setup easily by running the <DRUID_HOME>/hooks/install-hooks.sh script.
 
 ## Metadata
 The installation of a MySQL metadata store is outside the scope of this document, but instructions on setting up MySQL can be found at [docs/development/extensions-core/mysql.md](/docs/development/extensions-core/mysql.md). This assumes you followed the example there and have a database named `druid` with proper permissions for a user named `druid` and a password of `diurd`.

@@ -22,14 +22,16 @@ package org.apache.druid.data.input;
 import com.google.common.base.Strings;
 import org.apache.commons.io.LineIterator;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.java.util.common.parsers.CloseableIteratorWithMetadata;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.ParserUtils;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Abstract {@link InputEntityReader} for text format readers such as CSV or JSON.
@@ -51,8 +53,7 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
   }
 
   @Override
-  public CloseableIterator<String> intermediateRowIterator()
-      throws IOException
+  public CloseableIteratorWithMetadata<String> intermediateRowIteratorWithMetadata() throws IOException
   {
     final LineIterator delegate = new LineIterator(
         new InputStreamReader(source.open(), StringUtils.UTF8_STRING)
@@ -65,8 +66,17 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
       processHeaderLine(delegate.nextLine());
     }
 
-    return new CloseableIterator<String>()
+    return new CloseableIteratorWithMetadata<String>()
     {
+      private static final String LINE_KEY = "Line";
+      private long currentLineNumber = numHeaderLines + (needsToProcessHeaderLine() ? 1 : 0);
+
+      @Override
+      public Map<String, Object> currentMetadata()
+      {
+        return Collections.singletonMap(LINE_KEY, currentLineNumber);
+      }
+
       @Override
       public boolean hasNext()
       {
@@ -76,6 +86,7 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
       @Override
       public String next()
       {
+        currentLineNumber++;
         return delegate.nextLine();
       }
 
@@ -85,6 +96,12 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
         delegate.close();
       }
     };
+  }
+
+  @Override
+  protected InputEntity source()
+  {
+    return source;
   }
 
   /**

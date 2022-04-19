@@ -5988,6 +5988,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         "0",
                         null,
                         false,
+                        false,
+                        false,
                         "__acc + 1",
                         "__acc + diy_count",
                         null,
@@ -6002,6 +6004,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         "0.0",
                         null,
                         null,
+                        false,
+                        false,
                         "__acc + index",
                         null,
                         null,
@@ -6014,8 +6018,10 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         ImmutableSet.of("index"),
                         null,
                         "0.0",
-                        "<DOUBLE>[]",
+                        "ARRAY<DOUBLE>[]",
                         null,
+                        false,
+                        false,
                         "__acc + index",
                         "array_concat(__acc, diy_decomposed_sum)",
                         null,
@@ -6030,6 +6036,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         "[]",
                         null,
                         null,
+                        true,
+                        false,
                         "array_set_add(acc, quality)",
                         "array_set_add_all(acc, array_agg_distinct)",
                         "if(array_length(o1) > array_length(o2), 1, if (array_length(o1) == array_length(o2), 0, -1))",
@@ -6052,7 +6060,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         .put("diy_count", 837L)
                         .put("diy_sum", 95606.57232284546D)
                         .put("diy_decomposed_sum", 95606.57232284546D)
-                        .put("array_agg_distinct", new String[]{"mezzanine", "news", "premium", "business", "entertainment", "health", "technology", "automotive", "travel"})
+                        .put("array_agg_distinct", new String[]{"automotive", "business", "entertainment", "health", "mezzanine", "news", "premium", "technology", "travel"})
                         .build(),
                     ImmutableMap.<String, Object>builder()
                         .put(QueryRunnerTestHelper.MARKET_DIMENSION, "total_market")
@@ -6101,6 +6109,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                     "hyper_unique()",
                     null,
                     null,
+                    false,
+                    false,
                     "hyper_unique_add(quality, __acc)",
                     "hyper_unique_add(carExpr, __acc)",
                     null,

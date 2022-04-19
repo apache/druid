@@ -41,12 +41,12 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     name: 'tuningConfig.partitionsSpec.type',
     label: 'Partitioning type',
     type: 'string',
-    suggestions: ['dynamic', 'hashed', 'single_dim'],
+    suggestions: ['dynamic', 'hashed', 'range'],
     info: (
       <p>
         For perfect rollup, you should use either <Code>hashed</Code> (partitioning based on the
-        hash of dimensions in each row) or <Code>single_dim</Code> (based on ranges of a single
-        dimension). For best-effort rollup, you should use <Code>dynamic</Code>.
+        hash of dimensions in each row) or <Code>range</Code> (based on several dimensions). For
+        best-effort rollup, you should use <Code>dynamic</Code>.
       </p>
     ),
   },
@@ -227,20 +227,6 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
       <p>
         Assume that input data has already been grouped on time and dimensions. Ingestion will run
         faster, but may choose sub-optimal partitions if this assumption is violated.
-      </p>
-    ),
-  },
-  {
-    name: 'inputSegmentSizeBytes',
-    type: 'number',
-    defaultValue: 419430400,
-    info: (
-      <p>
-        Maximum number of total segment bytes processed per compaction task. Since a time chunk must
-        be processed in its entirety, if the segments for a particular time chunk have a total size
-        in bytes greater than this parameter, compaction will not run for that time chunk. Because
-        each compaction task runs with a single thread, setting this value too far above 1–2GB will
-        result in compaction tasks taking an excessive amount of time.
       </p>
     ),
   },

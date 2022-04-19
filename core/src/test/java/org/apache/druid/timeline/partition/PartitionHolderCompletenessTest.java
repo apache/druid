@@ -22,7 +22,9 @@ package org.apache.druid.timeline.partition;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -161,5 +163,21 @@ public class PartitionHolderCompletenessTest
       holder.add(shardSpec.createChunk(new OvershadowableInteger("version", shardSpec.getPartitionNum(), 0)));
     }
     Assert.assertTrue(holder.isComplete());
+    Assert.assertTrue(holder.hasData());
+  }
+
+  @Test
+  public void testHasNoData()
+  {
+    final DataSegment tombstone = DataSegment.builder()
+                                             .dataSource("foo")
+                                             .version("1")
+                                             .interval(Intervals.of("2021-01-01/P1D"))
+                                             .shardSpec(new TombstoneShardSpec())
+                                             .size(1)
+                                             .build();
+    final PartitionChunk<DataSegment> partitionChunk = new TombstonePartitionedChunk<>(tombstone);
+    final PartitionHolder<DataSegment> partitionHolder = new PartitionHolder<DataSegment>(partitionChunk);
+    Assert.assertFalse(partitionHolder.hasData());
   }
 }

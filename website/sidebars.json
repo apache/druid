@@ -68,6 +68,7 @@
       "querying/sql",
       "querying/querying",
       "querying/query-execution",
+      "querying/troubleshooting",
       {
         "type": "subcategory",
         "label": "Concepts",
@@ -80,6 +81,35 @@
           "querying/caching",
           "querying/using-caching",
           "querying/query-context"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Druid SQL",
+        "ids": [
+          "querying/sql-syntax",
+          "querying/sql-data-types",
+          "querying/sql-metadata-tables",
+          "querying/sql-translation"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Druid SQL Functions",
+        "ids": [
+          "querying/sql-operators",
+          "querying/sql-scalar",
+          "querying/sql-aggregations",
+          "querying/sql-multivalue-string-functions"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Druid SQL APIs",
+        "ids": [
+          "querying/sql-api",
+          "querying/sql-jdbc",
+          "querying/sql-connection-context"
         ]
       },
       {
@@ -143,16 +173,24 @@
         "ids": [
           "operations/basic-cluster-tuning",
           "operations/segment-optimization",
+          "operations/mixed-workloads",
           "operations/http-compression",
           "operations/clean-metadata-store"
+        ]
+      },       
+      {
+        "type": "subcategory",
+        "label": "Monitoring",
+        "ids": [
+          "operations/request-logging",
+          "operations/metrics",
+          "operations/alerts"
         ]
       },       
       "operations/api-reference",
       "operations/high-availability",
       "operations/rolling-updates",
       "operations/rule-configuration",
-      "operations/metrics",
-      "operations/alerts",
       "operations/other-hadoop",
       {
         "type": "subcategory",

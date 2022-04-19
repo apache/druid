@@ -29,6 +29,11 @@ public interface DruidNodeDiscovery
   Collection<DiscoveryDruidNode> getAllNodes();
   void registerListener(Listener listener);
 
+  default void removeListener(Listener listener)
+  {
+    // do nothing
+  }
+
   /**
    * Listener for watching nodes in a DruidNodeDiscovery instance obtained via {@link
    * DruidNodeDiscoveryProvider}.getXXX(). DruidNodeDiscovery implementation should assume that Listener is not

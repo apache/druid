@@ -29,7 +29,6 @@ import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
-
 import java.util.Comparator;
 
 /**
@@ -95,9 +94,11 @@ public interface DimensionHandler
    * Creates a new DimensionIndexer, a per-dimension object responsible for processing ingested rows in-memory, used
    * by the IncrementalIndex. See {@link DimensionIndexer} interface for more information.
    *
+   * @param useMaxMemoryEstimates true if the created DimensionIndexer should use
+   *                              maximum values to estimate on-heap memory
    * @return A new DimensionIndexer object.
    */
-  DimensionIndexer<EncodedType, EncodedKeyComponentType, ActualType> makeIndexer();
+  DimensionIndexer<EncodedType, EncodedKeyComponentType, ActualType> makeIndexer(boolean useMaxMemoryEstimates);
 
   /**
    * Creates a new DimensionMergerV9, a per-dimension object responsible for merging indexes/row data across segments

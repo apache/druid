@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 
 public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -93,16 +94,18 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
       throw new IAE("Function[%s] must have 1 or 2 arguments", name());
     }
 
+    final Function<Expr.Shuttle, Expr> visitFn = shuttle -> shuttle.visit(apply(shuttle.visitAll(args)));
+
     if (args.size() == 1) {
-      return new TrimStaticCharsExpr(mode, args.get(0), DEFAULT_CHARS, null);
+      return new TrimStaticCharsExpr(mode, args.get(0), DEFAULT_CHARS, null, visitFn);
     } else {
       final Expr charsArg = args.get(1);
       if (charsArg.isLiteral()) {
         final String charsString = charsArg.eval(InputBindings.nilBindings()).asString();
         final char[] chars = charsString == null ? EMPTY_CHARS : charsString.toCharArray();
-        return new TrimStaticCharsExpr(mode, args.get(0), chars, charsArg);
+        return new TrimStaticCharsExpr(mode, args.get(0), chars, charsArg, visitFn);
       } else {
-        return new TrimDynamicCharsExpr(mode, args.get(0), args.get(1));
+        return new TrimDynamicCharsExpr(mode, args.get(0), args.get(1), visitFn);
       }
     }
   }
@@ -113,13 +116,21 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
     private final TrimMode mode;
     private final char[] chars;
     private final Expr charsExpr;
+    private final Function<Shuttle, Expr> visitFn;
 
-    public TrimStaticCharsExpr(final TrimMode mode, final Expr stringExpr, final char[] chars, final Expr charsExpr)
+    public TrimStaticCharsExpr(
+        final TrimMode mode,
+        final Expr stringExpr,
+        final char[] chars,
+        final Expr charsExpr,
+        final Function<Shuttle, Expr> visitFn
+    )
     {
       super(mode.getFnName(), stringExpr);
       this.mode = mode;
       this.chars = chars;
       this.charsExpr = charsExpr;
+      this.visitFn = visitFn;
     }
 
     @Nonnull
@@ -167,8 +178,7 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      Expr newStringExpr = arg.visit(shuttle);
-      return shuttle.visit(new TrimStaticCharsExpr(mode, newStringExpr, chars, charsExpr));
+      return visitFn.apply(shuttle);
     }
 
     @Nullable
@@ -200,6 +210,8 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
         return false;
       }
       TrimStaticCharsExpr that = (TrimStaticCharsExpr) o;
+
+      // Doesn't use "visitFn", but that's OK, because visitFn is determined entirely by "mode".
       return mode == that.mode &&
              Arrays.equals(chars, that.chars) &&
              Objects.equals(charsExpr, that.charsExpr);
@@ -220,12 +232,19 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
     private final TrimMode mode;
     private final Expr stringExpr;
     private final Expr charsExpr;
+    private final Function<Shuttle, Expr> visitFn;
 
-    public TrimDynamicCharsExpr(final TrimMode mode, final Expr stringExpr, final Expr charsExpr)
+    public TrimDynamicCharsExpr(
+        final TrimMode mode,
+        final Expr stringExpr,
+        final Expr charsExpr,
+        final Function<Shuttle, Expr> visitFn
+    )
     {
       this.mode = mode;
       this.stringExpr = stringExpr;
       this.charsExpr = charsExpr;
+      this.visitFn = visitFn;
     }
 
     @Nonnull
@@ -286,9 +305,7 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      Expr newStringExpr = stringExpr.visit(shuttle);
-      Expr newCharsExpr = charsExpr.visit(shuttle);
-      return shuttle.visit(new TrimDynamicCharsExpr(mode, newStringExpr, newCharsExpr));
+      return visitFn.apply(shuttle);
     }
 
     @Override
@@ -316,6 +333,8 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
         return false;
       }
       TrimDynamicCharsExpr that = (TrimDynamicCharsExpr) o;
+
+      // Doesn't use "visitFn", but that's OK, because visitFn is determined entirely by "mode".
       return mode == that.mode &&
              Objects.equals(stringExpr, that.stringExpr) &&
              Objects.equals(charsExpr, that.charsExpr);

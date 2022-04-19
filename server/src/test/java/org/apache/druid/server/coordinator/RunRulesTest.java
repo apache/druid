@@ -1487,7 +1487,6 @@ public class RunRulesTest
                                    .withBalancerComputeThreads(0)
                                    .withEmitBalancingStats(false)
                                    .withSpecificDataSourcesToKillUnusedSegmentsIn(null)
-                                   .withKillUnusedSegmentsInAllDataSources(false)
                                    .withMaxSegmentsInNodeLoadingQueue(1000)
                                    .withPauseCoordination(false)
                                    .build();

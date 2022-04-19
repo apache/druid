@@ -134,6 +134,13 @@ public class QueryContextsTest
   }
 
   @Test
+  public void testDefaultInSubQueryThreshold()
+  {
+    Assert.assertEquals(QueryContexts.DEFAULT_IN_SUB_QUERY_THRESHOLD,
+                        QueryContexts.getInSubQueryThreshold(ImmutableMap.of()));
+  }
+
+  @Test
   public void testGetEnableJoinLeftScanDirect()
   {
     Assert.assertFalse(QueryContexts.getEnableJoinLeftScanDirect(ImmutableMap.of()));

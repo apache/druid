@@ -440,6 +440,45 @@ public class BoundFilterTest extends BaseFilterTest
   }
 
   @Test
+  public void testListFilteredVirtualColumn()
+  {
+    assertFilterMatchesSkipVectorize(
+        new BoundDimFilter("allow-dim0", "0", "2", false, false, false, null, StringComparators.LEXICOGRAPHIC),
+        ImmutableList.of()
+    );
+    assertFilterMatchesSkipVectorize(
+        new BoundDimFilter("allow-dim0", "0", "6", false, false, false, null, StringComparators.LEXICOGRAPHIC),
+        ImmutableList.of("3", "4")
+    );
+    assertFilterMatchesSkipVectorize(
+        new BoundDimFilter("deny-dim0", "0", "6", false, false, false, null, StringComparators.LEXICOGRAPHIC),
+        ImmutableList.of("0", "1", "2", "5", "6")
+    );
+    assertFilterMatchesSkipVectorize(
+        new BoundDimFilter("deny-dim0", "3", "4", false, false, false, null, StringComparators.LEXICOGRAPHIC),
+        ImmutableList.of()
+    );
+
+    assertFilterMatchesSkipVectorize(
+        new BoundDimFilter("allow-dim2", "a", "c", false, false, false, null, StringComparators.LEXICOGRAPHIC),
+        ImmutableList.of("0", "3", "6")
+    );
+    assertFilterMatchesSkipVectorize(
+        new BoundDimFilter("allow-dim2", "c", "z", false, false, false, null, StringComparators.LEXICOGRAPHIC),
+        ImmutableList.of()
+    );
+
+    assertFilterMatchesSkipVectorize(
+        new BoundDimFilter("deny-dim2", "a", "b", false, true, false, null, StringComparators.LEXICOGRAPHIC),
+        ImmutableList.of()
+    );
+    assertFilterMatchesSkipVectorize(
+        new BoundDimFilter("deny-dim2", "c", "z", false, false, false, null, StringComparators.LEXICOGRAPHIC),
+        ImmutableList.of("4", "7")
+    );
+  }
+
+  @Test
   public void testNumericMatchExactlySingleValue()
   {
     assertFilterMatches(

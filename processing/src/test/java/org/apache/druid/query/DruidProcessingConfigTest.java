@@ -135,6 +135,7 @@ public class DruidProcessingConfigTest
     props.setProperty("druid.processing.fifo", "true");
     props.setProperty("druid.processing.tmpDir", "/test/path");
 
+
     Injector injector = makeInjector(
         NUM_PROCESSORS,
         DIRECT_SIZE,
@@ -151,6 +152,7 @@ public class DruidProcessingConfigTest
     Assert.assertEquals(1, config.columnCacheSizeBytes());
     Assert.assertTrue(config.isFifo());
     Assert.assertEquals("/test/path", config.getTmpDir());
+    Assert.assertEquals(0, config.getNumInitalBuffersForIntermediatePool());
   }
 
   @Test

@@ -589,25 +589,26 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         query.withOverriddenContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false))
     );
 
-    final Object[] rowObjects = {DateTimes.of("2000").getMillis(), "foo", 100, 10};
+    final Object[] rowObjects = {DateTimes.of("2000").getMillis(), "foo", 100, 10.0};
     final ResultRow resultRow = ResultRow.of(rowObjects);
+
 
     Assert.assertEquals(
         resultRow,
         arraysObjectMapper.readValue(
-            StringUtils.format("[%s, \"foo\", 100, 10]", DateTimes.of("2000").getMillis()),
+            StringUtils.format("[%s, \"foo\", 100, 10.0]", DateTimes.of("2000").getMillis()),
             ResultRow.class
         )
     );
 
-    Assert.assertEquals(
+    TestHelper.assertRow("",
         resultRow,
-        arraysObjectMapper.readValue(
+                         arraysObjectMapper.readValue(
             StringUtils.format(
                 "{\"version\":\"v1\","
                 + "\"timestamp\":\"%s\","
                 + "\"event\":"
-                + "  {\"test\":\"foo\", \"rows\":100, \"post\":10}"
+                + "  {\"test\":\"foo\", \"rows\":100, \"post\":10.0}"
                 + "}",
                 DateTimes.of("2000")
             ),
