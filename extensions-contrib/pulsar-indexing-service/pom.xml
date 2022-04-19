@@ -33,6 +33,22 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
+    <properties>
+        <netty-tc-native.version>2.0.51.Final</netty-tc-native.version>
+        <tcnative.version>2.0.51.Final</tcnative.version>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>central</id>
+            <layout>default</layout>
+            <url>https://repo1.maven.org/maven2</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
     <dependencies>
 <!--        Druid deps-->
         <dependency>
@@ -60,13 +76,112 @@
             <scope>provided</scope>
         </dependency>
 
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty</artifactId>
+            <version>3.10.6.Final</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>joda-time</groupId>
+            <artifactId>joda-time</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.inject</groupId>
+            <artifactId>guice</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>jsr311-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+
 <!--        Pulsar Deps-->
         <dependency>
             <groupId>org.apache.pulsar</groupId>
             <artifactId>pulsar-client</artifactId>
             <version>${apache.pulsar.version}</version>
         </dependency>
+
         <!-- Tests -->
+
+        <dependency>
+            <groupId>org.apache.pulsar</groupId>
+            <artifactId>pulsar-broker</artifactId>
+            <version>${apache.pulsar.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
+<!--        <dependency>-->
+<!--            <groupId>org.apache.pulsar</groupId>-->
+<!--            <artifactId>pulsar-broker</artifactId>-->
+<!--            <version>${apache.pulsar.version}</version>-->
+<!--            <scope>test</scope>-->
+<!--        </dependency>-->
+
+
+<!--        <dependency>-->
+<!--        <groupId>io.netty</groupId>-->
+<!--        <artifactId>netty-tcnative-boringssl-static</artifactId>-->
+<!--        <version>${netty-tc-native.version}</version>-->
+<!--            <scope>test</scope>-->
+<!--            <type>test-jar</type>-->
+<!--    </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>org.apache.pulsar</groupId>-->
+<!--            <artifactId>pulsar-io-netty</artifactId>-->
+<!--            <version>${apache.pulsar.version}</version>-->
+<!--            <scope>test</scope>-->
+<!--            <type>test-jar</type>-->
+<!--        </dependency>-->
+
+<!--        <dependency>-->
+<!--            <groupId>org.apache.curator</groupId>-->
+<!--            <artifactId>curator-test</artifactId>-->
+<!--            <scope>test</scope>-->
+<!--        </dependency>-->
+
         <dependency>
             <groupId>org.easymock</groupId>
             <artifactId>easymock</artifactId>
