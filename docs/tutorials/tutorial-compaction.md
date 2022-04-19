@@ -41,7 +41,8 @@ If you haven't already, you should finish the following tutorials first:
 
 ## Load the initial data
 
-This tutorial uses the Wikipedia edits sample data with an ingestion task spec designed to create between one and three segments per hour from the input data.
+This tutorial uses the Wikipedia edits sample data included with the Druid distribution.
+To load the initial data, you use an ingestion spec that loads batch data with segment granularity of `HOUR` and creates between one and three segments per hour.
 
 You can review ingestion spec at `quickstart/tutorial/compaction-init-index.json`.
 Submit the spec as follows to create a datasource called `compaction-tutorial`:
