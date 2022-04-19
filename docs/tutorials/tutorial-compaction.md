@@ -24,7 +24,7 @@ sidebar_label: "Compacting segments"
   -->
 
 
-This tutorial demonstrates how to compact existing segments into fewer but larger segments.
+This tutorial demonstrates how to compact existing segments into fewer but larger segments in Apache Druid.
 
 Because there is some per-segment memory and processing overhead, it can sometimes be beneficial to reduce the total number of segments.
 Please check [Segment size optimization](../operations/segment-optimization.md) for details.
@@ -38,14 +38,11 @@ It will also be helpful to have finished [Tutorial: Loading a file](../tutorials
 
 For this tutorial, we'll be using the Wikipedia edits sample data, with an ingestion task spec that will create 1-3 segments per hour in the input data.
 
-The ingestion spec can be found at `quickstart/tutorial/compaction-init-index.json`. Let's submit that spec, which will create a datasource called `compaction-tutorial`:
+The ingestion spec can be found at `quickstart/tutorial/compaction-init-index.json`. Submit that spec to create a datasource called `compaction-tutorial`:
 
 ```bash
 bin/post-index-task --file quickstart/tutorial/compaction-init-index.json --url http://localhost:8081
 ```
-
-> Please note that `maxRowsPerSegment` in the ingestion spec is set to 1000. This is to generate multiple segments per hour and _NOT_ recommended in production.
-> It's 5000000 by default and may need to be adjusted to make your segments optimized.
 
 After the ingestion completes, go to [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources) in a browser to see the new datasource in the Druid Console.
 
@@ -82,7 +79,9 @@ We have included a compaction task spec for this tutorial datasource at `quickst
   "interval": "2015-09-12/2015-09-13",
   "tuningConfig" : {
     "type" : "index_parallel",
-    "maxRowsPerSegment" : 5000000,
+    "partitionsSpec": {
+        "type": "dynamic"
+    },
     "maxRowsInMemory" : 25000
   }
 }
@@ -92,7 +91,7 @@ This will compact all segments for the interval `2015-09-12/2015-09-13` in the `
 
 The parameters in the `tuningConfig` control how many segments will be present in the compacted set of segments.
 
-In this tutorial example, only one compacted segment will be created per hour, as each hour has less rows than the 5000000 `maxRowsPerSegment` (note that the total number of rows is 39244).
+In this tutorial example, only one compacted segment will be created per hour, as each hour has 39244 rows, which is less than the default 5000000 `maxRowsPerSegment` for dynamic partitioning.
 
 Let's submit this task now:
 
@@ -143,7 +142,9 @@ We have included a compaction task spec that will create DAY granularity segment
   "interval": "2015-09-12/2015-09-13",
   "tuningConfig" : {
     "type" : "index_parallel",
-    "maxRowsPerSegment" : 5000000,
+    "partitionsSpec": {
+        "type": "dynamic"
+    },
     "maxRowsInMemory" : 25000,
     "forceExtendableShardSpecs" : true
   },

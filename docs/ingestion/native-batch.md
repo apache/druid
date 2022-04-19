@@ -577,7 +577,9 @@ An example of the result is
       },
       "tuningConfig": {
         "type": "index_parallel",
-        "maxRowsPerSegment": 5000000,
+        "partitionsSpec": {
+          "type": "dynamic"
+        },
         "maxRowsInMemory": 1000000,
         "maxTotalRows": 20000000,
         "numShards": null,
