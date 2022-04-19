@@ -34,8 +34,7 @@
     </parent>
 
     <properties>
-        <netty-tc-native.version>2.0.51.Final</netty-tc-native.version>
-        <tcnative.version>2.0.51.Final</tcnative.version>
+        <netty-tc-native.version>2.0.0.Final</netty-tc-native.version>
     </properties>
 
     <repositories>
@@ -50,7 +49,7 @@
     </repositories>
 
     <dependencies>
-<!--        Druid deps-->
+        <!--        Druid deps-->
         <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-core</artifactId>
@@ -136,7 +135,7 @@
         </dependency>
 
 
-<!--        Pulsar Deps-->
+        <!--        Pulsar Deps-->
         <dependency>
             <groupId>org.apache.pulsar</groupId>
             <artifactId>pulsar-client</artifactId>
@@ -153,34 +152,27 @@
             <scope>test</scope>
         </dependency>
 
-<!--        <dependency>-->
-<!--            <groupId>org.apache.pulsar</groupId>-->
-<!--            <artifactId>pulsar-broker</artifactId>-->
-<!--            <version>${apache.pulsar.version}</version>-->
-<!--            <scope>test</scope>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>org.apache.pulsar</groupId>
+            <artifactId>pulsar-broker</artifactId>
+            <version>${apache.pulsar.version}</version>
+            <scope>test</scope>
+        </dependency>
 
 
-<!--        <dependency>-->
-<!--        <groupId>io.netty</groupId>-->
-<!--        <artifactId>netty-tcnative-boringssl-static</artifactId>-->
-<!--        <version>${netty-tc-native.version}</version>-->
-<!--            <scope>test</scope>-->
-<!--            <type>test-jar</type>-->
-<!--    </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.apache.pulsar</groupId>-->
-<!--            <artifactId>pulsar-io-netty</artifactId>-->
-<!--            <version>${apache.pulsar.version}</version>-->
-<!--            <scope>test</scope>-->
-<!--            <type>test-jar</type>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-tcnative-boringssl-static</artifactId>
+            <version>2.0.0.Final</version>
+            <scope>test</scope>
+        </dependency>
 
-<!--        <dependency>-->
-<!--            <groupId>org.apache.curator</groupId>-->
-<!--            <artifactId>curator-test</artifactId>-->
-<!--            <scope>test</scope>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>org.apache.pulsar</groupId>
+            <artifactId>testmocks</artifactId>
+            <version>2.7.2</version>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.easymock</groupId>
