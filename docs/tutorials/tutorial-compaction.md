@@ -26,7 +26,7 @@ sidebar_label: "Compacting segments"
 
 This tutorial demonstrates how to compact existing segments into fewer but larger segments in Apache Druid.
 
-There is some per-segment memory and processing overhead during query processing
+There is some per-segment memory and processing overhead during query processing.
 Therefore, it can be beneficial to reduce the total number of segments.
 See [Segment size optimization](../operations/segment-optimization.md) for details.
 
