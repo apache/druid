@@ -75,7 +75,7 @@ Retrieved 1 row in 1.38s.
 
 ## Compact the data
 
-Now you compact these 51 small segments.
+Now you compact these 51 small segments and retain the segment granularity of `HOUR`.
 The Druid distribution includes a compaction task spec for this tutorial datasource at `quickstart/tutorial/compaction-keep-granularity.json`:
 
 ```json
