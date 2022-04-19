@@ -183,5 +183,5 @@ In this tutorial demonstrated how to use a compaction task spec to manually comp
 
 ## Learn more
 
-- For more detail, see [Compaction](../ingestion/compaction.md).
+- For more details, see [Compaction](../ingestion/compaction.md).
 - To learn about the benefits of compaction, see [Segment optimization](../operations/segment-optimization.md).
