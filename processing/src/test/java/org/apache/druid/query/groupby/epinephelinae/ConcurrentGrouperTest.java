@@ -79,9 +79,10 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
   private final int concurrencyHint;
   private final int parallelCombineThreads;
   private final ExecutorService exec = Executors.newFixedThreadPool(8);
+  private final boolean mergeThreadLocal;
   private final Closer closer = Closer.create();
 
-  @Parameters(name = "bufferSize={0}, concurrencyHint={1}, parallelCombineThreads={2}")
+  @Parameters(name = "bufferSize={0}, concurrencyHint={1}, parallelCombineThreads={2}, mergeThreadLocal={3}")
   public static Collection<Object[]> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -89,8 +90,10 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
     for (final int bufferSize : new int[]{1024, 1024 * 32, 1024 * 1024}) {
       for (final int concurrencyHint : new int[]{1, 8}) {
         for (final int parallelCombineThreads : new int[]{0, 8}) {
-          if (parallelCombineThreads <= concurrencyHint) {
-            constructors.add(new Object[]{bufferSize, concurrencyHint, parallelCombineThreads});
+          for (final boolean mergeThreadLocal : new boolean[]{true, false}) {
+            if (parallelCombineThreads <= concurrencyHint) {
+              constructors.add(new Object[]{bufferSize, concurrencyHint, parallelCombineThreads, mergeThreadLocal});
+            }
           }
         }
       }
@@ -115,11 +118,13 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
   public ConcurrentGrouperTest(
       int bufferSize,
       int concurrencyHint,
-      int parallelCombineThreads
+      int parallelCombineThreads,
+      boolean mergeThreadLocal
   )
   {
     this.concurrencyHint = concurrencyHint;
     this.parallelCombineThreads = parallelCombineThreads;
+    this.mergeThreadLocal = mergeThreadLocal;
     this.bufferSupplier = new Supplier<ByteBuffer>()
     {
       private final AtomicBoolean called = new AtomicBoolean(false);
@@ -165,7 +170,8 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
         false,
         0,
         4,
-        parallelCombineThreads
+        parallelCombineThreads,
+        mergeThreadLocal
     );
     closer.register(grouper);
     grouper.init();
@@ -195,7 +201,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
 
     final CloseableIterator<Entry<LongKey>> iterator = closer.register(grouper.iterator(true));
 
-    if (parallelCombineThreads > 1 && temporaryStorage.currentSize() > 0) {
+    if (parallelCombineThreads > 1 && (mergeThreadLocal || temporaryStorage.currentSize() > 0)) {
       // Parallel combiner configured, and expected to actually be used due to thread-local merge (either explicitly
       // configured, or due to spilling).
       Assert.assertTrue(TEST_RESOURCE_HOLDER.taken);
@@ -234,7 +240,8 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
         true,
         1,
         4,
-        parallelCombineThreads
+        parallelCombineThreads,
+        mergeThreadLocal
     );
     closer.register(grouper);
     grouper.init();
