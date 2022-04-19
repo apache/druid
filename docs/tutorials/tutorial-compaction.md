@@ -179,7 +179,7 @@ It takes some time before the Coordinator marks the old input segments as unused
 
 ![Compacted segments day granularity 2](../assets/tutorial-compaction-08.png "Compacted segments day granularity 2")
 
-In this tutorial demonstrated how to use a compaction task spec to manually compact segments and how to optionally change the segment granularity for segments.
+This tutorial demonstrated how to use a compaction task spec to manually compact segments and how to optionally change the segment granularity for segments.
 
 ## Learn more
 
