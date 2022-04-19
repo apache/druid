@@ -28,9 +28,13 @@ import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.testing.junit.LoggerCaptureRule;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.LogEvent;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -46,6 +50,10 @@ public class DimensionCardinalityReportTest
   private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
 
   private DimensionCardinalityReport target;
+
+  @Rule
+  public final LoggerCaptureRule logger = new LoggerCaptureRule(ParallelIndexSupervisorTask.class);
+
 
   @Before
   public void setup()
@@ -302,6 +310,7 @@ public class DimensionCardinalityReportTest
   @Test
   public void testSupervisorDetermineNegativeNumShardsFromCardinalityReport()
   {
+    logger.clearLogEvents();
     Union negativeUnion = mock(Union.class);
     Mockito.when(negativeUnion.getEstimate()).thenReturn(-1.0);
     Interval interval = Intervals.of("2001-01-01/P1D");
@@ -309,6 +318,20 @@ public class DimensionCardinalityReportTest
     Map<Interval, Integer> intervalToNumShards =
         ParallelIndexSupervisorTask.computeIntervalToNumShards(10, intervalToUnion);
     Assert.assertEquals(new Integer(7), intervalToNumShards.get(interval));
+
+    List<LogEvent> loggingEvents = logger.getLogEvents();
+    String expectedLogMessage =
+        "Estimated cardinality for union of estimates is zero or less: -1.00, setting num shards to 7";
+    Assert.assertTrue(
+        "Logging events: " + loggingEvents,
+        loggingEvents.stream()
+                     .anyMatch(l ->
+                                   l.getLevel().equals(Level.WARN)
+                                   && l.getMessage()
+                                       .getFormattedMessage()
+                                       .equals(expectedLogMessage)
+                     )
+    );
   }
 
   @Test
@@ -321,6 +344,33 @@ public class DimensionCardinalityReportTest
     Map<Interval, Integer> intervalToNumShards =
         ParallelIndexSupervisorTask.computeIntervalToNumShards(6, intervalToUnion);
     Assert.assertEquals(new Integer(4), intervalToNumShards.get(interval));
+  }
+
+  @Test
+  public void testSupervisorDeterminePositiveOneShardFromCardinalityReport()
+  {
+    logger.clearLogEvents();
+    Union union = mock(Union.class);
+    Mockito.when(union.getEstimate()).thenReturn(24.0);
+    Interval interval = Intervals.of("2001-01-01/P1D");
+    Map<Interval, Union> intervalToUnion = ImmutableMap.of(interval, union);
+    Map<Interval, Integer> intervalToNumShards =
+        ParallelIndexSupervisorTask.computeIntervalToNumShards(24, intervalToUnion);
+    Assert.assertEquals(new Integer(1), intervalToNumShards.get(interval));
+
+    List<LogEvent> loggingEvents = logger.getLogEvents();
+    String expectedLogMessage =
+        "estimatedNumShards is ONE (1) given estimated cardinality 24.00 and maxRowsPerSegment 24";
+    Assert.assertTrue(
+        "Logging events: " + loggingEvents,
+        loggingEvents.stream()
+                     .anyMatch(l ->
+                                   l.getLevel().equals(Level.INFO)
+                                   && l.getMessage()
+                                       .getFormattedMessage()
+                                       .equals(expectedLogMessage)
+                     )
+    );
   }
 
 }

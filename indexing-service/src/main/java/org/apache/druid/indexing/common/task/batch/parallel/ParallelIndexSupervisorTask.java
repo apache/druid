@@ -706,7 +706,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         );
 
         // This is for potential debugging in case we suspect bad estimation of cardinalities etc,
-        LOG.info("intervalToNumShards: %s", intervalToNumShards.toString());
+        LOG.debug("intervalToNumShards: %s", intervalToNumShards.toString());
 
       } else {
         intervalToNumShards = CollectionUtils.mapValues(
@@ -933,9 +933,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             // determine numShards based on maxRowsPerSegment and the cardinality
             estimatedNumShards = Math.round(estimatedCardinality / maxRowsPerSegment);
           }
-          LOG.info("estimatedNumShards %d given estimated cardinality %.2f and maxRowsPerSegment %d",
-                   estimatedNumShards, estimatedCardinality, maxRowsPerSegment
+          LOG.debug("estimatedNumShards %d given estimated cardinality %.2f and maxRowsPerSegment %d",
+                    estimatedNumShards, estimatedCardinality, maxRowsPerSegment
           );
+          // We have seen this before in the wild in situations where more shards should have been created,
+          // log it if it happens with some information & context
+          if (estimatedNumShards == 1) {
+            LOG.info("estimatedNumShards is ONE (%d) given estimated cardinality %.2f and maxRowsPerSegment %d",
+                      estimatedNumShards, estimatedCardinality, maxRowsPerSegment
+            );
+          }
           try {
             return Math.max(Math.toIntExact(estimatedNumShards), 1);
           }
