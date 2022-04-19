@@ -22,7 +22,6 @@ package org.apache.druid.server.metrics;
 import com.google.inject.Inject;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.LoadScope;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
@@ -30,7 +29,6 @@ import org.apache.druid.java.util.metrics.AbstractMonitor;
 @LoadScope(roles = NodeRole.MIDDLE_MANAGER_JSON_NAME)
 public class WorkerTaskCountStatsMonitor extends AbstractMonitor
 {
-  private static final Logger LOG = new Logger(WorkerTaskCountStatsMonitor.class);
   private final WorkerTaskCountStatsProvider statsProvider;
   private final String workerCategory;
   private final String workerVersion;
@@ -62,7 +60,6 @@ public class WorkerTaskCountStatsMonitor extends AbstractMonitor
     if (value != null) {
       builder.setDimension("category", workerCategory);
       builder.setDimension("version", workerVersion);
-      LOG.info("%s (category: %s, version: %s): [%d]", metricName, workerCategory, workerVersion, value);
       emitter.emit(builder.build(metricName, value));
     }
   }
