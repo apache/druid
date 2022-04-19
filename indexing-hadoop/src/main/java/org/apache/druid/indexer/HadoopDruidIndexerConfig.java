@@ -33,8 +33,10 @@ import com.google.common.collect.Lists;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.TypeLiteral;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.annotations.Self;
@@ -73,9 +75,11 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  *
@@ -110,10 +114,18 @@ public class HadoopDruidIndexerConfig
         GuiceInjectors.makeStartupInjector(),
         ImmutableList.of(
             (Module) binder -> {
+              DruidNode druidNode = new DruidNode("hadoop-indexer", null, false, null, null, true, false);
               JsonConfigProvider.bindInstance(
                   binder,
                   Key.get(DruidNode.class, Self.class),
-                  new DruidNode("hadoop-indexer", null, false, null, null, true, false)
+                  druidNode
+              );
+              Set<NodeRole> nodeRoles = new HashSet<>();
+              nodeRoles.add(new NodeRole("hadoop-indexer"));
+              JsonConfigProvider.bindInstance(
+                  binder,
+                  Key.get(new TypeLiteral<Set<NodeRole>>(){}, Self.class),
+                  nodeRoles
               );
               JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HadoopKerberosConfig.class);
             },
