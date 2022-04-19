@@ -117,7 +117,7 @@ During that time, you may see 75 total segments comprised of the old segment set
 ![Compacted segments intermediate state 2](../assets/tutorial-compaction-04.png "Compacted segments intermediate state 2")
 
 The new compacted segments have a more recent version than the original segments.
-Even though the Druid Console dispalys both sets of segments, queries only read from the new compacted segments.
+Even though the Druid console displays both sets of segments, queries only read from the new compacted segments.
 
 Running a COUNT query on `compaction-tutorial` again to verify the number of rows remains 39,244:
 
