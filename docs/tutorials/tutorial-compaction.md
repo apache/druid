@@ -173,7 +173,7 @@ Submit this task now:
 bin/post-index-task --file quickstart/tutorial/compaction-day-granularity.json --url http://localhost:8081
 ```
 
-It takes some time before the Coordinator marks the old input segments as unused, so you may see an intermediate state with 25 total segments. Eventually, there only one DAY granularity segment remains:
+It takes some time before the Coordinator marks the old input segments as unused, so you may see an intermediate state with 25 total segments. Eventually, only one DAY granularity segment remains:
 
 ![Compacted segments day granularity 1](../assets/tutorial-compaction-07.png "Compacted segments day granularity 1")
 
