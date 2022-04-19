@@ -65,7 +65,7 @@ public class SQLMetadataStorageActionHandlerTest
     final String logTable = "logs";
     final String lockTable = "locks";
 
-    connector.prepareEntryTable(entryTable);
+    connector.prepareTaskEntryTable(entryTable);
     connector.createLockTable(lockTable, entryType);
     connector.createLogTable(logTable, entryType);
 

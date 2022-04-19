@@ -337,18 +337,24 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
   
-  public boolean tableContainsColumn(Handle handle, String table, String column) throws SQLException
+  public boolean tableContainsColumn(Handle handle, String table, String column)
   {
-    DatabaseMetaData databaseMetaData = handle.getConnection().getMetaData();
-    ResultSet columns = databaseMetaData.getColumns(null,
-                                                    null,
-                                                    table.toUpperCase(Locale.ENGLISH),
-                                                    column.toUpperCase(Locale.ENGLISH)
-    );
-    return columns.next();
+    try {
+      DatabaseMetaData databaseMetaData = handle.getConnection().getMetaData();
+      ResultSet columns = databaseMetaData.getColumns(
+          null,
+          null,
+          table.toUpperCase(Locale.ENGLISH),
+          column.toUpperCase(Locale.ENGLISH)
+      );
+      return columns.next();
+    }
+    catch (SQLException e) {
+      return false;
+    }
   }
   
-  public void prepareEntryTable(final String tableName)
+  public void prepareTaskEntryTable(final String tableName)
   {
     createEntryTable(tableName);
     alterEntryTable(tableName);
@@ -385,10 +391,15 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             @Override
             public Void withHandle(Handle handle)
             {
-              log.info("Altering table[%s]", tableName);
               final Batch batch = handle.createBatch();
-              batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN type VARCHAR(255)", tableName));
-              batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255)", tableName));
+              if (!tableContainsColumn(handle, tableName, "type")) {
+                log.info("Adding column: type to table[%s]", tableName);
+                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN type VARCHAR(255)", tableName));
+              }
+              if (!tableContainsColumn(handle, tableName, "group_id")) {
+                log.info("Adding column: group_id to table[%s]", tableName);
+                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255)", tableName));
+              }
               batch.execute();
               return null;
             }
@@ -416,25 +427,27 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             {
               ObjectMapper objectMapper = new ObjectMapper();
               Connection connection = handle.getConnection();
-              Statement statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_UPDATABLE);
-              String prevId = "''";
-              while (prevId != null) {
+              Statement statement = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+              boolean flag = true;
+              String limit = withFetchLimit(100);
+              while (flag) {
+                // Should ideally use a cursor and sort by id for efficiency, but updates with ordering aren't allowed
                 String sql = StringUtils.format(
-                    "SELECT * FROM %1$s WHERE id > %2$s AND active = false AND type IS null ORDER BY id ASC %3$s",
+                    "SELECT * FROM %1$s WHERE active = false AND type IS null %2$s",
                     tableName,
-                    prevId,
-                    withFetchLimit(100)
+                    limit
                 );
                 ResultSet resultSet = statement.executeQuery(sql);
-                prevId = null;
+                flag = false;
                 while (resultSet.next()) {
                   ObjectNode payload = objectMapper.readValue(resultSet.getBytes("payload"), ObjectNode.class);
                   resultSet.updateString("type", payload.get("type").asText());
                   resultSet.updateString("group_id", payload.get("groupId").asText());
-                  prevId = "'" + resultSet.getString("id") + "'";
                   resultSet.updateRow();
+                  flag = true;
                 }
               }
+              statement.close();
               return null;
             }
           }
@@ -675,7 +688,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     if (config.get().isCreateTables()) {
       final MetadataStorageTablesConfig tablesConfig = tablesConfigSupplier.get();
       final String entryType = tablesConfig.getTaskEntryType();
-      prepareEntryTable(tablesConfig.getEntryTable(entryType));
+      prepareTaskEntryTable(tablesConfig.getEntryTable(entryType));
       createLogTable(tablesConfig.getLogTable(entryType), entryType);
       createLockTable(tablesConfig.getLockTable(entryType), entryType);
     }

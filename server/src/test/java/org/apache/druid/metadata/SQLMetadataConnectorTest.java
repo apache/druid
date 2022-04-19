@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.commons.dbcp2.BasicDataSource;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -32,8 +33,15 @@ import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
+import java.sql.Blob;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 
 public class SQLMetadataConnectorTest
@@ -86,6 +94,14 @@ public class SQLMetadataConnectorTest
               );
             }
 
+            String taskTable = tablesConfig.getTasksTable();
+            for (String column : Arrays.asList("type", "group_id")) {
+              Assert.assertTrue(
+                  StringUtils.format("Tasks table column %s was not created!", column),
+                  connector.tableContainsColumn(handle, taskTable, column)
+              );
+            }
+
             return null;
           }
         }
@@ -94,6 +110,37 @@ public class SQLMetadataConnectorTest
     for (String table : tables) {
       dropTable(table);
     }
+  }
+
+  @Test
+  public void testMigrateTaskTable()
+  {
+    String table = tablesConfig.getTasksTable();
+    connector.getDBI().withHandle(
+        new HandleCallback<Void>()
+        {
+          @Override
+          public Void withHandle(Handle handle)
+          {
+            connector.prepareTaskEntryTable(table);
+            int numRows = 1000;
+            List<String> ids = new ArrayList<>();
+            for (int i = 0; i < numRows; i++) {
+              String id = insertIntoTasksTable(table, "type_" + i, "groupId_" + i);
+              Assert.assertNotEquals("", id);
+              ids.add(id);
+            }
+
+            connector.migrateTaskTable();
+
+            for (int i = 0; i < numRows; i++) {
+              Assert.assertTrue(verifyTaskTypeAndGroupId(table, ids.get(i), "type_" + i, "groupId_" + i));
+            }
+            return null;
+          }
+        }
+    );
+    dropTable(table);
   }
 
   @Test
@@ -247,5 +294,74 @@ public class SQLMetadataConnectorTest
     BasicDataSource dataSource = testSQLMetadataConnector.getDatasource();
     Assert.assertEquals(dataSource.getMaxConnLifetimeMillis(), 1200000);
     Assert.assertEquals((long) dataSource.getDefaultQueryTimeout(), 30000);
+  }
+
+  private String insertIntoTasksTable(String table, String type, String groupId)
+  {
+    String id = UUID.randomUUID().toString();
+    String dummy = "dummyData";
+    String createdDate = DateTimes.nowUtc().toString();
+    try {
+      connector.retryWithHandle(
+          new HandleCallback<Void>()
+          {
+            @Override
+            public Void withHandle(Handle handle) throws SQLException
+            {
+              String json = StringUtils.format("{\"type\":\"%1$s\",\"groupId\":\"%2$s\"}", type, groupId);
+              Blob payload = handle.getConnection().createBlob();
+              payload.setBytes(1, json.getBytes());
+
+              String sql = StringUtils.format(
+                  "INSERT INTO %1$s (id, created_date, datasource, active, payload, status_payload) VALUES (?,?,?,?,?,?)",
+                  table
+                  );
+              PreparedStatement preparedStatement = handle.getConnection().prepareStatement(sql);
+              preparedStatement.setString(1, id);
+              preparedStatement.setString(2, createdDate);
+              preparedStatement.setString(3, dummy);
+              preparedStatement.setBoolean(4, false);
+              preparedStatement.setBlob(5, payload);
+              preparedStatement.setBlob(6, payload);
+              preparedStatement.execute();
+              preparedStatement.close();
+
+              return null;
+            }
+          }
+      );
+      return id;
+    }
+    catch (Exception e) {
+      return "";
+    }
+  }
+
+  private boolean verifyTaskTypeAndGroupId(String table, String id, String type, String groupId)
+  {
+    try {
+      return connector.retryWithHandle(
+          new HandleCallback<Boolean>()
+          {
+            @Override
+            public Boolean withHandle(Handle handle) throws SQLException
+            {
+              Statement statement = handle.getConnection().createStatement();
+              ResultSet resultSet = statement.executeQuery(
+                  StringUtils.format("SELECT * FROM %1$s WHERE id = '%2$s'", table, id)
+              );
+              resultSet.next();
+              boolean flag = type.equals(resultSet.getString("type"))
+                             && groupId.equals(resultSet.getString("group_id"));
+              statement.close();
+              return flag;
+            }
+          }
+      );
+    }
+    catch (Exception e) {
+      e.printStackTrace();
+      return false;
+    }
   }
 }
