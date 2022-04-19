@@ -129,6 +129,9 @@
   "sys/storage/used" : { "dimensions" : ["fsDirName"], "type" : "gauge"},
   "sys/cpu" : { "dimensions" : ["cpuName", "cpuTime"], "type" : "gauge"},
 
+  "coordinator/global/time" : { "dimensions" :  ["dutyGroup"], "type" : "timer"},
+  "coordinator/time" : { "dimensions" :  ["dutyGroup", "duty"], "type" : "timer"},
+
   "coordinator-segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "historical-segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge" },
 
