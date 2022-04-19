@@ -51,7 +51,7 @@ Submit the spec as follows to create a datasource called `compaction-tutorial`:
 bin/post-index-task --file quickstart/tutorial/compaction-init-index.json --url http://localhost:8081
 ```
 
-After the ingestion completes, navigate to [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources) in a browser to see the new datasource in the Druid Console.
+After the ingestion completes, navigate to [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources) in a browser to see the new datasource in the Druid console.
 
 ![compaction-tutorial datasource](../assets/tutorial-compaction-01.png "compaction-tutorial datasource")
 
