@@ -1639,6 +1639,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           return Response.ok(sequenceNumbers).build();
         } else if (latestSequence.isCheckpointed()) {
           return Response.status(Response.Status.BAD_REQUEST)
+                         .type(MediaType.TEXT_PLAIN)
                          .entity(StringUtils.format(
                              "Sequence [%s] has already endOffsets set, cannot set to [%s]",
                              latestSequence,
@@ -1771,6 +1772,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     if (!(status == Status.PAUSED || status == Status.READING)) {
       return Response.status(Response.Status.BAD_REQUEST)
+                     .type(MediaType.TEXT_PLAIN)
                      .entity(StringUtils.format("Can't pause, task is not in a pausable state (state: [%s])", status))
                      .build();
     }

@@ -320,9 +320,10 @@ public class ResponseContextTest
         Strings.repeat("x", INTERVAL_LEN * 7)
     );
     final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
-    final String fullString = objectMapper.writeValueAsString(ctx.getDelegate());
     final ResponseContext.SerializationResult res1 = ctx.serializeWith(objectMapper, Integer.MAX_VALUE);
-    Assert.assertEquals(fullString, res1.getResult());
+    Assert.assertEquals(ctx.getDelegate(),
+        deserializeContext(res1.getResult(), objectMapper)
+    );
     final int maxLen = INTERVAL_LEN * 4 + Keys.UNCOVERED_INTERVALS.getName().length() + 4 +
                        Keys.TRUNCATED.getName().length() + 6;
     final ResponseContext.SerializationResult res2 = ctx.serializeWith(objectMapper, maxLen);

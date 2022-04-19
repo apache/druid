@@ -187,6 +187,7 @@ class ParallelIndexTestingFactory
           maxParseExceptions,
           25,
           null,
+          null,
           null
       );
     }
@@ -197,9 +198,7 @@ class ParallelIndexTestingFactory
     GranularitySpec granularitySpec = new ArbitraryGranularitySpec(Granularities.DAY, granularitySpecInputIntervals);
     TimestampSpec timestampSpec = new TimestampSpec(SCHEMA_TIME, "auto", null);
     DimensionsSpec dimensionsSpec = new DimensionsSpec(
-        DimensionsSpec.getDefaultSchemas(ImmutableList.of(SCHEMA_DIMENSION)),
-        null,
-        null
+        DimensionsSpec.getDefaultSchemas(ImmutableList.of(SCHEMA_DIMENSION))
     );
 
     return new DataSchema(

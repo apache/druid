@@ -38,9 +38,11 @@ import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserImplFactory;
 import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
@@ -57,6 +59,7 @@ public class PlannerFactory
       .setQuotedCasing(Casing.UNCHANGED)
       .setQuoting(Quoting.DOUBLE_QUOTE)
       .setConformance(DruidConformance.instance())
+      .setParserFactory(new DruidSqlParserImplFactory()) // Custom sql parser factory
       .build();
 
   private final DruidSchemaCatalog rootSchema;
@@ -148,7 +151,7 @@ public class PlannerFactory
         .withExpand(false)
         .withDecorrelationEnabled(false)
         .withTrimUnusedFields(false)
-        .withInSubQueryThreshold(Integer.MAX_VALUE)
+        .withInSubQueryThreshold(QueryContexts.getInSubQueryThreshold(plannerContext.getQueryContext()))
         .build();
     return Frameworks
         .newConfigBuilder()

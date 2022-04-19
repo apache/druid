@@ -23,7 +23,7 @@ import { Capabilities } from '../../../utils';
 
 import { SupervisorsCard } from './supervisors-card';
 
-describe('supervisors card', () => {
+describe('SupervisorsCard', () => {
   it('matches snapshot', () => {
     const supervisorsCard = <SupervisorsCard capabilities={Capabilities.FULL} />;
 

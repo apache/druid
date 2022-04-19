@@ -65,7 +65,7 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    return OperatorConversions.convertCall(
+    return OperatorConversions.convertDirectCallWithExtraction(
         plannerContext,
         rowSignature,
         rexNode,

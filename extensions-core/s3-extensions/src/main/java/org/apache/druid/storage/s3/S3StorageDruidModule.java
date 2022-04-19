@@ -28,6 +28,8 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
@@ -148,8 +150,14 @@ public class S3StorageDruidModule implements DruidModule
              .addBinding(SCHEME_S3N)
              .to(S3TimestampVersionedDataFinder.class)
              .in(LazySingleton.class);
-    Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME_S3_ZIP).to(S3DataSegmentKiller.class).in(LazySingleton.class);
-    Binders.dataSegmentMoverBinder(binder).addBinding(SCHEME_S3_ZIP).to(S3DataSegmentMover.class).in(LazySingleton.class);
+    Binders.dataSegmentKillerBinder(binder)
+           .addBinding(SCHEME_S3_ZIP)
+           .to(S3DataSegmentKiller.class)
+           .in(LazySingleton.class);
+    Binders.dataSegmentMoverBinder(binder)
+           .addBinding(SCHEME_S3_ZIP)
+           .to(S3DataSegmentMover.class)
+           .in(LazySingleton.class);
     Binders.dataSegmentArchiverBinder(binder)
            .addBinding(SCHEME_S3_ZIP)
            .to(S3DataSegmentArchiver.class)
@@ -202,6 +210,11 @@ public class S3StorageDruidModule implements DruidModule
   }
 
   // This provides ServerSideEncryptingAmazonS3 built with all default configs from Guice injection
+  /**
+   * Creates {@link ServerSideEncryptingAmazonS3} which may perform config validation immediately.
+   * You may want to avoid immediate config validation but defer it until you actually use the s3 client.
+   * Use {@link #getAmazonS3ClientSupplier} instead in that case.
+   */
   @Provides
   @LazySingleton
   public ServerSideEncryptingAmazonS3 getAmazonS3Client(
@@ -209,5 +222,18 @@ public class S3StorageDruidModule implements DruidModule
   )
   {
     return serverSideEncryptingAmazonS3Builder.build();
+  }
+
+  /**
+   * Creates a supplier that lazily initialize {@link ServerSideEncryptingAmazonS3}.
+   * You may want to use the supplier to defer config validation until you actually use the s3 client.
+   */
+  @Provides
+  @LazySingleton
+  public Supplier<ServerSideEncryptingAmazonS3> getAmazonS3ClientSupplier(
+      ServerSideEncryptingAmazonS3.Builder serverSideEncryptingAmazonS3Builder
+  )
+  {
+    return Suppliers.memoize(serverSideEncryptingAmazonS3Builder::build);
   }
 }

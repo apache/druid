@@ -197,7 +197,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     return Druids.newScanQueryBuilder()
                  .dataSource(new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE))
                  .columns(Collections.emptyList())
-                 .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                 .eternityInterval()
                  .limit(3)
                  .legacy(legacy);
   }

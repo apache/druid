@@ -70,7 +70,7 @@ public class HumanReadableFormatOperatorConversion implements SqlOperatorConvers
       final RexNode rexNode
   )
   {
-    return OperatorConversions.convertCall(plannerContext, rowSignature, rexNode, name);
+    return OperatorConversions.convertDirectCall(plannerContext, rowSignature, rexNode, name);
   }
 
   private static class HumanReadableFormatOperandTypeChecker implements SqlOperandTypeChecker

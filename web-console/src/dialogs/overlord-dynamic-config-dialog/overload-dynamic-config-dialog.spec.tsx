@@ -21,7 +21,7 @@ import React from 'react';
 
 import { OverlordDynamicConfigDialog } from './overlord-dynamic-config-dialog';
 
-describe('overload dynamic config', () => {
+describe('OverlordDynamicConfigDialog', () => {
   it('matches snapshot', () => {
     const lookupEditDialog = shallow(<OverlordDynamicConfigDialog onClose={() => {}} />);
 

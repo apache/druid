@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Segment;
@@ -77,7 +76,7 @@ public class BroadcastJoinableMMappedQueryableSegmentizerFactoryTest extends Ini
             .addValue(DataSegment.PruneSpecsHolder.class, DataSegment.PruneSpecsHolder.DEFAULT)
     );
 
-    IndexMerger indexMerger = new IndexMergerV9(mapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
+    IndexMergerV9 indexMerger = new IndexMergerV9(mapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
 
     SegmentizerFactory expectedFactory = new BroadcastJoinableMMappedQueryableSegmentizerFactory(
         indexIO,

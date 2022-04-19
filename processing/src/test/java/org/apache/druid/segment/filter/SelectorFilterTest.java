@@ -116,6 +116,20 @@ public class SelectorFilterTest extends BaseFilterTest
   }
 
   @Test
+  public void testListFilteredVirtualColumn()
+  {
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("allow-dim0", "1", null), ImmutableList.of());
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("allow-dim0", "4", null), ImmutableList.of("4"));
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("deny-dim0", "0", null), ImmutableList.of("0"));
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("deny-dim0", "4", null), ImmutableList.of());
+
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("allow-dim2", "b", null), ImmutableList.of());
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("allow-dim2", "a", null), ImmutableList.of("0", "3"));
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("deny-dim2", "b", null), ImmutableList.of("0"));
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("deny-dim2", "a", null), ImmutableList.of());
+  }
+
+  @Test
   public void testSingleValueStringColumnWithNulls()
   {
     // testSingleValueStringColumnWithoutNulls but with virtual column selector

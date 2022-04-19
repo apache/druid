@@ -30,11 +30,11 @@
 }
 
 .live-query-mode-selector-portal {
-  .auto.auto-on .bp3-text-overflow-ellipsis {
+  .auto.auto-on .#{$bp-ns}-text-overflow-ellipsis {
     color: $druid-brand;
   }
 
-  .on .bp3-text-overflow-ellipsis {
+  .on .#{$bp-ns}-text-overflow-ellipsis {
     color: $druid-brand;
   }
 }

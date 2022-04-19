@@ -131,10 +131,10 @@ final class FileWriteOutBytes extends WriteOutBytes
   @Override
   public void readFully(long pos, ByteBuffer buffer) throws IOException
   {
-    flush();
-    if (pos < 0 || pos > ch.size()) {
-      throw new IAE("pos %d out of range [%d, %d]", pos, 0, ch.size());
+    if (pos < 0 || pos > writeOutBytes) {
+      throw new IAE("pos %d out of range [%d, %d]", pos, 0, writeOutBytes);
     }
+    flush();
     ch.read(buffer, pos);
     if (buffer.remaining() > 0) {
       throw new BufferUnderflowException();

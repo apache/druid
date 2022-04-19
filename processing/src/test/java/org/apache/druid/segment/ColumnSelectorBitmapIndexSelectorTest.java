@@ -71,6 +71,7 @@ public class ColumnSelectorBitmapIndexSelectorTest
     ImmutableBitmap someBitmap = EasyMock.createMock(ImmutableBitmap.class);
     EasyMock.expect(someIndex.getIndex("foo")).andReturn(0).anyTimes();
     EasyMock.expect(someIndex.getBitmap(0)).andReturn(someBitmap).anyTimes();
+    EasyMock.expect(someIndex.getBitmapForValue("foo")).andReturn(someBitmap).anyTimes();
 
 
     ColumnHolder nonStringHolder = EasyMock.createMock(ColumnHolder.class);

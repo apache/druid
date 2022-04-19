@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.druid.common.config.NullHandling;
@@ -39,6 +40,7 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.TableDataSource;
@@ -58,9 +60,11 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
@@ -75,6 +79,7 @@ import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.Access;
@@ -99,6 +104,64 @@ import static org.apache.druid.query.QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KE
 @RunWith(JUnitParamsRunner.class)
 public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 {
+
+  @Test
+  public void testInnerJoinWithLimitAndAlias() throws Exception
+  {
+    minTopNThreshold = 1;
+    Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
+    testQuery(
+        "select t1.b1 from (select __time as b1 from numfoo group by 1 order by 1) as t1 inner join (\n"
+        + "  select __time as b2 from foo group by 1 order by 1\n"
+        + ") as t2 on t1.b1 = t2.b2 ",
+        context, // turn on exact topN
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dataSource(
+                    JoinDataSource.create(
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDataSource(new TableDataSource("numfoo"))
+                                        .setDimensions(new DefaultDimensionSpec("__time", "_d0", ColumnType.LONG))
+                                        .setContext(context)
+                                        .build()
+                        ),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDataSource(new TableDataSource("foo"))
+                                        .setDimensions(new DefaultDimensionSpec("__time", "d0", ColumnType.LONG))
+                                        .setContext(context)
+                                        .build()
+                        ),
+                        "j0.",
+                        "(\"_d0\" == \"j0.d0\")",
+                        JoinType.INNER,
+                        null,
+                        ExprMacroTable.nil()
+                    )
+                )
+                .columns("_d0")
+                .context(context)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L},
+            new Object[]{946771200000L},
+            new Object[]{946857600000L},
+            new Object[]{978307200000L},
+            new Object[]{978393600000L},
+            new Object[]{978480000000L}
+        )
+    );
+  }
+
+
   @Test
   public void testExactTopNOnInnerJoinWithLimit() throws Exception
   {
@@ -175,8 +238,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 ),
                                 "j0.",
                                 equalsCondition(
-                                    DruidExpression.fromColumn("m1"),
-                                    DruidExpression.fromColumn("j0.m1")
+                                    DruidExpression.ofColumn(ColumnType.FLOAT, "m1"),
+                                    DruidExpression.ofColumn(ColumnType.FLOAT, "j0.m1")
                                 ),
                                 JoinType.INNER
                             )
@@ -264,8 +327,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         ),
                         "j0.",
                         equalsCondition(
-                            DruidExpression.fromColumn("m1"),
-                            DruidExpression.fromColumn("j0.m1")
+                            DruidExpression.ofColumn(ColumnType.FLOAT, "m1"),
+                            DruidExpression.ofColumn(ColumnType.FLOAT, "j0.m1")
                         ),
                         JoinType.INNER
                     )
@@ -351,8 +414,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         ),
                         "j0.",
                         equalsCondition(
-                            DruidExpression.fromColumn("m1"),
-                            DruidExpression.fromColumn("j0.m1")
+                            DruidExpression.ofColumn(ColumnType.FLOAT, "m1"),
+                            DruidExpression.ofColumn(ColumnType.FLOAT, "j0.m1")
                         ),
                         JoinType.INNER
                     )
@@ -547,7 +610,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new TableDataSource(CalciteTests.DATASOURCE1),
                         new LookupDataSource("lookyloo"),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
                         JoinType.LEFT
                     )
                 )
@@ -583,7 +646,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new TableDataSource(CalciteTests.DATASOURCE1),
                         new LookupDataSource("lookyloo"),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
                         JoinType.LEFT
                     )
                 )
@@ -631,7 +694,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("k"), DruidExpression.fromColumn("j0.dim2")),
+                        equalsCondition(makeColumnExpression("k"), makeColumnExpression("j0.dim2")),
                         JoinType.RIGHT
                     )
                 )
@@ -671,7 +734,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new TableDataSource(CalciteTests.DATASOURCE1),
                         new LookupDataSource("lookyloo"),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
                         JoinType.LEFT
                     )
                 )
@@ -717,7 +780,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         ),
                         new LookupDataSource("lookyloo"),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
                         JoinType.LEFT
                     )
                 )
@@ -756,7 +819,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new TableDataSource(CalciteTests.DATASOURCE1),
                         new LookupDataSource("lookyloo"),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
                         JoinType.LEFT
                     )
                 )
@@ -803,7 +866,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         ),
                         new LookupDataSource("lookyloo"),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("d0"), DruidExpression.fromColumn("j0.k")),
+                        equalsCondition(makeColumnExpression("d0"), makeColumnExpression("j0.k")),
                         JoinType.LEFT
                     )
                 )
@@ -844,7 +907,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new TableDataSource(CalciteTests.DATASOURCE1),
                         new LookupDataSource("lookyloo"),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
+                        equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.k")),
                         JoinType.INNER
                     )
                 )
@@ -876,7 +939,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new TableDataSource(CalciteTests.DATASOURCE1),
                         new LookupDataSource("lookyloo"),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
                         JoinType.INNER
                     )
                 )
@@ -911,12 +974,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                             new TableDataSource(CalciteTests.DATASOURCE1),
                             new LookupDataSource("lookyloo"),
                             "j0.",
-                            equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
+                            equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.k")),
                             JoinType.LEFT
                         ),
                         new LookupDataSource("lookyloo"),
                         "_j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("_j0.k")),
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("_j0.k")),
                         JoinType.LEFT
                     )
                 )
@@ -958,12 +1021,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                             new TableDataSource(CalciteTests.DATASOURCE1),
                             new LookupDataSource("lookyloo"),
                             "j0.",
-                            equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                            equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
                             JoinType.INNER
                         ),
                         new LookupDataSource("lookyloo"),
                         "_j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("_j0.k")),
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("_j0.k")),
                         JoinType.INNER
                     )
                 )
@@ -1000,12 +1063,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                             new TableDataSource(CalciteTests.DATASOURCE1),
                             new LookupDataSource("lookyloo"),
                             "j0.",
-                            equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                            equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
                             JoinType.INNER
                         ),
                         new LookupDataSource("lookyloo"),
                         "_j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("_j0.k")),
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("_j0.k")),
                         JoinType.INNER
                     )
                 )
@@ -1043,12 +1106,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                             new TableDataSource(CalciteTests.DATASOURCE1),
                             new LookupDataSource("lookyloo"),
                             "j0.",
-                            equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                            equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
                             JoinType.INNER
                         ),
                         new LookupDataSource("lookyloo"),
                         "_j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("_j0.k")),
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("_j0.k")),
                         JoinType.INNER
                     )
                 )
@@ -1086,12 +1149,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                             new TableDataSource(CalciteTests.DATASOURCE1),
                             new LookupDataSource("lookyloo"),
                             "j0.",
-                            equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                            equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
                             JoinType.INNER
                         ),
                         new LookupDataSource("lookyloo"),
                         "_j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("_j0.k")),
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("_j0.k")),
                         JoinType.INNER
                     )
                 )
@@ -1164,9 +1227,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                                                                     "lookyloo"),
                                                                                                 "j0.",
                                                                                                 equalsCondition(
-                                                                                                    DruidExpression.fromColumn(
+                                                                                                    makeColumnExpression(
                                                                                                         "dim2"),
-                                                                                                    DruidExpression.fromColumn(
+                                                                                                    makeColumnExpression(
                                                                                                         "j0.k")
                                                                                                 ),
                                                                                                 JoinType.INNER
@@ -1175,9 +1238,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                                                                 "lookyloo"),
                                                                                             "_j0.",
                                                                                             equalsCondition(
-                                                                                                DruidExpression.fromColumn(
+                                                                                                makeColumnExpression(
                                                                                                     "dim2"),
-                                                                                                DruidExpression.fromColumn(
+                                                                                                makeColumnExpression(
                                                                                                     "_j0.k")
                                                                                             ),
                                                                                             JoinType.INNER
@@ -1185,9 +1248,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                                                         new LookupDataSource("lookyloo"),
                                                                                         "__j0.",
                                                                                         equalsCondition(
-                                                                                            DruidExpression.fromColumn(
+                                                                                            makeColumnExpression(
                                                                                                 "dim2"),
-                                                                                            DruidExpression.fromColumn(
+                                                                                            makeColumnExpression(
                                                                                                 "__j0.k")
                                                                                         ),
                                                                                         JoinType.INNER
@@ -1195,9 +1258,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                                                     new LookupDataSource("lookyloo"),
                                                                                     "___j0.",
                                                                                     equalsCondition(
-                                                                                        DruidExpression.fromColumn(
+                                                                                        makeColumnExpression(
                                                                                             "dim2"),
-                                                                                        DruidExpression.fromColumn(
+                                                                                        makeColumnExpression(
                                                                                             "___j0.k")
                                                                                     ),
                                                                                     JoinType.INNER
@@ -1205,8 +1268,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                                                 new LookupDataSource("lookyloo"),
                                                                                 "____j0.",
                                                                                 equalsCondition(
-                                                                                    DruidExpression.fromColumn("dim2"),
-                                                                                    DruidExpression.fromColumn(
+                                                                                    makeColumnExpression("dim2"),
+                                                                                    makeColumnExpression(
                                                                                         "____j0.k")
                                                                                 ),
                                                                                 JoinType.INNER
@@ -1214,112 +1277,112 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                                             new LookupDataSource("lookyloo"),
                                                                             "_____j0.",
                                                                             equalsCondition(
-                                                                                DruidExpression.fromColumn("dim2"),
-                                                                                DruidExpression.fromColumn("_____j0.k")
+                                                                                makeColumnExpression("dim2"),
+                                                                                makeColumnExpression("_____j0.k")
                                                                             ),
                                                                             JoinType.INNER
                                                                         ),
                                                                         new LookupDataSource("lookyloo"),
                                                                         "______j0.",
                                                                         equalsCondition(
-                                                                            DruidExpression.fromColumn("dim2"),
-                                                                            DruidExpression.fromColumn("______j0.k")
+                                                                            makeColumnExpression("dim2"),
+                                                                            makeColumnExpression("______j0.k")
                                                                         ),
                                                                         JoinType.INNER
                                                                     ),
                                                                     new LookupDataSource("lookyloo"),
                                                                     "_______j0.",
                                                                     equalsCondition(
-                                                                        DruidExpression.fromColumn("dim2"),
-                                                                        DruidExpression.fromColumn("_______j0.k")
+                                                                        makeColumnExpression("dim2"),
+                                                                        makeColumnExpression("_______j0.k")
                                                                     ),
                                                                     JoinType.INNER
                                                                 ),
                                                                 new LookupDataSource("lookyloo"),
                                                                 "________j0.",
                                                                 equalsCondition(
-                                                                    DruidExpression.fromColumn("dim2"),
-                                                                    DruidExpression.fromColumn("________j0.k")
+                                                                    makeColumnExpression("dim2"),
+                                                                    makeColumnExpression("________j0.k")
                                                                 ),
                                                                 JoinType.INNER
                                                             ),
                                                             new LookupDataSource("lookyloo"),
                                                             "_________j0.",
                                                             equalsCondition(
-                                                                DruidExpression.fromColumn("dim2"),
-                                                                DruidExpression.fromColumn("_________j0.k")
+                                                                makeColumnExpression("dim2"),
+                                                                makeColumnExpression("_________j0.k")
                                                             ),
                                                             JoinType.INNER
                                                         ),
                                                         new LookupDataSource("lookyloo"),
                                                         "__________j0.",
                                                         equalsCondition(
-                                                            DruidExpression.fromColumn("dim2"),
-                                                            DruidExpression.fromColumn("__________j0.k")
+                                                            makeColumnExpression("dim2"),
+                                                            makeColumnExpression("__________j0.k")
                                                         ),
                                                         JoinType.INNER
                                                     ),
                                                     new LookupDataSource("lookyloo"),
                                                     "___________j0.",
                                                     equalsCondition(
-                                                        DruidExpression.fromColumn("dim2"),
-                                                        DruidExpression.fromColumn("___________j0.k")
+                                                        makeColumnExpression("dim2"),
+                                                        makeColumnExpression("___________j0.k")
                                                     ),
                                                     JoinType.INNER
                                                 ),
                                                 new LookupDataSource("lookyloo"),
                                                 "____________j0.",
                                                 equalsCondition(
-                                                    DruidExpression.fromColumn("dim2"),
-                                                    DruidExpression.fromColumn("____________j0.k")
+                                                    makeColumnExpression("dim2"),
+                                                    makeColumnExpression("____________j0.k")
                                                 ),
                                                 JoinType.INNER
                                             ),
                                             new LookupDataSource("lookyloo"),
                                             "_____________j0.",
                                             equalsCondition(
-                                                DruidExpression.fromColumn("dim2"),
-                                                DruidExpression.fromColumn("_____________j0.k")
+                                                makeColumnExpression("dim2"),
+                                                makeColumnExpression("_____________j0.k")
                                             ),
                                             JoinType.INNER
                                         ),
                                         new LookupDataSource("lookyloo"),
                                         "______________j0.",
                                         equalsCondition(
-                                            DruidExpression.fromColumn("dim2"),
-                                            DruidExpression.fromColumn("______________j0.k")
+                                            makeColumnExpression("dim2"),
+                                            makeColumnExpression("______________j0.k")
                                         ),
                                         JoinType.INNER
                                     ),
                                     new LookupDataSource("lookyloo"),
                                     "_______________j0.",
                                     equalsCondition(
-                                        DruidExpression.fromColumn("dim2"),
-                                        DruidExpression.fromColumn("_______________j0.k")
+                                        makeColumnExpression("dim2"),
+                                        makeColumnExpression("_______________j0.k")
                                     ),
                                     JoinType.INNER
                                 ),
                                 new LookupDataSource("lookyloo"),
                                 "________________j0.",
                                 equalsCondition(
-                                    DruidExpression.fromColumn("dim2"),
-                                    DruidExpression.fromColumn("________________j0.k")
+                                    makeColumnExpression("dim2"),
+                                    makeColumnExpression("________________j0.k")
                                 ),
                                 JoinType.INNER
                             ),
                             new LookupDataSource("lookyloo"),
                             "_________________j0.",
                             equalsCondition(
-                                DruidExpression.fromColumn("dim2"),
-                                DruidExpression.fromColumn("_________________j0.k")
+                                makeColumnExpression("dim2"),
+                                makeColumnExpression("_________________j0.k")
                             ),
                             JoinType.INNER
                         ),
                         new LookupDataSource("lookyloo"),
                         "__________________j0.",
                         equalsCondition(
-                            DruidExpression.fromColumn("dim2"),
-                            DruidExpression.fromColumn("__________________j0.k")
+                            makeColumnExpression("dim2"),
+                            makeColumnExpression("__________________j0.k")
                         ),
                         JoinType.INNER
                     )
@@ -1373,7 +1436,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.d0")),
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.d0")),
                         JoinType.INNER
                     )
                 )
@@ -1409,7 +1472,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new TableDataSource(CalciteTests.DATASOURCE1),
                         new LookupDataSource("lookyloo"),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
                         JoinType.INNER
                     )
                 )
@@ -1465,14 +1528,14 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                             ),
                             "j0.",
                             equalsCondition(
-                                DruidExpression.fromColumn("m1"),
-                                DruidExpression.fromColumn("j0.v0")
+                                DruidExpression.ofColumn(ColumnType.FLOAT, "m1"),
+                                DruidExpression.ofColumn(ColumnType.FLOAT, "j0.v0")
                             ),
                             JoinType.INNER
                         ),
                         new LookupDataSource("lookyloo"),
                         "_j0.",
-                        equalsCondition(DruidExpression.fromColumn("j0.k"), DruidExpression.fromColumn("_j0.k")),
+                        equalsCondition(makeColumnExpression("j0.k"), makeColumnExpression("_j0.k")),
                         JoinType.INNER
                     )
                 )
@@ -1512,8 +1575,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                             new LookupDataSource("lookyloo"),
                             "j0.",
                             equalsCondition(
-                                DruidExpression.fromColumn("k"),
-                                DruidExpression.fromColumn("j0.k")
+                                makeColumnExpression("k"),
+                                makeColumnExpression("j0.k")
                             ),
                             JoinType.INNER
                         ),
@@ -1527,8 +1590,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         ),
                         "_j0.",
                         equalsCondition(
-                            DruidExpression.fromExpression("CAST(\"j0.k\", 'DOUBLE')"),
-                            DruidExpression.fromColumn("_j0.m1")
+                            makeExpression(ColumnType.DOUBLE, "CAST(\"j0.k\", 'DOUBLE')"),
+                            DruidExpression.ofColumn(ColumnType.DOUBLE, "_j0.m1")
                         ),
                         JoinType.INNER
                     )
@@ -1577,8 +1640,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                             ),
                             "j0.",
                             equalsCondition(
-                                DruidExpression.fromColumn("k"),
-                                DruidExpression.fromColumn("j0.dim1")
+                                makeColumnExpression("k"),
+                                makeColumnExpression("j0.dim1")
                             ),
                             JoinType.INNER
                         ),
@@ -1592,8 +1655,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         ),
                         "_j0.",
                         equalsCondition(
-                            DruidExpression.fromColumn("k"),
-                            DruidExpression.fromColumn("_j0.dim1")
+                            makeColumnExpression("k"),
+                            makeColumnExpression("_j0.dim1")
                         ),
                         JoinType.INNER
                     )
@@ -1657,8 +1720,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                             ),
                             "j0.",
                             equalsCondition(
-                                DruidExpression.fromColumn("k"),
-                                DruidExpression.fromColumn("j0.dim1")
+                                makeColumnExpression("k"),
+                                makeColumnExpression("j0.dim1")
                             ),
                             JoinType.INNER
                         ),
@@ -1672,8 +1735,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         ),
                         "_j0.",
                         equalsCondition(
-                            DruidExpression.fromColumn("j0.dim1"),
-                            DruidExpression.fromColumn("_j0.dim1")
+                            makeColumnExpression("j0.dim1"),
+                            makeColumnExpression("_j0.dim1")
                         ),
                         JoinType.INNER
                     )
@@ -1734,7 +1797,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.d0")),
+                        equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.d0")),
                         JoinType.INNER
                     )
                 )
@@ -1765,8 +1828,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new LookupDataSource("lookyloo"),
                         "j0.",
                         equalsCondition(
-                            DruidExpression.fromExpression("substring(\"dim2\", 0, 1)"),
-                            DruidExpression.fromColumn("j0.k")
+                            makeExpression("substring(\"dim2\", 0, 1)"),
+                            makeColumnExpression("j0.k")
                         ),
                         JoinType.INNER
                     )
@@ -1875,8 +1938,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                             ),
                             "j0.",
                             equalsCondition(
-                                DruidExpression.fromColumn("cnt"),
-                                DruidExpression.fromColumn("j0.v0")
+                                DruidExpression.ofColumn(ColumnType.LONG, "cnt"),
+                                DruidExpression.ofColumn(ColumnType.LONG, "j0.v0")
                             ),
                             JoinType.INNER
                         ),
@@ -1891,8 +1954,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         ),
                         "_j0.",
                         equalsCondition(
-                            DruidExpression.fromExpression("CAST(\"j0.k\", 'LONG')"),
-                            DruidExpression.fromColumn("_j0.cnt")
+                            makeExpression(ColumnType.LONG, "CAST(\"j0.k\", 'LONG')"),
+                            DruidExpression.ofColumn(ColumnType.LONG, "_j0.cnt")
                         ),
                         JoinType.INNER
                     )
@@ -1928,8 +1991,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new LookupDataSource("lookyloo"),
                         "j0.",
                         equalsCondition(
-                            DruidExpression.fromExpression("CAST(\"m1\", 'STRING')"),
-                            DruidExpression.fromColumn("j0.k")
+                            makeExpression("CAST(\"m1\", 'STRING')"),
+                            makeColumnExpression("j0.k")
                         ),
                         JoinType.INNER
                     )
@@ -1972,7 +2035,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("m1"), DruidExpression.fromColumn("j0.v0")),
+                        equalsCondition(DruidExpression.ofColumn(ColumnType.FLOAT, "m1"), DruidExpression.ofColumn(ColumnType.FLOAT, "j0.v0")),
                         JoinType.INNER
                     )
                 )
@@ -2016,7 +2079,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("m1"), DruidExpression.fromColumn("j0.v0")),
+                        equalsCondition(DruidExpression.ofColumn(ColumnType.FLOAT, "m1"), DruidExpression.ofColumn(ColumnType.FLOAT, "j0.v0")),
                         JoinType.INNER
                     )
                 )
@@ -2048,8 +2111,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new LookupDataSource("lookyloo"),
                         "j0.",
                         equalsCondition(
-                            DruidExpression.fromExpression("substring(\"dim2\", 0, 1)"),
-                            DruidExpression.fromColumn("j0.k")
+                            makeExpression("substring(\"dim2\", 0, 1)"),
+                            makeColumnExpression("j0.k")
                         ),
                         JoinType.INNER
                     )
@@ -2094,7 +2157,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.v0")),
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.v0")),
                         JoinType.INNER
                     )
                 )
@@ -2128,12 +2191,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                             new TableDataSource(CalciteTests.DATASOURCE1),
                             new LookupDataSource("lookyloo"),
                             "j0.",
-                            equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                            equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
                             JoinType.LEFT
                         ),
                         new LookupDataSource("lookyloo"),
                         "_j0.",
-                        equalsCondition(DruidExpression.fromColumn("j0.k"), DruidExpression.fromColumn("_j0.k")),
+                        equalsCondition(makeColumnExpression("j0.k"), makeColumnExpression("_j0.k")),
                         JoinType.LEFT
                     )
                 )
@@ -2173,17 +2236,17 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 new TableDataSource(CalciteTests.DATASOURCE1),
                                 new LookupDataSource("lookyloo"),
                                 "j0.",
-                                equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
+                                equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.k")),
                                 JoinType.LEFT
                             ),
                             new LookupDataSource("lookyloo"),
                             "_j0.",
-                            equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("_j0.k")),
+                            equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("_j0.k")),
                             JoinType.LEFT
                         ),
                         new LookupDataSource("lookyloo"),
                         "__j0.",
-                        equalsCondition(DruidExpression.fromColumn("_j0.k"), DruidExpression.fromColumn("__j0.k")),
+                        equalsCondition(makeColumnExpression("_j0.k"), makeColumnExpression("__j0.k")),
                         JoinType.LEFT
                     )
                 )
@@ -2219,7 +2282,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new TableDataSource(CalciteTests.DATASOURCE1),
                         new LookupDataSource("lookyloo"),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
+                        equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.k")),
                         JoinType.LEFT
                     )
                 )
@@ -2256,7 +2319,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new TableDataSource(CalciteTests.DATASOURCE1),
                         new LookupDataSource("lookyloo"),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
+                        equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.k")),
                         JoinType.RIGHT
                     )
                 )
@@ -2291,7 +2354,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new TableDataSource(CalciteTests.DATASOURCE1),
                         new LookupDataSource("lookyloo"),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
+                        equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.k")),
                         JoinType.FULL
                     )
                 )
@@ -2344,8 +2407,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         ),
                         "j0.",
                         equalsCondition(
-                            DruidExpression.fromColumn("__time"),
-                            DruidExpression.fromColumn("j0.a0")
+                            DruidExpression.ofColumn(ColumnType.LONG, "__time"),
+                            DruidExpression.ofColumn(ColumnType.LONG, "j0.a0")
                         ),
                         JoinType.INNER
                     )
@@ -2484,8 +2547,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         ),
                         "j0.",
                         equalsCondition(
-                            DruidExpression.fromExpression("substring(\"dim2\", 0, 1)"),
-                            DruidExpression.fromColumn("j0.d0")
+                            makeExpression("substring(\"dim2\", 0, 1)"),
+                            makeColumnExpression("j0.d0")
                         ),
                         JoinType.INNER
                     )
@@ -2519,8 +2582,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new LookupDataSource("lookyloo"),
                         "j0.",
                         equalsCondition(
-                            DruidExpression.fromColumn("dim1"),
-                            DruidExpression.fromColumn("j0.k")
+                            makeColumnExpression("dim1"),
+                            makeColumnExpression("j0.k")
                         ),
                         JoinType.INNER
                     )
@@ -2554,8 +2617,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new LookupDataSource("lookyloo"),
                         "j0.",
                         equalsCondition(
-                            DruidExpression.fromColumn("dim3"),
-                            DruidExpression.fromColumn("j0.k")
+                            makeColumnExpression("dim3"),
+                            makeColumnExpression("j0.k")
                         ),
                         JoinType.INNER
                     )
@@ -2629,7 +2692,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("v0"), DruidExpression.fromColumn("j0.v0")),
+                        equalsCondition(makeColumnExpression("v0"), makeColumnExpression("j0.v0")),
                         JoinType.LEFT
                     )
                 )
@@ -2683,7 +2746,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromExpression("'10.1'"), DruidExpression.fromColumn("j0.v0")),
+                        equalsCondition(makeExpression("'10.1'"), makeColumnExpression("j0.v0")),
                         JoinType.LEFT,
                         selector("dim1", "10.1", null)
                     )
@@ -2742,7 +2805,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("v0"), DruidExpression.fromColumn("j0.dim1")),
+                        equalsCondition(makeColumnExpression("v0"), makeColumnExpression("j0.dim1")),
                         JoinType.LEFT
                     )
                 )
@@ -2789,8 +2852,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         ),
                         "j0.",
                         equalsCondition(
-                            DruidExpression.fromExpression("'10.1'"),
-                            DruidExpression.fromColumn("j0.dim1")
+                            makeExpression("'10.1'"),
+                            makeColumnExpression("j0.dim1")
                         ),
                         JoinType.LEFT,
                         selector("dim1", "10.1", null)
@@ -2845,7 +2908,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("v0"), DruidExpression.fromColumn("j0.dim1")),
+                        equalsCondition(makeColumnExpression("v0"), makeColumnExpression("j0.dim1")),
                         JoinType.LEFT
                     )
                 )
@@ -2890,8 +2953,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         ),
                         "j0.",
                         equalsCondition(
-                            DruidExpression.fromExpression("'10.1'"),
-                            DruidExpression.fromColumn("j0.dim1")
+                            makeExpression("'10.1'"),
+                            makeColumnExpression("j0.dim1")
                         ),
                         JoinType.LEFT,
                         selector("dim1", "10.1", null)
@@ -2919,7 +2982,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 new QueryDataSource(
                     newScanQueryBuilder()
                         .dataSource(CalciteTests.DATASOURCE1)
-                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .eternityInterval()
                         .filters(new SelectorDimFilter("dim1", "10.1", null))
                         .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ColumnType.STRING))
                         .columns(ImmutableList.of("__time", "v0"))
@@ -2930,7 +2993,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 new QueryDataSource(
                     newScanQueryBuilder()
                         .dataSource(CalciteTests.DATASOURCE1)
-                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .eternityInterval()
                         .filters(new SelectorDimFilter("dim1", "10.1", null))
                         .columns(ImmutableList.of("dim1"))
                         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -2938,7 +3001,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         .build()
                 ),
                 "j0.",
-                equalsCondition(DruidExpression.fromColumn("v0"), DruidExpression.fromColumn("j0.dim1")),
+                equalsCondition(makeColumnExpression("v0"), makeColumnExpression("j0.dim1")),
                 JoinType.INNER
             )
         )
@@ -2993,8 +3056,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         ),
                         "j0.",
                         equalsCondition(
-                            DruidExpression.fromExpression("'10.1'"),
-                            DruidExpression.fromColumn("j0.dim1")
+                            makeExpression("'10.1'"),
+                            makeColumnExpression("j0.dim1")
                         ),
                         JoinType.INNER,
                         selector("dim1", "10.1", null)
@@ -3049,7 +3112,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("v0"), DruidExpression.fromColumn("j0.dim1")),
+                        equalsCondition(makeColumnExpression("v0"), makeColumnExpression("j0.dim1")),
                         JoinType.INNER
                     )
                 )
@@ -3095,8 +3158,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         ),
                         "j0.",
                         equalsCondition(
-                            DruidExpression.fromExpression("'10.1'"),
-                            DruidExpression.fromColumn("j0.dim1")
+                            makeExpression("'10.1'"),
+                            makeColumnExpression("j0.dim1")
                         ),
                         JoinType.INNER,
                         selector("dim1", "10.1", null)
@@ -3236,7 +3299,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         .build()
                 ),
                 "j0.",
-                equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.d0")),
+                equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.d0")),
                 JoinType.INNER
             )
         )
@@ -3262,7 +3325,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         .build()
                 ),
                 "j0.",
-                equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.d0")),
+                equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.d0")),
                 JoinType.LEFT
             )
         )
@@ -3332,7 +3395,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.d0")),
+                        equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.d0")),
                         JoinType.LEFT
                     )
                 )
@@ -3372,7 +3435,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                             .context(QUERY_CONTEXT_DEFAULT)
                             .build()),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.dim1")),
+                        equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.dim1")),
                         JoinType.LEFT
                     )
                 )
@@ -3426,10 +3489,13 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         "j0.",
                         StringUtils.format(
                             "(%s && %s)",
-                            equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.d0")),
                             equalsCondition(
-                                DruidExpression.fromExpression("'abc'"),
-                                DruidExpression.fromColumn("j0.d0")
+                                makeColumnExpression("dim1"),
+                                makeColumnExpression("j0.d0")
+                            ),
+                            equalsCondition(
+                                makeExpression("'abc'"),
+                                makeColumnExpression("j0.d0")
                             )
                         ),
                         JoinType.INNER
@@ -3472,7 +3538,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.d0")),
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.d0")),
                         JoinType.INNER
                     )
                 )
@@ -3755,7 +3821,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.d0")),
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.d0")),
                         JoinType.INNER
                     )
                 )
@@ -3836,7 +3902,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new TableDataSource(CalciteTests.DATASOURCE1),
                         new LookupDataSource("lookyloo"),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
+                        equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.k")),
                         JoinType.INNER
                     ))
                 .intervals(querySegmentSpec(Filtration.eternity()))
@@ -3885,7 +3951,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new TableDataSource(CalciteTests.DATASOURCE1),
                         new LookupDataSource("lookyloo"),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
+                        equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.k")),
                         JoinType.INNER
                     ))
                 .intervals(querySegmentSpec(Filtration.eternity()))
@@ -3917,7 +3983,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new TableDataSource(CalciteTests.DATASOURCE1),
                         new LookupDataSource("lookyloo"),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
+                        equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.k")),
                         JoinType.LEFT
                     )
                 )
@@ -3932,7 +3998,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new TableDataSource(CalciteTests.DATASOURCE1),
                         new LookupDataSource("lookyloo"),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
+                        equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.k")),
                         JoinType.INNER
                     ))
                 .intervals(querySegmentSpec(Filtration.eternity()))
@@ -3989,8 +4055,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         ),
                         "j0.",
                         equalsCondition(
-                            DruidExpression.fromColumn("dim2"),
-                            DruidExpression.fromColumn("j0.d0")
+                            makeColumnExpression("dim2"),
+                            makeColumnExpression("j0.d0")
                         ),
                         JoinType.INNER
                     )
@@ -4063,8 +4129,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         ),
                         "j0.",
                         equalsCondition(
-                            DruidExpression.fromColumn("dim2"),
-                            DruidExpression.fromColumn("j0.d0")
+                            makeColumnExpression("dim2"),
+                            makeColumnExpression("j0.d0")
                         ),
                         JoinType.INNER
                     )
@@ -4165,7 +4231,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new TableDataSource(CalciteTests.DATASOURCE1),
                         new LookupDataSource("lookyloo"),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
+                        equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.k")),
                         JoinType.LEFT
                     )
                 )
@@ -4221,8 +4287,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         ),
                         "j0.",
                         equalsCondition(
-                            DruidExpression.fromColumn("dim2"),
-                            DruidExpression.fromColumn("j0.d0")
+                            makeColumnExpression("dim2"),
+                            makeColumnExpression("j0.d0")
                         ),
                         JoinType.INNER
                     )
@@ -4302,8 +4368,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         ),
                         "_j0.",
                         equalsCondition(
-                            DruidExpression.fromColumn("dim2"),
-                            DruidExpression.fromColumn("_j0.d0")
+                            makeColumnExpression("dim2"),
+                            makeColumnExpression("_j0.d0")
                         ),
                         JoinType.LEFT
                     )
@@ -4393,8 +4459,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 ),
                                 "j0.",
                                 equalsCondition(
-                                    DruidExpression.fromColumn("dim1"),
-                                    DruidExpression.fromColumn("j0.dim1")
+                                    makeColumnExpression("dim1"),
+                                    makeColumnExpression("j0.dim1")
                                 ),
                                 JoinType.INNER
                             )
@@ -4467,8 +4533,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 ),
                 "j0.",
                 equalsCondition(
-                    DruidExpression.fromColumn("dim1"),
-                    DruidExpression.fromColumn("j0.dim1")
+                    makeColumnExpression("dim1"),
+                    makeColumnExpression("j0.dim1")
                 ),
                 JoinType.INNER
             )
@@ -4519,7 +4585,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.d0")),
+                        equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.d0")),
                         JoinType.INNER
                     )
                 )
@@ -4553,8 +4619,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new GlobalTableDataSource(CalciteTests.BROADCAST_DATASOURCE),
                         "j0.",
                         equalsCondition(
-                            DruidExpression.fromColumn("dim4"),
-                            DruidExpression.fromColumn("j0.dim4")
+                            makeColumnExpression("dim4"),
+                            makeColumnExpression("j0.dim4")
                         ),
                         JoinType.INNER
 
@@ -4594,8 +4660,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         new GlobalTableDataSource(CalciteTests.BROADCAST_DATASOURCE),
                         "j0.",
                         equalsCondition(
-                            DruidExpression.fromColumn("dim4"),
-                            DruidExpression.fromColumn("j0.dim4")
+                            makeColumnExpression("dim4"),
+                            makeColumnExpression("j0.dim4")
                         ),
                         JoinType.INNER
                     )
@@ -4615,4 +4681,422 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testVirtualColumnOnMVFilterJoinExpression(Map<String, Object> queryContext) throws Exception
+  {
+    testQuery(
+        "SELECT foo1.dim3, foo2.dim3 FROM druid.numfoo as foo1 INNER JOIN druid.numfoo as foo2 "
+        + "ON MV_FILTER_ONLY(foo1.dim3, ARRAY['a']) = MV_FILTER_ONLY(foo2.dim3, ARRAY['a'])\n",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE3),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE3)
+                                .intervals(querySegmentSpec(Intervals.of(
+                                    "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
+                                .virtualColumns(new ListFilteredVirtualColumn(
+                                    "v0",
+                                    new DefaultDimensionSpec("dim3", "dim3", ColumnType.STRING),
+                                    ImmutableSet.of("a"),
+                                    true
+                                ))
+                                .columns("dim3", "v0")
+                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                .context(queryContext)
+                                .build()
+                        ),
+                        "j0.",
+                        equalsCondition(makeColumnExpression("v0"), makeColumnExpression("j0.v0")),
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(new ListFilteredVirtualColumn(
+                    "v0",
+                    new DefaultDimensionSpec("dim3", "dim3", ColumnType.STRING),
+                    ImmutableSet.of("a"),
+                    true
+                ))
+                .columns("dim3", "j0.dim3")
+                .context(queryContext)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{"[\"a\",\"b\"]", "[\"a\",\"b\"]"})
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testVirtualColumnOnMVFilterMultiJoinExpression(Map<String, Object> queryContext) throws Exception
+  {
+    testQuery(
+        "SELECT foo1.dim3, foo2.dim3 FROM druid.numfoo as foo1 INNER JOIN "
+        + "(SELECT foo3.dim3 FROM druid.numfoo as foo3 INNER JOIN druid.numfoo as foo4 "
+        + "   ON MV_FILTER_ONLY(foo3.dim3, ARRAY['a']) = MV_FILTER_ONLY(foo4.dim3, ARRAY['a'])) as foo2 "
+        + "ON MV_FILTER_ONLY(foo1.dim3, ARRAY['a']) = MV_FILTER_ONLY(foo2.dim3, ARRAY['a'])\n",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE3),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(
+                                    join(
+                                        new TableDataSource(CalciteTests.DATASOURCE3),
+                                        new QueryDataSource(
+                                            newScanQueryBuilder()
+                                                .dataSource(CalciteTests.DATASOURCE3)
+                                                .intervals(querySegmentSpec(Intervals.of(
+                                                    "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
+                                                .virtualColumns(new ListFilteredVirtualColumn(
+                                                    "v0",
+                                                    new DefaultDimensionSpec("dim3", "dim3", ColumnType.STRING),
+                                                    ImmutableSet.of("a"),
+                                                    true
+                                                ))
+                                                .columns("v0")
+                                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                .context(queryContext)
+                                                .build()
+                                        ),
+                                        "j0.",
+                                        equalsCondition(makeColumnExpression("v0"), makeColumnExpression("j0.v0")),
+                                        JoinType.INNER
+                                    )
+                                )
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .virtualColumns(new ListFilteredVirtualColumn(
+                                    "v0",
+                                    new DefaultDimensionSpec("dim3", "dim3", ColumnType.STRING),
+                                    ImmutableSet.of("a"),
+                                    true
+                                ))
+                                .columns("dim3", "v0")
+                                .context(queryContext)
+                                .build()
+                        ),
+                        "j0.",
+                        equalsCondition(makeColumnExpression("v0"), makeColumnExpression("j0.v0")),
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(new ListFilteredVirtualColumn(
+                    "v0",
+                    new DefaultDimensionSpec("dim3", "dim3", ColumnType.STRING),
+                    ImmutableSet.of("a"),
+                    true
+                ))
+                .columns("dim3", "j0.dim3")
+                .context(queryContext)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{"[\"a\",\"b\"]", "[\"a\",\"b\"]"})
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testInnerJoinWithFilterPushdownAndManyFiltersEmptyResults(Map<String, Object> queryContext) throws Exception
+  {
+    // create the query we expect
+    ScanQuery query = newScanQueryBuilder()
+        .dataSource(
+            join(
+                new TableDataSource(CalciteTests.DATASOURCE1),
+                new QueryDataSource(
+                    newScanQueryBuilder()
+                        .dataSource(new TableDataSource("foo"))
+                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                        .columns("m1")
+                        .context(queryContext)
+                        .build()
+                ),
+                "j0.",
+                equalsCondition(DruidExpression.ofColumn(ColumnType.FLOAT, "m1"), DruidExpression.ofColumn(ColumnType.FLOAT, "j0.m1")),
+                JoinType.INNER
+            )
+        )
+        .intervals(querySegmentSpec(Filtration.eternity()))
+        .columns("j0.m1", "m1")
+        .filters(new OrDimFilter(
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "A", null),
+                new SelectorDimFilter("dim2", "B", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "C", null),
+                new SelectorDimFilter("dim2", "D", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "A", null),
+                new SelectorDimFilter("dim2", "C", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "C", null),
+                new SelectorDimFilter("dim2", "E", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "D", null),
+                new SelectorDimFilter("dim2", "H", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "A", null),
+                new SelectorDimFilter("dim2", "D", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "B", null),
+                new SelectorDimFilter("dim2", "C", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "H", null),
+                new SelectorDimFilter("dim2", "E", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "I", null),
+                new SelectorDimFilter("dim2", "J", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "I", null),
+                new SelectorDimFilter("dim2", "K", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "J", null),
+                new SelectorDimFilter("dim2", "I", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "Q", null),
+                new SelectorDimFilter("dim2", "R", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "Q", null),
+                new SelectorDimFilter("dim2", "S", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "S", null),
+                new SelectorDimFilter("dim2", "Q", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "X", null),
+                new SelectorDimFilter("dim2", "Y", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "Z", null),
+                new SelectorDimFilter("dim2", "U", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "U", null),
+                new SelectorDimFilter("dim2", "Z", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "P", null),
+                new SelectorDimFilter("dim2", "Q", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "X", null),
+                new SelectorDimFilter("dim2", "A", null)
+            )
+        ))
+        .context(queryContext)
+        .build();
+
+    assert QueryContexts.getEnableJoinFilterPushDown(query); // filter pushdown must be enabled
+    // no results will be produced since the filter values aren't in the table
+    testQuery(
+        "SELECT f1.m1, f2.m1\n"
+        + "FROM foo f1\n"
+        + "INNER JOIN foo f2 ON f1.m1 = f2.m1 where (f1.dim1, f1.dim2) in (('A', 'B'), ('C', 'D'), ('A', 'C'), ('C', 'E'), ('D', 'H'), ('A', 'D'), ('B', 'C'), \n"
+        + "('H', 'E'), ('I', 'J'), ('I', 'K'), ('J', 'I'), ('Q', 'R'), ('Q', 'S'), ('S', 'Q'), ('X', 'Y'), ('Z', 'U'), ('U', 'Z'), ('P', 'Q'), ('X', 'A'))\n",
+        queryContext,
+        ImmutableList.of(query),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testInnerJoinWithFilterPushdownAndManyFiltersNonEmptyResults(Map<String, Object> queryContext) throws Exception
+  {
+    // create the query we expect
+    ScanQuery query = newScanQueryBuilder()
+        .dataSource(
+            join(
+                new TableDataSource(CalciteTests.DATASOURCE1),
+                new QueryDataSource(
+                    newScanQueryBuilder()
+                        .dataSource(new TableDataSource("foo"))
+                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                        .columns("m1")
+                        .context(queryContext)
+                        .build()
+                ),
+                "j0.",
+                equalsCondition(DruidExpression.ofColumn(ColumnType.FLOAT, "m1"), DruidExpression.ofColumn(ColumnType.FLOAT, "j0.m1")),
+                JoinType.INNER
+            )
+        )
+        .intervals(querySegmentSpec(Filtration.eternity()))
+        .columns("j0.m1", "m1")
+        .filters(new OrDimFilter(
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "1", null),
+                new SelectorDimFilter("dim2", "a", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "C", null),
+                new SelectorDimFilter("dim2", "D", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "A", null),
+                new SelectorDimFilter("dim2", "C", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "C", null),
+                new SelectorDimFilter("dim2", "E", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "D", null),
+                new SelectorDimFilter("dim2", "H", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "A", null),
+                new SelectorDimFilter("dim2", "D", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "B", null),
+                new SelectorDimFilter("dim2", "C", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "H", null),
+                new SelectorDimFilter("dim2", "E", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "I", null),
+                new SelectorDimFilter("dim2", "J", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "I", null),
+                new SelectorDimFilter("dim2", "K", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "J", null),
+                new SelectorDimFilter("dim2", "I", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "Q", null),
+                new SelectorDimFilter("dim2", "R", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "Q", null),
+                new SelectorDimFilter("dim2", "S", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "S", null),
+                new SelectorDimFilter("dim2", "Q", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "X", null),
+                new SelectorDimFilter("dim2", "Y", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "Z", null),
+                new SelectorDimFilter("dim2", "U", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "U", null),
+                new SelectorDimFilter("dim2", "Z", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "P", null),
+                new SelectorDimFilter("dim2", "Q", null)
+            ),
+            new AndDimFilter(
+                new SelectorDimFilter("dim1", "X", null),
+                new SelectorDimFilter("dim2", "A", null)
+            )
+        ))
+        .context(queryContext)
+        .build();
+
+    assert QueryContexts.getEnableJoinFilterPushDown(query); // filter pushdown must be enabled
+    // (dim1, dim2, m1) in foo look like
+    // [, a, 1.0]
+    // [10.1, , 2.0]
+    // [2, , 3.0]
+    // [1, a, 4.0]
+    // [def, abc, 5.0]
+    // [abc, , 6.0]
+    // So (1, a) filter will produce results for 4.0
+    testQuery(
+        "SELECT f1.m1, f2.m1\n"
+        + "FROM foo f1\n"
+        + "INNER JOIN foo f2 ON f1.m1 = f2.m1 where (f1.dim1, f1.dim2) in (('1', 'a'), ('C', 'D'), ('A', 'C'), ('C', 'E'), ('D', 'H'), ('A', 'D'), ('B', 'C'), \n"
+        + "('H', 'E'), ('I', 'J'), ('I', 'K'), ('J', 'I'), ('Q', 'R'), ('Q', 'S'), ('S', 'Q'), ('X', 'Y'), ('Z', 'U'), ('U', 'Z'), ('P', 'Q'), ('X', 'A'))\n",
+        queryContext,
+        ImmutableList.of(query),
+        ImmutableList.of(new Object[]{4.0F, 4.0F})
+    );
+  }
+
+  @Test
+  public void testPlanWithInFilterMoreThanInSubQueryThreshold() throws Exception
+  {
+    String query = "SELECT l1 FROM numfoo WHERE l1 IN (4842, 4844, 4845, 14905, 4853, 29064)";
+
+    Map<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    queryContext.put(QueryContexts.IN_SUB_QUERY_THRESHOLD_KEY, 3);
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        queryContext,
+        DEFAULT_PARAMETERS,
+        query,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      JoinDataSource.create(
+                          new TableDataSource(CalciteTests.DATASOURCE3),
+                          InlineDataSource.fromIterable(
+                              ImmutableList.of(
+                                  new Object[]{4842L},
+                                  new Object[]{4844L},
+                                  new Object[]{4845L},
+                                  new Object[]{14905L},
+                                  new Object[]{4853L},
+                                  new Object[]{29064L}
+                              ),
+                              RowSignature.builder()
+                                          .add("ROW_VALUE", ColumnType.LONG)
+                                          .build()
+                          ),
+                          "j0.",
+                          "(\"l1\" == \"j0.ROW_VALUE\")",
+                          JoinType.INNER,
+                          null,
+                          ExprMacroTable.nil()
+                      )
+                  )
+                  .columns("l1")
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .context(queryContext)
+                  .legacy(false)
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .build()
+        ),
+        (sql, result) -> {
+          // Ignore the results, only need to check that the type of query is a join.
+        },
+        null
+    );
+  }
 }

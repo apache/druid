@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .query-history-dialog {
-  &.bp3-dialog {
+  &.#{$bp-ns}-dialog {
     width: 900px;
   }
 

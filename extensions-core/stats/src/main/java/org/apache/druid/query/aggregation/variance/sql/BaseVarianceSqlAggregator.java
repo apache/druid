@@ -35,7 +35,6 @@ import org.apache.druid.query.aggregation.variance.StandardDeviationPostAggregat
 import org.apache.druid.query.aggregation.variance.VarianceAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -93,9 +92,9 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
     if (input.isSimpleExtraction()) {
       dimensionSpec = input.getSimpleExtraction().toDimensionSpec(null, inputType);
     } else {
-      VirtualColumn virtualColumn =
-          virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, input, dataType);
-      dimensionSpec = new DefaultDimensionSpec(virtualColumn.getOutputName(), null, inputType);
+      String virtualColumnName =
+          virtualColumnRegistry.getOrCreateVirtualColumnForExpression(input, dataType);
+      dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
     }
 
     if (inputType == null) {

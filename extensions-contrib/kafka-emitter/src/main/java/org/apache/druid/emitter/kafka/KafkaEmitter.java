@@ -50,6 +50,8 @@ public class KafkaEmitter implements Emitter
 {
   private static Logger log = new Logger(KafkaEmitter.class);
 
+  private static final int DEFAULT_SEND_INTERVAL_SECONDS = 10;
+  private static final int DEFAULT_SEND_LOST_INTERVAL_MINUTES = 5;
   private static final int DEFAULT_RETRIES = 3;
   private final AtomicLong metricLost;
   private final AtomicLong alertLost;
@@ -63,6 +65,8 @@ public class KafkaEmitter implements Emitter
   private final MemoryBoundLinkedBlockingQueue<String> alertQueue;
   private final MemoryBoundLinkedBlockingQueue<String> requestQueue;
   private final ScheduledExecutorService scheduler;
+
+  protected int sendInterval = DEFAULT_SEND_INTERVAL_SECONDS;
 
   public KafkaEmitter(KafkaEmitterConfig config, ObjectMapper jsonMapper)
   {
@@ -116,16 +120,16 @@ public class KafkaEmitter implements Emitter
   @Override
   public void start()
   {
-    scheduler.schedule(this::sendMetricToKafka, 10, TimeUnit.SECONDS);
-    scheduler.schedule(this::sendAlertToKafka, 10, TimeUnit.SECONDS);
+    scheduler.schedule(this::sendMetricToKafka, sendInterval, TimeUnit.SECONDS);
+    scheduler.schedule(this::sendAlertToKafka, sendInterval, TimeUnit.SECONDS);
     if (config.getRequestTopic() != null) {
-      scheduler.schedule(this::sendRequestToKafka, 10, TimeUnit.SECONDS);
+      scheduler.schedule(this::sendRequestToKafka, sendInterval, TimeUnit.SECONDS);
     }
     scheduler.scheduleWithFixedDelay(() -> {
       log.info("Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], invalidLost=[%d]",
           metricLost.get(), alertLost.get(), requestLost.get(), invalidLost.get()
       );
-    }, 5, 5, TimeUnit.MINUTES);
+    }, DEFAULT_SEND_LOST_INTERVAL_MINUTES, DEFAULT_SEND_LOST_INTERVAL_MINUTES, TimeUnit.MINUTES);
     log.info("Starting Kafka Emitter.");
   }
 
@@ -144,8 +148,7 @@ public class KafkaEmitter implements Emitter
     sendToKafka(config.getRequestTopic(), requestQueue, setProducerCallback(requestLost));
   }
 
-  @VisibleForTesting
-  protected void sendToKafka(final String topic, MemoryBoundLinkedBlockingQueue<String> recordQueue, Callback callback)
+  private void sendToKafka(final String topic, MemoryBoundLinkedBlockingQueue<String> recordQueue, Callback callback)
   {
     ObjectContainer<String> objectToSend;
     try {

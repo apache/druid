@@ -283,27 +283,21 @@ public class FileUtils
       String messageOnRetry
   ) throws IOException
   {
-    try {
-      return RetryUtils.retry(
-          () -> {
-            try (InputStream inputStream = objectOpenFunction.open(object);
-                 OutputStream out = new FileOutputStream(outFile)) {
-              return IOUtils.copyLarge(inputStream, out, fetchBuffer);
-            }
-          },
-          retryCondition,
-          outFile::delete,
-          numTries,
-          messageOnRetry
-      );
-    }
-    catch (Exception e) {
-      throw new IOException(e);
-    }
+    return copyLarge(
+        () -> objectOpenFunction.open(object),
+        outFile,
+        fetchBuffer,
+        retryCondition,
+        numTries,
+        messageOnRetry
+    );
   }
 
+  /**
+   * Copy a potentially large amount of data from an input source to a file.
+   */
   public static long copyLarge(
-      InputStream inputStream,
+      InputStreamSupplier inputSource,
       File outFile,
       byte[] fetchBuffer,
       Predicate<Throwable> retryCondition,
@@ -314,8 +308,9 @@ public class FileUtils
     try {
       return RetryUtils.retry(
           () -> {
-            try (OutputStream out = new FileOutputStream(outFile)) {
-              return IOUtils.copyLarge(inputStream, out, fetchBuffer);
+            try (InputStream in = inputSource.openStream();
+                 OutputStream out = new FileOutputStream(outFile)) {
+              return IOUtils.copyLarge(in, out, fetchBuffer);
             }
           },
           retryCondition,
@@ -411,5 +406,13 @@ public class FileUtils
   public interface OutputStreamConsumer<T>
   {
     T apply(OutputStream outputStream) throws IOException;
+  }
+
+  /**
+   * Like {@link ByteSource}, but this is an interface, which allows use of lambdas.
+   */
+  public interface InputStreamSupplier
+  {
+    InputStream openStream() throws IOException;
   }
 }

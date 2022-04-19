@@ -26,10 +26,10 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorProcessors;
-import org.apache.druid.segment.column.ObjectByteStrategy;
-import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -434,14 +434,19 @@ class ComplexExpr extends ConstantExpr<Object>
     if (value == null) {
       return StringUtils.format("complex_decode_base64('%s', %s)", outputType.getComplexTypeName(), NULL_LITERAL);
     }
-    ObjectByteStrategy strategy = Types.getStrategy(outputType.getComplexTypeName());
-    if (strategy == null) {
-      throw new IAE("Cannot stringify type[%s]", outputType.asTypeString());
+    TypeStrategy strategy = outputType.getStrategy();
+    byte[] bytes = new byte[strategy.estimateSizeBytes(value)];
+    ByteBuffer wrappedBytes = ByteBuffer.wrap(bytes);
+    int remaining = strategy.write(wrappedBytes, 0, value, bytes.length);
+    if (remaining < 0) {
+      bytes = new byte[bytes.length - remaining];
+      wrappedBytes = ByteBuffer.wrap(bytes);
+      strategy.write(wrappedBytes, 0, value, bytes.length);
     }
     return StringUtils.format(
         "complex_decode_base64('%s', '%s')",
         outputType.getComplexTypeName(),
-        StringUtils.encodeBase64String(strategy.toBytes(value))
+        StringUtils.encodeBase64String(bytes)
     );
   }
 

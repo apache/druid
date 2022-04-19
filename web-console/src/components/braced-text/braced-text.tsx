@@ -74,10 +74,9 @@ function arrayJoin<T, U>(array: T[], separator: U): (T | U)[] {
 function hideThousandsSeparator(text: string) {
   const parts = text.split(THOUSANDS_SEPARATOR);
   if (parts.length < 2) return text;
-  return arrayJoin(
-    parts,
-    <span className="unselectable">{THOUSANDS_SEPARATOR}</span>,
-  ).map((x, i) => <Fragment key={i}>{x}</Fragment>);
+  return arrayJoin(parts, <span className="unselectable">{THOUSANDS_SEPARATOR}</span>).map(
+    (x, i) => <Fragment key={i}>{x}</Fragment>,
+  );
 }
 
 export const BracedText = React.memo(function BracedText(props: BracedTextProps) {
