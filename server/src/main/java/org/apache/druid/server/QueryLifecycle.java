@@ -359,18 +359,6 @@ public class QueryLifecycle
     }
   }
 
-  /**
-   * Returns the Query wrapped inside QueryHolder.
-   *
-   * This method does not check the validity of query context in the Query object. That means, the query context
-   * in the Query object returned can be different from actual query context that is used for query processing.
-   * To avoid unexpected mismatch of query context, callers should use this method only when it is clear that
-   * query context in the Query object will not be used anywhere. To avoid any potential bug in the future,
-   * this method should be used only for debugging or logging purpose.
-   *
-   * If you want to get a query context param value, consider using other methods or adding a new one in this class,
-   * such as {@link #getQueryId()}, that knows the valid place where the context param is stored.
-   */
   @Nullable
   public Query<?> getQuery()
   {

@@ -223,5 +223,13 @@ public class QueryContext
     return Objects.hash(getMergedParams());
   }
 
-  // TODO: toString?
+  @Override
+  public String toString()
+  {
+    return "QueryContext{" +
+           "defaultParams=" + defaultParams +
+           ", userParams=" + userParams +
+           ", systemParams=" + systemParams +
+           '}';
+  }
 }
