@@ -449,6 +449,25 @@ public class Initialization
     return Guice.createInjector(Modules.override(intermediateModules).with(extensionModules.getModules()));
   }
 
+  public static boolean shouldLoadOnCurrentNodeType(Set<NodeRole> nodeRoles, Class<?> clazz)
+  {
+    LoadScope loadScope = clazz.getAnnotation(LoadScope.class);
+    if (loadScope == null) {
+      // always load if annotation is not specified
+      return true;
+    }
+    Set<NodeRole> rolesPredicate = Arrays.stream(loadScope.roles())
+                                         .map(NodeRole::fromJsonName)
+                                         .collect(Collectors.toSet());
+    boolean shouldLoad = rolesPredicate.stream().anyMatch(nodeRoles::contains);
+    if (!shouldLoad) {
+      log.info(
+          "Not loading module [%s] - no matching LoadScope",
+          clazz.getName());
+    }
+    return shouldLoad;
+  }
+
   private static class ModuleList
   {
     private final Injector baseInjector;
@@ -510,15 +529,7 @@ public class Initialization
 
     private boolean shouldLoadOnCurrentNodeType(Object object)
     {
-      LoadScope loadScope = object.getClass().getAnnotation(LoadScope.class);
-      if (loadScope == null) {
-        // always load if annotation is not specified
-        return true;
-      }
-      Set<NodeRole> rolesPredicate = Arrays.stream(loadScope.roles())
-                                           .map(NodeRole::fromJsonName)
-                                           .collect(Collectors.toSet());
-      return rolesPredicate.stream().anyMatch(nodeRoles::contains);
+      return Initialization.shouldLoadOnCurrentNodeType(nodeRoles, object.getClass());
     }
 
     private boolean checkModuleClass(Class<?> moduleClass)

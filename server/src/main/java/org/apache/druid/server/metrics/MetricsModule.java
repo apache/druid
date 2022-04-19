@@ -34,6 +34,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -96,18 +97,13 @@ public class MetricsModule implements Module
       Set<Class<? extends Monitor>> monitorSet,
       ServiceEmitter emitter,
       Injector injector,
-      @Self Set<NodeRole> thisNodeRoles
+      @Self Set<NodeRole> nodeRoles
   )
   {
     List<Monitor> monitors = new ArrayList<>();
 
     for (Class<? extends Monitor> monitorClass : Iterables.concat(monitorsConfig.getMonitors(), monitorSet)) {
-      if (WorkerTaskCountStatsMonitor.class.equals(monitorClass)
-          && !thisNodeRoles.contains(NodeRole.MIDDLE_MANAGER)) {
-        log.info("Not adding monitor [%s] for this node because none of node's role [%s] support it.",
-                 monitorClass, thisNodeRoles);
-      } else {
-        log.info("Adding monitor [%s]", monitorClass);
+      if (Initialization.shouldLoadOnCurrentNodeType(nodeRoles, monitorClass)) {
         monitors.add(injector.getInstance(monitorClass));
       }
     }
