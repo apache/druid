@@ -55,7 +55,7 @@ After the ingestion completes, navigate to [http://localhost:8888/unified-consol
 
 ![compaction-tutorial datasource](../assets/tutorial-compaction-01.png "compaction-tutorial datasource")
 
-In the **Availability** column for the "compaction-tutorial" datasource, click the link for **51 segments** to view segments information for the datasource.
+In the **Availability** column for the `compaction-tutorial` datasource, click the link for **51 segments** to view segments information for the datasource.
 
 The datasource comprises 51 segments, between one and three segments per hour from the input data:
 
