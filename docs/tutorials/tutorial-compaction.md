@@ -109,7 +109,7 @@ After the task finishes, refresh the [segments view](http://localhost:8888/unifi
 
 Over time the Cooridinator marks the original 51 segments as "unused" and subsequently removes them to leave only the new compacted segments.
 
-By default, the Druid Coordinator does not mark segments as unused until the Coordinator process has been up for at least 15 minutes.
+By default, the Coordinator does not mark segments as unused until the Coordinator has been running for at least 15 minutes.
 During that time, you may see 75 total segments comprised of the old segment set and the new compacted set:
 
 ![Compacted segments intermediate state 1](../assets/tutorial-compaction-03.png "Compacted segments intermediate state 1")
