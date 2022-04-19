@@ -141,7 +141,7 @@ After the Coordinator has been running for at least 15 minutes, the segments vie
 
 You can also change the segment granularity in a compaction task to produce compacted segments with a different granularity from that of the input segments.
 
-The Druid distribution includes a compaction task spec to create DAY granularity segments at `quickstart/tutorial/compaction-day-granularity.json`:
+The Druid distribution includes a compaction task spec to create `DAY` granularity segments at `quickstart/tutorial/compaction-day-granularity.json`:
 
 ```json
 {
