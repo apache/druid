@@ -1078,7 +1078,7 @@ The following configs only apply if the Overlord is running in remote mode. For 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.indexer.runner.taskAssignmentTimeout`|How long to wait after a task as been assigned to a MiddleManager before throwing an error.|PT5M|
-|`druid.indexer.runner.minWorkerVersion`|The minimum MiddleManager version to send tasks to. |"0"|
+|`druid.indexer.runner.minWorkerVersion`|The minimum MiddleManager version to send tasks to. Note that the version number is a string. This affects the expected behavior during certain operations like when it's compared against `druid.worker.version`. Specifically, the version comparison follows dictionary order . Use ISO8601 date format for the version so that later versions are recognized as being more recent. |"0"|
 | `druid.indexer.runner.parallelIndexTaskSlotRatio`| The ratio of task slots available for parallel indexing supervisor tasks per worker. The specified value must be in the range [0, 1]. |1|
 |`druid.indexer.runner.compressZnodes`|Indicates whether or not the Overlord should expect MiddleManagers to compress Znodes.|true|
 |`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in Zookeeper, should be in the range of [10KiB, 2GiB). [Human-readable format](human-readable-byte.md) is supported.| 512 KiB |
@@ -1369,7 +1369,7 @@ Middle managers pass their configurations down to their child peons. The MiddleM
 |`druid.indexer.runner.endPort`|Ending port used for peon processes, should be greater than or equal to `druid.indexer.runner.startPort` and less than 65536.|65535|
 |`druid.indexer.runner.ports`|A JSON array of integers to specify ports that used for peon processes. If provided and non-empty, ports for peon processes will be chosen from these ports. And `druid.indexer.runner.startPort/druid.indexer.runner.endPort` will be completely ignored.|`[]`|
 |`druid.worker.ip`|The IP of the worker.|localhost|
-|`druid.worker.version`|Version identifier for the MiddleManager.|0|
+|`druid.worker.version`|Version identifier for the MiddleManager. Note that the version number is a string. This affects the expected behavior during certain operations like when it's compared against `druid.indexer.runner.minWorkerVersion`. Specifically, the version comparison follows dictionary order. Use ISO8601 date format for the version so that later versions are recognized as being more recent.|0|
 |`druid.worker.capacity`|Maximum number of tasks the MiddleManager can accept.|Number of CPUs on the machine - 1|
 |`druid.worker.category`|A string to name the category that the MiddleManager node belongs to.|`_default_worker_category`|
 
