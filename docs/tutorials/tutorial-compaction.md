@@ -37,7 +37,7 @@ the [single-machine quickstart](index.md) and have it running on your local mach
 
 If you haven't already, you should finish the following tutorials first:
 - [Tutorial: Loading a file](../tutorials/tutorial-batch.md)
-- [Tutorial: Querying data](../tutorials/tutorial-query.md).
+- [Tutorial: Querying data](../tutorials/tutorial-query.md)
 
 ## Load the initial data
 
