@@ -58,6 +58,13 @@ Metrics may have additional dimensions beyond those listed above.
 |`query/priority`|Assigned lane and priority, only if Laning strategy is enabled. Refer to [Laning strategies](../configuration/index.md#laning-strategies)|lane, dataSource, type|0|
 |`sqlQuery/time`|Milliseconds taken to complete a SQL query.|id, nativeQueryIds, dataSource, remoteAddress, success.|< 1s|
 |`sqlQuery/bytes`|Number of bytes returned in the SQL query response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
+|`segment/detailed/numRows`|Number of rows in a segment. Only reported if `SchemaStatsMonitor` is enabled.|`dataSource`, `segment/binaryVersion`, `segment/hasLastCompactedState`| Varies. Good sized segments should be around 5M rows.|
+|`segment/detailed/numReplicas`|Number servers that this segment is available on. Only reported if `SchemaStatsMonitor` is enabled.|`dataSource`, `segment/binaryVersion`, `segment/hasLastCompactedState`| Varies. Should be the number of replicas configured.|
+|`segment/detailed/sizeBytes`|Size of the segment in bytes. Only reported if `SchemaStatsMonitor` is enabled.|`dataSource`, `segment/binaryVersion`, `segment/hasLastCompactedState`| Varies.|
+|`segment/detailed/numDimensions`|Number of dimensions in the segment metadata. Only reported if `SchemaStatsMonitor` is enabled.|`dataSource`, `segment/binaryVersion`, `segment/hasLastCompactedState`| Varies.|
+|`segment/detailed/numMetrics`|Number of metrics in the segment metadata. Only reported if `SchemaStatsMonitor` is enabled.|`dataSource`, `segment/binaryVersion`, `segment/hasLastCompactedState`| Varies.|
+|`segment/detailed/durationMillis`|The size of the interval that the segment covers in millis. Only reported if `SchemaStatsMonitor` is enabled.|`dataSource`, `segment/binaryVersion`, `segment/hasLastCompactedState`| Varies.|
+
 
 ### Historical
 
@@ -244,7 +251,7 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/loadQueue/count`|Number of segments to load.|server.|Varies.|
 |`segment/dropQueue/count`|Number of segments to drop.|server.|Varies.|
 |`segment/size`|Total size of used segments in a data source. Emitted only for data sources to which at least one used segment belongs.|dataSource.|Varies.|
-|`segment/count`|Number of used segments belonging to a data source. Emitted only for data sources to which at least one used segment belongs.|dataSource.|< max|
+|`segsegment/count`|Number of used segments belonging to a data source. Emitted only for data sources to which at least one used segment belongs.|dataSource.|< max|
 |`segment/overShadowed/count`|Number of overshadowed segments.| |Varies.|
 |`segment/unavailable/count`|Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries.|dataSource.|0|
 |`segment/underReplicated/count`|Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries.|tier, dataSource.|0|

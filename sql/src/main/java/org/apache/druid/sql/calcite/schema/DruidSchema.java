@@ -107,6 +107,7 @@ public class DruidSchema extends AbstractSchema
   private final JoinableFactory joinableFactory;
   private final ExecutorService cacheExec;
   private final ExecutorService callbackExec;
+  private final ExecutorService metricsReporterExec;
   private final DruidSchemaManager druidSchemaManager;
 
   /**
@@ -120,20 +121,21 @@ public class DruidSchema extends AbstractSchema
   /**
    * DataSource -> Segment -> AvailableSegmentMetadata(contains RowSignature) for that segment.
    * Use SortedMap for segments so they are merged in deterministic order, from older to newer.
-   *
+   * <p>
    * This map is updated by these two threads.
-   *
+   * <p>
    * - {@link #callbackExec} can update it in {@link #addSegment}, {@link #removeServerSegment},
-   *   and {@link #removeSegment}.
+   * and {@link #removeSegment}.
    * - {@link #cacheExec} can update it in {@link #refreshSegmentsForDataSource}.
-   *
-   * While it is being updated, this map is read by these two types of thread.
-   *
+   * <p>
+   * While it is being updated, this map is read by these types of threads.
+   * <p>
    * - {@link #cacheExec} can iterate all {@link AvailableSegmentMetadata}s per datasource.
-   *   See {@link #buildDruidTable}.
+   * See {@link #buildDruidTable}.
    * - Query threads can create a snapshot of the entire map for processing queries on the system table.
-   *   See {@link #getSegmentMetadataSnapshot()}.
-   *
+   * See {@link #getSegmentMetadataSnapshot()}.
+   * - monitor thread from {@link SchemaStatsMonitor} if configured.
+   * <p>
    * As the access pattern of this map is read-intensive, we should minimize the contention between writers and readers.
    * Since there are two threads that can update this map at the same time, those writers should lock the inner map
    * first and then lock the entry before it updates segment metadata. This can be done using
@@ -158,7 +160,7 @@ public class DruidSchema extends AbstractSchema
    *     }
    *   );
    * </pre>
-   *
+   * <p>
    * Readers can simply delegate the locking to the concurrent map and iterate map entries.
    */
   private final ConcurrentHashMap<String, ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata>> segmentMetadataInfo
@@ -170,10 +172,10 @@ public class DruidSchema extends AbstractSchema
   /**
    * This lock coordinates the access from multiple threads to those variables guarded by this lock.
    * Currently, there are 2 threads that can access these variables.
-   *
+   * <p>
    * - {@link #callbackExec} executes the timeline callbacks whenever BrokerServerView changes.
    * - {@link #cacheExec} periodically refreshes segment metadata and {@link DruidTable} if necessary
-   *   based on the information collected via timeline callbacks.
+   * based on the information collected via timeline callbacks.
    */
   private final Object lock = new Object();
 
@@ -224,6 +226,7 @@ public class DruidSchema extends AbstractSchema
     this.config = Preconditions.checkNotNull(config, "config");
     this.cacheExec = Execs.singleThreaded("DruidSchema-Cache-%d");
     this.callbackExec = Execs.singleThreaded("DruidSchema-Callback-%d");
+    this.metricsReporterExec = Execs.singleThreaded("DruidSchema-Reporter-%d");
     this.escalator = escalator;
     this.brokerInternalQueryConfig = brokerInternalQueryConfig;
     this.druidSchemaManager = druidSchemaManager;
@@ -417,6 +420,7 @@ public class DruidSchema extends AbstractSchema
   {
     cacheExec.shutdownNow();
     callbackExec.shutdownNow();
+    metricsReporterExec.shutdownNow();
   }
 
   public void awaitInitialization() throws InterruptedException
@@ -461,7 +465,13 @@ public class DruidSchema extends AbstractSchema
                       // segmentReplicatable is used to determine if segments are served by historical or realtime servers
                       long isRealtime = server.isSegmentReplicationTarget() ? 0 : 1;
                       segmentMetadata = AvailableSegmentMetadata
-                          .builder(segment, isRealtime, ImmutableSet.of(server), null, DEFAULT_NUM_ROWS) // Added without needing a refresh
+                          .builder(
+                              segment,
+                              isRealtime,
+                              ImmutableSet.of(server),
+                              null,
+                              DEFAULT_NUM_ROWS
+                          ) // Added without needing a refresh
                           .build();
                       markSegmentAsNeedRefresh(segment.getId());
                       if (!server.isSegmentReplicationTarget()) {
@@ -815,7 +825,9 @@ public class DruidSchema extends AbstractSchema
     return new DruidTable(tableDataSource, builder.build(), null, isJoinable, isBroadcast);
   }
 
-  @VisibleForTesting
+  /**
+   * @return a copy of {@link #segmentMetadataInfo}
+   */
   Map<SegmentId, AvailableSegmentMetadata> getSegmentMetadataSnapshot()
   {
     final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(totalSegments);
@@ -823,6 +835,14 @@ public class DruidSchema extends AbstractSchema
       segmentMetadata.putAll(val);
     }
     return segmentMetadata;
+  }
+
+  /**
+   * @return segmentMetadataInfo. Callers can only safely read the contents of the map.
+   */
+  public ConcurrentHashMap<String, ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata>> getSegmentMetadataInfoUnsafe()
+  {
+    return segmentMetadataInfo;
   }
 
   /**
