@@ -139,11 +139,11 @@ public class SqlLifecycle
    *
    * If successful (it will be), it will transition the lifecycle to {@link State#INITIALIZED}.
    */
-  public String initialize(String sql, QueryContext queryAndContext)
+  public String initialize(String sql, QueryContext queryContext)
   {
     transition(State.NEW, State.INITIALIZED);
     this.sql = sql;
-    this.queryContext = contextWithSqlId(queryAndContext);
+    this.queryContext = contextWithSqlId(queryContext);
     return sqlQueryId();
   }
 

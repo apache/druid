@@ -58,6 +58,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
@@ -96,6 +97,9 @@ public class DruidMeta extends MetaImpl
   }
 
   private static final Logger LOG = new Logger(DruidMeta.class);
+  private static final Set<String> SENSITIVE_CONTEXT_FIELDS = ImmutableSet.of(
+      "user", "password"
+  );
 
   private final SqlLifecycleFactory sqlLifecycleFactory;
   private final ScheduledExecutorService exec;
@@ -146,7 +150,7 @@ public class DruidMeta extends MetaImpl
       final Map<String, Object> contextMap = new HashMap<>();
       if (info != null) {
         for (Map.Entry<String, String> entry : info.entrySet()) {
-          if (DruidConnection.SENSITIVE_CONTEXT_FIELDS.contains(entry.getKey())) {
+          if (SENSITIVE_CONTEXT_FIELDS.contains(entry.getKey())) {
             secret.put(entry.getKey(), entry.getValue());
           } else {
             contextMap.put(entry.getKey(), entry.getValue());

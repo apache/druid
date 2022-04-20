@@ -22,7 +22,6 @@ package org.apache.druid.sql.avatica;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -30,7 +29,6 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.SqlLifecycleFactory;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
@@ -42,9 +40,6 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class DruidConnection
 {
-  public static final Set<String> SENSITIVE_CONTEXT_FIELDS = ImmutableSet.of(
-      "user", "password"
-  );
   private static final Logger LOG = new Logger(DruidConnection.class);
 
   private final String connectionId;

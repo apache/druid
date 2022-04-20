@@ -156,37 +156,37 @@ public class PlannerConfig
     return useNativeQueryExplain;
   }
 
-  public PlannerConfig withOverrides(final QueryContext queryAndContext)
+  public PlannerConfig withOverrides(final QueryContext queryContext)
   {
-    if (queryAndContext.isEmpty()) {
+    if (queryContext.isEmpty()) {
       return this;
     }
 
     final PlannerConfig newConfig = new PlannerConfig();
     newConfig.metadataRefreshPeriod = getMetadataRefreshPeriod();
     newConfig.maxTopNLimit = getMaxTopNLimit();
-    newConfig.useApproximateCountDistinct = queryAndContext.getAsBoolean(
+    newConfig.useApproximateCountDistinct = queryContext.getAsBoolean(
         CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT,
         isUseApproximateCountDistinct()
     );
-    newConfig.useGroupingSetForExactDistinct = queryAndContext.getAsBoolean(
+    newConfig.useGroupingSetForExactDistinct = queryContext.getAsBoolean(
         CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
         isUseGroupingSetForExactDistinct()
     );
-    newConfig.useApproximateTopN = queryAndContext.getAsBoolean(
+    newConfig.useApproximateTopN = queryContext.getAsBoolean(
         CTX_KEY_USE_APPROXIMATE_TOPN,
         isUseApproximateTopN()
     );
-    newConfig.computeInnerJoinCostAsFilter = queryAndContext.getAsBoolean(
+    newConfig.computeInnerJoinCostAsFilter = queryContext.getAsBoolean(
         CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER,
         computeInnerJoinCostAsFilter
     );
-    newConfig.useNativeQueryExplain = queryAndContext.getAsBoolean(
+    newConfig.useNativeQueryExplain = queryContext.getAsBoolean(
         CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
         isUseNativeQueryExplain()
     );
     final int systemConfigMaxNumericInFilters = getMaxNumericInFilters();
-    final int queryContextMaxNumericInFilters = queryAndContext.getAsInt(
+    final int queryContextMaxNumericInFilters = queryContext.getAsInt(
         CTX_MAX_NUMERIC_IN_FILTERS,
         getMaxNumericInFilters()
     );

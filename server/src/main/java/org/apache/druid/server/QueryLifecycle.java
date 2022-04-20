@@ -98,9 +98,6 @@ public class QueryLifecycle
   private AuthenticationResult authenticationResult;
   private QueryToolChest toolChest;
 
-  /**
-   * A holder for the user query to run.
-   */
   @MonotonicNonNull
   private Query<?> baseQuery;
 

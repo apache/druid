@@ -35,13 +35,13 @@ import java.util.TreeMap;
  *   Auto-generated queryId or sqlQueryId are also set as default parameters. These default parameters can
  *   be overridden by user or system parameters.
  * - User parameters. These are the params set by the user. User params override default parameters but
- *   are overridden by system paramters.
+ *   are overridden by system parameters.
  * - System parameters. These are the params set by the Druid query engine for internal use only.
  *
  * You can use {@code getX} methods or {@link #getMergedParams()} to compute the context params
  * merging 3 types of params above.
  *
- * Currently, this class is mainly used for query context parameter authorization in query entires,
+ * Currently, this class is mainly used for query context parameter authorization,
  * such as HTTP query endpoints or JDBC endpoint. Its usage can be expanded in the future if we
  * want to track user parameters and separate them from others during query processing.
  */
