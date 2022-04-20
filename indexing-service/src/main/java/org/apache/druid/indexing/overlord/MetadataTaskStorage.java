@@ -29,6 +29,7 @@ import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
@@ -243,7 +244,7 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo<Map<String, String>, TaskStatus>> getTaskSummaryList(
+  public List<TaskStatusPlus> getTaskStatusPlusList(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource
   )
@@ -258,7 +259,9 @@ public class MetadataTaskStorage implements TaskStorage
         log.info(e, "Exception getting task migration future");
       }
     }
-    return Collections.unmodifiableList(handler.getTaskSummaryList(theTaskLookups, datasource, taskMigrationComplete));
+    return Collections.unmodifiableList(
+        handler.getTaskStatusPlusList(theTaskLookups, datasource, taskMigrationComplete)
+    );
   }
 
   private Map<TaskLookupType, TaskLookup> processTaskLookups(

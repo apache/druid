@@ -28,8 +28,10 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
+import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
@@ -45,7 +47,6 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -171,37 +172,22 @@ public class HeapMemoryTaskStorage implements TaskStorage
     return listBuilder.build();
   }
 
-  public List<TaskInfo<Map<String, String>, TaskStatus>> getActiveTaskSummary(@Nullable String dataSource)
-  {
-    final ImmutableList.Builder<TaskInfo<Map<String, String>, TaskStatus>> listBuilder = ImmutableList.builder();
-    for (final TaskStuff taskStuff : tasks.values()) {
-      if (taskStuff.getStatus().isRunnable()) {
-        if (dataSource == null || dataSource.equals(taskStuff.getDataSource())) {
-          TaskInfo<Task, TaskStatus> taskInfo = TaskStuff.toTaskInfo(taskStuff);
-        }
-      }
-    }
-    return listBuilder.build();
-  }
-
-  private TaskInfo<Map<String, String>, TaskStatus> taskSummary(TaskInfo<Task, TaskStatus> taskInfo)
+  private TaskStatusPlus toTaskStatusPlus(TaskInfo<Task, TaskStatus> taskInfo)
   {
     Task task = taskInfo.getTask();
-    Map<String, String> taskMap = new HashMap<>();
-    String type = task.getType();
-    if (type != null) {
-      taskMap.put("type", type);
-    }
-    String groupId = task.getGroupId();
-    if (groupId != null) {
-      taskMap.put("groupId", groupId);
-    }
-    return new TaskInfo<>(
+    TaskStatus status = taskInfo.getStatus();
+    return new TaskStatusPlus(
         taskInfo.getId(),
+        task == null ? null : task.getGroupId(),
+        task == null ? null : task.getType(),
         taskInfo.getCreatedTime(),
-        taskInfo.getStatus(),
+        DateTimes.EPOCH,
+        status.getStatusCode(),
+        status.getStatusCode().isComplete() ? RunnerTaskState.NONE : RunnerTaskState.WAITING,
+        status.getDuration(),
+        status.getLocation(),
         taskInfo.getDataSource(),
-        taskMap
+        status.getErrorMsg()
     );
   }
 
@@ -269,12 +255,12 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo<Map<String, String>, TaskStatus>> getTaskSummaryList(
+  public List<TaskStatusPlus> getTaskStatusPlusList(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource
   )
   {
-    final List<TaskInfo<Map<String, String>, TaskStatus>> tasks = new ArrayList<>();
+    final List<TaskStatusPlus> tasks = new ArrayList<>();
     taskLookups.forEach((type, lookup) -> {
       if (type == TaskLookupType.COMPLETE) {
         CompleteTaskLookup completeTaskLookup = (CompleteTaskLookup) lookup;
@@ -285,12 +271,12 @@ public class HeapMemoryTaskStorage implements TaskStorage
                 : completeTaskLookup.withDurationBeforeNow(config.getRecentlyFinishedThreshold()),
                 datasource
             ).stream()
-             .map(taskTaskStatusTaskInfo -> taskSummary(taskTaskStatusTaskInfo))
+             .map(taskInfo -> toTaskStatusPlus(taskInfo))
              .collect(Collectors.toList())
         );
       } else {
         tasks.addAll(getActiveTaskInfo(datasource).stream()
-                                                  .map(taskInfo -> taskSummary(taskInfo))
+                                                  .map(taskInfo -> toTaskStatusPlus(taskInfo))
                                                   .collect(Collectors.toList()));
       }
     });

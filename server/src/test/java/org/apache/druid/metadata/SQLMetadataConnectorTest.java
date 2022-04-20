@@ -33,6 +33,7 @@ import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Blob;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -310,7 +311,7 @@ public class SQLMetadataConnectorTest
             {
               String json = StringUtils.format("{\"type\":\"%1$s\",\"groupId\":\"%2$s\"}", type, groupId);
               Blob payload = handle.getConnection().createBlob();
-              payload.setBytes(1, json.getBytes());
+              payload.setBytes(1, json.getBytes(StandardCharsets.UTF_8));
 
               String sql = StringUtils.format(
                   "INSERT INTO %1$s (id, created_date, datasource, active, payload, status_payload) VALUES (?,?,?,?,?,?)",

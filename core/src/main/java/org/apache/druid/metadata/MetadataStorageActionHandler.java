@@ -21,6 +21,7 @@ package org.apache.druid.metadata;
 
 import com.google.common.base.Optional;
 import org.apache.druid.indexer.TaskInfo;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.joda.time.DateTime;
 
@@ -103,7 +104,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   );
 
   /**
-   * Returns a list of {@link TaskInfo} from metadata store that matches the given filters.
+   * Returns a list of TaskStatusPlus for the tasks corresponding to the given filters
    *
    * If {@code taskLookups} includes {@link TaskLookupType#ACTIVE}, it returns all active tasks in the metadata store.
    * If {@code taskLookups} includes {@link TaskLookupType#COMPLETE}, it returns all complete tasks in the metadata
@@ -118,7 +119,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param datasource  datasource filter
    * @param taskMigrationComplete indicates which query to use based on migration status
    */
-  List<TaskInfo<Map<String, String>, StatusType>> getTaskSummaryList(
+  List<TaskStatusPlus> getTaskStatusPlusList(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource,
       boolean taskMigrationComplete

@@ -690,7 +690,7 @@ public class OverlordResource
         taskMaster.getTaskRunner(),
         taskRunner -> {
           final List<TaskStatusPlus> authorizedList = securedTaskStatusPlus(
-              getTaskSummaryList(
+              getTaskStatusPlusList(
                   taskRunner,
                   TaskStateLookup.fromString(state),
                   dataSource,
@@ -706,7 +706,7 @@ public class OverlordResource
     );
   }
 
-  private List<TaskStatusPlus> getTaskSummaryList(
+  private List<TaskStatusPlus> getTaskStatusPlusList(
       TaskRunner taskRunner,
       TaskStateLookup state,
       @Nullable String dataSource,
@@ -729,7 +729,7 @@ public class OverlordResource
     // This way, we can use the snapshot from taskStorage as the source of truth for the set of tasks to process
     // and use the snapshot from taskRunner as a reference for potential task state updates happened
     // after the first snapshotting.
-    Stream<TaskInfo<Map<String, String>, TaskStatus>> taskInfoStreamFromTaskStorage = getTaskSummaryStreamFromTaskStorage(
+    Stream<TaskStatusPlus> taskStatusPlusStream = getTaskStatusPlusList(
         state,
         dataSource,
         createdTimeDuration,
@@ -745,87 +745,71 @@ public class OverlordResource
 
     if (state == TaskStateLookup.PENDING || state == TaskStateLookup.RUNNING) {
       // We are interested in only those tasks which are in taskRunner.
-      taskInfoStreamFromTaskStorage = taskInfoStreamFromTaskStorage
-          .filter(info -> runnerWorkItems.containsKey(info.getId()));
+      taskStatusPlusStream = taskStatusPlusStream
+          .filter(statusPlus -> runnerWorkItems.containsKey(statusPlus.getId()));
     }
-    final List<TaskInfo<Map<String, String>, TaskStatus>> taskInfoFromTaskStorage = taskInfoStreamFromTaskStorage
-        .collect(Collectors.toList());
+    final List<TaskStatusPlus> taskStatusPlusList = taskStatusPlusStream.collect(Collectors.toList());
 
     // Separate complete and active tasks from taskStorage.
     // Note that taskStorage can return only either complete tasks or active tasks per TaskLookupType.
-    final List<TaskInfo<Map<String, String>, TaskStatus>> completeTaskInfoFromTaskStorage = new ArrayList<>();
-    final List<TaskInfo<Map<String, String>, TaskStatus>> activeTaskInfoFromTaskStorage = new ArrayList<>();
-    for (TaskInfo<Map<String, String>, TaskStatus> info : taskInfoFromTaskStorage) {
-      if (info.getStatus().isComplete()) {
-        completeTaskInfoFromTaskStorage.add(info);
+    final List<TaskStatusPlus> completeTaskStatusPlusList = new ArrayList<>();
+    final List<TaskStatusPlus> activeTaskStatusPlusList = new ArrayList<>();
+    for (TaskStatusPlus statusPlus : taskStatusPlusList) {
+      if (statusPlus.getStatusCode().isComplete()) {
+        completeTaskStatusPlusList.add(statusPlus);
       } else {
-        activeTaskInfoFromTaskStorage.add(info);
+        activeTaskStatusPlusList.add(statusPlus);
       }
     }
 
-    final List<TaskStatusPlus> statuses = new ArrayList<>();
-    completeTaskInfoFromTaskStorage.forEach(taskInfo -> statuses.add(
-        new TaskStatusPlus(
-            taskInfo.getId(),
-            taskInfo.getTask() == null ? null : taskInfo.getTask().get("groupId"),
-            taskInfo.getTask() == null ? null : taskInfo.getTask().get("type"),
-            taskInfo.getCreatedTime(),
-            DateTimes.EPOCH,
-            taskInfo.getStatus().getStatusCode(),
-            RunnerTaskState.NONE,
-            taskInfo.getStatus().getDuration(),
-            taskInfo.getStatus().getLocation(),
-            taskInfo.getDataSource(),
-            taskInfo.getStatus().getErrorMsg()
-        )
-    ));
+    final List<TaskStatusPlus> taskStatuses = new ArrayList<>(completeTaskStatusPlusList);
 
-    activeTaskInfoFromTaskStorage.forEach(taskInfo -> {
-      final TaskRunnerWorkItem runnerWorkItem = runnerWorkItems.get(taskInfo.getId());
+    activeTaskStatusPlusList.forEach(statusPlus -> {
+      final TaskRunnerWorkItem runnerWorkItem = runnerWorkItems.get(statusPlus.getId());
       if (runnerWorkItem == null) {
         // a task is assumed to be a waiting task if it exists in taskStorage but not in taskRunner.
         if (state == TaskStateLookup.WAITING || state == TaskStateLookup.ALL) {
-          statuses.add(
+          taskStatuses.add(
               new TaskStatusPlus(
-                  taskInfo.getId(),
-                  taskInfo.getTask() == null ? null : taskInfo.getTask().get("groupId"),
-                  taskInfo.getTask() == null ? null : taskInfo.getTask().get("type"),
-                  taskInfo.getCreatedTime(),
-                  DateTimes.EPOCH,
-                  taskInfo.getStatus().getStatusCode(),
+                  statusPlus.getId(),
+                  statusPlus.getGroupId(),
+                  statusPlus.getType(),
+                  statusPlus.getCreatedTime(),
+                  statusPlus.getQueueInsertionTime(),
+                  statusPlus.getStatusCode(),
                   RunnerTaskState.WAITING,
-                  taskInfo.getStatus().getDuration(),
-                  taskInfo.getStatus().getLocation(),
-                  taskInfo.getDataSource(),
-                  taskInfo.getStatus().getErrorMsg()
+                  statusPlus.getDuration(),
+                  statusPlus.getLocation(),
+                  statusPlus.getDataSource(),
+                  statusPlus.getErrorMsg()
               )
           );
         }
       } else {
         if (state == TaskStateLookup.PENDING || state == TaskStateLookup.RUNNING || state == TaskStateLookup.ALL) {
-          statuses.add(
+          taskStatuses.add(
               new TaskStatusPlus(
-                  taskInfo.getId(),
-                  taskInfo.getTask() == null ? null : taskInfo.getTask().get("groupId"),
-                  taskInfo.getTask() == null ? null : taskInfo.getTask().get("type"),
+                  statusPlus.getId(),
+                  statusPlus.getGroupId(),
+                  statusPlus.getType(),
                   runnerWorkItem.getCreatedTime(),
                   runnerWorkItem.getQueueInsertionTime(),
-                  taskInfo.getStatus().getStatusCode(),
-                  taskRunner.getRunnerTaskState(taskInfo.getId()), // this is racy for remoteTaskRunner
-                  taskInfo.getStatus().getDuration(),
+                  statusPlus.getStatusCode(),
+                  taskRunner.getRunnerTaskState(statusPlus.getId()), // this is racy for remoteTaskRunner
+                  statusPlus.getDuration(),
                   runnerWorkItem.getLocation(), // location in taskInfo is only updated after the task is done.
-                  taskInfo.getDataSource(),
-                  taskInfo.getStatus().getErrorMsg()
+                  statusPlus.getDataSource(),
+                  statusPlus.getErrorMsg()
               )
           );
         }
       }
     });
 
-    return statuses;
+    return taskStatuses;
   }
 
-  private Stream<TaskInfo<Map<String, String>, TaskStatus>> getTaskSummaryStreamFromTaskStorage(
+  private Stream<TaskStatusPlus> getTaskStatusPlusList(
       TaskStateLookup state,
       @Nullable String dataSource,
       Duration createdTimeDuration,
@@ -861,16 +845,16 @@ public class OverlordResource
         throw new IAE("Unknown state: [%s]", state);
     }
 
-    final Stream<TaskInfo<Map<String, String>, TaskStatus>> taskInfoStreamFromTaskStorage = taskStorageQueryAdapter.getTaskSummaryList(
+    final Stream<TaskStatusPlus> taskStatusPlusStream = taskStorageQueryAdapter.getTaskStatusPlusList(
         taskLookups,
         dataSource
     ).stream();
     if (type != null) {
-      return taskInfoStreamFromTaskStorage.filter(
-          info -> type.equals(info.getTask() == null ? null : info.getTask().get("type"))
+      return taskStatusPlusStream.filter(
+          statusPlus -> type.equals(statusPlus == null ? null : statusPlus.getType())
       );
     } else {
-      return taskInfoStreamFromTaskStorage;
+      return taskStatusPlusStream;
     }
   }
 
