@@ -28,13 +28,10 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import io.timeandspace.cronscheduler.CronScheduler;
-import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -96,16 +93,13 @@ public class MetricsModule implements Module
       MonitorsConfig monitorsConfig,
       Set<Class<? extends Monitor>> monitorSet,
       ServiceEmitter emitter,
-      Injector injector,
-      @Self Set<NodeRole> nodeRoles
+      Injector injector
   )
   {
     List<Monitor> monitors = new ArrayList<>();
 
     for (Class<? extends Monitor> monitorClass : Iterables.concat(monitorsConfig.getMonitors(), monitorSet)) {
-      if (Initialization.shouldLoadOnCurrentNodeType(nodeRoles, monitorClass)) {
-        monitors.add(injector.getInstance(monitorClass));
-      }
+      monitors.add(injector.getInstance(monitorClass));
     }
 
     if (!monitors.isEmpty()) {

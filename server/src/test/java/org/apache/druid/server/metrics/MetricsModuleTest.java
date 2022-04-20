@@ -27,9 +27,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
-import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -41,8 +39,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.BasicMonitorScheduler;
 import org.apache.druid.java.util.metrics.ClockDriftSafeMonitorScheduler;
-import org.apache.druid.java.util.metrics.JvmMonitor;
-import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.server.DruidNode;
 import org.hamcrest.CoreMatchers;
@@ -53,9 +49,7 @@ import org.junit.rules.ExpectedException;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
-import java.util.HashSet;
 import java.util.Properties;
-import java.util.Set;
 
 public class MetricsModuleTest
 {
@@ -76,21 +70,6 @@ public class MetricsModuleTest
                 binder,
                 Key.get(DruidNode.class, Self.class),
                 new DruidNode("test-inject", null, false, null, null, true, false)
-            );
-            Set<NodeRole> nodeRoles = new HashSet<>();
-            nodeRoles.add(new NodeRole("test-inject"));
-            JsonConfigProvider.bindInstance(
-                binder,
-                Key.get(new TypeLiteral<Set<NodeRole>>(){}, Self.class),
-                nodeRoles
-            );
-            Set<Class<? extends Monitor>> monitorSet = new HashSet<>();
-            monitorSet.add(WorkerTaskCountStatsMonitor.class);
-            monitorSet.add(JvmMonitor.class);
-            JsonConfigProvider.bindInstance(
-                binder,
-                Key.get(new TypeLiteral<Set<Class<? extends Monitor>>>(){}),
-                monitorSet
             );
           }
         })
@@ -186,13 +165,6 @@ public class MetricsModuleTest
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
           binder.bind(ServiceEmitter.class).toInstance(new NoopServiceEmitter());
           binder.bind(Properties.class).toInstance(properties);
-          Set<NodeRole> nodeRoles = new HashSet<>();
-          nodeRoles.add(new NodeRole("test-inject"));
-          JsonConfigProvider.bindInstance(
-              binder,
-              Key.get(new TypeLiteral<Set<NodeRole>>(){}, Self.class),
-              nodeRoles
-          );
         },
         new MetricsModule()
     );

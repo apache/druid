@@ -19,6 +19,12 @@
 
 package org.apache.druid.server.metrics;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Module;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.junit.Assert;
 import org.junit.Before;
@@ -28,6 +34,10 @@ import javax.annotation.Nullable;
 
 public class WorkerTaskCountStatsMonitorTest
 {
+  private Injector injectorForMiddleManager;
+  private Injector injectorForMiddleManagerNullStats;
+  private Injector injectorForPeon;
+
   private WorkerTaskCountStatsProvider statsProvider;
   private WorkerTaskCountStatsProvider nullStatsProvider;
 
@@ -130,12 +140,35 @@ public class WorkerTaskCountStatsMonitorTest
         return null;
       }
     };
+
+    injectorForMiddleManager = Guice.createInjector(
+        ImmutableList.of(
+            (Module) binder -> {
+              binder.bind(WorkerTaskCountStatsProvider.class).toInstance(statsProvider);
+            }
+        )
+    );
+
+    injectorForMiddleManagerNullStats = Guice.createInjector(
+        ImmutableList.of(
+            (Module) binder -> {
+              binder.bind(WorkerTaskCountStatsProvider.class).toInstance(nullStatsProvider);
+            }
+        )
+    );
+
+    injectorForPeon = Guice.createInjector(
+        ImmutableList.of(
+            (Module) binder -> {}
+        )
+    );
   }
 
   @Test
   public void testMonitor()
   {
-    final WorkerTaskCountStatsMonitor monitor = new WorkerTaskCountStatsMonitor(statsProvider);
+    final WorkerTaskCountStatsMonitor monitor =
+        new WorkerTaskCountStatsMonitor(injectorForMiddleManager, ImmutableSet.of(NodeRole.MIDDLE_MANAGER));
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
     Assert.assertEquals(5, emitter.getEvents().size());
@@ -164,7 +197,18 @@ public class WorkerTaskCountStatsMonitorTest
   @Test
   public void testMonitorWithNulls()
   {
-    final WorkerTaskCountStatsMonitor monitor = new WorkerTaskCountStatsMonitor(nullStatsProvider);
+    final WorkerTaskCountStatsMonitor monitor =
+        new WorkerTaskCountStatsMonitor(injectorForMiddleManagerNullStats, ImmutableSet.of(NodeRole.MIDDLE_MANAGER));
+    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    monitor.doMonitor(emitter);
+    Assert.assertEquals(0, emitter.getEvents().size());
+  }
+
+  @Test
+  public void testMonitorNotMiddleManager()
+  {
+    final WorkerTaskCountStatsMonitor monitor =
+        new WorkerTaskCountStatsMonitor(injectorForPeon, ImmutableSet.of(NodeRole.PEON));
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
     Assert.assertEquals(0, emitter.getEvents().size());
