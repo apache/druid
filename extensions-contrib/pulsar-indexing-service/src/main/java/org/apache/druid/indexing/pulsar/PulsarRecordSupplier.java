@@ -79,12 +79,12 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
 
   @VisibleForTesting
   public PulsarRecordSupplier(
-   String serviceUrl, String readerName, Integer maxRecordsInSinglePoll, PulsarClient client,  Function2<PulsarClient, String, CompletableFuture<Reader<byte[]>>> buildConsumer
+   String serviceUrl, String readerName, Integer maxRecordsInSinglePoll, PulsarClient client,  Function2<PulsarClient, String, CompletableFuture<Reader<byte[]>>> buildConsumer, BlockingQueue<Message<byte[]>> received
   )
   {
     this.readerName = readerName;
     this.maxRecordsInSinglePoll = maxRecordsInSinglePoll;
-    this.received = new ArrayBlockingQueue<>(this.maxRecordsInSinglePoll);
+    this.received = received;
     this.client = client;
     this.consumerBuilder = buildConsumer;
   }
