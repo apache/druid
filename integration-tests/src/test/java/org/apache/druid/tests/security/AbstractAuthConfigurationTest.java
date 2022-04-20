@@ -21,6 +21,7 @@ package org.apache.druid.tests.security;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -28,6 +29,7 @@ import com.google.inject.Inject;
 import org.apache.calcite.avatica.AvaticaSqlException;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.Client;
+import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -63,6 +65,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
+@ExtensionPoint
 public abstract class AbstractAuthConfigurationTest
 {
   private static final Logger LOG = new Logger(AbstractAuthConfigurationTest.class);
@@ -179,6 +182,36 @@ public abstract class AbstractAuthConfigurationTest
       )
   );
 
+  protected enum User
+  {
+    ADMIN("admin", "priest"),
+    DATASOURCE_ONLY_USER("datasourceOnlyUser", "helloworld"),
+    DATASOURCE_AND_CONTEXT_PARAMS_USER("datasourceAndContextParamsUser", "helloworld"),
+    DATASOURCE_AND_SYS_USER("datasourceAndSysUser", "helloworld"),
+    DATASOURCE_WITH_STATE_USER("datasourceWithStateUser", "helloworld"),
+    STATE_ONLY_USER("stateOnlyUser", "helloworld"),
+    INTERNAL_SYSTEM("druid_system", "warlock");
+
+    private final String name;
+    private final String password;
+
+    User(String name, String password)
+    {
+      this.name = name;
+      this.password = password;
+    }
+
+    public String getName()
+    {
+      return name;
+    }
+
+    public String getPassword()
+    {
+      return password;
+    }
+  }
+
   protected List<Map<String, Object>> adminSegments;
   protected List<Map<String, Object>> adminTasks;
   protected List<Map<String, Object>> adminServers;
@@ -197,14 +230,7 @@ public abstract class AbstractAuthConfigurationTest
   @Inject
   protected CoordinatorResourceTestClient coordinatorClient;
 
-  protected HttpClient adminClient;
-  protected HttpClient datasourceOnlyUserClient;
-  protected HttpClient datasourceAndContextParamsClient;
-  protected HttpClient datasourceAndSysUserClient;
-  protected HttpClient datasourceWithStateUserClient;
-  protected HttpClient stateOnlyUserClient;
-  protected HttpClient internalSystemClient;
-
+  protected Map<User, HttpClient> httpClients;
 
   protected abstract void setupDatasourceOnlyUser() throws Exception;
   protected abstract void setupDatasourceAndContextParamsUser() throws Exception;
@@ -217,9 +243,23 @@ public abstract class AbstractAuthConfigurationTest
   protected abstract String getExpectedAvaticaAuthError();
   protected abstract String getExpectedAvaticaAuthzError();
 
+  /**
+   * Returns properties for the admin with an invalid password.
+   * Implementations can set any properties for authentication as they need.
+   */
+  protected abstract Properties getAvaticaConnectionPropertiesForInvalidAdmin();
+  /**
+   * Returns properties for the given user.
+   * Implementations can set any properties for authentication as they need.
+   *
+   * @see User
+   */
+  protected abstract Properties getAvaticaConnectionPropertiesForUser(User user);
+
   @Test
   public void test_systemSchemaAccess_admin() throws Exception
   {
+    final HttpClient adminClient = getHttpClient(User.ADMIN);
     // check that admin access works on all nodes
     checkNodeAccess(adminClient);
 
@@ -256,6 +296,7 @@ public abstract class AbstractAuthConfigurationTest
   @Test
   public void test_systemSchemaAccess_datasourceOnlyUser() throws Exception
   {
+    final HttpClient datasourceOnlyUserClient = getHttpClient(User.DATASOURCE_ONLY_USER);
     // check that we can access a datasource-permission restricted resource on the broker
     HttpUtil.makeRequest(
         datasourceOnlyUserClient,
@@ -301,6 +342,7 @@ public abstract class AbstractAuthConfigurationTest
   @Test
   public void test_systemSchemaAccess_datasourceAndSysUser() throws Exception
   {
+    final HttpClient datasourceAndSysUserClient = getHttpClient(User.DATASOURCE_AND_SYS_USER);
     // check that we can access a datasource-permission restricted resource on the broker
     HttpUtil.makeRequest(
         datasourceAndSysUserClient,
@@ -348,6 +390,7 @@ public abstract class AbstractAuthConfigurationTest
   @Test
   public void test_systemSchemaAccess_datasourceAndSysWithStateUser() throws Exception
   {
+    final HttpClient datasourceWithStateUserClient = getHttpClient(User.DATASOURCE_WITH_STATE_USER);
     // check that we can access a state-permission restricted resource on the broker
     HttpUtil.makeRequest(
         datasourceWithStateUserClient,
@@ -396,6 +439,7 @@ public abstract class AbstractAuthConfigurationTest
   @Test
   public void test_systemSchemaAccess_stateOnlyUser() throws Exception
   {
+    final HttpClient stateOnlyUserClient = getHttpClient(User.STATE_ONLY_USER);
     HttpUtil.makeRequest(stateOnlyUserClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
 
     // as user that can only read STATE
@@ -438,19 +482,19 @@ public abstract class AbstractAuthConfigurationTest
   @Test
   public void test_admin_loadStatus() throws Exception
   {
-    checkLoadStatus(adminClient);
+    checkLoadStatus(getHttpClient(User.ADMIN));
   }
 
   @Test
   public void test_admin_hasNodeAccess()
   {
-    checkNodeAccess(adminClient);
+    checkNodeAccess(getHttpClient(User.ADMIN));
   }
 
   @Test
   public void test_internalSystemUser_hasNodeAccess()
   {
-    checkNodeAccess(internalSystemClient);
+    checkNodeAccess(getHttpClient(User.INTERNAL_SYSTEM));
   }
 
   @Test
@@ -472,21 +516,21 @@ public abstract class AbstractAuthConfigurationTest
   @Test
   public void test_avaticaQueryAuthFailure_broker() throws Exception
   {
-    final Properties properties = getAvaticaConnectionPropertiesForWrongAdmin();
+    final Properties properties = getAvaticaConnectionPropertiesForInvalidAdmin();
     testAvaticaAuthFailure(properties, getBrokerAvacticaUrl());
   }
 
   @Test
   public void test_avaticaQueryAuthFailure_router() throws Exception
   {
-    final Properties properties = getAvaticaConnectionPropertiesForWrongAdmin();
+    final Properties properties = getAvaticaConnectionPropertiesForInvalidAdmin();
     testAvaticaAuthFailure(properties, getRouterAvacticaUrl());
   }
 
   @Test
   public void test_avaticaQueryWithContext_datasourceOnlyUser_fail() throws Exception
   {
-    final Properties properties = getAvaticaConnectionPropertiesForUser("datasourceOnlyUser", "helloworld");
+    final Properties properties = getAvaticaConnectionPropertiesForUser(User.DATASOURCE_ONLY_USER);
     properties.setProperty("auth_test_ctx", "should-be-denied");
     testAvaticaAuthzFailure(properties, getRouterAvacticaUrl());
   }
@@ -494,7 +538,7 @@ public abstract class AbstractAuthConfigurationTest
   @Test
   public void test_avaticaQueryWithContext_datasourceAndContextParamsUser_succeed()
   {
-    final Properties properties = getAvaticaConnectionPropertiesForUser("datasourceAndContextParamsUser", "helloworld");
+    final Properties properties = getAvaticaConnectionPropertiesForUser(User.DATASOURCE_AND_CONTEXT_PARAMS_USER);
     properties.setProperty("auth_test_ctx", "should-be-allowed");
     testAvaticaQuery(properties, getRouterAvacticaUrl());
   }
@@ -504,7 +548,7 @@ public abstract class AbstractAuthConfigurationTest
   {
     final String query = "select count(*) from auth_test";
     StatusResponseHolder responseHolder = makeSQLQueryRequest(
-        datasourceOnlyUserClient,
+        getHttpClient(User.DATASOURCE_ONLY_USER),
         query,
         ImmutableMap.of("auth_test_ctx", "should-be-denied"),
         HttpResponseStatus.FORBIDDEN
@@ -516,7 +560,7 @@ public abstract class AbstractAuthConfigurationTest
   {
     final String query = "select count(*) from auth_test";
     StatusResponseHolder responseHolder = makeSQLQueryRequest(
-        datasourceAndContextParamsClient,
+        getHttpClient(User.DATASOURCE_AND_CONTEXT_PARAMS_USER),
         query,
         ImmutableMap.of("auth_test_ctx", "should-be-allowed"),
         HttpResponseStatus.OK
@@ -551,6 +595,11 @@ public abstract class AbstractAuthConfigurationTest
   public void testMaliciousUser()
   {
     verifyMaliciousUser();
+  }
+
+  protected HttpClient getHttpClient(User user)
+  {
+    return Preconditions.checkNotNull(httpClients.get(user), "http client for user[%s]", user.getName());
   }
 
   protected void setupHttpClientsAndUsers() throws Exception
@@ -597,20 +646,7 @@ public abstract class AbstractAuthConfigurationTest
 
   private Properties getAvaticaConnectionPropertiesForAdmin()
   {
-    return getAvaticaConnectionPropertiesForUser("admin", "priest");
-  }
-
-  private Properties getAvaticaConnectionPropertiesForWrongAdmin()
-  {
-    return getAvaticaConnectionPropertiesForUser("admin", "wrongpassword");
-  }
-
-  private Properties getAvaticaConnectionPropertiesForUser(String id, String password)
-  {
-    Properties connectionProperties = new Properties();
-    connectionProperties.setProperty("user", id);
-    connectionProperties.setProperty("password", password);
-    return connectionProperties;
+    return getAvaticaConnectionPropertiesForUser(User.ADMIN);
   }
 
   protected void testAvaticaQuery(Properties connectionProperties, String url)
@@ -778,11 +814,7 @@ public abstract class AbstractAuthConfigurationTest
 
   protected void verifyAdminOptionsRequest()
   {
-    HttpClient adminClient = new CredentialedHttpClient(
-        new BasicCredentials("admin", "priest"),
-        httpClient
-    );
-    testOptionsRequests(adminClient);
+    testOptionsRequests(getHttpClient(User.ADMIN));
   }
 
   protected void verifyAuthenticationInvalidAuthNameFails()
@@ -820,7 +852,7 @@ public abstract class AbstractAuthConfigurationTest
     );
 
     HttpUtil.makeRequestWithExpectedStatus(
-        adminClient,
+        getHttpClient(User.ADMIN),
         HttpMethod.POST,
         endpoint,
         "SERIALIZED_DATA".getBytes(StandardCharsets.UTF_8),
@@ -855,38 +887,21 @@ public abstract class AbstractAuthConfigurationTest
 
   protected void setupCommonHttpClients()
   {
-    adminClient = new CredentialedHttpClient(
-        new BasicCredentials("admin", "priest"),
-        httpClient
-    );
+    httpClients = new HashMap<>();
+    for (User user : User.values()) {
+      httpClients.put(user, setupHttpClientForUser(user.getName(), user.getPassword()));
+    }
+  }
 
-    datasourceOnlyUserClient = new CredentialedHttpClient(
-        new BasicCredentials("datasourceOnlyUser", "helloworld"),
-        httpClient
-    );
-
-    datasourceAndContextParamsClient = new CredentialedHttpClient(
-        new BasicCredentials("datasourceAndContextParamsUser", "helloworld"),
-        httpClient
-    );
-
-    datasourceAndSysUserClient = new CredentialedHttpClient(
-        new BasicCredentials("datasourceAndSysUser", "helloworld"),
-        httpClient
-    );
-
-    datasourceWithStateUserClient = new CredentialedHttpClient(
-        new BasicCredentials("datasourceWithStateUser", "helloworld"),
-        httpClient
-    );
-
-    stateOnlyUserClient = new CredentialedHttpClient(
-        new BasicCredentials("stateOnlyUser", "helloworld"),
-        httpClient
-    );
-
-    internalSystemClient = new CredentialedHttpClient(
-        new BasicCredentials("druid_system", "warlock"),
+  /**
+   * Creates a HttpClient with the given user credentials.
+   * Implementations can override this method to return a different implementation of HttpClient
+   * than the basic CredentialedHttpClient.
+   */
+  protected HttpClient setupHttpClientForUser(String username, String password)
+  {
+    return new CredentialedHttpClient(
+        new BasicCredentials(username, password),
         httpClient
     );
   }

@@ -36,6 +36,7 @@ import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import java.util.List;
+import java.util.Properties;
 
 @Test(groups = TestNGGroup.SECURITY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -73,7 +74,7 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   protected void setupDatasourceOnlyUser() throws Exception
   {
     createUserAndRoleWithPermissions(
-        adminClient,
+        getHttpClient(User.ADMIN),
         "datasourceOnlyUser",
         "helloworld",
         "datasourceOnlyRole",
@@ -85,7 +86,7 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   protected void setupDatasourceAndContextParamsUser() throws Exception
   {
     createUserAndRoleWithPermissions(
-        adminClient,
+        getHttpClient(User.ADMIN),
         "datasourceAndContextParamsUser",
         "helloworld",
         "datasourceAndContextParamsRole",
@@ -97,7 +98,7 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   protected void setupDatasourceAndSysTableUser() throws Exception
   {
     createUserAndRoleWithPermissions(
-        adminClient,
+        getHttpClient(User.ADMIN),
         "datasourceAndSysUser",
         "helloworld",
         "datasourceAndSysRole",
@@ -109,7 +110,7 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   protected void setupDatasourceAndSysAndStateUser() throws Exception
   {
     createUserAndRoleWithPermissions(
-        adminClient,
+        getHttpClient(User.ADMIN),
         "datasourceWithStateUser",
         "helloworld",
         "datasourceWithStateRole",
@@ -121,7 +122,7 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   protected void setupSysTableAndStateOnlyUser() throws Exception
   {
     createUserAndRoleWithPermissions(
-        adminClient,
+        getHttpClient(User.ADMIN),
         "stateOnlyUser",
         "helloworld",
         "stateOnlyRole",
@@ -134,7 +135,7 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   {
     // create a new user+role that can read /status
     createUserAndRoleWithPermissions(
-        adminClient,
+        getHttpClient(User.ADMIN),
         "druid",
         "helloworld",
         "druidrole",
@@ -144,14 +145,14 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
     // create 100 users
     for (int i = 0; i < 100; i++) {
       HttpUtil.makeRequest(
-          adminClient,
+          getHttpClient(User.ADMIN),
           HttpMethod.POST,
           config.getCoordinatorUrl() + "/druid-ext/basic-security/authentication/db/basic/users/druid" + i,
           null
       );
 
       HttpUtil.makeRequest(
-          adminClient,
+          getHttpClient(User.ADMIN),
           HttpMethod.POST,
           config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/db/basic/users/druid" + i,
           null
@@ -162,14 +163,14 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
 
     // setup the last of 100 users and check that it works
     HttpUtil.makeRequest(
-        adminClient,
+        getHttpClient(User.ADMIN),
         HttpMethod.POST,
         config.getCoordinatorUrl() + "/druid-ext/basic-security/authentication/db/basic/users/druid99/credentials",
         jsonMapper.writeValueAsBytes(new BasicAuthenticatorCredentialUpdate("helloworld", 5000))
     );
 
     HttpUtil.makeRequest(
-        adminClient,
+        getHttpClient(User.ADMIN),
         HttpMethod.POST,
         config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/db/basic/users/druid99/roles/druidrole",
         null
@@ -203,6 +204,24 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   protected String getExpectedAvaticaAuthzError()
   {
     return EXPECTED_AVATICA_AUTHZ_ERROR;
+  }
+
+  @Override
+  protected Properties getAvaticaConnectionPropertiesForInvalidAdmin()
+  {
+    Properties connectionProperties = new Properties();
+    connectionProperties.setProperty("user", "admin");
+    connectionProperties.setProperty("password", "invalid_password");
+    return connectionProperties;
+  }
+
+  @Override
+  protected Properties getAvaticaConnectionPropertiesForUser(User user)
+  {
+    Properties connectionProperties = new Properties();
+    connectionProperties.setProperty("user", user.getName());
+    connectionProperties.setProperty("password", user.getPassword());
+    return connectionProperties;
   }
 
   private void createUserAndRoleWithPermissions(

@@ -42,6 +42,7 @@ import org.testng.annotations.Test;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 @Test(groups = TestNGGroup.LDAP_SECURITY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -80,7 +81,7 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   @Test
   public void test_systemSchemaAccess_stateOnlyNoLdapGroupUser() throws Exception
   {
-    HttpUtil.makeRequest(stateOnlyUserClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
+    HttpUtil.makeRequest(getHttpClient(User.STATE_ONLY_USER), HttpMethod.GET, config.getBrokerUrl() + "/status", null);
 
     // as user that can only read STATE
     LOG.info("Checking sys.segments query as stateOnlyNoLdapGroupUser...");
@@ -210,11 +211,30 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
     return EXPECTED_AVATICA_AUTHZ_ERROR;
   }
 
+  @Override
+  protected Properties getAvaticaConnectionPropertiesForInvalidAdmin()
+  {
+    Properties connectionProperties = new Properties();
+    connectionProperties.setProperty("user", "admin");
+    connectionProperties.setProperty("password", "invalid_password");
+    return connectionProperties;
+  }
+
+  @Override
+  protected Properties getAvaticaConnectionPropertiesForUser(User user)
+  {
+    Properties connectionProperties = new Properties();
+    connectionProperties.setProperty("user", user.getName());
+    connectionProperties.setProperty("password", user.getPassword());
+    return connectionProperties;
+  }
+
   private void createRoleWithPermissionsAndGroupMapping(
       String group,
       Map<String, List<ResourceAction>> roleTopermissions
   ) throws Exception
   {
+    final HttpClient adminClient = getHttpClient(User.ADMIN);
     roleTopermissions.keySet().forEach(role -> HttpUtil.makeRequest(
         adminClient,
         HttpMethod.POST,
@@ -266,6 +286,7 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
       String role
   )
   {
+    final HttpClient adminClient = getHttpClient(User.ADMIN);
     HttpUtil.makeRequest(
         adminClient,
         HttpMethod.POST,

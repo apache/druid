@@ -128,6 +128,11 @@ public class QueryContext
     );
   }
 
+  public boolean containsKey(String key)
+  {
+    return get(key) != null;
+  }
+
   @Nullable
   public Object get(String key)
   {
@@ -137,6 +142,12 @@ public class QueryContext
     }
     val = userParams.get(key);
     return val == null ? defaultParams.get(key) : val;
+  }
+
+  public Object getOrDefault(String key, Object defaultValue)
+  {
+    final Object val = get(key);
+    return val == null ? defaultValue : val;
   }
 
   @Nullable
