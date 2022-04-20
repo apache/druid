@@ -24,34 +24,36 @@ import com.google.common.collect.PeekingIterator;
 
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.PriorityQueue;
 
 /**
-*/
+ * Iterator that merges a collection of sorted iterators using a comparator.
+ *
+ * Similar to Guava's MergingIterator, but avoids calling next() on any iterator prior to returning the value
+ * returned by the previous call to next(). This is important when merging iterators that reuse container objects
+ * across calls to next().
+ *
+ * Used by {@link org.apache.druid.java.util.common.collect.Utils#mergeSorted(Iterable, Comparator)}.
+ */
 public class MergeIterator<T> implements Iterator<T>
 {
+  private static final int PRIORITY_QUEUE_INITIAL_CAPACITY = 16;
+
   private final PriorityQueue<PeekingIterator<T>> pQueue;
+  private PeekingIterator<T> currentIterator = null;
 
   public MergeIterator(
-      final Comparator<T> comparator,
-      List<Iterator<T>> iterators
+      final Iterable<? extends Iterator<? extends T>> sortedIterators,
+      final Comparator<? super T> comparator
   )
   {
     pQueue = new PriorityQueue<>(
-        16,
-        new Comparator<PeekingIterator<T>>()
-        {
-          @Override
-          public int compare(PeekingIterator<T> lhs, PeekingIterator<T> rhs)
-          {
-            return comparator.compare(lhs.peek(), rhs.peek());
-          }
-        }
+        PRIORITY_QUEUE_INITIAL_CAPACITY,
+        (lhs, rhs) -> comparator.compare(lhs.peek(), rhs.peek())
     );
 
-    for (Iterator<T> iterator : iterators) {
+    for (final Iterator<? extends T> iterator : sortedIterators) {
       final PeekingIterator<T> iter = Iterators.peekingIterator(iterator);
 
       if (iter != null && iter.hasNext()) {
@@ -64,7 +66,7 @@ public class MergeIterator<T> implements Iterator<T>
   @Override
   public boolean hasNext()
   {
-    return !pQueue.isEmpty();
+    return !pQueue.isEmpty() || (currentIterator != null && currentIterator.hasNext());
   }
 
   @Override
@@ -74,13 +76,19 @@ public class MergeIterator<T> implements Iterator<T>
       throw new NoSuchElementException();
     }
 
+    if (currentIterator != null) {
+      if (currentIterator.hasNext()) {
+        pQueue.add(currentIterator);
+      }
+
+      currentIterator = null;
+    }
+
     PeekingIterator<T> retIt = pQueue.remove();
     T retVal = retIt.next();
 
-    if (retIt.hasNext()) {
-      pQueue.add(retIt);
-    }
-
+    // Save currentIterator and add it back later, to avoid calling next() prior to returning the current value.
+    currentIterator = retIt;
     return retVal;
   }
 

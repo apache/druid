@@ -851,7 +851,7 @@ public class GroupByQueryEngineV2
     }
   }
 
-  private static class ArrayAggregateIterator extends GroupByEngineIterator<Integer>
+  private static class ArrayAggregateIterator extends GroupByEngineIterator<IntKey>
   {
     private final int cardinality;
 
@@ -895,13 +895,13 @@ public class GroupByQueryEngineV2
     }
 
     @Override
-    protected void aggregateSingleValueDims(Grouper<Integer> grouper)
+    protected void aggregateSingleValueDims(Grouper<IntKey> grouper)
     {
       aggregateSingleValueDims((IntGrouper) grouper);
     }
 
     @Override
-    protected void aggregateMultiValueDims(Grouper<Integer> grouper)
+    protected void aggregateMultiValueDims(Grouper<IntKey> grouper)
     {
       aggregateMultiValueDims((IntGrouper) grouper);
     }
@@ -971,11 +971,12 @@ public class GroupByQueryEngineV2
     }
 
     @Override
-    protected void putToRow(Integer key, ResultRow resultRow)
+    protected void putToRow(IntKey key, ResultRow resultRow)
     {
+      final int intKey = key.intValue();
       if (dim != null) {
-        if (key != GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE) {
-          resultRow.set(dim.getResultRowPosition(), ((DimensionSelector) dim.getSelector()).lookupName(key));
+        if (intKey != GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE) {
+          resultRow.set(dim.getResultRowPosition(), ((DimensionSelector) dim.getSelector()).lookupName(intKey));
         } else {
           resultRow.set(dim.getResultRowPosition(), NullHandling.defaultStringValue());
         }
@@ -1020,17 +1021,26 @@ public class GroupByQueryEngineV2
     }
 
     @Override
+    public ByteBuffer createKey()
+    {
+      return ByteBuffer.allocate(keySize);
+    }
+
+    @Override
     public ByteBuffer toByteBuffer(ByteBuffer key)
     {
       return key;
     }
 
     @Override
-    public ByteBuffer fromByteBuffer(ByteBuffer buffer, int position)
+    public void readFromByteBuffer(ByteBuffer dstBuffer, ByteBuffer srcBuffer, int position)
     {
-      final ByteBuffer dup = buffer.duplicate();
-      dup.position(position).limit(position + keySize);
-      return dup.slice();
+      dstBuffer.limit(keySize);
+      dstBuffer.position(0);
+
+      for (int i = 0; i < keySize; i++) {
+        dstBuffer.put(i, srcBuffer.get(position + i));
+      }
     }
 
     @Override
