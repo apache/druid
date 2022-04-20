@@ -1213,7 +1213,7 @@ public class DruidQuery
         // Cannot handle this ordering.
         // Scan cannot ORDER BY non-time columns.
         plannerContext.setPlanningError(
-            "SQL query requires order by non-time column on a datasource[%s], which is not supported.",
+            "SQL query is a scan and requires order by on a datasource[%s], which is not supported.",
             dataSource
         );
         return null;
