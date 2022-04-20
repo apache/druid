@@ -472,11 +472,11 @@
   </suppress>
 
   <suppress>
-    <!-- Suppress cves that aren't applicable to hadoop client -->
+    <!-- False alarm for the Async javascript library (https://github.com/caolan/async) which is a dev dependency for the web console -->
     <notes><![CDATA[
-    file name: hadoop-common-2.8.5.jar
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.hadoop/hadoop-common@2.8.5$</packageUrl>
-    <cve>CVE-2022-26612</cve>
+   file name: async-http-client-netty-utils-2.5.3.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.asynchttpclient/async-http-client-netty-utils@2.5.3$</packageUrl>
+    <cve>CVE-2021-43138</cve>
   </suppress>
 </suppressions>
