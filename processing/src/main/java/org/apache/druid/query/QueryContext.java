@@ -127,7 +127,7 @@ public class QueryContext
         QueryContexts.DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT
     );
   }
-
+  @SuppressWarnings("unused")
   public boolean containsKey(String key)
   {
     return get(key) != null;
@@ -144,6 +144,7 @@ public class QueryContext
     return val == null ? defaultParams.get(key) : val;
   }
 
+  @SuppressWarnings("unused")
   public Object getOrDefault(String key, Object defaultValue)
   {
     final Object val = get(key);
