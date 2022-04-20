@@ -24,9 +24,12 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
+
 public class WorkerTaskCountStatsMonitorTest
 {
   private WorkerTaskCountStatsProvider statsProvider;
+  private WorkerTaskCountStatsProvider nullStatsProvider;
 
   @Before
   public void setUp()
@@ -75,6 +78,58 @@ public class WorkerTaskCountStatsMonitorTest
         return "workerVersion";
       }
     };
+
+    nullStatsProvider = new WorkerTaskCountStatsProvider()
+    {
+      @Nullable
+      @Override
+      public Long getWorkerTotalTaskSlotCount()
+      {
+        return null;
+      }
+
+      @Nullable
+      @Override
+      public Long getWorkerFailedTaskCount()
+      {
+        return null;
+      }
+
+      @Nullable
+      @Override
+      public Long getWorkerIdleTaskSlotCount()
+      {
+        return null;
+      }
+
+      @Nullable
+      @Override
+      public Long getWorkerSuccessfulTaskCount()
+      {
+        return null;
+      }
+
+      @Nullable
+      @Override
+      public Long getWorkerUsedTaskSlotCount()
+      {
+        return null;
+      }
+
+      @Nullable
+      @Override
+      public String getWorkerCategory()
+      {
+        return null;
+      }
+
+      @Nullable
+      @Override
+      public String getWorkerVersion()
+      {
+        return null;
+      }
+    };
   }
 
   @Test
@@ -104,5 +159,14 @@ public class WorkerTaskCountStatsMonitorTest
     Assert.assertEquals("workerCategory", emitter.getEvents().get(4).toMap().get("category"));
     Assert.assertEquals("workerVersion", emitter.getEvents().get(4).toMap().get("version"));
     Assert.assertEquals(1L, emitter.getEvents().get(4).toMap().get("value"));
+  }
+
+  @Test
+  public void testMonitorWithNulls()
+  {
+    final WorkerTaskCountStatsMonitor monitor = new WorkerTaskCountStatsMonitor(nullStatsProvider);
+    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    monitor.doMonitor(emitter);
+    Assert.assertEquals(0, emitter.getEvents().size());
   }
 }

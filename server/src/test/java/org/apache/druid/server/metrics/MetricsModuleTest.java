@@ -41,6 +41,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.BasicMonitorScheduler;
 import org.apache.druid.java.util.metrics.ClockDriftSafeMonitorScheduler;
+import org.apache.druid.java.util.metrics.JvmMonitor;
+import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.server.DruidNode;
 import org.hamcrest.CoreMatchers;
@@ -81,6 +83,14 @@ public class MetricsModuleTest
                 binder,
                 Key.get(new TypeLiteral<Set<NodeRole>>(){}, Self.class),
                 nodeRoles
+            );
+            Set<Class<? extends Monitor>> monitorSet = new HashSet<>();
+            monitorSet.add(WorkerTaskCountStatsMonitor.class);
+            monitorSet.add(JvmMonitor.class);
+            JsonConfigProvider.bindInstance(
+                binder,
+                Key.get(new TypeLiteral<Set<Class<? extends Monitor>>>(){}),
+                monitorSet
             );
           }
         })
