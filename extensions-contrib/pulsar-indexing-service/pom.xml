@@ -37,16 +37,16 @@
         <netty-tc-native.version>2.0.0.Final</netty-tc-native.version>
     </properties>
 
-    <repositories>
-        <repository>
-            <id>central</id>
-            <layout>default</layout>
-            <url>https://repo1.maven.org/maven2</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
+<!--    <repositories>-->
+<!--        <repository>-->
+<!--            <id>central</id>-->
+<!--            <layout>default</layout>-->
+<!--            <url>https://repo1.maven.org/maven2</url>-->
+<!--            <snapshots>-->
+<!--                <enabled>false</enabled>-->
+<!--            </snapshots>-->
+<!--        </repository>-->
+<!--    </repositories>-->
 
     <dependencies>
         <!--        Druid deps-->
@@ -134,6 +134,15 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/com.google.guava/guava-concurrent -->
+<!--        <dependency>-->
+<!--            <groupId>com.google.guava</groupId>-->
+<!--            <artifactId>guava</artifactId>-->
+<!--            <scope>test</scope>-->
+<!--            <version>30.1-jre</version>-->
+<!--        </dependency>-->
+
+
 
         <!--        Pulsar Deps-->
         <dependency>
@@ -170,7 +179,14 @@
         <dependency>
             <groupId>org.apache.pulsar</groupId>
             <artifactId>testmocks</artifactId>
-            <version>2.7.2</version>
+            <version>${apache.pulsar.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.pulsar</groupId>
+            <artifactId>buildtools</artifactId>
+            <version>${apache.pulsar.version}</version>
             <scope>test</scope>
         </dependency>
 

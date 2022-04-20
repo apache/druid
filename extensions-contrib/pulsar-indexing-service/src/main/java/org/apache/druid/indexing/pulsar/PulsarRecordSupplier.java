@@ -19,10 +19,13 @@
 
 package org.apache.druid.indexing.pulsar;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.annotations.VisibleForTesting;
+import io.vavr.Function2;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -34,7 +37,6 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.druid.data.input.impl.ByteEntity;
-import org.apache.druid.indexing.pulsar.PulsarSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
@@ -59,29 +61,44 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
   private static final EmittingLogger log = new EmittingLogger(PulsarRecordSupplier.class);
   private PulsarClientException previousSeekFailure;
   private final BlockingQueue<Message<byte[]>> received;
-  private final Long maxRecordsInSinglePoll;
+  private final Integer maxRecordsInSinglePoll;
+  private final Function2<PulsarClient, String, CompletableFuture<Reader<byte[]>>> consumerBuilder;
 
-  public PulsarRecordSupplier(String serviceUrl, String readerName, Long maxRecordsInSinglePoll) {
+  public PulsarRecordSupplier(String serviceUrl, String readerName, Integer maxRecordsInSinglePoll) {
+    try {
     this.readerName = readerName;
     this.maxRecordsInSinglePoll = maxRecordsInSinglePoll;
     this.received = new ArrayBlockingQueue<>(this.maxRecordsInSinglePoll);
+    this.consumerBuilder = buildConsumer;
 
-    try {
       client = PulsarClient.builder().serviceUrl(serviceUrl).build();
     } catch (PulsarClientException e) {
       throw new RuntimeException(e);
     }
   }
 
-  protected CompletableFuture<Reader<byte[]>> buildConsumer(PulsarClient client, String topic)
+  @VisibleForTesting
+  public PulsarRecordSupplier(
+   String serviceUrl, String readerName, Integer maxRecordsInSinglePoll, PulsarClient client,  Function2<PulsarClient, String, CompletableFuture<Reader<byte[]>>> buildConsumer
+  )
   {
+    this.readerName = readerName;
+    this.maxRecordsInSinglePoll = maxRecordsInSinglePoll;
+    this.received = new ArrayBlockingQueue<>(this.maxRecordsInSinglePoll);
+    this.client = client;
+    this.consumerBuilder = buildConsumer;
+  }
+
+  protected static Function2<PulsarClient, String, CompletableFuture<Reader<byte[]>>> buildConsumer = (PulsarClient client, String topic) -> {
+    String readerName =  topic + "-reader";
     return client.newReader()
       .readerName(readerName)
       .topic(topic)
       .startMessageId(MessageId.latest)
       .startMessageIdInclusive()
       .createAsync();
-  }
+  };
+
 
 
   @Override
@@ -99,7 +116,7 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
           .getPartition(partition.getPartitionId())
           .toString();
 
-        futures.add(buildConsumer(client, topic).thenApplyAsync(reader -> {
+        futures.add(consumerBuilder.apply(client, topic).thenApplyAsync(reader -> {
           if (readerPartitions.containsKey(partition)) {
             reader.closeAsync();
           } else {
@@ -130,7 +147,8 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
   public void seek(StreamPartition<Integer> partition, Long sequenceNumber) throws InterruptedException {
     CursorContainer reader = readerPartitions.get(partition);
     if (reader == null) {
-      throw new IllegalArgumentException(String.format("Cannot seek on a partition [%s] where we are not assigned", partition));
+      String err = String.format(Locale.ENGLISH, "Cannot seek on a partition [%s] where we are not assigned", partition);
+      throw new IllegalArgumentException();
     }
 
     try {
@@ -212,7 +230,7 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
           sp.getStream(),
           sp.getPartitionId(),
           offset.get(),
-          ImmutableList.of(new ByteEntity(item.getValue()))
+          Collections.singletonList(new ByteEntity(item.getValue()))
         ));
 
         if (++numberOfRecords >= maxRecordsInSinglePoll) {
@@ -246,7 +264,7 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
   public Long getPosition(StreamPartition<Integer> partition) {
     CursorContainer reader = readerPartitions.get(partition);
     if (reader == null) {
-      throw new IllegalArgumentException(String.format("Cannot seek on a partition [%s] where we are not assigned", partition));
+      throw new IllegalArgumentException(String.format(Locale.ENGLISH ,"Cannot seek on a partition [%s] where we are not assigned", partition));
     }
     return PulsarSequenceNumber.of(reader.position).get();
   }
