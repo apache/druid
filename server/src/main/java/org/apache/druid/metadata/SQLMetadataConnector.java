@@ -417,6 +417,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     final MetadataStorageTablesConfig tablesConfig = tablesConfigSupplier.get();
     final String entryType = tablesConfig.getTaskEntryType();
     final String tableName = tablesConfig.getEntryTable(entryType);
+    return migrateTaskTable(tableName);
+  }
+
+  public boolean migrateTaskTable(String tableName)
+  {
     log.info("Populate fields task and group_id of task entry table [%s] from payload", tableName);
     try {
       retryWithHandle(

@@ -326,10 +326,10 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public List<TaskStatusPlus> getTaskStatusPlusList(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String dataSource,
-      boolean taskMigrationComplete
+      boolean fetchPayload
   )
   {
-    taskStatusPlusMapper.setUsePayload(!taskMigrationComplete);
+    taskStatusPlusMapper.setUsePayload(fetchPayload);
     return getConnector().retryTransaction(
         (handle, status) -> {
           final List<TaskStatusPlus> taskStatusPlusList = new ArrayList<>();
@@ -337,7 +337,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
             final Query<Map<String, Object>> query;
             switch (entry.getKey()) {
               case ACTIVE:
-                query = taskMigrationComplete
+                query = !fetchPayload
                         ? createActiveTaskSummaryStreamingQuery(handle, dataSource)
                         : createActiveTaskStreamingQuery(handle, dataSource);
                 taskStatusPlusList.addAll(query.map(taskStatusPlusMapper).list());
@@ -346,7 +346,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                 CompleteTaskLookup completeTaskLookup = (CompleteTaskLookup) entry.getValue();
                 DateTime priorTo = completeTaskLookup.getTasksCreatedPriorTo();
                 Integer limit = completeTaskLookup.getMaxTaskStatuses();
-                query = taskMigrationComplete
+                query = !fetchPayload
                         ? createCompletedTaskSummaryStreamingQuery(handle, priorTo, limit, dataSource)
                         : createCompletedTaskStreamingQuery(handle, priorTo, limit, dataSource);
                 taskStatusPlusList.addAll(query.map(taskStatusPlusMapper).list());

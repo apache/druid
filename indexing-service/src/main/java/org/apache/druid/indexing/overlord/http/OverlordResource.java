@@ -769,21 +769,7 @@ public class OverlordResource
       if (runnerWorkItem == null) {
         // a task is assumed to be a waiting task if it exists in taskStorage but not in taskRunner.
         if (state == TaskStateLookup.WAITING || state == TaskStateLookup.ALL) {
-          taskStatuses.add(
-              new TaskStatusPlus(
-                  statusPlus.getId(),
-                  statusPlus.getGroupId(),
-                  statusPlus.getType(),
-                  statusPlus.getCreatedTime(),
-                  statusPlus.getQueueInsertionTime(),
-                  statusPlus.getStatusCode(),
-                  RunnerTaskState.WAITING,
-                  statusPlus.getDuration(),
-                  statusPlus.getLocation(),
-                  statusPlus.getDataSource(),
-                  statusPlus.getErrorMsg()
-              )
-          );
+          taskStatuses.add(statusPlus);
         }
       } else {
         if (state == TaskStateLookup.PENDING || state == TaskStateLookup.RUNNING || state == TaskStateLookup.ALL) {
