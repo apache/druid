@@ -20,9 +20,9 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.server.coordinator.cost.ClusterCostCache;
+import org.apache.druid.server.coordinator.cost.SegmentsCostCache;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Set;
@@ -59,7 +59,7 @@ public class CachingCostBalancerStrategy extends CostBalancerStrategy
     double cost = clusterCostCache.computeCost(serverName, proposalSegment);
 
     // add segments that will be loaded to the cost
-    cost += costCacheForLoadingSegments(server).computeCost(serverName, proposalSegment);
+    cost += costCacheForLoadingSegments(server, proposalSegment);
 
     if (server.getAvailableSize() <= 0) {
       return Double.POSITIVE_INFINITY;
@@ -70,10 +70,19 @@ public class CachingCostBalancerStrategy extends CostBalancerStrategy
     return cost * (server.getMaxSize() / server.getAvailableSize());
   }
 
-  private ClusterCostCache costCacheForLoadingSegments(ServerHolder server)
+  private double costCacheForLoadingSegments(ServerHolder server, DataSegment proposalSegment)
   {
+    final double t0 = proposalSegment.getInterval().getStartMillis();
+    final double t1 = (proposalSegment.getInterval().getEndMillis() - t0) / SegmentsCostCache.MILLIS_FACTOR;
+    double costForLoadingSegments = 0d;
     final Set<DataSegment> loadingSegments = server.getPeon().getSegmentsToLoad();
-    return ClusterCostCache.builder(ImmutableMap.of(server.getServer().getName(), loadingSegments)).build();
+    for (DataSegment segment : loadingSegments) {
+      final double start = (segment.getInterval().getStartMillis() - t0) / SegmentsCostCache.MILLIS_FACTOR;
+      final double end = (segment.getInterval().getEndMillis() - t0) / SegmentsCostCache.MILLIS_FACTOR;
+      final double multiplier = segment.getDataSource().equals(proposalSegment.getDataSource()) ? 2d : 1d;
+      costForLoadingSegments += multiplier * intervalCost(t1, start, end);
+    }
+    return costForLoadingSegments;
   }
 
 }

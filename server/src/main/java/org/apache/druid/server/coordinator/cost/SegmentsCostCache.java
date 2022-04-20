@@ -95,7 +95,7 @@ public class SegmentsCostCache
    */
   private static final double HALF_LIFE_DAYS = 1.0;
   private static final double LAMBDA = Math.log(2) / HALF_LIFE_DAYS;
-  private static final double MILLIS_FACTOR = TimeUnit.DAYS.toMillis(1) / LAMBDA;
+  public static final double MILLIS_FACTOR = TimeUnit.DAYS.toMillis(1) / LAMBDA;
 
   /**
    * LIFE_THRESHOLD is used to avoid calculations for segments that are "far"
