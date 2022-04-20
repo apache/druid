@@ -486,5 +486,6 @@
     file name: hadoop-common-2.8.5.jar
     ]]></notes>
     <cve>CVE-2022-26612</cve>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.hadoop/hadoop-common@2.8.5$</packageUrl>
   </suppress>
 </suppressions>
