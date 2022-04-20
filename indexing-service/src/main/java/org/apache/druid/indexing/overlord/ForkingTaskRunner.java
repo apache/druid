@@ -757,7 +757,6 @@ public class ForkingTaskRunner
   public Long getWorkerUsedTaskSlotCount()
   {
     return (long) portFinder.findUsedPortCount();
-    //return RUNNING_TASK_COUNT.get();
   }
 
   @Override
