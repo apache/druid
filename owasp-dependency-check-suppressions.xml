@@ -470,4 +470,12 @@
     ]]></notes>
     <cve>CVE-2021-43045</cve>
   </suppress>
+
+  <suppress>
+    <!-- Suppress cves that aren't applicable to hadoop client -->
+    <notes><![CDATA[
+    file name: hadoop-common-2.8.5.jar
+    ]]></notes>
+    <cve>CVE-2022-26612</cve>
+  </suppress>
 </suppressions>
