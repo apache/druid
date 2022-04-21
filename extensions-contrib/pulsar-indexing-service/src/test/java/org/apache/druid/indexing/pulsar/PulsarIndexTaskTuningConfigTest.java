@@ -19,11 +19,8 @@
 
 package org.apache.druid.indexing.pulsar;
 
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.File;
-import java.io.IOException;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.indexing.pulsar.supervisor.PulsarSupervisorTuningConfig;
 import org.apache.druid.indexing.pulsar.test.TestModifiedPulsarIndexTaskTuningConfig;
@@ -32,36 +29,40 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.TuningConfig;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-public class PulsarIndexTaskTuningConfigTest {
+import java.io.File;
+import java.io.IOException;
+
+public class PulsarIndexTaskTuningConfigTest
+{
+  @Rule
+  public final ExpectedException exception = ExpectedException.none();
   private final ObjectMapper mapper;
 
-  public PulsarIndexTaskTuningConfigTest() {
+  public PulsarIndexTaskTuningConfigTest()
+  {
     mapper = new DefaultObjectMapper();
     mapper.registerModules((Iterable<Module>) new PulsarIndexingServiceModule().getJacksonModules());
   }
 
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
-
   @Test
-  public void testSerdeWithDefaults() throws Exception {
+  public void testSerdeWithDefaults() throws Exception
+  {
     String jsonStr = "{\"type\": \"pulsar\"}";
 
     PulsarIndexTaskTuningConfig config = (PulsarIndexTaskTuningConfig) mapper.readValue(
-      mapper.writeValueAsString(
-        mapper.readValue(
-          jsonStr,
-          TuningConfig.class
-        )
-      ),
-      TuningConfig.class
+        mapper.writeValueAsString(
+            mapper.readValue(
+                jsonStr,
+                TuningConfig.class
+            )
+        ),
+        TuningConfig.class
     );
 
     Assert.assertNotNull(config.getBasePersistDirectory());
@@ -78,7 +79,8 @@ public class PulsarIndexTaskTuningConfigTest {
   }
 
   @Test
-  public void testSerdeWithNonDefaults() throws Exception {
+  public void testSerdeWithNonDefaults() throws Exception
+  {
     String jsonStr = "{\n"
                      + "  \"type\": \"pulsar\",\n"
                      + "  \"basePersistDirectory\": \"/tmp/xxx\",\n"
@@ -95,13 +97,13 @@ public class PulsarIndexTaskTuningConfigTest {
                      + "}";
 
     PulsarIndexTaskTuningConfig config = (PulsarIndexTaskTuningConfig) mapper.readValue(
-      mapper.writeValueAsString(
-        mapper.readValue(
-          jsonStr,
-          TuningConfig.class
-        )
-      ),
-      TuningConfig.class
+        mapper.writeValueAsString(
+            mapper.readValue(
+                jsonStr,
+                TuningConfig.class
+            )
+        ),
+        TuningConfig.class
     );
 
     Assert.assertEquals(new File("/tmp/xxx"), config.getBasePersistDirectory());
@@ -116,38 +118,39 @@ public class PulsarIndexTaskTuningConfigTest {
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
     Assert.assertEquals(new IndexSpec(null, null, CompressionStrategy.NONE, null), config.getIndexSpec());
     Assert.assertEquals(new IndexSpec(null, CompressionStrategy.UNCOMPRESSED, null, null),
-      config.getIndexSpecForIntermediatePersists());
+        config.getIndexSpecForIntermediatePersists());
   }
 
   @Test
-  public void testConvert() {
+  public void testConvert()
+  {
     PulsarSupervisorTuningConfig original = new PulsarSupervisorTuningConfig(
-      null,
-      1,
-      null,
-      null,
-      2,
-      10L,
-      new Period("PT3S"),
-      new File("/tmp/xxx"),
-      4,
-      new IndexSpec(),
-      new IndexSpec(),
-      true,
-      5L,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+        null,
+        1,
+        null,
+        null,
+        2,
+        10L,
+        new Period("PT3S"),
+        new File("/tmp/xxx"),
+        4,
+        new IndexSpec(),
+        new IndexSpec(),
+        true,
+        5L,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
     );
     PulsarIndexTaskTuningConfig copy = (PulsarIndexTaskTuningConfig) original.convertToTaskTuningConfig();
 
@@ -165,33 +168,34 @@ public class PulsarIndexTaskTuningConfigTest {
   }
 
   @Test
-  public void testSerdeWithModifiedTuningConfigAddedField() throws IOException {
+  public void testSerdeWithModifiedTuningConfigAddedField() throws IOException
+  {
     PulsarIndexTaskTuningConfig base = new PulsarIndexTaskTuningConfig(
-      null,
-      1,
-      null,
-      null,
-      2,
-      10L,
-      new Period("PT3S"),
-      new File("/tmp/xxx"),
-      4,
-      new IndexSpec(),
-      new IndexSpec(),
-      true,
-      5L,
-      null,
-      null,
-      null,
-      null,
-      true,
-      42,
-      42
+        null,
+        1,
+        null,
+        null,
+        2,
+        10L,
+        new Period("PT3S"),
+        new File("/tmp/xxx"),
+        4,
+        new IndexSpec(),
+        new IndexSpec(),
+        true,
+        5L,
+        null,
+        null,
+        null,
+        null,
+        true,
+        42,
+        42
     );
 
     String serialized = mapper.writeValueAsString(base);
     TestModifiedPulsarIndexTaskTuningConfig deserialized =
-      mapper.readValue(serialized, TestModifiedPulsarIndexTaskTuningConfig.class);
+        mapper.readValue(serialized, TestModifiedPulsarIndexTaskTuningConfig.class);
 
     Assert.assertEquals(null, deserialized.getExtra());
     Assert.assertEquals(base.getAppendableIndexSpec(), deserialized.getAppendableIndexSpec());
@@ -217,31 +221,31 @@ public class PulsarIndexTaskTuningConfigTest {
   public void testSerdeWithModifiedTuningConfigRemovedField() throws IOException
   {
     PulsarIndexTaskTuningConfig base = new PulsarIndexTaskTuningConfig(
-      null,
-      1,
-      null,
-      null,
-      2,
-      10L,
-      new Period("PT3S"),
-      new File("/tmp/xxx"),
-      4,
-      new IndexSpec(),
-      new IndexSpec(),
-      true,
-      5L,
-      null,
-      null,
-      null,
-      null,
-      true,
-      42,
-      42
+        null,
+        1,
+        null,
+        null,
+        2,
+        10L,
+        new Period("PT3S"),
+        new File("/tmp/xxx"),
+        4,
+        new IndexSpec(),
+        new IndexSpec(),
+        true,
+        5L,
+        null,
+        null,
+        null,
+        null,
+        true,
+        42,
+        42
     );
 
     String serialized = mapper.writeValueAsString(new TestModifiedPulsarIndexTaskTuningConfig(base, "loool"));
     PulsarIndexTaskTuningConfig deserialized =
-      mapper.readValue(serialized, PulsarIndexTaskTuningConfig.class);
+        mapper.readValue(serialized, PulsarIndexTaskTuningConfig.class);
 
     Assert.assertEquals(base.getAppendableIndexSpec(), deserialized.getAppendableIndexSpec());
     Assert.assertEquals(base.getMaxRowsInMemory(), deserialized.getMaxRowsInMemory());
@@ -263,10 +267,11 @@ public class PulsarIndexTaskTuningConfigTest {
   }
 
   @Test
-  public void testEqualsAndHashCode() {
+  public void testEqualsAndHashCode()
+  {
     EqualsVerifier.forClass(PulsarIndexTaskTuningConfig.class)
-      .usingGetClass()
-      .verify();
+        .usingGetClass()
+        .verify();
   }
 
 }

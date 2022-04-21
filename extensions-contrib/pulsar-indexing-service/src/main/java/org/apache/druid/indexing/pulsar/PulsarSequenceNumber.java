@@ -19,18 +19,22 @@
 
 package org.apache.druid.indexing.pulsar;
 
-import javax.validation.constraints.NotNull;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.util.MessageIdUtils;
 
-public class PulsarSequenceNumber extends OrderedSequenceNumber<Long> {
+import javax.validation.constraints.NotNull;
+
+public class PulsarSequenceNumber extends OrderedSequenceNumber<Long>
+{
   public static final Long LATEST_OFFSET = MessageIdUtils.getOffset(MessageId.latest);
   public static final Long EARLIEST_OFFSET = MessageIdUtils.getOffset(MessageId.earliest);
 
-  protected PulsarSequenceNumber(Long sequenceNumber) {
+  protected PulsarSequenceNumber(Long sequenceNumber)
+  {
     super(sequenceNumber, false);
   }
+
   public static PulsarSequenceNumber of(Long sequenceNumber)
   {
     return new PulsarSequenceNumber(sequenceNumber);
@@ -48,7 +52,8 @@ public class PulsarSequenceNumber extends OrderedSequenceNumber<Long> {
   }
 
   @Override
-  public int compareTo(@NotNull OrderedSequenceNumber<Long> o) {
+  public int compareTo(@NotNull OrderedSequenceNumber<Long> o)
+  {
     return this.get().compareTo(o.get());
   }
 

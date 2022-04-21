@@ -3,8 +3,6 @@ package org.apache.druid.indexing.pulsar;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import java.util.Map;
-import javax.annotation.Nullable;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.indexing.pulsar.supervisor.PulsarSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
@@ -13,49 +11,56 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbe
 import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 
-public class PulsarIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Integer, Long> {
+import javax.annotation.Nullable;
+
+import java.util.Map;
+
+public class PulsarIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Integer, Long>
+{
   private final Map<String, Object> consumerProperties;
   private final long pollTimeout;
   private final String serviceUrl;
 
   @JsonCreator
-  public PulsarIndexTaskIOConfig(@JsonProperty("taskGroupId") @Nullable Integer taskGroupId, // can be null for backward compabitility
+  public PulsarIndexTaskIOConfig(@JsonProperty("taskGroupId") @Nullable Integer taskGroupId,
+                                 // can be null for backward compabitility
                                  @JsonProperty("baseSequenceName") String baseSequenceName,
                                  // startPartitions and endPartitions exist to be able to read old ioConfigs in metadata store
                                  @JsonProperty("startPartitions") @Nullable
-                                   @Deprecated SeekableStreamEndSequenceNumbers<Integer, Long> startPartitions,
+                                 @Deprecated SeekableStreamEndSequenceNumbers<Integer, Long> startPartitions,
                                  @JsonProperty("endPartitions") @Nullable
-                                   @Deprecated SeekableStreamEndSequenceNumbers<Integer, Long> endPartitions,
+                                 @Deprecated SeekableStreamEndSequenceNumbers<Integer, Long> endPartitions,
                                  // startSequenceNumbers and endSequenceNumbers must be set for new versions
                                  @JsonProperty("startSequenceNumbers")
-                                   @Nullable SeekableStreamStartSequenceNumbers<Integer, Long> startSequenceNumbers,
+                                 @Nullable SeekableStreamStartSequenceNumbers<Integer, Long> startSequenceNumbers,
                                  @JsonProperty("endSequenceNumbers")
-                                   @Nullable SeekableStreamEndSequenceNumbers<Integer, Long> endSequenceNumbers,
+                                 @Nullable SeekableStreamEndSequenceNumbers<Integer, Long> endSequenceNumbers,
                                  @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
                                  @JsonProperty("pollTimeout") Long pollTimeout,
                                  @JsonProperty("useTransaction") Boolean useTransaction,
                                  @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
                                  @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
-                                 @JsonProperty("inputFormat") @Nullable InputFormat inputFormat) {
+                                 @JsonProperty("inputFormat") @Nullable InputFormat inputFormat)
+  {
     super(
-      taskGroupId,
-      baseSequenceName,
-      startSequenceNumbers == null
-        ? Preconditions.checkNotNull(startPartitions, "startPartitions").asStartPartitions(true)
-        : startSequenceNumbers,
-      endSequenceNumbers == null ? endPartitions : endSequenceNumbers,
-      useTransaction,
-      minimumMessageTime,
-      maximumMessageTime,
-      inputFormat
+        taskGroupId,
+        baseSequenceName,
+        startSequenceNumbers == null
+            ? Preconditions.checkNotNull(startPartitions, "startPartitions").asStartPartitions(true)
+            : startSequenceNumbers,
+        endSequenceNumbers == null ? endPartitions : endSequenceNumbers,
+        useTransaction,
+        minimumMessageTime,
+        maximumMessageTime,
+        inputFormat
     );
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     this.pollTimeout = pollTimeout != null ? pollTimeout : PulsarSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS;
 
     Preconditions.checkNotNull(
-      consumerProperties.get(PulsarSupervisorIOConfig.SERVICE_URL_KEY),
-      StringUtils.format("consumerProperties must contain entry for [%s]", PulsarSupervisorIOConfig.SERVICE_URL_KEY)
+        consumerProperties.get(PulsarSupervisorIOConfig.SERVICE_URL_KEY),
+        StringUtils.format("consumerProperties must contain entry for [%s]", PulsarSupervisorIOConfig.SERVICE_URL_KEY)
     );
 
     this.serviceUrl = (String) consumerProperties.get(PulsarSupervisorIOConfig.SERVICE_URL_KEY);
@@ -63,41 +68,41 @@ public class PulsarIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Int
     final SeekableStreamEndSequenceNumbers<Integer, Long> myEndSequenceNumbers = getEndSequenceNumbers();
     for (int partition : myEndSequenceNumbers.getPartitionSequenceNumberMap().keySet()) {
       Preconditions.checkArgument(
-        myEndSequenceNumbers.getPartitionSequenceNumberMap()
-          .get(partition)
-          .compareTo(getStartSequenceNumbers().getPartitionSequenceNumberMap().get(partition)) >= 0,
-        "end offset must be >= start offset for partition[%s]",
-        partition
+          myEndSequenceNumbers.getPartitionSequenceNumberMap()
+              .get(partition)
+              .compareTo(getStartSequenceNumbers().getPartitionSequenceNumberMap().get(partition)) >= 0,
+          "end offset must be >= start offset for partition[%s]",
+          partition
       );
     }
   }
 
   public PulsarIndexTaskIOConfig(
-    int taskGroupId,
-    String baseSequenceName,
-    SeekableStreamStartSequenceNumbers<Integer, Long> startSequenceNumbers,
-    SeekableStreamEndSequenceNumbers<Integer, Long> endSequenceNumbers,
-    Map<String, Object> consumerProperties,
-    Long pollTimeout,
-    Boolean useTransaction,
-    DateTime minimumMessageTime,
-    DateTime maximumMessageTime,
-    InputFormat inputFormat
+      int taskGroupId,
+      String baseSequenceName,
+      SeekableStreamStartSequenceNumbers<Integer, Long> startSequenceNumbers,
+      SeekableStreamEndSequenceNumbers<Integer, Long> endSequenceNumbers,
+      Map<String, Object> consumerProperties,
+      Long pollTimeout,
+      Boolean useTransaction,
+      DateTime minimumMessageTime,
+      DateTime maximumMessageTime,
+      InputFormat inputFormat
   )
   {
     this(
-      taskGroupId,
-      baseSequenceName,
-      null,
-      null,
-      startSequenceNumbers,
-      endSequenceNumbers,
-      consumerProperties,
-      pollTimeout,
-      useTransaction,
-      minimumMessageTime,
-      maximumMessageTime,
-      inputFormat
+        taskGroupId,
+        baseSequenceName,
+        null,
+        null,
+        startSequenceNumbers,
+        endSequenceNumbers,
+        consumerProperties,
+        pollTimeout,
+        useTransaction,
+        minimumMessageTime,
+        maximumMessageTime,
+        inputFormat
     );
   }
 
@@ -113,8 +118,8 @@ public class PulsarIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Int
     // Converting to start sequence numbers. This is allowed for Pulsar because the start offset is always inclusive.
     final SeekableStreamStartSequenceNumbers<Integer, Long> startSequenceNumbers = getStartSequenceNumbers();
     return new SeekableStreamEndSequenceNumbers<>(
-      startSequenceNumbers.getStream(),
-      startSequenceNumbers.getPartitionSequenceNumberMap()
+        startSequenceNumbers.getStream(),
+        startSequenceNumbers.getPartitionSequenceNumberMap()
     );
   }
 
@@ -157,7 +162,8 @@ public class PulsarIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Int
            '}';
   }
 
-  public String getServiceUrl() {
+  public String getServiceUrl()
+  {
     return serviceUrl;
   }
 }

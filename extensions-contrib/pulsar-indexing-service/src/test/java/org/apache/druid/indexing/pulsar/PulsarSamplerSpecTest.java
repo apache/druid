@@ -23,10 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.ByteEntity;
@@ -57,74 +53,85 @@ import org.easymock.EasyMockSupport;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class PulsarSamplerSpecTest extends EasyMockSupport {
-  private final PulsarRecordSupplier recordSupplier = mock(PulsarRecordSupplier.class);
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+
+public class PulsarSamplerSpecTest extends EasyMockSupport
+{
   private static final String STREAM = "sampling";
   private static final Integer SHARD_ID = 1;
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
   private static final DataSchema DATA_SCHEMA = new DataSchema(
-    "test_ds",
-    new TimestampSpec("timestamp", "iso", null),
-    new DimensionsSpec(
-      Arrays.asList(
-        new StringDimensionSchema("dim1"),
-        new StringDimensionSchema("dim1t"),
-        new StringDimensionSchema("dim2"),
-        new LongDimensionSchema("dimLong"),
-        new FloatDimensionSchema("dimFloat")
-      )
-    ),
-    new AggregatorFactory[]{
-      new DoubleSumAggregatorFactory("met1sum", "met1"),
-      new CountAggregatorFactory("rows")
-    },
-    new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
-    null
+      "test_ds",
+      new TimestampSpec("timestamp", "iso", null),
+      new DimensionsSpec(
+          Arrays.asList(
+              new StringDimensionSchema("dim1"),
+              new StringDimensionSchema("dim1t"),
+              new StringDimensionSchema("dim2"),
+              new LongDimensionSchema("dimLong"),
+              new FloatDimensionSchema("dimFloat")
+          )
+      ),
+      new AggregatorFactory[] {
+          new DoubleSumAggregatorFactory("met1sum", "met1"),
+          new CountAggregatorFactory("rows")
+      },
+      new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
+      null
   );
 
   static {
     NullHandling.initializeForTests();
   }
 
-  private static List<ByteEntity> jb(String ts, String dim1, String dim2, String dimLong, String dimFloat, String met1) {
+  private final PulsarRecordSupplier recordSupplier = mock(PulsarRecordSupplier.class);
+
+  private static List<ByteEntity> jb(String ts, String dim1, String dim2, String dimLong, String dimFloat,
+                                     String met1)
+  {
     try {
       return Collections.singletonList(new ByteEntity(new ObjectMapper().writeValueAsBytes(
-        ImmutableMap.builder()
-          .put("timestamp", ts)
-          .put("dim1", dim1)
-          .put("dim2", dim2)
-          .put("dimLong", dimLong)
-          .put("dimFloat", dimFloat)
-          .put("met1", met1)
-          .build()
+          ImmutableMap.builder()
+              .put("timestamp", ts)
+              .put("dim1", dim1)
+              .put("dim2", dim2)
+              .put("dimLong", dimLong)
+              .put("dimFloat", dimFloat)
+              .put("met1", met1)
+              .build()
       )));
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
   }
 
-    private static List<OrderedPartitionableRecord<Integer, Long, ByteEntity>> generateRecords(String stream) {
-      return ImmutableList.of(
+  private static List<OrderedPartitionableRecord<Integer, Long, ByteEntity>> generateRecords(String stream)
+  {
+    return ImmutableList.of(
         new OrderedPartitionableRecord<>(stream, 1, 1l, jb("2008", "a", "y", "10", "20.0", "1.0")),
         new OrderedPartitionableRecord<>(stream, 1, 1l, jb("2009", "b", "y", "10", "20.0", "1.0")),
         new OrderedPartitionableRecord<>(stream, 1, 1l, jb("2010", "c", "y", "10", "20.0", "1.0")),
         new OrderedPartitionableRecord<>(
-          stream,
-          1, 1l,
-          jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")
+            stream,
+            1, 1l,
+            jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")
         ),
         new OrderedPartitionableRecord<>(
-          stream,
-          1, 1l,
-          Collections.singletonList(new ByteEntity(StringUtils.toUtf8("unparseable")))
+            stream,
+            1, 1l,
+            Collections.singletonList(new ByteEntity(StringUtils.toUtf8("unparseable")))
         ),
-        new OrderedPartitionableRecord<>(stream,1, 1l,
-          Collections.singletonList(new ByteEntity(StringUtils.toUtf8("{}"))))
-      );
-    }
+        new OrderedPartitionableRecord<>(stream, 1, 1l,
+            Collections.singletonList(new ByteEntity(StringUtils.toUtf8("{}"))))
+    );
+  }
 
-    @Test(timeout = 10_000L)
-  public void testSample() throws Exception {
+  @Test(timeout = 10_000L)
+  public void testSample() throws Exception
+  {
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).once();
 
     recordSupplier.assign(ImmutableSet.of(StreamPartition.of(STREAM, SHARD_ID)));
@@ -140,27 +147,27 @@ public class PulsarSamplerSpecTest extends EasyMockSupport {
 
     replayAll();
 
-      PulsarSupervisorSpec supervisorSpec = new PulsarSupervisorSpec(
+    PulsarSupervisorSpec supervisorSpec = new PulsarSupervisorSpec(
         null,
         DATA_SCHEMA,
         null,
         new PulsarSupervisorIOConfig(
-          STREAM,
-          new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
-          null,
-          null,
-          null,
-          ImmutableMap.of("serviceUrl", "pulsar://localhost"),
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
-          ),
+            STREAM,
+            new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
+            null,
+            null,
+            null,
+            ImmutableMap.of("serviceUrl", "pulsar://localhost"),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ),
         null,
         null,
         null,
@@ -172,119 +179,119 @@ public class PulsarSamplerSpecTest extends EasyMockSupport {
         null,
         null,
         null
-      );
+    );
 
-      PulsarSamplerSpec samplerSpec = new TestablePulsarSamplerSpec(
+    PulsarSamplerSpec samplerSpec = new TestablePulsarSamplerSpec(
         supervisorSpec,
         new SamplerConfig(5, null),
         new InputSourceSampler()
-      );
+    );
 
-      SamplerResponse response = samplerSpec.sample();
+    SamplerResponse response = samplerSpec.sample();
 
-      verifyAll();
+    verifyAll();
 
-      Assert.assertEquals(5, response.getNumRowsRead());
-      Assert.assertEquals(3, response.getNumRowsIndexed());
-      Assert.assertEquals(5, response.getData().size());
+    Assert.assertEquals(5, response.getNumRowsRead());
+    Assert.assertEquals(3, response.getNumRowsIndexed());
+    Assert.assertEquals(5, response.getData().size());
 
-      Iterator<SamplerResponse.SamplerResponseRow> it = response.getData().iterator();
+    Iterator<SamplerResponse.SamplerResponseRow> it = response.getData().iterator();
 
-      Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
+    Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
         ImmutableMap.<String, Object>builder()
-          .put("timestamp", "2008")
-          .put("dim1", "a")
-          .put("dim2", "y")
-          .put("dimLong", "10")
-          .put("dimFloat", "20.0")
-          .put("met1", "1.0")
-          .build(),
+            .put("timestamp", "2008")
+            .put("dim1", "a")
+            .put("dim2", "y")
+            .put("dimLong", "10")
+            .put("dimFloat", "20.0")
+            .put("met1", "1.0")
+            .build(),
         new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
-          .put("__time", 1199145600000L)
-          .put("dim1", "a")
-          .put("dim1t", null)
-          .put("dim2", "y")
-          .put("dimLong", 10L)
-          .put("dimFloat", 20.0F)
-          .put("rows", 1L)
-          .put("met1sum", 1.0)
-          .build(),
+            .put("__time", 1199145600000L)
+            .put("dim1", "a")
+            .put("dim1t", null)
+            .put("dim2", "y")
+            .put("dimLong", 10L)
+            .put("dimFloat", 20.0F)
+            .put("rows", 1L)
+            .put("met1sum", 1.0)
+            .build(),
         null,
         null
-      ), it.next());
-      Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
+    ), it.next());
+    Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
         ImmutableMap.<String, Object>builder()
-          .put("timestamp", "2009")
-          .put("dim1", "b")
-          .put("dim2", "y")
-          .put("dimLong", "10")
-          .put("dimFloat", "20.0")
-          .put("met1", "1.0")
-          .build(),
+            .put("timestamp", "2009")
+            .put("dim1", "b")
+            .put("dim2", "y")
+            .put("dimLong", "10")
+            .put("dimFloat", "20.0")
+            .put("met1", "1.0")
+            .build(),
         new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
-          .put("__time", 1230768000000L)
-          .put("dim1", "b")
-          .put("dim1t", null)
-          .put("dim2", "y")
-          .put("dimLong", 10L)
-          .put("dimFloat", 20.0F)
-          .put("rows", 1L)
-          .put("met1sum", 1.0)
-          .build(),
+            .put("__time", 1230768000000L)
+            .put("dim1", "b")
+            .put("dim1t", null)
+            .put("dim2", "y")
+            .put("dimLong", 10L)
+            .put("dimFloat", 20.0F)
+            .put("rows", 1L)
+            .put("met1sum", 1.0)
+            .build(),
         null,
         null
-      ), it.next());
-      Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
+    ), it.next());
+    Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
         ImmutableMap.<String, Object>builder()
-          .put("timestamp", "2010")
-          .put("dim1", "c")
-          .put("dim2", "y")
-          .put("dimLong", "10")
-          .put("dimFloat", "20.0")
-          .put("met1", "1.0")
-          .build(),
+            .put("timestamp", "2010")
+            .put("dim1", "c")
+            .put("dim2", "y")
+            .put("dimLong", "10")
+            .put("dimFloat", "20.0")
+            .put("met1", "1.0")
+            .build(),
         new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
-          .put("__time", 1262304000000L)
-          .put("dim1", "c")
-          .put("dim1t", null)
-          .put("dim2", "y")
-          .put("dimLong", 10L)
-          .put("dimFloat", 20.0F)
-          .put("rows", 1L)
-          .put("met1sum", 1.0)
-          .build(),
+            .put("__time", 1262304000000L)
+            .put("dim1", "c")
+            .put("dim1t", null)
+            .put("dim2", "y")
+            .put("dimLong", 10L)
+            .put("dimFloat", 20.0F)
+            .put("rows", 1L)
+            .put("met1sum", 1.0)
+            .build(),
         null,
         null
-      ), it.next());
-      Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
+    ), it.next());
+    Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
         ImmutableMap.<String, Object>builder()
-          .put("timestamp", "246140482-04-24T15:36:27.903Z")
-          .put("dim1", "x")
-          .put("dim2", "z")
-          .put("dimLong", "10")
-          .put("dimFloat", "20.0")
-          .put("met1", "1.0")
-          .build(),
+            .put("timestamp", "246140482-04-24T15:36:27.903Z")
+            .put("dim1", "x")
+            .put("dim2", "z")
+            .put("dimLong", "10")
+            .put("dimFloat", "20.0")
+            .put("met1", "1.0")
+            .build(),
         null,
         true,
         "Encountered row with timestamp[246140482-04-24T15:36:27.903Z] that cannot be represented as a long: [{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}]"
-      ), it.next());
-      Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
+    ), it.next());
+    Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
         null,
         null,
         true,
         "Unable to parse row [unparseable] into JSON"
-      ), it.next());
+    ), it.next());
 
-      Assert.assertFalse(it.hasNext());
+    Assert.assertFalse(it.hasNext());
   }
 
   private class TestablePulsarSamplerSpec extends PulsarSamplerSpec
   {
     private TestablePulsarSamplerSpec(
-      PulsarSupervisorSpec ingestionSpec,
-      SamplerConfig samplerConfig,
-      InputSourceSampler inputSourceSampler
+        PulsarSupervisorSpec ingestionSpec,
+        SamplerConfig samplerConfig,
+        InputSourceSampler inputSourceSampler
     )
     {
       super(ingestionSpec, samplerConfig, inputSourceSampler);

@@ -21,16 +21,6 @@ package org.apache.druid.indexing.pulsar;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -48,25 +38,40 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.pulsar.client.api.PulsarClientException;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+
 /**
  * Pulsar indexing task runner supporting incremental segments publishing
-*/
-public class PulsarIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer, Long, ByteEntity> {
+ */
+public class PulsarIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer, Long, ByteEntity>
+{
   private static final EmittingLogger log = new EmittingLogger(PulsarIndexTaskRunner.class);
   private final PulsarIndexTask task;
 
 
   public PulsarIndexTaskRunner(
-    PulsarIndexTask task,
-    @Nullable InputRowParser<ByteBuffer> parser,
-    AuthorizerMapper authorizerMapper,
-    LockGranularity lockGranularityToUse) {
+      PulsarIndexTask task,
+      @Nullable InputRowParser<ByteBuffer> parser,
+      AuthorizerMapper authorizerMapper,
+      LockGranularity lockGranularityToUse)
+  {
     super(task, parser, authorizerMapper, lockGranularityToUse);
     this.task = task;
   }
 
   @Override
-  protected boolean isEndOfShard(Long seqNum) {
+  protected boolean isEndOfShard(Long seqNum)
+  {
     return false;
   }
 
@@ -74,14 +79,15 @@ public class PulsarIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer
   @Override
   protected TreeMap<Integer, Map<Integer, Long>> getCheckPointsFromContext(TaskToolbox toolbox,
                                                                            String checkpointsString)
-    throws IOException {
+      throws IOException
+  {
     if (checkpointsString != null) {
       log.debug("Got checkpoints from task context[%s].", checkpointsString);
       return toolbox.getJsonMapper().readValue(
-        checkpointsString,
-        new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
-        {
-        }
+          checkpointsString,
+          new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
+          {
+          }
       );
     } else {
       return null;
@@ -89,25 +95,28 @@ public class PulsarIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer
   }
 
   @Override
-  protected Long getNextStartOffset(Long sequenceNumber) {
+  protected Long getNextStartOffset(Long sequenceNumber)
+  {
     return sequenceNumber;
   }
 
   @Override
   protected SeekableStreamEndSequenceNumbers<Integer, Long> deserializePartitionsFromMetadata(ObjectMapper mapper,
-                                                                                              Object object) {
+                                                                                              Object object)
+  {
     return mapper.convertValue(object, mapper.getTypeFactory().constructParametrizedType(
-      SeekableStreamEndSequenceNumbers.class,
-      SeekableStreamEndSequenceNumbers.class,
-      String.class,
-      String.class
+        SeekableStreamEndSequenceNumbers.class,
+        SeekableStreamEndSequenceNumbers.class,
+        String.class,
+        String.class
     ));
   }
 
   @Nonnull
   @Override
   protected List<OrderedPartitionableRecord<Integer, Long, ByteEntity>> getRecords(
-    RecordSupplier<Integer, Long, ByteEntity> recordSupplier, TaskToolbox toolbox) throws Exception {
+      RecordSupplier<Integer, Long, ByteEntity> recordSupplier, TaskToolbox toolbox) throws Exception
+  {
     // Handles PulsarClientException, which is thrown if the seeked-to
     // offset is not present in the topic-partition. This can happen if we're asking a task to read from data
     // that has not been written yet (which is totally legitimate). So let's wait for it to show up.
@@ -122,9 +131,45 @@ public class PulsarIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer
     return new ArrayList<>();
   }
 
+  @Override
+  protected SeekableStreamDataSourceMetadata<Integer, Long> createDataSourceMetadata(
+      SeekableStreamSequenceNumbers<Integer, Long> partitions)
+  {
+    return new PulsarDataSourceMetadata(partitions);
+  }
+
+  @Override
+  protected OrderedSequenceNumber<Long> createSequenceNumber(Long sequenceNumber)
+  {
+    return PulsarSequenceNumber.of(sequenceNumber);
+  }
+
+  @Override
+  protected void possiblyResetDataSourceMetadata(TaskToolbox toolbox,
+                                                 RecordSupplier<Integer, Long, ByteEntity> recordSupplier,
+                                                 Set<StreamPartition<Integer>> assignment)
+  {
+    // do nothing
+
+  }
+
+  @Override
+  protected boolean isEndOffsetExclusive()
+  {
+    return true;
+  }
+
+  @Override
+  protected TypeReference<List<SequenceMetadata<Integer, Long>>> getSequenceMetadataTypeReference()
+  {
+    return new TypeReference<List<SequenceMetadata<Integer, Long>>>()
+    {
+    };
+  }
+
   private void possiblyResetOffsetsOrWait(
-    RecordSupplier<Integer, Long, ByteEntity> recordSupplier,
-    TaskToolbox taskToolbox
+      RecordSupplier<Integer, Long, ByteEntity> recordSupplier,
+      TaskToolbox taskToolbox
   ) throws InterruptedException, IOException
   {
     final Map<StreamPartition<Integer>, Long> resetPartitions = new HashMap<>();
@@ -136,36 +181,5 @@ public class PulsarIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer
       }
       sendResetRequestAndWait(resetPartitions, taskToolbox);
     }
-  }
-
-  @Override
-  protected SeekableStreamDataSourceMetadata<Integer, Long> createDataSourceMetadata(
-    SeekableStreamSequenceNumbers<Integer, Long> partitions) {
-    return new PulsarDataSourceMetadata(partitions);
-  }
-
-  @Override
-  protected OrderedSequenceNumber<Long> createSequenceNumber(Long sequenceNumber) {
-    return PulsarSequenceNumber.of(sequenceNumber);
-  }
-
-  @Override
-  protected void possiblyResetDataSourceMetadata(TaskToolbox toolbox,
-                                                 RecordSupplier<Integer, Long, ByteEntity> recordSupplier,
-                                                 Set<StreamPartition<Integer>> assignment) {
-    // do nothing
-
-  }
-
-  @Override
-  protected boolean isEndOffsetExclusive() {
-    return true;
-  }
-
-  @Override
-  protected TypeReference<List<SequenceMetadata<Integer, Long>>> getSequenceMetadataTypeReference() {
-    return new TypeReference<List<SequenceMetadata<Integer, Long>>>()
-    {
-    };
   }
 }

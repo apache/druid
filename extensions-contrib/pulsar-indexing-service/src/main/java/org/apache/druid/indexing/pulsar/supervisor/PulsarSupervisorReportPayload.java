@@ -19,48 +19,51 @@
 
 package org.apache.druid.indexing.pulsar.supervisor;
 
-import java.util.List;
-import java.util.Map;
-import javax.annotation.Nullable;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
 import org.joda.time.DateTime;
 
-public class PulsarSupervisorReportPayload extends SeekableStreamSupervisorReportPayload<Integer, Long> {
+import javax.annotation.Nullable;
+
+import java.util.List;
+import java.util.Map;
+
+public class PulsarSupervisorReportPayload extends SeekableStreamSupervisorReportPayload<Integer, Long>
+{
   public PulsarSupervisorReportPayload(
-    String dataSource,
-    String topic,
-    int partitions,
-    int replicas,
-    long durationSeconds,
-    @Nullable Map<Integer, Long> latestOffsets,
-    @Nullable Map<Integer, Long> minimumLag,
-    @Nullable Long aggregateLag,
-    @Nullable DateTime offsetsLastUpdated,
-    boolean suspended,
-    boolean healthy,
-    SupervisorStateManager.State state,
-    SupervisorStateManager.State detailedState,
-    List<SupervisorStateManager.ExceptionEvent> recentErrors
+      String dataSource,
+      String topic,
+      int partitions,
+      int replicas,
+      long durationSeconds,
+      @Nullable Map<Integer, Long> latestOffsets,
+      @Nullable Map<Integer, Long> minimumLag,
+      @Nullable Long aggregateLag,
+      @Nullable DateTime offsetsLastUpdated,
+      boolean suspended,
+      boolean healthy,
+      SupervisorStateManager.State state,
+      SupervisorStateManager.State detailedState,
+      List<SupervisorStateManager.ExceptionEvent> recentErrors
   )
   {
     super(
-      dataSource,
-      topic,
-      partitions,
-      replicas,
-      durationSeconds,
-      latestOffsets,
-      minimumLag,
-      aggregateLag,
-      null,
-      null,
-      offsetsLastUpdated,
-      suspended,
-      healthy,
-      state,
-      detailedState,
-      recentErrors
+        dataSource,
+        topic,
+        partitions,
+        replicas,
+        durationSeconds,
+        latestOffsets,
+        minimumLag,
+        aggregateLag,
+        null,
+        null,
+        offsetsLastUpdated,
+        suspended,
+        healthy,
+        state,
+        detailedState,
+        recentErrors
     );
   }
 

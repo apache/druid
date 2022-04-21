@@ -25,36 +25,39 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.TypeLiteral;
-import java.util.List;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.indexing.pulsar.supervisor.PulsarSupervisorSpec;
 import org.apache.druid.indexing.pulsar.supervisor.PulsarSupervisorTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.initialization.DruidModule;
 
+import java.util.List;
+
 public class PulsarIndexingServiceModule implements DruidModule
 {
   @Override
-  public List<? extends Module> getJacksonModules() {
+  public List<? extends Module> getJacksonModules()
+  {
     return ImmutableList.of(
-      new SimpleModule(getClass().getSimpleName())
-        .registerSubtypes(
-          new NamedType(PulsarIndexTask.class, "index_pulsar"),
-          new NamedType(PulsarDataSourceMetadata.class, "pulsar"),
-          new NamedType(PulsarIndexTaskIOConfig.class, "pulsar"),
-          new NamedType(PulsarSupervisorTuningConfig.class, "pulsar"),
-          new NamedType(PulsarSupervisorSpec.class, "pulsar"),
-          new NamedType(PulsarSamplerSpec.class, "pulsar")
-        )
+        new SimpleModule(getClass().getSimpleName())
+            .registerSubtypes(
+                new NamedType(PulsarIndexTask.class, "index_pulsar"),
+                new NamedType(PulsarDataSourceMetadata.class, "pulsar"),
+                new NamedType(PulsarIndexTaskIOConfig.class, "pulsar"),
+                new NamedType(PulsarSupervisorTuningConfig.class, "pulsar"),
+                new NamedType(PulsarSupervisorSpec.class, "pulsar"),
+                new NamedType(PulsarSamplerSpec.class, "pulsar")
+            )
     );
   }
 
   @Override
-  public void configure(Binder binder) {
+  public void configure(Binder binder)
+  {
     binder.bind(
-      new TypeLiteral<SeekableStreamIndexTaskClientFactory<PulsarIndexTaskClient>>()
-      {
-      }
+        new TypeLiteral<SeekableStreamIndexTaskClientFactory<PulsarIndexTaskClient>>()
+        {
+        }
     ).to(PulsarIndexTaskClientFactory.class).in(LazySingleton.class);
   }
 }

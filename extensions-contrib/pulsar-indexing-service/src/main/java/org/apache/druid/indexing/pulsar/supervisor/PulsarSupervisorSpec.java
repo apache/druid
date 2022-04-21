@@ -23,8 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.Map;
-import javax.annotation.Nullable;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -38,38 +36,44 @@ import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 
-public class PulsarSupervisorSpec extends SeekableStreamSupervisorSpec {
+import javax.annotation.Nullable;
+
+import java.util.Map;
+
+public class PulsarSupervisorSpec extends SeekableStreamSupervisorSpec
+{
   private static final String SUPERVISOR_TYPE = "pulsar";
 
   @JsonCreator
   public PulsarSupervisorSpec(
-    @JsonProperty("spec") @Nullable PulsarSupervisorIngestionSpec ingestionSchema,
-    @JsonProperty("dataSchema") @Nullable DataSchema dataSchema,
-    @JsonProperty("tuningConfig") @Nullable PulsarSupervisorTuningConfig tuningConfig,
-    @JsonProperty("ioConfig") @Nullable PulsarSupervisorIOConfig ioConfig,
-    @JsonProperty("context") Map<String, Object> context,
-    @JsonProperty("suspended") Boolean suspended,
-    @JacksonInject TaskStorage taskStorage,
-    @JacksonInject TaskMaster taskMaster,
-    @JacksonInject IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
-    @JacksonInject PulsarIndexTaskClientFactory indexTaskClientFactory,
-    @JacksonInject @Json ObjectMapper mapper,
-    @JacksonInject ServiceEmitter emitter,
-    @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig,
-    @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-    @JacksonInject SupervisorStateManagerConfig supervisorStateManagerConfig) {
+      @JsonProperty("spec") @Nullable PulsarSupervisorIngestionSpec ingestionSchema,
+      @JsonProperty("dataSchema") @Nullable DataSchema dataSchema,
+      @JsonProperty("tuningConfig") @Nullable PulsarSupervisorTuningConfig tuningConfig,
+      @JsonProperty("ioConfig") @Nullable PulsarSupervisorIOConfig ioConfig,
+      @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("suspended") Boolean suspended,
+      @JacksonInject TaskStorage taskStorage,
+      @JacksonInject TaskMaster taskMaster,
+      @JacksonInject IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
+      @JacksonInject PulsarIndexTaskClientFactory indexTaskClientFactory,
+      @JacksonInject @Json ObjectMapper mapper,
+      @JacksonInject ServiceEmitter emitter,
+      @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig,
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JacksonInject SupervisorStateManagerConfig supervisorStateManagerConfig)
+  {
 
-    super( ingestionSchema != null
-        ? ingestionSchema
-        : new PulsarSupervisorIngestionSpec(
-          dataSchema,
-          ioConfig,
-          tuningConfig != null
-            ? tuningConfig
-            : PulsarSupervisorTuningConfig.defaultConfig()
-        ), context, suspended, taskStorage, taskMaster, indexerMetadataStorageCoordinator,
-      indexTaskClientFactory, mapper, emitter, monitorSchedulerConfig, rowIngestionMetersFactory,
-      supervisorStateManagerConfig);
+    super(ingestionSchema != null
+            ? ingestionSchema
+            : new PulsarSupervisorIngestionSpec(
+                dataSchema,
+                ioConfig,
+                tuningConfig != null
+                    ? tuningConfig
+                    : PulsarSupervisorTuningConfig.defaultConfig()
+            ), context, suspended, taskStorage, taskMaster, indexerMetadataStorageCoordinator,
+        indexTaskClientFactory, mapper, emitter, monitorSchedulerConfig, rowIngestionMetersFactory,
+        supervisorStateManagerConfig);
   }
 
   @Override
@@ -86,57 +90,60 @@ public class PulsarSupervisorSpec extends SeekableStreamSupervisorSpec {
   }
 
   @Override
-  public Supervisor createSupervisor()
+  @JsonProperty
+  public PulsarSupervisorIngestionSpec getSpec()
   {
-    return new PulsarSupervisor(
-      taskStorage,
-      taskMaster,
-      indexerMetadataStorageCoordinator,
-      (PulsarIndexTaskClientFactory) indexTaskClientFactory,
-      mapper,
-      this,
-      rowIngestionMetersFactory
-    );
-  }
-
-  @Override
-  protected SeekableStreamSupervisorSpec toggleSuspend(boolean suspend) {
-    return new PulsarSupervisorSpec(
-      getSpec(),
-      getDataSchema(),
-      getTuningConfig(),
-      getIoConfig(),
-      getContext(),
-      suspend,
-      taskStorage,
-      taskMaster,
-      indexerMetadataStorageCoordinator,
-      (PulsarIndexTaskClientFactory) indexTaskClientFactory,
-      mapper,
-      emitter,
-      monitorSchedulerConfig,
-      rowIngestionMetersFactory,
-      supervisorStateManagerConfig
-    );
+    return (PulsarSupervisorIngestionSpec) super.getSpec();
   }
 
   @Override
   @JsonProperty
-  public PulsarSupervisorTuningConfig getTuningConfig() {
+  public PulsarSupervisorTuningConfig getTuningConfig()
+  {
     return (PulsarSupervisorTuningConfig) super.getTuningConfig();
   }
 
   @Override
   @JsonProperty
-  public PulsarSupervisorIOConfig getIoConfig() {
+  public PulsarSupervisorIOConfig getIoConfig()
+  {
     return (PulsarSupervisorIOConfig) super.getIoConfig();
   }
 
   @Override
-  @JsonProperty
-  public PulsarSupervisorIngestionSpec getSpec()
+  public Supervisor createSupervisor()
   {
-    return (PulsarSupervisorIngestionSpec) super.getSpec();
+    return new PulsarSupervisor(
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        (PulsarIndexTaskClientFactory) indexTaskClientFactory,
+        mapper,
+        this,
+        rowIngestionMetersFactory
+    );
+  }
+
+  @Override
+  protected SeekableStreamSupervisorSpec toggleSuspend(boolean suspend)
+  {
+    return new PulsarSupervisorSpec(
+        getSpec(),
+        getDataSchema(),
+        getTuningConfig(),
+        getIoConfig(),
+        getContext(),
+        suspend,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        (PulsarIndexTaskClientFactory) indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig
+    );
   }
 
   @Override

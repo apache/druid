@@ -9,11 +9,12 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFac
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.joda.time.Duration;
 
-public class PulsarIndexTaskClientFactory  extends SeekableStreamIndexTaskClientFactory<PulsarIndexTaskClient> {
+public class PulsarIndexTaskClientFactory extends SeekableStreamIndexTaskClientFactory<PulsarIndexTaskClient>
+{
   @Inject
   public PulsarIndexTaskClientFactory(
-    @EscalatedGlobal HttpClient httpClient,
-    @Json ObjectMapper mapper
+      @EscalatedGlobal HttpClient httpClient,
+      @Json ObjectMapper mapper
   )
   {
     super(httpClient, mapper);
@@ -21,21 +22,21 @@ public class PulsarIndexTaskClientFactory  extends SeekableStreamIndexTaskClient
 
   @Override
   public PulsarIndexTaskClient build(
-    TaskInfoProvider taskInfoProvider,
-    String dataSource,
-    int numThreads,
-    Duration httpTimeout,
-    long numRetries
+      TaskInfoProvider taskInfoProvider,
+      String dataSource,
+      int numThreads,
+      Duration httpTimeout,
+      long numRetries
   )
   {
     return new PulsarIndexTaskClient(
-      getHttpClient(),
-      getMapper(),
-      taskInfoProvider,
-      dataSource,
-      numThreads,
-      httpTimeout,
-      numRetries
+        getHttpClient(),
+        getMapper(),
+        taskInfoProvider,
+        dataSource,
+        numThreads,
+        httpTimeout,
+        numRetries
     );
   }
 }

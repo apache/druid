@@ -21,21 +21,6 @@ package org.apache.druid.indexing.pulsar;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.vavr.Function2;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -50,26 +35,56 @@ import org.apache.pulsar.client.api.Reader;
 import org.apache.pulsar.client.api.ReaderListener;
 import org.apache.pulsar.common.naming.TopicName;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
 /**
  * Encapsulates fetching records from pulsar
  */
-public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteEntity>, ReaderListener<byte[]> {
+public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteEntity>, ReaderListener<byte[]>
+{
 
-  protected final ConcurrentHashMap<StreamPartition<Integer>, CursorContainer> readerPartitions = new ConcurrentHashMap<>();
+  private static final EmittingLogger log = new EmittingLogger(PulsarRecordSupplier.class);
+  protected static Function2<PulsarClient, String, CompletableFuture<Reader<byte[]>>> buildConsumer =
+      (PulsarClient client, String topic) -> {
+        String readerName = topic + "-reader";
+        return client.newReader()
+            .readerName(readerName)
+            .topic(topic)
+            .startMessageId(MessageId.latest)
+            .startMessageIdInclusive()
+            .createAsync();
+      };
+  protected final ConcurrentHashMap<StreamPartition<Integer>, CursorContainer> readerPartitions =
+      new ConcurrentHashMap<>();
   protected final PulsarClient client;
   protected final String readerName;
-  private static final EmittingLogger log = new EmittingLogger(PulsarRecordSupplier.class);
-  private PulsarClientException previousSeekFailure;
   private final BlockingQueue<Message<byte[]>> received;
   private final Integer maxRecordsInSinglePoll;
   private final Function2<PulsarClient, String, CompletableFuture<Reader<byte[]>>> consumerBuilder;
+  private PulsarClientException previousSeekFailure;
 
-  public PulsarRecordSupplier(String serviceUrl, String readerName, Integer maxRecordsInSinglePoll) {
+  public PulsarRecordSupplier(String serviceUrl, String readerName, Integer maxRecordsInSinglePoll)
+  {
     try {
-    this.readerName = readerName;
-    this.maxRecordsInSinglePoll = maxRecordsInSinglePoll;
-    this.received = new ArrayBlockingQueue<>(this.maxRecordsInSinglePoll);
-    this.consumerBuilder = buildConsumer;
+      this.readerName = readerName;
+      this.maxRecordsInSinglePoll = maxRecordsInSinglePoll;
+      this.received = new ArrayBlockingQueue<>(this.maxRecordsInSinglePoll);
+      this.consumerBuilder = buildConsumer;
 
       client = PulsarClient.builder().serviceUrl(serviceUrl).build();
     } catch (PulsarClientException e) {
@@ -79,7 +94,9 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
 
   @VisibleForTesting
   public PulsarRecordSupplier(
-   String serviceUrl, String readerName, Integer maxRecordsInSinglePoll, PulsarClient client,  Function2<PulsarClient, String, CompletableFuture<Reader<byte[]>>> buildConsumer, BlockingQueue<Message<byte[]>> received
+      String serviceUrl, String readerName, Integer maxRecordsInSinglePoll, PulsarClient client,
+      Function2<PulsarClient, String, CompletableFuture<Reader<byte[]>>> buildConsumer,
+      BlockingQueue<Message<byte[]>> received
   )
   {
     this.readerName = readerName;
@@ -89,20 +106,26 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
     this.consumerBuilder = buildConsumer;
   }
 
-  protected static Function2<PulsarClient, String, CompletableFuture<Reader<byte[]>>> buildConsumer = (PulsarClient client, String topic) -> {
-    String readerName =  topic + "-reader";
-    return client.newReader()
-      .readerName(readerName)
-      .topic(topic)
-      .startMessageId(MessageId.latest)
-      .startMessageIdInclusive()
-      .createAsync();
-  };
+  private static <T> T wrapExceptions(Callable<T> callable)
+  {
+    try {
+      return callable.call();
+    } catch (Exception e) {
+      throw new StreamException(e);
+    }
+  }
 
-
+  private static void wrapExceptions(Runnable runnable)
+  {
+    wrapExceptions(() -> {
+      runnable.run();
+      return null;
+    });
+  }
 
   @Override
-  public void assign(Set<StreamPartition<Integer>> streamPartitions) {
+  public void assign(Set<StreamPartition<Integer>> streamPartitions)
+  {
     List<CompletableFuture<Reader<byte[]>>> futures = new ArrayList<>();
     log.info("Assigning partitions: " + streamPartitions);
 
@@ -113,8 +136,8 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
         }
 
         String topic = TopicName.get(partition.getStream())
-          .getPartition(partition.getPartitionId())
-          .toString();
+            .getPartition(partition.getPartitionId())
+            .toString();
 
         futures.add(consumerBuilder.apply(client, topic).thenApplyAsync(reader -> {
           if (readerPartitions.containsKey(partition)) {
@@ -128,13 +151,11 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
       }
 
       futures.forEach(CompletableFuture::join);
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       futures.forEach(f -> {
         try {
           f.get().closeAsync();
-        }
-        catch (Exception ignored) {
+        } catch (Exception ignored) {
           // ignore
         }
       });
@@ -144,10 +165,12 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
   }
 
   @Override
-  public void seek(StreamPartition<Integer> partition, Long sequenceNumber) throws InterruptedException {
+  public void seek(StreamPartition<Integer> partition, Long sequenceNumber) throws InterruptedException
+  {
     CursorContainer reader = readerPartitions.get(partition);
     if (reader == null) {
-      String err = String.format(Locale.ENGLISH, "Cannot seek on a partition [%s] where we are not assigned", partition);
+      String err =
+          String.format(Locale.ENGLISH, "Cannot seek on a partition [%s] where we are not assigned", partition);
       throw new IllegalArgumentException();
     }
 
@@ -158,64 +181,46 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
       final MessageId messageId = PulsarSequenceNumber.of(sequenceNumber).getMessageId();
       setPosition(partition, messageId);
       previousSeekFailure = null;
-    }
-    catch (PulsarClientException e) {
+    } catch (PulsarClientException e) {
       previousSeekFailure = e;
     }
   }
 
-  public PulsarClientException getPreviousSeekFailure() {
-    return previousSeekFailure;
-  }
-
-  void setPosition(StreamPartition<Integer> partition, MessageId position)
-  {
-    CursorContainer reader = this.readerPartitions.get(partition);
-    if (reader != null) {
-      reader.position = position;
-    }
-  }
-
-
   @Override
-  public void seekToEarliest(Set<StreamPartition<Integer>> streamPartitions) throws InterruptedException {
+  public void seekToEarliest(Set<StreamPartition<Integer>> streamPartitions) throws InterruptedException
+  {
     streamPartitions.forEach(p -> {
       try {
         seek(p, PulsarSequenceNumber.EARLIEST_OFFSET);
-      }
-      catch (InterruptedException e) {
+      } catch (InterruptedException e) {
         throw new StreamException(e);
       }
     });
   }
 
   @Override
-  public void seekToLatest(Set<StreamPartition<Integer>> streamPartitions) throws InterruptedException {
+  public void seekToLatest(Set<StreamPartition<Integer>> streamPartitions) throws InterruptedException
+  {
     streamPartitions.forEach(p -> {
       try {
         seek(p, PulsarSequenceNumber.LATEST_OFFSET);
-      }
-      catch (InterruptedException e) {
+      } catch (InterruptedException e) {
         throw new StreamException(e);
       }
     });
   }
 
   @Override
-  public Collection<StreamPartition<Integer>> getAssignment() {
-    return this.readerPartitions.keySet();
-  }
-
-  private StreamPartition<Integer> getStreamPartitionFromMessage(Message<byte[]> msg)
+  public Collection<StreamPartition<Integer>> getAssignment()
   {
-    TopicName topic = TopicName.get(msg.getTopicName());
-    return new StreamPartition<>(topic.getPartitionedTopicName(), topic.getPartitionIndex());
+    return this.readerPartitions.keySet();
   }
 
   @Nonnull
   @Override
-  public List<OrderedPartitionableRecord<Integer, Long, ByteEntity>> poll(long timeout) {
-   try {
+  public List<OrderedPartitionableRecord<Integer, Long, ByteEntity>> poll(long timeout)
+  {
+    try {
       List<OrderedPartitionableRecord<Integer, Long, ByteEntity>> records = new ArrayList<>();
 
 
@@ -231,10 +236,10 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
         PulsarSequenceNumber offset = PulsarSequenceNumber.of(item.getMessageId());
 
         records.add(new OrderedPartitionableRecord<Integer, Long, ByteEntity>(
-          sp.getStream(),
-          sp.getPartitionId(),
-          offset.get(),
-          Collections.singletonList(new ByteEntity(item.getValue()))
+            sp.getStream(),
+            sp.getPartitionId(),
+            offset.get(),
+            Collections.singletonList(new ByteEntity(item.getValue()))
         ));
 
         if (++numberOfRecords >= maxRecordsInSinglePoll) {
@@ -245,80 +250,89 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
         item = received.poll(0, TimeUnit.MILLISECONDS);
       }
 
-     return records;
-    }
-    catch (InterruptedException e) {
+      return records;
+    } catch (InterruptedException e) {
       throw new StreamException(e);
     }
   }
 
   @Nullable
   @Override
-  public Long getLatestSequenceNumber(StreamPartition<Integer> partition) {
+  public Long getLatestSequenceNumber(StreamPartition<Integer> partition)
+  {
     return PulsarSequenceNumber.LATEST_OFFSET;
   }
 
   @Nullable
   @Override
-  public Long getEarliestSequenceNumber(StreamPartition<Integer> partition) {
+  public Long getEarliestSequenceNumber(StreamPartition<Integer> partition)
+  {
     return PulsarSequenceNumber.EARLIEST_OFFSET;
   }
 
   @Override
-  public Long getPosition(StreamPartition<Integer> partition) {
+  public Long getPosition(StreamPartition<Integer> partition)
+  {
     CursorContainer reader = readerPartitions.get(partition);
     if (reader == null) {
-      throw new IllegalArgumentException(String.format(Locale.ENGLISH ,"Cannot seek on a partition [%s] where we are not assigned", partition));
+      throw new IllegalArgumentException(
+          String.format(Locale.ENGLISH, "Cannot seek on a partition [%s] where we are not assigned", partition));
     }
     return PulsarSequenceNumber.of(reader.position).get();
   }
 
   @Override
-  public Set<Integer> getPartitionIds(String stream) {
+  public Set<Integer> getPartitionIds(String stream)
+  {
     try {
       return client.getPartitionsForTopic(stream).get().stream()
-        .map(TopicName::get)
-        .map(TopicName::getPartitionIndex)
-        .collect(Collectors.toSet());
-    }
-    catch (Exception e) {
-      throw new StreamException(e);
-    }
-  }
-
-  @Override
-  public void close() {
-    readerPartitions.forEach((k, r) -> r.reader.closeAsync());
-    client.closeAsync();
-  }
-
-  private static <T> T wrapExceptions(Callable<T> callable) {
-    try {
-      return callable.call();
+          .map(TopicName::get)
+          .map(TopicName::getPartitionIndex)
+          .collect(Collectors.toSet());
     } catch (Exception e) {
       throw new StreamException(e);
     }
   }
-  
-    private static void wrapExceptions(Runnable runnable) {
-    wrapExceptions(() -> {
-      runnable.run();
-      return null;
-    });
+
+  @Override
+  public void close()
+  {
+    readerPartitions.forEach((k, r) -> r.reader.closeAsync());
+    client.closeAsync();
+  }
+
+  public PulsarClientException getPreviousSeekFailure()
+  {
+    return previousSeekFailure;
+  }
+
+  void setPosition(StreamPartition<Integer> partition, MessageId position)
+  {
+    CursorContainer reader = this.readerPartitions.get(partition);
+    if (reader != null) {
+      reader.position = position;
+    }
+  }
+
+  private StreamPartition<Integer> getStreamPartitionFromMessage(Message<byte[]> msg)
+  {
+    TopicName topic = TopicName.get(msg.getTopicName());
+    return new StreamPartition<>(topic.getPartitionedTopicName(), topic.getPartitionIndex());
   }
 
   @Override
-  public void received(Reader<byte[]> reader, Message<byte[]> msg) {
+  public void received(Reader<byte[]> reader, Message<byte[]> msg)
+  {
     try {
       this.received.put(msg);
-    }
-    catch (InterruptedException e) {
+    } catch (InterruptedException e) {
       throw new StreamException(e);
     }
   }
 
   @Override
-  public void reachedEndOfTopic(Reader<byte[]> reader) {
+  public void reachedEndOfTopic(Reader<byte[]> reader)
+  {
     ReaderListener.super.reachedEndOfTopic(reader);
   }
 

@@ -4,14 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.stream.Collectors;
-import javax.annotation.Nullable;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.common.task.Task;
@@ -49,6 +41,16 @@ import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
+
 /**
  * Supervisor responsible for managing the PulsarIndexTasks for a single dataSource. At a high level, the class accepts a
  * {@link PulsarSupervisorSpec} which includes the Pulsar topic and configuration as well as an ingestion spec which will
@@ -57,12 +59,13 @@ import org.joda.time.DateTime;
  * tasks to satisfy the desired number of replicas. As tasks complete, new tasks are queued to process the next range of
  * Pulsar offsets.
  */
-public class PulsarSupervisor extends SeekableStreamSupervisor<Integer, Long, ByteEntity> {
+public class PulsarSupervisor extends SeekableStreamSupervisor<Integer, Long, ByteEntity>
+{
 
   public static final TypeReference<TreeMap<Integer, Map<Integer, String>>> CHECKPOINTS_TYPE_REF =
-    new TypeReference<TreeMap<Integer, Map<Integer, String>>>()
-    {
-    };
+      new TypeReference<TreeMap<Integer, Map<Integer, String>>>()
+      {
+      };
 
   private static final EmittingLogger log = new EmittingLogger(PulsarSupervisor.class);
   private static final Long NOT_SET = -1L;
@@ -75,43 +78,45 @@ public class PulsarSupervisor extends SeekableStreamSupervisor<Integer, Long, By
   private volatile Map<Integer, Long> latestSequenceFromStream;
 
   public PulsarSupervisor(
-                          TaskStorage taskStorage,
-                          TaskMaster taskMaster,
-                          IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
-                          PulsarIndexTaskClientFactory taskClientFactory,
-                          ObjectMapper mapper,
-                          PulsarSupervisorSpec spec,
-                          RowIngestionMetersFactory rowIngestionMetersFactory) {
+      TaskStorage taskStorage,
+      TaskMaster taskMaster,
+      IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
+      PulsarIndexTaskClientFactory taskClientFactory,
+      ObjectMapper mapper,
+      PulsarSupervisorSpec spec,
+      RowIngestionMetersFactory rowIngestionMetersFactory)
+  {
     super(StringUtils.format("PulsarSupervisor-%s", spec.getDataSchema().getDataSource()),
-      taskStorage, taskMaster, indexerMetadataStorageCoordinator, taskClientFactory, mapper, spec,
-      rowIngestionMetersFactory, false);
+        taskStorage, taskMaster, indexerMetadataStorageCoordinator, taskClientFactory, mapper, spec,
+        rowIngestionMetersFactory, false);
     this.spec = spec;
     this.emitter = spec.getEmitter();
     this.monitorSchedulerConfig = spec.getMonitorSchedulerConfig();
   }
 
   @Override
-  protected String baseTaskName() {
+  protected String baseTaskName()
+  {
     return TASK_NAME;
   }
 
   @Override
-  protected void updatePartitionLagFromStream() {
+  protected void updatePartitionLagFromStream()
+  {
     getRecordSupplierLock().lock();
     try {
       Set<Integer> partitionIds;
       try {
         partitionIds = recordSupplier.getPartitionIds(getIoConfig().getStream());
-      }
-      catch (Exception e) {
+      } catch (Exception e) {
         log.warn("Could not fetch partitions for topic/stream [%s]", getIoConfig().getStream());
         throw new StreamException(e);
       }
 
       Set<StreamPartition<Integer>> partitions = partitionIds
-        .stream()
-        .map(e -> new StreamPartition<>(getIoConfig().getStream(), e))
-        .collect(Collectors.toSet());
+          .stream()
+          .map(e -> new StreamPartition<>(getIoConfig().getStream(), e))
+          .collect(Collectors.toSet());
 
       recordSupplier.seekToLatest(partitions);
 
@@ -119,19 +124,18 @@ public class PulsarSupervisor extends SeekableStreamSupervisor<Integer, Long, By
       // because we currently only have record lag for pulsar, which can be lazily computed by subtracting the highest
       // task offsets from the latest offsets from the stream when it is needed
       latestSequenceFromStream =
-        partitions.stream().collect(Collectors.toMap(StreamPartition::getPartitionId, recordSupplier::getPosition));
-    }
-    catch (InterruptedException e) {
+          partitions.stream().collect(Collectors.toMap(StreamPartition::getPartitionId, recordSupplier::getPosition));
+    } catch (InterruptedException e) {
       throw new StreamException(e);
-    }
-    finally {
+    } finally {
       getRecordSupplierLock().unlock();
     }
   }
 
   @Nullable
   @Override
-  protected Map<Integer, Long> getPartitionRecordLag() {
+  protected Map<Integer, Long> getPartitionRecordLag()
+  {
     Map<Integer, Long> highestCurrentOffsets = getHighestCurrentOffsets();
 
     if (latestSequenceFromStream == null) {
@@ -140,9 +144,9 @@ public class PulsarSupervisor extends SeekableStreamSupervisor<Integer, Long, By
 
     if (!latestSequenceFromStream.keySet().equals(highestCurrentOffsets.keySet())) {
       log.warn(
-        "Lag metric: Pulsar partitions %s do not match task partitions %s",
-        latestSequenceFromStream.keySet(),
-        highestCurrentOffsets.keySet()
+          "Lag metric: Pulsar partitions %s do not match task partitions %s",
+          latestSequenceFromStream.keySet(),
+          highestCurrentOffsets.keySet()
       );
     }
 
@@ -151,7 +155,8 @@ public class PulsarSupervisor extends SeekableStreamSupervisor<Integer, Long, By
 
   @Nullable
   @Override
-  protected Map<Integer, Long> getPartitionTimeLag() {
+  protected Map<Integer, Long> getPartitionTimeLag()
+  {
     // TODO: how to measure lag in pulsar
     return null;
   }
@@ -162,19 +167,20 @@ public class PulsarSupervisor extends SeekableStreamSupervisor<Integer, Long, By
                                                                String baseSequenceName, DateTime minimumMessageTime,
                                                                DateTime maximumMessageTime,
                                                                Set<Integer> exclusiveStartSequenceNumberPartitions,
-                                                               SeekableStreamSupervisorIOConfig ioConfig) {
+                                                               SeekableStreamSupervisorIOConfig ioConfig)
+  {
     PulsarSupervisorIOConfig pulsarIoConfig = (PulsarSupervisorIOConfig) ioConfig;
     return new PulsarIndexTaskIOConfig(
-      groupId,
-      baseSequenceName,
-      new SeekableStreamStartSequenceNumbers<>(pulsarIoConfig.getTopic(), startPartitions, Collections.emptySet()),
-      new SeekableStreamEndSequenceNumbers<>(pulsarIoConfig.getTopic(), endPartitions),
-      pulsarIoConfig.getConsumerProperties(),
-      pulsarIoConfig.getPollTimeout(),
-      true,
-      minimumMessageTime,
-      maximumMessageTime,
-      ioConfig.getInputFormat()
+        groupId,
+        baseSequenceName,
+        new SeekableStreamStartSequenceNumbers<>(pulsarIoConfig.getTopic(), startPartitions, Collections.emptySet()),
+        new SeekableStreamEndSequenceNumbers<>(pulsarIoConfig.getTopic(), endPartitions),
+        pulsarIoConfig.getConsumerProperties(),
+        pulsarIoConfig.getPollTimeout(),
+        true,
+        minimumMessageTime,
+        maximumMessageTime,
+        ioConfig.getInputFormat()
     );
   }
 
@@ -186,7 +192,8 @@ public class PulsarSupervisor extends SeekableStreamSupervisor<Integer, Long, By
                                                                                       SeekableStreamIndexTaskIOConfig taskIoConfig,
                                                                                       SeekableStreamIndexTaskTuningConfig taskTuningConfig,
                                                                                       RowIngestionMetersFactory rowIngestionMetersFactory)
-    throws JsonProcessingException {
+      throws JsonProcessingException
+  {
     final String checkpoints = sortingMapper.writerFor(CHECKPOINTS_TYPE_REF).writeValueAsString(sequenceOffsets);
     final Map<String, Object> context = createBaseTaskContexts();
     context.put(CHECKPOINTS_CTX_KEY, checkpoints);
@@ -199,112 +206,127 @@ public class PulsarSupervisor extends SeekableStreamSupervisor<Integer, Long, By
     for (int i = 0; i < replicas; i++) {
       String taskId = IdUtils.getRandomIdWithPrefix(baseSequenceName);
       taskList.add(new PulsarIndexTask(
-        taskId,
-        new TaskResource(baseSequenceName, 1),
-        spec.getDataSchema(),
-        (PulsarIndexTaskTuningConfig) taskTuningConfig,
-        (PulsarIndexTaskIOConfig) taskIoConfig,
-        context,
-        sortingMapper
+          taskId,
+          new TaskResource(baseSequenceName, 1),
+          spec.getDataSchema(),
+          (PulsarIndexTaskTuningConfig) taskTuningConfig,
+          (PulsarIndexTaskIOConfig) taskIoConfig,
+          context,
+          sortingMapper
       ));
     }
     return taskList;
   }
 
   @Override
-  protected int getTaskGroupIdForPartition(Integer partition) {
+  protected int getTaskGroupIdForPartition(Integer partition)
+  {
     return partition % spec.getIoConfig().getTaskCount();
   }
 
   @Override
-  protected boolean checkSourceMetadataMatch(DataSourceMetadata metadata) {
+  protected boolean checkSourceMetadataMatch(DataSourceMetadata metadata)
+  {
     return metadata instanceof PulsarDataSourceMetadata;
   }
 
   @Override
-  protected boolean doesTaskTypeMatchSupervisor(Task task) {
+  protected boolean doesTaskTypeMatchSupervisor(Task task)
+  {
     return task instanceof PulsarIndexTask;
   }
 
   @Override
   protected SeekableStreamDataSourceMetadata<Integer, Long> createDataSourceMetaDataForReset(String topic,
-                                                                                             Map<Integer, Long> map) {
+                                                                                             Map<Integer, Long> map)
+  {
     return new PulsarDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, map));
   }
 
   @Override
-  protected OrderedSequenceNumber<Long> makeSequenceNumber(Long seq, boolean isExclusive) {
+  protected OrderedSequenceNumber<Long> makeSequenceNumber(Long seq, boolean isExclusive)
+  {
     return PulsarSequenceNumber.of(seq);
   }
 
   @Override
-  protected Map<Integer, Long> getRecordLagPerPartition(Map<Integer, Long> currentOffsets) {
+  protected Map<Integer, Long> getRecordLagPerPartition(Map<Integer, Long> currentOffsets)
+  {
     return ImmutableMap.of();
   }
 
   @Override
-  protected Map<Integer, Long> getTimeLagPerPartition(Map<Integer, Long> currentOffsets) {
-   return ImmutableMap.of();
+  protected Map<Integer, Long> getTimeLagPerPartition(Map<Integer, Long> currentOffsets)
+  {
+    return ImmutableMap.of();
   }
 
   @Override
-  protected RecordSupplier<Integer, Long, ByteEntity> setupRecordSupplier() {
+  protected RecordSupplier<Integer, Long, ByteEntity> setupRecordSupplier()
+  {
     String serviceUrl = (String) ((PulsarSupervisorIOConfig) getIoConfig()).getServiceUrl();
     return new PulsarRecordSupplier(serviceUrl,
-      StringUtils.format("PulsarSupervisor-%s", spec.getDataSchema().getDataSource()),
-      TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY);
+        StringUtils.format("PulsarSupervisor-%s", spec.getDataSchema().getDataSource()),
+        TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY);
   }
 
   @Override
   protected SeekableStreamSupervisorReportPayload<Integer, Long> createReportPayload(int numPartitions,
-                                                                                     boolean includeOffsets) {
+                                                                                     boolean includeOffsets)
+  {
     PulsarSupervisorIOConfig ioConfig = spec.getIoConfig();
     Map<Integer, Long> partitionLag = getRecordLagPerPartition(getHighestCurrentOffsets());
     return new PulsarSupervisorReportPayload(
-      spec.getDataSchema().getDataSource(),
-      ioConfig.getTopic(),
-      numPartitions,
-      ioConfig.getReplicas(),
-      ioConfig.getTaskDuration().getMillis() / 1000,
-      includeOffsets ? latestSequenceFromStream : null,
-      includeOffsets ? partitionLag : null,
-      includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
-      includeOffsets ? sequenceLastUpdated : null,
-      spec.isSuspended(),
-      stateManager.isHealthy(),
-      stateManager.getSupervisorState().getBasicState(),
-      stateManager.getSupervisorState(),
-      stateManager.getExceptionEvents()
+        spec.getDataSchema().getDataSource(),
+        ioConfig.getTopic(),
+        numPartitions,
+        ioConfig.getReplicas(),
+        ioConfig.getTaskDuration().getMillis() / 1000,
+        includeOffsets ? latestSequenceFromStream : null,
+        includeOffsets ? partitionLag : null,
+        includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
+        includeOffsets ? sequenceLastUpdated : null,
+        spec.isSuspended(),
+        stateManager.isHealthy(),
+        stateManager.getSupervisorState().getBasicState(),
+        stateManager.getSupervisorState(),
+        stateManager.getExceptionEvents()
     );
   }
 
   @Override
-  protected Long getNotSetMarker() {
+  protected Long getNotSetMarker()
+  {
     return NOT_SET;
   }
 
   @Override
-  protected Long getEndOfPartitionMarker() {
+  protected Long getEndOfPartitionMarker()
+  {
     return END_OF_PARTITION;
   }
 
   @Override
-  protected boolean isEndOfShard(Long seqNum) {
+  protected boolean isEndOfShard(Long seqNum)
+  {
     return false;
   }
 
   @Override
-  protected boolean isShardExpirationMarker(Long seqNum) {
+  protected boolean isShardExpirationMarker(Long seqNum)
+  {
     return false;
   }
 
   @Override
-  protected boolean useExclusiveStartSequenceNumberForNonFirstSequence() {
+  protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
+  {
     return false;
   }
 
   @Override
-  public LagStats computeLagStats() {
+  public LagStats computeLagStats()
+  {
     Map<Integer, Long> partitionRecordLag = getPartitionRecordLag();
     if (partitionRecordLag == null) {
       return new LagStats(0, 0, 0);

@@ -23,8 +23,6 @@ package org.apache.druid.indexing.pulsar.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import java.util.Map;
-import javax.annotation.Nullable;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
@@ -32,36 +30,43 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 
-public class PulsarSupervisorIOConfig  extends SeekableStreamSupervisorIOConfig {
+import javax.annotation.Nullable;
+
+import java.util.Map;
+
+public class PulsarSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
+{
   public static final long DEFAULT_POLL_TIMEOUT_MILLIS = 100;
+  public static final String SERVICE_URL_KEY = "serviceUrl";
   private final long pollTimeout;
   private final Map<String, Object> consumerProperties;
-  public static final String SERVICE_URL_KEY = "serviceUrl";
   private final String serviceUrl;
 
   public PulsarSupervisorIOConfig(@JsonProperty("topic") String topic,
-                                   @JsonProperty("inputFormat") InputFormat inputFormat,
-                                   @JsonProperty("replicas") Integer replicas,
-                                   @JsonProperty("taskCount") Integer taskCount,
-                                   @JsonProperty("taskDuration") Period taskDuration,
+                                  @JsonProperty("inputFormat") InputFormat inputFormat,
+                                  @JsonProperty("replicas") Integer replicas,
+                                  @JsonProperty("taskCount") Integer taskCount,
+                                  @JsonProperty("taskDuration") Period taskDuration,
                                   @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
-                                   @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig,
-                                   @JsonProperty("pollTimeout") Long pollTimeout,
-                                   @JsonProperty("startDelay") Period startDelay,
-                                   @JsonProperty("period") Period period,
-                                   @JsonProperty("useEarliestOffset") Boolean useEarliestOffset,
-                                   @JsonProperty("completionTimeout") Period completionTimeout,
-                                   @JsonProperty("lateMessageRejectionPeriod") Period lateMessageRejectionPeriod,
-                                   @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
-                                   @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime) {
+                                  @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig,
+                                  @JsonProperty("pollTimeout") Long pollTimeout,
+                                  @JsonProperty("startDelay") Period startDelay,
+                                  @JsonProperty("period") Period period,
+                                  @JsonProperty("useEarliestOffset") Boolean useEarliestOffset,
+                                  @JsonProperty("completionTimeout") Period completionTimeout,
+                                  @JsonProperty("lateMessageRejectionPeriod") Period lateMessageRejectionPeriod,
+                                  @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
+                                  @JsonProperty("lateMessageRejectionStartDateTime")
+                                      DateTime lateMessageRejectionStartDateTime)
+  {
     super(topic, inputFormat, replicas, taskCount, taskDuration, startDelay, period, useEarliestOffset,
-      completionTimeout, lateMessageRejectionPeriod, earlyMessageRejectionPeriod, autoScalerConfig,
-      lateMessageRejectionStartDateTime);
+        completionTimeout, lateMessageRejectionPeriod, earlyMessageRejectionPeriod, autoScalerConfig,
+        lateMessageRejectionStartDateTime);
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     Preconditions.checkNotNull(
-      consumerProperties.get(SERVICE_URL_KEY),
-      StringUtils.format("consumerProperties must contain entry for [%s]", SERVICE_URL_KEY)
+        consumerProperties.get(SERVICE_URL_KEY),
+        StringUtils.format("consumerProperties must contain entry for [%s]", SERVICE_URL_KEY)
     );
 
     this.serviceUrl = (String) consumerProperties.get(SERVICE_URL_KEY);
@@ -86,7 +91,8 @@ public class PulsarSupervisorIOConfig  extends SeekableStreamSupervisorIOConfig 
     return pollTimeout;
   }
 
-  public String getServiceUrl() {
+  public String getServiceUrl()
+  {
     return serviceUrl;
   }
 }

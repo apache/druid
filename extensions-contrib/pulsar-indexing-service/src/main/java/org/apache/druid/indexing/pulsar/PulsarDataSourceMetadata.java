@@ -7,10 +7,11 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 
-public class PulsarDataSourceMetadata extends SeekableStreamDataSourceMetadata<Integer, Long> {
+public class PulsarDataSourceMetadata extends SeekableStreamDataSourceMetadata<Integer, Long>
+{
   @JsonCreator
   public PulsarDataSourceMetadata(
-    @JsonProperty("partitions") SeekableStreamSequenceNumbers<Integer, Long> pulsarPartitions
+      @JsonProperty("partitions") SeekableStreamSequenceNumbers<Integer, Long> pulsarPartitions
   )
   {
     super(pulsarPartitions);
@@ -22,7 +23,7 @@ public class PulsarDataSourceMetadata extends SeekableStreamDataSourceMetadata<I
     final SeekableStreamSequenceNumbers<Integer, Long> sequenceNumbers = getSeekableStreamSequenceNumbers();
     if (sequenceNumbers instanceof SeekableStreamEndSequenceNumbers) {
       return createConcreteDataSourceMetaData(
-        ((SeekableStreamEndSequenceNumbers<Integer, Long>) sequenceNumbers).asStartPartitions(true)
+          ((SeekableStreamEndSequenceNumbers<Integer, Long>) sequenceNumbers).asStartPartitions(true)
       );
     } else {
       return this;
@@ -31,7 +32,7 @@ public class PulsarDataSourceMetadata extends SeekableStreamDataSourceMetadata<I
 
   @Override
   protected SeekableStreamDataSourceMetadata<Integer, Long> createConcreteDataSourceMetaData(
-    SeekableStreamSequenceNumbers<Integer, Long> seekableStreamSequenceNumbers
+      SeekableStreamSequenceNumbers<Integer, Long> seekableStreamSequenceNumbers
   )
   {
     return new PulsarDataSourceMetadata(seekableStreamSequenceNumbers);
