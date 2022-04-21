@@ -93,7 +93,7 @@ public class Calcites
   /**
    * Milliseconds precision.
    */
-  private final static int TIMESTAMP_LITERAL_PRECISION = 3;
+  private static final int TIMESTAMP_LITERAL_PRECISION = 3;
 
   public static final SqlReturnTypeInference
       ARG0_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE = new Arg0NullableArrayTypeInference();
