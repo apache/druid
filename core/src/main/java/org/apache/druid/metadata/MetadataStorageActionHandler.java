@@ -111,18 +111,20 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * store. For complete tasks, additional filters in {@code CompleteTaskLookup} can be applied.
    * All lookups should be processed atomically if there are more than one lookup is given.
    *
-   * taskMigrationComplete indicates if migration was completed before the time of calling.
-   * If yes, use the newly created type and group_id columns in the query for task summaries
-   * Else, fetch the payload and deserialize it to obtain the above fields
+   * It is RECOMMENDED to set fetchPayload to false after task table migration of old data to new schmea has completed
+   *
+   * fetchPayload determines the query used to fetch from the tasks table
+   * If true, fetch the payload and deserialize it to obtain the above fields
+   * Else, use the newly created type and group_id columns in the query for task summaries
    *
    * @param taskLookups task lookup type and filters.
    * @param datasource  datasource filter
-   * @param taskMigrationComplete indicates which query to use based on migration status
+   * @param fetchPayload indicates which query to use based on migration status
    */
   List<TaskStatusPlus> getTaskStatusPlusList(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource,
-      boolean taskMigrationComplete
+      boolean fetchPayload
   );
 
   default List<TaskInfo<EntryType, StatusType>> getTaskInfos(

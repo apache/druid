@@ -136,7 +136,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public abstract boolean tableExists(Handle handle, String tableName);
 
-  public abstract String withFetchLimit(int limit);
+  public abstract String limitClause(int limit);
 
   public <T> T retryWithHandle(
       final HandleCallback<T> callback,
@@ -434,13 +434,12 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
               Connection connection = handle.getConnection();
               Statement statement = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
               boolean flag = true;
-              String limit = withFetchLimit(100);
               while (flag) {
                 // Should ideally use a cursor and sort by id for efficiency, but updates with ordering aren't allowed
                 String sql = StringUtils.format(
                     "SELECT * FROM %1$s WHERE active = false AND type IS null %2$s",
                     tableName,
-                    limit
+                    limitClause(100)
                 );
                 ResultSet resultSet = statement.executeQuery(sql);
                 flag = false;

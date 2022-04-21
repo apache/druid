@@ -219,7 +219,7 @@ public class SQLMetadataConnectorTest
     }
 
     @Override
-    public String withFetchLimit(int limit)
+    public String limitClause(int limit)
     {
       return "";
     }

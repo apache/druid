@@ -117,7 +117,7 @@ public class DerbyConnector extends SQLMetadataConnector
   }
 
   @Override
-  public String withFetchLimit(int limit)
+  public String limitClause(int limit)
   {
     return String.format(Locale.ENGLISH, "FETCH NEXT %d ROWS ONLY", limit);
   }

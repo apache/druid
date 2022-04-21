@@ -63,6 +63,10 @@ public class SQLMetadataStorageActionHandlerTest
   public final ExpectedException thrown = ExpectedException.none();
 
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
+
+
+  private static final Random RANDOM = new Random(1);
+
   private SQLMetadataStorageActionHandler<Map<String, Object>, Map<String, Object>, Map<String, String>, Map<String, Object>> handler;
 
   final String entryTable = "entries";
@@ -540,7 +544,7 @@ public class SQLMetadataStorageActionHandlerTest
     Map<String, Object> status = new HashMap<>();
     status.put("id", id);
     status.put("status", active ? TaskState.RUNNING : TaskState.SUCCESS);
-    status.put("duration", (new Random()).nextLong());
+    status.put("duration", RANDOM.nextLong());
     status.put("location", TaskLocation.create(UUID.randomUUID().toString(), 8080, 995));
     status.put("errorMsg", UUID.randomUUID().toString());
 

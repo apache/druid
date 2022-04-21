@@ -250,17 +250,17 @@ public class MetadataTaskStorage implements TaskStorage
   )
   {
     Map<TaskLookupType, TaskLookup> theTaskLookups = processTaskLookups(taskLookups);
-    boolean taskMigrationComplete = false;
+    boolean fetchPayload = true;
     if (taskMigrationCompleteFuture.isDone()) {
       try {
-        taskMigrationComplete = taskMigrationCompleteFuture.get();
+        fetchPayload = !taskMigrationCompleteFuture.get();
       }
       catch (Exception e) {
         log.info(e, "Exception getting task migration future");
       }
     }
     return Collections.unmodifiableList(
-        handler.getTaskStatusPlusList(theTaskLookups, datasource, taskMigrationComplete)
+        handler.getTaskStatusPlusList(theTaskLookups, datasource, fetchPayload)
     );
   }
 
