@@ -41,6 +41,7 @@ import {
   deepGet,
   formatBytes,
   formatBytesCompact,
+  hasPopoverOpen,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
   lookupBy,
@@ -718,7 +719,10 @@ ORDER BY
             </Button>
           </ButtonGroup>
           <RefreshButton
-            onRefresh={auto => this.serviceQueryManager.rerunLastQuery(auto)}
+            onRefresh={auto => {
+              if (auto && hasPopoverOpen()) return;
+              this.serviceQueryManager.rerunLastQuery(auto);
+            }}
             localStorageKey={LocalStorageKeys.SERVICES_REFRESH_RATE}
           />
           {this.renderBulkServicesActions()}

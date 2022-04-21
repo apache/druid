@@ -905,7 +905,7 @@ public class DruidQuery
     if (!Granularities.ALL.equals(queryGranularity) || grouping.hasGroupingDimensionsDropped()) {
       theContext.put(TimeseriesQuery.SKIP_EMPTY_BUCKETS, true);
     }
-    theContext.putAll(plannerContext.getQueryContext());
+    theContext.putAll(plannerContext.getQueryContext().getMergedParams());
 
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
@@ -1025,7 +1025,7 @@ public class DruidQuery
         Granularities.ALL,
         grouping.getAggregatorFactories(),
         postAggregators,
-        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
+        ImmutableSortedMap.copyOf(plannerContext.getQueryContext().getMergedParams())
     );
   }
 
@@ -1082,7 +1082,7 @@ public class DruidQuery
         havingSpec,
         Optional.ofNullable(sorting).orElse(Sorting.none()).limitSpec(),
         grouping.getSubtotals().toSubtotalsSpec(grouping.getDimensionSpecs()),
-        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
+        ImmutableSortedMap.copyOf(plannerContext.getQueryContext().getMergedParams())
     );
     // We don't apply timestamp computation optimization yet when limit is pushed down. Maybe someday.
     if (query.getLimitSpec() instanceof DefaultLimitSpec && query.isApplyLimitPushDown()) {
@@ -1199,14 +1199,25 @@ public class DruidQuery
       orderByColumns = Collections.emptyList();
     }
 
-    if (!queryFeatureInspector.feature(QueryFeature.SCAN_CAN_ORDER_BY_NON_TIME)
-        && (orderByColumns.size() > 1
-            || orderByColumns.stream()
-                             .anyMatch(orderBy -> !orderBy.getColumnName().equals(ColumnHolder.TIME_COLUMN_NAME)))) {
-      // Cannot handle this ordering.
-      // Scan cannot ORDER BY non-time columns.
-      plannerContext.setPlanningError("SQL query requires order by non-time column %s that is not supported.", orderByColumns);
-      return null;
+    if (!queryFeatureInspector.feature(QueryFeature.SCAN_CAN_ORDER_BY_NON_TIME) && !orderByColumns.isEmpty()) {
+      if (orderByColumns.size() > 1 || !ColumnHolder.TIME_COLUMN_NAME.equals(orderByColumns.get(0).getColumnName())) {
+        // Cannot handle this ordering.
+        // Scan cannot ORDER BY non-time columns.
+        plannerContext.setPlanningError(
+            "SQL query requires order by non-time column %s that is not supported.",
+            orderByColumns
+        );
+        return null;
+      }
+      if (!dataSource.isConcrete()) {
+        // Cannot handle this ordering.
+        // Scan cannot ORDER BY non-time columns.
+        plannerContext.setPlanningError(
+            "SQL query is a scan and requires order by on a datasource[%s], which is not supported.",
+            dataSource
+        );
+        return null;
+      }
     }
 
     // Compute the list of columns to select, sorted and deduped.
@@ -1226,7 +1237,7 @@ public class DruidQuery
         filtration.getDimFilter(),
         ImmutableList.copyOf(scanColumns),
         false,
-        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
+        ImmutableSortedMap.copyOf(plannerContext.getQueryContext().getMergedParams())
     );
   }
 }

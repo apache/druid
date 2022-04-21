@@ -1463,7 +1463,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               )}
             </>
           )}
-          {this.renderFlattenControls()}
+          {canFlatten && this.renderFlattenControls()}
           {suggestedFlattenFields && suggestedFlattenFields.length ? (
             <FormGroup>
               <Button

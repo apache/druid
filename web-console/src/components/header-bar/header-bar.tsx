@@ -296,6 +296,12 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
                 onClick={() => setForcedMode(Capabilities.OVERLORD)}
               />
             )}
+            {capabilitiesMode !== 'no-proxy' && (
+              <MenuItem
+                text="Force no management proxy mode"
+                onClick={() => setForcedMode(Capabilities.NO_PROXY)}
+              />
+            )}
           </>
         )}
       </MenuItem>

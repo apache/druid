@@ -52,7 +52,7 @@ function isExplainQuery(query: string): boolean {
 function wrapInExplainIfNeeded(query: string): string {
   query = trimSemicolon(query);
   if (isExplainQuery(query)) return query;
-  return `EXPLAIN PLAN FOR (${query}\n)`;
+  return `EXPLAIN PLAN FOR ${query}`;
 }
 
 export interface ExplainDialogProps {

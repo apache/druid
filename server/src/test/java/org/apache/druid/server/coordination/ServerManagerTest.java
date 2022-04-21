@@ -168,6 +168,12 @@ public class ServerManagerTest
           {
 
           }
+
+          @Override
+          public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
+          {
+
+          }
         }
     );
     serverManager = new ServerManager(

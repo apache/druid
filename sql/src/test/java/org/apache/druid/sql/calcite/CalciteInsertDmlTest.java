@@ -40,8 +40,10 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import java.util.Map;
 
@@ -488,7 +490,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 ImmutableList.of()
             )
     );
-    Assert.assertEquals("INSERT statements must specify PARTITIONED BY clause explictly", e.getMessage());
+    Assert.assertEquals("INSERT statements must specify PARTITIONED BY clause explicitly", e.getMessage());
     didTest = true;
   }
 
@@ -659,6 +661,20 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                         .setAggregatorSpecs(new CountAggregatorFactory("a0"))
                         .setContext(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                         .build()
+        )
+        .verify();
+  }
+
+  @Test
+  public void testInsertWithInvalidSelectStatement()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO t SELECT channel, added as count FROM foo PARTITIONED BY ALL") // count is a keyword
+        .expectValidationError(
+            CoreMatchers.allOf(
+                CoreMatchers.instanceOf(SqlPlanningException.class),
+                ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Encountered \"as count\""))
+            )
         )
         .verify();
   }

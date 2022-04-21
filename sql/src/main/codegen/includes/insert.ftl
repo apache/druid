@@ -18,7 +18,7 @@
  */
 
 // Using fully qualified name for Pair class, since Calcite also has a same class name being used in the Parser.jj
-SqlNode DruidSqlInsert() :
+SqlNode DruidSqlInsertEof() :
 {
   SqlNode insertNode;
   org.apache.druid.java.util.common.Pair<Granularity, String> partitionedBy = new org.apache.druid.java.util.common.Pair(null, null);
@@ -26,6 +26,8 @@ SqlNode DruidSqlInsert() :
 }
 {
   insertNode = SqlInsert()
+  // PARTITIONED BY is necessary, but is kept optional in the grammar. It is asserted that it is not missing in the
+  // DruidSqlInsert constructor so that we can return a custom error message.
   [
     <PARTITIONED> <BY>
     partitionedBy = PartitionGranularity()
@@ -34,6 +36,11 @@ SqlNode DruidSqlInsert() :
     <CLUSTERED> <BY>
     clusteredBy = ClusterItems()
   ]
+  // EOF is also present in SqlStmtEof but EOF is a special case and a single EOF can be consumed multiple times.
+  // The reason for adding EOF here is to ensure that we create a DruidSqlInsert node after the syntax has been
+  // validated and throw SQL syntax errors before performing validations in the DruidSqlInsert which can overshadow the
+  // actual error message.
+  <EOF>
   {
     if (!(insertNode instanceof SqlInsert)) {
       // This shouldn't be encountered, but done as a defensive practice. SqlInsert() always returns a node of type

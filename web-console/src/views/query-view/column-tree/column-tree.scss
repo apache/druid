@@ -29,7 +29,7 @@
 }
 
 .column-tree {
-  .bp3-dark & {
+  .#{$bp-ns}-dark & {
     background: $dark-gray3;
   }
 
@@ -50,7 +50,7 @@
     width: 100%;
     overflow: auto;
 
-    .bp3-tree-node-content-1 {
+    .#{$bp-ns}-tree-node-content-1 {
       padding-left: 0;
     }
 
@@ -59,7 +59,7 @@
     }
   }
 
-  .bp3-popover2-target {
+  .#{$bp-ns}-popover2-target {
     width: 188px;
     display: inline-block;
     cursor: pointer;
