@@ -34,20 +34,20 @@ public class Fixtures
   public static List<OrderedPartitionableRecord<Integer, Long, ByteEntity>> generateRecords(String stream)
   {
     return ImmutableList.of(
-        new OrderedPartitionableRecord<>(stream, 1, 1l, jb("2008", "a", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, 1, 0l, jb("2008", "a", "y", "10", "20.0", "1.0")),
         new OrderedPartitionableRecord<>(stream, 1, 1l, jb("2009", "b", "y", "10", "20.0", "1.0")),
-        new OrderedPartitionableRecord<>(stream, 1, 1l, jb("2010", "c", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, 1, 2l, jb("2010", "c", "y", "10", "20.0", "1.0")),
         new OrderedPartitionableRecord<>(
             stream,
-            1, 1l,
+            1, 3l,
             jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")
         ),
         new OrderedPartitionableRecord<>(
             stream,
-            1, 1l,
+            1, 4l,
             Collections.singletonList(new ByteEntity(StringUtils.toUtf8("unparseable")))
         ),
-        new OrderedPartitionableRecord<>(stream, 1, 1l,
+        new OrderedPartitionableRecord<>(stream, 1, 5l,
             Collections.singletonList(new ByteEntity(StringUtils.toUtf8("{}"))))
     );
 

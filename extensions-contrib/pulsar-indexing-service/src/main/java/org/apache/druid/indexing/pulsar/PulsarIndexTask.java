@@ -74,7 +74,13 @@ public class PulsarIndexTask extends SeekableStreamIndexTask<Integer, Long, Byte
   @Override
   protected SeekableStreamIndexTaskRunner<Integer, Long, ByteEntity> createTaskRunner()
   {
-    return null;
+    //noinspection unchecked
+    return new PulsarIndexTaskRunner(
+        this,
+        dataSchema.getParser(),
+        authorizerMapper,
+        lockGranularityToUse
+    );
   }
 
   @Override

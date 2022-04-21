@@ -6,6 +6,8 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -28,6 +30,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
@@ -81,6 +84,7 @@ import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
@@ -96,6 +100,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
@@ -110,7 +115,9 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
+@RunWith(Parameterized.class)
 public class PulsarIndexTaskTest extends SeekableStreamIndexTaskTestBase
 {
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
@@ -125,11 +132,15 @@ public class PulsarIndexTaskTest extends SeekableStreamIndexTaskTestBase
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[] {LockGranularity.TIME_CHUNK},
-        new Object[] {LockGranularity.SEGMENT}
+//        new Object[] {LockGranularity.TIME_CHUNK},
+        new Object[] {LockGranularity.TIME_CHUNK}
     );
   }
 
+  static {
+    new PulsarIndexingServiceModule().getJacksonModules().stream().forEach(OBJECT_MAPPER::registerModule);
+  }
+  private AppenderatorsManager appenderatorsManager;
   private long handoffConditionTimeout = 0;
   private boolean reportParseExceptions = false;
   private boolean logParseExceptions = true;
@@ -184,9 +195,7 @@ public class PulsarIndexTaskTest extends SeekableStreamIndexTaskTestBase
     maxRecordsPerPoll = 1;
 
     recordSupplier = mock(PulsarRecordSupplier.class);
-
-    // sleep required because of kinesalite
-    Thread.sleep(500);
+    appenderatorsManager = new TestAppenderatorsManager();
     makeToolboxFactory();
   }
 
@@ -242,7 +251,8 @@ public class PulsarIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         false,
         false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        false
     );
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createDataSourceTable();
@@ -353,7 +363,7 @@ public class PulsarIndexTaskTest extends SeekableStreamIndexTaskTestBase
         MapCache.create(1024),
         new CacheConfig(),
         new CachePopulatorStats(),
-        testUtils.getTestIndexMergerV9(),
+        testUtils.getIndexMergerV9Factory(),
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
@@ -387,7 +397,7 @@ public class PulsarIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
-//  @Test(timeout = 120_000L)
+  @Test(timeout = 60_000L)
   public void testRunAfterDataInserted() throws Exception
   {
     recordSupplier.assign(EasyMock.anyObject());
@@ -398,10 +408,12 @@ public class PulsarIndexTaskTest extends SeekableStreamIndexTaskTestBase
     recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyLong());
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(Fixtures.generateRecords(STREAM)).once();
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong())).andReturn(Fixtures.generateRecords(STREAM)).anyTimes();
 
     recordSupplier.close();
-    EasyMock.expectLastCall().once();
+    EasyMock.expectLastCall().anyTimes();
+
+    EasyMock.expect(recordSupplier.getPreviousSeekFailure()).andReturn(null).anyTimes();
 
     replayAll();
 
@@ -410,12 +422,12 @@ public class PulsarIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new PulsarIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, 4l)),
-            new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, 4l)),
-            new SeekableStreamStartSequenceNumbers<Integer, Long>(STREAM, ImmutableMap.of(SHARD_ID1, 4l),
-                ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, 4l)),
             null,
+            null,
+            new SeekableStreamStartSequenceNumbers<Integer, Long>(STREAM, ImmutableMap.of(SHARD_ID1, 0l),
+                ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, 2l)),
+            ImmutableMap.of(PulsarSupervisorIOConfig.SERVICE_URL_KEY, "pulsar://localhost"),
             PulsarSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             null,
             null,
@@ -433,21 +445,21 @@ public class PulsarIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyAll();
 
     // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(2, task.getRunner().getRowIngestionMeters().getProcessed());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
         ImmutableList.of(
-            sdd("2010/P1D", 0, ImmutableList.of("lllllc")),
-            sdd("2011/P1D", 0, ImmutableList.of("d", "e"))
+            sdd("2008/P1D", 0, ImmutableList.of("a")),
+            sdd("2009/P1D", 0, ImmutableList.of("b"))
         ),
         publishedDescriptors()
     );
     Assert.assertEquals(
         new PulsarDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, 4l))
+            new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, 1l))
         ),
         newDataSchemaMetadata()
     );
@@ -486,18 +498,20 @@ public class PulsarIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     final PulsarIndexTaskTuningConfig tuningConfig = new PulsarSupervisorTuningConfig(
         null,
-        1,
+        maxRowsInMemory,
         null,
         null,
-        2,
-        10L,
-        new Period("PT3S"),
-        new File("/tmp/xxx"),
+        maxRowsPerSegment,
+        maxTotalRows,
+        new Period("P1Y"),
+        null,
         4,
         new IndexSpec(),
         new IndexSpec(),
         true,
-        5L,
+        handoffConditionTimeout,
+        resetOffsetAutomatically,
+        true,
         null,
         null,
         null,
@@ -505,12 +519,10 @@ public class PulsarIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         null,
         null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
+        intermediateHandoffPeriod,
+        logParseExceptions,
+        maxParseExceptions,
+        maxSavedParseExceptions
     );
 
     return new TestablePulsarIndexTask(
