@@ -8,8 +8,9 @@ import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.common.policies.data.ClusterData;
-import org.apache.pulsar.common.policies.data.TenantInfo;
-import org.apache.pulsar.common.policies.data.TenantInfoImpl;;
+import org.apache.pulsar.common.policies.data.TenantInfoImpl;
+
+;
 
 public class PulsarTestBase  extends MockedPulsarServiceBaseTest {
 
