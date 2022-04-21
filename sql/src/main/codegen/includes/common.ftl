@@ -17,6 +17,7 @@
  * under the License.
  */
 
+// Using fully qualified name for Pair class, since Calcite also has a same class name being used in the Parser.jj
 org.apache.druid.java.util.common.Pair<Granularity, String> PartitionGranularity() :
 {
   SqlNode e = null;

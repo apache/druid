@@ -62,7 +62,7 @@ import java.util.Map;
 
 public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 {
-  private static final Map<String, Object> DEFAULT_CONTEXT =
+  protected static final Map<String, Object> DEFAULT_CONTEXT =
       ImmutableMap.<String, Object>builder()
                   .put(PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
                   .build();
@@ -304,7 +304,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
       Assert.assertEquals(
           ImmutableSet.copyOf(expectedResources),
-          analyzeResources(plannerConfig, sql, authenticationResult)
+          analyzeResources(plannerConfig, new AuthConfig(), sql, queryContext, authenticationResult)
       );
 
       final List<Object[]> results =

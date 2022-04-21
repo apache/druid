@@ -18,96 +18,48 @@
  */
 
 // Taken from syntax of SqlInsert statement from calcite parser, edited for replace syntax
-SqlNode DruidSqlReplace() :
+SqlNode DruidSqlReplaceEof() :
 {
     SqlNode table;
-    SqlNodeList extendList = null;
     SqlNode source;
     SqlNodeList columnList = null;
     final Span s;
     SqlInsert sqlInsert;
     // Using fully qualified name for Pair class, since Calcite also has a same class name being used in the Parser.jj
     org.apache.druid.java.util.common.Pair<Granularity, String> partitionedBy = new org.apache.druid.java.util.common.Pair(null, null);
-    List<String> partitionSpecList;
     final Pair<SqlNodeList, SqlNodeList> p;
+    final SqlNode replaceTimeQuery;
 }
 {
     <REPLACE> { s = span(); }
-    <INTO> table = CompoundIdentifier()
+    table = CompoundIdentifier()
     [
         p = ParenthesizedCompoundIdentifierList() {
-            if (p.right.size() > 0) {
-                table = extend(table, p.right);
-            }
             if (p.left.size() > 0) {
                 columnList = p.left;
             }
         }
     ]
+    <DELETE>
+    (
+      <ALL> { replaceTimeQuery = SqlLiteral.createCharString("ALL", getPos()); }
+    |
+      replaceTimeQuery = WhereOpt()
+    )
     source = OrderedQueryOrExpr(ExprContext.ACCEPT_QUERY)
-    <FOR> partitionSpecList = PartitionSpecs()
+    // PARTITIONED BY is necessary, but is kept optional in the grammar. It is asserted that it is not missing in the
+    // DruidSqlInsert constructor so that we can return a custom error message.
     [
       <PARTITIONED> <BY>
       partitionedBy = PartitionGranularity()
     ]
+    // EOF is also present in SqlStmtEof but EOF is a special case and a single EOF can be consumed multiple times.
+    // The reason for adding EOF here is to ensure that we create a DruidSqlReplace node after the syntax has been
+    // validated and throw SQL syntax errors before performing validations in the DruidSqlReplace which can overshadow the
+    // actual error message.
+    <EOF>
     {
         sqlInsert = new SqlInsert(s.end(source), SqlNodeList.EMPTY, table, source, columnList);
-        return new DruidSqlReplace(sqlInsert, partitionedBy.lhs, partitionedBy.rhs, partitionSpecList);
+        return new DruidSqlReplace(sqlInsert, partitionedBy.lhs, partitionedBy.rhs, replaceTimeQuery);
     }
-}
-
-List<String> PartitionSpecs() :
-{
-  List<String> partitionSpecList;
-  String intervalString;
-}
-{
-  (
-    <ALL> <TIME>
-    {
-     return startList("all");
-    }
-  |
-    intervalString = PartitionSpec()
-    {
-      return startList(intervalString);
-    }
-  |
-    <LPAREN>
-    intervalString = PartitionSpec()
-    {
-      partitionSpecList = startList(intervalString);
-    }
-    (
-      <COMMA>
-      intervalString = PartitionSpec()
-      {
-        partitionSpecList.add(intervalString);
-      }
-    )*
-    <RPAREN>
-    {
-      return partitionSpecList;
-    }
-  )
-}
-
-String PartitionSpec() :
-{
-  final Span s;
-  SqlNode sqlNode;
-}
-{
-  (
-    <PARTITION> sqlNode = StringLiteral()
-    {
-      return SqlParserUtil.parseString(SqlLiteral.stringValue(sqlNode));
-    }
-  |
-    <PARTITION> <TIMESTAMP> { s = span(); } <QUOTED_STRING>
-    {
-      SqlTimestampLiteral timestampLiteral = SqlParserUtil.parseTimestampLiteral(token.image, s.end(this));
-      return timestampLiteral.toFormattedString();
-    }
-  )
 }

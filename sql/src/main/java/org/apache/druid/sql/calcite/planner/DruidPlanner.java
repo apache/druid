@@ -27,6 +27,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
@@ -51,13 +52,16 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOrderBy;
+import org.apache.calcite.sql.SqlTimestampLiteral;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
@@ -77,11 +81,20 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.filter.AndDimFilter;
+import org.apache.druid.query.filter.BoundDimFilter;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.OrDimFilter;
+import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.filtration.MoveTimeFiltersToIntervals;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
@@ -91,9 +104,14 @@ import org.apache.druid.sql.calcite.rel.DruidUnionRel;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 import org.apache.druid.utils.Throwables;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Interval;
+import org.joda.time.base.AbstractInterval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.sql.Timestamp;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -133,7 +151,7 @@ public class DruidPlanner implements Closeable
   public ValidationResult validate(boolean authorizeContextParams) throws SqlParseException, ValidationException
   {
     resetPlanner();
-    final ParsedNodes parsed = ParsedNodes.create(planner.parse(plannerContext.getSql()));
+    final ParsedNodes parsed = ParsedNodes.create(planner.parse(plannerContext.getSql()), plannerContext.getTimeZone());
     final SqlValidator validator = getValidator();
     final SqlNode validatedQueryNode;
 
@@ -174,7 +192,7 @@ public class DruidPlanner implements Closeable
   {
     resetPlanner();
 
-    final ParsedNodes parsed = ParsedNodes.create(planner.parse(plannerContext.getSql()));
+    final ParsedNodes parsed = ParsedNodes.create(planner.parse(plannerContext.getSql()), plannerContext.getTimeZone());
     final SqlNode validatedQueryNode = planner.validate(parsed.getQueryNode());
     final RelRoot rootQueryRel = planner.rel(validatedQueryNode);
 
@@ -205,7 +223,7 @@ public class DruidPlanner implements Closeable
   {
     resetPlanner();
 
-    final ParsedNodes parsed = ParsedNodes.create(planner.parse(plannerContext.getSql()));
+    final ParsedNodes parsed = ParsedNodes.create(planner.parse(plannerContext.getSql()), plannerContext.getTimeZone());
 
     try {
       if (parsed.getIngestionGranularity() != null) {
@@ -219,10 +237,10 @@ public class DruidPlanner implements Closeable
       throw new ValidationException("Unable to serialize partition granularity.");
     }
 
-    if (parsed.getReplaceTimeChunks() != null) {
-      plannerContext.getQueryContext().put(
+    if (parsed.getReplaceIntervals() != null) {
+      plannerContext.getQueryContext().addSystemParam(
           DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
-          String.join(",", parsed.getReplaceTimeChunks())
+          String.join(",", parsed.getReplaceIntervals())
       );
     }
 
@@ -233,11 +251,7 @@ public class DruidPlanner implements Closeable
     final RelRoot rootQueryRel = planner.rel(validatedQueryNode);
 
     try {
-      return planWithDruidConvention(
-          rootQueryRel,
-          parsed.getExplainNode(),
-          parsed.getInsertOrReplace()
-      );
+      return planWithDruidConvention(rootQueryRel, parsed.getExplainNode(), parsed.getInsertOrReplace());
     }
     catch (Exception e) {
       Throwable cannotPlanException = Throwables.getCauseOfType(e, RelOptPlanner.CannotPlanException.class);
@@ -246,7 +260,7 @@ public class DruidPlanner implements Closeable
         throw e;
       }
 
-      // If there isn't any INSERT clause, then we should try again with BINDABLE convention. And return without
+      // If there isn't any ingestion clause, then we should try again with BINDABLE convention. And return without
       // any error, if it is plannable by the bindable convention
       if (parsed.getInsertOrReplace() == null) {
         // Try again with BINDABLE convention. Used for querying Values and metadata tables.
@@ -780,31 +794,31 @@ public class DruidPlanner implements Closeable
     private final Granularity ingestionGranularity;
 
     @Nullable
-    private final List<String> replaceTimeChunks;
+    private final List<String> replaceIntervals;
 
     private ParsedNodes(
         @Nullable SqlExplain explain,
         @Nullable SqlInsert insertOrReplace,
         SqlNode query,
         @Nullable Granularity ingestionGranularity,
-        @Nullable List<String> partitionSpec
+        @Nullable List<String> replaceIntervals
     )
     {
       this.explain = explain;
       this.insertOrReplace = insertOrReplace;
       this.query = query;
       this.ingestionGranularity = ingestionGranularity;
-      this.replaceTimeChunks = partitionSpec;
+      this.replaceIntervals = replaceIntervals;
     }
 
-    static ParsedNodes create(final SqlNode node) throws ValidationException
+    static ParsedNodes create(final SqlNode node, DateTimeZone dateTimeZone) throws ValidationException
     {
       SqlExplain explain = null;
       DruidSqlInsert druidSqlInsert = null;
       DruidSqlReplace druidSqlReplace = null;
       SqlNode query = node;
       Granularity ingestionGranularity = null;
-      List<String> replaceTimeChunks = null;
+      List<String> replaceIntervals = null;
 
       if (query.getKind() == SqlKind.EXPLAIN) {
         explain = (SqlExplain) query;
@@ -864,13 +878,13 @@ public class DruidPlanner implements Closeable
             }
           }
 
-          List<String> replaceTimeChunksList = druidSqlReplace.getReplaceTimeChunks();
-          if (replaceTimeChunksList == null || replaceTimeChunksList.isEmpty()) {
-            throw new ValidationException("Missing partition specs for replace.");
+          SqlNode replaceTimeQuery = druidSqlReplace.getReplaceTimeQuery();
+          if (replaceTimeQuery == null) {
+            throw new ValidationException("Missing time chunk information in DELETE WHERE clause for replace.");
           }
 
           ingestionGranularity = druidSqlReplace.getPartitionedBy();
-          replaceTimeChunks = druidSqlReplace.getReplaceTimeChunks();
+          replaceIntervals = validateQueryAndConvertToIntervals(replaceTimeQuery, ingestionGranularity, dateTimeZone);
         }
       }
 
@@ -879,10 +893,93 @@ public class DruidPlanner implements Closeable
       }
 
       if (druidSqlInsert != null) {
-        return new ParsedNodes(explain, druidSqlInsert, query, ingestionGranularity, replaceTimeChunks);
+        return new ParsedNodes(explain, druidSqlInsert, query, ingestionGranularity, null);
       } else {
-        return new ParsedNodes(explain, druidSqlReplace, query, ingestionGranularity, replaceTimeChunks);
+        return new ParsedNodes(explain, druidSqlReplace, query, ingestionGranularity, replaceIntervals);
       }
+    }
+
+    private static List<String> validateQueryAndConvertToIntervals(
+        SqlNode replaceTimeQuery,
+        Granularity granularity,
+        DateTimeZone dateTimeZone
+    ) throws ValidationException
+    {
+      if (replaceTimeQuery instanceof SqlLiteral && "all".equalsIgnoreCase(((SqlLiteral) replaceTimeQuery).toValue())) {
+        return ImmutableList.of("all");
+      }
+
+      DimFilter dimFilter = convertQueryToDimFilter(replaceTimeQuery, dateTimeZone);
+      if (!ImmutableSet.of(ColumnHolder.TIME_COLUMN_NAME).equals(dimFilter.getRequiredColumns())) {
+        throw new ValidationException("Only " + ColumnHolder.TIME_COLUMN_NAME + " column is supported in DELETE WHERE clause");
+      }
+
+      Filtration filtration = Filtration.create(dimFilter);
+      filtration = MoveTimeFiltersToIntervals.instance().apply(filtration);
+      List<Interval> intervals = filtration.getIntervals();
+
+      for (Interval interval : intervals) {
+        if (!granularity.isAligned(interval)) {
+          throw new ValidationException("DELETE WHERE clause contains an interval which is not aligned with PARTITIONED BY granularity");
+        }
+      }
+      return intervals
+          .stream()
+          .map(AbstractInterval::toString)
+          .collect(Collectors.toList());
+    }
+
+    private static DimFilter convertQueryToDimFilter(SqlNode replaceTimeQuery, DateTimeZone dateTimeZone)
+        throws ValidationException
+    {
+      if (replaceTimeQuery instanceof SqlBasicCall) {
+        SqlBasicCall sqlBasicCall = (SqlBasicCall) replaceTimeQuery;
+        Pair<String, String> columnValuePair;
+        switch (sqlBasicCall.getOperator().getName()) {
+          case "AND":
+            List<DimFilter> dimFilters = new ArrayList<>();
+            for (SqlNode sqlNode : sqlBasicCall.getOperandList()) {
+              dimFilters.add(convertQueryToDimFilter(sqlNode, dateTimeZone));
+            }
+            return new AndDimFilter(dimFilters);
+          case "OR":
+            dimFilters = new ArrayList<>();
+            for (SqlNode sqlNode : sqlBasicCall.getOperandList()) {
+              dimFilters.add(convertQueryToDimFilter(sqlNode, dateTimeZone));
+            }
+            return new OrDimFilter(dimFilters);
+          case "NOT":
+            return new NotDimFilter(convertQueryToDimFilter(sqlBasicCall.getOperandList().get(0), dateTimeZone));
+          case ">=":
+            columnValuePair = createColumnValuePair(sqlBasicCall.getOperandList(), dateTimeZone);
+            return new BoundDimFilter(columnValuePair.left, columnValuePair.right, null, false, null, null, null, StringComparators.NUMERIC);
+          case "<=":
+            columnValuePair = createColumnValuePair(sqlBasicCall.getOperandList(), dateTimeZone);
+            return new BoundDimFilter(columnValuePair.left, null, columnValuePair.right, null, false, null, null, StringComparators.NUMERIC);
+          case ">":
+            columnValuePair = createColumnValuePair(sqlBasicCall.getOperandList(), dateTimeZone);
+            return new BoundDimFilter(columnValuePair.left, columnValuePair.right, null, true, null, null, null, StringComparators.NUMERIC);
+          case "<":
+            columnValuePair = createColumnValuePair(sqlBasicCall.getOperandList(), dateTimeZone);
+            return new BoundDimFilter(columnValuePair.left, null, columnValuePair.right, null, true, null, null, StringComparators.NUMERIC);
+          default:
+            throw new ValidationException("Unsupported operation in DELETE WHERE clause: " + sqlBasicCall.getOperator().getName());
+        }
+      }
+      throw new ValidationException("Invalid DELETE WHERE clause");
+    }
+
+    static Pair<String, String> createColumnValuePair(List<SqlNode> operands, DateTimeZone timeZone) throws ValidationException
+    {
+      SqlNode columnName = operands.get(0);
+      SqlNode timeLiteral = operands.get(1);
+      if (!(columnName instanceof SqlIdentifier) || !(timeLiteral instanceof SqlTimestampLiteral)) {
+        throw new ValidationException("Invalid DELETE WHERE clause");
+      }
+
+      Timestamp sqlTimestamp = Timestamp.valueOf(((SqlTimestampLiteral) timeLiteral).toFormattedString());
+      ZonedDateTime zonedTimestamp = sqlTimestamp.toLocalDateTime().atZone(timeZone.toTimeZone().toZoneId());
+      return Pair.of(columnName.toString(), String.valueOf(zonedTimestamp.toInstant().toEpochMilli()));
     }
 
     @Nullable
@@ -898,9 +995,9 @@ public class DruidPlanner implements Closeable
     }
 
     @Nullable
-    public List<String> getReplaceTimeChunks()
+    public List<String> getReplaceIntervals()
     {
-      return replaceTimeChunks;
+      return replaceIntervals;
     }
 
     public SqlNode getQueryNode()
