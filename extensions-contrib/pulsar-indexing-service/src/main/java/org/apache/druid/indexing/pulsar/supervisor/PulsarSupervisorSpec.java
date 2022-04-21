@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.pulsar.supervisor;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
@@ -40,7 +41,7 @@ import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 public class PulsarSupervisorSpec extends SeekableStreamSupervisorSpec {
   private static final String SUPERVISOR_TYPE = "pulsar";
 
-
+  @JsonCreator
   public PulsarSupervisorSpec(
     @JsonProperty("spec") @Nullable PulsarSupervisorIngestionSpec ingestionSchema,
     @JsonProperty("dataSchema") @Nullable DataSchema dataSchema,
