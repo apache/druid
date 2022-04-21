@@ -195,14 +195,23 @@ public class CalciteTests
           return Access.OK;
         }
 
-        if (ResourceType.DATASOURCE.equals(resource.getType()) && resource.getName().equals(FORBIDDEN_DATASOURCE)) {
-          return new Access(false);
-        } else if (ResourceType.VIEW.equals(resource.getType()) && resource.getName().equals("forbiddenView")) {
-          return new Access(false);
-        } else if (ResourceType.DATASOURCE.equals(resource.getType()) || ResourceType.VIEW.equals(resource.getType())) {
-          return Access.OK;
-        } else {
-          return new Access(false);
+        switch (resource.getType()) {
+          case ResourceType.DATASOURCE:
+            if (resource.getName().equals(FORBIDDEN_DATASOURCE)) {
+              return new Access(false);
+            } else {
+              return Access.OK;
+            }
+          case ResourceType.VIEW:
+            if (resource.getName().equals("forbiddenView")) {
+              return new Access(false);
+            } else {
+              return Access.OK;
+            }
+          case ResourceType.QUERY_CONTEXT:
+            return Access.OK;
+          default:
+            return new Access(false);
         }
       };
     }
@@ -823,11 +832,20 @@ public class CalciteTests
 
   public static SqlLifecycleFactory createSqlLifecycleFactory(final PlannerFactory plannerFactory)
   {
+    return createSqlLifecycleFactory(plannerFactory, new AuthConfig());
+  }
+
+  public static SqlLifecycleFactory createSqlLifecycleFactory(
+      final PlannerFactory plannerFactory,
+      final AuthConfig authConfig
+  )
+  {
     return new SqlLifecycleFactory(
         plannerFactory,
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
         new NoopRequestLogger(),
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+        authConfig
     );
   }
 

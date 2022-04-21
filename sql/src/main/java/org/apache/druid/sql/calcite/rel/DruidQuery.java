@@ -905,7 +905,7 @@ public class DruidQuery
     if (!Granularities.ALL.equals(queryGranularity) || grouping.hasGroupingDimensionsDropped()) {
       theContext.put(TimeseriesQuery.SKIP_EMPTY_BUCKETS, true);
     }
-    theContext.putAll(plannerContext.getQueryContext());
+    theContext.putAll(plannerContext.getQueryContext().getMergedParams());
 
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
@@ -1025,7 +1025,7 @@ public class DruidQuery
         Granularities.ALL,
         grouping.getAggregatorFactories(),
         postAggregators,
-        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
+        ImmutableSortedMap.copyOf(plannerContext.getQueryContext().getMergedParams())
     );
   }
 
@@ -1082,7 +1082,7 @@ public class DruidQuery
         havingSpec,
         Optional.ofNullable(sorting).orElse(Sorting.none()).limitSpec(),
         grouping.getSubtotals().toSubtotalsSpec(grouping.getDimensionSpecs()),
-        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
+        ImmutableSortedMap.copyOf(plannerContext.getQueryContext().getMergedParams())
     );
     // We don't apply timestamp computation optimization yet when limit is pushed down. Maybe someday.
     if (query.getLimitSpec() instanceof DefaultLimitSpec && query.isApplyLimitPushDown()) {
@@ -1237,7 +1237,7 @@ public class DruidQuery
         filtration.getDimFilter(),
         ImmutableList.copyOf(scanColumns),
         false,
-        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
+        ImmutableSortedMap.copyOf(plannerContext.getQueryContext().getMergedParams())
     );
   }
 }
