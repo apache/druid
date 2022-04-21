@@ -20,21 +20,20 @@
 package org.apache.druid.indexing.pulsar.supervisor;
 
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIngestionSpec;
-import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 
 public class PulsarSupervisorIngestionSpec extends SeekableStreamSupervisorIngestionSpec {
 
   private final DataSchema dataSchema;
   private final PulsarSupervisorIOConfig ioConfig;
-//  private final KinesisSupervisorTuningConfig tuningConfig;
+  private final PulsarSupervisorTuningConfig tuningConfig;
 
   public PulsarSupervisorIngestionSpec(DataSchema dataSchema,
                                        PulsarSupervisorIOConfig ioConfig,
-                                       SeekableStreamSupervisorTuningConfig tuningConfig) {
+                                       PulsarSupervisorTuningConfig tuningConfig) {
     super(dataSchema, ioConfig, tuningConfig);
     this.dataSchema = dataSchema;
     this.ioConfig = ioConfig;
-//    this.tuningConfig = tuningConfig == null ? KinesisSupervisorTuningConfig.defaultConfig() : tuningConfig;
+    this.tuningConfig = tuningConfig == null ? PulsarSupervisorTuningConfig.defaultConfig() : tuningConfig;
   }
 }

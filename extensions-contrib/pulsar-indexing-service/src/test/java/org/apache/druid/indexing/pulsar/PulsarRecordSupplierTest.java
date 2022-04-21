@@ -60,46 +60,6 @@ public class PulsarRecordSupplierTest  extends EasyMockSupport {
 //    pulsarTestBase.tearDown();
   }
 
-//  private static List<ProducerRecord<byte[], byte[]>> generateRecords(String topic)
-//  {
-//    return ImmutableList.of(
-//      new ProducerRecord<>(topic, 0, null, jb("2008", "a", "y", "10", "20.0", "1.0")),
-//      new ProducerRecord<>(topic, 0, null, jb("2009", "b", "y", "10", "20.0", "1.0")),
-//      new ProducerRecord<>(topic, 0, null, jb("2010", "c", "y", "10", "20.0", "1.0")),
-//      new ProducerRecord<>(topic, 0, null, jb("2011", "d", "y", "10", "20.0", "1.0")),
-//      new ProducerRecord<>(topic, 0, null, jb("2011", "e", "y", "10", "20.0", "1.0")),
-//      new ProducerRecord<>(topic, 0, null, jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")),
-//      new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8("unparseable")),
-//      new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8("unparseable2")),
-//      new ProducerRecord<>(topic, 0, null, null),
-//      new ProducerRecord<>(topic, 0, null, jb("2013", "f", "y", "10", "20.0", "1.0")),
-//      new ProducerRecord<>(topic, 0, null, jb("2049", "f", "y", "notanumber", "20.0", "1.0")),
-//      new ProducerRecord<>(topic, 1, null, jb("2049", "f", "y", "10", "notanumber", "1.0")),
-//      new ProducerRecord<>(topic, 1, null, jb("2049", "f", "y", "10", "20.0", "notanumber")),
-//      new ProducerRecord<>(topic, 1, null, jb("2012", "g", "y", "10", "20.0", "1.0")),
-//      new ProducerRecord<>(topic, 1, null, jb("2011", "h", "y", "10", "20.0", "1.0"))
-//    );
-//  }
-
-//  private static byte[] jb(String timestamp, String dim1, String dim2, String dimLong, String dimFloat, String met1)
-//  {
-//    try {
-//      return new ObjectMapper().writeValueAsBytes(
-//        ImmutableMap.builder()
-//          .put("timestamp", timestamp)
-//          .put("dim1", dim1)
-//          .put("dim2", dim2)
-//          .put("dimLong", dimLong)
-//          .put("dimFloat", dimFloat)
-//          .put("met1", met1)
-//          .build()
-//      );
-//    }
-//    catch (Exception e) {
-//      throw new RuntimeException(e);
-//    }
-//  }
-
   @Test
   public void testSupplierSetupAndAssignment()
   {

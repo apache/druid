@@ -164,6 +164,10 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
     }
   }
 
+  public PulsarClientException getPreviousSeekFailure() {
+    return previousSeekFailure;
+  }
+
   void setPosition(StreamPartition<Integer> partition, MessageId position)
   {
     CursorContainer reader = this.readerPartitions.get(partition);

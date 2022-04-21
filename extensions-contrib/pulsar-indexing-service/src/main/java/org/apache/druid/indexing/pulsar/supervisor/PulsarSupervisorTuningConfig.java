@@ -66,6 +66,7 @@ public class PulsarSupervisorTuningConfig extends PulsarIndexTaskTuningConfig
       offsetFetchPeriod,
       DEFAULT_OFFSET_FETCH_PERIOD
     );
+
   }
 
   public static PulsarSupervisorTuningConfig defaultConfig()
@@ -191,7 +192,7 @@ public class PulsarSupervisorTuningConfig extends PulsarIndexTaskTuningConfig
       getMaxPendingPersists(),
       getIndexSpec(),
       getIndexSpecForIntermediatePersists(),
-      isResetOffsetAutomatically(),
+      isReportParseExceptions(),
       getHandoffConditionTimeout(),
       isResetOffsetAutomatically(),
       isSkipSequenceNumberAvailabilityCheck(),
