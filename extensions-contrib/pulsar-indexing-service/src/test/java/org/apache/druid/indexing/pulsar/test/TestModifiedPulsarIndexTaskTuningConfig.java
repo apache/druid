@@ -71,4 +71,31 @@ public class TestModifiedPulsarIndexTaskTuningConfig extends PulsarIndexTaskTuni
     return extra;
   }
 
+  public TestModifiedPulsarIndexTaskTuningConfig(PulsarIndexTaskTuningConfig base, String extra)
+  {
+    super(
+      base.getAppendableIndexSpec(),
+      base.getMaxRowsInMemory(),
+      base.getMaxBytesInMemory(),
+      base.isSkipBytesInMemoryOverheadCheck(),
+      base.getMaxRowsPerSegment(),
+      base.getMaxTotalRows(),
+      base.getIntermediatePersistPeriod(),
+      base.getBasePersistDirectory(),
+      base.getMaxPendingPersists(),
+      base.getIndexSpec(),
+      base.getIndexSpecForIntermediatePersists(),
+      base.isReportParseExceptions(),
+      base.getHandoffConditionTimeout(),
+      base.isResetOffsetAutomatically(),
+      base.isSkipSequenceNumberAvailabilityCheck(),
+      base.getSegmentWriteOutMediumFactory(),
+      base.getIntermediateHandoffPeriod(),
+      base.isLogParseExceptions(),
+      base.getMaxParseExceptions(),
+      base.getMaxSavedParseExceptions()
+    );
+    this.extra = extra;
+  }
+
 }

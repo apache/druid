@@ -19,10 +19,12 @@
 
 package org.apache.druid.indexing.pulsar;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.indexing.pulsar.supervisor.PulsarSupervisorTuningConfig;
 import org.apache.druid.indexing.pulsar.test.TestModifiedPulsarIndexTaskTuningConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -30,6 +32,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.TuningConfig;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -208,6 +211,62 @@ public class PulsarIndexTaskTuningConfigTest {
     Assert.assertEquals(base.isLogParseExceptions(), deserialized.isLogParseExceptions());
     Assert.assertEquals(base.getMaxParseExceptions(), deserialized.getMaxParseExceptions());
     Assert.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
-
   }
+
+  @Test
+  public void testSerdeWithModifiedTuningConfigRemovedField() throws IOException
+  {
+    PulsarIndexTaskTuningConfig base = new PulsarIndexTaskTuningConfig(
+      null,
+      1,
+      null,
+      null,
+      2,
+      10L,
+      new Period("PT3S"),
+      new File("/tmp/xxx"),
+      4,
+      new IndexSpec(),
+      new IndexSpec(),
+      true,
+      5L,
+      null,
+      null,
+      null,
+      null,
+      true,
+      42,
+      42
+    );
+
+    String serialized = mapper.writeValueAsString(new TestModifiedPulsarIndexTaskTuningConfig(base, "loool"));
+    PulsarIndexTaskTuningConfig deserialized =
+      mapper.readValue(serialized, PulsarIndexTaskTuningConfig.class);
+
+    Assert.assertEquals(base.getAppendableIndexSpec(), deserialized.getAppendableIndexSpec());
+    Assert.assertEquals(base.getMaxRowsInMemory(), deserialized.getMaxRowsInMemory());
+    Assert.assertEquals(base.getMaxBytesInMemory(), deserialized.getMaxBytesInMemory());
+    Assert.assertEquals(base.getMaxRowsPerSegment(), deserialized.getMaxRowsPerSegment());
+    Assert.assertEquals(base.getMaxTotalRows(), deserialized.getMaxTotalRows());
+    Assert.assertEquals(base.getIntermediatePersistPeriod(), deserialized.getIntermediatePersistPeriod());
+    Assert.assertEquals(base.getBasePersistDirectory(), deserialized.getBasePersistDirectory());
+    Assert.assertEquals(base.getMaxPendingPersists(), deserialized.getMaxPendingPersists());
+    Assert.assertEquals(base.getIndexSpec(), deserialized.getIndexSpec());
+    Assert.assertEquals(base.isReportParseExceptions(), deserialized.isReportParseExceptions());
+    Assert.assertEquals(base.getHandoffConditionTimeout(), deserialized.getHandoffConditionTimeout());
+    Assert.assertEquals(base.isResetOffsetAutomatically(), deserialized.isResetOffsetAutomatically());
+    Assert.assertEquals(base.getSegmentWriteOutMediumFactory(), deserialized.getSegmentWriteOutMediumFactory());
+    Assert.assertEquals(base.getIntermediateHandoffPeriod(), deserialized.getIntermediateHandoffPeriod());
+    Assert.assertEquals(base.isLogParseExceptions(), deserialized.isLogParseExceptions());
+    Assert.assertEquals(base.getMaxParseExceptions(), deserialized.getMaxParseExceptions());
+    Assert.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
+  }
+
+  @Test
+  public void testEqualsAndHashCode() {
+    EqualsVerifier.forClass(PulsarIndexTaskTuningConfig.class)
+      .usingGetClass()
+      .verify();
+  }
+
 }
