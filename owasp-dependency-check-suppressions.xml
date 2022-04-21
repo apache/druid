@@ -320,12 +320,14 @@
      <cve>CVE-2018-8029</cve>
   </suppress>
   <suppress>
+     <!-- Suppress cves that aren't applicable to hadoop client -->
      <notes><![CDATA[
      file name: hadoop-*-2.8.5.jar
      ]]></notes>
      <packageUrl regex="true">^pkg:maven/org\.apache\.hadoop/hadoop\-.*@.*$</packageUrl>
      <cve>CVE-2018-11765</cve>
      <cve>CVE-2020-9492</cve>
+     <cve>CVE-2022-26612</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -479,4 +481,5 @@
     <packageUrl regex="true">^pkg:maven/org\.asynchttpclient/async-http-client-netty-utils@2.5.3$</packageUrl>
     <cve>CVE-2021-43138</cve>
   </suppress>
+
 </suppressions>
