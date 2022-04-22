@@ -337,6 +337,8 @@ public class JvmMonitor extends FeedDefiningMonitor
           return "cms";
         case "G1 incremental collections":
           return "g1";
+        case "Shenandoah partial":
+          return "shenandoah";
 
         // Old gen
         case "MCS":
@@ -347,6 +349,8 @@ public class JvmMonitor extends FeedDefiningMonitor
           return "cms";
         case "G1 stop-the-world full collections":
           return "g1";
+        case "Shenandoah full":
+          return "shenandoah";
 
         default:
           return name;
