@@ -90,11 +90,6 @@ public class Calcites
 
   private static final Pattern TRAILING_ZEROS = Pattern.compile("\\.?0+$");
 
-  /**
-   * Milliseconds precision.
-   */
-  private static final int TIMESTAMP_LITERAL_PRECISION = 3;
-
   public static final SqlReturnTypeInference
       ARG0_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE = new Arg0NullableArrayTypeInference();
   public static final SqlReturnTypeInference
@@ -309,7 +304,7 @@ public class Calcites
   /**
    * Creates a Calcite TIMESTAMP literal from a Joda DateTime.
    *
-   * @param dateTime joda timestamp
+   * @param dateTime        joda timestamp
    * @param sessionTimeZone session time zone
    *
    * @return Calcite style Calendar, appropriate for literals
@@ -317,7 +312,8 @@ public class Calcites
   public static RexLiteral jodaToCalciteTimestampLiteral(
       final RexBuilder rexBuilder,
       final DateTime dateTime,
-      final DateTimeZone sessionTimeZone
+      final DateTimeZone sessionTimeZone,
+      final int precision
   )
   {
     // Calcite expects TIMESTAMP literals to be represented by TimestampStrings in the session time zone.
@@ -325,7 +321,8 @@ public class Calcites
     final String timestampString = TRAILING_ZEROS
         .matcher(CALCITE_TIMESTAMP_PRINTER.print(dateTime.withZone(sessionTimeZone)))
         .replaceAll("");
-    return rexBuilder.makeTimestampLiteral(new TimestampString(timestampString), TIMESTAMP_LITERAL_PRECISION);
+
+    return rexBuilder.makeTimestampLiteral(new TimestampString(timestampString), precision);
   }
 
   /**

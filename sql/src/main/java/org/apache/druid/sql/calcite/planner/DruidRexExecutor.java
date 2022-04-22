@@ -112,7 +112,8 @@ public class DruidRexExecutor implements RexExecutor
           literal = Calcites.jodaToCalciteTimestampLiteral(
               rexBuilder,
               DateTimes.utc(exprResult.asLong()),
-              plannerContext.getTimeZone()
+              plannerContext.getTimeZone(),
+              constExp.getType().getPrecision()
           );
         } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
           final BigDecimal bigDecimal;
