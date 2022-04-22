@@ -255,13 +255,13 @@ public class TaskConfig
     }
     // TODO: consider the size of each of the base locations for distribution
     // use uniformly RANDOM assignment
-    int index = taskId.hashCode() % baseTaskDirLocations.size();
+    int index = Math.abs(taskId.hashCode()) % baseTaskDirLocations.size();
     return baseTaskDirLocations.get(index);
   }
 
   public File getTaskDir(String taskId)
   {
-    return new File(getBaseTaskDirLocationForId(taskId).getPath(), taskId);
+    return getBaseTaskDirLocationForId(taskId).getPath();
   }
 
   public File getTaskWorkDir(String taskId)

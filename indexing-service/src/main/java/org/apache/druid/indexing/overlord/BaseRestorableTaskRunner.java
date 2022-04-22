@@ -186,8 +186,7 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
     for (TaskRunnerWorkItem taskRunnerWorkItem : tasks.values()) {
       String taskId = taskRunnerWorkItem.getTaskId();
       StorageLocationConfig location = taskConfig.getBaseTaskDirLocationForId(taskId);
-      fileToTasksMap.putIfAbsent(location, new ArrayList<>());
-      fileToTasksMap.get(location).add(taskId);
+      fileToTasksMap.computeIfAbsent(location, k -> new ArrayList<>()).add(taskId);
     }
 
     for (Map.Entry<StorageLocationConfig, List<String>> entry : fileToTasksMap.entrySet()) {

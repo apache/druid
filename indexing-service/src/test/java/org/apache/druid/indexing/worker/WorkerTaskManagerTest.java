@@ -190,7 +190,7 @@ public class WorkerTaskManagerTest
     }
 
     // create a task in assigned task directory, to simulate MM shutdown right after a task was assigned.
-    jsonMapper.writeValue(new File(workerTaskManager.getAssignedTaskDirs(task1.getId()), task1.getId()), task1);
+    jsonMapper.writeValue(new File(workerTaskManager.getAssignedTaskDir(task1.getId()), task1.getId()), task1);
 
     // simulate an already completed task
     jsonMapper.writeValue(
@@ -211,7 +211,7 @@ public class WorkerTaskManagerTest
     }
     Assert.assertTrue(workerTaskManager.getCompletedTasks().get(task1.getId()).getTaskStatus().isSuccess());
     Assert.assertTrue(new File(workerTaskManager.getCompletedTaskDir(task1.getId()), task1.getId()).exists());
-    Assert.assertFalse(new File(workerTaskManager.getAssignedTaskDirs(task1.getId()), task1.getId()).exists());
+    Assert.assertFalse(new File(workerTaskManager.getAssignedTaskDir(task1.getId()), task1.getId()).exists());
 
     ChangeRequestsSnapshot<WorkerHistoryItem> baseHistory = workerTaskManager
         .getChangesSince(new ChangeRequestHistory.Counter(-1, 0))
@@ -244,7 +244,7 @@ public class WorkerTaskManagerTest
 
     Assert.assertTrue(workerTaskManager.getCompletedTasks().get(task3.getId()).getTaskStatus().isSuccess());
     Assert.assertTrue(new File(workerTaskManager.getCompletedTaskDir(task3.getId()), task3.getId()).exists());
-    Assert.assertFalse(new File(workerTaskManager.getAssignedTaskDirs(task3.getId()), task3.getId()).exists());
+    Assert.assertFalse(new File(workerTaskManager.getAssignedTaskDir(task3.getId()), task3.getId()).exists());
 
     ChangeRequestsSnapshot<WorkerHistoryItem> changes = workerTaskManager.getChangesSince(baseHistory.getCounter())
                                                                          .get();

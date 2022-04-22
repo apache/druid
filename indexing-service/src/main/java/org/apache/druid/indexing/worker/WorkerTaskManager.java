@@ -285,7 +285,7 @@ public class WorkerTaskManager
 
       try {
         FileUtils.writeAtomically(
-            new File(getAssignedTaskDirs(task.getId()), task.getId()),
+            new File(getAssignedTaskDir(task.getId()), task.getId()),
             getTmpTaskDir(task.getId()),
             os -> {
               jsonMapper.writeValue(os, task);
@@ -342,7 +342,7 @@ public class WorkerTaskManager
     }
   }
 
-  public File getAssignedTaskDirs(String taskId)
+  public File getAssignedTaskDir(String taskId)
   {
     return new File(taskConfig.getTaskDir(taskId), ASSIGNED);
   }
@@ -402,7 +402,7 @@ public class WorkerTaskManager
   private void cleanupAssignedTask(Task task)
   {
     assignedTasks.remove(task.getId());
-    File taskFile = new File(getAssignedTaskDirs(task.getId()), task.getId());
+    File taskFile = new File(getAssignedTaskDir(task.getId()), task.getId());
     try {
       Files.delete(taskFile.toPath());
     }
