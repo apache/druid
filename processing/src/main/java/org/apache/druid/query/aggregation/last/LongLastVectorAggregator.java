@@ -25,6 +25,9 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
+/**
+ * Vectorized version of on heap 'last' aggregator for column selectors with type LONG..
+ */
 public class LongLastVectorAggregator extends NumericLastVectorAggregator
 {
   long lastValue;
@@ -36,11 +39,10 @@ public class LongLastVectorAggregator extends NumericLastVectorAggregator
   }
 
   @Override
-  public void init(ByteBuffer buf, int position)
+  void initValue(ByteBuffer buf, int position)
   {
     buf.putLong(position, Long.MIN_VALUE);
   }
-
 
 
   @Override
@@ -50,11 +52,32 @@ public class LongLastVectorAggregator extends NumericLastVectorAggregator
     buf.putLong(position, lastValue);
   }
 
+
+  /**
+   * @return The primitive object stored at the position in the buffer.
+   */
   @Nullable
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return new SerializablePair<>(lastTime, rhsNull ? null : lastValue);
+    final boolean rhsNull = isValueNull(buf, position);
+    return new SerializablePair<>(buf.getLong(position), rhsNull ? null : buf.getLong(position + VALUE_OFFSET));
   }
+
+  public float getFloat(ByteBuffer buf, int position)
+  {
+    return buf.getLong(position + VALUE_OFFSET);
+  }
+
+  public long getLong(ByteBuffer buf, int position)
+  {
+    return buf.getLong(position + VALUE_OFFSET);
+  }
+
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return buf.getLong(position + VALUE_OFFSET);
+  }
+
 
 }

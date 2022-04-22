@@ -866,7 +866,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testPrimitiveLatestInSubquery() throws Exception
   {
     // Cannot vectorize LATEST aggregator.
-    skipVectorize();
+    //skipVectorize();
 
     testQuery(
         "SELECT SUM(val1), SUM(val2), SUM(val3) FROM (SELECT dim2, LATEST(m1) AS val1, LATEST(cnt) AS val2, LATEST(m2) AS val3 FROM foo GROUP BY dim2)",
@@ -909,6 +909,43 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         NullHandling.sqlCompatible()
         ? ImmutableList.of(new Object[]{18.0, 4L, 18.0})
         : ImmutableList.of(new Object[]{15.0, 3L, 15.0})
+    );
+  }
+
+  @Test
+  public void testPrimitiveLatestInSubqueryGroupBy() throws Exception
+  {
+    // Cannot vectorize LATEST aggregator.
+    // skipVectorize();
+
+    testQuery(
+        "SELECT dim2, LATEST(m1) AS val1 FROM foo GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                        .setAggregatorSpecs(aggregators(
+                                                new FloatLastAggregatorFactory("a0", "m1", null)
+                                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{null, 6.0f},
+            new Object[]{"", 3.0f},
+            new Object[]{"a", 4.0f},
+            new Object[]{"abc", 5.0f}
+        )
+        : ImmutableList.of(
+            new Object[]{"", 6.0f},
+            new Object[]{"a", 4.0f},
+            new Object[]{"abc", 5.0f}
+
+        )
     );
   }
 
@@ -1208,7 +1245,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testLatestAggregatorsNumericNull() throws Exception
   {
     // Cannot vectorize LATEST aggregator.
-    skipVectorize();
+    //skipVectorize();
 
     testQuery(
         "SELECT LATEST(l1), LATEST(d1), LATEST(f1) FROM druid.numfoo",

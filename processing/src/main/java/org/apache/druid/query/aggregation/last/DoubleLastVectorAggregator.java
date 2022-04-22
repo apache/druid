@@ -43,17 +43,34 @@ public class DoubleLastVectorAggregator extends NumericLastVectorAggregator
     buf.putDouble(position, lastValue);
   }
 
+
   @Override
-  public void init(ByteBuffer buf, int position)
+  void initValue(ByteBuffer buf, int position)
   {
-    buf.putDouble(position, Double.NEGATIVE_INFINITY);
+    buf.putDouble(position, 0);
   }
 
   @Nullable
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return new SerializablePair<>(lastTime, rhsNull ? null : lastValue);
+    final boolean rhsNull = isValueNull(buf, position);
+    return new SerializablePair<>(buf.getLong(position), rhsNull ? null : buf.getDouble(position + VALUE_OFFSET));
+  }
+
+  public float getFloat(ByteBuffer buf, int position)
+  {
+    return (float) buf.getDouble(position + VALUE_OFFSET);
+  }
+
+  public long getLong(ByteBuffer buf, int position)
+  {
+    return (long) buf.getDouble(position + VALUE_OFFSET);
+  }
+
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return buf.getDouble(position + VALUE_OFFSET);
   }
 }
 

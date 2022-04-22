@@ -35,17 +35,18 @@ public class FloatLastVectorAggregator extends NumericLastVectorAggregator
     lastValue = 0;
   }
 
+
   @Override
   void putValue(ByteBuffer buf, int position, int index)
   {
-    lastValue = valueSelector.getLongVector()[index];
+    lastValue = valueSelector.getFloatVector()[index];
     buf.putFloat(position, lastValue);
   }
 
   @Override
-  public void init(ByteBuffer buf, int position)
+  void initValue(ByteBuffer buf, int position)
   {
-    buf.putFloat(position, Float.NEGATIVE_INFINITY);
+    buf.putFloat(position, 0);
   }
 
 
@@ -53,7 +54,23 @@ public class FloatLastVectorAggregator extends NumericLastVectorAggregator
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return new SerializablePair<>(lastTime, rhsNull ? null : lastValue);
+    final boolean rhsNull = isValueNull(buf, position);
+    return new SerializablePair<>(buf.getLong(position), rhsNull ? null : buf.getFloat(position + VALUE_OFFSET));
+  }
+
+  public float getFloat(ByteBuffer buf, int position)
+  {
+    return buf.getFloat(position + VALUE_OFFSET);
+  }
+
+  public long getLong(ByteBuffer buf, int position)
+  {
+    return (long) buf.getFloat(position + VALUE_OFFSET);
+  }
+
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return buf.getFloat(position + VALUE_OFFSET);
   }
 }
 
