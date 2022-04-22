@@ -44,6 +44,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
+import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -155,10 +156,10 @@ public class TaskQueueScaleTest
     Assert.assertEquals("all tasks should be known", numTasks, (runningTasks + pendingTasks + waitingTasks));
 
     // Wait for all tasks to finish.
-    while (taskStorage.getRecentlyCreatedAlreadyFinishedTaskInfo(
-        numTasks,
-        Duration.standardHours(1),
-        DATASOURCE).size() < numTasks) {
+    final TaskLookup.CompleteTaskLookup completeTaskLookup =
+        TaskLookup.CompleteTaskLookup.of(numTasks, Duration.standardHours(1));
+
+    while (taskStorage.getTaskInfos(completeTaskLookup, DATASOURCE).size() < numTasks) {
       Thread.sleep(100);
     }
 
@@ -207,10 +208,10 @@ public class TaskQueueScaleTest
 
     Assert.assertEquals("no tasks should be running", 0, taskStorage.getActiveTasks().size());
 
-    int completed = taskStorage.getRecentlyCreatedAlreadyFinishedTaskInfo(
-        numTasks,
-        Duration.standardHours(1),
-        DATASOURCE).size();
+    int completed = taskStorage.getTaskInfos(
+        TaskLookup.CompleteTaskLookup.of(numTasks, Duration.standardHours(1)),
+        DATASOURCE
+    ).size();
     Assert.assertEquals("all tasks should have completed", numTasks, completed);
   }
 
