@@ -434,6 +434,9 @@
             @{jacocoArgLine}
             -Djava.library.path=${project.build.directory}/hyperic-sigar-${sigar.base.version}/sigar-bin/lib/
             -Duser.language=en
+            <!-- required for JvmMonitor tests on Java 11+ -->
+            --add-exports=java.base/jdk.internal.perf=ALL-UNNAMED
+            --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
           </argLine>
         </configuration>
       </plugin>

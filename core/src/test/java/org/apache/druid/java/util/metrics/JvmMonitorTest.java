@@ -77,10 +77,20 @@ public class JvmMonitorTest
         JvmMonitor.getGcGenerations(
             ImmutableSet.of(
                 "sun.gc.generation.1.spaces",
-                "sun.gc.collector.2.name"
+                "sun.gc.collector.2.name",
+                "sun.gc.somethingelse.3.name"
             )
         )
     );
+  }
+
+  @Test
+  public void testGetGcGenerationName()
+  {
+    Assert.assertEquals("young", JvmMonitor.getGcGenerationName(0));
+    Assert.assertEquals("old", JvmMonitor.getGcGenerationName(1));
+    Assert.assertEquals("perm", JvmMonitor.getGcGenerationName(2));
+    Assert.assertEquals("3", JvmMonitor.getGcGenerationName(3));
   }
 
   private static class GcTrackingEmitter implements Emitter

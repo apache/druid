@@ -198,6 +198,7 @@ public class JvmMonitor extends FeedDefiningMonitor
     return retVal;
   }
 
+  @VisibleForTesting
   static String getGcGenerationName(final int genIndex)
   {
     switch (genIndex) {
