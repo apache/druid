@@ -25,9 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.StringTuple;
-import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -38,15 +36,10 @@ import java.util.Objects;
 /**
  * {@link ShardSpec} for partitioning based on ranges of one or more dimensions.
  */
-public class DimensionRangeShardSpec implements ShardSpec
+public class DimensionRangeShardSpec extends BaseDimensionRangeShardSpec
 {
   public static final int UNKNOWN_NUM_CORE_PARTITIONS = -1;
 
-  private final List<String> dimensions;
-  @Nullable
-  private final StringTuple start;
-  @Nullable
-  private final StringTuple end;
   private final int partitionNum;
   private final int numCorePartitions;
 
@@ -65,15 +58,13 @@ public class DimensionRangeShardSpec implements ShardSpec
       @JsonProperty("numCorePartitions") @Nullable Integer numCorePartitions // nullable for backward compatibility
   )
   {
+    super(dimensions, start, end);
     Preconditions.checkArgument(partitionNum >= 0, "partitionNum >= 0");
     Preconditions.checkArgument(
         dimensions != null && !dimensions.isEmpty(),
         "dimensions should be non-null and non-empty"
     );
 
-    this.dimensions = dimensions;
-    this.start = start;
-    this.end = end;
     this.partitionNum = partitionNum;
     this.numCorePartitions = numCorePartitions == null ? UNKNOWN_NUM_CORE_PARTITIONS : numCorePartitions;
   }
@@ -115,24 +106,6 @@ public class DimensionRangeShardSpec implements ShardSpec
   public boolean isNumCorePartitionsUnknown()
   {
     return numCorePartitions == UNKNOWN_NUM_CORE_PARTITIONS;
-  }
-
-  @Override
-  public ShardSpecLookup getLookup(final List<? extends ShardSpec> shardSpecs)
-  {
-    return createLookup(shardSpecs);
-  }
-
-  private static ShardSpecLookup createLookup(List<? extends ShardSpec> shardSpecs)
-  {
-    return (long timestamp, InputRow row) -> {
-      for (ShardSpec spec : shardSpecs) {
-        if (((DimensionRangeShardSpec) spec).isInChunk(row)) {
-          return spec;
-        }
-      }
-      throw new ISE("row[%s] doesn't fit in any shard[%s]", row, shardSpecs);
-    };
   }
 
   @Override
@@ -277,33 +250,6 @@ public class DimensionRangeShardSpec implements ShardSpec
     } else {
       return new NumberedPartitionChunk<>(partitionNum, numCorePartitions, obj);
     }
-  }
-
-  private boolean isInChunk(InputRow inputRow)
-  {
-    return isInChunk(dimensions, start, end, inputRow);
-  }
-
-  public static boolean isInChunk(
-      List<String> dimensions,
-      @Nullable StringTuple start,
-      @Nullable StringTuple end,
-      InputRow inputRow
-  )
-  {
-    final String[] inputDimensionValues = new String[dimensions.size()];
-    for (int i = 0; i < dimensions.size(); ++i) {
-      // Get the values of this dimension, treat multiple values as null
-      List<String> values = inputRow.getDimension(dimensions.get(i));
-      inputDimensionValues[i] = values != null && values.size() == 1 ? values.get(0) : null;
-    }
-    final StringTuple inputRowTuple = StringTuple.create(inputDimensionValues);
-
-    int inputVsStart = inputRowTuple.compareTo(start);
-    int inputVsEnd = inputRowTuple.compareTo(end);
-
-    return (inputVsStart >= 0 || start == null)
-           && (inputVsEnd < 0 || end == null);
   }
 
   @Override

@@ -20,7 +20,6 @@
 package org.apache.druid.sql.avatica;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.calcite.avatica.AvaticaParameter;
 import org.apache.calcite.avatica.ColumnMetaData;
@@ -35,6 +34,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycle;
@@ -46,7 +46,6 @@ import java.sql.Array;
 import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -57,7 +56,7 @@ public class DruidStatement implements Closeable
   public static final long START_OFFSET = 0;
   private final String connectionId;
   private final int statementId;
-  private final Map<String, Object> queryContext;
+  private final QueryContext queryContext;
   @GuardedBy("lock")
   private final SqlLifecycle sqlLifecycle;
   private final Runnable onClose;
@@ -90,14 +89,14 @@ public class DruidStatement implements Closeable
   public DruidStatement(
       final String connectionId,
       final int statementId,
-      final Map<String, Object> queryContext,
+      final QueryContext queryContext,
       final SqlLifecycle sqlLifecycle,
       final Runnable onClose
   )
   {
     this.connectionId = Preconditions.checkNotNull(connectionId, "connectionId");
     this.statementId = statementId;
-    this.queryContext = queryContext == null ? ImmutableMap.of() : queryContext;
+    this.queryContext = queryContext;
     this.sqlLifecycle = Preconditions.checkNotNull(sqlLifecycle, "sqlLifecycle");
     this.onClose = Preconditions.checkNotNull(onClose, "onClose");
     this.yielderOpenCloseExecutor = Execs.singleThreaded(

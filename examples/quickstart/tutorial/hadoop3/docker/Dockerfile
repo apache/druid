@@ -36,12 +36,22 @@ RUN ssh-keygen -q -N "" -t rsa -f /etc/ssh/ssh_host_rsa_key
 RUN ssh-keygen -q -N "" -t rsa -f /root/.ssh/id_rsa
 RUN cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
 
-# zulu java 8
-COPY setup-zulu-repo.sh /root/setup-zulu-repo.sh
-RUN /root/setup-zulu-repo.sh
-RUN yum install -y zulu-8
+#
+# Pull Zulu OpenJDK binaries from official repository:
+#
 
-ENV JAVA_HOME /usr/lib/jvm/zulu-8
+ARG ZULU_REPO_VER=1.0.0-1
+
+RUN rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
+    curl -sLO https://cdn.azul.com/zulu/bin/zulu-repo-${ZULU_REPO_VER}.noarch.rpm && \
+    rpm -ivh zulu-repo-${ZULU_REPO_VER}.noarch.rpm && \
+    yum -q -y update && \
+    yum -q -y upgrade && \
+    yum -q -y install zulu8-jdk && \
+    yum clean all && \
+    rm -rf /var/cache/yum zulu-repo_${ZULU_REPO_VER}.noarch.rpm
+
+ENV JAVA_HOME=/usr/lib/jvm/zulu8
 ENV PATH $PATH:$JAVA_HOME/bin
 
 # hadoop
@@ -58,7 +68,7 @@ ENV HADOOP_CONF_DIR /usr/local/hadoop/etc/hadoop
 ENV YARN_CONF_DIR $HADOOP_HOME/etc/hadoop
 
 # in hadoop 3 the example file is nearly empty so we can just append stuff
-RUN sed -i '$ a export JAVA_HOME=/usr/lib/jvm/zulu-8' $HADOOP_HOME/etc/hadoop/hadoop-env.sh
+RUN sed -i '$ a export JAVA_HOME=/usr/lib/jvm/zulu8' $HADOOP_HOME/etc/hadoop/hadoop-env.sh
 RUN sed -i '$ a export HADOOP_HOME=/usr/local/hadoop' $HADOOP_HOME/etc/hadoop/hadoop-env.sh
 RUN sed -i '$ a export HADOOP_CONF_DIR=/usr/local/hadoop/etc/hadoop/' $HADOOP_HOME/etc/hadoop/hadoop-env.sh
 RUN sed -i '$ a export HDFS_NAMENODE_USER=root' $HADOOP_HOME/etc/hadoop/hadoop-env.sh

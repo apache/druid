@@ -57,6 +57,7 @@ import {
   formatMillions,
   formatPercent,
   getDruidErrorMessage,
+  hasPopoverOpen,
   isNumberLikeNaN,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
@@ -493,7 +494,8 @@ ORDER BY 1`;
     });
   }
 
-  private readonly refresh = (auto: any): void => {
+  private readonly refresh = (auto: boolean): void => {
+    if (auto && hasPopoverOpen()) return;
     this.datasourceQueryManager.rerunLastQuery(auto);
     this.tiersQueryManager.rerunLastQuery(auto);
   };

@@ -339,7 +339,7 @@ export function getMetricSpecSingleFieldName(metricSpec: MetricSpec): string | u
 
 export function getMetricSpecOutputType(metricSpec: MetricSpec): string | undefined {
   if (metricSpec.aggregator) return getMetricSpecOutputType(metricSpec.aggregator);
-  const m = /^(long|float|double)/.exec(String(metricSpec.type));
+  const m = /^(long|float|double|string)/.exec(String(metricSpec.type));
   if (!m) return;
   return m[1];
 }

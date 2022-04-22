@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
+import { Button, ButtonGroup, Icon, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import { SqlExpression, SqlLiteral, SqlRef } from 'druid-query-toolkit';
+import { SqlComparison, SqlExpression, SqlLiteral, SqlRef } from 'druid-query-toolkit';
+import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
@@ -37,6 +38,7 @@ import {
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
+import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { Api } from '../../singletons';
 import {
   addFilter,
@@ -49,6 +51,7 @@ import {
   formatBytes,
   formatInteger,
   getNeedleAndMode,
+  hasPopoverOpen,
   isNumberLikeNaN,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
@@ -74,8 +77,8 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'End',
     'Version',
     'Time span',
-    'Partitioning',
-    'Shard detail',
+    'Shard type',
+    'Shard spec',
     'Partition',
     'Size',
     'Num rows',
@@ -103,8 +106,8 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Start',
     'End',
     'Version',
-    'Partitioning',
-    'Shard detail',
+    'Shard type',
+    'Shard spec',
     'Partition',
     'Size',
     'Num rows',
@@ -154,7 +157,6 @@ interface SegmentQueryResultRow {
   segment_id: string;
   version: string;
   time_span: string;
-  partitioning: string;
   shard_spec: string;
   partition_num: number;
   size: number;
@@ -178,6 +180,7 @@ export interface SegmentsViewState {
   visibleColumns: LocalStorageBackedVisibility;
   groupByInterval: boolean;
   showSegmentTimeline: boolean;
+  showFullShardSpec?: string;
 }
 
 export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
@@ -198,18 +201,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   WHEN "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z' THEN 'Minute'
   ELSE 'Sub minute'
 END AS "time_span"`,
-      visibleColumns.shown('Partitioning') &&
-        `CASE
-  WHEN "shard_spec" LIKE '%"type":"numbered"%' THEN 'dynamic'
-  WHEN "shard_spec" LIKE '%"type":"hashed"%' THEN 'hashed'
-  WHEN "shard_spec" LIKE '%"type":"single"%' THEN 'single_dim'
-  WHEN "shard_spec" LIKE '%"type":"range"%' THEN 'range'
-  WHEN "shard_spec" LIKE '%"type":"none"%' THEN 'none'
-  WHEN "shard_spec" LIKE '%"type":"linear"%' THEN 'linear'
-  WHEN "shard_spec" LIKE '%"type":"numbered_overwrite"%' THEN 'numbered_overwrite'
-  ELSE '-'
-END AS "partitioning"`,
-      visibleColumns.shown('Shard detail') && `"shard_spec"`,
+      (visibleColumns.shown('Shard type') || visibleColumns.shown('Shard spec')) && `"shard_spec"`,
       visibleColumns.shown('Partition') && `"partition_num"`,
       visibleColumns.shown('Size') && `"size"`,
       visibleColumns.shown('Num rows') && `"num_rows"`,
@@ -266,7 +258,7 @@ END AS "partitioning"`,
       segmentFilter,
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
-        ['Time span', 'Partitioning', 'Shard detail'],
+        ['Time span'],
       ),
       groupByInterval: false,
       showSegmentTimeline: false,
@@ -280,7 +272,16 @@ END AS "partitioning"`,
 
         if (capabilities.hasSql()) {
           const whereParts = filterMap(filtered, (f: Filter) => {
-            if (f.id.startsWith('is_')) {
+            if (f.id === 'shard_type') {
+              // Special handling for shard_type that needs to be search in the shard_spec
+              // Creates filters like `shard_spec LIKE '%"type":"numbered"%'`
+              const needleAndMode = getNeedleAndMode(f);
+              const closingQuote = needleAndMode.mode === 'exact' ? '"' : '';
+              return SqlComparison.like(
+                SqlRef.column('shard_spec'),
+                `%"type":"${needleAndMode.needle}${closingQuote}%`,
+              );
+            } else if (f.id.startsWith('is_')) {
               if (f.value === 'all') return;
               return SqlRef.columnWithQuotes(f.id).equal(f.value === 'true' ? 1 : 0);
             } else {
@@ -394,7 +395,6 @@ END AS "partitioning"`,
                 interval: segment.interval,
                 version: segment.version,
                 time_span: SegmentsView.computeTimeSpan(start, end),
-                partitioning: deepGet(segment, 'shardSpec.type') || '-',
                 shard_spec: deepGet(segment, 'shardSpec'),
                 partition_num: deepGet(segment, 'shardSpec.partitionNum') || 0,
                 size: segment.size,
@@ -590,17 +590,26 @@ END AS "partitioning"`,
             Cell: renderFilterableCell('time_span'),
           },
           {
-            Header: 'Partitioning',
-            show: visibleColumns.shown('Partitioning'),
-            accessor: 'partitioning',
+            Header: 'Shard type',
+            show: visibleColumns.shown('Shard type'),
+            id: 'shard_type',
             width: 100,
-            sortable: hasSql,
-            filterable: allowGeneralFilter,
-            Cell: renderFilterableCell('partitioning'),
+            sortable: false,
+            accessor: d => {
+              let v: any;
+              try {
+                v = JSONBig.parse(d.shard_spec);
+              } catch {}
+
+              if (typeof v?.type !== 'string') return '-';
+              return v?.type;
+            },
+            Cell: renderFilterableCell('shard_type'),
           },
           {
-            Header: 'Shard detail',
-            show: visibleColumns.shown('Shard detail'),
+            Header: 'Shard spec',
+            show: visibleColumns.shown('Shard spec'),
+            id: 'shard_spec',
             accessor: 'shard_spec',
             width: 400,
             sortable: false,
@@ -608,10 +617,19 @@ END AS "partitioning"`,
             Cell: ({ value }) => {
               let v: any;
               try {
-                v = JSON.parse(value);
-              } catch {
-                return '-';
-              }
+                v = JSONBig.parse(value);
+              } catch {}
+
+              const onShowFullShardSpec = () => {
+                this.setState({
+                  showFullShardSpec:
+                    v && typeof v === 'object' ? JSONBig.stringify(v, undefined, 2) : String(value),
+                });
+              };
+
+              const fullShardIcon = (
+                <Icon className="full-shard-spec-icon" icon={IconNames.EYE_OPEN} />
+              );
 
               switch (v?.type) {
                 case 'range': {
@@ -620,24 +638,26 @@ END AS "partitioning"`,
                     values.map((x, i) => formatRangeDimensionValue(dimensions[i], x)).join('; ');
 
                   return (
-                    <div className="range-detail">
+                    <div className="spec-detail range-detail" onClick={onShowFullShardSpec}>
                       <span className="range-label">Start:</span>
                       {Array.isArray(v.start) ? formatEdge(v.start) : '-∞'}
                       <br />
                       <span className="range-label">End:</span>
                       {Array.isArray(v.end) ? formatEdge(v.end) : '∞'}
+                      {fullShardIcon}
                     </div>
                   );
                 }
 
                 case 'single': {
                   return (
-                    <div className="range-detail">
+                    <div className="spec-detail range-detail" onClick={onShowFullShardSpec}>
                       <span className="range-label">Start:</span>
                       {v.start != null ? formatRangeDimensionValue(v.dimension, v.start) : '-∞'}
                       <br />
                       <span className="range-label">End:</span>
                       {v.end != null ? formatRangeDimensionValue(v.dimension, v.end) : '∞'}
+                      {fullShardIcon}
                     </div>
                   );
                 }
@@ -645,17 +665,34 @@ END AS "partitioning"`,
                 case 'hashed': {
                   const { partitionDimensions } = v;
                   if (!Array.isArray(partitionDimensions)) return value;
-                  return `Partition dimensions: ${
-                    partitionDimensions.length ? partitionDimensions.join('; ') : 'all'
-                  }`;
+                  return (
+                    <div className="spec-detail" onClick={onShowFullShardSpec}>
+                      {`hash(${
+                        partitionDimensions.length
+                          ? partitionDimensions.join(', ')
+                          : '<all dimensions>'
+                      })`}
+                      {fullShardIcon}
+                    </div>
+                  );
                 }
 
                 case 'numbered':
                 case 'none':
-                  return '-';
+                case 'tombstone':
+                  return (
+                    <div className="spec-detail" onClick={onShowFullShardSpec}>
+                      No detail{fullShardIcon}
+                    </div>
+                  );
 
                 default:
-                  return typeof value === 'string' ? value : '-';
+                  return (
+                    <div className="spec-detail" onClick={onShowFullShardSpec}>
+                      {String(value)}
+                      {fullShardIcon}
+                    </div>
+                  );
               }
             },
           },
@@ -843,6 +880,7 @@ END AS "partitioning"`,
       actions,
       visibleColumns,
       showSegmentTimeline,
+      showFullShardSpec,
     } = this.state;
     const { capabilities } = this.props;
     const { groupByInterval } = this.state;
@@ -856,7 +894,10 @@ END AS "partitioning"`,
         >
           <ViewControlBar label="Segments">
             <RefreshButton
-              onRefresh={auto => this.segmentsQueryManager.rerunLastQuery(auto)}
+              onRefresh={auto => {
+                if (auto && hasPopoverOpen()) return;
+                this.segmentsQueryManager.rerunLastQuery(auto);
+              }}
               localStorageKey={LocalStorageKeys.SEGMENTS_REFRESH_RATE}
             />
             <Label>Group by</Label>
@@ -911,6 +952,13 @@ END AS "partitioning"`,
             datasourceId={datasourceTableActionDialogId}
             actions={actions}
             onClose={() => this.setState({ segmentTableActionDialogId: undefined })}
+          />
+        )}
+        {showFullShardSpec && (
+          <ShowValueDialog
+            title="Full shard spec"
+            str={showFullShardSpec}
+            onClose={() => this.setState({ showFullShardSpec: undefined })}
           />
         )}
       </>

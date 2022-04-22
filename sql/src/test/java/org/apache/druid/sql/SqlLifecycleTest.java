@@ -29,6 +29,7 @@ import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.log.RequestLogger;
@@ -71,7 +72,8 @@ public class SqlLifecycleTest
         plannerFactory,
         serviceEmitter,
         requestLogger,
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+        new AuthConfig()
     );
   }
 
@@ -81,11 +83,11 @@ public class SqlLifecycleTest
     SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
     final String sql = "select 1 + ?";
     final Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true");
-    lifecycle.initialize(sql, queryContext);
+    lifecycle.initialize(sql, new QueryContext(queryContext));
     Assert.assertEquals(SqlLifecycle.State.INITIALIZED, lifecycle.getState());
-    Assert.assertEquals(1, lifecycle.getQueryContext().size());
+    Assert.assertEquals(1, lifecycle.getQueryContext().getMergedParams().size());
     // should contain only query id, not bySegment since it is not valid for SQL
-    Assert.assertTrue(lifecycle.getQueryContext().containsKey(PlannerContext.CTX_SQL_QUERY_ID));
+    Assert.assertTrue(lifecycle.getQueryContext().getMergedParams().containsKey(PlannerContext.CTX_SQL_QUERY_ID));
   }
 
   @Test
@@ -94,11 +96,10 @@ public class SqlLifecycleTest
   {
     SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
     final String sql = "select 1 + ?";
-    final Map<String, Object> queryContext = Collections.emptyMap();
     Assert.assertEquals(SqlLifecycle.State.NEW, lifecycle.getState());
 
     // test initialize
-    lifecycle.initialize(sql, queryContext);
+    lifecycle.initialize(sql, new QueryContext());
     Assert.assertEquals(SqlLifecycle.State.INITIALIZED, lifecycle.getState());
     List<TypedValue> parameters = ImmutableList.of(new SqlParameter(SqlType.BIGINT, 1L).getTypedValue());
     lifecycle.setParameters(parameters);
@@ -118,7 +119,7 @@ public class SqlLifecycleTest
     EasyMock.expect(plannerFactory.getAuthorizerMapper()).andReturn(CalciteTests.TEST_AUTHORIZER_MAPPER).once();
     mockPlannerContext.setAuthorizationResult(Access.OK);
     EasyMock.expectLastCall();
-    EasyMock.expect(mockPlanner.validate()).andReturn(validationResult).once();
+    EasyMock.expect(mockPlanner.validate(false)).andReturn(validationResult).once();
     mockPlanner.close();
     EasyMock.expectLastCall();
 
@@ -191,11 +192,10 @@ public class SqlLifecycleTest
     // is run
     SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
     final String sql = "select 1 + ?";
-    final Map<String, Object> queryContext = Collections.emptyMap();
     Assert.assertEquals(SqlLifecycle.State.NEW, lifecycle.getState());
 
     // test initialize
-    lifecycle.initialize(sql, queryContext);
+    lifecycle.initialize(sql, new QueryContext());
     Assert.assertEquals(SqlLifecycle.State.INITIALIZED, lifecycle.getState());
     List<TypedValue> parameters = ImmutableList.of(new SqlParameter(SqlType.BIGINT, 1L).getTypedValue());
     lifecycle.setParameters(parameters);
@@ -215,7 +215,7 @@ public class SqlLifecycleTest
     EasyMock.expect(plannerFactory.getAuthorizerMapper()).andReturn(CalciteTests.TEST_AUTHORIZER_MAPPER).once();
     mockPlannerContext.setAuthorizationResult(Access.OK);
     EasyMock.expectLastCall();
-    EasyMock.expect(mockPlanner.validate()).andReturn(validationResult).once();
+    EasyMock.expect(mockPlanner.validate(false)).andReturn(validationResult).once();
     mockPlanner.close();
     EasyMock.expectLastCall();
 
