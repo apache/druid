@@ -64,6 +64,33 @@ public class JacksonUtilsTest
     );
   }
 
+  @Test
+  public void testWritePrimitivesUsingSerializerProvider() throws IOException
+  {
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+    final ObjectMapper objectMapper = new ObjectMapper();
+    final SerializerProvider serializers = objectMapper.getSerializerProviderInstance();
+
+    final JsonGenerator jg = objectMapper.getFactory().createGenerator(baos);
+    jg.writeStartArray();
+    JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, "foo");
+    JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, null);
+    JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, 1.23);
+    jg.writeEndArray();
+    jg.close();
+
+    final List<Object> deserializedValues = objectMapper.readValue(
+        baos.toByteArray(),
+        new TypeReference<List<Object>>() {}
+    );
+
+    Assert.assertEquals(
+        Arrays.asList("foo", null, 1.23),
+        deserializedValues
+    );
+  }
+
   public static class SerializableClass
   {
     private final int value;
