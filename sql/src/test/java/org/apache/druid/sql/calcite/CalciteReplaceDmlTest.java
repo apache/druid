@@ -143,6 +143,30 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testReplaceFromTableWithIntervalLargerThanOneGranularity()
+  {
+    testIngestionQuery()
+        .sql("REPLACE dst DELETE WHERE"
+             + " __time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-05-01' "
+             + "SELECT * FROM foo PARTITIONED BY MONTH")
+        .expectTarget("dst", FOO_TABLE_SIGNATURE)
+        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
+                .context(ImmutableMap.of(
+                    DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
+                    "\"MONTH\"",
+                    DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
+                    "2000-01-01T00:00:00.000Z/2000-05-01T00:00:00.000Z"))
+                .build()
+        )
+        .verify();
+  }
+
+  @Test
   public void testReplaceFromTableWithComplexDeleteWhereClause()
   {
     testIngestionQuery()

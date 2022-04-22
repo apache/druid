@@ -104,6 +104,7 @@ import org.apache.druid.sql.calcite.rel.DruidUnionRel;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 import org.apache.druid.utils.Throwables;
+import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.base.AbstractInterval;
@@ -919,7 +920,11 @@ public class DruidPlanner implements Closeable
       List<Interval> intervals = filtration.getIntervals();
 
       for (Interval interval : intervals) {
-        if (!granularity.isAligned(interval)) {
+        DateTime intervalStart = interval.getStart();
+        DateTime intervalEnd = interval.getEnd();
+        // The start of each interval should be aligned with the start of the bucket, and the end interval should be
+        // aligned with the start of the next interval.
+        if (!granularity.bucketStart(intervalStart).equals(intervalStart) || !granularity.bucketStart(intervalEnd).equals(intervalEnd)) {
           throw new ValidationException("DELETE WHERE clause contains an interval which is not aligned with PARTITIONED BY granularity");
         }
       }
