@@ -36,6 +36,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Configurations for ingestion tasks. These configurations can be applied per middleManager, indexer, or overlord.
@@ -82,9 +83,6 @@ public class TaskConfig
   private final String baseDir;
 
   @JsonProperty
-  private final File baseTaskDir;
-
-  @JsonProperty
   private final String hadoopWorkingPath;
 
   @JsonProperty
@@ -117,6 +115,44 @@ public class TaskConfig
   @JsonProperty
   private final boolean storeEmptyColumns;
 
+  // Use multiple base files for tasks instead of a single one
+  @JsonProperty
+  private final List<StorageLocationConfig> baseTaskDirLocations;
+
+  public TaskConfig(
+       String baseDir,
+       String baseTaskDir,
+       String hadoopWorkingPath,
+       Integer defaultRowFlushBoundary,
+       List<String> defaultHadoopCoordinates,
+       boolean restoreTasksOnRestart,
+       Period gracefulShutdownTimeout,
+       Period directoryLockTimeout,
+       List<StorageLocationConfig> shuffleDataLocations,
+       boolean ignoreTimestampSpecForDruidInputSource,
+       boolean batchMemoryMappedIndex,
+       String batchProcessingMode,
+       @Nullable Boolean storeEmptyColumns
+  )
+  {
+    this(
+        baseDir,
+        baseTaskDir,
+        hadoopWorkingPath,
+        defaultRowFlushBoundary,
+        defaultHadoopCoordinates,
+        restoreTasksOnRestart,
+        gracefulShutdownTimeout,
+        directoryLockTimeout,
+        shuffleDataLocations,
+        ignoreTimestampSpecForDruidInputSource,
+        batchMemoryMappedIndex,
+        batchProcessingMode,
+        storeEmptyColumns,
+        null
+    );
+  }
+
   @JsonCreator
   public TaskConfig(
       @JsonProperty("baseDir") String baseDir,
@@ -131,11 +167,11 @@ public class TaskConfig
       @JsonProperty("ignoreTimestampSpecForDruidInputSource") boolean ignoreTimestampSpecForDruidInputSource,
       @JsonProperty("batchMemoryMappedIndex") boolean batchMemoryMappedIndex, // deprecated, only set to true to fall back to older behavior
       @JsonProperty("batchProcessingMode") String batchProcessingMode,
-      @JsonProperty("storeEmptyColumns") @Nullable Boolean storeEmptyColumns
+      @JsonProperty("storeEmptyColumns") @Nullable Boolean storeEmptyColumns,
+      @JsonProperty("baseTaskDirLocations") @Nullable List<StorageLocationConfig> baseTaskDirLocations
   )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
-    this.baseTaskDir = new File(defaultDir(baseTaskDir, "persistent/task"));
     // This is usually on HDFS or similar, so we can't use java.io.tmpdir
     this.hadoopWorkingPath = hadoopWorkingPath == null ? "/tmp/druid-indexing" : hadoopWorkingPath;
     this.defaultRowFlushBoundary = defaultRowFlushBoundary == null ? 75000 : defaultRowFlushBoundary;
@@ -175,6 +211,14 @@ public class TaskConfig
     }
     log.debug("Batch processing mode:[%s]", this.batchProcessingMode);
     this.storeEmptyColumns = storeEmptyColumns == null ? DEFAULT_STORE_EMPTY_COLUMNS : storeEmptyColumns;
+
+    if (baseTaskDirLocations == null || baseTaskDirLocations.size() == 0) {
+      File baseTaskFile = new File(defaultDir(baseTaskDir, "persistent/task"));
+      baseTaskDirLocations = Collections.singletonList(
+          new StorageLocationConfig(baseTaskFile, null, null)
+      );
+    }
+    this.baseTaskDirLocations = ImmutableList.copyOf(baseTaskDirLocations);
   }
 
   @JsonProperty
@@ -184,14 +228,40 @@ public class TaskConfig
   }
 
   @JsonProperty
-  public File getBaseTaskDir()
+  public List<StorageLocationConfig> getBaseTaskDirLocations()
   {
-    return baseTaskDir;
+    return baseTaskDirLocations;
+  }
+
+  public List<StorageLocationConfig> getBaseTaskDirChildrenLocations(String child)
+  {
+    return getBaseTaskDirLocations().stream()
+                                    .map(location -> new StorageLocationConfig(
+                                        getChildFileFromLocation(location, child),
+                                        location.getMaxSize(),
+                                        location.getFreeSpacePercent()))
+                                    .collect(Collectors.toList());
+  }
+
+  public File getChildFileFromLocation(StorageLocationConfig location, String child)
+  {
+    return new File(location.getPath(), child);
+  }
+
+  public StorageLocationConfig getBaseTaskDirLocationForId(String taskId)
+  {
+    if (taskId == null) {
+      return null;
+    }
+    // TODO: consider the size of each of the base locations for distribution
+    // use uniformly RANDOM assignment
+    int index = taskId.hashCode() % baseTaskDirLocations.size();
+    return baseTaskDirLocations.get(index);
   }
 
   public File getTaskDir(String taskId)
   {
-    return new File(baseTaskDir, taskId);
+    return new File(getBaseTaskDirLocationForId(taskId).getPath(), taskId);
   }
 
   public File getTaskWorkDir(String taskId)
