@@ -649,7 +649,7 @@ public class DruidPlanner implements Closeable
 
   /**
    * Uses {@link SqlParameterizerShuttle} to rewrite {@link SqlNode} to swap out any
-   * {@link org.apache.calcite.sql.SqlDynamicParam} early for their {@link org.apache.calcite.sql.SqlLiteral}
+   * {@link org.apache.calcite.sql.SqlDynamicParam} early for their {@link SqlLiteral}
    * replacement
    */
   private SqlNode rewriteDynamicParameters(SqlNode parsed)
