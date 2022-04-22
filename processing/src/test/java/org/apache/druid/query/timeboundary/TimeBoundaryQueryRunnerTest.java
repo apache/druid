@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.CharSource;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
@@ -47,6 +48,7 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -216,6 +218,22 @@ public class TimeBoundaryQueryRunnerTest
     Assert.assertEquals(DateTimes.of("2011-04-15T00:00:00.000Z"), maxTime);
   }
 
+  @Test(expected = UOE.class)
+  @SuppressWarnings("unchecked")
+  public void testTimeBoundaryArrayResults()
+  {
+    TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
+                                                   .dataSource("testing")
+                                                   .bound(null)
+                                                   .build();
+    ResponseContext context = ConcurrentResponseContext.createEmpty();
+    context.initializeMissingSegments();
+    new TimeBoundaryQueryQueryToolChest().resultsAsArrays(
+        timeBoundaryQuery,
+        runner.run(QueryPlus.wrap(timeBoundaryQuery), context)
+    ).toList();
+  }
+
   @Test
   @SuppressWarnings("unchecked")
   public void testTimeBoundaryMax()
@@ -237,6 +255,26 @@ public class TimeBoundaryQueryRunnerTest
 
   @Test
   @SuppressWarnings("unchecked")
+  public void testTimeBoundaryMaxArraysResults()
+  {
+    TimeBoundaryQuery maxTimeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
+                                                   .dataSource("testing")
+                                                   .bound(TimeBoundaryQuery.MAX_TIME)
+                                                   .build();
+    ResponseContext context = ConcurrentResponseContext.createEmpty();
+    context.initializeMissingSegments();
+    List<Object[]> maxTime = new TimeBoundaryQueryQueryToolChest().resultsAsArrays(
+        maxTimeBoundaryQuery,
+        runner.run(QueryPlus.wrap(maxTimeBoundaryQuery), context)
+    ).toList();
+
+    Long maxTimeMillis = (Long) maxTime.get(0)[0];
+    Assert.assertEquals(DateTimes.of("2011-04-15T00:00:00.000Z"), new DateTime(maxTimeMillis, DateTimeZone.UTC));
+    Assert.assertEquals(1, maxTime.size());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
   public void testTimeBoundaryMin()
   {
     TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
@@ -252,6 +290,26 @@ public class TimeBoundaryQueryRunnerTest
 
     Assert.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), minTime);
     Assert.assertNull(maxTime);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testTimeBoundaryMinArraysResults()
+  {
+    TimeBoundaryQuery minTimeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
+                                                   .dataSource("testing")
+                                                   .bound(TimeBoundaryQuery.MIN_TIME)
+                                                   .build();
+    ResponseContext context = ConcurrentResponseContext.createEmpty();
+    context.initializeMissingSegments();
+    List<Object[]> minTime = new TimeBoundaryQueryQueryToolChest().resultsAsArrays(
+        minTimeBoundaryQuery,
+        runner.run(QueryPlus.wrap(minTimeBoundaryQuery), context)
+    ).toList();
+
+    Long minTimeMillis = (Long) minTime.get(0)[0];
+    Assert.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), new DateTime(minTimeMillis, DateTimeZone.UTC));
+    Assert.assertEquals(1, minTime.size());
   }
 
   @Test
