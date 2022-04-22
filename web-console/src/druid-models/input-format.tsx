@@ -34,7 +34,8 @@ export interface InputFormat {
   readonly listDelimiter?: string;
   readonly pattern?: string;
   readonly function?: string;
-  readonly flattenSpec?: FlattenSpec;
+  readonly flattenSpec?: FlattenSpec | null;
+  readonly featureSpec?: Record<string, boolean>;
   readonly keepNullColumns?: boolean;
 }
 
@@ -57,6 +58,35 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
         </p>
       </>
     ),
+  },
+  {
+    name: 'featureSpec',
+    label: 'JSON parser features',
+    type: 'json',
+    defined: typeIs('json'),
+    info: (
+      <>
+        <p>
+          <ExternalLink href="https://github.com/FasterXML/jackson-core/wiki/JsonParser-Features">
+            JSON parser features
+          </ExternalLink>{' '}
+          supported by Jackson library. Those features will be applied when parsing the input JSON
+          data.
+        </p>
+        <p>
+          Example:{' '}
+          <Code>{`{ "ALLOW_SINGLE_QUOTES": true, "ALLOW_UNQUOTED_FIELD_NAMES": true }`}</Code>
+        </p>
+      </>
+    ),
+  },
+  {
+    name: 'delimiter',
+    type: 'string',
+    defaultValue: '\t',
+    suggestions: ['\t', ';', '|', '#'],
+    defined: typeIs('tsv'),
+    info: <>A custom delimiter for data values.</>,
   },
   {
     name: 'pattern',
@@ -109,14 +139,6 @@ export const INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
         of your data.
       </>
     ),
-  },
-  {
-    name: 'delimiter',
-    type: 'string',
-    defaultValue: '\t',
-    suggestions: ['\t', ';', '|', '#'],
-    defined: typeIs('tsv'),
-    info: <>A custom delimiter for data values.</>,
   },
   {
     name: 'listDelimiter',

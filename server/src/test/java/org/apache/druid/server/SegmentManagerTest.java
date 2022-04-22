@@ -77,6 +77,12 @@ public class SegmentManagerTest
     {
 
     }
+
+    @Override
+    public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
+    {
+
+    }
   };
 
   private static class SegmentForTesting implements Segment

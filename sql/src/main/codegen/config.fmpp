@@ -382,7 +382,7 @@ data: {
     # Return type of method implementation should be 'SqlNode'.
     # Example: SqlShowDatabases(), SqlShowTables().
     statementParserMethods: [
-      "DruidSqlInsert()"
+      "DruidSqlInsertEof()"
       "DruidSqlExplain()"
     ]
 

@@ -29,6 +29,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.junit.Assert;
@@ -66,6 +67,7 @@ public class DruidJoinRuleTest
   public void setup()
   {
     PlannerContext plannerContext = Mockito.mock(PlannerContext.class);
+    Mockito.when(plannerContext.getQueryContext()).thenReturn(Mockito.mock(QueryContext.class));
     druidJoinRule = DruidJoinRule.instance(plannerContext);
   }
 
