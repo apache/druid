@@ -19,11 +19,13 @@
 
 package org.apache.druid.query.timeboundary;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CharSource;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
@@ -36,6 +38,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
@@ -183,6 +186,32 @@ public class TimeBoundaryQueryRunnerTest
 
     Assert.assertEquals(DateTimes.of("2011-01-13T00:00:00.000Z"), minTime);
     Assert.assertEquals(DateTimes.of("2011-01-16T00:00:00.000Z"), maxTime);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testTimeFilteredTimeBoundaryQuery() throws IOException
+  {
+    QueryRunner customRunner = getCustomRunner();
+    TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
+                                                .dataSource("testing")
+                                                .intervals(
+                                                    new MultipleIntervalSegmentSpec(
+                                                        ImmutableList.of(Intervals.of("2011-01-15T00:00:00.000Z/2011-01-16T00:00:00.000Z"))
+                                                    )
+                                                )
+                                                .build();
+    List<Result<TimeBoundaryResultValue>> results =
+        customRunner.run(QueryPlus.wrap(timeBoundaryQuery)).toList();
+
+    Assert.assertTrue(Iterables.size(results) > 0);
+
+    TimeBoundaryResultValue val = results.iterator().next().getValue();
+    DateTime minTime = val.getMinTime();
+    DateTime maxTime = val.getMaxTime();
+
+    Assert.assertEquals(DateTimes.of("2011-01-15T00:00:00.000Z"), minTime);
+    Assert.assertEquals(DateTimes.of("2011-01-15T01:00:00.000Z"), maxTime);
   }
 
   @Test

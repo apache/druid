@@ -45,6 +45,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import java.util.Iterator;
 import java.util.List;
@@ -155,7 +156,8 @@ public class TimeBoundaryQueryRunnerFactory
               final DateTime minTime;
               final DateTime maxTime;
 
-              if (legacyQuery.getFilter() != null) {
+              Interval queryInterval = legacyQuery.getQuerySegmentSpec().getIntervals().get(0);
+              if (legacyQuery.getFilter() != null || !queryInterval.contains(adapter.getInterval())) {
                 minTime = getTimeBoundary(adapter, legacyQuery, false);
                 if (minTime == null) {
                   maxTime = null;
