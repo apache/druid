@@ -41,7 +41,7 @@ and is updated at every step.
  - n is the count of elements in chunk1 
  - m is the count of elements in chunk2 
  - t1 = sum of elements in chunk1
- - t2 = sum of elements in chunk2.
+ - t2 is the sum of elements in chunk2
 
 This algorithm was proven to be numerically stable by J.L. Barlow in
 "Error analysis of a pairwise summation algorithm to compute sample variance"
