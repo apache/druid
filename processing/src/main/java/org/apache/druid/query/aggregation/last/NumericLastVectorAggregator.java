@@ -95,6 +95,14 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
     }
   }
 
+  /**
+   *
+   * Checks if the aggregated value at a position in the buffer is null or not
+   *
+   * @param buf         byte buffer storing the byte array representation of the aggregate
+   * @param position    offset within the byte buffer at which the current aggregate value is stored
+   * @return
+   */
   boolean isValueNull(ByteBuffer buf, int position)
   {
     return buf.get(position + NULL_OFFSET) == NullHandling.IS_NULL_BYTE;
@@ -127,6 +135,13 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
     }
   }
 
+  /**
+   *
+   * @param buf         byte buffer storing the byte array representation of the aggregate
+   * @param position    offset within the byte buffer at which the current aggregate value is stored
+   * @param time        the time to be updated in the buffer as the last time
+   * @param index       the index of the vectorized vector which is the last value
+   */
   void updateTimeWithValue(ByteBuffer buf, int position, long time, int index)
   {
     buf.putLong(position, time);
@@ -134,14 +149,27 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
     putValue(buf, position + VALUE_OFFSET, index);
   }
 
+  /**
+   *
+   * @param buf         byte buffer storing the byte array representation of the aggregate
+   * @param position    offset within the byte buffer at which the current aggregate value is stored
+   * @param time        the time to be updated in the buffer as the last time
+   */
   void updateTimeWithNull(ByteBuffer buf, int position, long time)
   {
     buf.putLong(position, time);
     buf.put(position + NULL_OFFSET, NullHandling.IS_NULL_BYTE);
   }
 
+  /**
+   *Abstract function which needs to be overridden by subclasses to set the initial value
+   */
   abstract void initValue(ByteBuffer buf, int position);
 
+  /**
+   *Abstract function which needs to be overridden by subclasses to set the
+   * latest value in the buffer depending on the datatype
+   */
   abstract void putValue(ByteBuffer buf, int position, int index);
 
   @Override

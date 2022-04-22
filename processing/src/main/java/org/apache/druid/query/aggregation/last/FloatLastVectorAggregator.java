@@ -25,6 +25,9 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
+/**
+ * Vectorized version of on heap 'last' aggregator for column selectors with type FLOAT..
+ */
 public class FloatLastVectorAggregator extends NumericLastVectorAggregator
 {
   float lastValue;
