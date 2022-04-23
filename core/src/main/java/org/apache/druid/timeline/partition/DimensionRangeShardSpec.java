@@ -220,17 +220,19 @@ public class DimensionRangeShardSpec extends BaseDimensionRangeShardSpec
       }
 
       final Range<String> firstRange = effectiveDomainRangeIterator.next();
+      final boolean effectiveDomainIsSingleRange = !effectiveDomainRangeIterator.hasNext();
 
-      if (!effectiveDomainRangeIterator.hasNext()) {
-        // Effective domain contained only one Range.
-        // If it's a singleton and lies only on the boundaries -> consider next dimensions
-        effectiveDomainIsStart = effectiveDomainIsStart
-                                 && segmentStart.get(i) != null
-                                 && firstRange.equals(Range.singleton(segmentStart.get(i)));
-        effectiveDomainIsEnd = effectiveDomainIsEnd
-                               && segmentEnd.get(i) != null
-                               && firstRange.equals(Range.singleton(segmentEnd.get(i)));
-      }
+      // Effective domain contained only one Range.
+      // If it's a singleton and lies only on the boundaries -> consider next dimensions
+      effectiveDomainIsStart = effectiveDomainIsStart
+                               && effectiveDomainIsSingleRange
+                               && segmentStart.get(i) != null
+                               && firstRange.equals(Range.singleton(segmentStart.get(i)));
+
+      effectiveDomainIsEnd = effectiveDomainIsEnd
+                             && effectiveDomainIsSingleRange
+                             && segmentEnd.get(i) != null
+                             && firstRange.equals(Range.singleton(segmentEnd.get(i)));
 
       // EffectiveDomain lies within the boundaries as well -> cannot prune based on next dimensions
       if (!effectiveDomainIsStart && !effectiveDomainIsEnd) {
