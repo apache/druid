@@ -181,15 +181,15 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
   @GuardedBy("tasks")
   protected void saveRunningTasks()
   {
-    final Map<StorageLocationConfig, List<String>> fileToTasksMap = new HashMap<>();
+    final Map<File, List<String>> fileToTasksMap = new HashMap<>();
 
     for (TaskRunnerWorkItem taskRunnerWorkItem : tasks.values()) {
       String taskId = taskRunnerWorkItem.getTaskId();
-      StorageLocationConfig location = taskConfig.getBaseTaskDirLocationForId(taskId);
-      fileToTasksMap.computeIfAbsent(location, k -> new ArrayList<>()).add(taskId);
+      File baseDir = taskConfig.getTaskBaseDir(taskId);
+      fileToTasksMap.computeIfAbsent(baseDir, k -> new ArrayList<>()).add(taskId);
     }
 
-    for (Map.Entry<StorageLocationConfig, List<String>> entry : fileToTasksMap.entrySet()) {
+    for (Map.Entry<File, List<String>> entry : fileToTasksMap.entrySet()) {
       File restoreFile = getRestoreFile(entry.getKey());
       try {
         Files.createParentDirs(restoreFile);
@@ -206,9 +206,9 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
     return taskConfig.getBaseTaskDirChildrenLocations(TASK_RESTORE_FILENAME);
   }
 
-  private File getRestoreFile(StorageLocationConfig location)
+  private File getRestoreFile(File baseTaskDir)
   {
-    return taskConfig.getChildFileFromLocation(location, TASK_RESTORE_FILENAME);
+    return new File(baseTaskDir, TASK_RESTORE_FILENAME);
   }
 
   protected static class TaskRestoreInfo

@@ -243,12 +243,12 @@ public class TaskConfig
                                     .collect(Collectors.toList());
   }
 
-  public File getChildFileFromLocation(StorageLocationConfig location, String child)
+  private File getChildFileFromLocation(StorageLocationConfig location, String child)
   {
     return new File(location.getPath(), child);
   }
 
-  public StorageLocationConfig getBaseTaskDirLocationForId(String taskId)
+  private StorageLocationConfig getBaseTaskDirLocationForId(String taskId)
   {
     if (taskId == null) {
       return null;
