@@ -33,7 +33,7 @@ public abstract class NumericLastAggregator<TSelector extends BaseNullableColumn
 {
   private final boolean useDefault = NullHandling.replaceWithDefault();
   private final BaseLongColumnValueSelector timeSelector;
-  
+
   final TSelector valueSelector;
   long lastTime;
   boolean rhsNull;
