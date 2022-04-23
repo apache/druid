@@ -285,7 +285,7 @@ public class WorkerTaskManager
 
       try {
         FileUtils.writeAtomically(
-            new File(getAssignedTaskDir(task.getId()), task.getId()),
+            getAssignedTaskFile(task.getId()),
             getTmpTaskDir(task.getId()),
             os -> {
               jsonMapper.writeValue(os, task);
@@ -315,7 +315,7 @@ public class WorkerTaskManager
 
   private File getTmpTaskDir(String taskId)
   {
-    return new File(taskConfig.getTaskDir(taskId), TEMP_WORKER);
+    return new File(taskConfig.getTaskBaseDir(taskId), TEMP_WORKER);
   }
 
   private void cleanupAndMakeTmpTaskDirs() throws IOException
@@ -342,9 +342,9 @@ public class WorkerTaskManager
     }
   }
 
-  public File getAssignedTaskDir(String taskId)
+  public File getAssignedTaskFile(String taskId)
   {
-    return new File(taskConfig.getTaskDir(taskId), ASSIGNED);
+    return new File(new File(taskConfig.getTaskBaseDir(taskId), ASSIGNED), taskId);
   }
 
   public List<File> getAssignedTaskDirs()
@@ -402,7 +402,7 @@ public class WorkerTaskManager
   private void cleanupAssignedTask(Task task)
   {
     assignedTasks.remove(task.getId());
-    File taskFile = new File(getAssignedTaskDir(task.getId()), task.getId());
+    File taskFile = getAssignedTaskFile(task.getId());
     try {
       Files.delete(taskFile.toPath());
     }
@@ -466,9 +466,9 @@ public class WorkerTaskManager
                      .collect(Collectors.toList());
   }
 
-  public File getCompletedTaskDir(String taskId)
+  public File getCompletedTaskFile(String taskId)
   {
-    return new File(taskConfig.getTaskDir(taskId), COMPLETED);
+    return new File(new File(taskConfig.getTaskBaseDir(taskId), COMPLETED), taskId);
   }
 
   private void moveFromRunningToCompleted(String taskId, TaskAnnouncement taskAnnouncement)
@@ -479,7 +479,7 @@ public class WorkerTaskManager
 
       try {
         FileUtils.writeAtomically(
-            new File(getCompletedTaskDir(taskId), taskId), getTmpTaskDir(taskId),
+            getCompletedTaskFile(taskId), getTmpTaskDir(taskId),
             os -> {
               jsonMapper.writeValue(os, taskAnnouncement);
               return null;
@@ -599,7 +599,7 @@ public class WorkerTaskManager
                 );
 
                 completedTasks.remove(taskId);
-                File taskFile = new File(getCompletedTaskDir(taskId), taskId);
+                File taskFile = getCompletedTaskFile(taskId);
                 try {
                   Files.deleteIfExists(taskFile.toPath());
                   changeHistory.addChangeRequest(new WorkerHistoryItem.TaskRemoval(taskId));

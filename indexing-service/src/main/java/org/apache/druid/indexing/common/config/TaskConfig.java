@@ -262,9 +262,14 @@ public class TaskConfig
     return baseTaskDirLocations.get(index);
   }
 
-  public File getTaskDir(String taskId)
+  public File getTaskBaseDir(String taskId)
   {
     return getBaseTaskDirLocationForId(taskId).getPath();
+  }
+
+  public File getTaskDir(String taskId)
+  {
+    return new File(getTaskBaseDir(taskId), taskId);
   }
 
   public File getTaskWorkDir(String taskId)
