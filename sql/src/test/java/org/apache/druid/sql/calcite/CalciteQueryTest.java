@@ -684,6 +684,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testLatestAggregators() throws Exception
   {
+    // Cannot vectorize until StringLast is vectorized
+    skipVectorize();
     testQuery(
         "SELECT "
         + "LATEST(cnt), LATEST(m1), LATEST(dim1, 10), "
