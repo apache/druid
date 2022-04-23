@@ -63,21 +63,4 @@ public class LongLastVectorAggregator extends NumericLastVectorAggregator
     final boolean rhsNull = isValueNull(buf, position);
     return new SerializablePair<>(buf.getLong(position), rhsNull ? null : buf.getLong(position + VALUE_OFFSET));
   }
-
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    return buf.getLong(position + VALUE_OFFSET);
-  }
-
-  public long getLong(ByteBuffer buf, int position)
-  {
-    return buf.getLong(position + VALUE_OFFSET);
-  }
-
-  public double getDouble(ByteBuffer buf, int position)
-  {
-    return buf.getLong(position + VALUE_OFFSET);
-  }
-
-
 }
