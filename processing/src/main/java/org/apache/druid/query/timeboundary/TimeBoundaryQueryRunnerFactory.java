@@ -118,7 +118,8 @@ public class TimeBoundaryQueryRunnerFactory
           VirtualColumns.EMPTY,
           descending,
           Granularities.ALL,
-          this.skipToFirstMatching
+          this.skipToFirstMatching,
+          null
       );
       final List<Result<DateTime>> resultList = resultSequence.limit(1).toList();
       if (resultList.size() > 0) {

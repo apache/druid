@@ -158,7 +158,8 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                       .addDimension("sally")
                       .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
                       .build(),
-          new IncrementalIndexStorageAdapter(index)
+          new IncrementalIndexStorageAdapter(index),
+          null
       );
 
       final List<Row> results = rows.toList();
@@ -236,7 +237,8 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                           )
                       )
                       .build(),
-          new IncrementalIndexStorageAdapter(index)
+          new IncrementalIndexStorageAdapter(index),
+          null
       );
 
       final List<Row> results = rows.toList();
@@ -406,7 +408,8 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                       .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
                       .setDimFilter(DimFilters.dimEquals("sally", (String) null))
                       .build(),
-          new IncrementalIndexStorageAdapter(index)
+          new IncrementalIndexStorageAdapter(index),
+          null
       );
 
       final List<Row> results = rows.toList();

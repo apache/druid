@@ -27,6 +27,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
@@ -187,7 +188,10 @@ public interface GroupByStrategy
    *
    * @return result sequence for the storage adapter
    */
-  Sequence<ResultRow> process(GroupByQuery query, StorageAdapter storageAdapter);
+  Sequence<ResultRow> process(
+      GroupByQuery query,
+      StorageAdapter storageAdapter,
+      @Nullable GroupByQueryMetrics groupByQueryMetrics);
 
   /**
    * Returns whether this strategy supports pushing down outer queries. This is used by

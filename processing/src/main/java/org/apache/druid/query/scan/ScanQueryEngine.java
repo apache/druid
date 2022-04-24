@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.Filter;
@@ -44,6 +45,7 @@ import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -61,7 +63,8 @@ public class ScanQueryEngine
   public Sequence<ScanResultValue> process(
       final ScanQuery query,
       final Segment segment,
-      final ResponseContext responseContext
+      final ResponseContext responseContext,
+      @Nullable final QueryMetrics<?> queryMetrics
   )
   {
     if (segment.asQueryableIndex() != null && segment.asQueryableIndex().isFromTombstone()) {
@@ -135,7 +138,7 @@ public class ScanQueryEngine
                     Granularities.ALL,
                     query.getTimeOrder().equals(ScanQuery.Order.DESCENDING) ||
                     (query.getTimeOrder().equals(ScanQuery.Order.NONE) && query.isDescending()),
-                    null
+                    queryMetrics
                 )
                 .map(cursor -> new BaseSequence<>(
                     new BaseSequence.IteratorMaker<ScanResultValue, Iterator<ScanResultValue>>()
