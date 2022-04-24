@@ -22,6 +22,7 @@ package org.apache.druid.query.timeboundary;
 import com.google.common.base.Function;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.BaseSequence;
@@ -156,8 +157,7 @@ public class TimeBoundaryQueryRunnerFactory
               final DateTime minTime;
               final DateTime maxTime;
 
-              Interval queryInterval = legacyQuery.getQuerySegmentSpec().getIntervals().get(0);
-              if (legacyQuery.getFilter() != null || !queryInterval.contains(adapter.getInterval())) {
+              if (legacyQuery.getFilter() != null || !queryIntervalContainsAdapterInterval()) {
                 minTime = getTimeBoundary(adapter, legacyQuery, false);
                 if (minTime == null) {
                   maxTime = null;
@@ -184,6 +184,15 @@ public class TimeBoundaryQueryRunnerFactory
             public void cleanup(Iterator<Result<TimeBoundaryResultValue>> toClean)
             {
 
+            }
+
+            private boolean queryIntervalContainsAdapterInterval()
+            {
+              List<Interval> queryIntervals = legacyQuery.getQuerySegmentSpec().getIntervals();
+              if (queryIntervals.size() != 1) {
+                throw new IAE("Should only have one interval, got[%s]", queryIntervals);
+              }
+              return queryIntervals.get(0).contains(adapter.getInterval());
             }
           }
       );
