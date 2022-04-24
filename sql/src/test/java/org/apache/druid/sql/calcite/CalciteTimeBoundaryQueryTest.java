@@ -94,8 +94,8 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  // this test is to maintain that if both min(__time) and max(__time) are present,
-  // we currently don't convert that query to timeBoundary
+  // Currently, if both min(__time) and max(__time) are present, we don't convert it
+  // to a timeBoundary query. (ref : https://github.com/apache/druid/issues/12479)
   @Test
   public void testMinMaxTimeQuery() throws Exception
   {
