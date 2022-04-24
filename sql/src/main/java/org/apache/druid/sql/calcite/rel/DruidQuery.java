@@ -835,7 +835,7 @@ public class DruidQuery
   /**
    * Return this query as a TimeBoundary query, or null if this query is not compatible with Timeseries.
    *
-   * @return query
+   * @return a TimeBoundaryQuery if possible. null if it is not possible to construct one.
    */
   @Nullable
   private TimeBoundaryQuery toTimeBoundaryQuery()
