@@ -146,8 +146,10 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
       getConnector().retryWithHandle(
           (HandleCallback<Void>) handle -> {
             final String sql = StringUtils.format(
-                "INSERT INTO %s (id, created_date, datasource, payload, active, status_payload) "
-                + "VALUES (:id, :created_date, :datasource, :payload, :active, :status_payload)",
+                "INSERT INTO %s (id, created_date, datasource, payload, payload_json, active, status_payload, "
+                + "status_payload_json) "
+                + "VALUES (:id, :created_date, :datasource, :payload, CAST(:payload_json as jsonb), :active, "
+                + ":status_payload, CAST(:status_payload_json as jsonb))",
                 getEntryTable()
             );
             handle.createStatement(sql)
@@ -155,8 +157,10 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                   .bind("created_date", timestamp.toString())
                   .bind("datasource", dataSource)
                   .bind("payload", jsonMapper.writeValueAsBytes(entry))
+                  .bind("payload_json", jsonMapper.writeValueAsString(entry))
                   .bind("active", active)
                   .bind("status_payload", jsonMapper.writeValueAsBytes(status))
+                  .bind("status_payload_json", jsonMapper.writeValueAsString(status))
                   .execute();
             return null;
           },

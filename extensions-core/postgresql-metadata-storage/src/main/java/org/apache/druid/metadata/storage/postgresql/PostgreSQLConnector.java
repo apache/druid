@@ -29,6 +29,7 @@ import org.apache.druid.metadata.MetadataCASUpdate;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
+import org.eclipse.jetty.util.ajax.JSON;
 import org.postgresql.PGProperty;
 import org.postgresql.util.PSQLException;
 import org.skife.jdbi.v2.DBI;
@@ -45,6 +46,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
 {
   private static final Logger log = new Logger(PostgreSQLConnector.class);
   private static final String PAYLOAD_TYPE = "BYTEA";
+  private static final String JSON_PAYLOAD_TYPE = "JSONB";
   private static final String SERIAL_TYPE = "BIGSERIAL";
   private static final String QUOTE_STRING = "\\\"";
   private static final String PSQL_SERIALIZATION_FAILURE_MSG =
@@ -124,6 +126,12 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   public String getPayloadType()
   {
     return PAYLOAD_TYPE;
+  }
+
+  @Override
+  public String getJsonPayloadType()
+  {
+    return JSON_PAYLOAD_TYPE;
   }
 
   @Override

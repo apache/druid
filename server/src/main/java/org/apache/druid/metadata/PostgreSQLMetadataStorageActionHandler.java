@@ -20,17 +20,31 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.indexer.TaskInfo;
+import org.apache.druid.indexer.TaskInfoLite;
+import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.Query;
+import org.skife.jdbi.v2.StatementContext;
+import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Map;
 
 public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
     extends SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
 {
+  private static final EmittingLogger log = new EmittingLogger(PostgreSQLMetadataStorageActionHandler.class);
+
+  private final TaskInfoLiteMapper taskInfoMapper;
+
   public PostgreSQLMetadataStorageActionHandler(
       SQLMetadataConnector connector,
       ObjectMapper jsonMapper,
@@ -42,6 +56,7 @@ public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogTy
   )
   {
     super(connector, jsonMapper, types, entryTypeName, entryTable, logTable, lockTable);
+    this.taskInfoMapper = new TaskInfoLiteMapper(jsonMapper);
   }
 
   @Override
@@ -81,6 +96,7 @@ public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogTy
     }
     return query;
   }
+
   private String getWhereClauseForInactiveStatusesSinceQuery(@Nullable String datasource)
   {
     String sql = StringUtils.format("active = FALSE AND created_date >= :start ");
@@ -88,6 +104,25 @@ public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogTy
       sql += " AND datasource = :ds ";
     }
     return sql;
+  }
+
+  @Override
+  @Nullable
+  public TaskInfoLite getTaskInfoLite(String entryId)
+  {
+    return getConnector().retryWithHandle(handle -> {
+      final String query = StringUtils.format(
+          "SELECT id, payload_json->>'groupId' AS group_id, payload_json->>'type' AS type, datasource, "
+          + "status_payload_json->>'location' AS location, created_date, status_payload_json->>'status' AS status, "
+          + "status_payload_json->>'duration' AS duration, status_payload_json->>'errorMsg' AS error_msg "
+          + "FROM %s WHERE id = :id",
+          getEntryTable()
+      );
+      return handle.createQuery(query)
+                   .bind("id", entryId)
+                   .map(taskInfoMapper)
+                   .first();
+    });
   }
 
   @Deprecated
@@ -99,4 +134,40 @@ public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogTy
                               getLogTable(), getEntryTable(), getEntryTypeName(), getEntryTable());
   }
 
+  static class TaskInfoLiteMapper implements ResultSetMapper<TaskInfoLite>
+  {
+    private final ObjectMapper objectMapper;
+
+    TaskInfoLiteMapper(ObjectMapper objectMapper)
+    {
+      this.objectMapper = objectMapper;
+    }
+
+    @Override
+    public TaskInfoLite map(int index, ResultSet resultSet, StatementContext context)
+        throws SQLException
+    {
+      final TaskInfoLite taskInfo;
+      TaskLocation location;
+      try {
+        location = objectMapper.readValue(resultSet.getString("location"), TaskLocation.class);
+      }
+      catch (IOException e) {
+        log.warn("Encountered exception[%s] while deserializing location from task status, setting location to unknown", e.getMessage());
+        location = TaskLocation.unknown();
+      }
+      taskInfo = new TaskInfoLite(
+          resultSet.getString("id"),
+          resultSet.getString("group_id"),
+          resultSet.getString("type"),
+          resultSet.getString("datasource"),
+          location,
+          DateTimes.of(resultSet.getString("created_date")),
+          resultSet.getString("status"),
+          resultSet.getLong("duration"),
+          resultSet.getString("error_msg")
+      );
+      return taskInfo;
+    }
+  }
 }
