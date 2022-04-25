@@ -56,7 +56,6 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.Properties;
 
 public abstract class SQLMetadataConnector implements MetadataStorageConnector
@@ -344,8 +343,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       ResultSet columns = databaseMetaData.getColumns(
           null,
           null,
-          table.toUpperCase(Locale.ENGLISH),
-          column.toUpperCase(Locale.ENGLISH)
+          table,
+          column
       );
       return columns.next();
     }
@@ -391,16 +390,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             @Override
             public Void withHandle(Handle handle)
             {
-              final Batch batch = handle.createBatch();
               if (!tableContainsColumn(handle, tableName, "type")) {
                 log.info("Adding column: type to table[%s]", tableName);
-                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN type VARCHAR(255)", tableName));
+                handle.execute(StringUtils.format("ALTER TABLE %1$s ADD COLUMN type VARCHAR(255)", tableName));
               }
               if (!tableContainsColumn(handle, tableName, "group_id")) {
                 log.info("Adding column: group_id to table[%s]", tableName);
-                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255)", tableName));
+                handle.execute(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255)", tableName));
               }
-              batch.execute();
               return null;
             }
           }
@@ -456,6 +453,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             }
           }
       );
+      log.info("Migration of tasks complete for table[%s]", tableName);
       return true;
     }
     catch (Exception e) {

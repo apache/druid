@@ -35,6 +35,9 @@ import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Locale;
 
 @ManageLifecycle
@@ -83,6 +86,24 @@ public class DerbyConnector extends SQLMetadataConnector
                   .bind("tableName", StringUtils.toUpperCase(tableName))
                   .list()
                   .isEmpty();
+  }
+
+  @Override
+  public boolean tableContainsColumn(Handle handle, String table, String column)
+  {
+    try {
+      DatabaseMetaData databaseMetaData = handle.getConnection().getMetaData();
+      ResultSet columns = databaseMetaData.getColumns(
+          null,
+          null,
+          table.toUpperCase(Locale.ENGLISH),
+          column.toUpperCase(Locale.ENGLISH)
+      );
+      return columns.next();
+    }
+    catch (SQLException e) {
+      return false;
+    }
   }
 
   @Override
