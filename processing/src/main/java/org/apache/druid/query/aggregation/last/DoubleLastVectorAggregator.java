@@ -41,13 +41,13 @@ public class DoubleLastVectorAggregator extends NumericLastVectorAggregator
   @Override
   void putValue(ByteBuffer buf, int position, int index)
   {
-    lastValue = valueSelector.getLongVector()[index];
+    lastValue = valueSelector.getDoubleVector()[index];
     buf.putDouble(position, lastValue);
   }
 
 
   @Override
-  void initValue(ByteBuffer buf, int position)
+  public void initValue(ByteBuffer buf, int position)
   {
     buf.putDouble(position, 0);
   }
