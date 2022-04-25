@@ -121,7 +121,7 @@ public class LongLastVectorAggregatorTest extends InitializedNullHandlingTest
   private void clearBufferForPositions(int offset, int... positions)
   {
     for (int position : positions) {
-      target.initValue(buf, offset + position);
+      target.init(buf, offset + position);
     }
   }
 

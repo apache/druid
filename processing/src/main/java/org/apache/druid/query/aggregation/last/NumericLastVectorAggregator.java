@@ -36,8 +36,8 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
   final VectorValueSelector valueSelector;
   private final boolean useDefault = NullHandling.replaceWithDefault();
   private final VectorValueSelector timeSelector;
-  long lastTime;
-  boolean rhsNull;
+  private long lastTime;
+  protected boolean rhsNull;
 
   public NumericLastVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
   {

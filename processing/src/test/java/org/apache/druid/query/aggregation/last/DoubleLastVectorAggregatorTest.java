@@ -66,8 +66,8 @@ public class DoubleLastVectorAggregatorTest extends InitializedNullHandlingTest
   public void initValueShouldInitZero()
   {
     target.initValue(buf, 0);
-    long initVal = buf.getLong(0);
-    Assert.assertEquals(0, initVal);
+    double initVal = buf.getDouble(0);
+    Assert.assertEquals(0, initVal, EPSILON);
   }
 
   @Test
@@ -121,7 +121,7 @@ public class DoubleLastVectorAggregatorTest extends InitializedNullHandlingTest
   private void clearBufferForPositions(int offset, int... positions)
   {
     for (int position : positions) {
-      target.initValue(buf, offset + position);
+      target.init(buf, offset + position);
     }
   }
 

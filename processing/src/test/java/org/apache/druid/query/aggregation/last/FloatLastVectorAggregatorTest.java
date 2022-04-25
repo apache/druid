@@ -65,14 +65,15 @@ public class FloatLastVectorAggregatorTest extends InitializedNullHandlingTest
   @Test
   public void initValueShouldBeNegInf()
   {
-    target.initValue(buf, 0);
+    target.init(buf, 0);
     float initVal = buf.getFloat(0);
-    Assert.assertEquals(Float.NEGATIVE_INFINITY, initVal, EPSILON);
+    Assert.assertEquals(0.0f, initVal, EPSILON);
   }
 
   @Test
   public void aggregate()
   {
+    target.init(buf,0);
     target.aggregate(buf, 0, 0, VALUES.length);
     Pair<Long, Float> result = (Pair<Long, Float>) target.get(buf, 0);
     Assert.assertEquals(times[3], result.lhs.longValue());
@@ -121,7 +122,7 @@ public class FloatLastVectorAggregatorTest extends InitializedNullHandlingTest
   private void clearBufferForPositions(int offset, int... positions)
   {
     for (int position : positions) {
-      target.initValue(buf, offset + position);
+      target.init(buf, offset + position);
     }
   }
 
