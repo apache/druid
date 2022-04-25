@@ -73,7 +73,7 @@ public class FloatLastVectorAggregatorTest extends InitializedNullHandlingTest
   @Test
   public void aggregate()
   {
-    target.init(buf,0);
+    target.init(buf, 0);
     target.aggregate(buf, 0, 0, VALUES.length);
     Pair<Long, Float> result = (Pair<Long, Float>) target.get(buf, 0);
     Assert.assertEquals(times[3], result.lhs.longValue());
