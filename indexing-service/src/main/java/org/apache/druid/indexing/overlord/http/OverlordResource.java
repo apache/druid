@@ -38,6 +38,7 @@ import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
+import org.apache.druid.indexer.TaskInfoLite;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -265,6 +266,78 @@ public class OverlordResource
   @ResourceFilters(TaskResourceFilter.class)
   public Response getTaskStatus(@PathParam("taskid") String taskid)
   {
+    final TaskInfoLite taskInfo = taskStorageQueryAdapter.getTaskInfoLite(taskid);
+    TaskStatusResponse response = null;
+
+    if (taskInfo != null) {
+      if (taskMaster.getTaskRunner().isPresent()) {
+        final TaskRunner taskRunner = taskMaster.getTaskRunner().get();
+        final TaskRunnerWorkItem workItem = taskRunner
+            .getKnownTasks()
+            .stream()
+            .filter(item -> item.getTaskId().equals(taskid))
+            .findAny()
+            .orElse(null);
+        if (workItem != null) {
+          response = new TaskStatusResponse(
+              workItem.getTaskId(),
+              new TaskStatusPlus(
+                  taskInfo.getId(),
+                  taskInfo.getGroupId(),
+                  taskInfo.getType(),
+                  taskInfo.getCreatedTime(),
+                  // Would be nice to include the real queue insertion time, but the
+                  // TaskStorage API doesn't yet allow it.
+                  DateTimes.EPOCH,
+                  taskInfo.getStatus(),
+                  taskRunner.getRunnerTaskState(workItem.getTaskId()),
+                  taskInfo.getDuration(),
+                  workItem.getLocation(),
+                  taskInfo.getDataSource(),
+                  taskInfo.getErrorMsg()
+              )
+          );
+        }
+      }
+
+      if (response == null) {
+        response = new TaskStatusResponse(
+            taskid,
+            new TaskStatusPlus(
+                taskInfo.getId(),
+                taskInfo.getGroupId(),
+                taskInfo.getType(),
+                taskInfo.getCreatedTime(),
+                // Would be nice to include the real queue insertion time, but the
+                // TaskStorage API doesn't yet allow it.
+                DateTimes.EPOCH,
+                taskInfo.getStatus(),
+                RunnerTaskState.WAITING,
+                taskInfo.getDuration(),
+                taskInfo.getLocation(),
+                taskInfo.getDataSource(),
+                taskInfo.getErrorMsg()
+            )
+        );
+      }
+    } else {
+      response = new TaskStatusResponse(taskid, null);
+    }
+
+    final Response.Status status = response.getStatus() == null
+                                   ? Response.Status.NOT_FOUND
+                                   : Response.Status.OK;
+
+    return Response.status(status).entity(response).build();
+  }
+
+  /*
+  @GET
+  @Path("/task/{taskid}/status")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(TaskResourceFilter.class)
+  public Response getTaskStatus(@PathParam("taskid") String taskid)
+  {
     final TaskInfo<Task, TaskStatus> taskInfo = taskStorageQueryAdapter.getTaskInfo(taskid);
     TaskStatusResponse response = null;
 
@@ -329,6 +402,7 @@ public class OverlordResource
 
     return Response.status(status).entity(response).build();
   }
+  */
 
   @Deprecated
   @GET
