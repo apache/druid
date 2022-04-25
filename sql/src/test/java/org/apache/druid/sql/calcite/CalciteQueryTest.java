@@ -602,7 +602,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testEarliestAggregators() throws Exception
   {
-    // Cannot vectorize EARLIEST aggregator.
+    // Cannot vectorize EARLIEST aggregator for Strings.
     skipVectorize();
 
     testQuery(
@@ -885,8 +885,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPrimitiveEarliestInSubquery() throws Exception
   {
-    // Cannot vectorize EARLIEST aggregator.
-    skipVectorize();
 
     testQuery(
         "SELECT SUM(val1), SUM(val2), SUM(val3) FROM (SELECT dim2, EARLIEST(m1) AS val1, EARLIEST(cnt) AS val2, EARLIEST(m2) AS val3 FROM foo GROUP BY dim2)",
@@ -929,6 +927,40 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         NullHandling.sqlCompatible()
         ? ImmutableList.of(new Object[]{11.0, 4L, 11.0})
         : ImmutableList.of(new Object[]{8.0, 3L, 8.0})
+    );
+  }
+
+  @Test
+  public void testPrimitiveEarliestInSubqueryGroupBy() throws Exception
+  {
+    testQuery(
+        "SELECT dim2, EARLIEST(m1) AS val1 FROM foo GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                        .setAggregatorSpecs(aggregators(
+                                                new FloatFirstAggregatorFactory("a0", "m1", null)
+                                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{null, 2.0f},
+            new Object[]{"", 3.0f},
+            new Object[]{"a", 1.0f},
+            new Object[]{"abc", 5.0f}
+        )
+        : ImmutableList.of(
+            new Object[]{"", 2.0f},
+            new Object[]{"a", 1.0f},
+            new Object[]{"abc", 5.0f}
+
+        )
     );
   }
 
@@ -987,7 +1019,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringEarliestInSubquery() throws Exception
   {
-    // Cannot vectorize EARLIEST aggregator.
+    // Cannot vectorize EARLIEST aggregator for Strings
     skipVectorize();
 
     testQuery(
@@ -1147,8 +1179,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testEarliestAggregatorsNumericNulls() throws Exception
   {
-    // Cannot vectorize EARLIEST aggregator.
-    skipVectorize();
 
     testQuery(
         "SELECT EARLIEST(l1), EARLIEST(d1), EARLIEST(f1) FROM druid.numfoo",
@@ -1324,8 +1354,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByEarliestFloat() throws Exception
   {
-    // Cannot vectorize EARLIEST aggregator.
-    skipVectorize();
+
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
@@ -1371,8 +1400,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByEarliestDouble() throws Exception
   {
-    // Cannot vectorize EARLIEST aggregator.
-    skipVectorize();
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
@@ -1418,8 +1445,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByEarliestLong() throws Exception
   {
-    // Cannot vectorize EARLIEST aggregator.
-    skipVectorize();
+
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
@@ -1601,6 +1627,39 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         expected
+    );
+  }
+
+  @Test
+  public void testEarliestVectorAggregators() throws Exception
+  {
+    testQuery(
+        "SELECT "
+        + "EARLIEST(cnt), EARLIEST(cnt + 1), EARLIEST(m1), EARLIEST(m1+1) "
+        + "FROM druid.numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "(\"cnt\" + 1)", ColumnType.LONG),
+                      expressionVirtualColumn("v1", "(\"m1\" + 1)", ColumnType.FLOAT)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new LongFirstAggregatorFactory("a0", "cnt", null),
+                          new LongFirstAggregatorFactory("a1", "v0", null),
+                          new FloatFirstAggregatorFactory("a2", "m1", null),
+                          new FloatFirstAggregatorFactory("a3", "v1", null)
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 2L, 1.0f, 2.0f}
+        )
     );
   }
 
