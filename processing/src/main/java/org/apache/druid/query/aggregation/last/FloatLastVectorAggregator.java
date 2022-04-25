@@ -47,9 +47,9 @@ public class FloatLastVectorAggregator extends NumericLastVectorAggregator
   }
 
   @Override
-  void initValue(ByteBuffer buf, int position)
+  public void initValue(ByteBuffer buf, int position)
   {
-    buf.putFloat(position, 0);
+    buf.putFloat(position, Float.NEGATIVE_INFINITY);
   }
 
 

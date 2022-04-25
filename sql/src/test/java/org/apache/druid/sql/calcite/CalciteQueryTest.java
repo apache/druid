@@ -867,9 +867,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPrimitiveLatestInSubquery() throws Exception
   {
-    // Cannot vectorize LATEST aggregator.
-    //skipVectorize();
-
     testQuery(
         "SELECT SUM(val1), SUM(val2), SUM(val3) FROM (SELECT dim2, LATEST(m1) AS val1, LATEST(cnt) AS val2, LATEST(m2) AS val3 FROM foo GROUP BY dim2)",
         ImmutableList.of(
@@ -917,9 +914,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPrimitiveLatestInSubqueryGroupBy() throws Exception
   {
-    // Cannot vectorize LATEST aggregator.
-    // skipVectorize();
-
     testQuery(
         "SELECT dim2, LATEST(m1) AS val1 FROM foo GROUP BY dim2",
         ImmutableList.of(
@@ -1006,7 +1000,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringLatestInSubquery() throws Exception
   {
-    // Cannot vectorize LATEST aggregator.
+    // Cannot vectorize LATEST aggregator for Strings
     skipVectorize();
 
     testQuery(
@@ -1246,9 +1240,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testLatestAggregatorsNumericNull() throws Exception
   {
-    // Cannot vectorize LATEST aggregator.
-    //skipVectorize();
-
     testQuery(
         "SELECT LATEST(l1), LATEST(d1), LATEST(f1) FROM druid.numfoo",
         ImmutableList.of(
@@ -1279,7 +1270,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFirstLatestAggregatorsSkipNulls() throws Exception
   {
-    // Cannot vectorize LATEST aggregator.
+    // Cannot vectorize EARLIEST aggregator.
     skipVectorize();
 
     final DimFilter filter;
@@ -1535,8 +1526,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByLatestFloat() throws Exception
   {
-    // Cannot vectorize LATEST aggregator.
-    // skipVectorize();
+
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
@@ -1583,8 +1573,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByLatestDouble() throws Exception
   {
-    // Cannot vectorize LATEST aggregator.
-    // skipVectorize();
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
@@ -1630,8 +1618,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByLatestLong() throws Exception
   {
-    // Cannot vectorize LATEST aggregator.
-    // skipVectorize();
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(

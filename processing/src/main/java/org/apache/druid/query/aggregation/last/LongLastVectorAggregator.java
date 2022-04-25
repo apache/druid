@@ -39,9 +39,9 @@ public class LongLastVectorAggregator extends NumericLastVectorAggregator
   }
 
   @Override
-  void initValue(ByteBuffer buf, int position)
+  public void initValue(ByteBuffer buf, int position)
   {
-    buf.putLong(position, Long.MIN_VALUE);
+    buf.putLong(position, 0);
   }
 
 
