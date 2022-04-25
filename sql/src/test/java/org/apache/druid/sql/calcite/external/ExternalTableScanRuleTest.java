@@ -24,6 +24,7 @@ import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.tools.ValidationException;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -57,7 +58,7 @@ public class ExternalTableScanRuleTest
                 NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
             )
         ),
-        ImmutableMap.of()
+        new QueryContext()
     );
     plannerContext.setQueryMaker(
         CalciteTests.createMockQueryMakerFactory(

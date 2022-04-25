@@ -452,13 +452,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Override
   public float getMetricFloatValue(int rowOffset, int aggOffset)
   {
-    return getMetricHelper(getMetricAggs(), concurrentGet(rowOffset), aggOffset, Aggregator::getFloat);
+    return ((Number) getMetricHelper(getMetricAggs(), concurrentGet(rowOffset), aggOffset, Aggregator::getFloat)).floatValue();
   }
 
   @Override
   public long getMetricLongValue(int rowOffset, int aggOffset)
   {
-    return getMetricHelper(getMetricAggs(), concurrentGet(rowOffset), aggOffset, Aggregator::getLong);
+    return ((Number) getMetricHelper(getMetricAggs(), concurrentGet(rowOffset), aggOffset, Aggregator::getLong)).longValue();
   }
 
   @Override
@@ -470,7 +470,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Override
   protected double getMetricDoubleValue(int rowOffset, int aggOffset)
   {
-    return getMetricHelper(getMetricAggs(), concurrentGet(rowOffset), aggOffset, Aggregator::getDouble);
+    return ((Number) getMetricHelper(getMetricAggs(), concurrentGet(rowOffset), aggOffset, Aggregator::getDouble)).doubleValue();
   }
 
   @Override
@@ -544,7 +544,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
    * If preserveExistingMetrics flag is set, then this method will combine values from two aggregators, the aggregator
    * for aggregating from input into output field and the aggregator for combining already aggregated field, as needed
    */
-  private <T> T getMetricHelper(AggregatorFactory[] metrics, Aggregator[] aggs, int aggOffset, Function<Aggregator, T> getMetricTypeFunction)
+  private <T> Object getMetricHelper(AggregatorFactory[] metrics, Aggregator[] aggs, int aggOffset, Function<Aggregator, T> getMetricTypeFunction)
   {
     if (preserveExistingMetrics) {
       // Since the preserveExistingMetrics flag is set, we will have to check and possibly retrieve the aggregated values
@@ -564,7 +564,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         AggregatorFactory aggregatorFactory = metrics[aggOffset];
         T aggregatedFromSource = getMetricTypeFunction.apply(aggs[aggOffset]);
         T aggregatedFromCombined = getMetricTypeFunction.apply(aggs[aggOffset + metrics.length]);
-        return (T) aggregatorFactory.combine(aggregatedFromSource, aggregatedFromCombined);
+        return aggregatorFactory.combine(aggregatedFromSource, aggregatedFromCombined);
       }
     } else {
       // If preserveExistingMetrics flag is not set then we simply get metrics from the list of Aggregator, aggs, using the

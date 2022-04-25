@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.input;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
@@ -55,14 +56,28 @@ public class DruidSegmentInputFormat implements InputFormat
       File temporaryDirectory
   )
   {
-    return new DruidSegmentReader(
-        source,
-        indexIO,
-        inputRowSchema.getTimestampSpec(),
-        inputRowSchema.getDimensionsSpec(),
-        inputRowSchema.getColumnsFilter(),
-        dimFilter,
-        temporaryDirectory
+    // this method handles the case when the entity comes from a tombstone or from a regular segment
+    Preconditions.checkArgument(
+        source instanceof DruidSegmentInputEntity,
+        DruidSegmentInputEntity.class.getName() + " required, but "
+        + source.getClass().getName() + " provided."
     );
+
+    final InputEntityReader retVal;
+    // Cast is safe here because of the precondition above passed
+    if (((DruidSegmentInputEntity) source).isFromTombstone()) {
+      retVal = new DruidTombstoneSegmentReader(source);
+    } else {
+      retVal = new DruidSegmentReader(
+          source,
+          indexIO,
+          inputRowSchema.getTimestampSpec(),
+          inputRowSchema.getDimensionsSpec(),
+          inputRowSchema.getColumnsFilter(),
+          dimFilter,
+          temporaryDirectory
+      );
+    }
+    return retVal;
   }
 }

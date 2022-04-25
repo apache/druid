@@ -154,3 +154,21 @@ objectClass: groupOfUniqueNames
 cn: datasourceWithSysGroup
 description: datasourceWithSysGroup users
 uniqueMember: uid=datasourceAndSysUser,ou=Users,dc=example,dc=org
+
+dn: uid=datasourceAndContextParamsUser,ou=Users,dc=example,dc=org
+uid: datasourceAndContextParamsUser
+cn: datasourceAndContextParamsUser
+sn: datasourceAndContextParamsUser
+objectClass: top
+objectClass: posixAccount
+objectClass: inetOrgPerson
+homeDirectory: /home/datasourceAndContextParamsUser
+uidNumber: 9
+gidNumber: 9
+userPassword: helloworld
+
+dn: cn=datasourceAndContextParamsGroup,ou=Groups,dc=example,dc=org
+objectClass: groupOfUniqueNames
+cn: datasourceAndContextParamsGroup
+description: datasourceAndContextParamsGroup users
+uniqueMember: uid=datasourceAndContextParamsUser,ou=Users,dc=example,dc=org
