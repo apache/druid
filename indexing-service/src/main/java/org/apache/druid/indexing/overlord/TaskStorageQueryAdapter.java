@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskInfo;
+import org.apache.druid.indexer.TaskInfoLite;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
@@ -101,6 +102,12 @@ public class TaskStorageQueryAdapter
   public TaskInfo<Task, TaskStatus> getTaskInfo(String taskId)
   {
     return storage.getTaskInfo(taskId);
+  }
+
+  @Nullable
+  public TaskInfoLite getTaskInfoLite(String taskId)
+  {
+    return storage.getTaskInfoLite(taskId);
   }
 
   /**

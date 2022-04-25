@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
 import org.apache.druid.indexer.TaskInfo;
+import org.apache.druid.indexer.TaskInfoLite;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskAction;
@@ -108,6 +109,11 @@ public interface TaskStorage
 
   @Nullable
   TaskInfo<Task, TaskStatus> getTaskInfo(String taskId);
+
+  @Nullable
+  default TaskInfoLite getTaskInfoLite(String taskId) {
+    return null;
+  }
 
   /**
    * Add an action taken by a task to the audit log.

@@ -21,6 +21,7 @@ package org.apache.druid.metadata;
 
 import com.google.common.base.Optional;
 import org.apache.druid.indexer.TaskInfo;
+import org.apache.druid.indexer.TaskInfoLite;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -80,6 +81,11 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
 
   @Nullable
   TaskInfo<EntryType, StatusType> getTaskInfo(String entryId);
+
+  @Nullable
+  default TaskInfoLite getTaskInfoLite(String entryId) {
+    return null;
+  }
 
   /**
    * Return up to {@code maxNumStatuses} {@link TaskInfo} objects for all inactive entries

@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskInfo;
+import org.apache.druid.indexer.TaskInfoLite;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskAction;
@@ -184,6 +185,13 @@ public class MetadataTaskStorage implements TaskStorage
   public TaskInfo<Task, TaskStatus> getTaskInfo(String taskId)
   {
     return handler.getTaskInfo(taskId);
+  }
+
+  @Nullable
+  @Override
+  public TaskInfoLite getTaskInfoLite(String taskId)
+  {
+    return handler.getTaskInfoLite(taskId);
   }
 
   @Override
