@@ -41,11 +41,7 @@ SqlNode DruidSqlReplaceEof() :
         }
     ]
     <DELETE>
-    (
-      <ALL> { replaceTimeQuery = SqlLiteral.createCharString("ALL", getPos()); }
-    |
-      replaceTimeQuery = WhereOpt()
-    )
+    replaceTimeQuery = ReplaceTimeQuery()
     source = OrderedQueryOrExpr(ExprContext.ACCEPT_QUERY)
     // PARTITIONED BY is necessary, but is kept optional in the grammar. It is asserted that it is not missing in the
     // DruidSqlInsert constructor so that we can return a custom error message.
@@ -61,5 +57,20 @@ SqlNode DruidSqlReplaceEof() :
     {
         sqlInsert = new SqlInsert(s.end(source), SqlNodeList.EMPTY, table, source, columnList);
         return new DruidSqlReplace(sqlInsert, partitionedBy.lhs, partitionedBy.rhs, replaceTimeQuery);
+    }
+}
+
+SqlNode ReplaceTimeQuery() :
+{
+    SqlNode replaceQuery;
+}
+{
+    (
+      <ALL> { replaceQuery = SqlLiteral.createCharString("ALL", getPos()); }
+    |
+      replaceQuery = WhereOpt()
+    )
+    {
+      return replaceQuery;
     }
 }

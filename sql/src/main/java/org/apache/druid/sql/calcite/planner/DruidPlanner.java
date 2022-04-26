@@ -27,7 +27,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
@@ -52,7 +51,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
@@ -61,7 +59,6 @@ import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOrderBy;
-import org.apache.calcite.sql.SqlTimestampLiteral;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
@@ -81,21 +78,13 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.filter.AndDimFilter;
-import org.apache.druid.query.filter.BoundDimFilter;
-import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.NotDimFilter;
-import org.apache.druid.query.filter.OrDimFilter;
-import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.filtration.MoveTimeFiltersToIntervals;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
@@ -104,15 +93,10 @@ import org.apache.druid.sql.calcite.rel.DruidUnionRel;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 import org.apache.druid.utils.Throwables;
-import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.joda.time.Interval;
-import org.joda.time.base.AbstractInterval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.sql.Timestamp;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -885,7 +869,7 @@ public class DruidPlanner implements Closeable
           }
 
           ingestionGranularity = druidSqlReplace.getPartitionedBy();
-          replaceIntervals = validateQueryAndConvertToIntervals(replaceTimeQuery, ingestionGranularity, dateTimeZone);
+          replaceIntervals = DruidSqlParserUtils.validateQueryAndConvertToIntervals(replaceTimeQuery, ingestionGranularity, dateTimeZone);
         }
       }
 
@@ -898,93 +882,6 @@ public class DruidPlanner implements Closeable
       } else {
         return new ParsedNodes(explain, druidSqlReplace, query, ingestionGranularity, replaceIntervals);
       }
-    }
-
-    private static List<String> validateQueryAndConvertToIntervals(
-        SqlNode replaceTimeQuery,
-        Granularity granularity,
-        DateTimeZone dateTimeZone
-    ) throws ValidationException
-    {
-      if (replaceTimeQuery instanceof SqlLiteral && "all".equalsIgnoreCase(((SqlLiteral) replaceTimeQuery).toValue())) {
-        return ImmutableList.of("all");
-      }
-
-      DimFilter dimFilter = convertQueryToDimFilter(replaceTimeQuery, dateTimeZone);
-      if (!ImmutableSet.of(ColumnHolder.TIME_COLUMN_NAME).equals(dimFilter.getRequiredColumns())) {
-        throw new ValidationException("Only " + ColumnHolder.TIME_COLUMN_NAME + " column is supported in DELETE WHERE clause");
-      }
-
-      Filtration filtration = Filtration.create(dimFilter);
-      filtration = MoveTimeFiltersToIntervals.instance().apply(filtration);
-      List<Interval> intervals = filtration.getIntervals();
-
-      for (Interval interval : intervals) {
-        DateTime intervalStart = interval.getStart();
-        DateTime intervalEnd = interval.getEnd();
-        // The start of each interval should be aligned with the start of the bucket, and the end interval should be
-        // aligned with the start of the next interval.
-        if (!granularity.bucketStart(intervalStart).equals(intervalStart) || !granularity.bucketStart(intervalEnd).equals(intervalEnd)) {
-          throw new ValidationException("DELETE WHERE clause contains an interval which is not aligned with PARTITIONED BY granularity");
-        }
-      }
-      return intervals
-          .stream()
-          .map(AbstractInterval::toString)
-          .collect(Collectors.toList());
-    }
-
-    private static DimFilter convertQueryToDimFilter(SqlNode replaceTimeQuery, DateTimeZone dateTimeZone)
-        throws ValidationException
-    {
-      if (replaceTimeQuery instanceof SqlBasicCall) {
-        SqlBasicCall sqlBasicCall = (SqlBasicCall) replaceTimeQuery;
-        Pair<String, String> columnValuePair;
-        switch (sqlBasicCall.getOperator().getName()) {
-          case "AND":
-            List<DimFilter> dimFilters = new ArrayList<>();
-            for (SqlNode sqlNode : sqlBasicCall.getOperandList()) {
-              dimFilters.add(convertQueryToDimFilter(sqlNode, dateTimeZone));
-            }
-            return new AndDimFilter(dimFilters);
-          case "OR":
-            dimFilters = new ArrayList<>();
-            for (SqlNode sqlNode : sqlBasicCall.getOperandList()) {
-              dimFilters.add(convertQueryToDimFilter(sqlNode, dateTimeZone));
-            }
-            return new OrDimFilter(dimFilters);
-          case "NOT":
-            return new NotDimFilter(convertQueryToDimFilter(sqlBasicCall.getOperandList().get(0), dateTimeZone));
-          case ">=":
-            columnValuePair = createColumnValuePair(sqlBasicCall.getOperandList(), dateTimeZone);
-            return new BoundDimFilter(columnValuePair.left, columnValuePair.right, null, false, null, null, null, StringComparators.NUMERIC);
-          case "<=":
-            columnValuePair = createColumnValuePair(sqlBasicCall.getOperandList(), dateTimeZone);
-            return new BoundDimFilter(columnValuePair.left, null, columnValuePair.right, null, false, null, null, StringComparators.NUMERIC);
-          case ">":
-            columnValuePair = createColumnValuePair(sqlBasicCall.getOperandList(), dateTimeZone);
-            return new BoundDimFilter(columnValuePair.left, columnValuePair.right, null, true, null, null, null, StringComparators.NUMERIC);
-          case "<":
-            columnValuePair = createColumnValuePair(sqlBasicCall.getOperandList(), dateTimeZone);
-            return new BoundDimFilter(columnValuePair.left, null, columnValuePair.right, null, true, null, null, StringComparators.NUMERIC);
-          default:
-            throw new ValidationException("Unsupported operation in DELETE WHERE clause: " + sqlBasicCall.getOperator().getName());
-        }
-      }
-      throw new ValidationException("Invalid DELETE WHERE clause");
-    }
-
-    static Pair<String, String> createColumnValuePair(List<SqlNode> operands, DateTimeZone timeZone) throws ValidationException
-    {
-      SqlNode columnName = operands.get(0);
-      SqlNode timeLiteral = operands.get(1);
-      if (!(columnName instanceof SqlIdentifier) || !(timeLiteral instanceof SqlTimestampLiteral)) {
-        throw new ValidationException("Invalid DELETE WHERE clause");
-      }
-
-      Timestamp sqlTimestamp = Timestamp.valueOf(((SqlTimestampLiteral) timeLiteral).toFormattedString());
-      ZonedDateTime zonedTimestamp = sqlTimestamp.toLocalDateTime().atZone(timeZone.toTimeZone().toZoneId());
-      return Pair.of(columnName.toString(), String.valueOf(zonedTimestamp.toInstant().toEpochMilli()));
     }
 
     @Nullable
