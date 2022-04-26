@@ -35,10 +35,13 @@ The American Statistician, 37 (1983) pp. 242--247.
 
 variance = variance1 + variance2 + n/(m*(m+n)) * pow(((m/n)*t1 - t2),2)
 
-where: - variance is sum(x-avg^2) (this is actually n times the variance)
-and is updated at every step. - n is the count of elements in chunk1 - m is
-the count of elements in chunk2 - t1 = sum of elements in chunk1, t2 =
-sum of elements in chunk2.
+where: 
+ - variance is sum(x-avg^2) (this is actually n times the variance)
+and is updated at every step. 
+ - n is the count of elements in chunk1 
+ - m is the count of elements in chunk2 
+ - t1 is the sum of elements in chunk1
+ - t2 is the sum of elements in chunk2
 
 This algorithm was proven to be numerically stable by J.L. Barlow in
 "Error analysis of a pairwise summation algorithm to compute sample variance"
