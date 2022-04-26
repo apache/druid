@@ -1428,6 +1428,7 @@ Sys
 SysMonitor
 TaskCountStatsMonitor
 TaskSlotCountStatsMonitor
+WorkerTaskCountStatsMonitor
 bufferCapacity
 bufferpoolName
 cms
