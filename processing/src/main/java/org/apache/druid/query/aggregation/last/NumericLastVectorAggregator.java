@@ -37,14 +37,12 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
   private final boolean useDefault = NullHandling.replaceWithDefault();
   private final VectorValueSelector timeSelector;
   private long lastTime;
-  protected boolean rhsNull;
 
   public NumericLastVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
   {
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;
     lastTime = Long.MIN_VALUE;
-    rhsNull = !useDefault;
   }
 
   @Override
@@ -87,10 +85,8 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
       lastTime = latestTime;
       if (useDefault || nullValueVector == null || !nullValueVector[index]) {
         updateTimeWithValue(buf, position, lastTime, index);
-        rhsNull = false;
       } else {
         updateTimeWithNull(buf, position, lastTime);
-        rhsNull = true;
       }
     }
   }
