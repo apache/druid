@@ -380,12 +380,12 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                                                   .add("__time", ColumnType.LONG)
                                                   .add("floor_m1", ColumnType.FLOAT)
                                                   .add("dim1", ColumnType.STRING)
-                                                  .add("ciel_m2", ColumnType.DOUBLE)
+                                                  .add("ceil_m2", ColumnType.DOUBLE)
                                                   .build();
     testInsertQuery()
         .sql(
             "INSERT INTO druid.dst "
-            + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ciel_m2 FROM foo "
+            + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
             + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1 DESC, CEIL(m2)"
         )
         .expectTarget("dst", targetRowSignature)
@@ -747,11 +747,30 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
   public void testInsertWithUnnamedColumnInSelectStatement()
   {
     testInsertQuery()
-        .sql("INSERT INTO t SELECT added, channel || '-lol' FROM foo PARTITIONED BY ALL")
+        .sql("INSERT INTO t SELECT dim1, dim2 || '-lol' FROM foo PARTITIONED BY ALL")
         .expectValidationError(
             SqlPlanningException.class,
-            "throw new ValidationException(\"Cannot ingest unnamed expressions that do not have an alias."
-            + " E.g. if you are ingesting \\\"func(X)\\\", then you can rewrite it as \\\"func(X) as myColumn\\\"\");"
+            "Cannot ingest unnamed expressions that do not have an alias "
+            + "or columns with names like EXPR$[digit]."
+            + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
+            + "\"func(X) as myColumn\""
+        )
+        .verify();
+  }
+
+  @Test
+  public void testInsertWithUnnamedColumnInNestedSelectStatement()
+  {
+    testInsertQuery()
+        .sql("INSERT INTO test "
+             + "SELECT __time, * FROM "
+             + "(SELECT __time, LOWER(dim1) FROM foo) PARTITIONED BY ALL TIME")
+        .expectValidationError(
+            SqlPlanningException.class,
+            "Cannot ingest unnamed expressions that do not have an alias "
+            + "or columns with names like EXPR$[digit]."
+            + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
+            + "\"func(X) as myColumn\""
         )
         .verify();
   }
@@ -932,7 +951,10 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
 
       final Throwable e = Assert.assertThrows(
           Throwable.class,
-          () -> sqlLifecycle.validateAndAuthorize(authenticationResult)
+          () -> {
+            sqlLifecycle.validateAndAuthorize(authenticationResult);
+            sqlLifecycle.plan();
+          }
       );
 
       MatcherAssert.assertThat(e, validationErrorMatcher);

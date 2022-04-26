@@ -51,7 +51,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
@@ -59,7 +58,6 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOrderBy;
-import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
@@ -95,7 +93,6 @@ import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 import org.apache.druid.utils.Throwables;
 
 import javax.annotation.Nullable;
-
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -103,11 +100,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class DruidPlanner implements Closeable
 {
   private static final EmittingLogger log = new EmittingLogger(DruidPlanner.class);
+  private static final Pattern UNNAMED_COLUMN_PATTERN = Pattern.compile("EXPR\\$\\d+");
 
   private final FrameworkConfig frameworkConfig;
   private final Planner planner;
@@ -222,6 +221,19 @@ public class DruidPlanner implements Closeable
     final SqlNode parameterizedQueryNode = rewriteDynamicParameters(parsed.getQueryNode());
     final SqlNode validatedQueryNode = planner.validate(parameterizedQueryNode);
     final RelRoot rootQueryRel = planner.rel(validatedQueryNode);
+
+    if (parsed.getInsertNode() != null) {
+      // Check that there are no unnamed columns in the insert.
+      // We do this validation here since we need the rel nodes for this.
+      for (Pair<Integer, String> field : rootQueryRel.fields) {
+        if (UNNAMED_COLUMN_PATTERN.matcher(field.right).matches()) {
+          throw new ValidationException("Cannot ingest unnamed expressions that do not have an alias "
+                                        + "or columns with names like EXPR$[digit]."
+                                        + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
+                                        + "\"func(X) as myColumn\"");
+        }
+      }
+    }
 
     try {
       return planWithDruidConvention(rootQueryRel, parsed.getExplainNode(), parsed.getInsertNode());
@@ -796,16 +808,13 @@ public class DruidPlanner implements Closeable
         druidSqlInsert = (DruidSqlInsert) query;
         query = druidSqlInsert.getSource();
 
+        // Check if ORDER BY clause is not provided to the underlying query
         if (query instanceof SqlOrderBy) {
           SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
           SqlNodeList orderByList = sqlOrderBy.orderList;
-          // Check if ORDER BY clause is not provided to the underlying query
           if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
             throw new ValidationException("Cannot have ORDER BY on an INSERT query, use CLUSTERED BY instead.");
           }
-          validateSelectColumnForIngestion(sqlOrderBy.query);
-        } else {
-          validateSelectColumnForIngestion(query);
         }
 
         ingestionGranularity = druidSqlInsert.getPartitionedBy();
@@ -841,31 +850,6 @@ public class DruidPlanner implements Closeable
       }
 
       return new ParsedNodes(explain, druidSqlInsert, query, ingestionGranularity);
-    }
-
-    private static void validateSelectColumnForIngestion(SqlNode sqlNode) throws ValidationException
-    {
-      if (sqlNode instanceof SqlBasicCall) {
-        // If the sql node is a basic call, it could have select statements as operands.
-        // We need to recursivly check the operands for select statements.
-        SqlBasicCall sqlBasicCall = (SqlBasicCall) sqlNode;
-        for (SqlNode operand : sqlBasicCall.getOperandList()) {
-          validateSelectColumnForIngestion(operand);
-        }
-      } else if (sqlNode instanceof SqlSelect) {
-        // Validate that all columns which do some computation in the select statement are named.
-        // If the column is named, the top level operator should be "AS".
-        for (SqlNode column : ((SqlSelect) sqlNode).getSelectList().getList()) {
-          if (column instanceof SqlBasicCall) {
-            SqlBasicCall basicCall = (SqlBasicCall) column;
-            if (!"AS".equalsIgnoreCase(basicCall.getOperator().getName())) {
-              throw new ValidationException("Cannot ingest unnamed expressions that do not have an alias. "
-                                            + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
-                                            + "\"func(X) as myColumn\"");
-            }
-          }
-        }
-      }
     }
 
     @Nullable
