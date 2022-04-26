@@ -205,10 +205,18 @@ public class SqlExpressionBenchmark
       "SELECT LATEST(long1) FROM foo",
       // 39: LATEST aggregator double
       "SELECT LATEST(double4) FROM foo",
-      // 40: LATEST aggregator double
+      // 40: LATEST aggregator float
       "SELECT LATEST(float3) FROM foo",
-      // 41: LATEST aggregator double
-      "SELECT LATEST(float3), LATEST(long1), LATEST(double4) FROM foo"
+      // 41: LATEST aggregator all
+      "SELECT LATEST(float3), LATEST(long1), LATEST(double4) FROM foo",
+      // 42: EARLIEST aggregator
+      "SELECT EARLIEST(long1) FROM foo",
+      // 43: EARLIEST aggregator double
+      "SELECT EARLIEST(double4) FROM foo",
+      // 44: EARLIEST aggregator float
+      "SELECT EARLIEST(float3) FROM foo",
+      // 45: EARLIEST aggregator all
+      "SELECT EARLIEST(float3), EARLIEST(long1), EARLIEST(double4) FROM foo"
   );
 
   @Param({"5000000"})
@@ -264,7 +272,11 @@ public class SqlExpressionBenchmark
       "38",
       "39",
       "40",
-      "41"
+      "41",
+      "42",
+      "43",
+      "44",
+      "45"
   })
   private String query;
 

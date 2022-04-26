@@ -34,14 +34,12 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
   private final boolean useDefault = NullHandling.replaceWithDefault();
   private final VectorValueSelector timeSelector;
   private long firstTime;
-  protected boolean rhsNull;
 
   public NumericFirstVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
   {
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;
     firstTime = Long.MAX_VALUE;
-    rhsNull = !useDefault;
   }
 
   @Override
@@ -84,10 +82,8 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
       firstTime = earliestTime;
       if (useDefault || nullValueVector == null || !nullValueVector[index]) {
         updateTimeWithValue(buf, position, firstTime, index);
-        rhsNull = false;
       } else {
         updateTimeWithNull(buf, position, firstTime);
-        rhsNull = true;
       }
     }
   }

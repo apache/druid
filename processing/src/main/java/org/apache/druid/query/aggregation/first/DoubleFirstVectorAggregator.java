@@ -41,7 +41,7 @@ public class DoubleFirstVectorAggregator extends NumericFirstVectorAggregator
   @Override
   public void initValue(ByteBuffer buf, int position)
   {
-    buf.putLong(position, 0);
+    buf.putDouble(position, 0);
   }
 
 
