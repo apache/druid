@@ -231,6 +231,12 @@ public class ForkingTaskRunnerTest
       @Override
       int waitForTaskProcessToComplete(Task task, ProcessHolder processHolder, File logFile, File reportsFile)
       {
+        WorkerConfig workerConfig = new WorkerConfig();
+        Assert.assertEquals(1L, (long) this.getWorkerUsedTaskSlotCount());
+        Assert.assertEquals(workerConfig.getCapacity(), (long) this.getWorkerTotalTaskSlotCount());
+        Assert.assertEquals(workerConfig.getCapacity() - 1, (long) this.getWorkerIdleTaskSlotCount());
+        Assert.assertEquals(workerConfig.getCategory(), this.getWorkerCategory());
+        Assert.assertEquals(workerConfig.getVersion(), this.getWorkerVersion());
         // Emulate task process failure
         return 1;
       }
@@ -242,6 +248,8 @@ public class ForkingTaskRunnerTest
         "Task execution process exited unsuccessfully with code[1]. See middleManager logs for more details.",
         status.getErrorMsg()
     );
+    Assert.assertEquals(1L, (long) forkingTaskRunner.getWorkerFailedTaskCount());
+    Assert.assertEquals(0L, (long) forkingTaskRunner.getWorkerSuccessfulTaskCount());
   }
 
   @Test
@@ -294,6 +302,12 @@ public class ForkingTaskRunnerTest
       @Override
       int waitForTaskProcessToComplete(Task task, ProcessHolder processHolder, File logFile, File reportsFile)
       {
+        WorkerConfig workerConfig = new WorkerConfig();
+        Assert.assertEquals(1L, (long) this.getWorkerUsedTaskSlotCount());
+        Assert.assertEquals(workerConfig.getCapacity(), (long) this.getWorkerTotalTaskSlotCount());
+        Assert.assertEquals(workerConfig.getCapacity() - 1, (long) this.getWorkerIdleTaskSlotCount());
+        Assert.assertEquals(workerConfig.getCategory(), this.getWorkerCategory());
+        Assert.assertEquals(workerConfig.getVersion(), this.getWorkerVersion());
         return 0;
       }
     };
@@ -301,6 +315,8 @@ public class ForkingTaskRunnerTest
     final TaskStatus status = forkingTaskRunner.run(task).get();
     Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
     Assert.assertNull(status.getErrorMsg());
+    Assert.assertEquals(0L, (long) forkingTaskRunner.getWorkerFailedTaskCount());
+    Assert.assertEquals(1L, (long) forkingTaskRunner.getWorkerSuccessfulTaskCount());
   }
 
   @Test
