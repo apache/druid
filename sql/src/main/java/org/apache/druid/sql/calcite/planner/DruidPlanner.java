@@ -106,7 +106,7 @@ import java.util.stream.Collectors;
 public class DruidPlanner implements Closeable
 {
   private static final EmittingLogger log = new EmittingLogger(DruidPlanner.class);
-  private static final Pattern UNNAMED_COLUMN_PATTERN = Pattern.compile("EXPR\\$\\d+");
+  private static final Pattern UNNAMED_COLUMN_PATTERN = Pattern.compile("^EXPR\\$\\d+$", Pattern.CASE_INSENSITIVE);
 
   private final FrameworkConfig frameworkConfig;
   private final Planner planner;
@@ -221,19 +221,6 @@ public class DruidPlanner implements Closeable
     final SqlNode parameterizedQueryNode = rewriteDynamicParameters(parsed.getQueryNode());
     final SqlNode validatedQueryNode = planner.validate(parameterizedQueryNode);
     final RelRoot rootQueryRel = planner.rel(validatedQueryNode);
-
-    if (parsed.getInsertNode() != null) {
-      // Check that there are no unnamed columns in the insert.
-      // We do this validation here since we need the rel nodes for this.
-      for (Pair<Integer, String> field : rootQueryRel.fields) {
-        if (UNNAMED_COLUMN_PATTERN.matcher(field.right).matches()) {
-          throw new ValidationException("Cannot ingest unnamed expressions that do not have an alias "
-                                        + "or columns with names like EXPR$[digit]."
-                                        + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
-                                        + "\"func(X) as myColumn\"");
-        }
-      }
-    }
 
     try {
       return planWithDruidConvention(rootQueryRel, parsed.getExplainNode(), parsed.getInsertNode());
@@ -664,6 +651,7 @@ public class DruidPlanner implements Closeable
   {
     if (insert != null) {
       final String targetDataSource = validateAndGetDataSourceForInsert(insert);
+      validateColumnsForIngestion(rootQueryRel);
       return queryMakerFactory.buildForInsert(targetDataSource, rootQueryRel, plannerContext);
     } else {
       return queryMakerFactory.buildForSelect(rootQueryRel, plannerContext);
@@ -726,6 +714,19 @@ public class DruidPlanner implements Closeable
     }
 
     return dataSource;
+  }
+
+  private void validateColumnsForIngestion(RelRoot rootQueryRel) throws ValidationException
+  {
+    // Check that there are no unnamed columns in the insert.
+    for (Pair<Integer, String> field : rootQueryRel.fields) {
+      if (UNNAMED_COLUMN_PATTERN.matcher(field.right).matches()) {
+        throw new ValidationException("Cannot ingest expressions that do not have an alias "
+                                      + "or columns with names like EXPR$[digit]."
+                                      + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
+                                      + "\"func(X) as myColumn\"");
+      }
+    }
   }
 
   private String buildSQLPlanningErrorMessage(Throwable exception)

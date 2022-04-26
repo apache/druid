@@ -750,7 +750,22 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
         .sql("INSERT INTO t SELECT dim1, dim2 || '-lol' FROM foo PARTITIONED BY ALL")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot ingest unnamed expressions that do not have an alias "
+            "Cannot ingest expressions that do not have an alias "
+            + "or columns with names like EXPR$[digit]."
+            + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
+            + "\"func(X) as myColumn\""
+        )
+        .verify();
+  }
+
+  @Test
+  public void testInsertWithInvalidColumnNameInIngest()
+  {
+    testInsertQuery()
+        .sql("INSERT INTO t SELECT __time, dim1 AS EXPR$0 FROM foo PARTITIONED BY ALL")
+        .expectValidationError(
+            SqlPlanningException.class,
+            "Cannot ingest expressions that do not have an alias "
             + "or columns with names like EXPR$[digit]."
             + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
             + "\"func(X) as myColumn\""
@@ -767,7 +782,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
              + "(SELECT __time, LOWER(dim1) FROM foo) PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot ingest unnamed expressions that do not have an alias "
+            "Cannot ingest expressions that do not have an alias "
             + "or columns with names like EXPR$[digit]."
             + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
             + "\"func(X) as myColumn\""
