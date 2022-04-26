@@ -39,7 +39,7 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
 {
   private static final double EPSILON = 1e-5;
   private static final float[] VALUES = new float[]{7.2f, 15.6f, 2.1f, 150.0f};
-  private static final boolean[] NULLS = new boolean[]{false, false, true, false};
+  private static final boolean[] NULLS = new boolean[]{true, false, true, false};
   private long[] times = {2436, 6879, 7888, 8224};
 
   @Mock
@@ -86,8 +86,13 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
     mockNullsVector();
     target.aggregate(buf, 0, 0, VALUES.length);
     Pair<Long, Float> result = (Pair<Long, Float>) target.get(buf, 0);
-    Assert.assertEquals(times[0], result.lhs.longValue());
-    Assert.assertEquals(VALUES[0], result.rhs, EPSILON);
+    if (!NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(times[1], result.lhs.longValue());
+      Assert.assertEquals(VALUES[1], result.rhs, EPSILON);
+    } else {
+      Assert.assertEquals(times[0], result.lhs.longValue());
+      Assert.assertEquals(VALUES[0], result.rhs, EPSILON);
+    }
   }
 
   @Test
