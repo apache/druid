@@ -67,7 +67,7 @@ public class JvmMonitor extends FeedDefiningMonitor
     Preconditions.checkNotNull(dimensions);
     this.dimensions = ImmutableMap.copyOf(dimensions);
     this.collector = AllocationMetricCollectors.getAllocationMetricCollector();
-    this.gcCounters = tryCreateGcCounters();
+    this.gcCounters = new GcCounters();
   }
 
   @Override
@@ -146,22 +146,6 @@ public class JvmMonitor extends FeedDefiningMonitor
     }
   }
 
-  @Nullable
-  private GcCounters tryCreateGcCounters()
-  {
-    try {
-      return new GcCounters();
-    }
-    catch (RuntimeException e) {
-      // in JDK11 jdk.internal.perf.Perf is not accessible, unless
-      // --add-exports java.base/jdk.internal.perf=ALL-UNNAMED is set
-      log.warn("Cannot initialize GC counters. If running JDK11 and above,"
-               + " add --add-exports java.base/jdk.internal.perf=ALL-UNNAMED"
-               + " to the JVM arguments to enable GC counters.");
-    }
-    return null;
-  }
-
   /**
    * The following GC-related code is partially based on
    * https://github.com/aragozin/jvm-tools/blob/e0e37692648951440aa1a4ea5046261cb360df70/
@@ -169,26 +153,26 @@ public class JvmMonitor extends FeedDefiningMonitor
    */
   private class GcCounters
   {
-    private final List<GcCollector> generations = new ArrayList<>();
+    private final List<GcCollectors> generations = new ArrayList<>();
 
     GcCounters()
     {
       List<GarbageCollectorMXBean> collectorMxBeans = ManagementFactory.getGarbageCollectorMXBeans();
       for (GarbageCollectorMXBean collectorMxBean : collectorMxBeans) {
-        generations.add(new GcCollector(collectorMxBean));
+        generations.add(new GcCollectors(collectorMxBean));
       }
 
     }
 
     void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
     {
-      for (GcCollector generation : generations) {
+      for (GcCollectors generation : generations) {
         generation.emit(emitter, dimensions);
       }
     }
   }
 
-  private class GcCollector
+  private class GcCollectors
   {
     private final String generation;
     private final String collectorName;
@@ -206,7 +190,7 @@ public class JvmMonitor extends FeedDefiningMonitor
     private static final String GC_ZGC_NAME = "zgc";
     private static final String GC_SHENANDOAN_NAME = "shenandoah";
 
-    GcCollector(GarbageCollectorMXBean gcBean)
+    GcCollectors(GarbageCollectorMXBean gcBean)
     {
       Pair<String, String> gcNamePair = getReadableName(gcBean.getName());
       this.generation = gcNamePair.lhs;
@@ -254,7 +238,7 @@ public class JvmMonitor extends FeedDefiningMonitor
         case "ZGC":
           return new Pair<>(GC_ZGC_GENERATION_NAME, GC_ZGC_NAME);
 
-        //shenanoan
+        //Shenandoah
         case "Shenandoah Cycles":
           return new Pair<>(GC_YOUNG_GENERATION_NAME, GC_SHENANDOAN_NAME);
         case "Shenandoah Pauses":
