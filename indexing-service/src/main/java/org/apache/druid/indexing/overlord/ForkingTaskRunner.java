@@ -63,6 +63,7 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.server.metrics.MonitorsConfig;
+import org.apache.druid.server.metrics.WorkerTaskCountStatsProvider;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.joda.time.DateTime;
@@ -83,13 +84,14 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Runs tasks in separate processes using the "internal peon" verb.
  */
 public class ForkingTaskRunner
     extends BaseRestorableTaskRunner<ForkingTaskRunner.ForkingTaskRunnerWorkItem>
-    implements TaskLogStreamer
+    implements TaskLogStreamer, WorkerTaskCountStatsProvider
 {
   private static final EmittingLogger LOGGER = new EmittingLogger(ForkingTaskRunner.class);
   private static final String CHILD_PROPERTY_PREFIX = "druid.indexer.fork.property.";
@@ -103,6 +105,11 @@ public class ForkingTaskRunner
   private final WorkerConfig workerConfig;
 
   private volatile boolean stopping = false;
+
+  private static final AtomicLong LAST_REPORTED_FAILED_TASK_COUNT = new AtomicLong();
+  private static final AtomicLong FAILED_TASK_COUNT = new AtomicLong();
+  private static final AtomicLong SUCCESSFUL_TASK_COUNT = new AtomicLong();
+  private static final AtomicLong LAST_REPORTED_SUCCESSFUL_TASK_COUNT = new AtomicLong();
 
   @Inject
   public ForkingTaskRunner(
@@ -399,7 +406,11 @@ public class ForkingTaskRunner
                             )
                         );
                       }
-
+                      if (status.isSuccess()) {
+                        SUCCESSFUL_TASK_COUNT.incrementAndGet();
+                      } else {
+                        FAILED_TASK_COUNT.incrementAndGet();
+                      }
                       TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
                       return status;
                     }
@@ -690,18 +701,12 @@ public class ForkingTaskRunner
   @Override
   public Map<String, Long> getTotalTaskSlotCount()
   {
-    if (config.getPorts() != null && !config.getPorts().isEmpty()) {
-      return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(config.getPorts().size()));
-    }
-    return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(config.getEndPort() - config.getStartPort() + 1));
+    return ImmutableMap.of(workerConfig.getCategory(), getTotalTaskSlotCountLong());
   }
 
   public long getTotalTaskSlotCountLong()
   {
-    if (config.getPorts() != null && !config.getPorts().isEmpty()) {
-      return config.getPorts().size();
-    }
-    return config.getEndPort() - config.getStartPort() + 1;
+    return workerConfig.getCapacity();
   }
 
   @Override
@@ -731,6 +736,54 @@ public class ForkingTaskRunner
   public Map<String, Long> getBlacklistedTaskSlotCount()
   {
     return ImmutableMap.of(workerConfig.getCategory(), 0L);
+  }
+
+  @Override
+  public Long getWorkerFailedTaskCount()
+  {
+    long failedTaskCount = FAILED_TASK_COUNT.get();
+    long lastReportedFailedTaskCount = LAST_REPORTED_FAILED_TASK_COUNT.get();
+    LAST_REPORTED_FAILED_TASK_COUNT.set(failedTaskCount);
+    return failedTaskCount - lastReportedFailedTaskCount;
+  }
+
+  @Override
+  public Long getWorkerIdleTaskSlotCount()
+  {
+    return Math.max(getTotalTaskSlotCountLong() - getUsedTaskSlotCountLong(), 0);
+  }
+
+  @Override
+  public Long getWorkerUsedTaskSlotCount()
+  {
+    return (long) portFinder.findUsedPortCount();
+  }
+
+  @Override
+  public Long getWorkerTotalTaskSlotCount()
+  {
+    return getTotalTaskSlotCountLong();
+  }
+
+  @Override
+  public String getWorkerCategory()
+  {
+    return workerConfig.getCategory();
+  }
+
+  @Override
+  public String getWorkerVersion()
+  {
+    return workerConfig.getVersion();
+  }
+
+  @Override
+  public Long getWorkerSuccessfulTaskCount()
+  {
+    long successfulTaskCount = SUCCESSFUL_TASK_COUNT.get();
+    long lastReportedSuccessfulTaskCount = LAST_REPORTED_SUCCESSFUL_TASK_COUNT.get();
+    LAST_REPORTED_SUCCESSFUL_TASK_COUNT.set(successfulTaskCount);
+    return successfulTaskCount - lastReportedSuccessfulTaskCount;
   }
 
   protected static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem
