@@ -36,7 +36,7 @@ There are several cases to consider compaction for segment optimization:
 By default, compaction does not modify the underlying data of the segments. However, there are cases when you may want to modify data during compaction to improve query performance:
 
 - If, after ingestion, you realize that data for the time interval is sparse, you can use compaction to increase the segment granularity.
-- Over time you don't need fine-grained granularity for older data so you want use compaction to change older segments to a coarser query granularity. This reduces the storage space required for older data. For example from `minute` to `hour`, or `hour` to `day`. 
+- Over time you don't need fine-grained granularity for older data so you want use compaction to change older segments to a coarser query granularity. This reduces the storage space required for older data. For example from `minute` to `hour`, or `hour` to `day`.
 - You can change the dimension order to improve sorting and reduce segment size.
 - You can remove unused columns in compaction or implement an aggregation metric for older data.
 - You can change segment rollup from dynamic partitioning with best-effort rollup to hash or range partitioning with perfect rollup. For more information on rollup, see [perfect vs best-effort rollup](./rollup.md#perfect-rollup-vs-best-effort-rollup).
@@ -82,7 +82,7 @@ If you configure query granularity in compaction to go from a finer granularity 
 
 ### Dimension handling
 
-Apache Druid supports schema changes. Therefore, dimensions can be different across segments even if they are a part of the same data source. See [Different schemas among segments](../design/segments.md#different-schemas-among-segments). If the input segments have different dimensions, the resulting compacted segment include all dimensions of the input segments. 
+Apache Druid supports schema changes. Therefore, dimensions can be different across segments even if they are a part of the same data source. See [Different schemas among segments](../design/segments.md#different-schemas-among-segments). If the input segments have different dimensions, the resulting compacted segment include all dimensions of the input segments.
 
 Even when the input segments have the same set of dimensions, the dimension order or the data type of dimensions can be different. The dimensions of recent segments precede that of old segments in terms of data types and the ordering because more recent segments are more likely to have the preferred order and data types.
 
@@ -214,27 +214,6 @@ Druid supports two supported `inputSpec` formats:
 |`segmentGranularity`|Time chunking period for the segment granularity. Defaults to 'null', which preserves the original segment granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
 |`queryGranularity`|The resolution of timestamp storage within each segment. Defaults to 'null', which preserves the original query granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
 |`rollup`|Whether to enable ingestion-time rollup or not. Defaults to 'null', which preserves the original setting. Note that once data is rollup, individual records can no longer be recovered. |No|
-
-For example, to set the segment granularity to "day", the query granularity to "hour", and enabling rollup:
-
-```json
-{
-  "type": "compact",
-  "dataSource": "wikipedia",
-  "ioConfig": {
-    "type": "compact",
-    "inputSpec": {
-      "type": "interval",
-      "interval": "2017-01-01/2018-01-01"
-    },
-    "granularitySpec": {
-      "segmentGranularity": "day",
-      "queryGranularity": "hour",
-      "rollup": true
-    }
-  }
-}
-```
 
 ## Learn more
 
