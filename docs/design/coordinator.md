@@ -83,7 +83,7 @@ To ensure an even distribution of segments across Historical processes in the cl
 
 The Druid Coordinator manages the automatic compaction system.
 Each run, the Coordinator compacts segments by merging small segments or splitting a large one. This is useful when your segments are not optimized
-in terms of segment size which may degrade query performance. See [Segment Size Optimization](../operations/segment-optimization.md) for details.
+in terms of segment size which may degrade query performance. See [Segment size optimization](../operations/segment-optimization.md) for details.
 
 The Coordinator first finds the segments to compact based on the [segment search policy](#segment-search-policy).
 Once some segments are found, it issues a [compaction task](../ingestion/tasks.md#compact) to compact those segments.

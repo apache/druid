@@ -1,6 +1,6 @@
 ---
 id: segment-optimization
-title: "Segment Size Optimization"
+title: "Segment size optimization"
 ---
 
 <!--

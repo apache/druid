@@ -28,7 +28,7 @@ Query performance in Apache Druid depends on optimally sized segments. Compactio
 
 There are several cases to consider compaction for segment optimization:
 
-- With streaming ingestion, data can arrive out of chronological order creating lots of small segments.
+- With streaming ingestion, data can arrive out of chronological order creating many small segments.
 - If you append data using `appendToExisting` for [native batch](native-batch.md) ingestion creating suboptimal segments.
 - When you use `index_parallel` for parallel batch indexing and the parallel ingestion tasks create many small segments.
 - When a misconfigured ingestion task creates oversized segments.
@@ -44,7 +44,7 @@ By default, compaction does not modify the underlying data of the segments. Howe
 Compaction does not improve performance in all situations. For example, if you rewrite your data with each ingestion task, you don't need to use compaction. See [Segment optimization](../operations/segment-optimization.md) for additional guidance to determine if compaction will help in your environment.
 
 ## Types of compaction
-You can configure the Druid Coordinator to perform automatic compaction, also called auto-compaction, for a datasource. Using a segment search policy, the coordinator periodically identifies segments for compaction starting with the newest to oldest. When it discovers segments that have not been compacted or segments that were compacted with a different or changed spec, it submits compaction task for those segments and only those segments.
+You can configure the Druid Coordinator to perform automatic compaction, also called auto-compaction, for a datasource. Using a segment search policy, the Coordinator periodically identifies segments for compaction starting from newest to oldest. When the Coordinator discovers segments that have not been compacted or segments that were compacted with a different or changed spec, it submits compaction tasks for only those segments.
 
 Automatic compaction works in most use cases and should be your first option. To learn more about automatic compaction, see [Compacting Segments](../design/coordinator.md#compacting-segments).
 
@@ -104,6 +104,7 @@ To perform a manual compaction, you submit a compaction task. Compaction tasks m
     "dataSource": <task_datasource>,
     "ioConfig": <IO config>,
     "dimensionsSpec": <custom dimensionsSpec>,
+    "transformSpec": <custom transformSpec>,
     "metricsSpec": <custom metricsSpec>,
     "tuningConfig": <parallel indexing task tuningConfig>,
     "granularitySpec": <compaction task granularitySpec>,
@@ -120,10 +121,10 @@ To perform a manual compaction, you submit a compaction task. Compaction tasks m
 |`dimensionsSpec`|Custom `dimensionsSpec`. The compaction task uses the specified `dimensionsSpec` if it exists instead of generating one. See [Compaction dimensionsSpec](#compaction-dimensions-spec) for details.|No|
 |`transformSpec`|Custom `transformSpec`. The compaction task uses the specified `transformSpec` rather than using `null`. See [Compaction transformSpec](#compaction-transform-spec) for details.|No|
 |`metricsSpec`|Custom `metricsSpec`. The compaction task uses the specified `metricsSpec` rather than generating one.|No|
-|`segmentGranularity`|When set, the compaction task changes the segment granularity for the given interval.  Deprecated. Use `granularitySpec`. |No.|
-|`tuningConfig`|[Parallel indexing task tuningConfig](native-batch.md#tuningconfig). `awaitSegmentAvailabilityTimeoutMillis` in the tuning config is not currently supported for compaction tasks. Do not set it to a non-zero value.|No|
-|`context`|[Task context](./tasks.md#context)|No|
+|`segmentGranularity`|When set, the compaction task changes the segment granularity for the given interval.  Deprecated. Use `granularitySpec`. |No|
+|`tuningConfig`|[Parallel indexing task tuningConfig](native-batch.md#tuningconfig). `awaitSegmentAvailabilityTimeoutMillis` in the tuning config is not currently supported for compaction tasks. This parameter must be left at the default value, 0.|No|
 |`granularitySpec`|Custom `granularitySpec`. The compaction task uses the specified `granularitySpec` rather than generating one. See [Compaction `granularitySpec`](#compaction-granularity-spec) for details.|No|
+|`context`|[Task context](./tasks.md#context).|No|
 
 > Note: Use `granularitySpec` over `segmentGranularity` and only set one of these values. If you specify different values for these in the same compaction spec, the task fails.
 
@@ -174,7 +175,7 @@ The compaction `ioConfig` requires specifying `inputSpec` as follows:
 |-----|-----------|-------|--------|
 |`type`|Task type: `compact`|none|Yes|
 |`inputSpec`|Specification of the target [intervals](#interval-inputspec) or [segments](#segments-inputspec).|none|Yes|
-|`dropExisting`|If `true` the task replaces all existing segments fully contained by either of the following:<br>- the `interval` in the `interval` type `inputSpec`.<br>- the umbrella interval of the `segments` in the `segment` type `inputSpec`.<br>If compaction fails, Druid does change any of the existing segments.<br>**WARNING**: `dropExisting` in `ioConfig` is a beta feature. |false|no|
+|`dropExisting`|If `true` the task replaces all existing segments fully contained by either of the following:<br>- the `interval` in the `interval` type `inputSpec`.<br>- the umbrella interval of the `segments` in the `segment` type `inputSpec`.<br>If compaction fails, Druid does change any of the existing segments.<br>**WARNING**: `dropExisting` in `ioConfig` is a beta feature. |false|No|
 
 
 Druid supports two supported `inputSpec` formats:
@@ -239,6 +240,6 @@ For example, to set the segment granularity to "day", the query granularity to "
 
 See the following topics for more information:
 - [Segment optimization](../operations/segment-optimization.md) for guidance to determine if compaction will help in your case.
-- [Compacting Segments](../design/coordinator.md#compacting-segments) for more on automatic compaction.
+- [Compacting Segments](../design/coordinator.md#compacting-segments) for details on how the Coordinator manages automatic compaction.
 - [Automatic compaction configuration API](../operations/api-reference.md#automatic-compaction-configuration)
 and [Automatic compaction configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for automatic compaction configuration information.
