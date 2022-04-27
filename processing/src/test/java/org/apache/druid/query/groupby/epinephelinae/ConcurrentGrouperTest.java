@@ -69,7 +69,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @RunWith(Parameterized.class)
 public class ConcurrentGrouperTest extends InitializedNullHandlingTest
 {
-  private static final ExecutorService SERVICE = Executors.newFixedThreadPool(8);
   private static final TestResourceHolder TEST_RESOURCE_HOLDER = new TestResourceHolder(256);
   private static final KeySerdeFactory<LongKey> KEY_SERDE_FACTORY = new TestKeySerdeFactory();
   private static final ColumnSelectorFactory NULL_FACTORY = new TestColumnSelectorFactory();
@@ -80,6 +79,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
   private final Supplier<ByteBuffer> bufferSupplier;
   private final int concurrencyHint;
   private final int parallelCombineThreads;
+  private final ExecutorService exec = Executors.newFixedThreadPool(8);
   private final Closer closer = Closer.create();
 
   @Parameters(name = "bufferSize={0}, concurrencyHint={1}, parallelCombineThreads={2}")
@@ -100,12 +100,6 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
     return constructors;
   }
 
-  @AfterClass
-  public static void teardown()
-  {
-    SERVICE.shutdown();
-  }
-
   @Before
   public void setUp()
   {
@@ -115,6 +109,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
   @After
   public void tearDown() throws IOException
   {
+    exec.shutdownNow();
     closer.close();
   }
 
@@ -166,7 +161,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
         concurrencyHint,
         null,
         false,
-        MoreExecutors.listeningDecorator(SERVICE),
+        MoreExecutors.listeningDecorator(exec),
         0,
         false,
         0,
@@ -181,7 +176,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
     Future<?>[] futures = new Future[concurrencyHint];
 
     for (int i = 0; i < concurrencyHint; i++) {
-      futures[i] = SERVICE.submit(() -> {
+      futures[i] = exec.submit(() -> {
         for (long j = 0; j < numRows; j++) {
           if (!grouper.aggregate(new LongKey(j)).isOk()) {
             throw new ISE("Grouper is full");
@@ -235,7 +230,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
         concurrencyHint,
         null,
         false,
-        MoreExecutors.listeningDecorator(SERVICE),
+        MoreExecutors.listeningDecorator(exec),
         0,
         true,
         1,
@@ -250,7 +245,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
     Future<?>[] futures = new Future[concurrencyHint];
 
     for (int i = 0; i < concurrencyHint; i++) {
-      futures[i] = SERVICE.submit(() -> {
+      futures[i] = exec.submit(() -> {
         for (long j = 0; j < numRows; j++) {
           if (!grouper.aggregate(new LongKey(j)).isOk()) {
             throw new ISE("Grouper is full");
