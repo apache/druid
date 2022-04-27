@@ -145,7 +145,7 @@ public class DruidConvertletTable implements SqlRexConvertletTable
     public RexNode convertCall(final SqlRexContext cx, final SqlCall call)
     {
       final SqlOperator operator = call.getOperator();
-      if (operator.equals(CURRENT_TIMESTAMP) || operator.equals(LOCALTIMESTAMP)) {
+      if (CURRENT_TIMESTAMP.equals(operator) || LOCALTIMESTAMP.equals(operator)) {
         int precision = DruidTypeSystem.DEFAULT_TIMESTAMP_PRECISION;
 
         if (call.operandCount() > 0) {
