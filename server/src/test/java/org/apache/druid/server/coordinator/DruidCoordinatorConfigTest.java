@@ -43,7 +43,7 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(new Duration("PT60s"), config.getCoordinatorPeriod());
     Assert.assertEquals(new Duration("PT1800s"), config.getCoordinatorIndexingPeriod());
     Assert.assertEquals(86400000, config.getCoordinatorKillPeriod().getMillis());
-    Assert.assertNull(config.getCoordinatorKillDurationToRetain());
+    Assert.assertEquals(86400000, config.getCoordinatorKillDurationToRetain());
     Assert.assertEquals(0, config.getCoordinatorKillMaxSegments());
     Assert.assertEquals(new Duration(15 * 60 * 1000), config.getLoadTimeoutDelay());
     Assert.assertEquals(Duration.millis(50), config.getLoadQueuePeonRepeatDelay());
@@ -79,7 +79,7 @@ public class DruidCoordinatorConfigTest
     Assert.assertFalse(config.getCompactionSkipLockedIntervals());
     Assert.assertTrue(config.getCoordinatorKillIgnoreDurationToRetain());
 
-    // Test negative druid.coordinator.kill.durationToRetain now that it is allowed.
+    // Test negative druid.coordinator.kill.durationToRetain now that it is valid.
     props = new Properties();
     props.setProperty("druid.coordinator.kill.durationToRetain", "PT-1s");
     factory = Config.createFactory(props);

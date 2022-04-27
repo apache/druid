@@ -31,7 +31,6 @@ import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -73,17 +72,13 @@ public class KillUnusedSegments implements CoordinatorDuty
     );
 
     this.ignoreRetainDuration = config.getCoordinatorKillIgnoreDurationToRetain();
-
-    // Operators must explicitly set this configuration if they are going to enable Segment Killing and do not set ignoreRetainDuration to true
-    if (!ignoreRetainDuration) {
-      Preconditions.checkArgument(
-          config.getCoordinatorKillDurationToRetain() != null,
-          "druid.coordinator.kill.durationToRetain must be non-null if ignoreRetainDuration is false"
+    this.retainDuration = config.getCoordinatorKillDurationToRetain().getMillis();
+    if (this.ignoreRetainDuration) {
+      log.debug(
+          "druid.coordinator.kill.durationToRetain [%s] will be ignored when discovering segments to kill "
+          + "because you have set druid.coordinator.kill.ignoreDurationToRetain to True.",
+          this.retainDuration
       );
-      this.retainDuration = config.getCoordinatorKillDurationToRetain().getMillis();
-    } else {
-      // Provide dummy value that will not be used since ignoreRetainDuration overrides it.
-      this.retainDuration = new Duration("PT0S").getMillis();
     }
 
     this.maxSegmentsToKill = config.getCoordinatorKillMaxSegments();

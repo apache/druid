@@ -21,8 +21,6 @@ package org.apache.druid.server.coordinator;
 
 import org.joda.time.Duration;
 
-import javax.annotation.Nullable;
-
 public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
 {
   private final Duration coordinatorStartDelay;
@@ -165,7 +163,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     return coordinatorKillPeriod;
   }
 
-  @Nullable
   @Override
   public Duration getCoordinatorKillDurationToRetain()
   {

@@ -49,12 +49,9 @@ public abstract class DruidCoordinatorConfig
   @Default("P1D")
   public abstract Duration getCoordinatorKillPeriod();
 
-  @Nullable
   @Config("druid.coordinator.kill.durationToRetain")
-  public Duration getCoordinatorKillDurationToRetain()
-  {
-    return null;
-  }
+  @Default("P90D")
+  public abstract Duration getCoordinatorKillDurationToRetain();
 
   @Config("druid.coordinator.kill.ignoreDurationToRetain")
   @Default("false")
