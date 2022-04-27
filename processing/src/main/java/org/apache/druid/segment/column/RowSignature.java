@@ -54,6 +54,13 @@ public class RowSignature implements ColumnInspector
   private final Object2IntMap<String> columnPositions = new Object2IntOpenHashMap<>();
   private final List<String> columnNames;
 
+  /**
+   * Precompute and store the hashCode since it is getting interned in
+   * {@link org.apache.druid.sql.calcite.schema.DruidSchema}
+   * Also helps in comparing the RowSignatures in equals method
+   */
+  private final int hashCode;
+
   private RowSignature(final List<ColumnSignature> columnTypeList)
   {
     this.columnPositions.defaultReturnValue(-1);
@@ -76,6 +83,7 @@ public class RowSignature implements ColumnInspector
     }
 
     this.columnNames = columnNamesBuilder.build();
+    this.hashCode = computeHashCode();
   }
 
   @JsonCreator
@@ -192,14 +200,20 @@ public class RowSignature implements ColumnInspector
       return false;
     }
     RowSignature that = (RowSignature) o;
-    return columnTypes.equals(that.columnTypes) &&
+    return hashCode == that.hashCode &&
+           columnTypes.equals(that.columnTypes) &&
            columnNames.equals(that.columnNames);
+  }
+
+  private int computeHashCode()
+  {
+    return Objects.hash(columnTypes, columnNames);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(columnTypes, columnNames);
+    return hashCode;
   }
 
   @Override

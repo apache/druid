@@ -27,7 +27,6 @@ import com.google.inject.Inject;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -35,6 +34,7 @@ import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.BadQueryException;
 import org.apache.druid.query.QueryCapacityExceededException;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
@@ -108,7 +108,7 @@ public class SqlResource
   ) throws IOException
   {
     final SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
-    final String sqlQueryId = lifecycle.initialize(sqlQuery.getQuery(), sqlQuery.getContext());
+    final String sqlQueryId = lifecycle.initialize(sqlQuery.getQuery(), new QueryContext(sqlQuery.getContext()));
     final String remoteAddr = req.getRemoteAddr();
     final String currThreadName = Thread.currentThread().getName();
 
@@ -205,22 +205,20 @@ public class SqlResource
       throw (ForbiddenException) serverConfig.getErrorResponseTransformStrategy()
                                              .transformIfNeeded(e); // let ForbiddenExceptionMapper handle this
     }
+    catch (RelOptPlanner.CannotPlanException e) {
+      endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
+      SqlPlanningException spe = new SqlPlanningException(SqlPlanningException.PlanningError.UNSUPPORTED_SQL_ERROR,
+          e.getMessage());
+      return buildNonOkResponse(BadQueryException.STATUS_CODE, spe, sqlQueryId);
+    }
     // calcite throws a java.lang.AssertionError which is type error not exception. using throwable will catch all
     catch (Throwable e) {
       log.warn(e, "Failed to handle query: %s", sqlQuery);
       endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
 
-      final Throwable exceptionToReport;
-
-      if (e instanceof RelOptPlanner.CannotPlanException) {
-        exceptionToReport = new ISE("Cannot build plan for query: %s", sqlQuery.getQuery());
-      } else {
-        exceptionToReport = e;
-      }
-
       return buildNonOkResponse(
           Status.INTERNAL_SERVER_ERROR.getStatusCode(),
-          QueryInterruptedException.wrapIfNeeded(exceptionToReport),
+          QueryInterruptedException.wrapIfNeeded(e),
           sqlQueryId
       );
     }

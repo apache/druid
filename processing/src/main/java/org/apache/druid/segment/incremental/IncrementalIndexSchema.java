@@ -153,7 +153,7 @@ public class IncrementalIndexSchema
           && parser.getParseSpec().getDimensionsSpec() != null) {
         this.dimensionsSpec = parser.getParseSpec().getDimensionsSpec();
       } else {
-        this.dimensionsSpec = new DimensionsSpec(null, null, null);
+        this.dimensionsSpec = DimensionsSpec.EMPTY;
       }
 
       return this;

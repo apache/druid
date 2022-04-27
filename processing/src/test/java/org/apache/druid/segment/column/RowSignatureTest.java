@@ -21,6 +21,7 @@ package org.apache.druid.segment.column;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -29,6 +30,16 @@ import java.io.IOException;
 
 public class RowSignatureTest
 {
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(RowSignature.class)
+                  .usingGetClass()
+                  .withCachedHashCode("hashCode", "computeHashCode", RowSignature.builder().build())
+                  .withIgnoredFields("columnPositions")
+                  .verify();
+  }
+
   @Test
   public void test_add_withConflict()
   {

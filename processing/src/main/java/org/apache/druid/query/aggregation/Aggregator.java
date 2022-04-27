@@ -40,7 +40,28 @@ import java.io.Closeable;
 @ExtensionPoint
 public interface Aggregator extends Closeable
 {
+  /**
+   * Performs aggregation.
+   */
   void aggregate();
+
+  /**
+   * Performs aggregation and returns the increase in required on-heap memory
+   * caused by this aggregation step.
+   * <p>
+   * The default implementation of this method calls {@link #aggregate()} and returns 0.
+   * <p>
+   * If overridden, this method must include the JVM object overheads in the size
+   * estimation and must ensure not to underestimate required memory as that might
+   * lead to OOM errors.
+   *
+   * @return Increase in required on-heap memory caused by this aggregation step.
+   */
+  default long aggregateWithSize()
+  {
+    aggregate();
+    return 0;
+  }
 
   @Nullable
   Object get();
@@ -54,7 +75,7 @@ public interface Aggregator extends Closeable
    */
   default double getDouble()
   {
-    return (double) getFloat();
+    return getFloat();
   }
 
   /**

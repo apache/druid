@@ -174,6 +174,8 @@ public class AppenderatorImpl implements Appenderator
   private volatile Throwable persistError;
 
   private final boolean isOpenSegments;
+  private final boolean useMaxMemoryEstimates;
+
   /**
    * Use next Map to store metadata (File, SegmentId) for a hydrant for batch appenderator
    * in order to facilitate the mapping of the QueryableIndex associated with a given hydrant
@@ -209,7 +211,8 @@ public class AppenderatorImpl implements Appenderator
       Cache cache,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean isOpenSegments
+      boolean isOpenSegments,
+      boolean useMaxMemoryEstimates
   )
   {
     this.myId = id;
@@ -226,6 +229,7 @@ public class AppenderatorImpl implements Appenderator
     this.rowIngestionMeters = Preconditions.checkNotNull(rowIngestionMeters, "rowIngestionMeters");
     this.parseExceptionHandler = Preconditions.checkNotNull(parseExceptionHandler, "parseExceptionHandler");
     this.isOpenSegments = isOpenSegments;
+    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
 
     if (sinkQuerySegmentWalker == null) {
       this.sinkTimeline = new VersionedIntervalTimeline<>(
@@ -239,11 +243,10 @@ public class AppenderatorImpl implements Appenderator
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
 
     if (isOpenSegments) {
-      log.info("Running open segments appenderator");
+      log.debug("Running open segments appenderator");
     } else {
-      log.info("Running closed segments appenderator");
+      log.debug("Running closed segments appenderator");
     }
-
   }
 
   @Override
@@ -497,9 +500,10 @@ public class AppenderatorImpl implements Appenderator
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
+          useMaxMemoryEstimates,
           null
       );
-      bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed(retVal));
+      bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed());
 
       try {
         segmentAnnouncer.announceSegment(retVal.getSegment());
@@ -1301,6 +1305,7 @@ public class AppenderatorImpl implements Appenderator
             tuningConfig.getAppendableIndexSpec(),
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,
+            useMaxMemoryEstimates,
             null,
             hydrants
         );
@@ -1346,7 +1351,7 @@ public class AppenderatorImpl implements Appenderator
       // i.e. those that haven't been persisted for *InMemory counters, or pushed to deep storage for the total counter.
       rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
       bytesCurrentlyInMemory.addAndGet(-sink.getBytesInMemory());
-      bytesCurrentlyInMemory.addAndGet(-calculateSinkMemoryInUsed(sink));
+      bytesCurrentlyInMemory.addAndGet(-calculateSinkMemoryInUsed());
       for (FireHydrant hydrant : sink) {
         // Decrement memory used by all Memory Mapped Hydrant
         if (!hydrant.equals(sink.getCurrHydrant())) {
@@ -1590,7 +1595,7 @@ public class AppenderatorImpl implements Appenderator
     return total;
   }
 
-  private int calculateSinkMemoryInUsed(Sink sink)
+  private int calculateSinkMemoryInUsed()
   {
     if (skipBytesInMemoryOverheadCheck) {
       return 0;

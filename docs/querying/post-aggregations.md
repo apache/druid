@@ -25,7 +25,7 @@ title: "Post-aggregations"
 > Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 > This document describes the native
 > language. For information about functions available in SQL, refer to the
-> [SQL documentation](sql.md#aggregation-functions).
+> [SQL documentation](sql-aggregations.md).
 
 Post-aggregations are specifications of processing that should happen on aggregated values as they come out of Apache Druid. If you include a post aggregation as part of a query, make sure to include all aggregators the post-aggregator requires.
 
@@ -42,6 +42,7 @@ Supported functions are `+`, `-`, `*`, `/`, and `quotient`.
 
 * `/` division always returns `0` if dividing by`0`, regardless of the numerator.
 * `quotient` division behaves like regular floating point division
+* Arithmetic post-aggregators always use floating point arithmetic.
 
 Arithmetic post-aggregators may also specify an `ordering`, which defines the order
 of resulting values when sorting results (this can be useful for topN queries for instance):
@@ -88,6 +89,20 @@ The constant post-aggregator always returns the specified value.
 ```json
 { "type"  : "constant", "name"  : <output_name>, "value" : <numerical_value> }
 ```
+
+
+### Expression post-aggregator
+The expression post-aggregator is defined using a Druid [expression](../misc/math-expr.md).
+
+```json
+{
+  "type": "expression",
+  "name": <output_name>,
+  "expression": <post-aggregation expression>,
+  "ordering" : <null (default), or "numericFirst">
+}
+```
+
 
 ### Greatest / Least post-aggregators
 
@@ -221,3 +236,21 @@ The format of the query JSON is as follows:
   ...
 }
 ```
+
+The same could be computed using an expression post-aggregator: 
+```json
+{
+  ...
+  "aggregations" : [
+    { "type" : "doubleSum", "name" : "tot", "fieldName" : "total" },
+    { "type" : "doubleSum", "name" : "part", "fieldName" : "part" }
+  ],
+  "postAggregations" : [{
+    "type"       : "expression",
+    "name"       : "part_percentage",
+    "expression" : "100 * (part / tot)"
+  }]
+  ...
+}
+```
+

@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.input;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -72,7 +71,7 @@ import java.util.Set;
 
 public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String, Object>>
 {
-  private final DruidSegmentInputEntity source;
+  private DruidSegmentInputEntity source;
   private final IndexIO indexIO;
   private final ColumnsFilter columnsFilter;
   private final InputRowSchema inputRowSchema;
@@ -89,7 +88,6 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
       final File temporaryDirectory
   )
   {
-    Preconditions.checkArgument(source instanceof DruidSegmentInputEntity);
     this.source = (DruidSegmentInputEntity) source;
     this.indexIO = indexIO;
     this.columnsFilter = columnsFilter;
@@ -105,7 +103,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
   @Override
   protected CloseableIterator<Map<String, Object>> intermediateRowIterator() throws IOException
   {
-    final CleanableFile segmentFile = source.fetch(temporaryDirectory, null);
+    final CleanableFile segmentFile = source().fetch(temporaryDirectory, null);
     final WindowedStorageAdapter storageAdapter = new WindowedStorageAdapter(
         new QueryableIndexStorageAdapter(
             indexIO.loadIndex(segmentFile.file())
@@ -139,6 +137,12 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
     );
 
     return makeCloseableIteratorFromSequenceAndSegmentFile(sequence, segmentFile);
+  }
+
+  @Override
+  protected InputEntity source()
+  {
+    return source;
   }
 
   @Override

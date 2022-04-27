@@ -39,6 +39,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -187,7 +188,8 @@ public class PartialDruidQuery
         relBuilder.push(selectProject.getInput());
         relBuilder.project(
             newProjectRexNodes,
-            newSelectProject.getRowType().getFieldNames()
+            newSelectProject.getRowType().getFieldNames(),
+            true
         );
         theProject = (Project) relBuilder.build();
       }
@@ -310,7 +312,28 @@ public class PartialDruidQuery
         sourceRowSignature,
         plannerContext,
         rexBuilder,
-        finalizeAggregations
+        finalizeAggregations,
+        null
+    );
+  }
+
+  public DruidQuery build(
+      final DataSource dataSource,
+      final RowSignature sourceRowSignature,
+      final PlannerContext plannerContext,
+      final RexBuilder rexBuilder,
+      final boolean finalizeAggregations,
+      @Nullable VirtualColumnRegistry virtualColumnRegistry
+  )
+  {
+    return DruidQuery.fromPartialQuery(
+        this,
+        dataSource,
+        sourceRowSignature,
+        plannerContext,
+        rexBuilder,
+        finalizeAggregations,
+        virtualColumnRegistry
     );
   }
 

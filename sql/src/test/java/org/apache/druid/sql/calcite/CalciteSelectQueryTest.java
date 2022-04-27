@@ -36,6 +36,7 @@ import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
@@ -107,7 +108,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                     new ExpressionVirtualColumn(
                         "v0",
                         "array('Hello',null)",
-                        ColumnType.STRING,
+                        ColumnType.STRING_ARRAY,
                         ExprMacroTable.nil()
                     )
                 )
@@ -118,6 +119,90 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(new Object[]{"[\"Hello\",null]"})
+    );
+  }
+
+  @Test
+  public void testValuesContainingNull() throws Exception
+  {
+    testQuery(
+        "SELECT * FROM (VALUES (NULL, 'United States'))",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(
+                    InlineDataSource.fromIterable(
+                        ImmutableList.of(new Object[]{null, "United States"}),
+                        RowSignature
+                            .builder()
+                            .add("EXPR$0", null)
+                            .add("EXPR$1", ColumnType.STRING)
+                            .build()
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("EXPR$0", "EXPR$1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{null, "United States"})
+    );
+  }
+
+  @Test
+  public void testMultipleValuesContainingNull() throws Exception
+  {
+    testQuery(
+        "SELECT * FROM (VALUES (NULL, 'United States'), ('Delhi', 'India'))",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(
+                    InlineDataSource.fromIterable(
+                        ImmutableList.of(new Object[]{null, "United States"}, new Object[]{"Delhi", "India"}),
+                        RowSignature
+                            .builder()
+                            .add("EXPR$0", ColumnType.STRING)
+                            .add("EXPR$1", ColumnType.STRING)
+                            .build()
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("EXPR$0", "EXPR$1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{NULL_STRING, "United States"}, new Object[]{"Delhi", "India"})
+    );
+  }
+
+  @Test
+  public void testMultipleValuesContainingNullAndIntegerValues() throws Exception
+  {
+    testQuery(
+        "SELECT * FROM (VALUES (NULL, 'United States'), (50, 'India'))",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(
+                    InlineDataSource.fromIterable(
+                        ImmutableList.of(new Object[]{null, "United States"}, new Object[]{50L, "India"}),
+                        RowSignature
+                            .builder()
+                            .add("EXPR$0", ColumnType.LONG)
+                            .add("EXPR$1", ColumnType.STRING)
+                            .build()
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("EXPR$0", "EXPR$1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{null, "United States"}, new Object[]{50, "India"})
     );
   }
 
@@ -161,6 +246,37 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 Long.MIN_VALUE,
                 Long.MIN_VALUE,
                 0L
+            }
+        )
+    );
+  }
+
+  // Test that the integers are getting correctly casted after being passed through a function when not selecting from
+  // a table
+  @Test
+  public void testDruidLogicalValuesRule() throws Exception
+  {
+    testQuery(
+        "SELECT FLOOR(123), CEIL(123), CAST(123.0 AS INTEGER)",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(InlineDataSource.fromIterable(
+                    ImmutableList.of(new Object[]{123L, 123L, 123L}),
+                    RowSignature.builder()
+                                .add("EXPR$0", ColumnType.LONG)
+                                .add("EXPR$1", ColumnType.LONG)
+                                .add("EXPR$2", ColumnType.LONG)
+                                .build()
+                ))
+                .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
+                .columns(ImmutableList.of("EXPR$0", "EXPR$1", "EXPR$2"))
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                123,
+                123,
+                123
             }
         )
     );

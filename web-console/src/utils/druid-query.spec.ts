@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { sane } from 'druid-query-toolkit/build/test-utils';
+import { sane } from 'druid-query-toolkit';
 
 import { DruidError, getDruidErrorMessage, parseHtmlError, trimSemicolon } from './druid-query';
 

@@ -188,7 +188,27 @@ public class SqlExpressionBenchmark
       // 30: logical and operator
       "SELECT CAST(long1 as BOOLEAN) AND CAST (long2 as BOOLEAN), COUNT(*) FROM foo GROUP BY 1 ORDER BY 2",
       // 31: isnull, notnull
-      "SELECT long5 IS NULL, long3 IS NOT NULL, count(*) FROM foo GROUP BY 1,2 ORDER BY 3"
+      "SELECT long5 IS NULL, long3 IS NOT NULL, count(*) FROM foo GROUP BY 1,2 ORDER BY 3",
+      // 32: time shift, non-expr col + reg agg, regular
+      "SELECT TIME_SHIFT(__time, 'PT1H', 3), string2, SUM(double4) FROM foo GROUP BY 1,2 ORDER BY 3",
+      // 33: time shift, non-expr col + expr agg, sequential low cardinality
+      "SELECT TIME_SHIFT(MILLIS_TO_TIMESTAMP(long1), 'PT1H', 1), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
+      // 34: time shift + non-expr agg (timeseries) (non-expression reference), zipf distribution low cardinality
+      "SELECT TIME_SHIFT(MILLIS_TO_TIMESTAMP(long2), 'PT1H', 1), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
+      // 35: time shift + expr agg (timeseries), zipf distribution high cardinality
+      "SELECT TIME_SHIFT(MILLIS_TO_TIMESTAMP(long3), 'PT1H', 1), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
+      // 36: time shift + non-expr agg (group by), uniform distribution low cardinality
+      "SELECT TIME_SHIFT(MILLIS_TO_TIMESTAMP(long4), 'PT1H', 1), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
+      // 37: time shift + expr agg (group by), uniform distribution high cardinality
+      "SELECT TIME_SHIFT(MILLIS_TO_TIMESTAMP(long5), 'PT1H', 1), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
+      // 38: LATEST aggregator
+      "SELECT LATEST(long1) FROM foo",
+      // 39: LATEST aggregator double
+      "SELECT LATEST(double4) FROM foo",
+      // 40: LATEST aggregator double
+      "SELECT LATEST(float3) FROM foo",
+      // 41: LATEST aggregator double
+      "SELECT LATEST(float3), LATEST(long1), LATEST(double4) FROM foo"
   );
 
   @Param({"5000000"})
@@ -234,7 +254,17 @@ public class SqlExpressionBenchmark
       "28",
       "29",
       "30",
-      "31"
+      "31",
+      "32",
+      "33",
+      "34",
+      "35",
+      "36",
+      "37",
+      "38",
+      "39",
+      "40",
+      "41"
   })
   private String query;
 

@@ -35,7 +35,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class BloomFilterExpressions
 {
@@ -88,7 +87,7 @@ public class BloomFilterExpressions
         @Override
         public Expr visit(Shuttle shuttle)
         {
-          return shuttle.visit(this);
+          return shuttle.visit(apply(shuttle.visitAll(args)));
         }
 
         @Nullable
@@ -171,8 +170,7 @@ public class BloomFilterExpressions
         @Override
         public Expr visit(Shuttle shuttle)
         {
-          List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-          return shuttle.visit(new BloomExpr(newArgs));
+          return shuttle.visit(apply(shuttle.visitAll(args)));
         }
 
         @Nullable
@@ -259,8 +257,7 @@ public class BloomFilterExpressions
         @Override
         public Expr visit(Shuttle shuttle)
         {
-          Expr newArg = arg.visit(shuttle);
-          return shuttle.visit(new BloomExpr(filter, newArg));
+          return shuttle.visit(apply(shuttle.visitAll(args)));
         }
 
         @Nullable
@@ -331,8 +328,7 @@ public class BloomFilterExpressions
         @Override
         public Expr visit(Shuttle shuttle)
         {
-          List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-          return shuttle.visit(new DynamicBloomExpr(newArgs));
+          return shuttle.visit(apply(shuttle.visitAll(args)));
         }
 
         @Nullable

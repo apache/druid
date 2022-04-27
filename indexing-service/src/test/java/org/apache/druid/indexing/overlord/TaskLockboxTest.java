@@ -491,7 +491,7 @@ public class TaskLockboxTest
     lockbox.add(task);
     Assert.assertTrue(tryTimeChunkLock(TaskLockType.SHARED, task, interval).isOk());
 
-    Assert.assertFalse(
+    Assert.assertTrue(
         lockbox.doInCriticalSection(
             task,
             Collections.singletonList(interval),

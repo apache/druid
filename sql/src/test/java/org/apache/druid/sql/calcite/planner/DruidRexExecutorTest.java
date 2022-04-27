@@ -39,18 +39,21 @@ import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringOperatorConversions;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NamedDruidSchema;
 import org.apache.druid.sql.calcite.schema.NamedViewSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.table.RowSignatures;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
@@ -92,7 +95,7 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
               NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
           )
       ),
-      ImmutableMap.of()
+      new QueryContext()
   );
 
   private final RexBuilder rexBuilder = new RexBuilder(new JavaTypeFactoryImpl());
@@ -132,7 +135,7 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
     Assert.assertEquals(1, reduced.size());
     Assert.assertEquals(SqlKind.OTHER_FUNCTION, reduced.get(0).getKind());
     Assert.assertEquals(
-        DruidExpression.fromExpression("hyper_unique()"),
+        CalciteTestBase.makeExpression(ColumnType.ofComplex("hyperUnique"), "hyper_unique()"),
         Expressions.toDruidExpression(
             PLANNER_CONTEXT,
             RowSignature.builder().build(),
@@ -153,7 +156,14 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
     rexy.reduce(rexBuilder, ImmutableList.of(literal), reduced);
     Assert.assertEquals(1, reduced.size());
     Assert.assertEquals(
-        DruidExpression.fromExpression("array(50.12,12.1)"),
+        DruidExpression.ofExpression(
+            ColumnType.DOUBLE_ARRAY,
+            DruidExpression.functionCall("array"),
+            ImmutableList.of(
+                DruidExpression.ofLiteral(ColumnType.DOUBLE, "50.12"),
+                DruidExpression.ofLiteral(ColumnType.DOUBLE, "12.1")
+            )
+        ),
         Expressions.toDruidExpression(
             PLANNER_CONTEXT,
             RowSignature.empty(),
@@ -174,10 +184,47 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
     rexy.reduce(rexBuilder, ImmutableList.of(literal), reduced);
     Assert.assertEquals(1, reduced.size());
     Assert.assertEquals(
-        DruidExpression.fromExpression("array(50,12)"),
+        DruidExpression.ofExpression(
+            ColumnType.LONG_ARRAY,
+            DruidExpression.functionCall("array"),
+            ImmutableList.of(
+                DruidExpression.ofLiteral(ColumnType.LONG, "50"),
+                DruidExpression.ofLiteral(ColumnType.LONG, "12")
+            )
+        ),
         Expressions.toDruidExpression(
             PLANNER_CONTEXT,
             RowSignature.empty(),
+            reduced.get(0)
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringNotReduced()
+  {
+    DruidRexExecutor rexy = new DruidRexExecutor(PLANNER_CONTEXT);
+    RexNode call = rexBuilder.makeCall(
+        MultiValueStringOperatorConversions.StringToMultiString.SQL_FUNCTION,
+        rexBuilder.makeLiteral("a,b,c"),
+        rexBuilder.makeLiteral(",")
+    );
+    List<RexNode> reduced = new ArrayList<>();
+    rexy.reduce(rexBuilder, ImmutableList.of(call), reduced);
+    Assert.assertEquals(1, reduced.size());
+    Assert.assertEquals(SqlKind.OTHER_FUNCTION, reduced.get(0).getKind());
+    Assert.assertEquals(
+        DruidExpression.ofExpression(
+            ColumnType.STRING,
+            DruidExpression.functionCall("string_to_array"),
+            ImmutableList.of(
+                DruidExpression.ofStringLiteral("a,b,c"),
+                DruidExpression.ofStringLiteral(",")
+            )
+        ),
+        Expressions.toDruidExpression(
+            PLANNER_CONTEXT,
+            RowSignature.builder().build(),
             reduced.get(0)
         )
     );

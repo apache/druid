@@ -24,11 +24,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
+import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -40,13 +41,16 @@ import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  * {@link VirtualColumn} form of {@link ListFilteredDimensionSpec}, powered by
@@ -253,12 +257,6 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     }
 
     @Override
-    public ImmutableBitmap getBitmap(int idx)
-    {
-      return delegate.getBitmap(idMapping.getReverseId(idx));
-    }
-
-    @Override
     public int getCardinality()
     {
       return idMapping.getValueCardinality();
@@ -267,7 +265,163 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     @Override
     public int getIndex(@Nullable String value)
     {
-      return Indexed.indexOf(this::getValue, getCardinality(), Comparators.naturalNullsFirst(), value);
+      return getReverseIndex(value);
+    }
+
+    @Override
+    public ImmutableBitmap getBitmap(int idx)
+    {
+      return delegate.getBitmap(idMapping.getReverseId(idx));
+    }
+
+    @Override
+    public ImmutableBitmap getBitmapForValue(@Nullable String value)
+    {
+      if (getReverseIndex(value) < 0) {
+        return delegate.getBitmap(-1);
+      }
+      return delegate.getBitmapForValue(value);
+    }
+
+    @Override
+    public Iterable<ImmutableBitmap> getBitmapsInRange(
+        @Nullable String startValue,
+        boolean startStrict,
+        @Nullable String endValue,
+        boolean endStrict,
+        Predicate<String> matcher
+    )
+    {
+      int startIndex, endIndex;
+      if (startValue == null) {
+        startIndex = 0;
+      } else {
+        final int found = getReverseIndex(NullHandling.emptyToNullIfNeeded(startValue));
+        if (found >= 0) {
+          startIndex = startStrict ? found + 1 : found;
+        } else {
+          startIndex = -(found + 1);
+        }
+      }
+
+      if (endValue == null) {
+        endIndex = idMapping.getValueCardinality();
+      } else {
+        final int found = getReverseIndex(NullHandling.emptyToNullIfNeeded(endValue));
+        if (found >= 0) {
+          endIndex = endStrict ? found : found + 1;
+        } else {
+          endIndex = -(found + 1);
+        }
+      }
+
+      endIndex = startIndex > endIndex ? startIndex : endIndex;
+      final int start = startIndex, end = endIndex;
+      return () -> new Iterator<ImmutableBitmap>()
+      {
+        int currIndex = start;
+        int found;
+        {
+          found = findNext();
+        }
+
+        private int findNext()
+        {
+          while (currIndex < end && !matcher.test(delegate.getValue(idMapping.getReverseId(currIndex)))) {
+            currIndex++;
+          }
+
+          if (currIndex < end) {
+            return currIndex++;
+          } else {
+            return -1;
+          }
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+          return found != -1;
+        }
+
+        @Override
+        public ImmutableBitmap next()
+        {
+          int cur = found;
+
+          if (cur == -1) {
+            throw new NoSuchElementException();
+          }
+
+          found = findNext();
+          return getBitmap(cur);
+        }
+      };
+    }
+
+    @Override
+    public Iterable<ImmutableBitmap> getBitmapsForValues(Set<String> values)
+    {
+      return () -> new Iterator<ImmutableBitmap>()
+      {
+        final Iterator<String> iterator = values.iterator();
+        int next = -1;
+
+        @Override
+        public boolean hasNext()
+        {
+          if (next < 0) {
+            findNext();
+          }
+          return next >= 0;
+        }
+
+        @Override
+        public ImmutableBitmap next()
+        {
+          if (next < 0) {
+            findNext();
+            if (next < 0) {
+              throw new NoSuchElementException();
+            }
+          }
+          final int swap = next;
+          next = -1;
+          return getBitmap(swap);
+        }
+
+        private void findNext()
+        {
+          while (next < 0 && iterator.hasNext()) {
+            String nextValue = iterator.next();
+            next = getReverseIndex(nextValue);
+          }
+        }
+      };
+    }
+
+    private int getReverseIndex(@Nullable String value)
+    {
+      int minIndex = 0;
+      int maxIndex = idMapping.getValueCardinality() - 1;
+      final Comparator<String> comparator = StringComparators.LEXICOGRAPHIC;
+      while (minIndex <= maxIndex) {
+        int currIndex = (minIndex + maxIndex) >>> 1;
+
+        String currValue = delegate.getValue(idMapping.getReverseId(currIndex));
+        int comparison = comparator.compare(currValue, value);
+        if (comparison == 0) {
+          return currIndex;
+        }
+
+        if (comparison < 0) {
+          minIndex = currIndex + 1;
+        } else {
+          maxIndex = currIndex - 1;
+        }
+      }
+
+      return -(minIndex + 1);
     }
   }
 }

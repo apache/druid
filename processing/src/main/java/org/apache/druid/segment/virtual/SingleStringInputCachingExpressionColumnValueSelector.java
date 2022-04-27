@@ -64,7 +64,7 @@ public class SingleStringInputCachingExpressionColumnValueSelector implements Co
     this.selector = Preconditions.checkNotNull(selector, "selector");
     this.expression = Preconditions.checkNotNull(expression, "expression");
 
-    final Supplier<Object> inputSupplier = ExpressionSelectors.supplierFromDimensionSelector(selector, false);
+    final Supplier<Object> inputSupplier = ExpressionSelectors.supplierFromDimensionSelector(selector, false, false);
     this.bindings = InputBindings.singleProvider(ExpressionType.STRING, name -> inputSupplier.get());
 
     if (selector.getValueCardinality() == DimensionDictionarySelector.CARDINALITY_UNKNOWN) {

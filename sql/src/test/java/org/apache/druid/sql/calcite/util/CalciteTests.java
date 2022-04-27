@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.util;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Predicate;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -35,7 +36,9 @@ import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ServerInventoryView;
+import org.apache.druid.client.ServerView;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -56,6 +59,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -100,6 +104,7 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AllowAllAuthenticator;
@@ -123,6 +128,7 @@ import org.apache.druid.sql.calcite.run.NativeQueryMakerFactory;
 import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.InformationSchema;
 import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
@@ -131,6 +137,7 @@ import org.apache.druid.sql.calcite.schema.NamedLookupSchema;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.schema.NamedSystemSchema;
 import org.apache.druid.sql.calcite.schema.NamedViewSchema;
+import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
@@ -145,7 +152,6 @@ import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -189,14 +195,23 @@ public class CalciteTests
           return Access.OK;
         }
 
-        if (ResourceType.DATASOURCE.equals(resource.getType()) && resource.getName().equals(FORBIDDEN_DATASOURCE)) {
-          return new Access(false);
-        } else if (ResourceType.VIEW.equals(resource.getType()) && resource.getName().equals("forbiddenView")) {
-          return new Access(false);
-        } else if (ResourceType.DATASOURCE.equals(resource.getType()) || ResourceType.VIEW.equals(resource.getType())) {
-          return Access.OK;
-        } else {
-          return new Access(false);
+        switch (resource.getType()) {
+          case ResourceType.DATASOURCE:
+            if (resource.getName().equals(FORBIDDEN_DATASOURCE)) {
+              return new Access(false);
+            } else {
+              return Access.OK;
+            }
+          case ResourceType.VIEW:
+            if (resource.getName().equals("forbiddenView")) {
+              return new Access(false);
+            } else {
+              return Access.OK;
+            }
+          case ResourceType.QUERY_CONTEXT:
+            return Access.OK;
+          default:
+            return new Access(false);
         }
       };
     }
@@ -287,9 +302,7 @@ public class CalciteTests
       new TimeAndDimsParseSpec(
           new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
           new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")),
-              null,
-              null
+              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3"))
           )
       )
   );
@@ -299,16 +312,14 @@ public class CalciteTests
           new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
           new DimensionsSpec(
               ImmutableList.<DimensionSchema>builder()
-                  .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "dim4", "dim5")))
+                  .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "dim4", "dim5", "dim6")))
                   .add(new DoubleDimensionSchema("d1"))
                   .add(new DoubleDimensionSchema("d2"))
                   .add(new FloatDimensionSchema("f1"))
                   .add(new FloatDimensionSchema("f2"))
                   .add(new LongDimensionSchema("l1"))
                   .add(new LongDimensionSchema("l2"))
-                  .build(),
-              null,
-              null
+                  .build()
           )
       )
   );
@@ -331,9 +342,7 @@ public class CalciteTests
                                                  .add("metLongSequential")
                                                  .add("metLongUniform")
                                                  .build()
-              ),
-              null,
-              null
+              )
           )
       )
   );
@@ -531,6 +540,7 @@ public class CalciteTests
           .put("dim3", ImmutableList.of("a", "b"))
           .put("dim4", "a")
           .put("dim5", "aa")
+          .put("dim6", "1")
           .build(),
       ImmutableMap.<String, Object>builder()
           .put("t", "2000-01-02")
@@ -547,6 +557,7 @@ public class CalciteTests
           .put("dim3", ImmutableList.of("b", "c"))
           .put("dim4", "a")
           .put("dim5", "ab")
+          .put("dim6", "2")
           .build(),
       ImmutableMap.<String, Object>builder()
           .put("t", "2000-01-03")
@@ -563,6 +574,7 @@ public class CalciteTests
           .put("dim3", ImmutableList.of("d"))
           .put("dim4", "a")
           .put("dim5", "ba")
+          .put("dim6", "3")
           .build(),
       ImmutableMap.<String, Object>builder()
           .put("t", "2001-01-01")
@@ -573,6 +585,7 @@ public class CalciteTests
           .put("dim3", ImmutableList.of(""))
           .put("dim4", "b")
           .put("dim5", "ad")
+          .put("dim6", "4")
           .build(),
       ImmutableMap.<String, Object>builder()
           .put("t", "2001-01-02")
@@ -583,6 +596,7 @@ public class CalciteTests
           .put("dim3", ImmutableList.of())
           .put("dim4", "b")
           .put("dim5", "aa")
+          .put("dim6", "5")
           .build(),
       ImmutableMap.<String, Object>builder()
           .put("t", "2001-01-03")
@@ -591,6 +605,7 @@ public class CalciteTests
           .put("dim1", "abc")
           .put("dim4", "b")
           .put("dim5", "ab")
+          .put("dim6", "6")
           .build()
   );
   public static final List<InputRow> ROWS1_WITH_NUMERIC_DIMS =
@@ -817,11 +832,20 @@ public class CalciteTests
 
   public static SqlLifecycleFactory createSqlLifecycleFactory(final PlannerFactory plannerFactory)
   {
+    return createSqlLifecycleFactory(plannerFactory, new AuthConfig());
+  }
+
+  public static SqlLifecycleFactory createSqlLifecycleFactory(
+      final PlannerFactory plannerFactory,
+      final AuthConfig authConfig
+  )
+  {
     return new SqlLifecycleFactory(
         plannerFactory,
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
         new NoopRequestLogger(),
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+        authConfig
     );
   }
 
@@ -1165,7 +1189,7 @@ public class CalciteTests
       final AuthorizerMapper authorizerMapper
   )
   {
-    return createMockRootSchema(conglomerate, walker, plannerConfig, null, authorizerMapper);
+    return createMockRootSchema(conglomerate, walker, plannerConfig, null, new NoopDruidSchemaManager(), authorizerMapper);
   }
 
   public static DruidSchemaCatalog createMockRootSchema(
@@ -1173,10 +1197,11 @@ public class CalciteTests
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig,
       @Nullable final ViewManager viewManager,
+      final DruidSchemaManager druidSchemaManager,
       final AuthorizerMapper authorizerMapper
   )
   {
-    DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig);
+    DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig, druidSchemaManager);
     SystemSchema systemSchema =
         CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
 
@@ -1214,25 +1239,11 @@ public class CalciteTests
     return catalog;
   }
 
-  /**
-   * Some Calcite exceptions (such as that thrown by
-   * {@link org.apache.druid.sql.calcite.CalciteQueryTest#testCountStarWithTimeFilterUsingStringLiteralsInvalid)},
-   * are structured as a chain of RuntimeExceptions caused by InvocationTargetExceptions. To get the root exception
-   * it is necessary to make getTargetException calls on the InvocationTargetExceptions.
-   */
-  public static Throwable getRootCauseFromInvocationTargetExceptionChain(Throwable t)
-  {
-    Throwable curThrowable = t;
-    while (curThrowable.getCause() instanceof InvocationTargetException) {
-      curThrowable = ((InvocationTargetException) curThrowable.getCause()).getTargetException();
-    }
-    return curThrowable;
-  }
-
   private static DruidSchema createMockSchema(
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
-      final PlannerConfig plannerConfig
+      final PlannerConfig plannerConfig,
+      final DruidSchemaManager druidSchemaManager
   )
   {
     final DruidSchema schema = new DruidSchema(
@@ -1249,7 +1260,8 @@ public class CalciteTests
         createDefaultJoinableFactory(),
         plannerConfig,
         TEST_AUTHENTICATOR_ESCALATOR,
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        druidSchemaManager
     );
 
     try {
@@ -1358,7 +1370,7 @@ public class CalciteTests
   /**
    * A fake {@link ServerInventoryView} for {@link #createMockSystemSchema}.
    */
-  private static class FakeServerInventoryView implements ServerInventoryView
+  private static class FakeServerInventoryView implements FilteredServerInventoryView
   {
     @Nullable
     @Override
@@ -1386,13 +1398,20 @@ public class CalciteTests
     }
 
     @Override
-    public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
+    public void registerSegmentCallback(
+        Executor exec,
+        ServerView.SegmentCallback callback,
+        Predicate<Pair<DruidServerMetadata, DataSegment>> filter
+    )
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public void registerSegmentCallback(Executor exec, SegmentCallback callback)
+    public void registerServerRemovedCallback(
+        Executor exec,
+        ServerView.ServerRemovedCallback callback
+    )
     {
       throw new UnsupportedOperationException();
     }

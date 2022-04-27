@@ -420,6 +420,7 @@ public class Initialization
         new IndexingServiceDiscoveryModule(),
         new CoordinatorDiscoveryModule(),
         new LocalDataStorageDruidModule(),
+        new TombstoneDataStorageModule(),
         new FirehoseModule(),
         new JavaScriptModule(),
         new AuthenticatorModule(),

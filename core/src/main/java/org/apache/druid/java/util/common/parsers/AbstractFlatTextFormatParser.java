@@ -110,7 +110,7 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
       setFieldNames(parseLine(header));
     }
     catch (Exception e) {
-      throw new ParseException(e, "Unable to parse header [%s]", header);
+      throw new ParseException(header, e, "Unable to parse header [%s]", header);
     }
   }
 
@@ -145,7 +145,7 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
       return Utils.zipMapPartial(fieldNames, Iterables.transform(values, valueFunction));
     }
     catch (Exception e) {
-      throw new ParseException(e, "Unable to parse row [%s]", input);
+      throw new ParseException(input, e, "Unable to parse row [%s]", input);
     }
   }
 

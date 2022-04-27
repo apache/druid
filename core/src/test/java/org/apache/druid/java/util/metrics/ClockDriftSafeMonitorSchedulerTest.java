@@ -58,18 +58,20 @@ public class ClockDriftSafeMonitorSchedulerTest
   private ExecutorService cronTaskRunner;
   @Mock
   private CronScheduler cronScheduler;
-  
+  private AutoCloseable mocks;
+
   @Before
   public void setUp()
   {
     cronTaskRunner = Execs.singleThreaded("monitor-scheduler-test");
-    MockitoAnnotations.initMocks(this);
+    mocks = MockitoAnnotations.openMocks(this);
   }
 
   @After
-  public void tearDown()
+  public void tearDown() throws Exception
   {
     cronTaskRunner.shutdownNow();
+    mocks.close();
   }
   
   @Test

@@ -91,7 +91,8 @@ public class HttpClientInit
                   new ResourcePoolConfig(
                       config.getNumConnections(),
                       config.getUnusedConnectionTimeoutDuration().getMillis()
-                  )
+                  ),
+                  config.isEagerInitialization()
               ),
               config.getReadTimeout(),
               config.getCompressionCodec(),

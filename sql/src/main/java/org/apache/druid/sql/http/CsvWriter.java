@@ -22,6 +22,7 @@ package org.apache.druid.sql.http;
 import com.opencsv.CSVWriter;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
@@ -76,7 +77,7 @@ public class CsvWriter implements ResultFormat.Writer
       final String[] types = new String[rowType.getFieldCount()];
 
       for (int i = 0; i < signature.size(); i++) {
-        types[i] = signature.getColumnType(i).get().asTypeString();
+        types[i] = signature.getColumnType(i).map(TypeSignature::asTypeString).orElse(null);
       }
 
       writer.writeNext(types, false);

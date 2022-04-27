@@ -31,7 +31,10 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Predicate;
 
 public class FiltersTest extends InitializedNullHandlingTest
 {
@@ -81,6 +84,41 @@ public class FiltersTest extends InitializedNullHandlingTest
 
       @Override
       public int getIndex(String value)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public ImmutableBitmap getBitmapForValue(@Nullable String value)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public Iterable<ImmutableBitmap> getBitmapsInRange(
+          @Nullable String startValue,
+          boolean startStrict,
+          @Nullable String endValue,
+          boolean endStrict
+      )
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public Iterable<ImmutableBitmap> getBitmapsInRange(
+          @Nullable String startValue,
+          boolean startStrict,
+          @Nullable String endValue,
+          boolean endStrict,
+          Predicate<String> matcher
+      )
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public Iterable<ImmutableBitmap> getBitmapsForValues(Set<String> values)
       {
         throw new UnsupportedOperationException();
       }

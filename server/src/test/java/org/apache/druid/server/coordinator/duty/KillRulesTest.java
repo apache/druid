@@ -83,7 +83,7 @@ public class KillRulesTest
     );
     killRules = new KillRules(druidCoordinatorConfig);
     killRules.run(mockDruidCoordinatorRuntimeParams);
-    Mockito.verifyZeroInteractions(mockRuleManager);
+    Mockito.verifyNoInteractions(mockRuleManager);
   }
 
   @Test

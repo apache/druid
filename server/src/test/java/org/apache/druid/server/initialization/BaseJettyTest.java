@@ -122,7 +122,12 @@ public abstract class BaseJettyTest
 
       try {
         this.client = HttpClientInit.createClient(
-            HttpClientConfig.builder().withNumConnections(maxClientConnections).withSslContext(SSLContext.getDefault()).withReadTimeout(Duration.ZERO).build(),
+            HttpClientConfig.builder()
+                            .withNumConnections(maxClientConnections)
+                            .withSslContext(SSLContext.getDefault())
+                            .withReadTimeout(Duration.ZERO)
+                            .withEagerInitialization(true)
+                            .build(),
             druidLifecycle
         );
       }

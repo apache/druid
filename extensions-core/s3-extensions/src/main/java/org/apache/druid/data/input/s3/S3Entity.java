@@ -19,7 +19,6 @@
 
 package org.apache.druid.data.input.s3;
 
-import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
@@ -105,16 +104,4 @@ public class S3Entity extends RetryingInputEntity
   {
     return S3Utils.S3RETRY;
   }
-
-  @Override
-  public Predicate<Throwable> getResetCondition()
-  {
-    // SdkClientException can be thrown for many reasons and the only way to
-    // distinguish it is to look at the message, this is not ideal since the
-    // message may change so it may need to be adjusted in the future
-    return t -> super.getResetCondition().apply(t) ||
-                (t instanceof SdkClientException &&
-                 t.getMessage().contains("Data read has a different length than the expected"));
-  }
-
 }

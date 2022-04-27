@@ -74,6 +74,7 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -99,6 +100,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -252,11 +254,13 @@ public class SqlResourceTest extends CalciteTestBase
       }
     };
     final ServiceEmitter emitter = new NoopServiceEmitter();
+    final AuthConfig authConfig = new AuthConfig();
     sqlLifecycleFactory = new SqlLifecycleFactory(
         plannerFactory,
         emitter,
         testRequestLogger,
-        scheduler
+        scheduler,
+        authConfig
     )
     {
       @Override
@@ -267,6 +271,7 @@ public class SqlResourceTest extends CalciteTestBase
             emitter,
             testRequestLogger,
             scheduler,
+            authConfig,
             System.currentTimeMillis(),
             System.nanoTime(),
             validateAndAuthorizeLatchSupplier,
@@ -671,6 +676,30 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
+  public void testArrayResultFormatWithHeader_nullColumnType() throws Exception
+  {
+    // Test a query that returns null header for some of the columns
+    final String query = "SELECT (1, 2)";
+    Assert.assertEquals(
+        ImmutableList.of(
+            Collections.singletonList("EXPR$0"),
+            Collections.singletonList(null),
+            Collections.singletonList("ROW"),
+            Collections.singletonList(
+                Arrays.asList(
+                    1,
+                    2
+                )
+            )
+        ),
+        doPost(
+            new SqlQuery(query, ResultFormat.ARRAY, true, true, true, null, null),
+            new TypeReference<List<List<Object>>>() {}
+        ).rhs
+    );
+  }
+
+  @Test
   public void testArrayLinesResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
@@ -761,6 +790,34 @@ public class SqlResourceTest extends CalciteTestBase
     );
     Assert.assertEquals("", lines.get(5));
     Assert.assertEquals("", lines.get(6));
+  }
+
+  @Test
+  public void testArrayLinesResultFormatWithHeader_nullColumnType() throws Exception
+  {
+    final String query = "SELECT (1, 2)";
+    final Pair<QueryException, String> pair = doPostRaw(
+        new SqlQuery(query, ResultFormat.ARRAYLINES, true, true, true, null, null)
+    );
+    Assert.assertNull(pair.lhs);
+    final String response = pair.rhs;
+    final List<String> lines = Splitter.on('\n').splitToList(response);
+
+    Assert.assertEquals(6, lines.size());
+    Assert.assertEquals(Collections.singletonList("EXPR$0"), JSON_MAPPER.readValue(lines.get(0), List.class));
+    Assert.assertEquals(Collections.singletonList(null), JSON_MAPPER.readValue(lines.get(1), List.class));
+    Assert.assertEquals(Collections.singletonList("ROW"), JSON_MAPPER.readValue(lines.get(2), List.class));
+    Assert.assertEquals(
+        Collections.singletonList(
+            Arrays.asList(
+                1,
+                2
+            )
+        ),
+        JSON_MAPPER.readValue(lines.get(3), List.class)
+    );
+    Assert.assertEquals("", lines.get(4));
+    Assert.assertEquals("", lines.get(5));
   }
 
   @Test
@@ -993,6 +1050,35 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
+  public void testObjectLinesResultFormatWithFullHeader_nullColumnType() throws Exception
+  {
+    final String query = "SELECT (1, 2)";
+    final Pair<QueryException, String> pair =
+        doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, true, true, true, null, null));
+    Assert.assertNull(pair.lhs);
+    final String response = pair.rhs;
+    final List<String> lines = Splitter.on('\n').splitToList(response);
+
+    final Map<String, String> typeMap = new HashMap<>();
+    typeMap.put(ObjectWriter.TYPE_HEADER_NAME, null);
+    typeMap.put(ObjectWriter.SQL_TYPE_HEADER_NAME, "ROW");
+    final Map<String, Object> expectedHeader = ImmutableMap.of("EXPR$0", typeMap);
+
+    Assert.assertEquals(4, lines.size());
+    Assert.assertEquals(expectedHeader, JSON_MAPPER.readValue(lines.get(0), Object.class));
+    Assert.assertEquals(
+            ImmutableMap
+                .<String, Object>builder()
+                .put("EXPR$0", Arrays.asList(1, 2))
+                .build(),
+        JSON_MAPPER.readValue(lines.get(1), Object.class)
+    );
+
+    Assert.assertEquals("", lines.get(2));
+    Assert.assertEquals("", lines.get(3));
+  }
+
+  @Test
   public void testCsvResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
@@ -1036,6 +1122,27 @@ public class SqlResourceTest extends CalciteTestBase
             ""
         ),
         lines
+    );
+  }
+
+  @Test
+  public void testCsvResultFormatWithHeaders_nullColumnType() throws Exception
+  {
+    final String query = "SELECT (1, 2)";
+    final Pair<QueryException, String> pair = doPostRaw(
+        new SqlQuery(query, ResultFormat.CSV, true, true, true, null, null)
+    );
+    Assert.assertNull(pair.lhs);
+    final String response = pair.rhs;
+    final List<String> lines = Splitter.on('\n').splitToList(response);
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            "EXPR$0",
+            "",
+            "ROW"
+        ),
+        lines.subList(0, 3)
     );
   }
 
@@ -1110,11 +1217,37 @@ public class SqlResourceTest extends CalciteTestBase
     ).lhs;
 
     Assert.assertNotNull(exception);
-    Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, exception.getErrorCode());
-    Assert.assertEquals(ISE.class.getName(), exception.getErrorClass());
+    Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorCode(), exception.getErrorCode());
+    Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorClass(), exception.getErrorClass());
     Assert.assertTrue(
         exception.getMessage()
-                 .contains("Cannot build plan for query: SELECT dim1 FROM druid.foo ORDER BY dim1")
+                 .contains("Cannot build plan for query: SELECT dim1 FROM druid.foo ORDER BY dim1. " +
+                     "Possible error: SQL query requires order by non-time column [dim1 ASC] that is not supported.")
+    );
+    checkSqlRequestLog(false);
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+  }
+
+  /**
+   * This test is for {@link UnsupportedSQLQueryException} exceptions that are thrown by druid rules during query
+   * planning. e.g. doing max aggregation on string type. The test checks that the API returns correct error messages
+   * for such planning errors.
+   */
+  @Test
+  public void testCannotConvert_UnsupportedSQLQueryException() throws Exception
+  {
+    // max(string) unsupported
+    final QueryException exception = doPost(
+        createSimpleQueryWithId("id", "SELECT max(dim1) FROM druid.foo")
+    ).lhs;
+
+    Assert.assertNotNull(exception);
+    Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorCode(), exception.getErrorCode());
+    Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorClass(), exception.getErrorClass());
+    Assert.assertTrue(
+        exception.getMessage()
+            .contains("Cannot build plan for query: SELECT max(dim1) FROM druid.foo. " +
+                "Possible error: Max aggregation is not supported for 'STRING' type")
     );
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
@@ -1634,6 +1767,7 @@ public class SqlResourceTest extends CalciteTestBase
         ServiceEmitter emitter,
         RequestLogger requestLogger,
         QueryScheduler queryScheduler,
+        AuthConfig authConfig,
         long startMs,
         long startNs,
         SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier,
@@ -1642,7 +1776,7 @@ public class SqlResourceTest extends CalciteTestBase
         SettableSupplier<Function<Sequence<Object[]>, Sequence<Object[]>>> sequenceMapFnSupplier
     )
     {
-      super(plannerFactory, emitter, requestLogger, queryScheduler, startMs, startNs);
+      super(plannerFactory, emitter, requestLogger, queryScheduler, authConfig, startMs, startNs);
       this.validateAndAuthorizeLatchSupplier = validateAndAuthorizeLatchSupplier;
       this.planLatchSupplier = planLatchSupplier;
       this.executeLatchSupplier = executeLatchSupplier;

@@ -58,7 +58,7 @@ public abstract class BaseQuery<T> implements Query<T>
   public static final String SQL_QUERY_ID = "sqlQueryId";
   private final DataSource dataSource;
   private final boolean descending;
-  private final Map<String, Object> context;
+  private final QueryContext context;
   private final QuerySegmentSpec querySegmentSpec;
   private volatile Duration duration;
   private final Granularity granularity;
@@ -86,7 +86,7 @@ public abstract class BaseQuery<T> implements Query<T>
     Preconditions.checkNotNull(granularity, "Must specify a granularity");
 
     this.dataSource = dataSource;
-    this.context = context;
+    this.context = new QueryContext(context);
     this.querySegmentSpec = querySegmentSpec;
     this.descending = descending;
     this.granularity = granularity;
@@ -167,13 +167,19 @@ public abstract class BaseQuery<T> implements Query<T>
   @JsonProperty
   public Map<String, Object> getContext()
   {
+    return context.getMergedParams();
+  }
+
+  @Override
+  public QueryContext getQueryContext()
+  {
     return context;
   }
 
   @Override
   public <ContextType> ContextType getContextValue(String key)
   {
-    return context == null ? null : (ContextType) context.get(key);
+    return (ContextType) context.get(key);
   }
 
   @Override
@@ -186,7 +192,7 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public boolean getContextBoolean(String key, boolean defaultValue)
   {
-    return QueryContexts.parseBoolean(this, key, defaultValue);
+    return context.getAsBoolean(key, defaultValue);
   }
 
   /**
@@ -230,7 +236,7 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public String getId()
   {
-    return (String) getContextValue(QUERY_ID);
+    return context.getAsString(QUERY_ID);
   }
 
   @Override
@@ -243,20 +249,13 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public String getSubQueryId()
   {
-    return (String) getContextValue(SUB_QUERY_ID);
+    return context.getAsString(SUB_QUERY_ID);
   }
 
   @Override
   public Query<T> withId(String id)
   {
     return withOverriddenContext(ImmutableMap.of(QUERY_ID, id));
-  }
-
-  @Nullable
-  @Override
-  public String getSqlQueryId()
-  {
-    return (String) getContextValue(SQL_QUERY_ID);
   }
 
   @Override

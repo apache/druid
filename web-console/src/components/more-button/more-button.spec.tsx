@@ -22,7 +22,7 @@ import React from 'react';
 
 import { MoreButton } from './more-button';
 
-describe('more button', () => {
+describe('MoreButton', () => {
   it('matches snapshot (full)', () => {
     const moreButton = (
       <MoreButton>

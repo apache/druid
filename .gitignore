@@ -24,3 +24,4 @@ README
 **/.pmd
 **/.pmdruleset.xml
 .java-version
+integration-tests/gen-scripts/

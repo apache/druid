@@ -271,6 +271,7 @@ public class RealtimePlumber implements Plumber
           config.getAppendableIndexSpec(),
           config.getMaxRowsInMemory(),
           config.getMaxBytesInMemoryOrDefault(),
+          true,
           config.getDedupColumn()
       );
       addSink(retVal);
@@ -739,6 +740,7 @@ public class RealtimePlumber implements Plumber
           config.getAppendableIndexSpec(),
           config.getMaxRowsInMemory(),
           config.getMaxBytesInMemoryOrDefault(),
+          true,
           config.getDedupColumn(),
           hydrants
       );
