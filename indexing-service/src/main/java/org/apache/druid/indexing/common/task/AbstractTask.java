@@ -28,6 +28,9 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.joda.time.Interval;
@@ -54,6 +57,8 @@ public abstract class AbstractTask implements Task
 
   private final Map<String, Object> context;
 
+  private ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+
   protected AbstractTask(String id, String dataSource, Map<String, Object> context)
   {
     this(id, null, null, dataSource, context);
@@ -73,6 +78,7 @@ public abstract class AbstractTask implements Task
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     // Copy the given context into a new mutable map because the Druid indexing service can add some internal contexts.
     this.context = context == null ? new HashMap<>() : new HashMap<>(context);
+    IndexTaskUtils.setTaskDimensions(metricBuilder, this);
   }
 
   public static String getOrMakeId(@Nullable String id, final String typeName, String dataSource)
@@ -218,5 +224,15 @@ public abstract class AbstractTask implements Task
         Tasks.USE_MAX_MEMORY_ESTIMATES,
         Tasks.DEFAULT_USE_MAX_MEMORY_ESTIMATES
     );
+  }
+
+  protected ServiceMetricEvent.Builder getMetricBuilder()
+  {
+    return metricBuilder;
+  }
+
+  protected ServiceEventBuilder<ServiceMetricEvent> buildEvent(String subMetrics, Number value)
+  {
+    return getMetricBuilder().build(StringUtils.format("task/%s", subMetrics), value);
   }
 }

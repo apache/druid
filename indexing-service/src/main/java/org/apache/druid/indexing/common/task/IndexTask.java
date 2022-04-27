@@ -442,6 +442,16 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   public TaskStatus runTask(final TaskToolbox toolbox)
   {
     try {
+
+      toolbox.getEmitter().emit(buildEvent(
+          "batch/appendState",
+          ingestionSchema.getIOConfig().isAppendToExisting() ? 1 : 0
+      ));
+      toolbox.getEmitter().emit(buildEvent(
+          "batch/replaceState",
+          ingestionSchema.getIOConfig().isDropExisting() ? 1 : 0
+      ));
+
       log.debug("Found chat handler of class[%s]", toolbox.getChatHandlerProvider().getClass().getName());
 
       if (toolbox.getChatHandlerProvider().get(getId()).isPresent()) {
