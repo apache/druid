@@ -280,7 +280,10 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
       final Throwable e = Assert.assertThrows(
           Throwable.class,
-          () -> sqlLifecycle.validateAndAuthorize(authenticationResult)
+          () -> {
+            sqlLifecycle.validateAndAuthorize(authenticationResult);
+            sqlLifecycle.plan();
+          }
       );
 
       MatcherAssert.assertThat(e, validationErrorMatcher);

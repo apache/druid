@@ -316,12 +316,12 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                                                   .add("__time", ColumnType.LONG)
                                                   .add("floor_m1", ColumnType.FLOAT)
                                                   .add("dim1", ColumnType.STRING)
-                                                  .add("EXPR$3", ColumnType.DOUBLE)
+                                                  .add("ceil_m2", ColumnType.DOUBLE)
                                                   .build();
     testIngestionQuery()
         .sql(
             "INSERT INTO druid.dst "
-            + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) FROM foo "
+            + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
             + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1 DESC, CEIL(m2)"
         )
         .expectTarget("dst", targetRowSignature)
@@ -675,6 +675,53 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 CoreMatchers.instanceOf(SqlPlanningException.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Encountered \"as count\""))
             )
+        )
+        .verify();
+  }
+
+  @Test
+  public void testInsertWithUnnamedColumnInSelectStatement()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO t SELECT dim1, dim2 || '-lol' FROM foo PARTITIONED BY ALL")
+        .expectValidationError(
+            SqlPlanningException.class,
+            "Cannot ingest expressions that do not have an alias "
+            + "or columns with names like EXPR$[digit]."
+            + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
+            + "\"func(X) as myColumn\""
+        )
+        .verify();
+  }
+
+  @Test
+  public void testInsertWithInvalidColumnNameInIngest()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO t SELECT __time, dim1 AS EXPR$0 FROM foo PARTITIONED BY ALL")
+        .expectValidationError(
+            SqlPlanningException.class,
+            "Cannot ingest expressions that do not have an alias "
+            + "or columns with names like EXPR$[digit]."
+            + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
+            + "\"func(X) as myColumn\""
+        )
+        .verify();
+  }
+
+  @Test
+  public void testInsertWithUnnamedColumnInNestedSelectStatement()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO test "
+             + "SELECT __time, * FROM "
+             + "(SELECT __time, LOWER(dim1) FROM foo) PARTITIONED BY ALL TIME")
+        .expectValidationError(
+            SqlPlanningException.class,
+            "Cannot ingest expressions that do not have an alias "
+            + "or columns with names like EXPR$[digit]."
+            + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
+            + "\"func(X) as myColumn\""
         )
         .verify();
   }
