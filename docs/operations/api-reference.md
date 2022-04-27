@@ -518,7 +518,7 @@ will be set for them.
 * `/druid/coordinator/v1/config/compaction`
 
 Creates or updates the compaction config for a dataSource.
-See [Automatic compaction configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for configuration details.
+See [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for configuration details.
 
 
 ##### DELETE
