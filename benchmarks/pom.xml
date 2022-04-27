@@ -272,7 +272,10 @@
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
           <configuration>
-            <argLine>@{jacocoArgLine}</argLine>
+            <argLine>
+              @{jacocoArgLine}
+              ${jdk.surefire.argLine}
+            </argLine>
           </configuration>
         </plugin>
       </plugins>
