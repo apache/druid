@@ -57,8 +57,11 @@ public class LifecycleModule implements Module
    *
    * This mechanism exists to allow the {@link Lifecycle} to be the primary entry point from the injector, not to
    * auto-register things with the {@link Lifecycle}.  It is also possible to just bind things eagerly with Guice,
-   * it is not clear which is actually the best approach.  This is more explicit, but eager bindings inside of modules
-   * is less error-prone.
+   * but that is almost never the correct option.  Guice eager bindings are pre-instantiated before the object graph
+   * is materialized and injected, meaning that objects are not actually instantiated in dependency order.
+   * Registering with the LifecyceModule, on the other hand, will instantiate the objects after the normal object
+   * graph has already been instantiated, meaning that objects will be created in dependency order and this will
+   * only actually instantiate something that wasn't actually dependend upon.
    *
    * @param clazz the class to instantiate
    * @return this, for chaining.
@@ -78,8 +81,11 @@ public class LifecycleModule implements Module
    *
    * This mechanism exists to allow the {@link Lifecycle} to be the primary entry point from the injector, not to
    * auto-register things with the {@link Lifecycle}.  It is also possible to just bind things eagerly with Guice,
-   * it is not clear which is actually the best approach.  This is more explicit, but eager bindings inside of modules
-   * is less error-prone.
+   * but that is almost never the correct option.  Guice eager bindings are pre-instantiated before the object graph
+   * is materialized and injected, meaning that objects are not actually instantiated in dependency order.
+   * Registering with the LifecyceModule, on the other hand, will instantiate the objects after the normal object
+   * graph has already been instantiated, meaning that objects will be created in dependency order and this will
+   * only actually instantiate something that wasn't actually dependend upon.
    *
    * @param clazz the class to instantiate
    * @param annotation The annotation class to register with Guice
@@ -98,10 +104,13 @@ public class LifecycleModule implements Module
    * scope.  That is, they are generally eagerly loaded because the loading operation will produce some beneficial
    * side-effect even if nothing actually directly depends on the instance.
    *
-   * This mechanism exists to allow the {@link Lifecycle} to be the primary entry point
-   * from the injector, not to auto-register things with the {@link Lifecycle}.  It is
-   * also possible to just bind things eagerly with Guice, it is not clear which is actually the best approach.
-   * This is more explicit, but eager bindings inside of modules is less error-prone.
+   * This mechanism exists to allow the {@link Lifecycle} to be the primary entry point from the injector, not to
+   * auto-register things with the {@link Lifecycle}.  It is also possible to just bind things eagerly with Guice,
+   * but that is almost never the correct option.  Guice eager bindings are pre-instantiated before the object graph
+   * is materialized and injected, meaning that objects are not actually instantiated in dependency order.
+   * Registering with the LifecyceModule, on the other hand, will instantiate the objects after the normal object
+   * graph has already been instantiated, meaning that objects will be created in dependency order and this will
+   * only actually instantiate something that wasn't actually dependend upon.
    *
    * @param key The key to use in finding the DruidNode instance
    */

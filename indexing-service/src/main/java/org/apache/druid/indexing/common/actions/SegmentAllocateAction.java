@@ -80,6 +80,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   private final boolean skipSegmentLineageCheck;
   private final PartialShardSpec partialShardSpec;
   private final LockGranularity lockGranularity;
+  private final TaskLockType taskLockType;
 
   @JsonCreator
   public SegmentAllocateAction(
@@ -92,7 +93,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       @JsonProperty("skipSegmentLineageCheck") boolean skipSegmentLineageCheck,
       // nullable for backward compatibility
       @JsonProperty("shardSpecFactory") @Nullable PartialShardSpec partialShardSpec,
-      @JsonProperty("lockGranularity") @Nullable LockGranularity lockGranularity // nullable for backward compatibility
+      @JsonProperty("lockGranularity") @Nullable LockGranularity lockGranularity,
+      @JsonProperty("taskLockType") @Nullable TaskLockType taskLockType
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
@@ -107,6 +109,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
     this.skipSegmentLineageCheck = skipSegmentLineageCheck;
     this.partialShardSpec = partialShardSpec == null ? NumberedPartialShardSpec.instance() : partialShardSpec;
     this.lockGranularity = lockGranularity == null ? LockGranularity.TIME_CHUNK : lockGranularity;
+    this.taskLockType = taskLockType == null ? TaskLockType.EXCLUSIVE : taskLockType;
   }
 
   @JsonProperty
@@ -161,6 +164,12 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   public LockGranularity getLockGranularity()
   {
     return lockGranularity;
+  }
+
+  @JsonProperty
+  public TaskLockType getTaskLockType()
+  {
+    return taskLockType;
   }
 
   @Override
@@ -290,13 +299,13 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       boolean logOnFail
   )
   {
-    // This action is always used by appending tasks, which cannot change the segment granularity of existing
-    // dataSources. So, all lock requests should be segmentLock.
+    // This action is always used by appending tasks, so if it is a time_chunk lock then we allow it to be
+    // shared with other appending tasks as well
     final LockResult lockResult = toolbox.getTaskLockbox().tryLock(
         task,
         new LockRequestForNewSegment(
             lockGranularity,
-            TaskLockType.EXCLUSIVE,
+            taskLockType,
             task.getGroupId(),
             dataSource,
             tryInterval,

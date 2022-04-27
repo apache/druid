@@ -131,7 +131,7 @@ public abstract class SimpleFloatAggregatorFactory extends NullableNumericAggreg
   }
 
   @Override
-  public ColumnType getType()
+  public ColumnType getIntermediateType()
   {
     return ColumnType.FLOAT;
   }

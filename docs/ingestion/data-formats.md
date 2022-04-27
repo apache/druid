@@ -74,8 +74,8 @@ parsing data is less efficient than writing a native Java parser or using an ext
 
 ## Input format
 
-> The Input Format is a new way to specify the data format of your input data which was introduced in 0.17.0.
-Unfortunately, the Input Format doesn't support all data formats or ingestion methods supported by Druid yet.
+You can use the `inputFormat` field to specify the data format for your input data.
+> `inputFormat` doesn't support all data formats or ingestion methods supported by Druid yet.
 Especially if you want to use the Hadoop ingestion, you still need to use the [Parser](#parser).
 If your data is formatted in some format not listed in this section, please consider using the Parser instead.
 
@@ -89,7 +89,7 @@ Configure the JSON `inputFormat` to load JSON data as follows:
 |-------|------|-------------|----------|
 | type | String | Set value to `json`. | yes |
 | flattenSpec | JSON Object | Specifies flattening configuration for nested JSON data. See [`flattenSpec`](#flattenspec) for more info. | no |
-| featureSpec | JSON Object | [JSON parser features](https://github.com/FasterXML/jackson-core/wiki/JsonParser-Features) supported by Jackson library. Those features will be applied when parsing the input JSON data. | no |
+| featureSpec | JSON Object | [JSON parser features](https://github.com/FasterXML/jackson-core/wiki/JsonParser-Features) supported by Jackson, a JSON processor for Java. The features control parsing of the input JSON data. To enable a feature, map the feature name to a Boolean value of "true". For example: `"featureSpec": {"ALLOW_SINGLE_QUOTES": true, "ALLOW_UNQUOTED_FIELD_NAMES": true}` | no |
 
 For example:
 ```json
@@ -155,7 +155,7 @@ Be sure to change the `delimiter` to the appropriate delimiter for your data. Li
 
 Configure the Kafka `inputFormat` to load complete kafka records including header, key, and value. 
 
-> That Kafka inputFormat is currently designated as experimental.
+> That Kafka `inputFormat` is currently designated as experimental.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
@@ -488,6 +488,12 @@ Multiple Instances:
 ...
 ```
 
+###### Parse exceptions
+
+The following errors when reading records will be considered parse exceptions, which can be limited and logged with ingestion task configurations such as `maxParseExceptions` and `maxSavedParseExceptions`:
+- Failure to retrieve a schema due to misconfiguration or corrupt records (invalid schema IDs)
+- Failure to decode an Avro message
+
 ### Avro OCF
 
 To load the Avro OCF input format, load the Druid Avro extension ([`druid-avro-extensions`](../development/extensions-core/avro.md)).
@@ -578,7 +584,7 @@ For example:
 
 ### FlattenSpec
 
-The `flattenSpec` bridges the gap between potentially nested input data (such as JSON, Avro, etc) and Druid's flat data model. It is an object within the `inputFormat` object.
+The `flattenSpec` object bridges the gap between potentially nested input data, such as JSON or Avro, and Druid's flat data model. It is an object within the `inputFormat` object.
 
 Configure your `flattenSpec` as follows:
 
@@ -598,11 +604,9 @@ For example:
   ]
 }
 ```
-After Druid reads the input data records, it applies the flattenSpec before applying any other specs such as [`timestampSpec`](./ingestion-spec.md#timestampspec), [`transformSpec`](./ingestion-spec.md#transformspec),
-> [`dimensionsSpec`](./ingestion-spec.md#dimensionsspec), or [`metricsSpec`](./ingestion-spec.md#metricsspec). Keep this in mind when writing your ingestion spec.
+After Druid reads the input data records, it applies the flattenSpec before applying any other specs such as [`timestampSpec`](./ingestion-spec.md#timestampspec), [`transformSpec`](./ingestion-spec.md#transformspec), [`dimensionsSpec`](./ingestion-spec.md#dimensionsspec), or [`metricsSpec`](./ingestion-spec.md#metricsspec).  This makes it possible to extract timestamps from flattened data, for example, and to refer to flattened data in transformations, in your dimension list, and when generating metrics.
 
-Flattening is only supported for [data formats](data-formats.md) that support nesting, including `avro`, `json`, `orc`,
-and `parquet`.
+Flattening is only supported for [data formats](data-formats.md) that support nesting, including `avro`, `json`, `orc`, and `parquet`.
 
 #### Field flattening specifications
 
@@ -622,6 +626,20 @@ Each entry in the `fields` list can have the following components:
 * If `useFieldDiscovery` is enabled, any discovered field with the same name as one already defined in the `fields` list will be skipped, rather than added twice.
 * [http://jsonpath.herokuapp.com/](http://jsonpath.herokuapp.com/) is useful for testing `path`-type expressions.
 * jackson-jq supports a subset of the full [jq](https://stedolan.github.io/jq/) syntax.  Please refer to the [jackson-jq documentation](https://github.com/eiiches/jackson-jq) for details.
+* [JsonPath](https://github.com/jayway/JsonPath) supports a bunch of functions, but not all of these functions are supported by Druid now. Following matrix shows the current supported JsonPath functions and corresponding data formats. Please also note the output data type of these functions.
+  
+  | Function   | Description                                                         | Output type | json | orc | avro | parquet |
+  | :----------| :------------------------------------------------------------------ |:----------- |:-----|:----|:-----|:-----|
+  | min()      | Provides the min value of an array of numbers                       | Double      | &#10003;  |  &#10003;   |   &#10003;   |  &#10003;   |
+  | max()      | Provides the max value of an array of numbers                       | Double      | &#10003;  |  &#10003;   |   &#10003;   |  &#10003;   |
+  | avg()      | Provides the average value of an array of numbers                   | Double      | &#10003;  |  &#10003;   |   &#10003;   |  &#10003;   |
+  | stddev()   | Provides the standard deviation value of an array of numbers        | Double      | &#10003;  |  &#10003;   |   &#10003;   |  &#10003;   |
+  | length()   | Provides the length of an array                                     | Integer     | &#10003;  |  &#10003;   |   &#10003;   |  &#10003;   |
+  | sum()      | Provides the sum value of an array of numbers                       | Double      | &#10003;  |  &#10003;   |   &#10003;   |  &#10003;   |
+  | concat(X)  | Provides a concatenated version of the path output with a new item  | like input  | &#10003;  |  &#10007;   |   &#10007;   | &#10007;   |
+  | append(X)  | add an item to the json path output array                           | like input  | &#10003;  |  &#10007;   |   &#10007;   | &#10007;   |
+  | keys()     | Provides the property keys (An alternative for terminal tilde ~)    | Set<E>      | &#10007;  |  &#10007;   |   &#10007;   | &#10007;   |
+
 
 ## Parser
 

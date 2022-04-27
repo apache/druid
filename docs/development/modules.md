@@ -344,17 +344,19 @@ The duties will be grouped into multiple groups as per the elements in list `dru
 All duties in the same group will have the same run period configured by `druid.coordinator.<GROUP_NAME>.period`.
 Currently, there is a single thread running the duties sequentially for each group. 
 
-For example, see `KillSupervisorsCustomDuty` for a custom coordinator duty implementation and `common-custom-coordinator-duties`
-integration test group which loads `KillSupervisorsCustomDuty` using the configs set in `integration-tests/docker/environment-configs/common-custom-coordinator-duties`.
-The relevant configs in `integration-tests/docker/environment-configs/common-custom-coordinator-duties` are as follows:
-(The configs create a custom coordinator duty group called `cleanupMetadata` which runs a custom coordinator duty called `killSupervisors` every 10 seconds.
-The custom coordinator duty `killSupervisors` also has a config called `retainDuration` which is set to 0 minute)
+For example, see `KillSupervisorsCustomDuty` for a custom coordinator duty implementation and the `custom-coordinator-duties`
+integration test group which loads `KillSupervisorsCustomDuty` using the configs set in `integration-tests/docker/environment-configs/test-groups/custom-coordinator-duties`.
+This config file adds the configs below to enable a custom coordinator duty.
+
 ```
 druid.coordinator.dutyGroups=["cleanupMetadata"]
 druid.coordinator.cleanupMetadata.duties=["killSupervisors"]
 druid.coordinator.cleanupMetadata.duty.killSupervisors.retainDuration=PT0M
 druid.coordinator.cleanupMetadata.period=PT10S
 ```
+
+These configurations create a custom coordinator duty group called `cleanupMetadata` which runs a custom coordinator duty called `killSupervisors` every 10 seconds.
+The custom coordinator duty `killSupervisors` also has a config called `retainDuration` which is set to 0 minute.
 
 ### Routing data through a HTTP proxy for your extension
 

@@ -321,13 +321,13 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
    * actual type is {@link HyperLogLogCollector}
    */
   @Override
-  public ColumnType getType()
+  public ColumnType getIntermediateType()
   {
     return TYPE;
   }
 
   @Override
-  public ColumnType getFinalizedType()
+  public ColumnType getResultType()
   {
     return round ? ColumnType.LONG : ColumnType.DOUBLE;
   }

@@ -53,7 +53,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -154,8 +153,9 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
 
       final String topic = getKafkaTopic();
       LOG.debug("About to listen to topic [%s] with group.id [%s]", topic, factoryId);
+      // this creates a ConcurrentMap
       cacheHandler = cacheManager.createCache();
-      final ConcurrentMap<String, String> map = cacheHandler.getCache();
+      final Map<String, String> map = cacheHandler.getCache();
       mapRef.set(map);
 
 

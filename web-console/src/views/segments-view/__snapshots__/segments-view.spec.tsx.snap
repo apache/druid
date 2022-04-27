@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`segments-view matches snapshot 1`] = `
+exports[`SegmentsView matches snapshot 1`] = `
 <Fragment>
   <div
     className="segments-view app-view"
@@ -15,32 +15,34 @@ exports[`segments-view matches snapshot 1`] = `
       <Component>
         Group by
       </Component>
-      <Blueprint3.ButtonGroup>
-        <Blueprint3.Button
+      <Blueprint4.ButtonGroup>
+        <Blueprint4.Button
           active={true}
           onClick={[Function]}
         >
           None
-        </Blueprint3.Button>
-        <Blueprint3.Button
+        </Blueprint4.Button>
+        <Blueprint4.Button
           active={false}
           onClick={[Function]}
         >
           Interval
-        </Blueprint3.Button>
-      </Blueprint3.ButtonGroup>
+        </Blueprint4.Button>
+      </Blueprint4.ButtonGroup>
       <Memo(MoreButton)>
-        <Blueprint3.MenuItem
+        <Blueprint4.MenuItem
+          active={false}
           disabled={true}
           icon="application"
           multiline={false}
           onClick={[Function]}
           popoverProps={Object {}}
+          selected={false}
           shouldDismissPopover={true}
           text="View SQL query for table"
         />
       </Memo(MoreButton)>
-      <Blueprint3.Switch
+      <Blueprint4.Switch
         checked={false}
         disabled={false}
         label="Show segment timeline"
@@ -55,10 +57,12 @@ exports[`segments-view matches snapshot 1`] = `
             "End",
             "Version",
             "Time span",
-            "Partitioning",
+            "Shard type",
+            "Shard spec",
             "Partition",
             "Size",
             "Num rows",
+            "Avg. row size",
             "Replicas",
             "Is published",
             "Is realtime",
@@ -72,7 +76,6 @@ exports[`segments-view matches snapshot 1`] = `
         tableColumnsHidden={
           Array [
             "Time span",
-            "Partitioning",
           ]
         }
       />
@@ -198,12 +201,22 @@ exports[`segments-view matches snapshot 1`] = `
           },
           Object {
             "Cell": [Function],
-            "Header": "Partitioning",
-            "accessor": "partitioning",
-            "filterable": true,
-            "show": false,
-            "sortable": true,
+            "Header": "Shard type",
+            "accessor": [Function],
+            "id": "shard_type",
+            "show": true,
+            "sortable": false,
             "width": 100,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": "Shard spec",
+            "accessor": "shard_spec",
+            "filterable": false,
+            "id": "shard_spec",
+            "show": true,
+            "sortable": false,
+            "width": 400,
           },
           Object {
             "Header": "Partition",
@@ -229,6 +242,18 @@ exports[`segments-view matches snapshot 1`] = `
             "defaultSortDesc": true,
             "filterable": false,
             "show": true,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": <React.Fragment>
+              Avg. row size
+              <br />
+              (bytes)
+            </React.Fragment>,
+            "accessor": "avg_row_size",
+            "filterable": false,
+            "show": true,
+            "width": 100,
           },
           Object {
             "Header": "Replicas",
@@ -369,7 +394,7 @@ exports[`segments-view matches snapshot 1`] = `
       rowsText="rows"
       showPageJump={false}
       showPageSizeOptions={true}
-      showPagination={false}
+      showPagination={true}
       showPaginationBottom={true}
       showPaginationTop={false}
       sortable={true}

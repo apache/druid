@@ -115,8 +115,7 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new IPv4AddressMatchExpr(newArg, subnetInfo));
+        return shuttle.visit(apply(shuttle.visitAll(args)));
       }
 
       @Nullable

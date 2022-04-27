@@ -26,6 +26,7 @@ import java.util.function.Function;
 
 /**
  */
+@SuppressWarnings("serial")
 public class ISE extends IllegalStateException implements SanitizableException
 {
   public ISE(String formatText, Object... arguments)

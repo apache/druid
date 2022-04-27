@@ -167,6 +167,14 @@ export function typeIs<T extends { type?: S }, S = string>(...options: S[]): (x:
   };
 }
 
+export function without<T>(xs: readonly T[], x: T | undefined): T[] {
+  return xs.filter(i => i !== x);
+}
+
+export function change<T>(xs: readonly T[], from: T, to: T): T[] {
+  return xs.map(x => (x === from ? to : x));
+}
+
 // ----------------------------
 
 export function countBy<T>(
@@ -246,6 +254,10 @@ export function formatInteger(n: NumberLike): string {
   return numeral(n).format('0,0');
 }
 
+export function formatNumber(n: NumberLike): string {
+  return n.toLocaleString('en-US', { maximumFractionDigits: 20 });
+}
+
 export function formatBytes(n: NumberLike): string {
   return numeral(n).format('0.00 b');
 }
@@ -262,6 +274,10 @@ export function formatPercent(n: NumberLike): string {
   return (Number(n) * 100).toFixed(2) + '%';
 }
 
+export function formatPercentClapped(n: NumberLike): string {
+  return formatPercent(Math.min(Math.max(Number(n), 0), 1));
+}
+
 export function formatMillions(n: NumberLike): string {
   const s = (Number(n) / 1e6).toFixed(3);
   if (s === '0.000') return String(Math.round(Number(n)));
@@ -272,12 +288,41 @@ function pad2(str: string | number): string {
   return ('00' + str).substr(-2);
 }
 
+function pad3(str: string | number): string {
+  return ('000' + str).substr(-3);
+}
+
 export function formatDuration(ms: NumberLike): string {
   const n = Number(ms);
   const timeInHours = Math.floor(n / 3600000);
   const timeInMin = Math.floor(n / 60000) % 60;
   const timeInSec = Math.floor(n / 1000) % 60;
   return timeInHours + ':' + pad2(timeInMin) + ':' + pad2(timeInSec);
+}
+
+export function formatDurationWithMs(ms: NumberLike): string {
+  const n = Number(ms);
+  const timeInHours = Math.floor(n / 3600000);
+  const timeInMin = Math.floor(n / 60000) % 60;
+  const timeInSec = Math.floor(n / 1000) % 60;
+  return (
+    timeInHours + ':' + pad2(timeInMin) + ':' + pad2(timeInSec) + '.' + pad3(Math.floor(n) % 1000)
+  );
+}
+
+export function formatDurationHybrid(ms: NumberLike): string {
+  const n = Number(ms);
+  if (n < 600000) {
+    // anything that looks like 1:23.45 (max 9:59.99)
+    const timeInMin = Math.floor(n / 60000);
+    const timeInSec = Math.floor(n / 1000) % 60;
+    const timeInMs = Math.floor(n) % 1000;
+    return `${timeInMin ? `${timeInMin}:` : ''}${timeInMin ? pad2(timeInSec) : timeInSec}.${pad3(
+      timeInMs,
+    ).substring(0, 2)}s`;
+  } else {
+    return formatDuration(n);
+  }
 }
 
 export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string): string {
@@ -399,6 +444,28 @@ export function moveElement<T>(items: readonly T[], fromIndex: number, toIndex: 
   }
 }
 
+export function moveToIndex<T>(
+  items: readonly T[],
+  itemToIndex: (item: T, i: number) => number,
+): T[] {
+  const frontItems: { item: T; index: number }[] = [];
+  const otherItems: T[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const index = itemToIndex(item, i);
+    if (index >= 0) {
+      frontItems.push({ item, index });
+    } else {
+      otherItems.push(item);
+    }
+  }
+
+  return frontItems
+    .sort((a, b) => a.index - b.index)
+    .map(d => d.item)
+    .concat(otherItems);
+}
+
 export function stringifyValue(value: unknown): string {
   switch (typeof value) {
     case 'object':
@@ -413,4 +480,54 @@ export function stringifyValue(value: unknown): string {
 
 export function isInBackground(): boolean {
   return document.visibilityState === 'hidden';
+}
+
+export function twoLines(line1: string, line2: string) {
+  return (
+    <>
+      {line1}
+      <br />
+      {line2}
+    </>
+  );
+}
+
+export function parseCsvLine(line: string): string[] {
+  line = ',' + line.replace(/\r?\n?$/, ''); // remove trailing new lines
+  const parts: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = /^,(?:"([^"]*(?:""[^"]*)*)"|([^,\r\n]*))/m.exec(line))) {
+    parts.push(typeof m[1] === 'string' ? m[1].replace(/""/g, '"') : m[2]);
+    line = line.substr(m[0].length);
+  }
+  return parts;
+}
+
+// From: https://en.wikipedia.org/wiki/Jenkins_hash_function
+export function hashJoaat(str: string): number {
+  let hash = 0;
+  const n = str.length;
+  for (let i = 0; i < n; i++) {
+    hash += str.charCodeAt(i);
+    // eslint-disable-next-line no-bitwise
+    hash += hash << 10;
+    // eslint-disable-next-line no-bitwise
+    hash ^= hash >> 6;
+  }
+  // eslint-disable-next-line no-bitwise
+  hash += hash << 3;
+  // eslint-disable-next-line no-bitwise
+  hash ^= hash >> 11;
+  // eslint-disable-next-line no-bitwise
+  hash += hash << 15;
+  // eslint-disable-next-line no-bitwise
+  return (hash & 4294967295) >>> 0;
+}
+
+export function objectHash(obj: any): string {
+  return hashJoaat(JSONBig.stringify(obj)).toString(16).padStart(8);
+}
+
+export function hasPopoverOpen(): boolean {
+  return Boolean(document.querySelector('.bp4-portal .bp4-overlay .bp4-popover2'));
 }

@@ -218,6 +218,42 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       100
   );
 
+  private final DataSegment hugeTimeRangeSegment1 = new DataSegment(
+      "hugeTimeRangeDataSource",
+      Intervals.of("-9994-01-02T00Z/1994-01-03T00Z"),
+      "zversion",
+      ImmutableMap.of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new NumberedShardSpec(0, 1),
+      9,
+      100
+  );
+
+  private final DataSegment hugeTimeRangeSegment2 = new DataSegment(
+      "hugeTimeRangeDataSource",
+      Intervals.of("2994-01-02T00Z/2994-01-03T00Z"),
+      "zversion",
+      ImmutableMap.of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new NumberedShardSpec(0, 1),
+      9,
+      100
+  );
+
+  private final DataSegment hugeTimeRangeSegment3 = new DataSegment(
+      "hugeTimeRangeDataSource",
+      Intervals.of("29940-01-02T00Z/29940-01-03T00Z"),
+      "zversion",
+      ImmutableMap.of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new NumberedShardSpec(0, 1),
+      9,
+      100
+  );
+
   private final Set<DataSegment> SEGMENTS = ImmutableSet.of(defaultSegment, defaultSegment2);
   private final AtomicLong metadataUpdateCounter = new AtomicLong();
   private final AtomicLong segmentTableDropUpdateCounter = new AtomicLong();
@@ -258,7 +294,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       @Override
       protected DataStoreMetadataUpdateResult dropSegmentsWithHandle(
           final Handle handle,
-          final Set<DataSegment> segmentsToDrop,
+          final Collection<DataSegment> segmentsToDrop,
           final String dataSource
       )
       {
@@ -748,7 +784,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null
     );
-    Assert.assertEquals(SegmentPublishResult.fail("org.apache.druid.metadata.RetryTransactionException: Aborting transaction!"), result1);
+    Assert.assertEquals(SegmentPublishResult.fail(
+        "org.apache.druid.metadata.RetryTransactionException: Aborting transaction!"), result1);
 
     Assert.assertEquals(MAX_SQL_MEATADATA_RETRY_FOR_TEST, segmentTableDropUpdateCounter.get());
 
@@ -1097,6 +1134,75 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
+  public void testUsedHugeTimeRangeEternityFilter() throws IOException
+  {
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(
+            hugeTimeRangeSegment1,
+            hugeTimeRangeSegment2,
+            hugeTimeRangeSegment3
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(hugeTimeRangeSegment1, hugeTimeRangeSegment2, hugeTimeRangeSegment3),
+        ImmutableSet.copyOf(
+            coordinator.retrieveUsedSegmentsForIntervals(
+                hugeTimeRangeSegment1.getDataSource(),
+                Intervals.ONLY_ETERNITY,
+                Segments.ONLY_VISIBLE
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testUsedHugeTimeRangeTrickyFilter1() throws IOException
+  {
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(
+            hugeTimeRangeSegment1,
+            hugeTimeRangeSegment2,
+            hugeTimeRangeSegment3
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(hugeTimeRangeSegment2),
+        ImmutableSet.copyOf(
+            coordinator.retrieveUsedSegmentsForInterval(
+                hugeTimeRangeSegment1.getDataSource(),
+                Intervals.of("2900/10000"),
+                Segments.ONLY_VISIBLE
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testUsedHugeTimeRangeTrickyFilter2() throws IOException
+  {
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(
+            hugeTimeRangeSegment1,
+            hugeTimeRangeSegment2,
+            hugeTimeRangeSegment3
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(hugeTimeRangeSegment2),
+        ImmutableSet.copyOf(
+            coordinator.retrieveUsedSegmentsForInterval(
+                hugeTimeRangeSegment1.getDataSource(),
+                Intervals.of("2993/2995"),
+                Segments.ONLY_VISIBLE
+            )
+        )
+    );
+  }
+
+  @Test
   public void testDeleteDataSourceMetadata() throws IOException
   {
     coordinator.announceHistoricalSegments(
@@ -1125,28 +1231,28 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     // check segments Published
     Assert.assertEquals(
-            SEGMENTS,
-            ImmutableSet.copyOf(
-                    coordinator.retrieveUsedSegmentsForInterval(
-                            defaultSegment.getDataSource(),
-                            defaultSegment.getInterval(),
-                            Segments.ONLY_VISIBLE
-                    )
+        SEGMENTS,
+        ImmutableSet.copyOf(
+            coordinator.retrieveUsedSegmentsForInterval(
+                defaultSegment.getDataSource(),
+                defaultSegment.getInterval(),
+                Segments.ONLY_VISIBLE
             )
+        )
     );
     // remove segments in MetaDataStorage
     coordinator.deleteSegments(SEGMENTS);
 
     // check segments removed
     Assert.assertEquals(
-            0,
-            ImmutableSet.copyOf(
-                    coordinator.retrieveUsedSegmentsForInterval(
-                            defaultSegment.getDataSource(),
-                            defaultSegment.getInterval(),
-                            Segments.ONLY_VISIBLE
-                    )
-            ).size()
+        0,
+        ImmutableSet.copyOf(
+            coordinator.retrieveUsedSegmentsForInterval(
+                defaultSegment.getDataSource(),
+                defaultSegment.getInterval(),
+                Segments.ONLY_VISIBLE
+            )
+        ).size()
     );
   }
 
@@ -1648,7 +1754,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       prevSegmentId = identifier.toString();
     }
 
-    final int numDeleted = coordinator.deletePendingSegmentsCreatedInInterval(dataSource, new Interval(begin, secondBegin));
+    final int numDeleted = coordinator.deletePendingSegmentsCreatedInInterval(
+        dataSource,
+        new Interval(begin, secondBegin)
+    );
     Assert.assertEquals(10, numDeleted);
   }
 
@@ -1904,7 +2013,11 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       Assert.assertEquals(defaultSegment.getId().toString(), usedSegments.get(0));
 
       // Try drop segment
-      IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult result = coordinator.dropSegmentsWithHandle(handle, ImmutableSet.of(defaultSegment), defaultSegment.getDataSource());
+      IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult result = coordinator.dropSegmentsWithHandle(
+          handle,
+          ImmutableSet.of(defaultSegment),
+          defaultSegment.getDataSource()
+      );
 
       Assert.assertEquals(IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult.SUCCESS, result);
       usedSegments = retrieveUsedSegmentIds();
@@ -1917,7 +2030,11 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     try (Handle handle = derbyConnector.getDBI().open()) {
       // Try drop segment
-      IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult result = coordinator.dropSegmentsWithHandle(handle, ImmutableSet.of(defaultSegment), defaultSegment.getDataSource());
+      IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult result = coordinator.dropSegmentsWithHandle(
+          handle,
+          ImmutableSet.of(defaultSegment),
+          defaultSegment.getDataSource()
+      );
       Assert.assertEquals(IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult.TRY_AGAIN, result);
     }
   }
@@ -1938,7 +2055,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
 
     // Try delete. Datasource should not be deleted as it is in excluded set
-    int deletedCount = coordinator.removeDataSourceMetadataOlderThan(System.currentTimeMillis(), ImmutableSet.of("fooDataSource"));
+    int deletedCount = coordinator.removeDataSourceMetadataOlderThan(
+        System.currentTimeMillis(),
+        ImmutableSet.of("fooDataSource")
+    );
 
     // Datasource should not be deleted
     Assert.assertEquals(
@@ -1974,7 +2094,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testRemoveDataSourceMetadataOlderThanDatasourceNotActiveButNotOlderThanTimeShouldNotBeDeleted() throws Exception
+  public void testRemoveDataSourceMetadataOlderThanDatasourceNotActiveButNotOlderThanTimeShouldNotBeDeleted()
+      throws Exception
   {
     coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
@@ -1990,7 +2111,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     // Do delete. Datasource metadata should not be deleted. Datasource is not active but it was created just now so it's
     // created timestamp will be later than the timestamp 2012-01-01T00:00:00Z
-    int deletedCount = coordinator.removeDataSourceMetadataOlderThan(DateTimes.of("2012-01-01T00:00:00Z").getMillis(), ImmutableSet.of());
+    int deletedCount = coordinator.removeDataSourceMetadataOlderThan(
+        DateTimes.of("2012-01-01T00:00:00Z").getMillis(),
+        ImmutableSet.of()
+    );
 
     // Datasource should not be deleted
     Assert.assertEquals(
@@ -2001,7 +2125,39 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testMarkSegmentsAsUnusedWithinInterval() throws IOException
+  public void testMarkSegmentsAsUnusedWithinIntervalOneYear() throws IOException
+  {
+    coordinator.announceHistoricalSegments(ImmutableSet.of(existingSegment1, existingSegment2));
+
+    // interval covers existingSegment1 and partially overlaps existingSegment2,
+    // only existingSegment1 will be dropped
+    coordinator.markSegmentsAsUnusedWithinInterval(
+        existingSegment1.getDataSource(),
+        Intervals.of("1994-01-01/1994-01-02T12Z")
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(existingSegment1),
+        ImmutableSet.copyOf(
+            coordinator.retrieveUnusedSegmentsForInterval(
+                existingSegment1.getDataSource(),
+                existingSegment1.getInterval().withEnd(existingSegment1.getInterval().getEnd().plus(1))
+            )
+        )
+    );
+    Assert.assertEquals(
+        ImmutableSet.of(),
+        ImmutableSet.copyOf(
+            coordinator.retrieveUnusedSegmentsForInterval(
+                existingSegment2.getDataSource(),
+                existingSegment2.getInterval().withEnd(existingSegment2.getInterval().getEnd().plusYears(1))
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testMarkSegmentsAsUnusedWithinIntervalTwoYears() throws IOException
   {
     coordinator.announceHistoricalSegments(ImmutableSet.of(existingSegment1, existingSegment2));
 

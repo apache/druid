@@ -33,7 +33,6 @@ import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.druid.data.input.AvroStreamInputRowParserTest;
 import org.apache.druid.data.input.SomeAvroDatum;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.utils.DynamicConfigProviderUtils;
 import org.junit.Assert;
@@ -148,7 +147,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
   }
 
-  @Test(expected = RE.class)
+  @Test(expected = ParseException.class)
   public void testParseWrongSchemaType() throws Exception
   {
     // Given
@@ -159,7 +158,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
   }
 
-  @Test(expected = RE.class)
+  @Test(expected = ParseException.class)
   public void testParseWrongId() throws Exception
   {
     // Given

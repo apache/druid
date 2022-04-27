@@ -162,29 +162,25 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
 
     final Map<String, ColumnAnalysis> columns = analysis.getColumns();
     Assert.assertEquals(
-        TestIndex.COLUMNS.length + 3 - 1,
+        TestIndex.COLUMNS.length + 3,
         columns.size()
-    ); // All columns including time and excluding empty/null column
+    ); // All columns including time
 
     for (DimensionSchema schema : TestIndex.DIMENSION_SCHEMAS) {
       final String dimension = schema.getName();
       final ColumnAnalysis columnAnalysis = columns.get(dimension);
-      if ("null_column".equals(dimension)) {
-        Assert.assertNull(columnAnalysis);
-      } else {
-        final boolean isString = schema.getColumnType().is(ValueType.STRING);
-        Assert.assertEquals(dimension, schema.getColumnType().toString(), columnAnalysis.getType());
-        Assert.assertEquals(dimension, 0, columnAnalysis.getSize());
+      final boolean isString = schema.getColumnType().is(ValueType.STRING);
+      Assert.assertEquals(dimension, schema.getColumnType().toString(), columnAnalysis.getType());
+      Assert.assertEquals(dimension, 0, columnAnalysis.getSize());
 
-        if (isString) {
-          if (analyses == null) {
-            Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
-          } else {
-            Assert.assertEquals(dimension, 0, columnAnalysis.getCardinality().longValue());
-          }
+      if (isString) {
+        if (analyses == null) {
+          Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
         } else {
-          Assert.assertNull(dimension, columnAnalysis.getCardinality());
+          Assert.assertEquals(dimension, 0, columnAnalysis.getCardinality().longValue());
         }
+      } else {
+        Assert.assertNull(dimension, columnAnalysis.getCardinality());
       }
     }
 
@@ -445,7 +441,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public ColumnType getType()
+    public ColumnType getIntermediateType()
     {
       return new ColumnType(ValueType.COMPLEX, TYPE, null);
     }
@@ -463,9 +459,9 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public ColumnType getFinalizedType()
+    public ColumnType getResultType()
     {
-      return getType();
+      return getIntermediateType();
     }
   }
 

@@ -74,6 +74,7 @@ public class ThriftInputRowParser implements InputRowParser<Object>
     this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
   }
 
+  @SuppressWarnings("ReturnValueIgnored")
   public Class<TBase> getThriftClass()
       throws IOException, ClassNotFoundException, IllegalAccessException, InstantiationException
   {

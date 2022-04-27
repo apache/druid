@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`lookups view matches snapshot 1`] = `
+exports[`LookupsView matches snapshot 1`] = `
 <div
   className="lookups-view app-view"
 >
@@ -11,7 +11,7 @@ exports[`lookups view matches snapshot 1`] = `
       localStorageKey="lookups-refresh-rate"
       onRefresh={[Function]}
     />
-    <Blueprint3.Button
+    <Blueprint4.Button
       icon="plus"
       onClick={[Function]}
       text="Add lookup"

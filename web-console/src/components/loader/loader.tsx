@@ -16,11 +16,13 @@
  * limitations under the License.
  */
 
+import classNames from 'classnames';
 import React from 'react';
 
 import './loader.scss';
 
 export interface LoaderProps {
+  className?: string;
   loading?: boolean; // This is needed so that this component can be used as a LoadingComponent in react table
   loadingText?: string;
   cancelText?: string;
@@ -28,11 +30,11 @@ export interface LoaderProps {
 }
 
 export const Loader = React.memo(function Loader(props: LoaderProps) {
-  const { loadingText, loading, cancelText, onCancel } = props;
+  const { className, loadingText, loading, cancelText, onCancel } = props;
   if (loading === false) return null;
 
   return (
-    <div className="loader">
+    <div className={classNames('loader', className)}>
       <div className="loader-logo">
         <svg viewBox="0 0 100 100">
           <path

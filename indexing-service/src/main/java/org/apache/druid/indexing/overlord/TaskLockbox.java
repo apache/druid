@@ -579,9 +579,8 @@ public class TaskLockbox
           .stream()
           .allMatch(interval -> {
             final List<TaskLockPosse> lockPosses = getOnlyTaskLockPosseContainingInterval(task, interval);
-            // Tasks cannot enter the critical section with a shared lock
-            return lockPosses.stream().map(TaskLockPosse::getTaskLock).allMatch(
-                lock -> !lock.isRevoked() && lock.getType() != TaskLockType.SHARED
+            return lockPosses.stream().map(TaskLockPosse::getTaskLock).noneMatch(
+                lock -> lock.isRevoked()
             );
           });
     }
@@ -1134,8 +1133,10 @@ public class TaskLockbox
       if (taskLock.getType() == request.getType() && taskLock.getGranularity() == request.getGranularity()) {
         switch (taskLock.getType()) {
           case SHARED:
-            // All shared lock is not reusable. Instead, a new lock posse is created for each lock request.
-            // See createOrFindLockPosse().
+            if (request instanceof TimeChunkLockRequest) {
+              return taskLock.getInterval().contains(request.getInterval())
+                     && taskLock.getGroupId().equals(request.getGroupId());
+            }
             return false;
           case EXCLUSIVE:
             if (request instanceof TimeChunkLockRequest) {

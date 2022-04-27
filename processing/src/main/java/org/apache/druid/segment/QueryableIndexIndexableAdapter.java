@@ -198,7 +198,6 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     private final TimeAndDimsPointer markedRowPointer;
 
     boolean first = true;
-    int memoizedOffset = -1;
 
     RowIteratorImpl()
     {
@@ -334,20 +333,6 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
         markedMetricSelectors[i].setValueFrom(rowMetricSelectors[i]);
       }
     }
-
-    /**
-     * Used in {@link RowFilteringIndexAdapter}
-     */
-    void memoizeOffset()
-    {
-      memoizedOffset = offset.getOffset();
-    }
-
-    void resetToMemoizedOffset()
-    {
-      offset.setCurrentOffset(memoizedOffset);
-      setRowPointerValues();
-    }
   }
 
   @Override
@@ -412,7 +397,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       return BitmapValues.EMPTY;
     }
 
-    return new ImmutableBitmapValues(bitmaps.getBitmap(bitmaps.getIndex(value)));
+    return new ImmutableBitmapValues(bitmaps.getBitmapForValue(value));
   }
 
   @Override

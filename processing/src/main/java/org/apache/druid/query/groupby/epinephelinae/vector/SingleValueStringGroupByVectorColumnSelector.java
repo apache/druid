@@ -40,7 +40,7 @@ public class SingleValueStringGroupByVectorColumnSelector implements GroupByVect
   }
 
   @Override
-  public void writeKeys(
+  public int writeKeys(
       final WritableMemory keySpace,
       final int keySize,
       final int keyOffset,
@@ -57,6 +57,8 @@ public class SingleValueStringGroupByVectorColumnSelector implements GroupByVect
         keySpace.putInt(j, vector[i]);
       }
     }
+
+    return 0;
   }
 
   @Override
@@ -69,5 +71,11 @@ public class SingleValueStringGroupByVectorColumnSelector implements GroupByVect
   {
     final int id = keyMemory.getInt(keyOffset);
     resultRow.set(resultRowPosition, selector.lookupName(id));
+  }
+
+  @Override
+  public void reset()
+  {
+    // Nothing to do.
   }
 }

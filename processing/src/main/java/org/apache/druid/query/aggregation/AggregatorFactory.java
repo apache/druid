@@ -27,6 +27,7 @@ import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -66,6 +67,27 @@ public abstract class AggregatorFactory implements Cacheable
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
     throw new UOE("Aggregator[%s] cannot vectorize", getClass().getName());
+  }
+
+  /**
+   * Creates an {@link Aggregator} based on the provided column selector factory.
+   * The returned value is a holder object which contains both the aggregator
+   * and its initial size in bytes. The callers can then invoke
+   * {@link Aggregator#aggregateWithSize()} to perform aggregation and get back
+   * the incremental memory required in each aggregate call. Combined with the
+   * initial size, this gives the total on-heap memory required by the aggregator.
+   * <p>
+   * This method must include JVM object overheads in the estimated size and must
+   * ensure not to underestimate required memory as that might lead to OOM errors.
+   * <p>
+   * This flow does not require invoking {@link #guessAggregatorHeapFootprint(long)}
+   * which tends to over-estimate the required memory.
+   *
+   * @return AggregatorAndSize which contains the actual aggregator and its initial size.
+   */
+  public AggregatorAndSize factorizeWithSize(ColumnSelectorFactory metricFactory)
+  {
+    return new AggregatorAndSize(factorize(metricFactory), getMaxIntermediateSize());
   }
 
   /**
@@ -213,22 +235,73 @@ public abstract class AggregatorFactory implements Cacheable
   public abstract List<String> requiredFields();
 
   /**
-   * Get the "intermediate" {@link ValueType} for this aggregator. This is the same as the type returned by
+   * Get the "intermediate" {@link ColumnType} for this aggregator. This is the same as the type returned by
    * {@link #deserialize} and the type accepted by {@link #combine}. However, it is *not* necessarily the same type
    * returned by {@link #finalizeComputation}.
    *
    * Refer to the {@link ColumnType} javadocs for details on the implications of choosing a type.
    */
-  public abstract ColumnType getType();
+  public ColumnType getIntermediateType()
+  {
+    final ValueType intermediateType = getType();
+    if (intermediateType == ValueType.COMPLEX) {
+      return ColumnType.ofComplex(getComplexTypeName());
+    }
+    return ColumnTypeFactory.ofValueType(intermediateType);
+  }
 
   /**
-   * Get the type for the final form of this this aggregator, i.e. the type of the value returned by
+   * Get the {@link ColumnType} for the final form of this aggregator, i.e. the type of the value returned by
    * {@link #finalizeComputation}. This may be the same as or different than the types expected in {@link #deserialize}
    * and {@link #combine}.
    *
    * Refer to the {@link ColumnType} javadocs for details on the implications of choosing a type.
    */
-  public abstract ColumnType getFinalizedType();
+  public ColumnType getResultType()
+  {
+    // this default 'fill' method is incomplete and can at best return 'unknown' complex
+    final ValueType finalized = getFinalizedType();
+    if (finalized == ValueType.COMPLEX) {
+      return ColumnType.UNKNOWN_COMPLEX;
+    }
+    return ColumnTypeFactory.ofValueType(finalized);
+  }
+
+
+  /**
+   * This method is deprecated and will be removed soon. Use {@link #getIntermediateType()} instead. Do not call this
+   * method, it will likely produce incorrect results, it exists for backwards compatibility.
+   */
+  @Deprecated
+  public ValueType getType()
+  {
+    throw new UnsupportedOperationException(
+        "Do not call or implement this method, it is deprecated, use 'getIntermediateType'"
+    );
+  }
+
+  /**
+   * This method is deprecated and will be removed soon. Use {@link #getResultType()} instead. Do not call this
+   * method, it will likely produce incorrect results, it exists for backwards compatibility.
+   */
+  @Deprecated
+  public ValueType getFinalizedType()
+  {
+    throw new UnsupportedOperationException(
+        "Do not call or implement this method, it is deprecated, use 'getResultType'"
+    );
+  }
+
+  /**
+   * This method is deprecated and will be removed soon. Use {@link #getIntermediateType()} instead. Do not call this
+   * method, it will likely produce incorrect results, it exists for backwards compatibility.
+   */
+  @Nullable
+  @Deprecated
+  public String getComplexTypeName()
+  {
+    return null;
+  }
 
   /**
    * Returns the maximum size that this aggregator will require in bytes for intermediate storage of results.
@@ -248,6 +321,23 @@ public abstract class AggregatorFactory implements Cacheable
   public int getMaxIntermediateSizeWithNulls()
   {
     return getMaxIntermediateSize();
+  }
+
+  /**
+   * Returns a best guess as to how much memory the on-heap {@link Aggregator} returned by {@link #factorize} will
+   * require when a certain number of rows have been aggregated into it.
+   *
+   * The main user of this method is {@link org.apache.druid.segment.incremental.OnheapIncrementalIndex}, which
+   * uses it to determine when to persist the current in-memory data to disk.
+   *
+   * Important note for callers! In nearly all cases, callers that wish to constrain memory would be better off
+   * using {@link #factorizeBuffered} or {@link #factorizeVector}, which offer precise control over how much memory
+   * is being used.
+   */
+  public int guessAggregatorHeapFootprint(long rows)
+  {
+    // By default, guess that on-heap footprint is equal to off-heap footprint.
+    return getMaxIntermediateSizeWithNulls();
   }
 
   /**

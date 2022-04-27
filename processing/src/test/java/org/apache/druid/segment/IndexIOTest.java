@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
@@ -30,7 +29,6 @@ import com.google.common.collect.Maps;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -51,7 +49,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -262,11 +259,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
               .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
               .withMetrics(new CountAggregatorFactory("count"))
               .withDimensionsSpec(
-                  new DimensionsSpec(
-                      DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")),
-                      null,
-                      null
-                  )
+                  new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")))
               )
               .build()
       )
@@ -279,11 +272,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
               .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
               .withMetrics(new CountAggregatorFactory("count"))
               .withDimensionsSpec(
-                  new DimensionsSpec(
-                      DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")),
-                      null,
-                      null
-                  )
+                  new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")))
               )
               .build()
       )
@@ -338,68 +327,6 @@ public class IndexIOTest extends InitializedNullHandlingTest
       if (ex != null) {
         throw ex;
       }
-    }
-  }
-
-  @Test
-  public void testLoadSegmentDamagedFileWithLazy()
-  {
-    final ObjectMapper mapper = new DefaultObjectMapper();
-    final IndexIO indexIO = new IndexIO(mapper, () -> 0);
-    String path = this.getClass().getClassLoader().getResource("v9SegmentPersistDir/segmentWithDamagedFile/").getPath();
-
-    ForkSegmentLoadDropHandler segmentLoadDropHandler = new ForkSegmentLoadDropHandler();
-    ForkSegment segment = new ForkSegment(true);
-    Assert.assertTrue(segment.getSegmentExist());
-    File inDir = new File(path);
-    Exception e = null;
-
-    try {
-      QueryableIndex queryableIndex = indexIO.loadIndex(inDir, true, () -> segmentLoadDropHandler.removeSegment(segment));
-      Assert.assertNotNull(queryableIndex);
-      queryableIndex.getDimensionHandlers();
-      List<String> columnNames = queryableIndex.getColumnNames();
-      for (String columnName : columnNames) {
-        Assert.assertNotNull(queryableIndex.getColumnHolder(columnName).toString());
-      }
-    }
-    catch (Exception ex) {
-      // Do nothing. Can ignore exceptions here.
-      e = ex;
-    }
-    Assert.assertNotNull(e);
-    Assert.assertFalse(segment.getSegmentExist());
-
-  }
-
-  private static class ForkSegmentLoadDropHandler
-  {
-    public void addSegment()
-    {
-    }
-    public void removeSegment(ForkSegment segment)
-    {
-      segment.setSegmentExist(false);
-    }
-  }
-
-  private static class ForkSegment
-  {
-    private Boolean segmentExist;
-
-    ForkSegment(Boolean segmentExist)
-    {
-      this.segmentExist = segmentExist;
-    }
-
-    void setSegmentExist(Boolean value)
-    {
-      this.segmentExist = value;
-    }
-
-    Boolean getSegmentExist()
-    {
-      return this.segmentExist;
     }
   }
 }

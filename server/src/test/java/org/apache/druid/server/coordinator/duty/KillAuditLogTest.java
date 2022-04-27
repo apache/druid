@@ -77,7 +77,7 @@ public class KillAuditLogTest
     );
     killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig);
     killAuditLog.run(mockDruidCoordinatorRuntimeParams);
-    Mockito.verifyZeroInteractions(mockAuditManager);
+    Mockito.verifyNoInteractions(mockAuditManager);
   }
 
   @Test

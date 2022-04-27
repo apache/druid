@@ -41,6 +41,7 @@ import {
   deepGet,
   formatBytes,
   formatBytesCompact,
+  hasPopoverOpen,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
   lookupBy,
@@ -180,7 +181,9 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   "tls_port",
   "curr_size",
   "max_size",
-  "is_leader",
+  "is_leader"
+FROM sys.servers
+ORDER BY
   (
     CASE "server_type"
     WHEN 'coordinator' THEN 8
@@ -193,9 +196,8 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
     WHEN 'peon' THEN 1
     ELSE 0
     END
-  ) AS "rank"
-FROM sys.servers
-ORDER BY "rank" DESC, "service" DESC`;
+  ) DESC,
+  "service" DESC`;
 
   static async getServices(): Promise<ServiceQueryResultRow[]> {
     const allServiceResp = await Api.instance.get('/druid/coordinator/v1/servers?simple');
@@ -244,7 +246,7 @@ ORDER BY "rank" DESC, "service" DESC`;
           services = services.map(s => {
             const loadQueueInfo = loadQueues[s.service];
             if (loadQueueInfo) {
-              s = Object.assign(s, loadQueueInfo);
+              s = { ...s, ...loadQueueInfo };
             }
             return s;
           });
@@ -277,7 +279,7 @@ ORDER BY "rank" DESC, "service" DESC`;
           services = services.map(s => {
             const middleManagerInfo = middleManagersLookup[s.service];
             if (middleManagerInfo) {
-              s = Object.assign(s, middleManagerInfo);
+              s = { ...s, ...middleManagerInfo };
             }
             return s;
           });
@@ -444,7 +446,7 @@ ORDER BY "rank" DESC, "service" DESC`;
             Header: 'Usage',
             show: visibleColumns.shown('Usage'),
             id: 'usage',
-            width: 100,
+            width: 140,
             filterable: false,
             accessor: row => {
               if (oneOf(row.service_type, 'middle_manager', 'indexer')) {
@@ -496,9 +498,9 @@ ORDER BY "rank" DESC, "service" DESC`;
                   const currCapacityUsed = deepGet(row, 'original.currCapacityUsed') || 0;
                   const capacity = deepGet(row, 'original.worker.capacity');
                   if (typeof capacity === 'number') {
-                    return `${currCapacityUsed} / ${capacity} (slots)`;
+                    return `Slots used: ${currCapacityUsed} of ${capacity}`;
                   } else {
-                    return '- / -';
+                    return 'Slots used: -';
                   }
                 }
 
@@ -526,7 +528,7 @@ ORDER BY "rank" DESC, "service" DESC`;
                 }
                 return details.join(' ');
               } else if (oneOf(row.service_type, 'coordinator', 'overlord')) {
-                return (row.is_leader || 0) === 1 ? 'leader' : '';
+                return row.is_leader === 1 ? 'Leader' : '';
               } else {
                 return (Number(row.segmentsToLoad) || 0) + (Number(row.segmentsToDrop) || 0);
               }
@@ -536,12 +538,8 @@ ORDER BY "rank" DESC, "service" DESC`;
               const { service_type } = row.original;
               switch (service_type) {
                 case 'historical': {
-                  const {
-                    segmentsToLoad,
-                    segmentsToLoadSize,
-                    segmentsToDrop,
-                    segmentsToDropSize,
-                  } = row.original;
+                  const { segmentsToLoad, segmentsToLoadSize, segmentsToDrop, segmentsToDropSize } =
+                    row.original;
                   return formatQueues(
                     segmentsToLoad,
                     segmentsToLoadSize,
@@ -721,7 +719,10 @@ ORDER BY "rank" DESC, "service" DESC`;
             </Button>
           </ButtonGroup>
           <RefreshButton
-            onRefresh={auto => this.serviceQueryManager.rerunLastQuery(auto)}
+            onRefresh={auto => {
+              if (auto && hasPopoverOpen()) return;
+              this.serviceQueryManager.rerunLastQuery(auto);
+            }}
             localStorageKey={LocalStorageKeys.SERVICES_REFRESH_RATE}
           />
           {this.renderBulkServicesActions()}

@@ -51,7 +51,7 @@ public class DruidMetrics
   {
     int retVal = 0;
     for (AggregatorFactory agg : aggs) {
-      if (agg.getType().is(ValueType.COMPLEX)) {
+      if (agg.getIntermediateType().is(ValueType.COMPLEX)) {
         retVal++;
       }
     }

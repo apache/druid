@@ -47,6 +47,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
@@ -70,12 +71,10 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 
 /**
  * Manages {@link Appenderator} instances for the CliIndexer task execution service, which runs all tasks in
@@ -166,7 +165,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   )
   {
     synchronized (this) {
@@ -188,7 +188,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           wrapIndexMerger(indexMerger),
           cache,
           rowIngestionMeters,
-          parseExceptionHandler
+          parseExceptionHandler,
+          useMaxMemoryEstimates
       );
 
       datasourceBundle.addAppenderator(taskId, appenderator);
@@ -207,7 +208,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   )
   {
     synchronized (this) {
@@ -226,7 +228,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           indexIO,
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
-          parseExceptionHandler
+          parseExceptionHandler,
+          useMaxMemoryEstimates
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;
@@ -244,7 +247,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   )
   {
     synchronized (this) {
@@ -263,7 +267,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           indexIO,
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
-          parseExceptionHandler
+          parseExceptionHandler,
+          useMaxMemoryEstimates
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;
@@ -281,7 +286,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   )
   {
     synchronized (this) {
@@ -300,7 +306,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           indexIO,
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
-          parseExceptionHandler
+          parseExceptionHandler,
+          useMaxMemoryEstimates
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;
@@ -436,9 +443,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     {
       taskAppenderatorMap.computeIfAbsent(
           taskId,
-          (myTaskId) -> {
-            return new ArrayList<>();
-          }
+          myTaskId -> new ArrayList<>()
       ).add(appenderator);
     }
   }
@@ -587,102 +592,25 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     }
 
     @Override
-    public File mergeQueryableIndex(
-        List<QueryableIndex> indexes,
-        boolean rollup,
-        AggregatorFactory[] metricAggs,
-        File outDir,
-        IndexSpec indexSpec,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-        int maxColumnsToMerge
-    )
-    {
-      return mergeQueryableIndex(
-          indexes,
-          rollup,
-          metricAggs,
-          null,
-          outDir,
-          indexSpec,
-          segmentWriteOutMediumFactory,
-          maxColumnsToMerge
-      );
-    }
-
-    @Override
-    public File mergeQueryableIndex(
-        List<QueryableIndex> indexes,
-        boolean rollup,
-        AggregatorFactory[] metricAggs,
-        @Nullable DimensionsSpec dimensionsSpec,
-        File outDir,
-        IndexSpec indexSpec,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-        int maxColumnsToMerge
-    )
-    {
-      ListenableFuture<File> mergeFuture = mergeExecutor.submit(
-          new Callable<File>()
-          {
-            @Override
-            public File call()
-            {
-              try {
-                return baseMerger.mergeQueryableIndex(
-                    indexes,
-                    rollup,
-                    metricAggs,
-                    dimensionsSpec,
-                    outDir,
-                    indexSpec,
-                    segmentWriteOutMediumFactory,
-                    maxColumnsToMerge
-                );
-              }
-              catch (IOException ioe) {
-                throw new RuntimeException(ioe);
-              }
-            }
-          }
-      );
-
-      try {
-        return mergeFuture.get();
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    @Override
     public File persist(
         IncrementalIndex index,
         Interval dataInterval,
         File outDir,
         IndexSpec indexSpec,
+        ProgressIndicator progress,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
     )
     {
       ListenableFuture<File> mergeFuture = mergeExecutor.submit(
-          new Callable<File>()
-          {
-            @Override
-            public File call()
-            {
-              try {
-                return baseMerger.persist(
-                    index,
-                    dataInterval,
-                    outDir,
-                    indexSpec,
-                    segmentWriteOutMediumFactory
-                );
-              }
-              catch (IOException ioe) {
-                throw new RuntimeException(ioe);
-              }
-            }
-          }
+          () ->
+              baseMerger.persist(
+                  index,
+                  dataInterval,
+                  outDir,
+                  indexSpec,
+                  progress,
+                  segmentWriteOutMediumFactory
+              )
       );
 
       try {
@@ -699,56 +627,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         boolean rollup,
         AggregatorFactory[] metricAggs,
         File outDir,
+        DimensionsSpec dimensionsSpec,
         IndexSpec indexSpec,
         int maxColumnsToMerge
     )
     {
-      throw new UOE(ERROR_MSG);
-    }
-
-    @Override
-    public File convert(
-        File inDir,
-        File outDir,
-        IndexSpec indexSpec
-    )
-    {
-      throw new UOE(ERROR_MSG);
-    }
-
-    @Override
-    public File append(
-        List<IndexableAdapter> indexes,
-        AggregatorFactory[] aggregators,
-        File outDir,
-        IndexSpec indexSpec,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-    )
-    {
-      throw new UOE(ERROR_MSG);
-    }
-
-    @Override
-    public File persist(
-        IncrementalIndex index,
-        File outDir,
-        IndexSpec indexSpec,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-    )
-    {
-      throw new UOE(ERROR_MSG);
-    }
-
-    @Override
-    public File persist(
-        IncrementalIndex index,
-        Interval dataInterval,
-        File outDir,
-        IndexSpec indexSpec,
-        ProgressIndicator progress,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-    )
-    {
+      // Only used in certain tests. No need to implement.
       throw new UOE(ERROR_MSG);
     }
 
@@ -760,12 +644,34 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         @Nullable DimensionsSpec dimensionsSpec,
         File outDir,
         IndexSpec indexSpec,
+        IndexSpec indexSpecForIntermediatePersists,
         ProgressIndicator progress,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
         int maxColumnsToMerge
     )
     {
-      throw new UOE(ERROR_MSG);
+      ListenableFuture<File> mergeFuture = mergeExecutor.submit(
+          () ->
+              baseMerger.mergeQueryableIndex(
+                  indexes,
+                  rollup,
+                  metricAggs,
+                  dimensionsSpec,
+                  outDir,
+                  indexSpec,
+                  indexSpecForIntermediatePersists,
+                  new BaseProgressIndicator(),
+                  segmentWriteOutMediumFactory,
+                  maxColumnsToMerge
+              )
+      );
+
+      try {
+        return mergeFuture.get();
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 }

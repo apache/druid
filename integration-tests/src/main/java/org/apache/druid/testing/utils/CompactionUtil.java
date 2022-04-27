@@ -53,6 +53,7 @@ public class CompactionUtil
             null,
             null,
             null,
+            null,
             new MaxSizeSplitHintSpec(null, 1),
             new DynamicPartitionsSpec(maxRowsPerSegment, null),
             null,
@@ -68,6 +69,8 @@ public class CompactionUtil
             null,
             1
         ),
+        null,
+        null,
         null,
         null,
         new UserCompactionTaskIOConfig(true),

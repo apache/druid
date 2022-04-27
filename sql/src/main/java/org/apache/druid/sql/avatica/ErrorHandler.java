@@ -78,7 +78,7 @@ class ErrorHandler
       return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded((SanitizableException) error.getCause()));
     }
     QueryInterruptedException wrappedError = QueryInterruptedException.wrapIfNeeded(error);
-    return (QueryInterruptedException) errorResponseTransformStrategy.transformIfNeeded(wrappedError);
+    return (QueryException) errorResponseTransformStrategy.transformIfNeeded(wrappedError);
   }
 
   /**

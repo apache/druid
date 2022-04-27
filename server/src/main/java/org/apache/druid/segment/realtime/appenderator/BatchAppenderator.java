@@ -50,6 +50,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
@@ -114,6 +115,7 @@ public class BatchAppenderator implements Appenderator
   private final IndexMerger indexMerger;
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
+  private final boolean useMaxMemoryEstimates;
 
   private volatile ListeningExecutorService persistExecutor = null;
   private volatile ListeningExecutorService pushExecutor = null;
@@ -159,7 +161,8 @@ public class BatchAppenderator implements Appenderator
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   )
   {
     this.myId = id;
@@ -176,6 +179,7 @@ public class BatchAppenderator implements Appenderator
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
     maxPendingPersists = tuningConfig.getMaxPendingPersists();
+    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
   }
 
   @Override
@@ -464,6 +468,7 @@ public class BatchAppenderator implements Appenderator
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
+          useMaxMemoryEstimates,
           null
       );
       bytesCurrentlyInMemory += calculateSinkMemoryInUsed();
@@ -732,8 +737,6 @@ public class BatchAppenderator implements Appenderator
       final Sink sink
   )
   {
-
-
     // Use a descriptor file to indicate that pushing has completed.
     final File persistDir = computePersistDir(identifier);
     final File mergedTarget = new File(persistDir, "merged");
@@ -794,6 +797,8 @@ public class BatchAppenderator implements Appenderator
             schema.getDimensionsSpec(),
             mergedTarget,
             tuningConfig.getIndexSpec(),
+            tuningConfig.getIndexSpecForIntermediatePersists(),
+            new BaseProgressIndicator(),
             tuningConfig.getSegmentWriteOutMediumFactory(),
             tuningConfig.getMaxColumnsToMerge()
         );
@@ -1029,6 +1034,7 @@ public class BatchAppenderator implements Appenderator
         tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
         maxBytesTuningConfig,
+        useMaxMemoryEstimates,
         null,
         hydrants
     );
@@ -1148,9 +1154,9 @@ public class BatchAppenderator implements Appenderator
       sm.setPersistedFileDir(persistDir);
 
       log.info(
-          "About to persist in-memory data for segment[%s] spill[%s] to disk in [%,d] ms (%,d rows).",
+          "Persisted in-memory data for segment[%s] spill[%s] to disk in [%,d] ms (%,d rows).",
           indexToPersist.getSegmentId(),
-          indexToPersist.getCount(),
+          sm.getNumHydrants(),
           (System.nanoTime() - startTime) / 1000000,
           numRows
       );

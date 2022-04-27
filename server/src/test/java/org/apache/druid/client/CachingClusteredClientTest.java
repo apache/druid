@@ -88,7 +88,6 @@ import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
@@ -168,7 +167,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
@@ -3292,7 +3290,7 @@ public class CachingClusteredClientTest
     final ResponseContext responseContext = initializeResponseContext();
 
     getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
-    Assert.assertEquals("MDs2yIUvYLVzaG6zmwTH1plqaYE=", responseContext.get(ResponseContext.Key.ETAG));
+    Assert.assertEquals("MDs2yIUvYLVzaG6zmwTH1plqaYE=", responseContext.getEntityTag());
   }
 
   @Test
@@ -3340,9 +3338,9 @@ public class CachingClusteredClientTest
     final ResponseContext responseContext = initializeResponseContext();
 
     getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
-    final Object etag1 = responseContext.get(ResponseContext.Key.ETAG);
+    final String etag1 = responseContext.getEntityTag();
     getDefaultQueryRunner().run(QueryPlus.wrap(query2), responseContext);
-    final Object etag2 = responseContext.get(ResponseContext.Key.ETAG);
+    final String etag2 = responseContext.getEntityTag();
     Assert.assertNotEquals(etag1, etag2);
   }
 
@@ -3363,7 +3361,7 @@ public class CachingClusteredClientTest
   private static ResponseContext initializeResponseContext()
   {
     final ResponseContext context = ResponseContext.createEmpty();
-    context.put(Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS, new ConcurrentHashMap<>());
+    context.initializeRemainingResponses();
     return context;
   }
 }

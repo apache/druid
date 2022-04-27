@@ -22,6 +22,7 @@ package org.apache.druid.storage.aliyun;
 import com.aliyun.oss.OSS;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Objects;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Json;
@@ -39,7 +40,7 @@ public class OssDataSegmentArchiver extends OssDataSegmentMover implements DataS
   @Inject
   public OssDataSegmentArchiver(
       @Json ObjectMapper mapper,
-      OSS client,
+      Supplier<OSS> client,
       OssDataSegmentArchiverConfig archiveConfig,
       OssStorageConfig restoreConfig
   )

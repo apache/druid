@@ -268,7 +268,7 @@ public class GreatestExpressionTest extends ExpressionTestBase
       final Object expectedResult
   )
   {
-    testHelper.testExpression(target.calciteOperator(), exprs, expectedExpression, expectedResult);
+    testHelper.testExpressionString(target.calciteOperator(), exprs, expectedExpression, expectedResult);
   }
 
   private DruidExpression buildExpectedExpression(Object... args)

@@ -123,7 +123,7 @@ export class ReactTableCustomPagination extends React.PureComponent<
                   value={tempPage || String(page + 1)}
                   onBlur={this.applyTempPage}
                   onKeyPress={e => {
-                    if (e.which === 13 || e.keyCode === 13) {
+                    if (e.key === 'Enter') {
                       this.applyTempPage(e);
                     }
                   }}

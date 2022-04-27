@@ -30,17 +30,18 @@ import {
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../../utils';
-import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
+import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './parse-data-table.scss';
 
 export interface ParseDataTableProps {
-  sampleData: HeaderAndRows;
+  sampleData: SampleHeaderAndRows;
   columnFilter: string;
   canFlatten: boolean;
   flattenedColumnsOnly: boolean;
   flattenFields: FlattenField[];
   onFlattenFieldSelect: (field: FlattenField, index: number) => void;
+  useInput?: boolean;
 }
 
 export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDataTableProps) {
@@ -51,8 +52,10 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
     flattenedColumnsOnly,
     flattenFields,
     onFlattenFieldSelect,
+    useInput,
   } = props;
 
+  const key = useInput ? 'input' : 'parsed';
   return (
     <ReactTable
       className="parse-data-table -striped -highlight"
@@ -82,7 +85,7 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
             </div>
           ),
           id: String(i),
-          accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
+          accessor: (row: SampleEntry) => (row[key] ? row[key]![columnName] : null),
           Cell: function ParseDataTableCell(row) {
             if (row.original.unparseable) {
               return <TableCellUnparseable />;

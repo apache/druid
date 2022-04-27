@@ -32,6 +32,12 @@ describe('AutoForm', () => {
           { name: 'testSizeBytes', type: 'size-bytes' },
           { name: 'testString', type: 'string' },
           { name: 'testStringWithDefault', type: 'string', defaultValue: 'Hello World' },
+          {
+            name: 'testStringWithMultiline',
+            type: 'string',
+            multiline: true,
+            defaultValue: 'Hello World',
+          },
           { name: 'testBoolean', type: 'boolean' },
           { name: 'testBooleanWithDefault', type: 'boolean', defaultValue: false },
           { name: 'testStringArray', type: 'string-array' },
@@ -69,7 +75,6 @@ describe('AutoForm', () => {
           {
             dataSource: 'ds',
             taskPriority: 25,
-            inputSegmentSizeBytes: 419430400,
             maxRowsPerSegment: null,
             skipOffsetFromLatest: 'P4D',
             tuningConfig: {
@@ -115,7 +120,6 @@ describe('AutoForm', () => {
         {
           dataSource: 'ds',
           taskPriority: 25,
-          inputSegmentSizeBytes: 419430400,
           skipOffsetFromLatest: 'P4D',
           tuningConfig: {
             partitionsSpec: {

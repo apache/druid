@@ -115,9 +115,9 @@ public class KillCompactionConfigTest
         mockConnectorConfig
     );
     killCompactionConfig.run(mockDruidCoordinatorRuntimeParams);
-    Mockito.verifyZeroInteractions(mockSqlSegmentsMetadataManager);
-    Mockito.verifyZeroInteractions(mockJacksonConfigManager);
-    Mockito.verifyZeroInteractions(mockServiceEmitter);
+    Mockito.verifyNoInteractions(mockSqlSegmentsMetadataManager);
+    Mockito.verifyNoInteractions(mockJacksonConfigManager);
+    Mockito.verifyNoInteractions(mockServiceEmitter);
   }
 
   @Test
@@ -202,7 +202,7 @@ public class KillCompactionConfigTest
         mockConnectorConfig
     );
     killCompactionConfig.run(mockDruidCoordinatorRuntimeParams);
-    Mockito.verifyZeroInteractions(mockSqlSegmentsMetadataManager);
+    Mockito.verifyNoInteractions(mockSqlSegmentsMetadataManager);
     final ArgumentCaptor<ServiceEventBuilder> emittedEventCaptor = ArgumentCaptor.forClass(ServiceEventBuilder.class);
     Mockito.verify(mockServiceEmitter).emit(emittedEventCaptor.capture());
     Assert.assertEquals(KillCompactionConfig.COUNT_METRIC, emittedEventCaptor.getValue().build(ImmutableMap.of()).toMap().get("metric"));
@@ -236,6 +236,8 @@ public class KillCompactionConfigTest
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
         null,
         null,
+        null,
+        null,
         ImmutableMap.of("key", "val")
     );
 
@@ -247,6 +249,8 @@ public class KillCompactionConfigTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
+        null,
+        null,
         null,
         null,
         ImmutableMap.of("key", "val")
@@ -353,6 +357,8 @@ public class KillCompactionConfigTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
+        null,
+        null,
         null,
         null,
         ImmutableMap.of("key", "val")

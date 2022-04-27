@@ -23,7 +23,7 @@ import { Capabilities } from '../../../utils';
 
 import { SegmentsCard } from './segments-card';
 
-describe('segments card', () => {
+describe('SegmentsCard', () => {
   it('matches snapshot', () => {
     const segmentsCard = <SegmentsCard capabilities={Capabilities.FULL} />;
 

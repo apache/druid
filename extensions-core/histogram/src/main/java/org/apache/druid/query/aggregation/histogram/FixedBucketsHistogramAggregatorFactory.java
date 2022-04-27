@@ -282,7 +282,7 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
    * actual type is {@link FixedBucketsHistogram}
    */
   @Override
-  public ColumnType getType()
+  public ColumnType getIntermediateType()
   {
     return FixedBucketsHistogramAggregator.TYPE;
   }
@@ -291,7 +291,7 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
    * actual type is {@link FixedBucketsHistogram} if {@link #finalizeAsBase64Binary} is set
    */
   @Override
-  public ColumnType getFinalizedType()
+  public ColumnType getResultType()
   {
     return finalizeAsBase64Binary ? FixedBucketsHistogramAggregator.TYPE : ColumnType.STRING;
   }

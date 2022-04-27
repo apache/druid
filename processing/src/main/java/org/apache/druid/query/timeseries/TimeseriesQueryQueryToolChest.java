@@ -232,7 +232,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
                              RowBasedColumnSelectorFactory.create(
                                  RowAdapters.standardRow(),
                                  () -> new MapBasedRow(null, null),
-                                 () -> aggregatorsSignature,
+                                 aggregatorsSignature,
                                  false
                              )
                          );

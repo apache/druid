@@ -31,9 +31,11 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -84,6 +86,8 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
       @Nullable ClientCompactionTaskDimensionsSpec dimensionsSpec,
+      @Nullable AggregatorFactory[] metricsSpec,
+      @Nullable ClientCompactionTaskTransformSpec transformSpec,
       @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context
   )
@@ -100,13 +104,16 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
     context.put("priority", compactionTaskPriority);
 
     final String taskId = IdUtils.newTaskId(idPrefix, ClientCompactionTaskQuery.TYPE, dataSource, null);
+    final Granularity segmentGranularity = granularitySpec == null ? null : granularitySpec.getSegmentGranularity();
     final ClientTaskQuery taskQuery = new ClientCompactionTaskQuery(
         taskId,
         dataSource,
-        new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments), dropExisting),
+        new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments, segmentGranularity), dropExisting),
         tuningConfig,
         granularitySpec,
         dimensionsSpec,
+        metricsSpec,
+        transformSpec,
         context
     );
     return runTask(taskId, taskQuery);
@@ -209,6 +216,32 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       );
 
       return workers.stream().mapToInt(workerInfo -> workerInfo.getWorker().getCapacity()).sum();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public int getTotalWorkerCapacityWithAutoScale()
+  {
+    try {
+      final StringFullResponseHolder response = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/indexer/v1/totalWorkerCapacity")
+                           .setHeader("Content-Type", MediaType.APPLICATION_JSON)
+      );
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while getting total worker capacity. status[%s] content[%s]",
+            response.getStatus(),
+            response.getContent()
+        );
+      }
+      final IndexingTotalWorkerCapacityInfo indexingTotalWorkerCapacityInfo = jsonMapper.readValue(
+          response.getContent(),
+          new TypeReference<IndexingTotalWorkerCapacityInfo>() {}
+      );
+      return indexingTotalWorkerCapacityInfo.getMaximumCapacityWithAutoScale();
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -352,12 +385,17 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
           )
       );
 
-      if (responseHolder.getContent().length() == 0 || responseHolder.getStatus() != HttpResponseStatus.OK) {
+      if (responseHolder.getContent().length() == 0 || !HttpResponseStatus.OK.equals(responseHolder.getStatus())) {
         if (responseHolder.getStatus() == HttpResponseStatus.NOT_FOUND) {
           log.info("Report not found for taskId [%s] because [%s]", taskId, responseHolder.getContent());
         } else {
           // also log other non-ok statuses:
-          log.info("Non OK response for taskId [%s] because [%s]", taskId, responseHolder.getContent());
+          log.info(
+              "Non OK response status [%s] for taskId [%s] because [%s]",
+              responseHolder.getStatus(),
+              taskId,
+              responseHolder.getContent()
+          );
         }
         return null;
       }

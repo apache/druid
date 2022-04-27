@@ -144,6 +144,35 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void unsuccessfulComplexTypesInHLL() throws Exception
+  {
+    String metricSpec = "[{"
+                        + "\"type\": \"hyperUnique\","
+                        + "\"name\": \"index_hll\","
+                        + "\"fieldName\": \"id\""
+                        + "}]";
+    try {
+      Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+          new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile()),
+          buildParserJson(
+              Arrays.asList("dim", "multiDim", "id"),
+              Arrays.asList("timestamp", "dim", "multiDim", "id")
+          ),
+          metricSpec,
+          0, // minTimestamp
+          Granularities.NONE,
+          200, // maxRowCount
+          buildGroupByQueryJson("HLLSketchBuild", "index_hll", !ROUND)
+      );
+    }
+    catch (RuntimeException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Invalid input [index_hll] of type [COMPLEX<hyperUnique>] for [HLLSketchBuild]"));
+    }
+
+  }
+
+  @Test
   public void buildSketchesAtQueryTimeMultiValue() throws Exception
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(

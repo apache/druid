@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
- 
+
 package org.apache.druid.emitter.prometheus;
 
 import com.google.common.collect.ImmutableMap;
@@ -38,7 +38,7 @@ import static org.easymock.EasyMock.mock;
 public class PrometheusEmitterTest
 {
   @Test
-  public void testEmitter() 
+  public void testEmitter()
   {
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null);
     PrometheusEmitterModule prometheusEmitterModule = new PrometheusEmitterModule();
@@ -108,5 +108,29 @@ public class PrometheusEmitterTest
             .build(ImmutableMap.of("service", "peon"));
     emitter.emit(build);
     emitter.flush();
+  }
+
+  @Test
+  public void testEmitterConfigCreationWithNullAsAddress()
+  {
+    Assert.assertThrows(NullPointerException.class, () -> new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace4", null, 0, null));
+  }
+
+  @Test
+  public void testEmitterStartWithHttpUrl()
+  {
+    PrometheusEmitterConfig pushEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace4", null, 0, "http://pushgateway");
+    PrometheusEmitter pushEmitter = new PrometheusEmitter(pushEmitterConfig);
+    pushEmitter.start();
+    Assert.assertNotNull(pushEmitter.getPushGateway());
+  }
+
+  @Test
+  public void testEmitterStartWithHttpsUrl()
+  {
+    PrometheusEmitterConfig pushEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace5", null, 0, "https://pushgateway");
+    PrometheusEmitter pushEmitter = new PrometheusEmitter(pushEmitterConfig);
+    pushEmitter.start();
+    Assert.assertNotNull(pushEmitter.getPushGateway());
   }
 }

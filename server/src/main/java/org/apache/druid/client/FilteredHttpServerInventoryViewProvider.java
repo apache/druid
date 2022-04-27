@@ -59,7 +59,8 @@ public class FilteredHttpServerInventoryViewProvider implements FilteredServerIn
         httpClient,
         druidNodeDiscoveryProvider,
         Predicates.alwaysFalse(),
-        config
+        config,
+        "FilteredHttpServerInventoryView"
     );
   }
 }

@@ -77,7 +77,7 @@ public class KillSupervisorsTest
     );
     killSupervisors = new KillSupervisors(druidCoordinatorConfig, mockMetadataSupervisorManager);
     killSupervisors.run(mockDruidCoordinatorRuntimeParams);
-    Mockito.verifyZeroInteractions(mockMetadataSupervisorManager);
+    Mockito.verifyNoInteractions(mockMetadataSupervisorManager);
   }
 
   @Test
