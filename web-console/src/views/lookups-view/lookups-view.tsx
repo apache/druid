@@ -37,6 +37,7 @@ import { Api, AppToaster } from '../../singletons';
 import {
   deepGet,
   getDruidErrorMessage,
+  hasPopoverOpen,
   isLookupsUninitialized,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
@@ -455,7 +456,10 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       <div className="lookups-view app-view">
         <ViewControlBar label="Lookups">
           <RefreshButton
-            onRefresh={auto => this.lookupsQueryManager.rerunLastQuery(auto)}
+            onRefresh={auto => {
+              if (auto && hasPopoverOpen()) return;
+              this.lookupsQueryManager.rerunLastQuery(auto);
+            }}
             localStorageKey={LocalStorageKeys.LOOKUPS_REFRESH_RATE}
           />
           {!lookupEntriesAndTiersState.isError() && (

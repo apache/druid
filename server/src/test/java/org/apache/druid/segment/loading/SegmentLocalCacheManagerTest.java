@@ -44,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 public class SegmentLocalCacheManagerTest
 {
@@ -100,6 +101,31 @@ public class SegmentLocalCacheManagerTest
     Assert.assertFalse("Expect cache miss", manager.isSegmentCached(uncachedSegment));
   }
 
+  @Test
+  public void testNoLoadingOfSegmentInPageCache() throws IOException
+  {
+    final DataSegment segment = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D");
+    final File segmentFile = new File(
+        localSegmentCacheFolder,
+        "test_segment_loader/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
+    );
+    FileUtils.mkdirp(segmentFile);
+    // should not throw any exception
+    manager.loadSegmentIntoPageCache(segment, null);
+  }
+
+  @Test
+  public void testLoadSegmentInPageCache() throws IOException
+  {
+    final DataSegment segment = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D");
+    final File segmentFile = new File(
+        localSegmentCacheFolder,
+        "test_segment_loader/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
+    );
+    FileUtils.mkdirp(segmentFile);
+    // should not throw any exception
+    manager.loadSegmentIntoPageCache(segment, Executors.newSingleThreadExecutor());
+  }
 
   @Test
   public void testIfTombstoneIsLoaded() throws IOException, SegmentLoadingException

@@ -21,11 +21,10 @@ package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.data.input.InputRow;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.data.input.StringTuple;
 
 import javax.annotation.Nullable;
-import java.util.List;
+import java.util.Collections;
 import java.util.Objects;
 
 /**
@@ -33,7 +32,8 @@ import java.util.Objects;
  *
  * @see BuildingSingleDimensionShardSpec
  */
-public class SingleDimensionRangeBucketShardSpec implements BucketNumberedShardSpec<BuildingSingleDimensionShardSpec>
+public class SingleDimensionRangeBucketShardSpec extends BaseDimensionRangeShardSpec
+    implements BucketNumberedShardSpec<BuildingSingleDimensionShardSpec>
 {
   private final int bucketId;
   private final String dimension;
@@ -50,6 +50,11 @@ public class SingleDimensionRangeBucketShardSpec implements BucketNumberedShardS
       @JsonProperty("end") @Nullable String end
   )
   {
+    super(
+        dimension == null ? Collections.emptyList() : Collections.singletonList(dimension),
+        start == null ? null : StringTuple.create(start),
+        end == null ? null : StringTuple.create(end)
+    );
     this.bucketId = bucketId;
     this.dimension = dimension;
     this.start = start;
@@ -87,24 +92,6 @@ public class SingleDimensionRangeBucketShardSpec implements BucketNumberedShardS
   public BuildingSingleDimensionShardSpec convert(int partitionId)
   {
     return new BuildingSingleDimensionShardSpec(bucketId, dimension, start, end, partitionId);
-  }
-
-  public boolean isInChunk(InputRow inputRow)
-  {
-    return SingleDimensionShardSpec.isInChunk(dimension, start, end, inputRow);
-  }
-
-  @Override
-  public ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs)
-  {
-    return (long timestamp, InputRow row) -> {
-      for (ShardSpec spec : shardSpecs) {
-        if (((SingleDimensionRangeBucketShardSpec) spec).isInChunk(row)) {
-          return spec;
-        }
-      }
-      throw new ISE("row[%s] doesn't fit in any shard[%s]", row, shardSpecs);
-    };
   }
 
   @Override

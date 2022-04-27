@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.BadQueryException;
 import org.apache.druid.query.QueryCapacityExceededException;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
@@ -63,7 +64,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -108,7 +108,7 @@ public class SqlResource
   ) throws IOException
   {
     final SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
-    final String sqlQueryId = lifecycle.initialize(sqlQuery.getQuery(), sqlQuery.getContext());
+    final String sqlQueryId = lifecycle.initialize(sqlQuery.getQuery(), new QueryContext(sqlQuery.getContext()));
     final String remoteAddr = req.getRemoteAddr();
     final String currThreadName = Thread.currentThread().getName();
 

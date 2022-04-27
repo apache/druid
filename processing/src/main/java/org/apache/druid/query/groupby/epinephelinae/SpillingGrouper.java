@@ -22,6 +22,7 @@ package org.apache.druid.query.groupby.epinephelinae;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
@@ -30,6 +31,7 @@ import net.jpountz.lz4.LZ4BlockInputStream;
 import net.jpountz.lz4.LZ4BlockOutputStream;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.BaseQuery;
@@ -309,10 +311,11 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
         final LZ4BlockOutputStream compressedOut = new LZ4BlockOutputStream(out);
         final JsonGenerator jsonGenerator = spillMapper.getFactory().createGenerator(compressedOut)
     ) {
+      final SerializerProvider serializers = spillMapper.getSerializerProviderInstance();
+
       while (iterator.hasNext()) {
         BaseQuery.checkInterrupted();
-
-        jsonGenerator.writeObject(iterator.next());
+        JacksonUtils.writeObjectUsingSerializerProvider(jsonGenerator, serializers, iterator.next());
       }
 
       return out.getFile();

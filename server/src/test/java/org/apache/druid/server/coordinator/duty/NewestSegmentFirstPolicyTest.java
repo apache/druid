@@ -700,7 +700,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
+    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
     final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
@@ -733,7 +733,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
+    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
     final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
@@ -766,7 +766,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
+    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
     final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
@@ -809,7 +809,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
+    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
     final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
@@ -852,7 +852,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
+    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
     final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
@@ -904,7 +904,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
+    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
     final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
@@ -955,7 +955,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
+    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have
     // rollup=false for interval 2017-10-01T00:00:00/2017-10-02T00:00:00,
@@ -1015,7 +1015,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
+    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have
     // queryGranularity=DAY for interval 2017-10-01T00:00:00/2017-10-02T00:00:00,
@@ -1075,7 +1075,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
+    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have
     // Dimensions=["foo", "bar"] for interval 2017-10-01T00:00:00/2017-10-02T00:00:00,
@@ -1174,7 +1174,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
+    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have
     // filter=SelectorDimFilter("dim1", "foo", null) for interval 2017-10-01T00:00:00/2017-10-02T00:00:00,
@@ -1298,7 +1298,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
+    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have
     // metricsSpec={CountAggregatorFactory("cnt")} for interval 2017-10-01T00:00:00/2017-10-02T00:00:00,
@@ -1447,7 +1447,7 @@ public class NewestSegmentFirstPolicyTest
     // Different indexSpec as what is set in the auto compaction config
     IndexSpec newIndexSpec = new IndexSpec(new ConciseBitmapSerdeFactory(), null, null, null);
     Map<String, Object> newIndexSpecMap = mapper.convertValue(newIndexSpec, new TypeReference<Map<String, Object>>() {});
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
+    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
     final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
@@ -1496,7 +1496,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorDoesNotReturnSegmentWithChangingAppendableIndexSpec()
   {
     NullHandling.initializeForTests();
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
+    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
     final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),

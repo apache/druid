@@ -27,13 +27,14 @@ import { AppToaster } from '../../singletons';
 import './show-value-dialog.scss';
 
 export interface ShowValueDialogProps {
-  onClose: () => void;
+  title?: string;
   str: string;
   size?: 'normal' | 'large';
+  onClose: () => void;
 }
 
 export const ShowValueDialog = React.memo(function ShowValueDialog(props: ShowValueDialogProps) {
-  const { onClose, str, size } = props;
+  const { title, onClose, str, size } = props;
 
   function handleCopy() {
     copy(str, { format: 'text/plain' });
@@ -48,7 +49,7 @@ export const ShowValueDialog = React.memo(function ShowValueDialog(props: ShowVa
       className={classNames('show-value-dialog', size || 'normal')}
       isOpen
       onClose={onClose}
-      title="Full value"
+      title={title || 'Full value'}
     >
       <TextArea value={str} spellCheck={false} />
       <div className={Classes.DIALOG_FOOTER_ACTIONS}>
