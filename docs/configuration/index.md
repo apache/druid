@@ -973,9 +973,9 @@ You can configure automatic compaction through the following properties:
 |`dimensionsSpec`|Custom `dimensionsSpec`. See [Automatic compaction dimensionsSpec](#automatic-compaction-dimensionsspec).|No|
 |`transformSpec`|Custom `transformSpec`. See [Automatic compaction transformSpec](#automatic-compaction-transformspec).|No|
 |`metricsSpec`|Custom [`metricsSpec`](../ingestion/ingestion-spec.md#metricsspec). The compaction task preserves any existing metrics regardless of whether `metricsSpec` is specified. If `metricsSpec` is specified, Druid does not reapply any aggregators matching the metric names specified in `metricsSpec` to rows that already have the associated metrics. For rows that do not already have the metric specified in `metricsSpec`, Druid applies the metric aggregator on the source column, then proceeds to combine the metrics across segments as usual. If `metricsSpec` is not specified, Druid automatically discovers the metrics in the existing segments and combines existing metrics with the same metric name across segments. Aggregators for metrics with the same name are assumed to be compatible for combining across segments, otherwise the compaction task may fail.|No|
-|`ioConfig`|IO config for compaction tasks. See below [Automatic compaction ioConfig](#automatic-compaction-ioconfig).|no|
+|`ioConfig`|IO config for compaction tasks. See [Automatic compaction ioConfig](#automatic-compaction-ioconfig).|no|
 
-An example of an automatic compaction config is:
+Automatic compaction config example:
 
 ```json
 {
@@ -1036,7 +1036,7 @@ The below is a list of the supported configurations for auto-compaction.
 
 ###### Automatic compaction ioConfig
 
-Auto-compaction supports a subset of the [IOConfig for Parallel task](../ingestion/native-batch.md).
+Auto-compaction supports a subset of the [ioConfig for Parallel task](../ingestion/native-batch.md).
 The below is a list of the supported configurations for auto-compaction.
 
 |Property|Description|Default|Required|

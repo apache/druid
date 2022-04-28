@@ -82,8 +82,8 @@ To ensure an even distribution of segments across Historical processes in the cl
 ### Compacting segments
 
 The Druid Coordinator manages the automatic compaction system.
-Each run, the Coordinator compacts segments by merging small segments or splitting a large one. This is useful when your segments are not optimized
-in terms of segment size which may degrade query performance. See [Segment size optimization](../operations/segment-optimization.md) for details.
+Each run, the Coordinator compacts segments by merging small segments or splitting a large one. This is useful when the size of your segments is not optimized which may degrade query performance.
+See [Segment size optimization](../operations/segment-optimization.md) for details.
 
 The Coordinator first finds the segments to compact based on the [segment search policy](#segment-search-policy).
 Once some segments are found, it issues a [compaction task](../ingestion/tasks.md#compact) to compact those segments.
@@ -99,7 +99,7 @@ Compaction tasks might fail due to the following reasons:
 
 Once a compaction task fails, the Coordinator simply checks the segments in the interval of the failed task again, and issues another compaction task in the next run.
 
-Note that Compacting Segments Coordinator Duty is automatically enabled and run as part of the Indexing Service Duties group. However, Compacting Segments Coordinator Duty can be configured to run in isolation as a separate Coordinator duty group. This allows changing the period of Compacting Segments Coordinator Duty without impacting the period of other Indexing Service Duties. This can be done by setting the following properties (for more details see [custom pluggable Coordinator Duty](../development/modules.md#adding-your-own-custom-pluggable-coordinator-duty)):
+Note that Compacting Segments Coordinator Duty is automatically enabled and run as part of the Indexing Service Duties group. However, Compacting Segments Coordinator Duty can be configured to run in isolation as a separate Coordinator duty group. This allows changing the period of Compacting Segments Coordinator Duty without impacting the period of other Indexing Service Duties. This can be done by setting the following properties. For more details, see [custom pluggable Coordinator Duty](../development/modules.md#adding-your-own-custom-pluggable-coordinator-duty).
 ```
 druid.coordinator.dutyGroups=[<SOME_GROUP_NAME>]
 druid.coordinator.<SOME_GROUP_NAME>.duties=["compactSegments"]
@@ -110,7 +110,7 @@ druid.coordinator.<SOME_GROUP_NAME>.period=<PERIOD_TO_RUN_COMPACTING_SEGMENTS_DU
 
 At every Coordinator run, this policy looks up time chunks from newest to oldest and checks whether the segments in those time chunks
 need compaction.
-A set of segments need compaction if all conditions below are satisfied:
+A set of segments needs compaction if all conditions below are satisfied:
 
 1) Total size of segments in the time chunk is smaller than or equal to the configured `inputSegmentSizeBytes`.
 2) Segments have never been compacted yet or compaction spec has been updated since the last compaction, especially `maxRowsPerSegment`, `maxTotalRows`, and `indexSpec`.
@@ -144,7 +144,7 @@ Note that realtime tasks have a higher priority than compaction tasks by default
 
 ### The Coordinator console
 
-The Druid Coordinator exposes a web GUI for displaying cluster information and rule configuration. For more details, please see [Coordinator console](../operations/management-uis.md#coordinator-consoles).
+The Druid Coordinator exposes a web GUI for displaying cluster information and rule configuration. For more details, see [Coordinator console](../operations/management-uis.md#coordinator-consoles).
 
 ### FAQ
 
