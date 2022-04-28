@@ -87,7 +87,7 @@ public interface MetadataStorageConnector
 
   void createSupervisorsTable();
 
-  boolean migrateTaskTable();
+  String getTaskTableName();
 
   void deleteAllRecords(String tableName);
 }

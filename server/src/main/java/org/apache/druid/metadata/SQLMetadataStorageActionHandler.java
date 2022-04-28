@@ -52,8 +52,10 @@ import org.skife.jdbi.v2.util.ByteArrayMapper;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -902,5 +904,51 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                             .map(Entry::getKey)
                             .findAny()
                             .orElse(null);
+  }
+
+  @Override
+  public boolean migrateTaskTable(String tableName)
+  {
+    log.info("Populate fields task and group_id of task entry table [%s] from payload", tableName);
+    try {
+      connector.retryWithHandle(
+          new HandleCallback<Void>()
+          {
+            @Override
+            public Void withHandle(Handle handle) throws SQLException, IOException
+            {
+              ObjectMapper objectMapper = new ObjectMapper();
+              Connection connection = handle.getConnection();
+              Statement statement = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+              boolean flag = true;
+              while (flag) {
+                // Should ideally use a cursor and sort by id for efficiency, but updates with ordering aren't allowed
+                String sql = StringUtils.format(
+                    "SELECT * FROM %1$s WHERE active = false AND type IS null %2$s",
+                    tableName,
+                    connector.limitClause(100)
+                );
+                ResultSet resultSet = statement.executeQuery(sql);
+                flag = false;
+                while (resultSet.next()) {
+                  ObjectNode payload = objectMapper.readValue(resultSet.getBytes("payload"), ObjectNode.class);
+                  resultSet.updateString("type", payload.get("type").asText());
+                  resultSet.updateString("group_id", payload.get("groupId").asText());
+                  resultSet.updateRow();
+                  flag = true;
+                }
+              }
+              statement.close();
+              return null;
+            }
+          }
+      );
+      log.info("Migration of tasks complete for table[%s]", tableName);
+      return true;
+    }
+    catch (Exception e) {
+      log.warn(e, "Exception migrating task table [%s]", tableName);
+      return false;
+    }
   }
 }

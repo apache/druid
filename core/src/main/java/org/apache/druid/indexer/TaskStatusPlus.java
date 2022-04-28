@@ -22,6 +22,7 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.RE;
 import org.joda.time.DateTime;
 
@@ -31,6 +32,7 @@ import java.util.Objects;
 public class TaskStatusPlus
 {
   private final String id;
+  @Nullable
   private final String type;
   private final DateTime createdTime;
   private final DateTime queueInsertionTime;
@@ -251,5 +253,30 @@ public class TaskStatusPlus
            ", dataSource='" + dataSource + '\'' +
            ", errorMsg='" + errorMsg + '\'' +
            '}';
+  }
+
+  /**
+   * Convert a TaskInfo pair of TaskMetadata and TaskStatus to a TaskStatusPlus
+   * Applicable only for completed or waiting tasks
+   *
+   * @param taskMetadataInfo TaskInfo pair
+   * @return corresponding TaskStatusPlus
+   */
+  public static TaskStatusPlus fromTaskMetadataInfo(TaskInfo<TaskMetadata, TaskStatus> taskMetadataInfo)
+  {
+    TaskStatus status = taskMetadataInfo.getStatus();
+    return new TaskStatusPlus(
+        taskMetadataInfo.getId(),
+        taskMetadataInfo.getTask().getGroupId(),
+        taskMetadataInfo.getTask().getType(),
+        taskMetadataInfo.getCreatedTime(),
+        DateTimes.EPOCH,
+        status.getStatusCode(),
+        status.getStatusCode().isComplete() ? RunnerTaskState.NONE : RunnerTaskState.WAITING,
+        status.getDuration(),
+        status.getLocation(),
+        taskMetadataInfo.getDataSource(),
+        status.getErrorMsg()
+    );
   }
 }

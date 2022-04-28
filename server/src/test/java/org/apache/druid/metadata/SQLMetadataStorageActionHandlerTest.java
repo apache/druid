@@ -69,7 +69,7 @@ public class SQLMetadataStorageActionHandlerTest
 
   private SQLMetadataStorageActionHandler<Map<String, Object>, Map<String, Object>, Map<String, String>, Map<String, Object>> handler;
 
-  final String entryTable = "entries";
+  private final String entryTable = "entries";
 
   @Before
   public void setUp()
@@ -507,7 +507,7 @@ public class SQLMetadataStorageActionHandlerTest
     verify(activeAltered, taskStatusPlusList, true, true, true);
 
     // MIGRATION
-    derbyConnectorRule.getConnector().migrateTaskTable(entryTable);
+    handler.migrateTaskTable(entryTable);
 
     // Payload based fetch. task type and groupid will still be populated
     taskStatusPlusList = handler.getTaskStatusPlusList(taskLookups, null, true);

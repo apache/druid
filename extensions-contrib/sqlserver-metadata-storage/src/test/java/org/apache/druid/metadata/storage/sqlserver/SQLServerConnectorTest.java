@@ -70,19 +70,7 @@ public class SQLServerConnectorTest
     SQLServerConnector connector = new SQLServerConnector(
         Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
         Suppliers.ofInstance(
-            new MetadataStorageTablesConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            )
+            new MetadataStorageTablesConfig(null, null, null, null, null, null, null, null, null, null, null)
         )
     );
     Assert.assertEquals("FETCH NEXT 100 ROWS ONLY", connector.limitClause(100));

@@ -124,7 +124,7 @@ public class MetadataTaskStorage implements TaskStorage
     metadataStorageConnector.createTaskTables();
     ExecutorService executorService = Executors.newSingleThreadExecutor();
     taskMigrationCompleteFuture = executorService.submit(() -> {
-      return metadataStorageConnector.migrateTaskTable();
+      return handler.migrateTaskTable(metadataStorageConnector.getTaskTableName());
     });
   }
 

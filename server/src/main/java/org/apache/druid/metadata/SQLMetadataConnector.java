@@ -19,8 +19,6 @@
 
 package org.apache.druid.metadata;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
@@ -45,14 +43,12 @@ import org.skife.jdbi.v2.util.ByteArrayMapper;
 import org.skife.jdbi.v2.util.IntegerMapper;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
 import java.sql.SQLTransientException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -390,14 +386,16 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             @Override
             public Void withHandle(Handle handle)
             {
+              final Batch batch = handle.createBatch();
               if (!tableContainsColumn(handle, tableName, "type")) {
                 log.info("Adding column: type to table[%s]", tableName);
-                handle.execute(StringUtils.format("ALTER TABLE %1$s ADD COLUMN type VARCHAR(255)", tableName));
+                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN type VARCHAR(255) NULL", tableName));
               }
               if (!tableContainsColumn(handle, tableName, "group_id")) {
                 log.info("Adding column: group_id to table[%s]", tableName);
-                handle.execute(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255)", tableName));
+                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255) NULL", tableName));
               }
+              batch.execute();
               return null;
             }
           }
@@ -409,57 +407,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   @Override
-  public boolean migrateTaskTable()
+  public String getTaskTableName()
   {
     final MetadataStorageTablesConfig tablesConfig = tablesConfigSupplier.get();
     final String entryType = tablesConfig.getTaskEntryType();
-    final String tableName = tablesConfig.getEntryTable(entryType);
-    return migrateTaskTable(tableName);
-  }
-
-  public boolean migrateTaskTable(String tableName)
-  {
-    log.info("Populate fields task and group_id of task entry table [%s] from payload", tableName);
-    try {
-      retryWithHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws SQLException, IOException
-            {
-              ObjectMapper objectMapper = new ObjectMapper();
-              Connection connection = handle.getConnection();
-              Statement statement = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
-              boolean flag = true;
-              while (flag) {
-                // Should ideally use a cursor and sort by id for efficiency, but updates with ordering aren't allowed
-                String sql = StringUtils.format(
-                    "SELECT * FROM %1$s WHERE active = false AND type IS null %2$s",
-                    tableName,
-                    limitClause(100)
-                );
-                ResultSet resultSet = statement.executeQuery(sql);
-                flag = false;
-                while (resultSet.next()) {
-                  ObjectNode payload = objectMapper.readValue(resultSet.getBytes("payload"), ObjectNode.class);
-                  resultSet.updateString("type", payload.get("type").asText());
-                  resultSet.updateString("group_id", payload.get("groupId").asText());
-                  resultSet.updateRow();
-                  flag = true;
-                }
-              }
-              statement.close();
-              return null;
-            }
-          }
-      );
-      log.info("Migration of tasks complete for table[%s]", tableName);
-      return true;
-    }
-    catch (Exception e) {
-      log.warn(e, "Exception migrating task table [%s]", tableName);
-      return false;
-    }
+    return tablesConfig.getEntryTable(entryType);
   }
 
   public void createLogTable(final String tableName, final String entryTypeName)

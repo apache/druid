@@ -109,7 +109,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * If {@code taskLookups} includes {@link TaskLookupType#ACTIVE}, it returns all active tasks in the metadata store.
    * If {@code taskLookups} includes {@link TaskLookupType#COMPLETE}, it returns all complete tasks in the metadata
    * store. For complete tasks, additional filters in {@code CompleteTaskLookup} can be applied.
-   * All lookups should be processed atomically if there are more than one lookup is given.
+   * All lookups should be processed atomically if more than one lookup is given.
    *
    * It is RECOMMENDED to set fetchPayload to false after task table migration of old data to new schmea has completed
    *
@@ -201,4 +201,13 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    */
   @Nullable
   Long getLockId(String entryId, LockType lock);
+
+  /**
+   * Utility to migrate existing tasks to the new schema
+   *
+   * To be kicked off in a separate thread at MetadataTaskStorage startup.
+   * @param tasksTable
+   * @return
+   */
+  boolean migrateTaskTable(String tasksTable);
 }
