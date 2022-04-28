@@ -80,7 +80,9 @@ public class FunctionTest extends InitializedNullHandlingTest
                     .put("a", new String[] {"foo", "bar", "baz", "foobar"})
                     .put("b", new Long[] {1L, 2L, 3L, 4L, 5L})
                     .put("c", new Double[] {3.1, 4.2, 5.3})
-                    .put("someComplex", new TypeStrategiesTest.NullableLongPair(1L, 2L));
+                    .put("someComplex", new TypeStrategiesTest.NullableLongPair(1L, 2L))
+                    .put("str1", "v1")
+                    .put("str2", "v2");
     bindings = InputBindings.withMap(builder.build());
   }
 
@@ -971,6 +973,36 @@ public class FunctionTest extends InitializedNullHandlingTest
     expectedException.expect(IAE.class);
     expectedException.expectMessage("needs exactly 1 argument of type String");
     assertArrayExpr("mv_to_array()", null);
+  }
+
+  @Test
+  public void testPlusOnString()
+  {
+    assertExpr("str1 + str2", "v1v2");
+  }
+
+  @Test
+  public void testMultiplyOnString()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("operator '*' in expression (\"str1\" * \"str2\") is not supported on type 'string'.");
+    assertExpr("str1 * str2", null);
+  }
+
+  @Test
+  public void testMinusOnString()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("operator '-' in expression (\"str1\" - \"str2\") is not supported on type 'string'.");
+    assertExpr("str1 - str2", null);
+  }
+
+  @Test
+  public void testDivOnString()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("operator '/' in expression (\"str1\" / \"str2\") is not supported on type 'string'.");
+    assertExpr("str1 / str2", null);
   }
 
   private void assertExpr(final String expression, @Nullable final Object expectedResult)
