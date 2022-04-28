@@ -22,6 +22,7 @@ package org.apache.druid.segment.column;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 
 import javax.annotation.Nullable;
 
@@ -34,7 +35,7 @@ public class ColumnBuilder
   @Nullable
   private Supplier<? extends BaseColumn> columnSupplier = null;
   @Nullable
-  private ColumnIndexSupplier indexSupplier = null;
+  private ColumnIndexSupplier indexSupplier = NoIndexesColumnIndexSupplier.getInstance();
   @Nullable
   private SmooshedFileMapper fileMapper = null;
 
@@ -96,7 +97,11 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnBuilder setIndexSupplier(ColumnIndexSupplier indexSupplier, boolean hasBitmapIndex, boolean hasSpatial)
+  public ColumnBuilder setIndexSupplier(
+      @Nullable ColumnIndexSupplier indexSupplier,
+      boolean hasBitmapIndex,
+      boolean hasSpatial
+  )
   {
     this.indexSupplier = indexSupplier;
     capabilitiesBuilder.setHasBitmapIndexes(hasBitmapIndex);

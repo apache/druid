@@ -24,7 +24,6 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
@@ -42,9 +41,9 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.BitmapColumnIndex;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.LexicographicalRangeIndex;
-import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -66,59 +65,33 @@ public class BoundFilter implements Filter
   }
 
   @Override
-  public <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  @Nullable
+  public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
+    if (!Filters.checkFilterTuningUseIndex(boundDimFilter.getDimension(), selector, filterTuning)) {
+      return null;
+    }
     if (supportShortCircuit()) {
-      final LexicographicalRangeIndex rangeIndex = selector.as(
-          boundDimFilter.getDimension(),
-          LexicographicalRangeIndex.class
-      );
-      if (rangeIndex == null) {
-        return Filters.makeNullIndexResult(doesMatchNull(), selector, bitmapResultFactory);
+      final ColumnIndexSupplier supplier = selector.getIndexSupplier(boundDimFilter.getDimension());
+      if (supplier == null) {
+        return Filters.makeNullIndex(doesMatchNull(), selector);
       }
-      return bitmapResultFactory.unionDimensionValueBitmaps(
-          rangeIndex.getBitmapsInRange(
-              boundDimFilter.getLower(),
-              boundDimFilter.isLowerStrict(),
-              boundDimFilter.getUpper(),
-              boundDimFilter.isUpperStrict()
-          )
+      final LexicographicalRangeIndex rangeIndex = supplier.getIndex(LexicographicalRangeIndex.class);
+      if (rangeIndex == null) {
+        // column
+        return null;
+      }
+      return rangeIndex.forRange(
+          boundDimFilter.getLower(),
+          boundDimFilter.isLowerStrict(),
+          boundDimFilter.getUpper(),
+          boundDimFilter.isUpperStrict()
       );
     } else {
-      return Filters.matchPredicate(
+      return Filters.makePredicateIndex(
           boundDimFilter.getDimension(),
           selector,
-          bitmapResultFactory,
-          getPredicateFactory().makeStringPredicate()
-      );
-    }
-  }
-
-  @Override
-  public double estimateSelectivity(ColumnIndexSelector indexSelector)
-  {
-    if (supportShortCircuit()) {
-      final LexicographicalRangeIndex rangeIndex = indexSelector.as(
-          boundDimFilter.getDimension(),
-          LexicographicalRangeIndex.class
-      );
-      if (rangeIndex == null) {
-        return doesMatchNull() ? 1. : 0.;
-      }
-      return Filters.estimateSelectivity(
-          rangeIndex.getBitmapsInRange(
-              boundDimFilter.getLower(),
-              boundDimFilter.isLowerStrict(),
-              boundDimFilter.getUpper(),
-              boundDimFilter.isUpperStrict()
-          ).iterator(),
-          indexSelector.getNumRows()
-      );
-    } else {
-      return Filters.estimateSelectivity(
-          boundDimFilter.getDimension(),
-          indexSelector,
-          getPredicateFactory().makeStringPredicate()
+          getPredicateFactory()
       );
     }
   }
@@ -149,23 +122,6 @@ public class BoundFilter implements Filter
   public boolean canVectorizeMatcher(ColumnInspector inspector)
   {
     return true;
-  }
-
-  @Nullable
-  @Override
-  public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
-  {
-    final String columnName = boundDimFilter.getDimension();
-    if (supportShortCircuit()) {
-      final ColumnIndexCapabilities capabilities = selector.getIndexCapabilities(
-          columnName,
-          LexicographicalRangeIndex.class
-      );
-      if (capabilities != null) {
-        return Filters.getCapabilitiesWithFilterTuning(selector, columnName, capabilities, filterTuning);
-      }
-    }
-    return Filters.getCapabilitiesWithFilterTuning(selector, columnName, StringValueSetIndex.class, filterTuning);
   }
 
   @Override

@@ -20,7 +20,6 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
@@ -35,7 +34,7 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 
@@ -56,10 +55,11 @@ public class ColumnComparisonFilter implements Filter
     this.dimensions = Preconditions.checkNotNull(dimensions, "dimensions");
   }
 
+  @Nullable
   @Override
-  public <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    throw new UnsupportedOperationException();
+    return null;
   }
 
   @Override
@@ -134,13 +134,6 @@ public class ColumnComparisonFilter implements Filter
     return false;
   }
 
-  @Nullable
-  @Override
-  public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
-  {
-    return null;
-  }
-
   @Override
   public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
   {
@@ -158,7 +151,6 @@ public class ColumnComparisonFilter implements Filter
   {
     throw new UnsupportedOperationException();
   }
-
 
   @Override
   public boolean equals(Object o)

@@ -36,7 +36,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.js.JavaScriptConfig;
-import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
@@ -63,8 +62,8 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
-import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
+import org.apache.druid.segment.column.AllTrueBitmapColumnIndex;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.SelectorFilter;
@@ -657,10 +656,11 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
       this.timestamp = timestamp;
     }
 
+    @Nullable
     @Override
-    public <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+    public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
     {
-      return bitmapResultFactory.wrapAllTrue(Filters.allTrue(selector));
+      return new AllTrueBitmapColumnIndex(selector);
     }
 
     @Override
@@ -677,13 +677,6 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
           "billy",
           new DictionaryRaceTestFilterDruidPredicateFactory()
       );
-    }
-
-    @Nullable
-    @Override
-    public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
-    {
-      return SimpleColumnIndexCapabilities.getConstant();
     }
 
     @Override

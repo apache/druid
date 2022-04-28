@@ -45,7 +45,6 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
@@ -57,7 +56,8 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.BitmapColumnIndex;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -280,44 +280,32 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   }
 
   @Override
-  public <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  @Nullable
+  public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
+    if (!Filters.checkFilterTuningUseIndex(dimension, selector, filterTuning)) {
+      return null;
+    }
     if (extractionFn == null) {
-      final StringValueSetIndex valueSetIndex = selector.as(dimension, StringValueSetIndex.class);
-      if (valueSetIndex == null) {
-        return Filters.makeNullIndexResult(
+      final ColumnIndexSupplier supplier = selector.getIndexSupplier(dimension);
+
+      if (supplier == null) {
+        // column doesn't exist, match against null
+        return Filters.makeNullIndex(
             predicateFactory.makeStringPredicate().apply(null),
-            selector,
-            bitmapResultFactory
+            selector
         );
       }
-      return bitmapResultFactory.unionDimensionValueBitmaps(valueSetIndex.getBitmapsForValues(values));
-    } else {
-      return Filters.matchPredicate(
-          dimension,
-          selector,
-          bitmapResultFactory,
-          predicateFactory.makeStringPredicate()
-      );
+      final StringValueSetIndex valueSetIndex = supplier.getIndex(StringValueSetIndex.class);
+      if (valueSetIndex != null) {
+        return valueSetIndex.forValues(values);
+      }
     }
-  }
-
-  @Override
-  public double estimateSelectivity(ColumnIndexSelector indexSelector)
-  {
-    if (extractionFn == null) {
-      final StringValueSetIndex valueSetIndex = indexSelector.as(dimension, StringValueSetIndex.class);
-      return Filters.estimateSelectivity(
-          valueSetIndex.getBitmapsForValues(values).iterator(),
-          indexSelector.getNumRows()
-      );
-    } else {
-      return Filters.estimateSelectivity(
-          dimension,
-          indexSelector,
-          predicateFactory.makeStringPredicate()
-      );
-    }
+    return Filters.makePredicateIndex(
+        dimension,
+        selector,
+        predicateFactory
+    );
   }
 
   @Override
@@ -367,13 +355,6 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
           predicateFactory
       );
     }
-  }
-
-  @Nullable
-  @Override
-  public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
-  {
-    return Filters.getCapabilitiesWithFilterTuning(selector, dimension, StringValueSetIndex.class, filterTuning);
   }
 
   @Override

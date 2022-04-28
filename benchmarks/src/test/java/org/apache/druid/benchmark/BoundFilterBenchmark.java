@@ -34,6 +34,7 @@ import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.filter.BoundFilter;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.serde.DictionaryEncodedStringIndexSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -184,7 +185,7 @@ public class BoundFilterBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void matchNothingLexicographic()
   {
-    final ImmutableBitmap bitmapIndex = NOTHING_LEXICOGRAPHIC.getBitmapIndex(selector);
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(NOTHING_LEXICOGRAPHIC, selector);
     Preconditions.checkState(bitmapIndex.size() == 0);
   }
 
@@ -193,7 +194,7 @@ public class BoundFilterBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void matchHalfLexicographic()
   {
-    final ImmutableBitmap bitmapIndex = HALF_LEXICOGRAPHIC.getBitmapIndex(selector);
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(HALF_LEXICOGRAPHIC, selector);
     Preconditions.checkState(bitmapIndex.size() > 0 && bitmapIndex.size() < cardinality);
   }
 
@@ -202,7 +203,7 @@ public class BoundFilterBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void matchEverythingLexicographic()
   {
-    final ImmutableBitmap bitmapIndex = EVERYTHING_LEXICOGRAPHIC.getBitmapIndex(selector);
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(EVERYTHING_LEXICOGRAPHIC, selector);
     Preconditions.checkState(bitmapIndex.size() == cardinality);
   }
 
@@ -211,7 +212,7 @@ public class BoundFilterBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void matchNothingAlphaNumeric()
   {
-    final ImmutableBitmap bitmapIndex = NOTHING_ALPHANUMERIC.getBitmapIndex(selector);
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(NOTHING_ALPHANUMERIC, selector);
     Preconditions.checkState(bitmapIndex.size() == 0);
   }
 
@@ -220,7 +221,7 @@ public class BoundFilterBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void matchHalfAlphaNumeric()
   {
-    final ImmutableBitmap bitmapIndex = HALF_ALPHANUMERIC.getBitmapIndex(selector);
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(HALF_ALPHANUMERIC, selector);
     Preconditions.checkState(bitmapIndex.size() > 0 && bitmapIndex.size() < cardinality);
   }
 
@@ -229,7 +230,7 @@ public class BoundFilterBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void matchEverythingAlphaNumeric()
   {
-    final ImmutableBitmap bitmapIndex = EVERYTHING_ALPHANUMERIC.getBitmapIndex(selector);
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(EVERYTHING_ALPHANUMERIC, selector);
     Preconditions.checkState(bitmapIndex.size() == cardinality);
   }
 

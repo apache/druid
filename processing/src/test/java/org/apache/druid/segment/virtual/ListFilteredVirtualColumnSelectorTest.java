@@ -41,7 +41,6 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -186,8 +185,6 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
 
 
     EasyMock.expect(holder.getIndexSupplier()).andReturn(indexSupplier).atLeastOnce();
-    EasyMock.expect(indexSupplier.getIndexCapabilities(DictionaryEncodedStringValueIndex.class))
-            .andReturn(SimpleColumnIndexCapabilities.getConstant()).atLeastOnce();
     EasyMock.expect(indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class)).andReturn(index).atLeastOnce();
 
     EasyMock.expect(index.getCardinality()).andReturn(3).atLeastOnce();
@@ -207,9 +204,10 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
     );
 
     SelectorFilter filter = new SelectorFilter(ALLOW_VIRTUAL_NAME, "a");
-    Assert.assertNotNull(filter.getIndexCapabilities(bitmapIndexSelector));
+    Assert.assertNotNull(filter.getBitmapColumnIndex(bitmapIndexSelector));
 
-    DictionaryEncodedStringValueIndex listFilteredIndex = bitmapIndexSelector.as(ALLOW_VIRTUAL_NAME, DictionaryEncodedStringValueIndex.class);
+    DictionaryEncodedStringValueIndex listFilteredIndex =
+        bitmapIndexSelector.getIndexSupplier(ALLOW_VIRTUAL_NAME).getIndex(DictionaryEncodedStringValueIndex.class);
     Assert.assertEquals(-1, listFilteredIndex.getIndex("a"));
     Assert.assertEquals(0, listFilteredIndex.getIndex("b"));
     Assert.assertEquals(1, listFilteredIndex.getIndex("c"));
@@ -249,8 +247,6 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
                                                    .setHasBitmapIndexes(true)
             ).anyTimes();
     EasyMock.expect(holder.getIndexSupplier()).andReturn(indexSupplier).atLeastOnce();
-    EasyMock.expect(indexSupplier.getIndexCapabilities(DictionaryEncodedStringValueIndex.class))
-            .andReturn(new SimpleColumnIndexCapabilities(true, true)).anyTimes();
     EasyMock.expect(indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class)).andReturn(index).atLeastOnce();
     EasyMock.expect(index.getCardinality()).andReturn(3).atLeastOnce();
     EasyMock.expect(index.getValue(0)).andReturn("a").atLeastOnce();
@@ -269,9 +265,10 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
     );
 
     SelectorFilter filter = new SelectorFilter(DENY_VIRTUAL_NAME, "c");
-    Assert.assertNotNull(filter.getIndexCapabilities(bitmapIndexSelector));
+    Assert.assertNotNull(filter.getBitmapColumnIndex(bitmapIndexSelector));
 
-    DictionaryEncodedStringValueIndex listFilteredIndex = bitmapIndexSelector.as(DENY_VIRTUAL_NAME, DictionaryEncodedStringValueIndex.class);
+    DictionaryEncodedStringValueIndex listFilteredIndex =
+        bitmapIndexSelector.getIndexSupplier(DENY_VIRTUAL_NAME).getIndex(DictionaryEncodedStringValueIndex.class);
     Assert.assertEquals(-1, listFilteredIndex.getIndex("a"));
     Assert.assertEquals(-1, listFilteredIndex.getIndex("b"));
     Assert.assertEquals(0, listFilteredIndex.getIndex("c"));

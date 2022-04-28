@@ -35,6 +35,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.serde.DictionaryEncodedStringIndexSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -148,7 +149,7 @@ public class LikeFilterBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void matchLikeEquals(Blackhole blackhole)
   {
-    final ImmutableBitmap bitmapIndex = LIKE_EQUALS.getBitmapIndex(selector);
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(LIKE_EQUALS, selector);
     blackhole.consume(bitmapIndex);
   }
 
@@ -157,7 +158,7 @@ public class LikeFilterBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void matchSelectorEquals(Blackhole blackhole)
   {
-    final ImmutableBitmap bitmapIndex = SELECTOR_EQUALS.getBitmapIndex(selector);
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(SELECTOR_EQUALS, selector);
     blackhole.consume(bitmapIndex);
   }
 
@@ -166,7 +167,7 @@ public class LikeFilterBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void matchLikePrefix(Blackhole blackhole)
   {
-    final ImmutableBitmap bitmapIndex = LIKE_PREFIX.getBitmapIndex(selector);
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(LIKE_PREFIX, selector);
     blackhole.consume(bitmapIndex);
   }
 
@@ -175,7 +176,7 @@ public class LikeFilterBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void matchBoundPrefix(Blackhole blackhole)
   {
-    final ImmutableBitmap bitmapIndex = BOUND_PREFIX.getBitmapIndex(selector);
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(BOUND_PREFIX, selector);
     blackhole.consume(bitmapIndex);
   }
 
@@ -184,7 +185,7 @@ public class LikeFilterBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void matchRegexPrefix(Blackhole blackhole)
   {
-    final ImmutableBitmap bitmapIndex = REGEX_PREFIX.getBitmapIndex(selector);
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(REGEX_PREFIX, selector);
     blackhole.consume(bitmapIndex);
   }
 

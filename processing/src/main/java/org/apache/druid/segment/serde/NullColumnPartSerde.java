@@ -25,10 +25,7 @@ import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
-import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
@@ -47,21 +44,6 @@ import java.util.Objects;
  */
 public class NullColumnPartSerde implements ColumnPartSerde
 {
-  private static final ColumnIndexSupplier NIL_INDEX_SUPPLIER = new ColumnIndexSupplier()
-  {
-    @Override
-    public <T> ColumnIndexCapabilities getIndexCapabilities(Class<T> clazz)
-    {
-      return SimpleColumnIndexCapabilities.getConstant();
-    }
-
-    @Nullable
-    @Override
-    public <T> T getIndex(Class<T> clazz)
-    {
-      return null;
-    }
-  };
 
   private static final Serializer NOOP_SERIALIZER = new Serializer()
   {
@@ -109,7 +91,9 @@ public class NullColumnPartSerde implements ColumnPartSerde
       builder.setHasMultipleValues(false)
              .setHasNulls(true)
              .setFilterable(true)
-             .setIndexSupplier(NIL_INDEX_SUPPLIER, true, false)
+             // this is a bit sneaky, we set supplier to null here to act like a null column instead of a column
+             // without any indexes, which is the default state
+             .setIndexSupplier(null, true, false)
              .setDictionaryEncodedColumnSupplier(Suppliers.ofInstance(nullDictionaryEncodedColumn));
     };
   }

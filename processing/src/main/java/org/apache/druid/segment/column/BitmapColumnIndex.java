@@ -19,31 +19,11 @@
 
 package org.apache.druid.segment.column;
 
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
+import org.apache.druid.query.BitmapResultFactory;
 
-/**
- */
-public interface ColumnHolder
+public interface BitmapColumnIndex
 {
-  String TIME_COLUMN_NAME = "__time";
-  String DOUBLE_STORAGE_TYPE_PROPERTY = "druid.indexing.doubleStorage";
+  ColumnIndexCapabilities getIndexCapabilities();
 
-  static boolean storeDoubleAsFloat()
-  {
-    String value = System.getProperty(DOUBLE_STORAGE_TYPE_PROPERTY, "double");
-    return !"double".equals(StringUtils.toLowerCase(value));
-  }
-
-  ColumnCapabilities getCapabilities();
-
-  int getLength();
-  BaseColumn getColumn();
-
-  ColumnIndexSupplier getIndexSupplier();
-
-  /**
-   * Returns a new instance of a {@link SettableColumnValueSelector}, corresponding to the type of this column.
-   */
-  SettableColumnValueSelector makeNewSettableColumnValueSelector();
+  <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory);
 }

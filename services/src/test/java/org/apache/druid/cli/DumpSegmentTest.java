@@ -39,7 +39,6 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
@@ -90,7 +89,6 @@ public class DumpSegmentTest
     Mockito.when(queryableIndex.getColumnHolder("y")).thenReturn(yHolder);
 
     Mockito.when(xHolder.getIndexSupplier()).thenReturn(indexSupplier);
-    Mockito.when(indexSupplier.getIndexCapabilities(DictionaryEncodedStringValueIndex.class)).thenReturn(new SimpleColumnIndexCapabilities(true, true));
     Mockito.when(indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class)).thenReturn(valueIndex);
     Mockito.when(valueIndex.getCardinality()).thenReturn(1);
     Mockito.when(valueIndex.getBitmap(0)).thenReturn(bitmap);

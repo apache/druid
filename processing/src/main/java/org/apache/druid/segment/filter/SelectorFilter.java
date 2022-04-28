@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
@@ -34,7 +33,8 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.BitmapColumnIndex;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -77,13 +77,22 @@ public class SelectorFilter implements Filter
   }
 
   @Override
-  public <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  @Nullable
+  public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    final StringValueSetIndex valueSetIndex = selector.as(dimension, StringValueSetIndex.class);
-    if (valueSetIndex == null) {
-      return Filters.makeNullIndexResult(NullHandling.isNullOrEquivalent(value), selector, bitmapResultFactory);
+    if (!Filters.checkFilterTuningUseIndex(dimension, selector, filterTuning)) {
+      return null;
     }
-    return bitmapResultFactory.wrapDimensionValue(valueSetIndex.getBitmapForValue(value));
+    final ColumnIndexSupplier supplier = selector.getIndexSupplier(dimension);
+    if (supplier == null) {
+      return Filters.makeNullIndex(NullHandling.isNullOrEquivalent(value), selector);
+    }
+    final StringValueSetIndex valueSetIndex = supplier.getIndex(StringValueSetIndex.class);
+    if (valueSetIndex == null) {
+      // column exists, but has no index
+      return null;
+    }
+    return valueSetIndex.forValue(value);
   }
 
   @Override
@@ -102,24 +111,10 @@ public class SelectorFilter implements Filter
     ).makeMatcher(value);
   }
 
-  @Nullable
-  @Override
-  public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
-  {
-    return Filters.getCapabilitiesWithFilterTuning(selector, dimension, StringValueSetIndex.class, filterTuning);
-  }
-
   @Override
   public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
   {
     return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
-  }
-
-  @Override
-  public double estimateSelectivity(ColumnIndexSelector selector)
-  {
-    return (double) selector.as(dimension, StringValueSetIndex.class).getBitmapForValue(value).size()
-           / selector.getNumRows();
   }
 
   @Override

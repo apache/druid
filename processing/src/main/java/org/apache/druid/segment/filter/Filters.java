@@ -20,13 +20,11 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.BitmapResultFactory;
+import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.filter.ColumnIndexSelector;
@@ -38,10 +36,13 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.AllFalseBitmapColumnIndex;
+import org.apache.druid.segment.column.AllTrueBitmapColumnIndex;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.StringValueSetIndex;
+import org.apache.druid.segment.column.DruidPredicateIndex;
 import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.filter.cnf.CalciteCnfHelper;
 import org.apache.druid.segment.filter.cnf.HiveCnfHelper;
@@ -142,113 +143,41 @@ public class Filters
     );
   }
 
-  public static <T> T makeNullIndexResult(
-      boolean matchesNull,
+  @Nullable
+  public static BitmapColumnIndex makePredicateIndex(
+      final String column,
       final ColumnIndexSelector selector,
-      BitmapResultFactory<T> bitmapResultFactory
+      final DruidPredicateFactory predicateFactory
   )
   {
-    return matchesNull
-           ? bitmapResultFactory.wrapAllTrue(Filters.allTrue(selector))
-           : bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));
-  }
-
-  public static ImmutableBitmap allFalse(final ColumnIndexSelector selector)
-  {
-    return selector.getBitmapFactory().makeEmptyImmutableBitmap();
-  }
-
-  public static ImmutableBitmap allTrue(final ColumnIndexSelector selector)
-  {
-    return selector.getBitmapFactory()
-                   .complement(selector.getBitmapFactory().makeEmptyImmutableBitmap(), selector.getNumRows());
-  }
-
-
-  /**
-   * Return the union of bitmaps for all values matching a particular predicate.
-   *
-   * @param dimension           dimension to look at
-   * @param selector            bitmap selector
-   * @param bitmapResultFactory
-   * @param predicate           predicate to use
-   *
-   * @return bitmap of matching rows
-   *
-   * @see #estimateSelectivity(String, ColumnIndexSelector, Predicate)
-   */
-  public static <T> T matchPredicate(
-      final String dimension,
-      final ColumnIndexSelector selector,
-      BitmapResultFactory<T> bitmapResultFactory,
-      final Predicate<String> predicate
-  )
-  {
-    return bitmapResultFactory.unionDimensionValueBitmaps(matchPredicateNoUnion(dimension, selector, predicate));
-  }
-
-  /**
-   * Return an iterable of bitmaps for all values matching a particular predicate. Unioning these bitmaps
-   * yields the same result that {@link #matchPredicate(String, ColumnIndexSelector, BitmapResultFactory, Predicate)}
-   * would have returned.
-   *
-   * @param dimension dimension to look at
-   * @param selector  bitmap selector
-   * @param predicate predicate to use
-   *
-   * @return iterable of bitmaps of matching rows
-   */
-  public static Iterable<ImmutableBitmap> matchPredicateNoUnion(
-      final String dimension,
-      final ColumnIndexSelector selector,
-      final Predicate<String> predicate
-  )
-  {
-    Preconditions.checkNotNull(dimension, "dimension");
+    Preconditions.checkNotNull(column, "column");
     Preconditions.checkNotNull(selector, "selector");
-    Preconditions.checkNotNull(predicate, "predicate");
-
-
-    final StringValueSetIndex valueSetIndex = selector.as(dimension, StringValueSetIndex.class);
-    if (valueSetIndex != null) {
-      return valueSetIndex.getBitmapsForPredicate(predicate);
-    } else {
-      // Missing dimension -> match all rows if the predicate matches null; match no rows otherwise
-      return ImmutableList.of(predicate.apply(null) ? allTrue(selector) : allFalse(selector));
+    Preconditions.checkNotNull(predicateFactory, "predicateFactory");
+    final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(column);
+    if (indexSupplier != null) {
+      final DruidPredicateIndex predicateIndex = indexSupplier.getIndex(DruidPredicateIndex.class);
+      if (predicateIndex != null) {
+        return predicateIndex.forPredicate(predicateFactory);
+      }
+      // index doesn't exist
+      return null;
     }
+    // missing column -> match all rows if the predicate matches null; match no rows otherwise
+    return predicateFactory.makeStringPredicate().apply(null)
+           ? new AllTrueBitmapColumnIndex(selector)
+           : new AllFalseBitmapColumnIndex(selector);
   }
 
-  /**
-   * Return an estimated selectivity for bitmaps of all values matching the given predicate.
-   *
-   * @param dimension     dimension to look at
-   * @param indexSelector bitmap selector
-   * @param predicate     predicate to use
-   *
-   * @return estimated selectivity
-   *
-   * @see #matchPredicate(String, ColumnIndexSelector, BitmapResultFactory, Predicate)
-   */
-  public static double estimateSelectivity(
-      final String dimension,
-      final ColumnIndexSelector indexSelector,
-      final Predicate<String> predicate
-  )
+  public static BitmapColumnIndex makeNullIndex(boolean matchesNull, final ColumnIndexSelector selector)
   {
-    Preconditions.checkNotNull(dimension, "dimension");
-    Preconditions.checkNotNull(indexSelector, "selector");
-    Preconditions.checkNotNull(predicate, "predicate");
+    return matchesNull ? new AllTrueBitmapColumnIndex(selector) : new AllFalseBitmapColumnIndex(selector);
+  }
 
-    final StringValueSetIndex valueSetIndex = indexSelector.as(dimension, StringValueSetIndex.class);
-    if (valueSetIndex != null) {
-      return estimateSelectivity(
-          valueSetIndex.getBitmapsForPredicate(predicate::apply).iterator(),
-          indexSelector.getNumRows()
-      );
-    } else {
-      // Missing dimension -> match all rows if the predicate matches null; match no rows otherwise
-      return predicate.apply(null) ? 1. : 0.;
-    }
+  public static ImmutableBitmap computeDefaultBitmapResults(Filter filter, ColumnIndexSelector selector)
+  {
+    return filter.getBitmapColumnIndex(selector).computeBitmapResult(
+        new DefaultBitmapResultFactory(selector.getBitmapFactory())
+    );
   }
 
   /**
@@ -304,7 +233,7 @@ public class Filters
       ColumnIndexSelector indexSelector
   )
   {
-    if (filter.getIndexCapabilities(indexSelector) != null) {
+    if (filter.getBitmapColumnIndex(indexSelector) != null) {
       final ColumnHolder columnHolder = columnSelector.getColumnHolder(dimension);
       if (columnHolder != null) {
         return columnHolder.getCapabilities().hasMultipleValues().isFalse();
@@ -348,50 +277,41 @@ public class Filters
     return current;
   }
 
-  @Nullable
-  public static <T> ColumnIndexCapabilities getCapabilitiesWithFilterTuning(
-      ColumnIndexSelector indexSelector,
-      String columnName,
-      Class<T> indexClazz,
-      @Nullable FilterTuning filterTuning
-  )
-  {
-    final ColumnIndexCapabilities indexCapabilities = indexSelector.getIndexCapabilities(columnName, indexClazz);
-    return getCapabilitiesWithFilterTuning(indexSelector, columnName, indexCapabilities, filterTuning);
-  }
 
-  @Nullable
-  public static ColumnIndexCapabilities getCapabilitiesWithFilterTuning(
-      ColumnIndexSelector indexSelector,
+  public static boolean checkFilterTuningUseIndex(
       String columnName,
-      @Nullable ColumnIndexCapabilities indexCapabilities,
+      ColumnIndexSelector indexSelector,
       @Nullable FilterTuning filterTuning
   )
   {
     if (filterTuning != null) {
       if (!filterTuning.getUseBitmapIndex()) {
-        return null;
+        return false;
       }
       if (filterTuning.hasValueCardinalityThreshold()) {
-        final DictionaryEncodedStringValueIndex valueIndex = indexSelector.as(
-            columnName,
-            DictionaryEncodedStringValueIndex.class
-        );
-        if (valueIndex != null) {
-          final int cardinality = valueIndex.getCardinality();
-          Integer min = filterTuning.getMinCardinalityToUseBitmapIndex();
-          Integer max = filterTuning.getMaxCardinalityToUseBitmapIndex();
-          if (min != null && cardinality < min) {
-            return null;
-          }
-          if (max != null && cardinality > max) {
-            return null;
+        final ColumnIndexSupplier supplier = indexSelector.getIndexSupplier(columnName);
+        if (supplier != null) {
+          final DictionaryEncodedStringValueIndex valueIndex = supplier.getIndex(
+              DictionaryEncodedStringValueIndex.class
+          );
+          if (valueIndex != null) {
+            final int cardinality = valueIndex.getCardinality();
+            Integer min = filterTuning.getMinCardinalityToUseBitmapIndex();
+            Integer max = filterTuning.getMaxCardinalityToUseBitmapIndex();
+            if (min != null && cardinality < min) {
+              return false;
+            }
+            if (max != null && cardinality > max) {
+              return false;
+            }
           }
         }
       }
     }
-    return indexCapabilities;
+    return true;
   }
+
+
 
   /**
    * Create a filter representing an AND relationship across a list of filters. Deduplicates filters, flattens stacks,

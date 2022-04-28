@@ -37,6 +37,7 @@ import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.serde.DictionaryEncodedStringIndexSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -156,7 +157,7 @@ public class DimensionPredicateFilterBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void matchIsEven()
   {
-    final ImmutableBitmap bitmapIndex = IS_EVEN.getBitmapIndex(selector);
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(IS_EVEN, selector);
     Preconditions.checkState(bitmapIndex.size() == cardinality / 2);
   }
 

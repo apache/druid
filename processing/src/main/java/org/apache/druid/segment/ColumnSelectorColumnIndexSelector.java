@@ -23,10 +23,8 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.NumericColumn;
-import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 
 import javax.annotation.Nullable;
 
@@ -63,35 +61,8 @@ public class ColumnSelectorColumnIndexSelector implements ColumnIndexSelector
     return bitmapFactory;
   }
 
-  @Nullable
   @Override
-  public <T> ColumnIndexCapabilities getIndexCapabilities(
-      String column,
-      Class<T> clazz
-  )
-  {
-    final ColumnIndexSupplier indexSupplier;
-    if (isVirtualColumn(column)) {
-      indexSupplier = virtualColumns.getIndexSupplier(column, columnSelector);
-    } else {
-      final ColumnHolder columnHolder = columnSelector.getColumnHolder(column);
-      if (columnHolder == null || !columnHolder.getCapabilities().isFilterable()) {
-        // if a column doesn't exist or isn't filterable, return true so that callers can use a value matcher to
-        // either make an all true or all false bitmap if the matcher matches null
-        return SimpleColumnIndexCapabilities.getConstant();
-      }
-      indexSupplier = columnHolder.getIndexSupplier();
-    }
-    if (indexSupplier == null) {
-      // column exists, but doesn't have an index supplier
-      return null;
-    }
-    return indexSupplier.getIndexCapabilities(clazz);
-  }
-
-  @Nullable
-  @Override
-  public <T> T as(String column, Class<T> clazz)
+  public ColumnIndexSupplier getIndexSupplier(String column)
   {
     final ColumnIndexSupplier indexSupplier;
     if (isVirtualColumn(column)) {
@@ -103,10 +74,7 @@ public class ColumnSelectorColumnIndexSelector implements ColumnIndexSelector
       }
       indexSupplier = columnHolder.getIndexSupplier();
     }
-    if (indexSupplier == null) {
-      return null;
-    }
-    return indexSupplier.getIndex(clazz);
+    return indexSupplier;
   }
 
   private boolean isVirtualColumn(final String columnName)

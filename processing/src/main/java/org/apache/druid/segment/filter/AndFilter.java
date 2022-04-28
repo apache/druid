@@ -23,10 +23,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
+import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
@@ -38,9 +39,12 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -74,39 +78,65 @@ public class AndFilter implements BooleanFilter
       List<Filter> filters
   )
   {
-    return bitmapResultFactory.toImmutableBitmap(getBitmapResult(selector, bitmapResultFactory, filters));
+    return bitmapResultFactory.toImmutableBitmap(
+        getBitmapIndex(selector, filters).computeBitmapResult(bitmapResultFactory)
+    );
   }
 
-  private static <T> T getBitmapResult(
+  private static BitmapColumnIndex getBitmapIndex(
       ColumnIndexSelector selector,
-      BitmapResultFactory<T> bitmapResultFactory,
       Collection<Filter> filters
   )
   {
     if (filters.size() == 1) {
-      return Iterables.getOnlyElement(filters).getBitmapResult(selector, bitmapResultFactory);
+      return Iterables.getOnlyElement(filters).getBitmapColumnIndex(selector);
     }
 
-    final List<T> bitmapResults = Lists.newArrayListWithCapacity(filters.size());
+    final List<BitmapColumnIndex> bitmapColumnIndices = new ArrayList<>(filters.size());
+    ColumnIndexCapabilities merged = new SimpleColumnIndexCapabilities(true, true);
     for (final Filter filter : filters) {
-      Preconditions.checkArgument(filter.getIndexCapabilities(selector) != null,
-                                  "Filter[%s] does not support bitmap index", filter
-      );
-      final T bitmapResult = filter.getBitmapResult(selector, bitmapResultFactory);
-      if (bitmapResultFactory.isEmpty(bitmapResult)) {
-        // Short-circuit.
-        return bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));
+      final BitmapColumnIndex index = filter.getBitmapColumnIndex(selector);
+      if (index == null) {
+        // all or nothing
+        return null;
       }
-      bitmapResults.add(bitmapResult);
+      merged = merged.merge(index.getIndexCapabilities());
+      bitmapColumnIndices.add(index);
     }
 
-    return bitmapResultFactory.intersection(bitmapResults);
+    final ColumnIndexCapabilities finalMerged = merged;
+    return new BitmapColumnIndex()
+    {
+      @Override
+      public ColumnIndexCapabilities getIndexCapabilities()
+      {
+        return finalMerged;
+      }
+
+      @Override
+      public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+      {
+        final List<T> bitmapResults = new ArrayList<>(bitmapColumnIndices.size());
+        for (final BitmapColumnIndex index : bitmapColumnIndices) {
+          final T bitmapResult = index.computeBitmapResult(bitmapResultFactory);
+          if (bitmapResultFactory.isEmpty(bitmapResult)) {
+            // Short-circuit.
+            return bitmapResultFactory.wrapAllFalse(
+                selector.getBitmapFactory().makeEmptyImmutableBitmap()
+            );
+          }
+          bitmapResults.add(bitmapResult);
+        }
+        return bitmapResultFactory.intersection(bitmapResults);
+      }
+    };
   }
 
+  @Nullable
   @Override
-  public <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    return getBitmapResult(selector, bitmapResultFactory, filters);
+    return getBitmapIndex(selector, filters);
   }
 
   @Override
@@ -148,13 +178,13 @@ public class AndFilter implements BooleanFilter
   {
     final List<ValueMatcher> matchers = new ArrayList<>();
     final List<ImmutableBitmap> bitmaps = new ArrayList<>();
+    final BitmapFactory bitmapFactory = selector.getBitmapFactory();
+    final DefaultBitmapResultFactory resultFactory = new DefaultBitmapResultFactory(bitmapFactory);
 
     for (Filter filter : filters) {
-      // we only consider "exact" filters here, because if false, we've already used the bitmap index for the base
-      // offset
-      final ColumnIndexCapabilities capabilities = filter.getIndexCapabilities(selector);
-      if (capabilities != null && capabilities.isExact()) {
-        bitmaps.add(filter.getBitmapIndex(selector));
+      final BitmapColumnIndex columnIndex = filter.getBitmapColumnIndex(selector);
+      if (columnIndex != null && columnIndex.getIndexCapabilities().isExact()) {
+        bitmaps.add(columnIndex.computeBitmapResult(resultFactory));
       } else {
         ValueMatcher matcher = filter.makeMatcher(columnSelectorFactory);
         matchers.add(matcher);

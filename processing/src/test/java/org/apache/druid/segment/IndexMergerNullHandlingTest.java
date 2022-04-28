@@ -28,6 +28,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
@@ -202,7 +203,13 @@ public class IndexMergerNullHandlingTest
             if (expectedNullRows.size() > 0) {
               Assert.assertEquals(subsetList.toString(), 0, valueIndex.getIndex(null));
 
-              final ImmutableBitmap nullBitmap = valueSetIndex.getBitmapForValue(null);
+              final ImmutableBitmap nullBitmap = valueSetIndex.forValue(null)
+                                                              .computeBitmapResult(
+                                                                  new DefaultBitmapResultFactory(
+                                                                      indexSpec.getBitmapSerdeFactory()
+                                                                               .getBitmapFactory()
+                                                                  )
+                                                              );
               final List<Integer> actualNullRows = new ArrayList<>();
               final IntIterator iterator = nullBitmap.iterator();
               while (iterator.hasNext()) {

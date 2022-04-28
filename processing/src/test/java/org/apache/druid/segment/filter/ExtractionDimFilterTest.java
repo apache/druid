@@ -35,7 +35,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
@@ -90,7 +90,12 @@ public class ExtractionDimFilterTest extends InitializedNullHandlingTest
     @Override
     public ColumnCapabilities getColumnCapabilities(String column)
     {
-      return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.STRING).setHasMultipleValues(true).setDictionaryEncoded(true).setDictionaryValuesUnique(true).setDictionaryValuesSorted(true);
+      return ColumnCapabilitiesImpl.createDefault()
+                                   .setType(ColumnType.STRING)
+                                   .setHasMultipleValues(true)
+                                   .setDictionaryEncoded(true)
+                                   .setDictionaryValuesUnique(true)
+                                   .setDictionaryValuesSorted(true);
     }
 
     @Override
@@ -105,24 +110,8 @@ public class ExtractionDimFilterTest extends InitializedNullHandlingTest
       return factory;
     }
 
-    @Nullable
     @Override
-    public <T> ColumnIndexCapabilities getIndexCapabilities(
-        String column,
-        Class<T> clazz
-    )
-    {
-      return new DictionaryEncodedStringIndexSupplier(
-          factory,
-          GenericIndexed.fromIterable(Collections.singletonList("foo1"), GenericIndexed.STRING_STRATEGY),
-          GenericIndexed.fromIterable(Collections.singletonList(foo1BitMap), serdeFactory.getObjectStrategy()),
-          null
-      ).getIndexCapabilities(clazz);
-    }
-
-    @Nullable
-    @Override
-    public <T> T as(String column, Class<T> clazz)
+    public ColumnIndexSupplier getIndexSupplier(String column)
     {
       if ("foo".equals(column)) {
         return new DictionaryEncodedStringIndexSupplier(
@@ -130,10 +119,11 @@ public class ExtractionDimFilterTest extends InitializedNullHandlingTest
             GenericIndexed.fromIterable(Collections.singletonList("foo1"), GenericIndexed.STRING_STRATEGY),
             GenericIndexed.fromIterable(Collections.singletonList(foo1BitMap), serdeFactory.getObjectStrategy()),
             null
-        ).getIndex(clazz);
+        );
       }
       return null;
     }
+
   };
   private static final ExtractionFn DIM_EXTRACTION_FN = new DimExtractionFn()
   {
@@ -167,7 +157,7 @@ public class ExtractionDimFilterTest extends InitializedNullHandlingTest
   public void testEmpty()
   {
     Filter extractionFilter = new SelectorDimFilter("foo", "NFDJUKFNDSJFNS", DIM_EXTRACTION_FN).toFilter();
-    ImmutableBitmap immutableBitmap = extractionFilter.getBitmapIndex(BITMAP_INDEX_SELECTOR);
+    ImmutableBitmap immutableBitmap = Filters.computeDefaultBitmapResults(extractionFilter, BITMAP_INDEX_SELECTOR);
     Assert.assertEquals(0, immutableBitmap.size());
   }
 
@@ -175,7 +165,7 @@ public class ExtractionDimFilterTest extends InitializedNullHandlingTest
   public void testNull()
   {
     Filter extractionFilter = new SelectorDimFilter("FDHJSFFHDS", "extractDimVal", DIM_EXTRACTION_FN).toFilter();
-    ImmutableBitmap immutableBitmap = extractionFilter.getBitmapIndex(BITMAP_INDEX_SELECTOR);
+    ImmutableBitmap immutableBitmap = Filters.computeDefaultBitmapResults(extractionFilter, BITMAP_INDEX_SELECTOR);
     Assert.assertEquals(0, immutableBitmap.size());
   }
 
@@ -183,7 +173,7 @@ public class ExtractionDimFilterTest extends InitializedNullHandlingTest
   public void testNormal()
   {
     Filter extractionFilter = new SelectorDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN).toFilter();
-    ImmutableBitmap immutableBitmap = extractionFilter.getBitmapIndex(BITMAP_INDEX_SELECTOR);
+    ImmutableBitmap immutableBitmap = Filters.computeDefaultBitmapResults(extractionFilter, BITMAP_INDEX_SELECTOR);
     Assert.assertEquals(1, immutableBitmap.size());
   }
 
@@ -192,23 +182,23 @@ public class ExtractionDimFilterTest extends InitializedNullHandlingTest
   {
     Assert.assertEquals(
         1,
-        Filters
-            .toFilter(DimFilters.or(new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null)))
-            .getBitmapIndex(BITMAP_INDEX_SELECTOR)
-            .size()
+        Filters.computeDefaultBitmapResults(
+            Filters.toFilter(DimFilters.or(new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null))),
+            BITMAP_INDEX_SELECTOR
+        ).size()
     );
 
     Assert.assertEquals(
         1,
-        Filters
-            .toFilter(
+        Filters.computeDefaultBitmapResults(
+            Filters.toFilter(
                 DimFilters.or(
                     new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null),
                     new ExtractionDimFilter("foo", "DOES NOT EXIST", DIM_EXTRACTION_FN, null)
                 )
-            )
-            .getBitmapIndex(BITMAP_INDEX_SELECTOR)
-            .size()
+            ),
+            BITMAP_INDEX_SELECTOR
+        ).size()
     );
   }
 
@@ -217,23 +207,23 @@ public class ExtractionDimFilterTest extends InitializedNullHandlingTest
   {
     Assert.assertEquals(
         1,
-        Filters
-            .toFilter(DimFilters.or(new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null)))
-            .getBitmapIndex(BITMAP_INDEX_SELECTOR)
-            .size()
+        Filters.computeDefaultBitmapResults(
+            Filters.toFilter(DimFilters.or(new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null))),
+            BITMAP_INDEX_SELECTOR
+        ).size()
     );
 
     Assert.assertEquals(
         1,
-        Filters
-            .toFilter(
+        Filters.computeDefaultBitmapResults(
+            Filters.toFilter(
                 DimFilters.and(
                     new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null),
                     new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null)
                 )
-            )
-            .getBitmapIndex(BITMAP_INDEX_SELECTOR)
-            .size()
+            ),
+            BITMAP_INDEX_SELECTOR
+        ).size()
     );
   }
 
@@ -243,18 +233,18 @@ public class ExtractionDimFilterTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(
         1,
-        Filters
-            .toFilter(DimFilters.or(new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null)))
-            .getBitmapIndex(BITMAP_INDEX_SELECTOR)
-            .size()
+        Filters.computeDefaultBitmapResults(
+            Filters.toFilter(DimFilters.or(new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null))),
+            BITMAP_INDEX_SELECTOR
+        ).size()
     );
 
     Assert.assertEquals(
         1,
-        Filters
-            .toFilter(DimFilters.not(new ExtractionDimFilter("foo", "DOES NOT EXIST", DIM_EXTRACTION_FN, null)))
-            .getBitmapIndex(BITMAP_INDEX_SELECTOR)
-            .size()
+        Filters.computeDefaultBitmapResults(
+            Filters.toFilter(DimFilters.not(new ExtractionDimFilter("foo", "DOES NOT EXIST", DIM_EXTRACTION_FN, null))),
+            BITMAP_INDEX_SELECTOR
+        ).size()
     );
   }
 }

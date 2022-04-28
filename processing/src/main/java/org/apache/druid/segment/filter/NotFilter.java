@@ -32,6 +32,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -51,13 +52,31 @@ public class NotFilter implements Filter
     this.baseFilter = baseFilter;
   }
 
+  @Nullable
   @Override
-  public <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    return bitmapResultFactory.complement(
-        baseFilter.getBitmapResult(selector, bitmapResultFactory),
-        selector.getNumRows()
-    );
+    final BitmapColumnIndex baseIndex = baseFilter.getBitmapColumnIndex(selector);
+    if (baseIndex != null && baseIndex.getIndexCapabilities().isInvertible()) {
+      return new BitmapColumnIndex()
+      {
+        @Override
+        public ColumnIndexCapabilities getIndexCapabilities()
+        {
+          return baseIndex.getIndexCapabilities();
+        }
+
+        @Override
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        {
+          return bitmapResultFactory.complement(
+              baseIndex.computeBitmapResult(bitmapResultFactory),
+              selector.getNumRows()
+          );
+        }
+      };
+    }
+    return null;
   }
 
   @Override
@@ -125,17 +144,6 @@ public class NotFilter implements Filter
   public Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
   {
     return new NotFilter(baseFilter.rewriteRequiredColumns(columnRewrites));
-  }
-
-  @Nullable
-  @Override
-  public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
-  {
-    ColumnIndexCapabilities capabilities = baseFilter.getIndexCapabilities(selector);
-    if (capabilities != null && capabilities.isInvertible()) {
-      return capabilities;
-    }
-    return null;
   }
 
   @Override

@@ -50,7 +50,6 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
-import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -76,7 +75,7 @@ import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.RowBasedStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -518,22 +517,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     final Filter theFilter = makeFilter(filter);
     final Filter postFilteringFilter = new Filter()
     {
-      @Override
-      public <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
-      {
-        throw new UnsupportedOperationException();
-      }
 
       @Override
       public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
       {
         return theFilter.makeMatcher(factory);
-      }
-
-      @Override
-      public @Nullable ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
-      {
-        return null;
       }
 
       @Override
@@ -552,6 +540,13 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       public double estimateSelectivity(ColumnIndexSelector indexSelector)
       {
         return 1.0;
+      }
+
+      @Nullable
+      @Override
+      public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
+      {
+        return null;
       }
     };
 
@@ -586,23 +581,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     final Filter theFilter = makeFilter(filter);
     final Filter postFilteringFilter = new Filter()
     {
-      @Override
-      public <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
-      {
-        throw new UnsupportedOperationException();
-      }
 
       @Override
       public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
       {
         return theFilter.makeMatcher(factory);
-      }
-
-      @Nullable
-      @Override
-      public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
-      {
-        return null;
       }
 
       @Override
@@ -633,6 +616,13 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       public double estimateSelectivity(ColumnIndexSelector indexSelector)
       {
         return 1.0;
+      }
+
+      @Nullable
+      @Override
+      public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
+      {
+        return null;
       }
     };
 

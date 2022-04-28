@@ -21,7 +21,7 @@ package org.apache.druid.query.filter;
 
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 
 import javax.annotation.Nullable;
 
@@ -34,18 +34,11 @@ public interface ColumnIndexSelector extends ColumnInspector
   BitmapFactory getBitmapFactory();
 
   /**
-   * Get the {@link ColumnIndexCapabilities} of a column for the specified type of index. If the index does not exist
-   * this method will return null. Note that 'missing' columns should in fact return a non-null value from this method
-   * to allow for filters to use 'nil' bitmaps if the filter matches nulls, in order to produce an all true or all
-   * false index.
+   * Get the {@link ColumnIndexSupplier} of a column. If the column exists, but does not support indexes, this method
+   * will return a non-null index supplier, likely {@link org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier}.
+   * Columns which are 'missing' will return a null value from this method, which allows for filters to act on this
+   * information to produce an all true or all false index depending on how the filter matches the null value.
    */
   @Nullable
-  <T> ColumnIndexCapabilities getIndexCapabilities(String column, Class<T> clazz);
-
-  /**
-   * Get the specified type of index for the specified column. {@link #getIndexCapabilities(String, Class)} should
-   * be called prior to this method to distinguish 'missing' columns from columns without indexes.
-   */
-  @Nullable
-  <T> T as(String column, Class<T> clazz);
+  ColumnIndexSupplier getIndexSupplier(String column);
 }

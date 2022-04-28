@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.filter;
 
-import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -28,8 +27,8 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
-import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
+import org.apache.druid.segment.column.AllFalseBitmapColumnIndex;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -50,10 +49,11 @@ public class FalseFilter implements Filter
   {
   }
 
+  @Nullable
   @Override
-  public <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    return bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));
+    return new AllFalseBitmapColumnIndex(selector);
   }
 
   @Override
@@ -72,13 +72,6 @@ public class FalseFilter implements Filter
   public VectorValueMatcher makeVectorMatcher(VectorColumnSelectorFactory factory)
   {
     return BooleanVectorValueMatcher.of(factory.getReadableVectorInspector(), false);
-  }
-
-  @Nullable
-  @Override
-  public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
-  {
-    return SimpleColumnIndexCapabilities.getConstant();
   }
 
   @Override

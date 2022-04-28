@@ -21,9 +21,7 @@ package org.apache.druid.query.filter;
 
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
 
-import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -70,25 +68,6 @@ public interface BooleanFilter extends Filter
       allColumns.addAll(f.getRequiredColumns());
     }
     return allColumns;
-  }
-
-  @Nullable
-  @Override
-  default ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
-  {
-    ColumnIndexCapabilities capabilities = null;
-    for (Filter f : getFilters()) {
-      ColumnIndexCapabilities other = f.getIndexCapabilities(selector);
-      if (other == null) {
-        return null;
-      }
-      if (capabilities == null) {
-        capabilities = other;
-      } else {
-        capabilities = capabilities.merge(other);
-      }
-    }
-    return capabilities;
   }
 
   @Override

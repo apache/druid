@@ -39,6 +39,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.ComplexColumn;
@@ -127,7 +128,7 @@ public class SegmentAnalyzer
           break;
         case STRING:
           if (index != null) {
-            analysis = analyzeStringColumn(capabilities, index.getColumnHolder(columnName));
+            analysis = analyzeStringColumn(capabilities, index.getColumnHolder(columnName), columnName);
           } else {
             analysis = analyzeStringColumn(capabilities, storageAdapter, columnName);
           }
@@ -193,7 +194,8 @@ public class SegmentAnalyzer
 
   private ColumnAnalysis analyzeStringColumn(
       final ColumnCapabilities capabilities,
-      final ColumnHolder columnHolder
+      final ColumnHolder columnHolder,
+      final String columnName
   )
   {
     Comparable min = null;
@@ -201,10 +203,12 @@ public class SegmentAnalyzer
     long size = 0;
     final int cardinality;
     if (capabilities.hasBitmapIndexes()) {
-      final DictionaryEncodedStringValueIndex valueIndex = columnHolder.getIndexSupplier().getIndex(
-          DictionaryEncodedStringValueIndex.class
-      );
-      if (valueIndex != null) {
+      ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+      if (indexSupplier != null) {
+        final DictionaryEncodedStringValueIndex valueIndex = indexSupplier.getIndex(
+            DictionaryEncodedStringValueIndex.class
+        );
+        Preconditions.checkNotNull(valueIndex, "Column [%s] does not have a value index", columnName);
         cardinality = valueIndex.getCardinality();
         if (analyzingSize()) {
           for (int i = 0; i < cardinality; ++i) {

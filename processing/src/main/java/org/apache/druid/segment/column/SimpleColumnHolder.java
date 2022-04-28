@@ -28,10 +28,13 @@ import org.apache.druid.segment.selector.settable.SettableObjectColumnValueSelec
 import javax.annotation.Nullable;
 
 /**
+ *
  */
 class SimpleColumnHolder implements ColumnHolder
 {
   private final ColumnCapabilities capabilities;
+
+  @Nullable
   private final Supplier<? extends BaseColumn> columnSupplier;
 
   @Nullable

@@ -19,30 +19,24 @@
 
 package org.apache.druid.segment.column;
 
-import com.google.common.base.Predicate;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 
 import javax.annotation.Nullable;
 import java.util.Set;
 
 /**
- * Index on individual values, and provide bitmaps for the rows which contain these values
+ * Index on individual values, and provides bitmaps for the rows which contain these values
  */
 public interface StringValueSetIndex
 {
   /**
    * Get the {@link ImmutableBitmap} corresponding to the supplied value
    */
-  ImmutableBitmap getBitmapForValue(@Nullable String value);
+  BitmapColumnIndex forValue(@Nullable String value);
 
   /**
    * Get an {@link Iterable} of {@link ImmutableBitmap} corresponding to the specified set of values (if they are
    * contained in the underlying column)
    */
-  Iterable<ImmutableBitmap> getBitmapsForValues(Set<String> values);
-
-  /**
-   * Get an {@link Iterable} of {@link ImmutableBitmap} for all values in the column which match the predicate
-   */
-  Iterable<ImmutableBitmap> getBitmapsForPredicate(Predicate<String> matcher);
+  BitmapColumnIndex forValues(Set<String> values);
 }

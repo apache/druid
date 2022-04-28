@@ -36,14 +36,6 @@ import javax.annotation.Nullable;
 public interface ColumnIndexSupplier
 {
   /**
-   * Get the {@link ColumnIndexCapabilities} for the specified type of index. If the index does not exist
-   * this method will return null. A null return value from this method indicates that an index of the desired type
-   * in unavailable.
-   */
-  @Nullable
-  <T> ColumnIndexCapabilities getIndexCapabilities(Class<T> clazz);
-
-  /**
    * Get a column 'index' of the specified type. If the index of the desired type is not available, this method will
    * return null. If the value is non-null, the index may be used for the eventual construction of an
    * {@link org.apache.druid.segment.data.Offset} to form the basis of a {@link org.apache.druid.segment.Cursor}

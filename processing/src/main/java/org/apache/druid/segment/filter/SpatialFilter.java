@@ -36,12 +36,15 @@ import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.AllFalseBitmapColumnIndex;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 import org.apache.druid.segment.column.SpatialIndex;
 import org.apache.druid.segment.incremental.SpatialDimensionRowTransformer;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
 
@@ -64,15 +67,33 @@ public class SpatialFilter implements Filter
     this.filterTuning = filterTuning;
   }
 
+  @Nullable
   @Override
-  public <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    SpatialIndex spatialIndex = selector.as(dimension, SpatialIndex.class);
-    if (spatialIndex == null) {
-      return bitmapResultFactory.unionDimensionValueBitmaps(Collections.emptyList());
+    if (!Filters.checkFilterTuningUseIndex(dimension, selector, filterTuning)) {
+      return null;
     }
-    Iterable<ImmutableBitmap> search = spatialIndex.getRTree().search(bound);
-    return bitmapResultFactory.unionDimensionValueBitmaps(search);
+    final ColumnIndexSupplier supplier = selector.getIndexSupplier(dimension);
+    SpatialIndex spatialIndex = supplier.getIndex(SpatialIndex.class);
+    if (spatialIndex == null) {
+      return new AllFalseBitmapColumnIndex(selector);
+    }
+    return new BitmapColumnIndex()
+    {
+      @Override
+      public ColumnIndexCapabilities getIndexCapabilities()
+      {
+        return new SimpleColumnIndexCapabilities(true, true);
+      }
+
+      @Override
+      public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+      {
+        Iterable<ImmutableBitmap> search = spatialIndex.getRTree().search(bound);
+        return bitmapResultFactory.unionDimensionValueBitmaps(search);
+      }
+    };
   }
 
   @Override
@@ -84,13 +105,6 @@ public class SpatialFilter implements Filter
         new BoundDruidPredicateFactory(bound)
 
     );
-  }
-
-  @Nullable
-  @Override
-  public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
-  {
-    return Filters.getCapabilitiesWithFilterTuning(selector, dimension, SpatialIndex.class, filterTuning);
   }
 
   @Override

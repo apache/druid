@@ -20,7 +20,6 @@
 package org.apache.druid.query.filter;
 
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.DefaultBitmapResultFactory;
@@ -28,7 +27,7 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -39,51 +38,17 @@ import java.util.Set;
 public interface Filter
 {
   /**
-   * Get a bitmap index, indicating rows that match this filter. Do not call this method unless
-   * {@link #getIndexCapabilities(ColumnIndexSelector)} returns a non-null value. Behavior in the case that
-   * {@link #getIndexCapabilities(ColumnIndexSelector)} returns null is undefined.
+   * Returns a {@link BitmapColumnIndex} if this filter supports using a bitmap index for filtering for the given input
+   * {@link ColumnIndexSelector}. The {@link BitmapColumnIndex} can be used to compute into a bitmap indicating rows
+   * that match this filter result {@link BitmapColumnIndex#computeBitmapResult(BitmapResultFactory)}, or examine
+   * details about the index prior to computing it, via {@link BitmapColumnIndex#getIndexCapabilities()}.
    *
-   * This method is OK to be called, but generally should not be overridden, override {@link #getBitmapResult} instead.
+   * @param selector Object used to create BitmapColumnIndex
    *
-   * @param selector Object used to retrieve bitmap indexes
-   *
-   * @return A bitmap indicating rows that match this filter.
-   *
-   * @see Filter#estimateSelectivity(ColumnIndexSelector)
+   * @return BitmapColumnIndex that can build ImmutableBitmap of matched row numbers
    */
-  default ImmutableBitmap getBitmapIndex(ColumnIndexSelector selector)
-  {
-    return getBitmapResult(selector, new DefaultBitmapResultFactory(selector.getBitmapFactory()));
-  }
-
-  /**
-   * Get a (possibly wrapped) bitmap index, indicating rows that match this filter. Do not call this method unless
-   * {@link #getIndexCapabilities(ColumnIndexSelector)} returns a non-null value. Behavior in the case that
-   * {@link #getIndexCapabilities(ColumnIndexSelector)} returns null is undefined.
-   *
-   * @param selector Object used to retrieve indexes
-   *
-   * @return A bitmap indicating rows that match this filter.
-   *
-   * @see Filter#estimateSelectivity(ColumnIndexSelector)
-   */
-  <T> T getBitmapResult(ColumnIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory);
-
-  /**
-   * Estimate selectivity of this filter.
-   * This method can be used for cost-based query planning like in {@link org.apache.druid.query.search.AutoStrategy}.
-   * To avoid significant performance degradation for calculating the exact cost,
-   * implementation of this method targets to achieve rapid selectivity estimation
-   * with reasonable sacrifice of the accuracy.
-   * As a result, the estimated selectivity might be different from the exact value.
-   *
-   * @param indexSelector Object used to retrieve indexes
-   *
-   * @return an estimated selectivity ranging from 0 (filter selects no rows) to 1 (filter selects all rows).
-   *
-   * @see Filter#getBitmapIndex(ColumnIndexSelector)
-   */
-  double estimateSelectivity(ColumnIndexSelector indexSelector);
+  @Nullable
+  BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector);
 
   /**
    * Get a ValueMatcher that applies this filter to row values.
@@ -107,17 +72,26 @@ public interface Filter
   }
 
   /**
-   * Provides {@link ColumnIndexCapabilities} for a filter, if any indexes may be used. A null return value from
-   * this method means that a filter cannot use indexes during query processing for the given
-   * {@link ColumnIndexSelector}.
+   * Estimate selectivity of this filter.
+   * This method can be used for cost-based query planning like in {@link org.apache.druid.query.search.AutoStrategy}.
+   * To avoid significant performance degradation for calculating the exact cost,
+   * implementation of this method targets to achieve rapid selectivity estimation
+   * with reasonable sacrifice of the accuracy.
+   * As a result, the estimated selectivity might be different from the exact value.
    *
-   * @param selector Object used to retrieve index information and provide information about the column
+   * @param indexSelector Object used to retrieve indexes
    *
-   * @return information about the function of the indexes which will be used when processing this filter, or null if
-   *         indexes may not be used to process this query.
+   * @return an estimated selectivity ranging from 0 (filter selects no rows) to 1 (filter selects all rows).
+   *
+   * @see Filter#getBitmapColumnIndex(ColumnIndexSelector)
    */
-  @Nullable
-  ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector);
+  default double estimateSelectivity(ColumnIndexSelector indexSelector)
+  {
+    final long numMatchedRows = getBitmapColumnIndex(indexSelector).computeBitmapResult(
+        new DefaultBitmapResultFactory(indexSelector.getBitmapFactory())
+    ).size();
+    return Math.min(1., (double) numMatchedRows / indexSelector.getNumRows());
+  }
 
   /**
    * Indicates whether this filter supports selectivity estimation.
@@ -141,8 +115,7 @@ public interface Filter
   }
 
   /**
-   * Set of columns used by a filter. If {@link #getIndexCapabilities} returns a non-null value, all columns returned
-   * by this method can be expected to have an index available for filtering.
+   * Set of columns used by a filter.
    */
   Set<String> getRequiredColumns();
 

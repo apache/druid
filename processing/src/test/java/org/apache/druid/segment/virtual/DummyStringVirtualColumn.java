@@ -36,7 +36,6 @@ import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
@@ -175,21 +174,6 @@ public class DummyStringVirtualColumn implements VirtualColumn
   {
     return new ColumnIndexSupplier()
     {
-      @Nullable
-      @Override
-      public <T> ColumnIndexCapabilities getIndexCapabilities(Class<T> clazz)
-      {
-        if (enableBitmaps) {
-          ColumnHolder holder = columnSelector.getColumnHolder(baseColumnName);
-          if (holder == null) {
-            return null;
-          }
-
-          return holder.getIndexSupplier().getIndexCapabilities(clazz);
-        } else {
-          return null;
-        }
-      }
 
       @Nullable
       @Override
@@ -203,7 +187,7 @@ public class DummyStringVirtualColumn implements VirtualColumn
 
           return holder.getIndexSupplier().getIndex(clazz);
         } else {
-          throw new UnsupportedOperationException("not supported");
+          return null;
         }
       }
     };

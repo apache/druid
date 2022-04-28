@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -390,6 +391,9 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     }
   }
 
+  /**
+   * this method is only for testing, don't use it for stuff
+   */
   @VisibleForTesting
   BitmapValues getBitmapIndex(String dimension, String value)
   {
@@ -409,7 +413,9 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       return BitmapValues.EMPTY;
     }
 
-    return new ImmutableBitmapValues(index.getBitmapForValue(value));
+    return new ImmutableBitmapValues(index.forValue(value).computeBitmapResult(
+        new DefaultBitmapResultFactory(input.getBitmapFactoryForDimensions()))
+    );
   }
 
   @Override

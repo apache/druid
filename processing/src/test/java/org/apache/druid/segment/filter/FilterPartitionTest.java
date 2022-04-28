@@ -43,7 +43,7 @@ import org.apache.druid.segment.ColumnSelectorColumnIndexSelector;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -81,7 +81,7 @@ public class FilterPartitionTest extends BaseFilterTest
 
     @Nullable
     @Override
-    public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
+    public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
     {
       return null;
     }
@@ -100,7 +100,7 @@ public class FilterPartitionTest extends BaseFilterTest
 
     @Nullable
     @Override
-    public ColumnIndexCapabilities getIndexCapabilities(ColumnIndexSelector selector)
+    public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
     {
       return null;
     }

@@ -33,9 +33,9 @@ import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
@@ -191,7 +191,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     if (filter != null) {
       final boolean filterCanVectorize =
-          filter.getIndexCapabilities(makeBitmapIndexSelector(virtualColumns)) != null || filter.canVectorizeMatcher(this);
+          filter.getBitmapColumnIndex(makeBitmapIndexSelector(virtualColumns)) != null
+          || filter.canVectorizeMatcher(this);
 
       if (!filterCanVectorize) {
         return false;
@@ -342,7 +343,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
      * were not pruned AND those that matched the filter during row scanning)
      *
      * An AND filter can have its subfilters partitioned across the two steps. The subfilters that can be
-     * processed entirely with bitmap indexes (subfilter returns true for supportsBitmapIndex())
+     * processed entirely with bitmap indexes (subfilter returns non-null value for getBitmapColumnIndex)
      * will be moved to the pre-filtering stage.
      *
      * Any subfilters that cannot be processed entirely with bitmap indexes will be moved to the post-filtering stage.
@@ -359,25 +360,25 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         // If we get an AndFilter, we can split the subfilters across both filtering stages
         for (Filter subfilter : ((AndFilter) filter).getFilters()) {
 
-          final ColumnIndexCapabilities capabilities = subfilter.getIndexCapabilities(indexSelector);
+          final BitmapColumnIndex columnIndex = subfilter.getBitmapColumnIndex(indexSelector);
 
-          if (capabilities == null) {
+          if (columnIndex == null) {
             postFilters.add(subfilter);
           } else {
             preFilters.add(subfilter);
-            if (!capabilities.isExact()) {
+            if (!columnIndex.getIndexCapabilities().isExact()) {
               postFilters.add(subfilter);
             }
           }
         }
       } else {
         // If we get an OrFilter or a single filter, handle the filter in one stage
-        final ColumnIndexCapabilities capabilities = filter.getIndexCapabilities(indexSelector);
-        if (capabilities == null) {
+        final BitmapColumnIndex columnIndex = filter.getBitmapColumnIndex(indexSelector);
+        if (columnIndex == null) {
           postFilters.add(filter);
         } else {
           preFilters.add(filter);
-          if (!capabilities.isExact()) {
+          if (!columnIndex.getIndexCapabilities().isExact()) {
             postFilters.add(filter);
           }
         }
@@ -392,7 +393,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         BitmapResultFactory<?> bitmapResultFactory =
             queryMetrics.makeBitmapResultFactory(indexSelector.getBitmapFactory());
         long bitmapConstructionStartNs = System.nanoTime();
-        // Use AndFilter.getBitmapResult to intersect the preFilters to get its short-circuiting behavior.
+        // Use AndFilter.getBitmapIndex to intersect the preFilters to get its short-circuiting behavior.
         preFilterBitmap = AndFilter.getBitmapIndex(indexSelector, bitmapResultFactory, preFilters);
         preFilteredRows = preFilterBitmap.size();
         queryMetrics.reportBitmapConstructionTime(System.nanoTime() - bitmapConstructionStartNs);

@@ -20,34 +20,33 @@
 package org.apache.druid.segment.column;
 
 import com.google.common.base.Predicate;
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
 
 import javax.annotation.Nullable;
 
 /**
- * An optimized column value index for columns which are stored in 'lexicographical' order, allowing short-circuit
- * processing of string value ranges.
+ * An optimized column value {@link BitmapColumnIndex} provider for columns which are stored in 'lexicographical' order,
+ * allowing short-circuit processing of string value ranges.
  */
 public interface LexicographicalRangeIndex
 {
   /**
-   * Get an {@link Iterable} of {@link ImmutableBitmap} corresponding to the values supplied in the specified range
+   * Get an {@link BitmapColumnIndex} corresponding to the values supplied in the specified range
    */
-  default Iterable<ImmutableBitmap> getBitmapsInRange(
+  default BitmapColumnIndex forRange(
       @Nullable String startValue,
       boolean startStrict,
       @Nullable String endValue,
       boolean endStrict
   )
   {
-    return getBitmapsInRange(startValue, startStrict, endValue, endStrict, (index) -> true);
+    return forRange(startValue, startStrict, endValue, endStrict, (index) -> true);
   }
 
   /**
-   * Get an {@link Iterable} of {@link ImmutableBitmap} corresponding to the values supplied in the specified range
-   * whose dictionary ids also match some predicate, such as to match a prefix
+   * Get an {@link BitmapColumnIndex} corresponding to the values supplied in the specified range whose dictionary ids
+   * also match some predicate, such as to match a prefix
    */
-  Iterable<ImmutableBitmap> getBitmapsInRange(
+  BitmapColumnIndex forRange(
       @Nullable String startValue,
       boolean startStrict,
       @Nullable String endValue,

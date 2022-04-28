@@ -26,6 +26,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
@@ -303,6 +304,6 @@ public interface VirtualColumn extends Cacheable
   @Nullable
   default ColumnIndexSupplier getIndexSupplier(String columnName, ColumnSelector columnSelector)
   {
-    return null;
+    return NoIndexesColumnIndexSupplier.getInstance();
   }
 }

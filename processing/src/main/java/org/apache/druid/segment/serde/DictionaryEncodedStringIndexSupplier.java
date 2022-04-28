@@ -20,7 +20,6 @@
 package org.apache.druid.segment.serde;
 
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.IntIntImmutablePair;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import it.unimi.dsi.fastutil.ints.IntIterator;
@@ -28,10 +27,14 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.BitmapResultFactory;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.IntListUtils;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.column.DruidPredicateIndex;
 import org.apache.druid.segment.column.LexicographicalRangeIndex;
 import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 import org.apache.druid.segment.column.SpatialIndex;
@@ -45,12 +48,7 @@ import java.util.Set;
 
 public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
 {
-  private static final Set<Class<?>> SUPPORTED_BITMAP_INDEX_TYPES = ImmutableSet.of(
-      DictionaryEncodedStringValueIndex.class,
-      StringValueSetIndex.class,
-      LexicographicalRangeIndex.class
-  );
-  private static final ColumnIndexCapabilities CAPABILITIES = new SimpleColumnIndexCapabilities(true, true);
+  public static final ColumnIndexCapabilities CAPABILITIES = new SimpleColumnIndexCapabilities(true, true);
 
   private final BitmapFactory bitmapFactory;
   private final GenericIndexed<String> dictionary;
@@ -72,23 +70,14 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
     this.indexedTree = indexedTree;
   }
 
-  @Override
-  public <T> ColumnIndexCapabilities getIndexCapabilities(Class<T> clazz)
-  {
-    if (SUPPORTED_BITMAP_INDEX_TYPES.contains(clazz) && bitmaps != null) {
-      return CAPABILITIES;
-    } else if (clazz.equals(SpatialIndex.class) && indexedTree != null) {
-      return CAPABILITIES;
-    }
-    return null;
-  }
-
   @Nullable
   @Override
   public <T> T getIndex(Class<T> clazz)
   {
     if (clazz.equals(StringValueSetIndex.class)) {
       return (T) new GenericIndexedDictionaryEncodedStringValueSetIndex(bitmapFactory, dictionary, bitmaps);
+    } else if (clazz.equals(DruidPredicateIndex.class)) {
+      return (T) new GenericIndexedDictionaryEncodedStringDruidPredicateIndex(bitmapFactory, dictionary, bitmaps);
     } else if (clazz.equals(LexicographicalRangeIndex.class)) {
       return (T) new GenericIndexedDictionaryEncodedColumnLexicographicalRangeIndex(bitmapFactory, dictionary, bitmaps);
     } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)) {
@@ -99,13 +88,22 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
     return null;
   }
 
-  public static class GenericIndexedDictionaryEncodedStringValueIndex implements DictionaryEncodedStringValueIndex
+  private abstract static class DictionaryEncodedStringBitmapColumnIndex implements BitmapColumnIndex
   {
-    private final BitmapFactory bitmapFactory;
-    private final GenericIndexed<String> dictionary;
-    private final GenericIndexed<ImmutableBitmap> bitmaps;
+    @Override
+    public ColumnIndexCapabilities getIndexCapabilities()
+    {
+      return CAPABILITIES;
+    }
+  }
 
-    public GenericIndexedDictionaryEncodedStringValueIndex(
+  private abstract static class BaseGenericIndexedDictionaryEncodedStringIndex
+  {
+    protected final BitmapFactory bitmapFactory;
+    protected final GenericIndexed<String> dictionary;
+    protected final GenericIndexed<ImmutableBitmap> bitmaps;
+
+    protected BaseGenericIndexedDictionaryEncodedStringIndex(
         BitmapFactory bitmapFactory,
         GenericIndexed<String> dictionary,
         GenericIndexed<ImmutableBitmap> bitmaps
@@ -114,6 +112,29 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
       this.bitmapFactory = bitmapFactory;
       this.dictionary = dictionary;
       this.bitmaps = bitmaps;
+    }
+
+    public ImmutableBitmap getBitmap(int idx)
+    {
+      if (idx < 0) {
+        return bitmapFactory.makeEmptyImmutableBitmap();
+      }
+
+      final ImmutableBitmap bitmap = bitmaps.get(idx);
+      return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
+    }
+  }
+
+  public static final class GenericIndexedDictionaryEncodedStringValueIndex
+      extends BaseGenericIndexedDictionaryEncodedStringIndex implements DictionaryEncodedStringValueIndex
+  {
+    public GenericIndexedDictionaryEncodedStringValueIndex(
+        BitmapFactory bitmapFactory,
+        GenericIndexed<String> dictionary,
+        GenericIndexed<ImmutableBitmap> bitmaps
+    )
+    {
+      super(bitmapFactory, dictionary, bitmaps);
     }
 
     @Override
@@ -140,25 +161,11 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
     {
       return dictionary.indexOf(value);
     }
-
-    @Override
-    public ImmutableBitmap getBitmap(int idx)
-    {
-      if (idx < 0) {
-        return bitmapFactory.makeEmptyImmutableBitmap();
-      }
-
-      final ImmutableBitmap bitmap = bitmaps.get(idx);
-      return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
-    }
   }
 
-
-  public static class GenericIndexedDictionaryEncodedStringValueSetIndex implements StringValueSetIndex
+  public static final class GenericIndexedDictionaryEncodedStringValueSetIndex
+      extends BaseGenericIndexedDictionaryEncodedStringIndex implements StringValueSetIndex
   {
-    private final BitmapFactory bitmapFactory;
-    private final GenericIndexed<String> dictionary;
-    private final GenericIndexed<ImmutableBitmap> bitmaps;
 
     public GenericIndexedDictionaryEncodedStringValueSetIndex(
         BitmapFactory bitmapFactory,
@@ -166,120 +173,149 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
         GenericIndexed<ImmutableBitmap> bitmaps
     )
     {
-      this.bitmapFactory = bitmapFactory;
-      this.dictionary = dictionary;
-      this.bitmaps = bitmaps;
+      super(bitmapFactory, dictionary, bitmaps);
     }
 
     @Override
-    public ImmutableBitmap getBitmapForValue(@Nullable String value)
+    public BitmapColumnIndex forValue(@Nullable String value)
     {
-      final int idx = dictionary.indexOf(value);
-      return getBitmap(idx);
-    }
-
-    @Override
-    public Iterable<ImmutableBitmap> getBitmapsForValues(Set<String> values)
-    {
-      return () -> new Iterator<ImmutableBitmap>()
+      return new DictionaryEncodedStringBitmapColumnIndex()
       {
-        final Iterator<String> iterator = values.iterator();
-        int next = -1;
-
         @Override
-        public boolean hasNext()
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
         {
-          if (next < 0) {
-            findNext();
-          }
-          return next >= 0;
-        }
-
-        @Override
-        public ImmutableBitmap next()
-        {
-          if (next < 0) {
-            findNext();
-            if (next < 0) {
-              throw new NoSuchElementException();
-            }
-          }
-          final int swap = next;
-          next = -1;
-          return getBitmap(swap);
-        }
-
-        private void findNext()
-        {
-          while (next < 0 && iterator.hasNext()) {
-            String nextValue = iterator.next();
-            next = dictionary.indexOf(nextValue);
-          }
+          final int idx = dictionary.indexOf(value);
+          return bitmapResultFactory.wrapDimensionValue(getBitmap(idx));
         }
       };
     }
 
     @Override
-    public Iterable<ImmutableBitmap> getBitmapsForPredicate(Predicate<String> matcher)
+    public BitmapColumnIndex forValues(Set<String> values)
     {
-      return () -> new Iterator<ImmutableBitmap>()
+      return new DictionaryEncodedStringBitmapColumnIndex()
       {
-        final Iterator<String> iterator = dictionary.iterator();
-        @Nullable
-        String next = null;
-        boolean nextSet = false;
-
         @Override
-        public boolean hasNext()
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
         {
-          if (!nextSet) {
-            findNext();
-          }
-          return nextSet;
-        }
+          return bitmapResultFactory.unionDimensionValueBitmaps(
+              () -> new Iterator<ImmutableBitmap>()
+              {
+                final Iterator<String> iterator = values.iterator();
+                int next = -1;
 
-        @Override
-        public ImmutableBitmap next()
-        {
-          if (!nextSet) {
-            findNext();
-            if (!nextSet) {
-              throw new NoSuchElementException();
-            }
-          }
-          nextSet = false;
-          return getBitmapForValue(next);
-        }
+                @Override
+                public boolean hasNext()
+                {
+                  if (next < 0) {
+                    findNext();
+                  }
+                  return next >= 0;
+                }
 
-        private void findNext()
-        {
-          while (!nextSet && iterator.hasNext()) {
-            String nextValue = iterator.next();
-            nextSet = matcher.apply(nextValue);
-            if (nextSet) {
-              next = nextValue;
-            }
-          }
+                @Override
+                public ImmutableBitmap next()
+                {
+                  if (next < 0) {
+                    findNext();
+                    if (next < 0) {
+                      throw new NoSuchElementException();
+                    }
+                  }
+                  final int swap = next;
+                  next = -1;
+                  return getBitmap(swap);
+                }
+
+                private void findNext()
+                {
+                  while (next < 0 && iterator.hasNext()) {
+                    String nextValue = iterator.next();
+                    next = dictionary.indexOf(nextValue);
+                  }
+                }
+              }
+          );
         }
       };
-    }
-
-    private ImmutableBitmap getBitmap(int idx)
-    {
-      if (idx < 0) {
-        return bitmapFactory.makeEmptyImmutableBitmap();
-      }
-
-      final ImmutableBitmap bitmap = bitmaps.get(idx);
-      return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
     }
   }
 
-  public static class GenericIndexedDictionaryEncodedColumnLexicographicalRangeIndex implements LexicographicalRangeIndex
+  public static final class GenericIndexedDictionaryEncodedStringDruidPredicateIndex
+      extends BaseGenericIndexedDictionaryEncodedStringIndex implements DruidPredicateIndex
   {
-    private final BitmapFactory bitmapFactory;
-    private final GenericIndexed<String> dictionary;
-    private final GenericIndexed<ImmutableBitmap> bitmaps;
+    public GenericIndexedDictionaryEncodedStringDruidPredicateIndex(
+        BitmapFactory bitmapFactory,
+        GenericIndexed<String> dictionary,
+        GenericIndexed<ImmutableBitmap> bitmaps
+    )
+    {
+      super(bitmapFactory, dictionary, bitmaps);
+    }
+
+    @Override
+    public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
+    {
+      return new DictionaryEncodedStringBitmapColumnIndex()
+      {
+        @Override
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        {
+          final Predicate<String> stringPredicate = matcherFactory.makeStringPredicate();
+          return bitmapResultFactory.unionDimensionValueBitmaps(() -> new Iterator<ImmutableBitmap>()
+          {
+            final Iterator<String> iterator = dictionary.iterator();
+            @Nullable
+            String next = null;
+            boolean nextSet = false;
+
+            @Override
+            public boolean hasNext()
+            {
+              if (!nextSet) {
+                findNext();
+              }
+              return nextSet;
+            }
+
+            @Override
+            public ImmutableBitmap next()
+            {
+              if (!nextSet) {
+                findNext();
+                if (!nextSet) {
+                  throw new NoSuchElementException();
+                }
+              }
+              nextSet = false;
+              final int idx = dictionary.indexOf(next);
+              if (idx < 0) {
+                return bitmapFactory.makeEmptyImmutableBitmap();
+              }
+
+              final ImmutableBitmap bitmap = bitmaps.get(idx);
+              return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
+            }
+
+            private void findNext()
+            {
+              while (!nextSet && iterator.hasNext()) {
+                String nextValue = iterator.next();
+                nextSet = stringPredicate.apply(nextValue);
+                if (nextSet) {
+                  next = nextValue;
+                }
+              }
+            }
+          });
+        }
+      };
+    }
+  }
+
+  public static final class GenericIndexedDictionaryEncodedColumnLexicographicalRangeIndex
+      extends BaseGenericIndexedDictionaryEncodedStringIndex implements LexicographicalRangeIndex
+  {
 
     public GenericIndexedDictionaryEncodedColumnLexicographicalRangeIndex(
         BitmapFactory bitmapFactory,
@@ -287,41 +323,48 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
         GenericIndexed<ImmutableBitmap> bitmaps
     )
     {
-      this.bitmapFactory = bitmapFactory;
-      this.dictionary = dictionary;
-      this.bitmaps = bitmaps;
+      super(bitmapFactory, dictionary, bitmaps);
     }
 
     @Override
-    public Iterable<ImmutableBitmap> getBitmapsInRange(
+    public BitmapColumnIndex forRange(
         @Nullable String startValue,
         boolean startStrict,
         @Nullable String endValue,
         boolean endStrict
     )
     {
-      final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
-      final int start = range.leftInt(), end = range.rightInt();
-      return () -> new Iterator<ImmutableBitmap>()
+      return new DictionaryEncodedStringBitmapColumnIndex()
       {
-        final IntIterator rangeIterator = IntListUtils.fromTo(start, end).iterator();
-
         @Override
-        public boolean hasNext()
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
         {
-          return rangeIterator.hasNext();
-        }
+          final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
+          final int start = range.leftInt(), end = range.rightInt();
+          return bitmapResultFactory.unionDimensionValueBitmaps(
+              () -> new Iterator<ImmutableBitmap>()
+              {
+                final IntIterator rangeIterator = IntListUtils.fromTo(start, end).iterator();
 
-        @Override
-        public ImmutableBitmap next()
-        {
-          return getBitmap(rangeIterator.nextInt());
+                @Override
+                public boolean hasNext()
+                {
+                  return rangeIterator.hasNext();
+                }
+
+                @Override
+                public ImmutableBitmap next()
+                {
+                  return getBitmap(rangeIterator.nextInt());
+                }
+              }
+          );
         }
       };
     }
 
     @Override
-    public Iterable<ImmutableBitmap> getBitmapsInRange(
+    public BitmapColumnIndex forRange(
         @Nullable String startValue,
         boolean startStrict,
         @Nullable String endValue,
@@ -329,46 +372,56 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
         Predicate<String> matcher
     )
     {
-      final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
-      final int start = range.leftInt(), end = range.rightInt();
-      return () -> new Iterator<ImmutableBitmap>()
+      return new DictionaryEncodedStringBitmapColumnIndex()
       {
-        int currIndex = start;
-        int found;
-        {
-          found = findNext();
-        }
-
-        private int findNext()
-        {
-          while (currIndex < end && !matcher.apply(dictionary.get(currIndex))) {
-            currIndex++;
-          }
-
-          if (currIndex < end) {
-            return currIndex++;
-          } else {
-            return -1;
-          }
-        }
-
         @Override
-        public boolean hasNext()
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
         {
-          return found != -1;
-        }
+          final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
+          final int start = range.leftInt(), end = range.rightInt();
+          return bitmapResultFactory.unionDimensionValueBitmaps(
+              () -> new Iterator<ImmutableBitmap>()
+              {
+                int currIndex = start;
+                int found;
 
-        @Override
-        public ImmutableBitmap next()
-        {
-          int cur = found;
+                {
+                  found = findNext();
+                }
 
-          if (cur == -1) {
-            throw new NoSuchElementException();
-          }
+                private int findNext()
+                {
+                  while (currIndex < end && !matcher.apply(dictionary.get(currIndex))) {
+                    currIndex++;
+                  }
 
-          found = findNext();
-          return getBitmap(cur);
+                  if (currIndex < end) {
+                    return currIndex++;
+                  } else {
+                    return -1;
+                  }
+                }
+
+                @Override
+                public boolean hasNext()
+                {
+                  return found != -1;
+                }
+
+                @Override
+                public ImmutableBitmap next()
+                {
+                  int cur = found;
+
+                  if (cur == -1) {
+                    throw new NoSuchElementException();
+                  }
+
+                  found = findNext();
+                  return getBitmap(cur);
+                }
+              }
+          );
         }
       };
     }
@@ -400,16 +453,6 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
 
       endIndex = Math.max(startIndex, endIndex);
       return new IntIntImmutablePair(startIndex, endIndex);
-    }
-
-    private ImmutableBitmap getBitmap(int idx)
-    {
-      if (idx < 0) {
-        return bitmapFactory.makeEmptyImmutableBitmap();
-      }
-
-      final ImmutableBitmap bitmap = bitmaps.get(idx);
-      return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
     }
   }
 }
