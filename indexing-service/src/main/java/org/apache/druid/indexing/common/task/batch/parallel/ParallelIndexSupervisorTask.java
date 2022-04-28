@@ -441,10 +441,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
 
-    // emit metric for batch ingestion mode:
-    emitBatchIngestionModeMetrics(toolbox.getEmitter(), ingestionSchema.getIOConfig().isAppendToExisting(),
-                                  ingestionSchema.getIOConfig().isDropExisting()
-    );
 
     if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
         != TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS) {
@@ -484,6 +480,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       initializeSubTaskCleaner();
 
       if (isParallelMode()) {
+
+        // emit metric for parallel batch ingestion mode:
+        emitBatchIngestionModeMetrics(toolbox.getEmitter(), ingestionSchema.getIOConfig().isAppendToExisting(),
+                                      ingestionSchema.getIOConfig().isDropExisting()
+        );
+
         this.toolbox = toolbox;
         if (isGuaranteedRollup(ingestionSchema.getIOConfig(), ingestionSchema.getTuningConfig())) {
           return runMultiPhaseParallel(toolbox);

@@ -239,6 +239,18 @@ task's `IOConfig` as follows:
 `false` | `false` | `OVEWRITE` (this is the default for native batch ingestion) |
 `false` | `true` | `REPLACE`|
 
+## Compaction ingestion metrics (Native parallel task)
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`ingest/compact/ovewrite/count`|Count of `1` everytime a compaction overwrite job runs|dataSource, taskId, taskType|Always `1`|
+|`ingest/compact/replace/count`|Count of `1` everytime a compaction replace job runs|dataSource, taskId, taskType|Always `1`|
+
+|`isdDropExisting` | mode |
+|---------------------|-------------------|
+`false` |`OVEWRITE` (this is the default for compaction) |
+`true`  | `REPLACE`|
+
 ## Shuffle metrics (Native parallel task)
 
 The shuffle metrics can be enabled by adding `org.apache.druid.indexing.worker.shuffle.ShuffleMonitor` in `druid.monitoring.monitors`

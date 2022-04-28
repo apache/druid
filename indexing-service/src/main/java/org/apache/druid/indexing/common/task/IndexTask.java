@@ -443,7 +443,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   {
     try {
 
-      // emit metric for batch ingestion mode:
+      // emit metric for sequential batch ingestion mode:
       emitBatchIngestionModeMetrics(toolbox.getEmitter(), ingestionSchema.getIOConfig().isAppendToExisting(),
                                     ingestionSchema.getIOConfig().isDropExisting()
       );

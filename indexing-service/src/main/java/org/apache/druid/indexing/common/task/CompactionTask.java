@@ -76,6 +76,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -422,9 +423,35 @@ public class CompactionTask extends AbstractBatchIndexTask
     return tuningConfig != null && tuningConfig.isForceGuaranteedRollup();
   }
 
+  private void emitCompactIngestionModeMetrics(
+      ServiceEmitter emitter,
+      boolean isAppendToExisting,
+      boolean isDropExisting
+  )
+  {
+    BatchIngestionMode mode = getBatchIngestionMode(
+        isAppendToExisting,
+        isDropExisting
+    );
+    // compact does not support APPEND
+    switch (mode) {
+      case REPLACE:
+        emitter.emit(buildEvent("compact/replace/count", 1));
+        break;
+      case OVERWRITE:
+        emitter.emit(buildEvent("compact/overwrite/count", 1));
+        break;
+      default:
+        throw new ISE("Invalid compact ingestion mode [%s]", mode);
+    }
+  }
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
+
+    // emit metric for compact ingestion mode:
+    emitCompactIngestionModeMetrics(toolbox.getEmitter(), false, ioConfig.isDropExisting());
+
     final List<ParallelIndexIngestionSpec> ingestionSpecs = createIngestionSchema(
         toolbox,
         getTaskLockHelper().getLockGranularityToUse(),

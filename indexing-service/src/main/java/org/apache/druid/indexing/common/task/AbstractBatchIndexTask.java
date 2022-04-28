@@ -879,10 +879,10 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
   }
 
-  private ServiceEventBuilder<ServiceMetricEvent> buildEvent(String subMetrics, Number value)
+  protected ServiceEventBuilder<ServiceMetricEvent> buildEvent(String subMetrics, Number value)
   {
     // make "base" metric name similar (i.e. "ingest") to the existing ingestion shuffle metrics
-    return getMetricBuilder().build(StringUtils.format("ingest/batch/%s", subMetrics), value);
+    return getMetricBuilder().build(StringUtils.format("ingest/%s", subMetrics), value);
   }
 
   protected static BatchIngestionMode getBatchIngestionMode(boolean isAppendToExisting, boolean isDropExisting)
@@ -908,13 +908,13 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     );
     switch (mode) {
       case APPEND:
-        emitter.emit(buildEvent("append/count", 1));
+        emitter.emit(buildEvent("batch/append/count", 1));
         break;
       case REPLACE:
-        emitter.emit(buildEvent("replace/count", 1));
+        emitter.emit(buildEvent("batch/replace/count", 1));
         break;
       case OVERWRITE:
-        emitter.emit(buildEvent("overwrite/count", 1));
+        emitter.emit(buildEvent("batch/overwrite/count", 1));
         break;
       default:
         throw new ISE("Invalid batch ingestion mode [%s]", mode);
