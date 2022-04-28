@@ -35,6 +35,7 @@ import org.apache.druid.indexing.overlord.autoscaling.ProvisioningSchedulerConfi
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 
@@ -54,6 +55,7 @@ public class HttpRemoteTaskRunnerFactory implements TaskRunnerFactory<HttpRemote
   private final ProvisioningStrategy provisioningStrategy;
   private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
   private final TaskStorage taskStorage;
+  private final ServiceEmitter emitter;
 
   // ZK_CLEANUP_TODO : Remove these when RemoteTaskRunner and WorkerTaskMonitor are removed.
   @Nullable //Null if zk is disabled
@@ -72,7 +74,8 @@ public class HttpRemoteTaskRunnerFactory implements TaskRunnerFactory<HttpRemote
       final TaskStorage taskStorage,
       final Provider<CuratorFramework> cfProvider,
       final IndexerZkConfig indexerZkConfig,
-      final ZkEnablementConfig zkEnablementConfig
+      final ZkEnablementConfig zkEnablementConfig,
+      final ServiceEmitter emitter
   )
   {
     this.smileMapper = smileMapper;
@@ -84,6 +87,7 @@ public class HttpRemoteTaskRunnerFactory implements TaskRunnerFactory<HttpRemote
     this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
     this.taskStorage = taskStorage;
     this.indexerZkConfig = indexerZkConfig;
+    this.emitter = emitter;
 
     if (zkEnablementConfig.isEnabled()) {
       this.cf = cfProvider.get();
@@ -104,7 +108,8 @@ public class HttpRemoteTaskRunnerFactory implements TaskRunnerFactory<HttpRemote
         druidNodeDiscoveryProvider,
         taskStorage,
         cf,
-        indexerZkConfig
+        indexerZkConfig,
+        emitter
     );
   }
 }
