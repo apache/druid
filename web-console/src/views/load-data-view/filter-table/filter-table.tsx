@@ -96,6 +96,7 @@ export const FilterTable = React.memo(function FilterTable(props: FilterTablePro
           className: columnClassName,
           id: String(i),
           accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
+          width: 140,
           Cell: function FilterTableCell(row) {
             return <TableCell value={timestamp ? new Date(row.value) : row.value} />;
           },

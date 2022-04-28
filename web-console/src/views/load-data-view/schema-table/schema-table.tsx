@@ -101,6 +101,7 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
             className: columnClassName,
             id: String(i),
             accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
+            width: 120,
             Cell: function SchemaTableCell({ value }) {
               return <TableCell value={value} />;
             },
@@ -145,7 +146,7 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
             headerClassName: columnClassName,
             className: columnClassName,
             id: String(i),
-            width: isTimestamp ? 200 : 100,
+            width: isTimestamp ? 200 : 140,
             accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
             Cell: function SchemaTableCell(row) {
               return <TableCell value={isTimestamp ? new Date(row.value) : row.value} />;

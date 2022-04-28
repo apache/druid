@@ -133,7 +133,7 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
               }
               return <TableCell value={isTimestamp ? new Date(row.value) : row.value} />;
             },
-            minWidth: isTimestamp ? 200 : 100,
+            width: isTimestamp ? 200 : 140,
             resizable: !isTimestamp,
           };
         },

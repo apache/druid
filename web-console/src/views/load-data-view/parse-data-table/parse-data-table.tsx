@@ -86,6 +86,7 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
           ),
           id: String(i),
           accessor: (row: SampleEntry) => (row[key] ? row[key]![columnName] : null),
+          width: 140,
           Cell: function ParseDataTableCell(row) {
             if (row.original.unparseable) {
               return <TableCellUnparseable />;
