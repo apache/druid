@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -60,6 +61,8 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
@@ -860,4 +863,61 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     );
   }
 
+  public enum BatchIngestionMode
+  {
+    REPLACE,
+    APPEND,
+    OVERWRITE;
+
+    @JsonCreator
+    public static BatchIngestionMode fromString(String name)
+    {
+      if (name == null) {
+        return null;
+      }
+      return valueOf(StringUtils.toUpperCase(name));
+    }
+  }
+
+  private ServiceEventBuilder<ServiceMetricEvent> buildEvent(String subMetrics, Number value)
+  {
+    // make "base" metric name similar (i.e. "ingest") to the existing ingestion shuffle metrics
+    return getMetricBuilder().build(StringUtils.format("ingest/batch/%s", subMetrics), value);
+  }
+
+  protected static BatchIngestionMode getBatchIngestionMode(boolean isAppendToExisting, boolean isDropExisting)
+  {
+    if (isAppendToExisting) {
+      return BatchIngestionMode.APPEND;
+    } else if (isDropExisting) {
+      return BatchIngestionMode.REPLACE;
+    } else {
+      return BatchIngestionMode.OVERWRITE;
+    }
+  }
+
+  protected void emitBatchIngestionModeMetrics(
+      ServiceEmitter emitter,
+      boolean isAppendToExisting,
+      boolean isDropExisting
+  )
+  {
+    BatchIngestionMode mode = getBatchIngestionMode(
+        isAppendToExisting,
+        isDropExisting
+    );
+    switch (mode) {
+      case APPEND:
+        emitter.emit(buildEvent("append/count", 1));
+        break;
+      case REPLACE:
+        emitter.emit(buildEvent("replace/count", 1));
+        break;
+      case OVERWRITE:
+        emitter.emit(buildEvent("overwrite/count", 1));
+        break;
+      default:
+        throw new ISE("Invalid batch ingestion mode [%s]", mode);
+    }
+  }
 }

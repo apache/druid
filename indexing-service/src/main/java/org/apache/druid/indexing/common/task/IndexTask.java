@@ -443,14 +443,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   {
     try {
 
-      toolbox.getEmitter().emit(buildEvent(
-          "batch/appendState",
-          ingestionSchema.getIOConfig().isAppendToExisting() ? 1 : 0
-      ));
-      toolbox.getEmitter().emit(buildEvent(
-          "batch/replaceState",
-          ingestionSchema.getIOConfig().isDropExisting() ? 1 : 0
-      ));
+      // emit metric for batch ingestion mode:
+      emitBatchIngestionModeMetrics(toolbox.getEmitter(), ingestionSchema.getIOConfig().isAppendToExisting(),
+                                    ingestionSchema.getIOConfig().isDropExisting()
+      );
 
       log.debug("Found chat handler of class[%s]", toolbox.getChatHandlerProvider().getClass().getName());
 

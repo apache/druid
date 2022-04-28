@@ -28,8 +28,6 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -229,10 +227,5 @@ public abstract class AbstractTask implements Task
   protected ServiceMetricEvent.Builder getMetricBuilder()
   {
     return metricBuilder;
-  }
-
-  protected ServiceEventBuilder<ServiceMetricEvent> buildEvent(String subMetrics, Number value)
-  {
-    return getMetricBuilder().build(StringUtils.format("task/%s", subMetrics), value);
   }
 }

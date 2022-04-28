@@ -220,6 +220,25 @@ Note: If the JVM does not support CPU time measurement for the current thread, i
 |`worker/taskSlot/total/count`|Number of total task slots on the reporting worker per emission period. This metric is only available if the WorkerTaskCountStatsMonitor module is included.|category, version.|Varies.|
 |`worker/taskSlot/used/count`|Number of busy task slots on the reporting worker per emission period. This metric is only available if the WorkerTaskCountStatsMonitor module is included.|category, version.|Varies.|
 
+## Batch ingestion metrics (Native parallel task)
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`ingest/batch/append/count`|Count of `1` everytime a batch ingestion append job runs|dataSource, taskId, taskType|Always `1`|
+|`ingest/batch/ovewrite/count`|Count of `1` everytime a batch ingestion overwrite job runs|dataSource, taskId, taskType|Always `1`|
+|`ingest/batch/replace/count`|Count of `1` everytime a batch ingestion replace job runs|dataSource, taskId, taskType|Always `1`|
+
+`APPEND`, `OVERWRITE`, and `REPLACE` are decided using the values
+of the `isAppendToExisting` and `isDropExisting` flags in the
+task's `IOConfig` as follows:
+
+|`isAppendToExisting` | `isdDropExisting` | mode |
+|---------------------|-------------------|------|
+`true` | `false` | `APPEND`|
+`true` | `true  ` | Invalid combination, exception thrown |
+`false` | `false` | `OVEWRITE` (this is the default for native batch ingestion) |
+`false` | `true` | `REPLACE`|
+
 ## Shuffle metrics (Native parallel task)
 
 The shuffle metrics can be enabled by adding `org.apache.druid.indexing.worker.shuffle.ShuffleMonitor` in `druid.monitoring.monitors`
@@ -229,6 +248,7 @@ See [Enabling Metrics](../configuration/index.md#enabling-metrics) for more deta
 |------|-----------|----------|------------|
 |`ingest/shuffle/bytes`|Number of bytes shuffled per emission period.|supervisorTaskId|Varies|
 |`ingest/shuffle/requests`|Number of shuffle requests per emission period.|supervisorTaskId|Varies|
+
 
 ## Coordination
 

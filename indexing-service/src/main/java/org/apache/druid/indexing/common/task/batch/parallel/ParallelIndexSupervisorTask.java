@@ -441,15 +441,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
 
-    toolbox.getEmitter().emit(buildEvent(
-        "batch/appendState",
-        ingestionSchema.getIOConfig().isAppendToExisting() ? 1 : 0
-    ));
-    toolbox.getEmitter().emit(buildEvent(
-        "batch/replaceState",
-        ingestionSchema.getIOConfig().isDropExisting() ? 1 : 0
-    ));
-
+    // emit metric for batch ingestion mode:
+    emitBatchIngestionModeMetrics(toolbox.getEmitter(), ingestionSchema.getIOConfig().isAppendToExisting(),
+                                  ingestionSchema.getIOConfig().isDropExisting()
+    );
 
     if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
         != TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS) {
