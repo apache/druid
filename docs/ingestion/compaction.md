@@ -175,7 +175,7 @@ The compaction `ioConfig` requires specifying `inputSpec` as follows:
 |-----|-----------|-------|--------|
 |`type`|Task type: `compact`|none|Yes|
 |`inputSpec`|Specification of the target [intervals](#interval-inputspec) or [segments](#segments-inputspec).|none|Yes|
-|`dropExisting`|If `true` the task replaces all existing segments fully contained by either of the following:<br>- the `interval` in the `interval` type `inputSpec`.<br>- the umbrella interval of the `segments` in the `segment` type `inputSpec`.<br>If compaction fails, Druid does change any of the existing segments.<br>**WARNING**: `dropExisting` in `ioConfig` is a beta feature. |false|No|
+|`dropExisting`|If `true`, the task replaces all existing segments fully contained by either of the following:<br>- the `interval` in the `interval` type `inputSpec`.<br>- the umbrella interval of the `segments` in the `segment` type `inputSpec`.<br>If compaction fails, Druid does not change any of the existing segments.<br>**WARNING**: `dropExisting` in `ioConfig` is a beta feature. |false|No|
 
 
 Druid supports two supported `inputSpec` formats:
