@@ -141,6 +141,13 @@ public class QueryContextsTest
   }
 
   @Test
+  public void testDefaultPlanTimeBoundarySql()
+  {
+    Assert.assertEquals(QueryContexts.DEFAULT_PLAN_TIME_BOUNDARY_SQL,
+                        QueryContexts.isPlanTimeBoundarySql(ImmutableMap.of()));
+  }
+
+  @Test
   public void testGetEnableJoinLeftScanDirect()
   {
     Assert.assertFalse(QueryContexts.getEnableJoinLeftScanDirect(ImmutableMap.of()));

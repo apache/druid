@@ -65,6 +65,7 @@ public class TestInsertQueryMaker implements QueryMaker
       // INSERT queries should stick to groupBy, scan.
       case CAN_RUN_TIMESERIES:
       case CAN_RUN_TOPN:
+      case CAN_RUN_TIME_BOUNDARY:
         return false;
 
       // INSERT uses external data.
