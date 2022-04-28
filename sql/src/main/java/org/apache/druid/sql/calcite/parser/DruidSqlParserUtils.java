@@ -202,7 +202,7 @@ public class DruidSqlParserUtils
 
     DimFilter dimFilter = convertQueryToDimFilter(replaceTimeQuery, dateTimeZone);
     if (!ImmutableSet.of(ColumnHolder.TIME_COLUMN_NAME).equals(dimFilter.getRequiredColumns())) {
-      throw new ValidationException("Only " + ColumnHolder.TIME_COLUMN_NAME + " column is supported in DELETE WHERE clause");
+      throw new ValidationException("Only " + ColumnHolder.TIME_COLUMN_NAME + " column is supported in OVERWRITE WHERE clause");
     }
 
     Filtration filtration = Filtration.create(dimFilter);
@@ -213,7 +213,7 @@ public class DruidSqlParserUtils
       DateTime intervalStart = interval.getStart();
       DateTime intervalEnd = interval.getEnd();
       if (!granularity.bucketStart(intervalStart).equals(intervalStart) || !granularity.bucketStart(intervalEnd).equals(intervalEnd)) {
-        throw new ValidationException("DELETE WHERE clause contains an interval which is not aligned with PARTITIONED BY granularity");
+        throw new ValidationException("OVERWRITE WHERE clause contains an interval which is not aligned with PARTITIONED BY granularity");
       }
     }
     return intervals
@@ -256,10 +256,10 @@ public class DruidSqlParserUtils
           columnValuePair = createColumnValuePair(sqlBasicCall.getOperandList(), dateTimeZone);
           return new BoundDimFilter(columnValuePair.left, null, columnValuePair.right, null, true, null, null, StringComparators.NUMERIC);
         default:
-          throw new ValidationException("Unsupported operation in DELETE WHERE clause: " + sqlBasicCall.getOperator().getName());
+          throw new ValidationException("Unsupported operation in OVERWRITE WHERE clause: " + sqlBasicCall.getOperator().getName());
       }
     }
-    throw new ValidationException("Invalid DELETE WHERE clause");
+    throw new ValidationException("Invalid OVERWRITE WHERE clause");
   }
 
   public static Pair<String, String> createColumnValuePair(List<SqlNode> operands, DateTimeZone timeZone) throws ValidationException
@@ -267,7 +267,7 @@ public class DruidSqlParserUtils
     SqlNode columnName = operands.get(0);
     SqlNode timeLiteral = operands.get(1);
     if (!(columnName instanceof SqlIdentifier) || !(timeLiteral instanceof SqlTimestampLiteral)) {
-      throw new ValidationException("Invalid DELETE WHERE clause");
+      throw new ValidationException("Expressions must be of the form __time <operator> TIMESTAMP");
     }
 
     Timestamp sqlTimestamp = Timestamp.valueOf(((SqlTimestampLiteral) timeLiteral).toFormattedString());

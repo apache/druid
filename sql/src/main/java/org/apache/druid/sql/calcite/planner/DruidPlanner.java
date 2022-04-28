@@ -814,13 +814,8 @@ public class DruidPlanner implements Closeable
 
     static ParsedNodes create(final SqlNode node, DateTimeZone dateTimeZone) throws ValidationException
     {
-      SqlExplain explain = null;
-      DruidSqlInsert druidSqlInsert = null;
-      DruidSqlReplace druidSqlReplace = null;
       SqlNode query = node;
-      Granularity ingestionGranularity = null;
-      List<String> replaceIntervals = null;
-
+      SqlExplain explain = null;
       if (query.getKind() == SqlKind.EXPLAIN) {
         explain = (SqlExplain) query;
         query = explain.getExplicandum();
@@ -828,64 +823,9 @@ public class DruidPlanner implements Closeable
 
       if (query.getKind() == SqlKind.INSERT) {
         if (query instanceof DruidSqlInsert) {
-          druidSqlInsert = (DruidSqlInsert) query;
-          query = druidSqlInsert.getSource();
-
-          // Check if ORDER BY clause is not provided to the underlying query
-          if (query instanceof SqlOrderBy) {
-            SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
-            SqlNodeList orderByList = sqlOrderBy.orderList;
-            if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
-              throw new ValidationException("Cannot have ORDER BY on an INSERT query, use CLUSTERED BY instead.");
-            }
-          }
-
-          ingestionGranularity = druidSqlInsert.getPartitionedBy();
-
-          if (druidSqlInsert.getClusteredBy() != null) {
-            // If we have a CLUSTERED BY clause, extract the information in that CLUSTERED BY and create a new
-            // SqlOrderBy node
-            SqlNode offset = null;
-            SqlNode fetch = null;
-
-            if (query instanceof SqlOrderBy) {
-              SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
-              // This represents the underlying query free of OFFSET, FETCH and ORDER BY clauses
-              // For a sqlOrderBy.query like "SELECT dim1, sum(dim2) FROM foo OFFSET 10 FETCH 30 ORDER BY dim1 GROUP
-              // BY dim1 this would represent the "SELECT dim1, sum(dim2) from foo GROUP BY dim1
-              query = sqlOrderBy.query;
-              offset = sqlOrderBy.offset;
-              fetch = sqlOrderBy.fetch;
-            }
-            // Creates a new SqlOrderBy query, which may have our CLUSTERED BY overwritten
-            query = new SqlOrderBy(
-                query.getParserPosition(),
-                query,
-                druidSqlInsert.getClusteredBy(),
-                offset,
-                fetch
-            );
-          }
+          return handleInsert(explain, (DruidSqlInsert) query);
         } else if (query instanceof DruidSqlReplace) {
-          druidSqlReplace = (DruidSqlReplace) query;
-          query = druidSqlReplace.getSource();
-
-          // Check if ORDER BY clause is not provided to the underlying query
-          if (query instanceof SqlOrderBy) {
-            SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
-            SqlNodeList orderByList = sqlOrderBy.orderList;
-            if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
-              throw new ValidationException("Cannot have ORDER BY on a REPLACE query.");
-            }
-          }
-
-          SqlNode replaceTimeQuery = druidSqlReplace.getReplaceTimeQuery();
-          if (replaceTimeQuery == null) {
-            throw new ValidationException("Missing time chunk information in DELETE WHERE clause for replace.");
-          }
-
-          ingestionGranularity = druidSqlReplace.getPartitionedBy();
-          replaceIntervals = DruidSqlParserUtils.validateQueryAndConvertToIntervals(replaceTimeQuery, ingestionGranularity, dateTimeZone);
+          return handleReplace(explain, (DruidSqlReplace) query, dateTimeZone);
         }
       }
 
@@ -893,11 +833,83 @@ public class DruidPlanner implements Closeable
         throw new ValidationException(StringUtils.format("Cannot execute [%s].", query.getKind()));
       }
 
-      if (druidSqlInsert != null) {
-        return new ParsedNodes(explain, druidSqlInsert, query, ingestionGranularity, null);
-      } else {
-        return new ParsedNodes(explain, druidSqlReplace, query, ingestionGranularity, replaceIntervals);
+      return new ParsedNodes(explain, null, query, null, null);
+    }
+
+    static ParsedNodes handleInsert(SqlExplain explain, DruidSqlInsert druidSqlInsert) throws ValidationException
+    {
+      SqlNode query = druidSqlInsert.getSource();
+
+      // Check if ORDER BY clause is not provided to the underlying query
+      if (query instanceof SqlOrderBy) {
+        SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
+        SqlNodeList orderByList = sqlOrderBy.orderList;
+        if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
+          throw new ValidationException("Cannot have ORDER BY on an INSERT query, use CLUSTERED BY instead.");
+        }
       }
+
+      Granularity ingestionGranularity = druidSqlInsert.getPartitionedBy();
+
+      if (druidSqlInsert.getClusteredBy() != null) {
+        // If we have a CLUSTERED BY clause, extract the information in that CLUSTERED BY and create a new
+        // SqlOrderBy node
+        SqlNode offset = null;
+        SqlNode fetch = null;
+
+        if (query instanceof SqlOrderBy) {
+          SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
+          // This represents the underlying query free of OFFSET, FETCH and ORDER BY clauses
+          // For a sqlOrderBy.query like "SELECT dim1, sum(dim2) FROM foo OFFSET 10 FETCH 30 ORDER BY dim1 GROUP
+          // BY dim1 this would represent the "SELECT dim1, sum(dim2) from foo GROUP BY dim1
+          query = sqlOrderBy.query;
+          offset = sqlOrderBy.offset;
+          fetch = sqlOrderBy.fetch;
+        }
+        // Creates a new SqlOrderBy query, which may have our CLUSTERED BY overwritten
+        query = new SqlOrderBy(
+            query.getParserPosition(),
+            query,
+            druidSqlInsert.getClusteredBy(),
+            offset,
+            fetch
+        );
+      }
+
+      if (!query.isA(SqlKind.QUERY)) {
+        throw new ValidationException(StringUtils.format("Cannot execute [%s].", query.getKind()));
+      }
+
+      return new ParsedNodes(explain, druidSqlInsert, query, ingestionGranularity, null);
+    }
+
+    static ParsedNodes handleReplace(SqlExplain explain, DruidSqlReplace druidSqlReplace, DateTimeZone dateTimeZone)
+        throws ValidationException
+    {
+      SqlNode query = druidSqlReplace.getSource();
+
+      // Check if ORDER BY clause is not provided to the underlying query
+      if (query instanceof SqlOrderBy) {
+        SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
+        SqlNodeList orderByList = sqlOrderBy.orderList;
+        if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
+          throw new ValidationException("Cannot have ORDER BY on a REPLACE query.");
+        }
+      }
+
+      SqlNode replaceTimeQuery = druidSqlReplace.getReplaceTimeQuery();
+      if (replaceTimeQuery == null) {
+        throw new ValidationException("Missing time chunk information in DELETE WHERE clause for replace.");
+      }
+
+      Granularity ingestionGranularity = druidSqlReplace.getPartitionedBy();
+      List<String> replaceIntervals = DruidSqlParserUtils.validateQueryAndConvertToIntervals(replaceTimeQuery, ingestionGranularity, dateTimeZone);
+
+      if (!query.isA(SqlKind.QUERY)) {
+        throw new ValidationException(StringUtils.format("Cannot execute [%s].", query.getKind()));
+      }
+
+      return new ParsedNodes(explain, druidSqlReplace, query, ingestionGranularity, replaceIntervals);
     }
 
     @Nullable

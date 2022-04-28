@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.parser;
 import com.google.common.base.Preconditions;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
@@ -44,6 +45,8 @@ public class DruidSqlReplace extends SqlInsert
   public static final SqlOperator OPERATOR = new SqlSpecialOperator("REPLACE", SqlKind.OTHER);
 
   private final Granularity partitionedBy;
+
+  // Used in the unparse function to generate the original query since we convert the string to an enum
   private final String partitionedByStringForUnparse;
 
   private final SqlNode replaceTimeQuery;
@@ -99,7 +102,7 @@ public class DruidSqlReplace extends SqlInsert
   public void unparse(SqlWriter writer, int leftPrec, int rightPrec)
   {
     writer.startList(SqlWriter.FrameTypeEnum.SELECT);
-    writer.sep("REPLACE");
+    writer.sep("REPLACE INTO");
     final int opLeft = getOperator().getLeftPrec();
     final int opRight = getOperator().getRightPrec();
     getTargetTable().unparse(writer, opLeft, opRight);
@@ -107,12 +110,20 @@ public class DruidSqlReplace extends SqlInsert
     if (getTargetColumnList() != null) {
       getTargetColumnList().unparse(writer, opLeft, opRight);
     }
-
-    writer.keyword("DELETE");
-    replaceTimeQuery.unparse(writer, leftPrec, rightPrec);
-
     writer.newlineAndIndent();
+
+    writer.keyword("OVERWRITE");
+    if (replaceTimeQuery instanceof SqlLiteral) {
+      writer.keyword("ALL");
+    } else {
+      replaceTimeQuery.unparse(writer, leftPrec, rightPrec);
+    }
+    writer.keyword("WITH");
+    writer.newlineAndIndent();
+
     getSource().unparse(writer, 0, 0);
+    writer.newlineAndIndent();
+
     writer.keyword("PARTITIONED BY");
     writer.keyword(partitionedByStringForUnparse);
   }

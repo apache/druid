@@ -64,6 +64,7 @@ data: {
     # keyword add it to 'nonReservedKeywords' section.
     keywords: [
       "CLUSTERED"
+      "OVERWRITE"
       "PARTITIONED"
     ]
 
@@ -219,6 +220,7 @@ data: {
         "OTHERS"
         "OUTPUT"
         "OVERRIDING"
+        "OVERWRITE"
         "PAD"
         "PARAMETER_MODE"
         "PARAMETER_NAME"
