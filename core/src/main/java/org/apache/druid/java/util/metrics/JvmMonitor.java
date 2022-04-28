@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
@@ -40,7 +39,6 @@ import java.util.Map;
 
 public class JvmMonitor extends FeedDefiningMonitor
 {
-  private static final Logger log = new Logger(JvmMonitor.class);
 
   private final Map<String, String[]> dimensions;
 

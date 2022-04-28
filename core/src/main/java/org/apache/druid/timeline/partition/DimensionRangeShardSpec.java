@@ -29,6 +29,7 @@ import org.apache.druid.data.input.StringTuple;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -112,22 +113,6 @@ public class DimensionRangeShardSpec extends BaseDimensionRangeShardSpec
   public List<String> getDomainDimensions()
   {
     return Collections.unmodifiableList(dimensions);
-  }
-
-  /**
-   * Check if a given domain of Strings is a singleton set containing the given value
-   * @param rangeSet Domain of Strings
-   * @param val Value of String
-   * @return rangeSet == {val}
-   */
-  private boolean isRangeSetSingletonWithVal(RangeSet<String> rangeSet, String val)
-  {
-    if (val == null) {
-      return false;
-    }
-    return rangeSet.asRanges().equals(
-        Collections.singleton(Range.singleton(val))
-    );
   }
 
   /**
@@ -223,16 +208,31 @@ public class DimensionRangeShardSpec extends BaseDimensionRangeShardSpec
 
       // EffectiveDomain[i] = QueryDomain[i] INTERSECTION SegmentRange[i]
       RangeSet<String> effectiveDomainForDimension = queryDomainForDimension.subRangeSet(rangeTillSegmentBoundary);
+
+      // Create an iterator to use for checking if the RangeSet is empty or is a singleton. This is significantly
+      // faster than using isEmpty() and equals(), because those methods call size() internally, which iterates
+      // the entire RangeSet.
+      final Iterator<Range<String>> effectiveDomainRangeIterator = effectiveDomainForDimension.asRanges().iterator();
+
       // Prune segment because query domain is out of segment range
-      if (effectiveDomainForDimension.isEmpty()) {
+      if (!effectiveDomainRangeIterator.hasNext()) {
         return false;
       }
 
-      // EffectiveDomain is singleton and lies only on the boundaries -> consider next dimensions
+      final Range<String> firstRange = effectiveDomainRangeIterator.next();
+      final boolean effectiveDomainIsSingleRange = !effectiveDomainRangeIterator.hasNext();
+
+      // Effective domain contained only one Range.
+      // If it's a singleton and lies only on the boundaries -> consider next dimensions
       effectiveDomainIsStart = effectiveDomainIsStart
-                                && isRangeSetSingletonWithVal(effectiveDomainForDimension, segmentStart.get(i));
+                               && effectiveDomainIsSingleRange
+                               && segmentStart.get(i) != null
+                               && firstRange.equals(Range.singleton(segmentStart.get(i)));
+
       effectiveDomainIsEnd = effectiveDomainIsEnd
-                           && isRangeSetSingletonWithVal(effectiveDomainForDimension, segmentEnd.get(i));
+                             && effectiveDomainIsSingleRange
+                             && segmentEnd.get(i) != null
+                             && firstRange.equals(Range.singleton(segmentEnd.get(i)));
 
       // EffectiveDomain lies within the boundaries as well -> cannot prune based on next dimensions
       if (!effectiveDomainIsStart && !effectiveDomainIsEnd) {

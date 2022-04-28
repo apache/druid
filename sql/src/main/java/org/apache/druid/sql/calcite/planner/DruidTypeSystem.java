@@ -28,6 +28,11 @@ public class DruidTypeSystem implements RelDataTypeSystem
 {
   public static final DruidTypeSystem INSTANCE = new DruidTypeSystem();
 
+  /**
+   * Druid uses millisecond precision for timestamps internally. This is also the default at the SQL layer.
+   */
+  public static final int DEFAULT_TIMESTAMP_PRECISION = 3;
+
   private DruidTypeSystem()
   {
     // Singleton.
@@ -42,7 +47,13 @@ public class DruidTypeSystem implements RelDataTypeSystem
   @Override
   public int getDefaultPrecision(final SqlTypeName typeName)
   {
-    return RelDataTypeSystem.DEFAULT.getDefaultPrecision(typeName);
+    switch (typeName) {
+      case TIMESTAMP:
+      case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
+        return DEFAULT_TIMESTAMP_PRECISION;
+      default:
+        return RelDataTypeSystem.DEFAULT.getDefaultPrecision(typeName);
+    }
   }
 
   @Override
