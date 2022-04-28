@@ -26,6 +26,7 @@ import ReactTable from 'react-table';
 
 import { BracedText, Deferred, TableCell } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
+import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../react-table';
 import {
   changePage,
   copyAndAlert,
@@ -35,8 +36,6 @@ import {
   Pagination,
   prettyPrintSql,
   QueryAction,
-  SMALL_TABLE_PAGE_SIZE,
-  SMALL_TABLE_PAGE_SIZE_OPTIONS,
   stringifyValue,
 } from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';

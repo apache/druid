@@ -23,6 +23,14 @@ import { Filter } from 'react-table';
 
 import { addOrUpdate, caseInsensitiveContains } from '../utils';
 
+export const DEFAULT_TABLE_CLASS_NAME = '-striped -highlight padded-header';
+
+export const STANDARD_TABLE_PAGE_SIZE = 50;
+export const STANDARD_TABLE_PAGE_SIZE_OPTIONS = [50, 100, 200];
+
+export const SMALL_TABLE_PAGE_SIZE = 25;
+export const SMALL_TABLE_PAGE_SIZE_OPTIONS = [25, 50, 100];
+
 export type FilterMode = '~' | '=' | '!=' | '<=' | '>=';
 
 export const FILTER_MODES: FilterMode[] = ['~', '=', '!=', '<=', '>='];

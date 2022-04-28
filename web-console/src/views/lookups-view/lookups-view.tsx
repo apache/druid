@@ -35,6 +35,7 @@ import {
 import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
 import { LookupTableActionDialog } from '../../dialogs/lookup-table-action-dialog/lookup-table-action-dialog';
 import { LookupSpec, lookupSpecSummary } from '../../druid-models';
+import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import {
   deepGet,
@@ -45,8 +46,6 @@ import {
   LocalStorageKeys,
   QueryManager,
   QueryState,
-  STANDARD_TABLE_PAGE_SIZE,
-  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 

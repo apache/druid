@@ -2,7 +2,7 @@
 
 exports[`ParseTimeTable matches snapshot 1`] = `
 <div
-  class="ReactTable parse-time-table -striped -highlight"
+  class="ReactTable parse-time-table -striped -highlight padded-header"
 >
   <div
     class="rt-table"

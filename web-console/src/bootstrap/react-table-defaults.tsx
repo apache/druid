@@ -20,7 +20,12 @@ import React from 'react';
 import { Filter, ReactTableDefaults } from 'react-table';
 
 import { Loader } from '../components';
-import { booleanCustomTableFilter, GenericFilterInput, ReactTablePagination } from '../react-table';
+import {
+  booleanCustomTableFilter,
+  DEFAULT_TABLE_CLASS_NAME,
+  GenericFilterInput,
+  ReactTablePagination,
+} from '../react-table';
 import { countBy } from '../utils';
 
 const NoData = React.memo(function NoData(props) {
@@ -31,7 +36,7 @@ const NoData = React.memo(function NoData(props) {
 
 export function bootstrapReactTable() {
   Object.assign(ReactTableDefaults, {
-    className: '-striped -highlight padded-header',
+    className: DEFAULT_TABLE_CLASS_NAME,
     defaultFilterMethod: (filter: Filter, row: any) => {
       const id = filter.pivotId || filter.id;
       return booleanCustomTableFilter(filter, row[id]);

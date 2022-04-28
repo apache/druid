@@ -21,7 +21,7 @@ import { Popover2 } from '@blueprintjs/popover2';
 import React, { ReactNode } from 'react';
 import { Filter } from 'react-table';
 
-import { addFilter, FilterMode, filterModeToIcon } from '../../react-table/react-table-utils';
+import { addFilter, FilterMode, filterModeToIcon } from '../../react-table';
 import { Deferred } from '../deferred/deferred';
 
 import './table-filterable-cell.scss';

@@ -22,8 +22,8 @@ import ReactTable, { Filter } from 'react-table';
 
 import { Loader } from '../../components';
 import { useQueryManager } from '../../hooks';
+import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, UrlBaser } from '../../singletons';
-import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../utils';
 
 import './status-dialog.scss';
 

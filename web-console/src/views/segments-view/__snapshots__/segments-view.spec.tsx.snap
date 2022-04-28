@@ -206,6 +206,7 @@ exports[`SegmentsView matches snapshot 1`] = `
             "Cell": [Function],
             "Header": "Shard type",
             "accessor": [Function],
+            "headerClassName": "disable-comparisons",
             "id": "shard_type",
             "show": true,
             "sortable": false,

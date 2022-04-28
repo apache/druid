@@ -2,7 +2,7 @@
 
 exports[`TransformTable matches snapshot 1`] = `
 <div
-  class="ReactTable transform-table -striped -highlight"
+  class="ReactTable transform-table -striped -highlight padded-header"
 >
   <div
     class="rt-table"

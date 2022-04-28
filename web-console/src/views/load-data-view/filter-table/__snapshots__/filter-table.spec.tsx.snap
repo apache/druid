@@ -2,7 +2,7 @@
 
 exports[`FilterTable matches snapshot 1`] = `
 <div
-  class="ReactTable filter-table -striped -highlight"
+  class="ReactTable filter-table -striped -highlight padded-header"
 >
   <div
     class="rt-table"

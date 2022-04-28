@@ -30,11 +30,11 @@ import {
   MetricSpec,
 } from '../../../druid-models';
 import {
-  caseInsensitiveContains,
-  filterMap,
+  DEFAULT_TABLE_CLASS_NAME,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
-} from '../../../utils';
+} from '../../../react-table';
+import { caseInsensitiveContains, filterMap } from '../../../utils';
 import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './schema-table.scss';
@@ -69,7 +69,7 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
 
   return (
     <ReactTable
-      className="schema-table -striped -highlight"
+      className={classNames('schema-table', DEFAULT_TABLE_CLASS_NAME)}
       data={headerAndRows.rows}
       sortable={false}
       defaultPageSize={STANDARD_TABLE_PAGE_SIZE}

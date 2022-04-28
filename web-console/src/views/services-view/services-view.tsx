@@ -34,6 +34,7 @@ import {
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
+import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api } from '../../singletons';
 import {
   Capabilities,
@@ -51,8 +52,6 @@ import {
   queryDruidSql,
   QueryManager,
   QueryState,
-  STANDARD_TABLE_PAGE_SIZE,
-  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 

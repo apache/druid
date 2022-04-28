@@ -23,11 +23,11 @@ import ReactTable from 'react-table';
 import { TableCell } from '../../../components';
 import { Transform } from '../../../druid-models';
 import {
-  caseInsensitiveContains,
-  filterMap,
+  DEFAULT_TABLE_CLASS_NAME,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
-} from '../../../utils';
+} from '../../../react-table';
+import { caseInsensitiveContains, filterMap } from '../../../utils';
 import { escapeColumnName } from '../../../utils/druid-expression';
 import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
@@ -64,7 +64,7 @@ export const TransformTable = React.memo(function TransformTable(props: Transfor
 
   return (
     <ReactTable
-      className="transform-table -striped -highlight"
+      className={classNames('transform-table', DEFAULT_TABLE_CLASS_NAME)}
       data={sampleData.rows}
       sortable={false}
       defaultPageSize={STANDARD_TABLE_PAGE_SIZE}

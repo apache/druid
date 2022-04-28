@@ -2,7 +2,7 @@
 
 exports[`SchemaTable matches snapshot 1`] = `
 <div
-  class="ReactTable schema-table -striped -highlight"
+  class="ReactTable schema-table -striped -highlight padded-header"
 >
   <div
     class="rt-table"

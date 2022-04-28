@@ -41,12 +41,14 @@ import {
 import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
-import { BooleanFilterInput } from '../../react-table';
 import {
   booleanCustomTableFilter,
+  BooleanFilterInput,
   parseFilterModeAndNeedle,
   sqlQueryCustomTableFilter,
-} from '../../react-table/react-table-utils';
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+} from '../../react-table';
 import { Api } from '../../singletons';
 import {
   Capabilities,
@@ -64,8 +66,6 @@ import {
   queryDruidSql,
   QueryManager,
   QueryState,
-  STANDARD_TABLE_PAGE_SIZE,
-  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
   twoLines,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';

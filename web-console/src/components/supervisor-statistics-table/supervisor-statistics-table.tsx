@@ -21,8 +21,9 @@ import React from 'react';
 import ReactTable, { CellInfo, Column } from 'react-table';
 
 import { useQueryManager } from '../../hooks';
+import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, UrlBaser } from '../../singletons';
-import { deepGet, SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../utils';
+import { deepGet } from '../../utils';
 import { Loader } from '../loader/loader';
 
 import './supervisor-statistics-table.scss';

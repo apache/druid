@@ -40,7 +40,12 @@ import {
   SupervisorTableActionDialog,
   TaskTableActionDialog,
 } from '../../dialogs';
-import { booleanCustomTableFilter, syncFilterClauseById } from '../../react-table';
+import {
+  booleanCustomTableFilter,
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+  syncFilterClauseById,
+} from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import {
   Capabilities,
@@ -56,8 +61,6 @@ import {
   queryDruidSql,
   QueryManager,
   QueryState,
-  SMALL_TABLE_PAGE_SIZE,
-  SMALL_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 
