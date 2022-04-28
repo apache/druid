@@ -27,6 +27,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AllowAllAuthenticator;
@@ -113,147 +114,155 @@ public class DruidStatementTest extends CalciteTestBase
   public void testSignature()
   {
     final String sql = "SELECT * FROM druid.foo";
-    final DruidStatement statement = new DruidStatement("", 0, null, sqlLifecycleFactory.factorize(), () -> {
-    }).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
-
-    // Check signature.
-    final Meta.Signature signature = statement.getSignature();
-    Assert.assertEquals(Meta.CursorFactory.ARRAY, signature.cursorFactory);
-    Assert.assertEquals(Meta.StatementType.SELECT, signature.statementType);
-    Assert.assertEquals(sql, signature.sql);
-    Assert.assertEquals(
-        Lists.newArrayList(
-            Lists.newArrayList("__time", "TIMESTAMP", "java.lang.Long"),
-            Lists.newArrayList("cnt", "BIGINT", "java.lang.Number"),
-            Lists.newArrayList("dim1", "VARCHAR", "java.lang.String"),
-            Lists.newArrayList("dim2", "VARCHAR", "java.lang.String"),
-            Lists.newArrayList("dim3", "VARCHAR", "java.lang.String"),
-            Lists.newArrayList("m1", "FLOAT", "java.lang.Float"),
-            Lists.newArrayList("m2", "DOUBLE", "java.lang.Double"),
-            Lists.newArrayList("unique_dim1", "OTHER", "java.lang.Object")
-        ),
-        Lists.transform(
-            signature.columns,
-            new Function<ColumnMetaData, List<String>>()
-            {
-              @Override
-              public List<String> apply(final ColumnMetaData columnMetaData)
+    try (final DruidStatement statement = statement(sql)) {
+      // Check signature.
+      final Meta.Signature signature = statement.getSignature();
+      Assert.assertEquals(Meta.CursorFactory.ARRAY, signature.cursorFactory);
+      Assert.assertEquals(Meta.StatementType.SELECT, signature.statementType);
+      Assert.assertEquals(sql, signature.sql);
+      Assert.assertEquals(
+          Lists.newArrayList(
+              Lists.newArrayList("__time", "TIMESTAMP", "java.lang.Long"),
+              Lists.newArrayList("cnt", "BIGINT", "java.lang.Number"),
+              Lists.newArrayList("dim1", "VARCHAR", "java.lang.String"),
+              Lists.newArrayList("dim2", "VARCHAR", "java.lang.String"),
+              Lists.newArrayList("dim3", "VARCHAR", "java.lang.String"),
+              Lists.newArrayList("m1", "FLOAT", "java.lang.Float"),
+              Lists.newArrayList("m2", "DOUBLE", "java.lang.Double"),
+              Lists.newArrayList("unique_dim1", "OTHER", "java.lang.Object")
+          ),
+          Lists.transform(
+              signature.columns,
+              new Function<ColumnMetaData, List<String>>()
               {
-                return Lists.newArrayList(
-                    columnMetaData.label,
-                    columnMetaData.type.name,
-                    columnMetaData.type.rep.clazz.getName()
-                );
+                @Override
+                public List<String> apply(final ColumnMetaData columnMetaData)
+                {
+                  return Lists.newArrayList(
+                      columnMetaData.label,
+                      columnMetaData.type.name,
+                      columnMetaData.type.rep.clazz.getName()
+                  );
+                }
               }
-            }
-        )
-    );
+          )
+      );
+    }
   }
 
   @Test
   public void testSubQueryWithOrderBy()
   {
     final String sql = "select T20.F13 as F22  from (SELECT DISTINCT dim1 as F13 FROM druid.foo T10) T20 order by T20.F13 ASC";
-    final DruidStatement statement = new DruidStatement("", 0, null, sqlLifecycleFactory.factorize(), () -> {
-    }).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
-    // First frame, ask for all rows.
-    Meta.Frame frame = statement.execute(Collections.emptyList()).nextFrame(DruidStatement.START_OFFSET, 6);
-    Assert.assertEquals(
-        Meta.Frame.create(
-            0,
-            true,
-            Lists.newArrayList(
-                new Object[]{""},
-                new Object[]{
-                    "1"
-                },
-                new Object[]{"10.1"},
-                new Object[]{"2"},
-                new Object[]{"abc"},
-                new Object[]{"def"}
-            )
-        ),
-        frame
-    );
-    Assert.assertTrue(statement.isDone());
+    try (final DruidStatement statement = statement(sql)) {
+      // First frame, ask for all rows.
+      Meta.Frame frame = statement.execute(Collections.emptyList()).nextFrame(DruidStatement.START_OFFSET, 6);
+      Assert.assertEquals(
+          Meta.Frame.create(
+              0,
+              true,
+              Lists.newArrayList(
+                  new Object[]{""},
+                  new Object[]{
+                      "1"
+                  },
+                  new Object[]{"10.1"},
+                  new Object[]{"2"},
+                  new Object[]{"abc"},
+                  new Object[]{"def"}
+              )
+          ),
+          frame
+      );
+      Assert.assertTrue(statement.isDone());
+    }
   }
 
   @Test
   public void testSelectAllInFirstFrame()
   {
     final String sql = "SELECT __time, cnt, dim1, dim2, m1 FROM druid.foo";
-    final DruidStatement statement = new DruidStatement("", 0, null, sqlLifecycleFactory.factorize(), () -> {
-    }).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
-
-    // First frame, ask for all rows.
-    Meta.Frame frame = statement.execute(Collections.emptyList()).nextFrame(DruidStatement.START_OFFSET, 6);
-    Assert.assertEquals(
-        Meta.Frame.create(
-            0,
-            true,
-            Lists.newArrayList(
-                new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
-                new Object[]{
-                    DateTimes.of("2000-01-02").getMillis(),
-                    1L,
-                    "10.1",
-                    NullHandling.defaultStringValue(),
-                    2.0f
-                },
-                new Object[]{DateTimes.of("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
-                new Object[]{DateTimes.of("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},
-                new Object[]{DateTimes.of("2001-01-02").getMillis(), 1L, "def", "abc", 5.0f},
-                new Object[]{DateTimes.of("2001-01-03").getMillis(), 1L, "abc", NullHandling.defaultStringValue(), 6.0f}
-            )
-        ),
-        frame
-    );
-    Assert.assertTrue(statement.isDone());
+    try (final DruidStatement statement = statement(sql)) {
+      // First frame, ask for all rows.
+      Meta.Frame frame = statement.execute(Collections.emptyList()).nextFrame(DruidStatement.START_OFFSET, 6);
+      Assert.assertEquals(
+          Meta.Frame.create(
+              0,
+              true,
+              Lists.newArrayList(
+                  new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
+                  new Object[]{
+                      DateTimes.of("2000-01-02").getMillis(),
+                      1L,
+                      "10.1",
+                      NullHandling.defaultStringValue(),
+                      2.0f
+                  },
+                  new Object[]{DateTimes.of("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
+                  new Object[]{DateTimes.of("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},
+                  new Object[]{DateTimes.of("2001-01-02").getMillis(), 1L, "def", "abc", 5.0f},
+                  new Object[]{DateTimes.of("2001-01-03").getMillis(), 1L, "abc", NullHandling.defaultStringValue(), 6.0f}
+              )
+          ),
+          frame
+      );
+      Assert.assertTrue(statement.isDone());
+    }
   }
 
   @Test
   public void testSelectSplitOverTwoFrames()
   {
     final String sql = "SELECT __time, cnt, dim1, dim2, m1 FROM druid.foo";
-    final DruidStatement statement = new DruidStatement("", 0, null, sqlLifecycleFactory.factorize(), () -> {
-    }).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
+    try (final DruidStatement statement = statement(sql)) {
+      // First frame, ask for 2 rows.
+      Meta.Frame frame = statement.execute(Collections.emptyList()).nextFrame(DruidStatement.START_OFFSET, 2);
+      Assert.assertEquals(
+          Meta.Frame.create(
+              0,
+              false,
+              Lists.newArrayList(
+                  new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
+                  new Object[]{
+                      DateTimes.of("2000-01-02").getMillis(),
+                      1L,
+                      "10.1",
+                      NullHandling.defaultStringValue(),
+                      2.0f
+                  }
+              )
+          ),
+          frame
+      );
+      Assert.assertFalse(statement.isDone());
 
-    // First frame, ask for 2 rows.
-    Meta.Frame frame = statement.execute(Collections.emptyList()).nextFrame(DruidStatement.START_OFFSET, 2);
-    Assert.assertEquals(
-        Meta.Frame.create(
-            0,
-            false,
-            Lists.newArrayList(
-                new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
-                new Object[]{
-                    DateTimes.of("2000-01-02").getMillis(),
-                    1L,
-                    "10.1",
-                    NullHandling.defaultStringValue(),
-                    2.0f
-                }
-            )
-        ),
-        frame
-    );
-    Assert.assertFalse(statement.isDone());
+      // Last frame, ask for all remaining rows.
+      frame = statement.nextFrame(2, 10);
+      Assert.assertEquals(
+          Meta.Frame.create(
+              2,
+              true,
+              Lists.newArrayList(
+                  new Object[]{DateTimes.of("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
+                  new Object[]{DateTimes.of("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},
+                  new Object[]{DateTimes.of("2001-01-02").getMillis(), 1L, "def", "abc", 5.0f},
+                  new Object[]{DateTimes.of("2001-01-03").getMillis(), 1L, "abc", NullHandling.defaultStringValue(), 6.0f}
+              )
+          ),
+          frame
+      );
+      Assert.assertTrue(statement.isDone());
+    }
+  }
 
-    // Last frame, ask for all remaining rows.
-    frame = statement.nextFrame(2, 10);
-    Assert.assertEquals(
-        Meta.Frame.create(
-            2,
-            true,
-            Lists.newArrayList(
-                new Object[]{DateTimes.of("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
-                new Object[]{DateTimes.of("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},
-                new Object[]{DateTimes.of("2001-01-02").getMillis(), 1L, "def", "abc", 5.0f},
-                new Object[]{DateTimes.of("2001-01-03").getMillis(), 1L, "abc", NullHandling.defaultStringValue(), 6.0f}
-            )
-        ),
-        frame
-    );
-    Assert.assertTrue(statement.isDone());
+  private DruidStatement statement(String sql)
+  {
+    return new DruidStatement(
+        "",
+        0,
+        new QueryContext(),
+        sqlLifecycleFactory.factorize(),
+        () -> {}
+    ).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
   }
 }

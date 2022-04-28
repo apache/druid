@@ -20,7 +20,6 @@
 package org.apache.druid.segment.virtual;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
@@ -262,7 +261,7 @@ public class ExpressionVectorSelectorsTest
           int rows = 0;
           while (!nonVectorized.isDone()) {
             Assert.assertEquals(
-                StringUtils.format("Failed at row %s", rows),
+                "Failed at row " + rows,
                 nonSelector.getObject(),
                 results.get(rows)
             );

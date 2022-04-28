@@ -396,6 +396,7 @@ rollups
 rsync
 runtime
 schemas
+schemaless
 searchable
 secondaryPartitionPruning
 seekable-stream
@@ -1427,6 +1428,7 @@ Sys
 SysMonitor
 TaskCountStatsMonitor
 TaskSlotCountStatsMonitor
+WorkerTaskCountStatsMonitor
 bufferCapacity
 bufferpoolName
 cms
@@ -1957,7 +1959,6 @@ dimensionExclusions
 expr
 jackson-jq
 missingValue
-schemaless
 skipBytesInMemoryOverheadCheck
 spatialDimensions
 useFieldDiscovery

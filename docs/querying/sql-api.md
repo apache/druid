@@ -50,7 +50,7 @@ Submit your query as the value of a "query" field in the JSON object within the 
 |`header`|Whether or not to include a header row for the query result. See [Responses](#responses) for details.|`false`|
 |`typesHeader`|Whether or not to include type information in the header. Can only be set when `header` is also `true`. See [Responses](#responses) for details.|`false`|
 |`sqlTypesHeader`|Whether or not to include SQL type information in the header. Can only be set when `header` is also `true`. See [Responses](#responses) for details.|`false`|
-|`context`|JSON object containing [connection context parameters](sql-connection-context.md).|`{}` (empty)|
+|`context`|JSON object containing [SQL query context parameters](sql-query-context.md).|`{}` (empty)|
 |`parameters`|List of query parameters for parameterized queries. Each parameter in the list should be a JSON object like `{"type": "VARCHAR", "value": "foo"}`. The type should be a SQL type; see [Data types](sql-data-types.md) for a list of supported SQL types.|`[]` (empty)|
 
 You can use _curl_ to send SQL queries from the command-line:
@@ -63,7 +63,7 @@ $ curl -XPOST -H'Content-Type: application/json' http://ROUTER:8888/druid/v2/sql
 [{"TheCount":24433}]
 ```
 
-There are a variety of [connection context parameters](sql-connection-context.md) you can provide by adding a "context" map,
+There are a variety of [SQL query context parameters](sql-query-context.md) you can provide by adding a "context" map,
 like:
 
 ```json
@@ -140,7 +140,7 @@ understands the `typesHeader` and `sqlTypesHeader` parameters. This HTTP respons
 whether `typesHeader` or `sqlTypesHeader` are set or not.
 
 Druid returns the SQL query identifier in the `X-Druid-SQL-Query-Id` HTTP header.
-This query id will be assigned the value of `sqlQueryId` from the [connection context parameters](sql-connection-context.md)
+This query id will be assigned the value of `sqlQueryId` from the [query context parameters](sql-query-context.md)
 if specified, else Druid will generate a SQL query id for you.
 
 #### Errors

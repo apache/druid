@@ -38,6 +38,7 @@ import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -96,7 +97,7 @@ public class PlannerFactory
   /**
    * Create a Druid query planner from an initial query context
    */
-  public DruidPlanner createPlanner(final String sql, final Map<String, Object> queryContext)
+  public DruidPlanner createPlanner(final String sql, final QueryContext queryContext)
   {
     final PlannerContext context = PlannerContext.create(
         sql,
@@ -126,11 +127,11 @@ public class PlannerFactory
   @VisibleForTesting
   public DruidPlanner createPlannerForTesting(final Map<String, Object> queryContext, String query)
   {
-    final DruidPlanner thePlanner = createPlanner(query, queryContext);
+    final DruidPlanner thePlanner = createPlanner(query, new QueryContext(queryContext));
     thePlanner.getPlannerContext()
               .setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
     try {
-      thePlanner.validate();
+      thePlanner.validate(false);
     }
     catch (SqlParseException | ValidationException e) {
       throw new RuntimeException(e);
@@ -151,7 +152,9 @@ public class PlannerFactory
         .withExpand(false)
         .withDecorrelationEnabled(false)
         .withTrimUnusedFields(false)
-        .withInSubQueryThreshold(QueryContexts.getInSubQueryThreshold(plannerContext.getQueryContext()))
+        .withInSubQueryThreshold(
+            QueryContexts.getInSubQueryThreshold(plannerContext.getQueryContext().getMergedParams())
+        )
         .build();
     return Frameworks
         .newConfigBuilder()
