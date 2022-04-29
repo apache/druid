@@ -423,9 +423,9 @@ public class CompactionTask extends AbstractBatchIndexTask
     return tuningConfig != null && tuningConfig.isForceGuaranteedRollup();
   }
 
-  private void emitCompactIngestionModeMetrics(
+  @VisibleForTesting
+  void emitCompactIngestionModeMetrics(
       ServiceEmitter emitter,
-      boolean isAppendToExisting,
       boolean isDropExisting
   )
   {
@@ -435,7 +435,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     }
 
     BatchIngestionMode mode = getBatchIngestionMode(
-        isAppendToExisting,
+        false, // compact never supports append mode
         isDropExisting
     );
     // compact does not support APPEND
@@ -455,7 +455,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   {
 
     // emit metric for compact ingestion mode:
-    emitCompactIngestionModeMetrics(toolbox.getEmitter(), false, ioConfig.isDropExisting());
+    emitCompactIngestionModeMetrics(toolbox.getEmitter(), ioConfig.isDropExisting());
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = createIngestionSchema(
         toolbox,
