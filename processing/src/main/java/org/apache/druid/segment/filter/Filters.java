@@ -21,7 +21,6 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.DefaultBitmapResultFactory;
@@ -52,7 +51,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -178,52 +176,6 @@ public class Filters
     return filter.getBitmapColumnIndex(selector).computeBitmapResult(
         new DefaultBitmapResultFactory(selector.getBitmapFactory())
     );
-  }
-
-  /**
-   * Return an estimated selectivity for bitmaps for the dimension values given by dimValueIndexes.
-   *
-   * @param bitmapIndex  bitmap index
-   * @param bitmaps      bitmaps to extract, by index
-   * @param totalNumRows number of rows in the column associated with this bitmap index
-   *
-   * @return estimated selectivity
-   */
-  public static double estimateSelectivity(
-      final DictionaryEncodedStringValueIndex bitmapIndex,
-      final IntList bitmaps,
-      final long totalNumRows
-  )
-  {
-    long numMatchedRows = 0;
-    for (int i = 0; i < bitmaps.size(); i++) {
-      final ImmutableBitmap bitmap = bitmapIndex.getBitmap(bitmaps.getInt(i));
-      numMatchedRows += bitmap.size();
-    }
-
-    return Math.min(1., (double) numMatchedRows / totalNumRows);
-  }
-
-  /**
-   * Return an estimated selectivity for bitmaps given by an iterator.
-   *
-   * @param bitmaps      iterator of bitmaps
-   * @param totalNumRows number of rows in the column associated with this bitmap index
-   *
-   * @return estimated selectivity
-   */
-  public static double estimateSelectivity(
-      final Iterator<ImmutableBitmap> bitmaps,
-      final long totalNumRows
-  )
-  {
-    long numMatchedRows = 0;
-    while (bitmaps.hasNext()) {
-      final ImmutableBitmap bitmap = bitmaps.next();
-      numMatchedRows += bitmap.size();
-    }
-
-    return Math.min(1., (double) numMatchedRows / totalNumRows);
   }
 
   public static boolean supportsSelectivityEstimation(
