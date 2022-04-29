@@ -21,6 +21,7 @@ package org.apache.druid.data.input.impl;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -28,9 +29,11 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,6 +49,12 @@ public class InputEntityIteratingReaderTest
 {
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Before
+  public void setup()
+  {
+    NullHandling.initializeForTests();
+  }
 
   @Test
   public void test() throws IOException
@@ -117,11 +126,11 @@ public class InputEntityIteratingReaderTest
             0
         ),
         ImmutableList.of(
-            new HttpEntity(new URI("http://test/path"), null, null)
+            new HttpEntity(new URI("testscheme://some/path"), null, null)
         ).iterator(),
         temporaryFolder.newFolder()
     );
-    String expectedMessage = "Error occured while trying to read uri: http://test/path";
+    String expectedMessage = "Error occured while trying to read uri: testscheme://some/path";
     Exception exception = Assert.assertThrows(RuntimeException.class, firehose::read);
 
     Assert.assertTrue(exception.getMessage().contains(expectedMessage));
