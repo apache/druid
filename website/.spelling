@@ -55,6 +55,7 @@ DRUIDVERSION
 DataSketches
 DateTime
 DateType
+dimensionsSpec
 DimensionSpec
 DimensionSpecs
 Dockerfile
@@ -112,6 +113,7 @@ InputFormat
 InputSource
 InputSources
 Integer.MAX_VALUE
+ioConfig
 JBOD
 JDBC
 JDK
@@ -671,7 +673,6 @@ baseDataSource
 baseDataSource-hashCode
 classpathPrefix
 derivativeDataSource
-dimensionsSpec
 druid.extensions.hadoopDependenciesDir
 hadoopDependencyCoordinates
 maxTaskCount
@@ -1132,7 +1133,6 @@ datetime
 f.example.com
 filePattern
 forceExtendableShardSpecs
-granularitySpec
 ignoreInvalidRows
 ignoreWhenNoSegments
 indexSpecForIntermediatePersists
@@ -1842,7 +1842,6 @@ cpuacct
 dataSourceName
 datetime
 defaultHistory
-dimensionsSpec
 doubleMax
 doubleMin
 doubleSum
