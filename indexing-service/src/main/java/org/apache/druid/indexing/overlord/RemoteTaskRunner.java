@@ -1529,6 +1529,12 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     return workersWithUnacknowledgedTask;
   }
 
+  @VisibleForTesting
+  ProvisioningStrategy<WorkerTaskRunner> getProvisioningStrategy()
+  {
+    return provisioningStrategy;
+  }
+
   @Override
   public Map<String, Long> getTotalTaskSlotCount()
   {
