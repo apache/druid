@@ -1074,6 +1074,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         ingestionSchema
     );
 
+
     Set<DataSegment> tombStones;
     if (ingestionSchema.getIOConfig().isDropExisting()) {
       TombstoneHelper tombstoneHelper = new TombstoneHelper(
@@ -1093,9 +1094,21 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           );
           tombstonesAnShards.put(interval, segmentIdWithShardSpec);
         }
+
         tombStones = tombstoneHelper.computeTombstones(tombstonesAnShards);
+        // emit segment count before adding tombstones:
+        emitMetric(toolbox.getEmitter(), "batch/replace/segments/count", newSegments.size());
+        // add tombstones
         newSegments.addAll(tombStones);
+        emitMetric(toolbox.getEmitter(), "batch/replace/tombstones/count", tombStones.size());
+
         LOG.debugSegments(tombStones, "To publish tombstones");
+      }
+    } else {
+      if (ingestionSchema.getIOConfig().isAppendToExisting()) {
+        emitMetric(toolbox.getEmitter(), "batch/append/segments/count", newSegments.size());
+      } else {
+        emitMetric(toolbox.getEmitter(), "batch/ovewrite/segments/count", newSegments.size());
       }
     }
 

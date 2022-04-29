@@ -896,6 +896,19 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
   }
 
+  protected void emitMetric(
+      ServiceEmitter emitter,
+      String metric,
+      Number value
+  )
+  {
+
+    if (emitter == null) {
+      return;
+    }
+    emitter.emit(buildEvent(metric, value));
+  }
+
   protected void emitBatchIngestionModeMetrics(
       ServiceEmitter emitter,
       boolean isAppendToExisting,
@@ -903,23 +916,19 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   )
   {
 
-    if (emitter == null) {
-      return;
-    }
-
     BatchIngestionMode mode = getBatchIngestionMode(
         isAppendToExisting,
         isDropExisting
     );
     switch (mode) {
       case APPEND:
-        emitter.emit(buildEvent("batch/append/count", 1));
+        emitMetric(emitter, "batch/append/count", 1);
         break;
       case REPLACE:
-        emitter.emit(buildEvent("batch/replace/count", 1));
+        emitMetric(emitter, "batch/replace/count", 1);
         break;
       case OVERWRITE:
-        emitter.emit(buildEvent("batch/overwrite/count", 1));
+        emitMetric(emitter, "batch/overwrite/count", 1);
         break;
       default:
         throw new ISE("Invalid batch ingestion mode [%s]", mode);

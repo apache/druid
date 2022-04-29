@@ -963,8 +963,19 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           );
           tombstonesAndVersions.put(interval, segmentIdWithShardSpec);
         }
+
         tombStones = tombstoneHelper.computeTombstones(tombstonesAndVersions);
+
+        emitMetric(toolbox.getEmitter(), "batch/replace/tombstones/count", tombStones.size());
+        emitMetric(toolbox.getEmitter(), "batch/replace/segments/count", pushed.getSegments().size());
+
         log.debugSegments(tombStones, "To publish tombstones");
+      } else {
+        if (ingestionSchema.getIOConfig().isAppendToExisting()) {
+          emitMetric(toolbox.getEmitter(), "batch/append/segments/count", pushed.getSegments().size());
+        } else {
+          emitMetric(toolbox.getEmitter(), "batch/ovewrite/segments/count", pushed.getSegments().size());
+        }
       }
 
       // Probably we can publish atomicUpdateGroup along with segments.
