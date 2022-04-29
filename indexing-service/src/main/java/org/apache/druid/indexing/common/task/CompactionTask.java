@@ -429,6 +429,11 @@ public class CompactionTask extends AbstractBatchIndexTask
       boolean isDropExisting
   )
   {
+
+    if (emitter == null) {
+      return;
+    }
+
     BatchIngestionMode mode = getBatchIngestionMode(
         isAppendToExisting,
         isDropExisting

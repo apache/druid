@@ -902,6 +902,11 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       boolean isDropExisting
   )
   {
+
+    if (emitter == null) {
+      return;
+    }
+
     BatchIngestionMode mode = getBatchIngestionMode(
         isAppendToExisting,
         isDropExisting
