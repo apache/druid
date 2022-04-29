@@ -17,37 +17,56 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.common.guava;
+package org.apache.druid.query.groupby.epinephelinae;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 
-/**
- */
-public class MergeIterable<T> implements Iterable<T>
+public class IntKey
 {
-  private final Comparator<? super T> comparator;
-  private final Iterable<? extends Iterable<? extends T>> baseIterables;
+  private int intValue;
 
-  public MergeIterable(
-      Iterable<? extends Iterable<? extends T>> baseIterables,
-      Comparator<? super T> comparator
-  )
+  @JsonCreator
+  public IntKey(final int intValue)
   {
-    this.comparator = comparator;
-    this.baseIterables = baseIterables;
+    this.intValue = intValue;
+  }
+
+  @JsonValue
+  public int intValue()
+  {
+    return intValue;
+  }
+
+  public void setValue(final int intValue)
+  {
+    this.intValue = intValue;
   }
 
   @Override
-  public Iterator<T> iterator()
+  public boolean equals(Object o)
   {
-    List<Iterator<? extends T>> iterators = new ArrayList<>();
-    for (Iterable<? extends T> baseIterable : baseIterables) {
-      iterators.add(baseIterable.iterator());
+    if (this == o) {
+      return true;
     }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    IntKey intKey = (IntKey) o;
+    return intValue == intKey.intValue;
+  }
 
-    return new MergeIterator<>(iterators, comparator);
+  @Override
+  public int hashCode()
+  {
+    return intValue;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "IntKey{" +
+           "intValue=" + intValue +
+           '}';
   }
 }
