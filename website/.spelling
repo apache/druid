@@ -1651,6 +1651,7 @@ enableJoinFilterPushDown
 enableJoinFilterRewrite
 enableJoinFilterRewriteValueColumnFilters
 joinFilterRewriteMaxSize
+enableTimeBoundaryPlanning
  - ../docs/querying/querying.md
 7KiB
 DatasourceMetadata
