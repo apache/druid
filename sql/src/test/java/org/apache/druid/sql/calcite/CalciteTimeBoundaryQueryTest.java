@@ -40,7 +40,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   public void testMaxTimeQuery() throws Exception
   {
     HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    queryContext.put(QueryContexts.PLAN_TIME_BOUNDARY_SQL, true);
+    queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     HashMap<String, Object> expectedContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     expectedContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
     testQuery(
@@ -61,7 +61,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   public void testMinTimeQuery() throws Exception
   {
     HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    queryContext.put(QueryContexts.PLAN_TIME_BOUNDARY_SQL, true);
+    queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     HashMap<String, Object> expectedContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     expectedContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
     testQuery(
@@ -82,7 +82,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   public void testMinTimeQueryWithFilters() throws Exception
   {
     HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    queryContext.put(QueryContexts.PLAN_TIME_BOUNDARY_SQL, true);
+    queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     HashMap<String, Object> expectedContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     expectedContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
     testQuery(
@@ -110,7 +110,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   public void testMinMaxTimeQuery() throws Exception
   {
     HashMap<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    context.put(QueryContexts.PLAN_TIME_BOUNDARY_SQL, true);
+    context.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     testQuery(
         "SELECT MIN(__time) AS minTime, MAX(__time) as maxTime FROM foo",
         context,

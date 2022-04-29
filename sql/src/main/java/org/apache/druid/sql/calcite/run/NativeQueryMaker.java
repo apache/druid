@@ -114,7 +114,7 @@ public class NativeQueryMaker implements QueryMaker
       case SCAN_CAN_ORDER_BY_NON_TIME:
         return false;
       case CAN_RUN_TIME_BOUNDARY:
-        return QueryContexts.isPlanTimeBoundarySql(plannerContext.getQueryContext().getMergedParams());
+        return QueryContexts.isTimeBoundaryPlanningEnabled(plannerContext.getQueryContext().getMergedParams());
       default:
         throw new IAE("Unrecognized feature: %s", feature);
     }

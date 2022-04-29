@@ -2389,7 +2389,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     }
 
     Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
-    updatedQueryContext.put(QueryContexts.PLAN_TIME_BOUNDARY_SQL, true);
+    updatedQueryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
     maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
     testQuery(
@@ -2437,7 +2437,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
-    updatedQueryContext.put(QueryContexts.PLAN_TIME_BOUNDARY_SQL, true);
+    updatedQueryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
     maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
     testQuery(
@@ -3573,7 +3573,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     }
 
     Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
-    updatedQueryContext.put(QueryContexts.PLAN_TIME_BOUNDARY_SQL, true);
+    updatedQueryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
     maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
     testQuery(
@@ -3635,7 +3635,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
-    updatedQueryContext.put(QueryContexts.PLAN_TIME_BOUNDARY_SQL, true);
+    updatedQueryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     Map<String, Object> minTimeQueryContext = new HashMap<>(queryContext);
     minTimeQueryContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
@@ -3741,7 +3741,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
-    updatedQueryContext.put(QueryContexts.PLAN_TIME_BOUNDARY_SQL, true);
+    updatedQueryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     Map<String, Object> minTimeQueryContext = new HashMap<>(queryContext);
     minTimeQueryContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
     Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);

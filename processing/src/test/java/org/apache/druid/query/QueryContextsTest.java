@@ -143,8 +143,8 @@ public class QueryContextsTest
   @Test
   public void testDefaultPlanTimeBoundarySql()
   {
-    Assert.assertEquals(QueryContexts.DEFAULT_PLAN_TIME_BOUNDARY_SQL,
-                        QueryContexts.isPlanTimeBoundarySql(ImmutableMap.of()));
+    Assert.assertEquals(QueryContexts.DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING,
+                        QueryContexts.isTimeBoundaryPlanningEnabled(ImmutableMap.of()));
   }
 
   @Test
