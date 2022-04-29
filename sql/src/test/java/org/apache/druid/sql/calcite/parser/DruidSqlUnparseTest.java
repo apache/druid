@@ -49,9 +49,9 @@ public class DruidSqlUnparseTest
   @Test
   public void testUnparseReplaceAll() throws ParseException
   {
-    String sqlQuery = "REPLACE INTO dst OVERWRITE ALL WITH SELECT * FROM foo PARTITIONED BY ALL TIME";
+    String sqlQuery = "REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME";
     String prettySqlQuery = "REPLACE INTO \"dst\"\n"
-                            + "OVERWRITE ALL WITH\n"
+                            + "OVERWRITE ALL\n"
                             + "(SELECT *\n"
                             + "    FROM \"foo\")\n"
                             + "PARTITIONED BY ALL TIME";
@@ -66,9 +66,9 @@ public class DruidSqlUnparseTest
   @Test
   public void testUnparseReplaceWhere() throws ParseException
   {
-    String sqlQuery = "REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' WITH SELECT * FROM foo PARTITIONED BY DAY";
+    String sqlQuery = "REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' SELECT * FROM foo PARTITIONED BY DAY";
     String prettySqlQuery = "REPLACE INTO \"dst\"\n"
-                            + "OVERWRITE \"__time\" >= TIMESTAMP '2000-01-01 00:00:00' AND \"__time\" < TIMESTAMP '2000-01-02 00:00:00' WITH\n"
+                            + "OVERWRITE \"__time\" >= TIMESTAMP '2000-01-01 00:00:00' AND \"__time\" < TIMESTAMP '2000-01-02 00:00:00'\n"
                             + "(SELECT *\n"
                             + "    FROM \"foo\")\n"
                             + "PARTITIONED BY DAY";

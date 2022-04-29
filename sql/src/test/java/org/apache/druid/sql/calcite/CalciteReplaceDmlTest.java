@@ -79,7 +79,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceFromTableWithReplaceAll()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO dst OVERWRITE ALL WITH SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectTarget("dst", FOO_TABLE_SIGNATURE)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
         .expectQuery(
@@ -98,7 +98,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' "
-             + "WITH SELECT * FROM foo PARTITIONED BY DAY")
+             + "SELECT * FROM foo PARTITIONED BY DAY")
         .expectTarget("dst", FOO_TABLE_SIGNATURE)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
         .expectQuery(
@@ -124,7 +124,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .context(context)
         .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 05:30:00' AND __time < TIMESTAMP '2000-01-02 05:30:00' "
-             + "WITH SELECT * FROM foo PARTITIONED BY DAY")
+             + "SELECT * FROM foo PARTITIONED BY DAY")
         .expectTarget("dst", FOO_TABLE_SIGNATURE)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
         .expectQuery(
@@ -148,7 +148,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE WHERE"
              + " __time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-05-01' "
-             + "WITH SELECT * FROM foo PARTITIONED BY MONTH")
+             + "SELECT * FROM foo PARTITIONED BY MONTH")
         .expectTarget("dst", FOO_TABLE_SIGNATURE)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
         .expectQuery(
@@ -173,7 +173,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO dst OVERWRITE WHERE"
              + " __time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-02-01' "
              + "OR __time >= TIMESTAMP '2000-03-01' AND __time < TIMESTAMP '2000-04-01' "
-             + "WITH SELECT * FROM foo PARTITIONED BY MONTH")
+             + "SELECT * FROM foo PARTITIONED BY MONTH")
         .expectTarget("dst", FOO_TABLE_SIGNATURE)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
         .expectQuery(
@@ -195,7 +195,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceForUnsupportedDeleteWhereClause()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO dst OVERWRITE WHERE __time LIKE '20__-02-01' WITH SELECT * FROM foo PARTITIONED BY MONTH")
+        .sql("REPLACE INTO dst OVERWRITE WHERE __time LIKE '20__-02-01' SELECT * FROM foo PARTITIONED BY MONTH")
         .expectValidationError(
             SqlPlanningException.class,
             "Unsupported operation in OVERWRITE WHERE clause: LIKE"
@@ -207,7 +207,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceForInvalidDeleteWhereClause()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO dst OVERWRITE WHERE TRUE WITH SELECT * FROM foo PARTITIONED BY MONTH")
+        .sql("REPLACE INTO dst OVERWRITE WHERE TRUE SELECT * FROM foo PARTITIONED BY MONTH")
         .expectValidationError(
             SqlPlanningException.class,
             "Invalid OVERWRITE WHERE clause"
@@ -219,7 +219,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceForDeleteWhereClauseOnUnsupportedColumns()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO dst OVERWRITE WHERE dim1 > TIMESTAMP '2000-01-05 00:00:00' WITH SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .sql("REPLACE INTO dst OVERWRITE WHERE dim1 > TIMESTAMP '2000-01-05 00:00:00' SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
             "Only __time column is supported in OVERWRITE WHERE clause"
@@ -231,7 +231,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceForMisalignedPartitionInterval()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-05 00:00:00' AND __time <= TIMESTAMP '2000-01-06 00:00:00' WITH SELECT * FROM foo PARTITIONED BY MONTH")
+        .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-05 00:00:00' AND __time <= TIMESTAMP '2000-01-06 00:00:00' SELECT * FROM foo PARTITIONED BY MONTH")
         .expectValidationError(
             SqlPlanningException.class,
             "OVERWRITE WHERE clause contains an interval which is not aligned with PARTITIONED BY granularity"
@@ -243,7 +243,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceForInvalidPartition()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-05 00:00:00' AND __time <= TIMESTAMP '2000-02-05 00:00:00' WITH SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-05 00:00:00' AND __time <= TIMESTAMP '2000-02-05 00:00:00' SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
             "OVERWRITE WHERE clause contains an interval which is not aligned with PARTITIONED BY granularity"
@@ -255,7 +255,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceForWithInvalidInterval()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-INVALID0:00' AND __time <= TIMESTAMP '2000-02-05 00:00:00' WITH SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-INVALID0:00' AND __time <= TIMESTAMP '2000-02-05 00:00:00' SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(SqlPlanningException.class)
         .verify();
   }
@@ -264,7 +264,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceForWithoutPartitionSpec()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO dst WITH SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .sql("REPLACE INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(SqlPlanningException.class)
         .verify();
   }
@@ -273,7 +273,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceFromView()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO dst OVERWRITE ALL WITH SELECT * FROM view.aview PARTITIONED BY ALL TIME")
+        .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM view.aview PARTITIONED BY ALL TIME")
         .expectTarget("dst", RowSignature.builder().add("dim1_firstchar", ColumnType.STRING).build())
         .expectResources(viewRead("aview"), dataSourceWrite("dst"))
         .expectQuery(
@@ -293,7 +293,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceIntoQualifiedTable()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO druid.dst OVERWRITE ALL WITH SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .sql("REPLACE INTO druid.dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectTarget("dst", FOO_TABLE_SIGNATURE)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
         .expectQuery(
@@ -311,7 +311,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceIntoInvalidDataSourceName()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO \"in/valid\" OVERWRITE ALL WITH SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
+        .sql("REPLACE INTO \"in/valid\" OVERWRITE ALL SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(SqlPlanningException.class, "Ingestion dataSource cannot contain the '/' character.")
         .verify();
   }
@@ -320,7 +320,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceUsingColumnList()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO dst (foo, bar) OVERWRITE ALL WITH SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
+        .sql("REPLACE INTO dst (foo, bar) OVERWRITE ALL SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(SqlPlanningException.class, "Ingestion with target column list is not supported.")
         .verify();
   }
@@ -329,7 +329,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceIntoSystemTable()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO INFORMATION_SCHEMA.COLUMNS OVERWRITE ALL WITH SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .sql("REPLACE INTO INFORMATION_SCHEMA.COLUMNS OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
             "Cannot ingest into [INFORMATION_SCHEMA.COLUMNS] because it is not a Druid datasource."
@@ -341,7 +341,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceIntoView()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO view.aview OVERWRITE ALL WITH SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .sql("REPLACE INTO view.aview OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
             "Cannot ingest into [view.aview] because it is not a Druid datasource."
@@ -353,7 +353,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceFromUnauthorizedDataSource()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO dst OVERWRITE ALL WITH SELECT * FROM \"%s\" PARTITIONED BY ALL TIME", CalciteTests.FORBIDDEN_DATASOURCE)
+        .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM \"%s\" PARTITIONED BY ALL TIME", CalciteTests.FORBIDDEN_DATASOURCE)
         .expectValidationError(ForbiddenException.class)
         .verify();
   }
@@ -362,7 +362,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceIntoUnauthorizedDataSource()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO \"%s\" OVERWRITE ALL WITH SELECT * FROM foo PARTITIONED BY ALL TIME", CalciteTests.FORBIDDEN_DATASOURCE)
+        .sql("REPLACE INTO \"%s\" OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME", CalciteTests.FORBIDDEN_DATASOURCE)
         .expectValidationError(ForbiddenException.class)
         .verify();
   }
@@ -371,7 +371,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceIntoNonexistentSchema()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO nonexistent.dst OVERWRITE ALL WITH SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .sql("REPLACE INTO nonexistent.dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
             "Cannot ingest into [nonexistent.dst] because it is not a Druid datasource."
@@ -383,7 +383,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceFromExternal()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO dst OVERWRITE ALL WITH SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(externalDataSource))
+        .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(externalDataSource))
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", externalDataSource.getSignature())
         .expectResources(dataSourceWrite("dst"), ExternalOperatorConversion.EXTERNAL_RESOURCE_ACTION)
@@ -409,7 +409,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
 
     testIngestionQuery()
         .sql(
-            "REPLACE INTO druid.dst OVERWRITE ALL WITH SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo LIMIT 10 OFFSET 20 PARTITIONED BY DAY")
+            "REPLACE INTO druid.dst OVERWRITE ALL SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo LIMIT 10 OFFSET 20 PARTITIONED BY DAY")
         .expectTarget("dst", targetRowSignature)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
         .expectQuery(
@@ -432,7 +432,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     // Throws a ValidationException, which gets converted to a SqlPlanningException before throwing to end user
     try {
       testQuery(
-          "REPLACE INTO dst OVERWRITE ALL WITH SELECT * FROM foo PARTITIONED BY 'invalid_granularity'",
+          "REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY 'invalid_granularity'",
           ImmutableList.of(),
           ImmutableList.of()
       );
@@ -474,7 +474,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     testQuery(
         new PlannerConfig(),
         StringUtils.format(
-            "EXPLAIN PLAN FOR REPLACE INTO dst OVERWRITE ALL WITH SELECT * FROM %s PARTITIONED BY ALL TIME",
+            "EXPLAIN PLAN FOR REPLACE INTO dst OVERWRITE ALL SELECT * FROM %s PARTITIONED BY ALL TIME",
             externSql(externalDataSource)
         ),
         CalciteTests.SUPER_USER_AUTH_RESULT,
@@ -500,7 +500,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         () ->
             testQuery(
                 StringUtils.format(
-                    "EXPLAIN PLAN FOR REPLACE INTO dst OVERWRITE ALL WITH SELECT * FROM %s PARTITIONED BY ALL TIME",
+                    "EXPLAIN PLAN FOR REPLACE INTO dst OVERWRITE ALL SELECT * FROM %s PARTITIONED BY ALL TIME",
                     externSql(externalDataSource)
                 ),
                 ImmutableList.of(),
@@ -516,7 +516,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceFromExternalUnauthorized()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO dst OVERWRITE ALL WITH SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(externalDataSource))
+        .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(externalDataSource))
         .expectValidationError(ForbiddenException.class)
         .verify();
   }
@@ -526,7 +526,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql(
-            "REPLACE INTO dst OVERWRITE ALL WITH SELECT x || y AS xy, z FROM %s PARTITIONED BY ALL TIME",
+            "REPLACE INTO dst OVERWRITE ALL SELECT x || y AS xy, z FROM %s PARTITIONED BY ALL TIME",
             externSql(externalDataSource)
         )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
@@ -549,7 +549,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql(
-            "REPLACE INTO dst OVERWRITE ALL WITH SELECT x, SUM(z) AS sum_z, COUNT(*) AS cnt FROM %s GROUP BY 1 PARTITIONED BY ALL TIME",
+            "REPLACE INTO dst OVERWRITE ALL SELECT x, SUM(z) AS sum_z, COUNT(*) AS cnt FROM %s GROUP BY 1 PARTITIONED BY ALL TIME",
             externSql(externalDataSource)
         )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
@@ -583,7 +583,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql(
-            "REPLACE INTO dst OVERWRITE ALL WITH SELECT COUNT(*) AS cnt FROM %s PARTITIONED BY ALL TIME",
+            "REPLACE INTO dst OVERWRITE ALL SELECT COUNT(*) AS cnt FROM %s PARTITIONED BY ALL TIME",
             externSql(externalDataSource)
         )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)

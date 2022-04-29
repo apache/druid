@@ -118,7 +118,6 @@ public class DruidSqlReplace extends SqlInsert
     } else {
       replaceTimeQuery.unparse(writer, leftPrec, rightPrec);
     }
-    writer.keyword("WITH");
     writer.newlineAndIndent();
 
     getSource().unparse(writer, 0, 0);
