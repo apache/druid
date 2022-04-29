@@ -458,7 +458,7 @@ to filter by interval and limit the number of results respectively.
 
 Update overlord dynamic worker configuration.
 
-#### Compaction status
+#### Automatic compaction status
 
 ##### GET
 
