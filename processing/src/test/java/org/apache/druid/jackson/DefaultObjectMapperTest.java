@@ -22,11 +22,18 @@ package org.apache.druid.jackson;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.Yielders;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
+
 /**
+ *
  */
 public class DefaultObjectMapperTest
 {
@@ -38,5 +45,26 @@ public class DefaultObjectMapperTest
     final DateTime time = DateTimes.nowUtc();
 
     Assert.assertEquals(StringUtils.format("\"%s\"", time), mapper.writeValueAsString(time));
+  }
+
+  @Test
+  public void testYielder() throws Exception
+  {
+    final Sequence<Object> sequence = Sequences.simple(
+        Arrays.asList(
+            "a",
+            "b",
+            null,
+            DateTimes.utc(2L),
+            5,
+            DateTimeZone.UTC,
+            "c"
+        )
+    );
+
+    Assert.assertEquals(
+        "[\"a\",\"b\",null,\"1970-01-01T00:00:00.002Z\",5,\"UTC\",\"c\"]",
+        mapper.writeValueAsString(Yielders.each(sequence))
+    );
   }
 }

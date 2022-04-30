@@ -22,12 +22,10 @@ package org.apache.druid.query.groupby.epinephelinae;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
-import com.google.common.primitives.Ints;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -56,28 +54,27 @@ public class StreamingMergeSortedGrouperTest extends InitializedNullHandlingTest
   public void testAggregate()
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final StreamingMergeSortedGrouper<Integer> grouper = newGrouper(columnSelectorFactory, 1024);
+    final StreamingMergeSortedGrouper<IntKey> grouper = newGrouper(columnSelectorFactory, 1024);
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
-    grouper.aggregate(6);
-    grouper.aggregate(6);
-    grouper.aggregate(6);
-    grouper.aggregate(10);
-    grouper.aggregate(12);
-    grouper.aggregate(12);
+    grouper.aggregate(new IntKey(6));
+    grouper.aggregate(new IntKey(6));
+    grouper.aggregate(new IntKey(6));
+    grouper.aggregate(new IntKey(10));
+    grouper.aggregate(new IntKey(12));
+    grouper.aggregate(new IntKey(12));
 
     grouper.finish();
 
-    final List<Entry<Integer>> expected = ImmutableList.of(
-        new Grouper.Entry<>(6, new Object[]{30L, 3L}),
-        new Grouper.Entry<>(10, new Object[]{10L, 1L}),
-        new Grouper.Entry<>(12, new Object[]{20L, 2L})
+    final List<Entry<IntKey>> expected = ImmutableList.of(
+        new ReusableEntry<>(new IntKey(6), new Object[]{30L, 3L}),
+        new ReusableEntry<>(new IntKey(10), new Object[]{10L, 1L}),
+        new ReusableEntry<>(new IntKey(12), new Object[]{20L, 2L})
     );
-    final List<Entry<Integer>> unsortedEntries = Lists.newArrayList(grouper.iterator(true));
 
-    Assert.assertEquals(
-        expected,
-        unsortedEntries
+    GrouperTestUtil.assertEntriesEquals(
+        expected.iterator(),
+        grouper.iterator(true)
     );
   }
 
@@ -85,7 +82,7 @@ public class StreamingMergeSortedGrouperTest extends InitializedNullHandlingTest
   public void testEmptyIterator()
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final StreamingMergeSortedGrouper<Integer> grouper = newGrouper(columnSelectorFactory, 1024);
+    final StreamingMergeSortedGrouper<IntKey> grouper = newGrouper(columnSelectorFactory, 1024);
 
     grouper.finish();
 
@@ -108,11 +105,11 @@ public class StreamingMergeSortedGrouperTest extends InitializedNullHandlingTest
   {
     final ExecutorService exec = Execs.multiThreaded(2, "merge-sorted-grouper-test-%d");
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final StreamingMergeSortedGrouper<Integer> grouper = newGrouper(columnSelectorFactory, bufferSize);
+    final StreamingMergeSortedGrouper<IntKey> grouper = newGrouper(columnSelectorFactory, bufferSize);
 
-    final List<Entry<Integer>> expected = new ArrayList<>(1024);
+    final List<Entry<IntKey>> expected = new ArrayList<>(1024);
     for (int i = 0; i < 1024; i++) {
-      expected.add(new Entry<>(i, new Object[]{100L, 10L}));
+      expected.add(new ReusableEntry<>(new IntKey(i), new Object[]{100L, 10L}));
     }
 
     try {
@@ -121,24 +118,26 @@ public class StreamingMergeSortedGrouperTest extends InitializedNullHandlingTest
 
         for (int i = 0; i < 1024; i++) {
           for (int j = 0; j < 10; j++) {
-            grouper.aggregate(i);
+            grouper.aggregate(new IntKey(i));
           }
         }
 
         grouper.finish();
       });
 
-      final List<Entry<Integer>> unsortedEntries = Lists.newArrayList(grouper.iterator(true));
-      final List<Entry<Integer>> actual = Ordering.from((Comparator<Entry<Integer>>) (o1, o2) -> Ints.compare(
-          o1.getKey(),
-          o2.getKey()
-      ))
-                                                  .sortedCopy(unsortedEntries);
+      final CloseableIterator<Entry<IntKey>> grouperIterator = grouper.iterator();
 
-      if (!actual.equals(expected)) {
-        future.get(); // Check there is an exception occured
-        Assert.fail();
-      }
+      GrouperTestUtil.assertEntriesEquals(
+          expected.iterator(),
+          GrouperTestUtil.sortedEntries(
+              grouperIterator,
+              k -> new IntKey(k.intValue()),
+              Comparator.comparing(IntKey::intValue)
+          ).iterator()
+      );
+
+      // Ensure future resolves successfully.
+      future.get();
     }
     finally {
       exec.shutdownNow();
@@ -164,22 +163,22 @@ public class StreamingMergeSortedGrouperTest extends InitializedNullHandlingTest
     expectedException.expect(QueryTimeoutException.class);
 
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final StreamingMergeSortedGrouper<Integer> grouper = newGrouper(columnSelectorFactory, 100);
+    final StreamingMergeSortedGrouper<IntKey> grouper = newGrouper(columnSelectorFactory, 100);
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
-    grouper.aggregate(6);
+    grouper.aggregate(new IntKey(6));
 
     grouper.iterator();
   }
 
-  private StreamingMergeSortedGrouper<Integer> newGrouper(
+  private StreamingMergeSortedGrouper<IntKey> newGrouper(
       TestColumnSelectorFactory columnSelectorFactory,
       int bufferSize
   )
   {
     final ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
 
-    final StreamingMergeSortedGrouper<Integer> grouper = new StreamingMergeSortedGrouper<>(
+    final StreamingMergeSortedGrouper<IntKey> grouper = new StreamingMergeSortedGrouper<>(
         Suppliers.ofInstance(buffer),
         GrouperTestUtil.intKeySerde(),
         columnSelectorFactory,

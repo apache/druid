@@ -2250,9 +2250,6 @@ public class CachingClusteredClientTest
               for (int i = 0; i < numTimesToQuery; ++i) {
                 TestHelper.assertExpectedResults(
                     new MergeIterable(
-                        query instanceof GroupByQuery
-                        ? ((GroupByQuery) query).getResultOrdering()
-                        : Comparators.naturalNullsFirst(),
                         FunctionalIterable
                             .create(new RangeIterable(expectedResultsRangeStart, expectedResultsRangeEnd))
                             .transformCat(
@@ -2273,7 +2270,10 @@ public class CachingClusteredClientTest
                                     return retVal;
                                   }
                                 }
-                            )
+                            ),
+                        query instanceof GroupByQuery
+                        ? ((GroupByQuery) query).getResultOrdering()
+                        : Comparators.naturalNullsFirst()
                     ),
                     runner.run(
                         QueryPlus.wrap(
