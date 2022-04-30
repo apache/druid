@@ -911,7 +911,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testPrimitiveLatestInSubqueryGroupBy() throws Exception
+  public void testLatestOffHeapGroupBy() throws Exception
   {
     testQuery(
         "SELECT dim2, LATEST(m1) AS val1 FROM foo GROUP BY dim2",
@@ -994,7 +994,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testPrimitiveEarliestInSubqueryGroupBy() throws Exception
+  public void testOffHeapEarliestGroupBy() throws Exception
   {
     testQuery(
         "SELECT dim2, EARLIEST(m1) AS val1 FROM foo GROUP BY dim2",

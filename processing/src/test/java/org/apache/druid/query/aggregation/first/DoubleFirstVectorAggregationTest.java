@@ -21,12 +21,16 @@ package org.apache.druid.query.aggregation.first;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -42,13 +46,21 @@ public class DoubleFirstVectorAggregationTest extends InitializedNullHandlingTes
   private static final boolean[] NULLS = new boolean[]{false, false, true, false};
   private long[] times = {2436, 6879, 7888, 8224};
 
+  private static final String NAME = "NAME";
+  private static final String FIELD_NAME = "FIELD_NAME";
+  private static final String TIME_COL = "__time";
+
   @Mock
   private VectorValueSelector selector;
   @Mock
-  private VectorValueSelector timeSelector;
+  private BaseLongVectorValueSelector timeSelector;
   private ByteBuffer buf;
 
   private DoubleFirstVectorAggregator target;
+
+  private DoubleFirstAggregatorFactory doubleFirstAggregatorFactory;
+  @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+  private VectorColumnSelectorFactory selectorFactory;
 
   @Before
   public void setup()
@@ -60,6 +72,20 @@ public class DoubleFirstVectorAggregationTest extends InitializedNullHandlingTes
     Mockito.doReturn(times).when(timeSelector).getLongVector();
     target = new DoubleFirstVectorAggregator(timeSelector, selector);
     clearBufferForPositions(0, 0);
+
+    Mockito.doReturn(null).when(selectorFactory).getColumnCapabilities(FIELD_NAME);
+    Mockito.doReturn(selector).when(selectorFactory).makeValueSelector(FIELD_NAME);
+    Mockito.doReturn(timeSelector).when(selectorFactory).makeValueSelector(TIME_COL);
+    doubleFirstAggregatorFactory = new DoubleFirstAggregatorFactory(NAME, FIELD_NAME, TIME_COL);
+  }
+
+  @Test
+  public void testFactory()
+  {
+    Assert.assertTrue(doubleFirstAggregatorFactory.canVectorize(selectorFactory));
+    VectorAggregator vectorAggregator = doubleFirstAggregatorFactory.factorizeVector(selectorFactory);
+    Assert.assertNotNull(vectorAggregator);
+    Assert.assertEquals(DoubleFirstVectorAggregator.class, vectorAggregator.getClass());
   }
 
   @Test

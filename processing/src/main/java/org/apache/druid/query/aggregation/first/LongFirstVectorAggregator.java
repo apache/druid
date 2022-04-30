@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
- * Vectorized version of on heap 'last' aggregator for column selectors with type LONG..
+ * Vectorized version of on heap 'earliest' aggregator for column selectors with type LONG..
  */
 public class LongFirstVectorAggregator extends NumericFirstVectorAggregator
 {

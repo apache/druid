@@ -26,6 +26,9 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
+/**
+ * Class for vectorized version of first/earliest aggregator over numeric types
+ */
 public abstract class NumericFirstVectorAggregator implements VectorAggregator
 {
   static final int NULL_OFFSET = Long.BYTES;
@@ -57,15 +60,15 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
     final boolean[] nullValueVector = valueSelector.getNullVector();
     boolean nullAbsent = false;
     firstTime = buf.getLong(position);
-    //check if nullVector is found or not
+    // check if nullVector is found or not
     // the nullVector is null if no null values are found
     // set the nullAbsent flag accordingly
     if (nullValueVector == null) {
       nullAbsent = true;
     }
 
-    //the time vector is already sorted so the first element would be the earliest
-    //traverse accordingly
+    // the time vector is already sorted so the first element would be the earliest
+    // traverse accordingly
     int index = startRow;
     if (!useDefault && !nullAbsent) {
       for (int i = startRow; i < endRow; i++) {
@@ -76,7 +79,7 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
       }
     }
 
-    //find the first non-null value
+    // find the first non-null value
     final long earliestTime = timeVector[index];
     if (earliestTime <= firstTime) {
       firstTime = earliestTime;
@@ -128,6 +131,7 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
   }
 
   /**
+   * Updates the time and the non null values to the appropriate position in buffer
    *
    * @param buf         byte buffer storing the byte array representation of the aggregate
    * @param position    offset within the byte buffer at which the current aggregate value is stored
@@ -142,6 +146,7 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
   }
 
   /**
+   *Updates the time only to the appropriate position in buffer as the value is null
    *
    * @param buf         byte buffer storing the byte array representation of the aggregate
    * @param position    offset within the byte buffer at which the current aggregate value is stored
