@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -45,6 +46,7 @@ import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchQuerySpec;
 import org.apache.druid.query.search.SearchSortSpec;
 import org.apache.druid.query.spec.LegacySegmentSpec;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -775,9 +777,9 @@ public class Druids
    * Usage example:
    * <pre><code>
    *   ScanQuery query = new ScanQueryBuilder()
-   *                                  .dataSource("Example")
-   *                                  .interval("2010/2013")
-   *                                  .build();
+   *           .dataSource("Example")
+   *           .eternityInterval()
+   *           .build();
    * </code></pre>
    *
    * @see ScanQuery
@@ -793,27 +795,10 @@ public class Druids
     private long offset;
     private long limit;
     private DimFilter dimFilter;
-    private List<String> columns;
+    private List<String> columns = new ArrayList<>();
     private Boolean legacy;
     private ScanQuery.Order order;
     private List<ScanQuery.OrderBy> orderBy;
-
-    public ScanQueryBuilder()
-    {
-      dataSource = null;
-      querySegmentSpec = null;
-      virtualColumns = null;
-      context = null;
-      resultFormat = null;
-      batchSize = 0;
-      offset = 0;
-      limit = 0;
-      dimFilter = null;
-      columns = new ArrayList<>();
-      legacy = null;
-      order = null;
-      orderBy = null;
-    }
 
     public ScanQuery build()
     {
@@ -867,6 +852,16 @@ public class Druids
     {
       querySegmentSpec = q;
       return this;
+    }
+
+    /**
+     * Convenience method for an interval over all time.
+     */
+    public ScanQueryBuilder eternityInterval()
+    {
+      return intervals(
+            new MultipleIntervalSegmentSpec(
+                  ImmutableList.of(Intervals.ETERNITY)));
     }
 
     public ScanQueryBuilder virtualColumns(VirtualColumns virtualColumns)

@@ -13,44 +13,50 @@ exports[`DatasourcesView matches snapshot 1`] = `
     />
     <Memo(MoreButton)
       altExtra={
-        <Blueprint3.MenuItem
+        <Blueprint4.MenuItem
+          active={false}
           disabled={false}
           icon="compressed"
           intent="danger"
           multiline={false}
           onClick={[Function]}
           popoverProps={Object {}}
+          selected={false}
           shouldDismissPopover={true}
           text="Force compaction run (debug)"
         />
       }
     >
-      <Blueprint3.MenuItem
+      <Blueprint4.MenuItem
+        active={false}
         disabled={true}
         icon="application"
         multiline={false}
         onClick={[Function]}
         popoverProps={Object {}}
+        selected={false}
         shouldDismissPopover={true}
         text="View SQL query for table"
       />
-      <Blueprint3.MenuItem
+      <Blueprint4.MenuItem
+        active={false}
         disabled={false}
         icon="edit"
         multiline={false}
         onClick={[Function]}
         popoverProps={Object {}}
+        selected={false}
         shouldDismissPopover={true}
         text="Edit default retention rules"
       />
     </Memo(MoreButton)>
-    <Blueprint3.Switch
+    <Blueprint4.Switch
       checked={false}
       disabled={false}
       label="Show unused"
       onChange={[Function]}
     />
-    <Blueprint3.Switch
+    <Blueprint4.Switch
       checked={false}
       disabled={false}
       label="Show segment timeline"

@@ -38,9 +38,12 @@ import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserImplFactory;
 import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
@@ -57,6 +60,7 @@ public class PlannerFactory
       .setQuotedCasing(Casing.UNCHANGED)
       .setQuoting(Quoting.DOUBLE_QUOTE)
       .setConformance(DruidConformance.instance())
+      .setParserFactory(new DruidSqlParserImplFactory()) // Custom sql parser factory
       .build();
 
   private final DruidSchemaCatalog rootSchema;
@@ -93,7 +97,7 @@ public class PlannerFactory
   /**
    * Create a Druid query planner from an initial query context
    */
-  public DruidPlanner createPlanner(final String sql, final Map<String, Object> queryContext)
+  public DruidPlanner createPlanner(final String sql, final QueryContext queryContext)
   {
     final PlannerContext context = PlannerContext.create(
         sql,
@@ -123,11 +127,11 @@ public class PlannerFactory
   @VisibleForTesting
   public DruidPlanner createPlannerForTesting(final Map<String, Object> queryContext, String query)
   {
-    final DruidPlanner thePlanner = createPlanner(query, queryContext);
+    final DruidPlanner thePlanner = createPlanner(query, new QueryContext(queryContext));
     thePlanner.getPlannerContext()
               .setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
     try {
-      thePlanner.validate();
+      thePlanner.validate(false);
     }
     catch (SqlParseException | ValidationException e) {
       throw new RuntimeException(e);
@@ -148,7 +152,9 @@ public class PlannerFactory
         .withExpand(false)
         .withDecorrelationEnabled(false)
         .withTrimUnusedFields(false)
-        .withInSubQueryThreshold(Integer.MAX_VALUE)
+        .withInSubQueryThreshold(
+            QueryContexts.getInSubQueryThreshold(plannerContext.getQueryContext().getMergedParams())
+        )
         .build();
     return Frameworks
         .newConfigBuilder()

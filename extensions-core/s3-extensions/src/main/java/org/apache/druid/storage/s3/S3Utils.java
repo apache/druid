@@ -20,6 +20,7 @@
 package org.apache.druid.storage.s3;
 
 import com.amazonaws.AmazonClientException;
+import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CanonicalGrantee;
@@ -65,6 +66,12 @@ public class S3Utils
       if (e == null) {
         return false;
       } else if (e instanceof IOException) {
+        return true;
+      } else if (e instanceof SdkClientException
+                 && e.getMessage().contains("Data read has a different length than the expected")) {
+        // Can happen when connections to S3 are dropped; see https://github.com/apache/druid/pull/11941.
+        // SdkClientException can be thrown for many reasons and the only way to distinguish it is to look at
+        // the message. This is not ideal, since the message may change, so it may need to be adjusted in the future.
         return true;
       } else if (e instanceof AmazonClientException) {
         return AWSClientUtil.isClientExceptionRecoverable((AmazonClientException) e);
@@ -226,11 +233,13 @@ public class S3Utils
 
   /**
    * Delete the files from S3 in a specified bucket, matching a specified prefix and filter
+   *
    * @param s3Client s3 client
    * @param config   specifies the configuration to use when finding matching files in S3 to delete
    * @param bucket   s3 bucket
    * @param prefix   the file prefix
    * @param filter   function which returns true if the prefix file found should be deleted and false otherwise.
+   *
    * @throws Exception
    */
   public static void deleteObjectsInPath(

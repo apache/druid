@@ -122,21 +122,20 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                 .withQueryGranularity(Granularities.DAY)
                 .withMetrics(METRIC_AGGS)
                 .withDimensionsSpec(
-                    new DimensionsSpec(
-                        null,
-                        null,
-                        Arrays.asList(
-                            new SpatialDimensionSchema(
-                                "dim.geo",
-                                Arrays.asList("lat", "long")
-                            ),
-                            new SpatialDimensionSchema(
-                                "spatialIsRad",
-                                Arrays.asList("lat2", "long2")
-                            )
-
-                        )
-                    )
+                    DimensionsSpec.builder()
+                                  .setSpatialDimensions(
+                                      Arrays.asList(
+                                          new SpatialDimensionSchema(
+                                              "dim.geo",
+                                              Arrays.asList("lat", "long")
+                                          ),
+                                          new SpatialDimensionSchema(
+                                              "spatialIsRad",
+                                              Arrays.asList("lat2", "long2")
+                                          )
+                                      )
+                                  )
+                                  .build()
                 ).build()
         )
         .setMaxRowCount(NUM_POINTS)
@@ -288,20 +287,20 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Arrays.asList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  Arrays.asList("lat", "long")
-                              ),
-                              new SpatialDimensionSchema(
-                                  "spatialIsRad",
-                                  Arrays.asList("lat2", "long2")
-                              )
-                          )
-                      )
+                      DimensionsSpec.builder()
+                                    .setSpatialDimensions(
+                                        Arrays.asList(
+                                            new SpatialDimensionSchema(
+                                                "dim.geo",
+                                                Arrays.asList("lat", "long")
+                                            ),
+                                            new SpatialDimensionSchema(
+                                                "spatialIsRad",
+                                                Arrays.asList("lat2", "long2")
+                                            )
+                                        )
+                                    )
+                                    .build()
                   ).build()
           )
           .setMaxRowCount(1000)
@@ -314,20 +313,20 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Arrays.asList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  Arrays.asList("lat", "long")
-                              ),
-                              new SpatialDimensionSchema(
-                                  "spatialIsRad",
-                                  Arrays.asList("lat2", "long2")
-                              )
-                          )
-                      )
+                      DimensionsSpec.builder()
+                                    .setSpatialDimensions(
+                                        Arrays.asList(
+                                            new SpatialDimensionSchema(
+                                                "dim.geo",
+                                                Arrays.asList("lat", "long")
+                                            ),
+                                            new SpatialDimensionSchema(
+                                                "spatialIsRad",
+                                                Arrays.asList("lat2", "long2")
+                                            )
+                                        )
+                                    )
+                                    .build()
                   ).build()
           )
           .setMaxRowCount(1000)
@@ -340,20 +339,20 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Arrays.asList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  Arrays.asList("lat", "long")
-                              ),
-                              new SpatialDimensionSchema(
-                                  "spatialIsRad",
-                                  Arrays.asList("lat2", "long2")
-                              )
-                          )
-                      )
+                      DimensionsSpec.builder()
+                                    .setSpatialDimensions(
+                                        Arrays.asList(
+                                            new SpatialDimensionSchema(
+                                                "dim.geo",
+                                                Arrays.asList("lat", "long")
+                                            ),
+                                            new SpatialDimensionSchema(
+                                                "spatialIsRad",
+                                                Arrays.asList("lat2", "long2")
+                                            )
+                                        )
+                                    )
+                                    .build()
                   ).build()
           )
           .setMaxRowCount(NUM_POINTS)

@@ -33,7 +33,6 @@ import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggrega
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchMergeAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -143,12 +142,11 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
       if (columnArg.isDirectColumnAccess()) {
         dimensionSpec = columnArg.getSimpleExtraction().toDimensionSpec(null, inputType);
       } else {
-        VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-            plannerContext,
+        String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             columnArg,
             dataType
         );
-        dimensionSpec = new DefaultDimensionSpec(virtualColumn.getOutputName(), null, inputType);
+        dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
       }
 
       aggregatorFactory = new HllSketchBuildAggregatorFactory(

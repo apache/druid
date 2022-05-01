@@ -262,6 +262,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
                 enableLiveAutocompletion: !runeMode,
                 showLineNumbers: true,
                 tabSize: 2,
+                newLineMode: 'unix' as any, // newLineMode is incorrectly assumed to be boolean in the typings
               }}
               style={{}}
               placeholder="SELECT * FROM ..."

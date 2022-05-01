@@ -21,7 +21,6 @@ package org.apache.druid.query.groupby.epinephelinae.vector;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
-import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
@@ -41,6 +40,7 @@ import org.apache.druid.query.groupby.epinephelinae.CloseableGrouperIterator;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.query.groupby.epinephelinae.HashVectorGrouper;
 import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
+import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
@@ -102,6 +102,11 @@ public class VectorGroupByEngine
                 // group by on multi value dimensions are not currently supported
                 // DimensionSpecs that decorate may turn singly-valued columns into multi-valued selectors.
                 // To be safe, we must return false here.
+                return false;
+              }
+
+              if (dimension.getOutputType().isArray()) {
+                // group by on arrays is not currently supported in the vector processing engine
                 return false;
               }
 
@@ -239,10 +244,15 @@ public class VectorGroupByEngine
     @Nullable
     private Interval bucketInterval;
 
+    // -1 if the current vector was fully aggregated after a call to "initNewDelegate". Otherwise, the number of
+    // rows of the current vector that were aggregated.
     private int partiallyAggregatedRows = -1;
 
+    // Sum of internal state footprint across all "selectors".
+    private long selectorInternalFootprint = 0;
+
     @Nullable
-    private CloseableGrouperIterator<Memory, ResultRow> delegate = null;
+    private CloseableGrouperIterator<MemoryPointer, ResultRow> delegate = null;
 
     VectorGroupByEngineIterator(
         final GroupByQuery query,
@@ -299,6 +309,8 @@ public class VectorGroupByEngine
             if (delegate != null) {
               delegate.close();
               vectorGrouper.reset();
+              selectors.forEach(GroupByVectorColumnSelector::reset);
+              selectorInternalFootprint = 0;
             }
 
             delegate = initNewDelegate();
@@ -362,7 +374,7 @@ public class VectorGroupByEngine
       return grouper;
     }
 
-    private CloseableGrouperIterator<Memory, ResultRow> initNewDelegate()
+    private CloseableGrouperIterator<MemoryPointer, ResultRow> initNewDelegate()
     {
       // Method must not be called unless there's a current bucketInterval.
       assert bucketInterval != null;
@@ -385,7 +397,11 @@ public class VectorGroupByEngine
           // Write keys to the keySpace.
           int keyOffset = 0;
           for (final GroupByVectorColumnSelector selector : selectors) {
-            selector.writeKeys(keySpace, keySize, keyOffset, startOffset, granulizer.getEndOffset());
+            // Update selectorInternalFootprint now, but check it later. (We reset on the first vector that causes us
+            // to go past the limit.)
+            selectorInternalFootprint +=
+                selector.writeKeys(keySpace, keySize, keyOffset, startOffset, granulizer.getEndOffset());
+
             keyOffset += selector.getGroupingKeySize();
           }
 
@@ -414,6 +430,8 @@ public class VectorGroupByEngine
         } else if (!granulizer.advanceCursorWithinBucket()) {
           // Advance bucketInterval.
           bucketInterval = bucketIterator.hasNext() ? bucketIterator.next() : null;
+          break;
+        } else if (selectorInternalFootprint > querySpecificConfig.getMaxSelectorDictionarySize()) {
           break;
         }
       }

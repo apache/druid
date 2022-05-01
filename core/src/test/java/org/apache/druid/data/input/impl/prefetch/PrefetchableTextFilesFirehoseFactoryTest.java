@@ -73,11 +73,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
               "auto",
               null
           ),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b")),
-              new ArrayList<>(),
-              new ArrayList<>()
-          ),
+          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b"))),
           ",",
           Arrays.asList("timestamp", "a", "b"),
           false,

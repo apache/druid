@@ -25,11 +25,15 @@ import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlCollation;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlOperatorBinding;
+import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimeString;
@@ -38,6 +42,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnType;
@@ -78,11 +83,17 @@ public class Calcites
 
   private static final DateTimeFormatter CALCITE_TIME_PRINTER = DateTimeFormat.forPattern("HH:mm:ss.S");
   private static final DateTimeFormatter CALCITE_DATE_PRINTER = DateTimeFormat.forPattern("yyyy-MM-dd");
-  private static final DateTimeFormatter CALCITE_TIMESTAMP_PRINTER = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.S");
+  private static final DateTimeFormatter CALCITE_TIMESTAMP_PRINTER =
+      DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
   private static final Charset DEFAULT_CHARSET = Charset.forName(ConversionUtil.NATIVE_UTF16_CHARSET_NAME);
 
   private static final Pattern TRAILING_ZEROS = Pattern.compile("\\.?0+$");
+
+  public static final SqlReturnTypeInference
+      ARG0_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE = new Arg0NullableArrayTypeInference();
+  public static final SqlReturnTypeInference
+      ARG1_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE = new Arg1NullableArrayTypeInference();
 
   private Calcites()
   {
@@ -128,17 +139,16 @@ public class Calcites
   }
 
   /**
-   * Convert {@link RelDataType} to the most appropriate {@link ValueType}, coercing all ARRAY types to STRING (until
-   * the time is right and we are more comfortable handling Druid ARRAY types in all parts of the engine).
-   *
-   * Callers who are not scared of ARRAY types should isntead call {@link #getValueTypeForRelDataTypeFull(RelDataType)},
-   * which returns the most accurate conversion of {@link RelDataType} to {@link ValueType}.
+   * Convert {@link RelDataType} to the most appropriate {@link ValueType}
+   * Caller who want to coerce all ARRAY types to STRING can set `druid.expressions.allowArrayToStringCast`
+   * runtime property in {@link org.apache.druid.math.expr.ExpressionProcessingConfig}
    */
   @Nullable
   public static ColumnType getColumnTypeForRelDataType(final RelDataType type)
   {
     ColumnType valueType = getValueTypeForRelDataTypeFull(type);
-    if (valueType != null && valueType.isArray()) {
+    // coerce array to multi value string
+    if (ExpressionProcessing.processArraysAsMultiValueStrings() && valueType != null && valueType.isArray()) {
       return ColumnType.STRING;
     }
     return valueType;
@@ -165,14 +175,11 @@ public class Calcites
       }
       return ColumnType.UNKNOWN_COMPLEX;
     } else if (sqlTypeName == SqlTypeName.ARRAY) {
-      SqlTypeName componentType = type.getComponentType().getSqlTypeName();
-      if (isDoubleType(componentType)) {
-        return ColumnType.DOUBLE_ARRAY;
+      ColumnType elementType = getValueTypeForRelDataTypeFull(type.getComponentType());
+      if (elementType != null) {
+        return ColumnType.ofArray(elementType);
       }
-      if (isLongType(componentType)) {
-        return ColumnType.LONG_ARRAY;
-      }
-      return ColumnType.STRING_ARRAY;
+      return null;
     } else {
       return null;
     }
@@ -182,6 +189,7 @@ public class Calcites
   {
     return SqlTypeName.FRACTIONAL_TYPES.contains(sqlTypeName) || SqlTypeName.APPROX_TYPES.contains(sqlTypeName);
   }
+
   public static boolean isLongType(SqlTypeName sqlTypeName)
   {
     return SqlTypeName.TIMESTAMP == sqlTypeName ||
@@ -257,6 +265,7 @@ public class Calcites
   )
   {
 
+
     final RelDataType dataType = typeFactory.createArrayType(
         createSqlTypeWithNullability(typeFactory, elementTypeName, nullable),
         -1
@@ -293,20 +302,27 @@ public class Calcites
   }
 
   /**
-   * Calcite expects TIMESTAMP literals to be represented by TimestampStrings in the local time zone.
+   * Creates a Calcite TIMESTAMP literal from a Joda DateTime.
    *
-   * @param dateTime joda timestamp
-   * @param timeZone session time zone
+   * @param dateTime        joda timestamp
+   * @param sessionTimeZone session time zone
    *
    * @return Calcite style Calendar, appropriate for literals
    */
-  public static TimestampString jodaToCalciteTimestampString(final DateTime dateTime, final DateTimeZone timeZone)
+  public static RexLiteral jodaToCalciteTimestampLiteral(
+      final RexBuilder rexBuilder,
+      final DateTime dateTime,
+      final DateTimeZone sessionTimeZone,
+      final int precision
+  )
   {
-    // The replaceAll is because Calcite doesn't like trailing zeroes in its fractional seconds part.
-    String timestampString = TRAILING_ZEROS
-        .matcher(CALCITE_TIMESTAMP_PRINTER.print(dateTime.withZone(timeZone)))
+    // Calcite expects TIMESTAMP literals to be represented by TimestampStrings in the session time zone.
+    // The TRAILING_ZEROS ... replaceAll is because Calcite doesn't like trailing zeroes in its fractional seconds part.
+    final String timestampString = TRAILING_ZEROS
+        .matcher(CALCITE_TIMESTAMP_PRINTER.print(dateTime.withZone(sessionTimeZone)))
         .replaceAll("");
-    return new TimestampString(timestampString);
+
+    return rexBuilder.makeTimestampLiteral(new TimestampString(timestampString), precision);
   }
 
   /**
@@ -466,6 +482,40 @@ public class Calcites
         return Timestamp.class;
       default:
         return Object.class;
+    }
+  }
+
+  public static class Arg0NullableArrayTypeInference implements SqlReturnTypeInference
+  {
+    @Override
+    public RelDataType inferReturnType(SqlOperatorBinding opBinding)
+    {
+      RelDataType type = opBinding.getOperandType(0);
+      if (SqlTypeUtil.isArray(type)) {
+        return type;
+      }
+      return Calcites.createSqlArrayTypeWithNullability(
+          opBinding.getTypeFactory(),
+          type.getSqlTypeName(),
+          true
+      );
+    }
+  }
+
+  public static class Arg1NullableArrayTypeInference implements SqlReturnTypeInference
+  {
+    @Override
+    public RelDataType inferReturnType(SqlOperatorBinding opBinding)
+    {
+      RelDataType type = opBinding.getOperandType(1);
+      if (SqlTypeUtil.isArray(type)) {
+        return type;
+      }
+      return Calcites.createSqlArrayTypeWithNullability(
+          opBinding.getTypeFactory(),
+          type.getSqlTypeName(),
+          true
+      );
     }
   }
 }

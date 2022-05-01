@@ -310,6 +310,21 @@ export function formatDurationWithMs(ms: NumberLike): string {
   );
 }
 
+export function formatDurationHybrid(ms: NumberLike): string {
+  const n = Number(ms);
+  if (n < 600000) {
+    // anything that looks like 1:23.45 (max 9:59.99)
+    const timeInMin = Math.floor(n / 60000);
+    const timeInSec = Math.floor(n / 1000) % 60;
+    const timeInMs = Math.floor(n) % 1000;
+    return `${timeInMin ? `${timeInMin}:` : ''}${timeInMin ? pad2(timeInSec) : timeInSec}.${pad3(
+      timeInMs,
+    ).substring(0, 2)}s`;
+  } else {
+    return formatDuration(n);
+  }
+}
+
 export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string): string {
   if (!plural) plural = singular + 's';
   return `${formatInteger(n)} ${n === 1 ? singular : plural}`;
@@ -429,6 +444,28 @@ export function moveElement<T>(items: readonly T[], fromIndex: number, toIndex: 
   }
 }
 
+export function moveToIndex<T>(
+  items: readonly T[],
+  itemToIndex: (item: T, i: number) => number,
+): T[] {
+  const frontItems: { item: T; index: number }[] = [];
+  const otherItems: T[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const index = itemToIndex(item, i);
+    if (index >= 0) {
+      frontItems.push({ item, index });
+    } else {
+      otherItems.push(item);
+    }
+  }
+
+  return frontItems
+    .sort((a, b) => a.index - b.index)
+    .map(d => d.item)
+    .concat(otherItems);
+}
+
 export function stringifyValue(value: unknown): string {
   switch (typeof value) {
     case 'object':
@@ -443,4 +480,54 @@ export function stringifyValue(value: unknown): string {
 
 export function isInBackground(): boolean {
   return document.visibilityState === 'hidden';
+}
+
+export function twoLines(line1: string, line2: string) {
+  return (
+    <>
+      {line1}
+      <br />
+      {line2}
+    </>
+  );
+}
+
+export function parseCsvLine(line: string): string[] {
+  line = ',' + line.replace(/\r?\n?$/, ''); // remove trailing new lines
+  const parts: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = /^,(?:"([^"]*(?:""[^"]*)*)"|([^,\r\n]*))/m.exec(line))) {
+    parts.push(typeof m[1] === 'string' ? m[1].replace(/""/g, '"') : m[2]);
+    line = line.substr(m[0].length);
+  }
+  return parts;
+}
+
+// From: https://en.wikipedia.org/wiki/Jenkins_hash_function
+export function hashJoaat(str: string): number {
+  let hash = 0;
+  const n = str.length;
+  for (let i = 0; i < n; i++) {
+    hash += str.charCodeAt(i);
+    // eslint-disable-next-line no-bitwise
+    hash += hash << 10;
+    // eslint-disable-next-line no-bitwise
+    hash ^= hash >> 6;
+  }
+  // eslint-disable-next-line no-bitwise
+  hash += hash << 3;
+  // eslint-disable-next-line no-bitwise
+  hash ^= hash >> 11;
+  // eslint-disable-next-line no-bitwise
+  hash += hash << 15;
+  // eslint-disable-next-line no-bitwise
+  return (hash & 4294967295) >>> 0;
+}
+
+export function objectHash(obj: any): string {
+  return hashJoaat(JSONBig.stringify(obj)).toString(16).padStart(8);
+}
+
+export function hasPopoverOpen(): boolean {
+  return Boolean(document.querySelector('.bp4-portal .bp4-overlay .bp4-popover2'));
 }

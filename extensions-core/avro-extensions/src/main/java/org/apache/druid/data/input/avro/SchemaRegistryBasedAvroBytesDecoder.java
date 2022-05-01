@@ -35,7 +35,6 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.utils.DynamicConfigProviderUtils;
 
@@ -141,10 +140,10 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
       schema = parsedSchema instanceof AvroSchema ? ((AvroSchema) parsedSchema).rawSchema() : null;
     }
     catch (IOException | RestClientException ex) {
-      throw new RE(ex, "Failed to get Avro schema: %s", id);
+      throw new ParseException(null, "Failed to get Avro schema: %s", id);
     }
     if (schema == null) {
-      throw new RE("Failed to find Avro schema: %s", id);
+      throw new ParseException(null, "Failed to find Avro schema: %s", id);
     }
     DatumReader<GenericRecord> reader = new GenericDatumReader<>(schema);
     try {
@@ -164,24 +163,17 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     SchemaRegistryBasedAvroBytesDecoder that = (SchemaRegistryBasedAvroBytesDecoder) o;
-
-    return Objects.equals(url, that.url) &&
-        Objects.equals(capacity, that.capacity) &&
-        Objects.equals(urls, that.urls) &&
-        Objects.equals(config, that.config) &&
-        Objects.equals(headers, that.headers);
+    return capacity == that.capacity
+           && Objects.equals(url, that.url)
+           && Objects.equals(urls, that.urls)
+           && Objects.equals(config, that.config)
+           && Objects.equals(headers, that.headers);
   }
 
   @Override
   public int hashCode()
   {
-    int result = url != null ? url.hashCode() : 0;
-    result = 31 * result + capacity;
-    result = 31 * result + (urls != null ? urls.hashCode() : 0);
-    result = 31 * result + (config != null ? config.hashCode() : 0);
-    result = 31 * result + (headers != null ? headers.hashCode() : 0);
-    return result;
+    return Objects.hash(registry, url, capacity, urls, config, headers, jsonMapper);
   }
 }

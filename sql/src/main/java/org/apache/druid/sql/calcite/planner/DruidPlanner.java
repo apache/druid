@@ -56,6 +56,8 @@ import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
@@ -66,19 +68,21 @@ import org.apache.calcite.tools.Planner;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
@@ -88,7 +92,6 @@ import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 import org.apache.druid.utils.Throwables;
 
 import javax.annotation.Nullable;
-
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -96,11 +99,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class DruidPlanner implements Closeable
 {
   private static final EmittingLogger log = new EmittingLogger(DruidPlanner.class);
+  private static final Pattern UNNAMED_COLUMN_PATTERN = Pattern.compile("^EXPR\\$\\d+$", Pattern.CASE_INSENSITIVE);
 
   private final FrameworkConfig frameworkConfig;
   private final Planner planner;
@@ -126,7 +131,7 @@ public class DruidPlanner implements Closeable
    *
    * @return set of {@link Resource} corresponding to any Druid datasources or views which are taking part in the query.
    */
-  public ValidationResult validate() throws SqlParseException, ValidationException
+  public ValidationResult validate(boolean authorizeContextParams) throws SqlParseException, ValidationException
   {
     resetPlanner();
     final ParsedNodes parsed = ParsedNodes.create(planner.parse(plannerContext.getSql()));
@@ -149,6 +154,11 @@ public class DruidPlanner implements Closeable
       final String targetDataSource = validateAndGetDataSourceForInsert(parsed.getInsertNode());
       resourceActions.add(new ResourceAction(new Resource(targetDataSource, ResourceType.DATASOURCE), Action.WRITE));
     }
+    if (authorizeContextParams) {
+      plannerContext.getQueryContext().getUserParams().keySet().forEach(contextParam -> resourceActions.add(
+          new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
+      ));
+    }
 
     plannerContext.setResourceActions(resourceActions);
     return new ValidationResult(resourceActions);
@@ -158,7 +168,7 @@ public class DruidPlanner implements Closeable
    * Prepare an SQL query for execution, including some initial parsing and validation and any dynamic parameter type
    * resolution, to support prepared statements via JDBC.
    *
-   * In some future this could perhaps re-use some of the work done by {@link #validate()}
+   * In some future this could perhaps re-use some of the work done by {@link #validate(boolean)}
    * instead of repeating it, but that day is not today.
    */
   public PrepareResult prepare() throws SqlParseException, ValidationException, RelConversionException
@@ -189,7 +199,7 @@ public class DruidPlanner implements Closeable
    * Ideally, the query can be planned into a native Druid query, using {@link #planWithDruidConvention}, but will
    * fall-back to {@link #planWithBindableConvention} if this is not possible.
    *
-   * In some future this could perhaps re-use some of the work done by {@link #validate()}
+   * In some future this could perhaps re-use some of the work done by {@link #validate(boolean)}
    * instead of repeating it, but that day is not today.
    */
   public PlannerResult plan() throws SqlParseException, ValidationException, RelConversionException
@@ -197,6 +207,18 @@ public class DruidPlanner implements Closeable
     resetPlanner();
 
     final ParsedNodes parsed = ParsedNodes.create(planner.parse(plannerContext.getSql()));
+
+    try {
+      if (parsed.getIngestionGranularity() != null) {
+        plannerContext.getQueryContext().addSystemParam(
+            DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
+            plannerContext.getJsonMapper().writeValueAsString(parsed.getIngestionGranularity())
+        );
+      }
+    }
+    catch (JsonProcessingException e) {
+      throw new ValidationException("Unable to serialize partition granularity.");
+    }
 
     // the planner's type factory is not available until after parsing
     this.rexBuilder = new RexBuilder(planner.getTypeFactory());
@@ -213,24 +235,25 @@ public class DruidPlanner implements Closeable
         // Not a CannotPlanningException, rethrow without trying with bindable
         throw e;
       }
-      if (parsed.getInsertNode() != null) {
-        // Cannot INSERT with BINDABLE.
-        throw e;
-      }
-      // Try again with BINDABLE convention. Used for querying Values and metadata tables.
-      try {
-        return planWithBindableConvention(rootQueryRel, parsed.getExplainNode());
-      }
-      catch (Exception e2) {
-        e.addSuppressed(e2);
-        Logger logger = log;
-        if (!QueryContexts.isDebug(plannerContext.getQueryContext())) {
-          logger = log.noStackTrace();
+
+      // If there isn't any INSERT clause, then we should try again with BINDABLE convention. And return without
+      // any error, if it is plannable by the bindable convention
+      if (parsed.getInsertNode() == null) {
+        // Try again with BINDABLE convention. Used for querying Values and metadata tables.
+        try {
+          return planWithBindableConvention(rootQueryRel, parsed.getExplainNode());
         }
-        String errorMessage = buildSQLPlanningErrorMessage(cannotPlanException);
-        logger.warn(e, errorMessage);
-        throw new UnsupportedSQLQueryException(errorMessage);
+        catch (Exception e2) {
+          e.addSuppressed(e2);
+        }
       }
+      Logger logger = log;
+      if (!plannerContext.getQueryContext().isDebug()) {
+        logger = log.noStackTrace();
+      }
+      String errorMessage = buildSQLPlanningErrorMessage(cannotPlanException);
+      logger.warn(e, errorMessage);
+      throw new UnsupportedSQLQueryException(errorMessage);
     }
   }
 
@@ -479,6 +502,7 @@ public class DruidPlanner implements Closeable
    *    DruidRel (B)
    *  DruidRel(C)
    * will return [DruidRel(A), DruidRel(B), DruidRel(C)]
+   *
    * @param outermostDruidRel The outermost rel which is to be flattened
    * @return a list of DruidRel's which donot have a DruidUnionRel nested in between them
    */
@@ -493,7 +517,8 @@ public class DruidPlanner implements Closeable
    * Recursive function (DFS) which traverses the nodes and collects the corresponding {@link DruidRel} into a list if
    * they are not of the type {@link DruidUnionRel} or else calls the method with the child nodes. The DFS order of the
    * nodes are retained, since that is the order in which they will actually be called in {@link DruidUnionRel#runQuery()}
-   * @param druidRel The current relNode
+   *
+   * @param druidRel                The current relNode
    * @param flattendListAccumulator Accumulator list which needs to be appended by this method
    */
   private void flattenOutermostRel(DruidRel<?> druidRel, List<DruidRel<?>> flattendListAccumulator)
@@ -630,6 +655,7 @@ public class DruidPlanner implements Closeable
   {
     if (insert != null) {
       final String targetDataSource = validateAndGetDataSourceForInsert(insert);
+      validateColumnsForIngestion(rootQueryRel);
       return queryMakerFactory.buildForInsert(targetDataSource, rootQueryRel, plannerContext);
     } else {
       return queryMakerFactory.buildForSelect(rootQueryRel, plannerContext);
@@ -662,24 +688,47 @@ public class DruidPlanner implements Closeable
     }
 
     final SqlIdentifier tableIdentifier = (SqlIdentifier) insert.getTargetTable();
+    final String dataSource;
 
     if (tableIdentifier.names.isEmpty()) {
       // I don't think this can happen, but include a branch for it just in case.
       throw new ValidationException("INSERT requires target table.");
     } else if (tableIdentifier.names.size() == 1) {
       // Unqualified name.
-      return Iterables.getOnlyElement(tableIdentifier.names);
+      dataSource = Iterables.getOnlyElement(tableIdentifier.names);
     } else {
       // Qualified name.
       final String defaultSchemaName =
           Iterables.getOnlyElement(CalciteSchema.from(frameworkConfig.getDefaultSchema()).path(null));
 
       if (tableIdentifier.names.size() == 2 && defaultSchemaName.equals(tableIdentifier.names.get(0))) {
-        return tableIdentifier.names.get(1);
+        dataSource = tableIdentifier.names.get(1);
       } else {
         throw new ValidationException(
             StringUtils.format("Cannot INSERT into [%s] because it is not a Druid datasource.", tableIdentifier)
         );
+      }
+    }
+
+    try {
+      IdUtils.validateId("INSERT dataSource", dataSource);
+    }
+    catch (IllegalArgumentException e) {
+      throw new ValidationException(e.getMessage());
+    }
+
+    return dataSource;
+  }
+
+  private void validateColumnsForIngestion(RelRoot rootQueryRel) throws ValidationException
+  {
+    // Check that there are no unnamed columns in the insert.
+    for (Pair<Integer, String> field : rootQueryRel.fields) {
+      if (UNNAMED_COLUMN_PATTERN.matcher(field.right).matches()) {
+        throw new ValidationException("Cannot ingest expressions that do not have an alias "
+                                      + "or columns with names like EXPR$[digit]."
+                                      + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
+                                      + "\"func(X) as myColumn\"");
       }
     }
   }
@@ -725,25 +774,35 @@ public class DruidPlanner implements Closeable
   private static class ParsedNodes
   {
     @Nullable
-    private SqlExplain explain;
+    private final SqlExplain explain;
 
     @Nullable
-    private SqlInsert insert;
+    private final DruidSqlInsert insert;
 
-    private SqlNode query;
+    private final SqlNode query;
 
-    private ParsedNodes(@Nullable SqlExplain explain, @Nullable SqlInsert insert, SqlNode query)
+    @Nullable
+    private final Granularity ingestionGranularity;
+
+    private ParsedNodes(
+        @Nullable SqlExplain explain,
+        @Nullable DruidSqlInsert insert,
+        SqlNode query,
+        @Nullable Granularity ingestionGranularity
+    )
     {
       this.explain = explain;
       this.insert = insert;
       this.query = query;
+      this.ingestionGranularity = ingestionGranularity;
     }
 
     static ParsedNodes create(final SqlNode node) throws ValidationException
     {
       SqlExplain explain = null;
-      SqlInsert insert = null;
+      DruidSqlInsert druidSqlInsert = null;
       SqlNode query = node;
+      Granularity ingestionGranularity = null;
 
       if (query.getKind() == SqlKind.EXPLAIN) {
         explain = (SqlExplain) query;
@@ -751,15 +810,51 @@ public class DruidPlanner implements Closeable
       }
 
       if (query.getKind() == SqlKind.INSERT) {
-        insert = (SqlInsert) query;
-        query = insert.getSource();
+        druidSqlInsert = (DruidSqlInsert) query;
+        query = druidSqlInsert.getSource();
+
+        // Check if ORDER BY clause is not provided to the underlying query
+        if (query instanceof SqlOrderBy) {
+          SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
+          SqlNodeList orderByList = sqlOrderBy.orderList;
+          if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
+            throw new ValidationException("Cannot have ORDER BY on an INSERT query, use CLUSTERED BY instead.");
+          }
+        }
+
+        ingestionGranularity = druidSqlInsert.getPartitionedBy();
+
+        if (druidSqlInsert.getClusteredBy() != null) {
+          // If we have a CLUSTERED BY clause, extract the information in that CLUSTERED BY and create a new SqlOrderBy
+          // node
+          SqlNode offset = null;
+          SqlNode fetch = null;
+
+          if (query instanceof SqlOrderBy) {
+            SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
+            // This represents the underlying query free of OFFSET, FETCH and ORDER BY clauses
+            // For a sqlOrderBy.query like "SELECT dim1, sum(dim2) FROM foo OFFSET 10 FETCH 30 ORDER BY dim1 GROUP BY dim1
+            // this would represent the "SELECT dim1, sum(dim2) from foo GROUP BY dim1
+            query = sqlOrderBy.query;
+            offset = sqlOrderBy.offset;
+            fetch = sqlOrderBy.fetch;
+          }
+          // Creates a new SqlOrderBy query, which may have our CLUSTERED BY overwritten
+          query = new SqlOrderBy(
+              query.getParserPosition(),
+              query,
+              druidSqlInsert.getClusteredBy(),
+              offset,
+              fetch
+          );
+        }
       }
 
       if (!query.isA(SqlKind.QUERY)) {
         throw new ValidationException(StringUtils.format("Cannot execute [%s].", query.getKind()));
       }
 
-      return new ParsedNodes(explain, insert, query);
+      return new ParsedNodes(explain, druidSqlInsert, query, ingestionGranularity);
     }
 
     @Nullable
@@ -769,7 +864,7 @@ public class DruidPlanner implements Closeable
     }
 
     @Nullable
-    public SqlInsert getInsertNode()
+    public DruidSqlInsert getInsertNode()
     {
       return insert;
     }
@@ -777,6 +872,12 @@ public class DruidPlanner implements Closeable
     public SqlNode getQueryNode()
     {
       return query;
+    }
+
+    @Nullable
+    public Granularity getIngestionGranularity()
+    {
+      return ingestionGranularity;
     }
   }
 }

@@ -20,10 +20,11 @@
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.DictionaryBuilding;
+import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import java.util.ArrayList;
@@ -42,19 +43,14 @@ public class DictionaryBuildingSingleValueStringGroupByVectorColumnSelector impl
 
   private final VectorObjectSelector selector;
 
-  private int nextId = 0;
   private final List<String> dictionary = new ArrayList<>();
   private final Object2IntOpenHashMap<String> reverseDictionary = new Object2IntOpenHashMap<>();
-
-  {
-    reverseDictionary.defaultReturnValue(-1);
-  }
 
   public DictionaryBuildingSingleValueStringGroupByVectorColumnSelector(VectorObjectSelector selector)
   {
     this.selector = selector;
+    this.reverseDictionary.defaultReturnValue(-1);
   }
-
 
   @Override
   public int getGroupingKeySize()
@@ -63,7 +59,7 @@ public class DictionaryBuildingSingleValueStringGroupByVectorColumnSelector impl
   }
 
   @Override
-  public void writeKeys(
+  public int writeKeys(
       final WritableMemory keySpace,
       final int keySize,
       final int keyOffset,
@@ -72,30 +68,37 @@ public class DictionaryBuildingSingleValueStringGroupByVectorColumnSelector impl
   )
   {
     final Object[] vector = selector.getObjectVector();
+    int stateFootprintIncrease = 0;
 
     for (int i = startRow, j = keyOffset; i < endRow; i++, j += keySize) {
       final String value = (String) vector[i];
       final int dictId = reverseDictionary.getInt(value);
       if (dictId < 0) {
+        final int nextId = dictionary.size();
         dictionary.add(value);
         reverseDictionary.put(value, nextId);
         keySpace.putInt(j, nextId);
-        nextId++;
+
+        // Use same ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY as the nonvectorized version; dictionary structure is the same.
+        stateFootprintIncrease +=
+            DictionaryBuilding.estimateEntryFootprint((value == null ? 0 : value.length()) * Character.BYTES);
       } else {
         keySpace.putInt(j, dictId);
       }
     }
+
+    return stateFootprintIncrease;
   }
 
   @Override
   public void writeKeyToResultRow(
-      final Memory keyMemory,
+      final MemoryPointer keyMemory,
       final int keyOffset,
       final ResultRow resultRow,
       final int resultRowPosition
   )
   {
-    final int id = keyMemory.getInt(keyOffset);
+    final int id = keyMemory.memory().getInt(keyMemory.position() + keyOffset);
     // GROUP_BY_MISSING_VALUE is used to indicate empty rows, which are omitted from the result map.
     if (id != GROUP_BY_MISSING_VALUE) {
       final String value = dictionary.get(id);
@@ -103,5 +106,12 @@ public class DictionaryBuildingSingleValueStringGroupByVectorColumnSelector impl
     } else {
       resultRow.set(resultRowPosition, NullHandling.defaultStringValue());
     }
+  }
+
+  @Override
+  public void reset()
+  {
+    dictionary.clear();
+    reverseDictionary.clear();
   }
 }

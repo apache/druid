@@ -66,6 +66,7 @@ export const SpecDialog = React.memo(function SpecDialog(props: SpecDialogProps)
         setOptions={{
           showLineNumbers: true,
           tabSize: 2,
+          newLineMode: 'unix' as any, // newLineMode is incorrectly assumed to be boolean in the typings
         }}
         style={{}}
         placeholder="{ JSON spec... }"

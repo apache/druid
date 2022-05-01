@@ -111,7 +111,8 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
         TestHelper.getTestIndexIO(),
         TestHelper.getTestIndexMergerV9(OnHeapMemorySegmentWriteOutMediumFactory.instance()),
         new NoopRowIngestionMeters(),
-        new ParseExceptionHandler(new NoopRowIngestionMeters(), false, 0, 0)
+        new ParseExceptionHandler(new NoopRowIngestionMeters(), false, 0, 0),
+        true
     );
   }
 
@@ -277,7 +278,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
 
     // "merge" is neither necessary nor implemented
     expectedException.expect(UnsupportedOperationException.class);
-    Assert.assertEquals(file, limitedPoolIndexMerger.merge(null, false, null, file, null, -1));
+    Assert.assertEquals(file, limitedPoolIndexMerger.merge(null, false, null, file, null, null, -1));
   }
 
   /**
@@ -341,6 +342,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
         boolean rollup,
         AggregatorFactory[] metricAggs,
         File outDir,
+        DimensionsSpec dimensionsSpec,
         IndexSpec indexSpec,
         int maxColumnsToMerge
     ) throws IOException

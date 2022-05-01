@@ -1,8 +1,11 @@
 com.fasterxml.jackson.databind.ObjectMapper#reader(com.fasterxml.jackson.core.type.TypeReference) @ Use ObjectMapper#readerFor instead
 com.fasterxml.jackson.databind.ObjectMapper#reader(com.fasterxml.jackson.databind.JavaType) @ Use ObjectMapper#readerFor instead
 com.fasterxml.jackson.databind.ObjectMapper#reader(java.lang.Class) @ Use ObjectMapper#readerFor instead
+com.fasterxml.jackson.databind.ObjectMapper#writeValue(com.fasterxml.jackson.core.JsonGenerator, java.lang.Object) @ Use JacksonUtils#writeObjectUsingSerializerProvider to allow SerializerProvider reuse
+com.fasterxml.jackson.core.JsonGenerator#writeObject(java.lang.Object) @ Use JacksonUtils#writeObjectUsingSerializerProvider to allow SerializerProvider reuse
 com.google.common.base.Charsets @ Use java.nio.charset.StandardCharsets instead
 com.google.common.collect.Iterators#emptyIterator() @ Use java.util.Collections#emptyIterator()
+com.google.common.collect.Iterators#mergeSorted(java.lang.Iterable,java.util.Comparator) @ Use org.apache.druid.java.util.common.collect.Utils#mergeSorted()
 com.google.common.collect.Lists#newArrayList() @ Create java.util.ArrayList directly
 com.google.common.collect.Lists#newLinkedList() @ Use ArrayList or ArrayDeque instead
 com.google.common.collect.Lists#newLinkedList(java.lang.Iterable) @ Use ArrayList or ArrayDeque instead
@@ -21,7 +24,6 @@ com.google.common.collect.Sets#newLinkedHashSet() @ Create java.util.LinkedHashS
 com.google.common.collect.Sets#newTreeSet() @ Create java.util.TreeSet directly
 com.google.common.collect.Sets#newTreeSet(java.util.Comparator) @ Create java.util.TreeSet directly
 com.google.common.io.Files#createTempDir() @ Use org.apache.druid.java.util.common.FileUtils.createTempDir()
-com.google.common.util.concurrent.MoreExecutors#sameThreadExecutor() @ Use org.apache.druid.java.util.common.concurrent.Execs#directExecutor()
 java.io.File#mkdirs() @ Use org.apache.druid.java.util.common.FileUtils.mkdirp instead
 java.io.File#toURL() @ Use java.io.File#toURI() and java.net.URI#toURL() instead
 java.lang.String#matches(java.lang.String) @ Use startsWith(), endsWith(), contains(), or compile and cache a Pattern explicitly
@@ -46,7 +48,6 @@ org.apache.commons.io.FileUtils#getTempDirectory() @ Use org.junit.rules.Tempora
 org.apache.commons.io.FileUtils#deleteDirectory(java.io.File) @ Use org.apache.druid.java.util.common.FileUtils#deleteDirectory()
 org.apache.commons.io.FileUtils#forceMkdir(java.io.File) @ Use org.apache.druid.java.util.common.FileUtils.mkdirp instead
 java.lang.Class#getCanonicalName() @ Class.getCanonicalName can return null for anonymous types, use Class.getName instead.
-com.google.common.base.Objects#firstNonNull(java.lang.Object, java.lang.Object) @ Use org.apache.druid.common.guava.GuavaUtils#firstNonNull(java.lang.Object, java.lang.Object) instead (probably... the GuavaUtils method return object is nullable)
 
 @defaultMessage Use Locale.ENGLISH
 com.ibm.icu.text.DateFormatSymbols#<init>()
@@ -60,3 +61,5 @@ com.google.common.io.BaseEncoding#base64()
 @defaultMessage Use com.google.errorprone.annotations.concurrent.GuardedBy
 javax.annotation.concurrent.GuardedBy
 com.amazonaws.annotation.GuardedBy
+
+org.powermock.** @ Use Mockito instead of Powermock for compatibility with newer Java versions

@@ -130,7 +130,7 @@ export class DatasourcesOverview {
   }
 
   private async waitForPopupMenu(): Promise<void> {
-    await this.page.waitForSelector('ul.bp3-menu');
+    await this.page.waitForSelector('ul.bp4-menu');
   }
 
   async triggerCompaction(): Promise<void> {

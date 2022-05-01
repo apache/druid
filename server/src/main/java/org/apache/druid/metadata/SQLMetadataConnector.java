@@ -171,6 +171,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                          || (e instanceof DBIException && isTransientException(e.getCause())));
   }
 
+  /**
+   * Vendor specific errors that are not covered by {@link #isTransientException(Throwable)}
+   */
   protected boolean connectorIsTransientException(Throwable e)
   {
     return false;

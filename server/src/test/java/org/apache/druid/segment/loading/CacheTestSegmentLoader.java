@@ -28,6 +28,8 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
+import java.util.concurrent.ExecutorService;
+
 /**
 */
 public class CacheTestSegmentLoader implements SegmentLoader
@@ -68,6 +70,12 @@ public class CacheTestSegmentLoader implements SegmentLoader
       }
     };
     return ReferenceCountingSegment.wrapSegment(baseSegment, segment.getShardSpec());
+  }
+
+  @Override
+  public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
+  {
+
   }
 
   @Override

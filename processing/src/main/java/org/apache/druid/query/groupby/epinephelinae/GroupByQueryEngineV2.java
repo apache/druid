@@ -42,6 +42,9 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.column.ArrayDoubleGroupByColumnSelectorStrategy;
+import org.apache.druid.query.groupby.epinephelinae.column.ArrayLongGroupByColumnSelectorStrategy;
+import org.apache.druid.query.groupby.epinephelinae.column.ArrayStringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingStringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.DoubleGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.FloatGroupByColumnSelectorStrategy;
@@ -233,7 +236,7 @@ public class GroupByQueryEngineV2
                       processingBuffer,
                       fudgeTimestamp,
                       dims,
-                      isAllSingleValueDims(columnSelectorFactory, query.getDimensions()),
+                      hasNoExplodingDimensions(columnSelectorFactory, query.getDimensions()),
                       cardinalityForArrayAggregation
                   );
                 } else {
@@ -244,7 +247,7 @@ public class GroupByQueryEngineV2
                       processingBuffer,
                       fudgeTimestamp,
                       dims,
-                      isAllSingleValueDims(columnSelectorFactory, query.getDimensions())
+                      hasNoExplodingDimensions(columnSelectorFactory, query.getDimensions())
                   );
                 }
               }
@@ -290,6 +293,11 @@ public class GroupByQueryEngineV2
       if (query.getVirtualColumns().exists(Iterables.getOnlyElement(dimensions).getDimension())) {
         return -1;
       }
+      // We cannot support array-based aggregation on array based grouping as we we donot have all the indexes up front
+      // to allocate appropriate values
+      if (dimensions.get(0).getOutputType().isArray()) {
+        return -1;
+      }
 
       final String columnName = Iterables.getOnlyElement(dimensions).getDimension();
       columnCapabilities = storageAdapter.getColumnCapabilities(columnName);
@@ -319,11 +327,13 @@ public class GroupByQueryEngineV2
   }
 
   /**
-   * Checks whether all "dimensions" are either single-valued, or if allowed, nonexistent. Since non-existent column
-   * selectors will show up as full of nulls they are effectively single valued, however they can also be null during
-   * broker merge, for example with an 'inline' datasource subquery.
+   * Checks whether all "dimensions" are either single-valued, or if the input column or output dimension spec has
+   * specified a type that {@link ColumnType#isArray()}. Both cases indicate we don't want to explode the under-lying
+   * multi value column. Since selectors on non-existent columns will show up as full of nulls, they are effectively
+   * single valued, however capabilites on columns can also be null, for example during broker merge with an 'inline'
+   * datasource subquery, so we only return true from this method when capabilities are fully known.
    */
-  public static boolean isAllSingleValueDims(
+  public static boolean hasNoExplodingDimensions(
       final ColumnInspector inspector,
       final List<DimensionSpec> dimensions
   )
@@ -338,9 +348,13 @@ public class GroupByQueryEngineV2
                 return false;
               }
 
-              // Now check column capabilities, which must be present and explicitly not multi-valued
+              // Now check column capabilities, which must be present and explicitly not multi-valued and not arrays
               final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
-              return columnCapabilities != null && columnCapabilities.hasMultipleValues().isFalse();
+              return dimension.getOutputType().isArray()
+                     || (columnCapabilities != null
+                         && columnCapabilities.hasMultipleValues().isFalse()
+                         && !columnCapabilities.isArray()
+                     );
             });
   }
 
@@ -403,6 +417,20 @@ public class GroupByQueryEngineV2
           return makeNullableNumericStrategy(new FloatGroupByColumnSelectorStrategy());
         case DOUBLE:
           return makeNullableNumericStrategy(new DoubleGroupByColumnSelectorStrategy());
+        case ARRAY:
+          switch (capabilities.getElementType().getType()) {
+            case LONG:
+              return new ArrayLongGroupByColumnSelectorStrategy();
+            case STRING:
+              return new ArrayStringGroupByColumnSelectorStrategy();
+            case DOUBLE:
+              return new ArrayDoubleGroupByColumnSelectorStrategy();
+            case FLOAT:
+              // Array<Float> not supported in expressions, ingestion
+            default:
+              throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
+
+          }
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
       }
@@ -431,6 +459,8 @@ public class GroupByQueryEngineV2
     @Nullable
     protected CloseableGrouperIterator<KeyType, ResultRow> delegate = null;
     protected final boolean allSingleValueDims;
+    protected final boolean allowMultiValueGrouping;
+
 
     public GroupByEngineIterator(
         final GroupByQuery query,
@@ -452,6 +482,10 @@ public class GroupByQueryEngineV2
       // Time is the same for every row in the cursor
       this.timestamp = fudgeTimestamp != null ? fudgeTimestamp : cursor.getTime();
       this.allSingleValueDims = allSingleValueDims;
+      this.allowMultiValueGrouping = query.getContextBoolean(
+          GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
+          true
+      );
     }
 
     private CloseableGrouperIterator<KeyType, ResultRow> initNewDelegate()
@@ -565,6 +599,15 @@ public class GroupByQueryEngineV2
       return indexedInts.size() == 1 ? indexedInts.get(0) : GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE;
     }
 
+    /**
+     * Throws {@link UnexpectedMultiValueDimensionException} if "allowMultiValueGrouping" is false.
+     */
+    protected void checkIfMultiValueGroupingIsAllowed(String dimName)
+    {
+      if (!allowMultiValueGrouping) {
+        throw new UnexpectedMultiValueDimensionException(dimName);
+      }
+    }
   }
 
   private static class HashAggregateIterator extends GroupByEngineIterator<ByteBuffer>
@@ -576,7 +619,10 @@ public class GroupByQueryEngineV2
     private final ByteBuffer keyBuffer;
 
     private int stackPointer = Integer.MIN_VALUE;
-    protected boolean currentRowWasPartiallyAggregated = false;
+    private boolean currentRowWasPartiallyAggregated = false;
+
+    // Sum of internal state footprint across all "dims".
+    private long selectorInternalFootprint = 0;
 
     public HashAggregateIterator(
         GroupByQuery query,
@@ -670,12 +716,19 @@ public class GroupByQueryEngineV2
     @Override
     protected void aggregateSingleValueDims(Grouper<ByteBuffer> grouper)
     {
+      if (!currentRowWasPartiallyAggregated) {
+        for (GroupByColumnSelectorPlus dim : dims) {
+          dim.getColumnSelectorStrategy().reset();
+        }
+        selectorInternalFootprint = 0;
+      }
+
       while (!cursor.isDone()) {
         for (GroupByColumnSelectorPlus dim : dims) {
           final GroupByColumnSelectorStrategy strategy = dim.getColumnSelectorStrategy();
-          strategy.writeToKeyBuffer(
+          selectorInternalFootprint += strategy.writeToKeyBuffer(
               dim.getKeyBufferPosition(),
-              strategy.getOnlyValue(dim.getSelector()),
+              dim.getSelector(),
               keyBuffer
           );
         }
@@ -684,13 +737,27 @@ public class GroupByQueryEngineV2
         if (!grouper.aggregate(keyBuffer).isOk()) {
           return;
         }
+
         cursor.advance();
+
+        // Check selectorInternalFootprint after advancing the cursor. (We reset after the first row that causes
+        // us to go past the limit.)
+        if (selectorInternalFootprint > querySpecificConfig.getMaxSelectorDictionarySize()) {
+          return;
+        }
       }
     }
 
     @Override
     protected void aggregateMultiValueDims(Grouper<ByteBuffer> grouper)
     {
+      if (!currentRowWasPartiallyAggregated) {
+        for (GroupByColumnSelectorPlus dim : dims) {
+          dim.getColumnSelectorStrategy().reset();
+        }
+        selectorInternalFootprint = 0;
+      }
+
       while (!cursor.isDone()) {
         if (!currentRowWasPartiallyAggregated) {
           // Set up stack, valuess, and first grouping in keyBuffer for this row
@@ -698,7 +765,7 @@ public class GroupByQueryEngineV2
 
           for (int i = 0; i < dims.length; i++) {
             GroupByColumnSelectorStrategy strategy = dims[i].getColumnSelectorStrategy();
-            strategy.initColumnValues(
+            selectorInternalFootprint += strategy.initColumnValues(
                 dims[i].getSelector(),
                 i,
                 valuess
@@ -736,6 +803,9 @@ public class GroupByQueryEngineV2
             );
 
             if (doAggregate) {
+              // this check is done during the row aggregation as a dimension can become multi-value col if column
+              // capabilities is unknown.
+              checkIfMultiValueGroupingIsAllowed(dims[stackPointer].getName());
               stack[stackPointer]++;
               for (int i = stackPointer + 1; i < stack.length; i++) {
                 dims[i].getColumnSelectorStrategy().initGroupingKeyColumnValue(
@@ -758,6 +828,12 @@ public class GroupByQueryEngineV2
         // Advance to next row
         cursor.advance();
         currentRowWasPartiallyAggregated = false;
+
+        // Check selectorInternalFootprint after advancing the cursor. (We reset after the first row that causes
+        // us to go past the limit.)
+        if (selectorInternalFootprint > querySpecificConfig.getMaxSelectorDictionarySize()) {
+          return;
+        }
       }
     }
 
@@ -775,7 +851,7 @@ public class GroupByQueryEngineV2
     }
   }
 
-  private static class ArrayAggregateIterator extends GroupByEngineIterator<Integer>
+  private static class ArrayAggregateIterator extends GroupByEngineIterator<IntKey>
   {
     private final int cardinality;
 
@@ -819,19 +895,22 @@ public class GroupByQueryEngineV2
     }
 
     @Override
-    protected void aggregateSingleValueDims(Grouper<Integer> grouper)
+    protected void aggregateSingleValueDims(Grouper<IntKey> grouper)
     {
       aggregateSingleValueDims((IntGrouper) grouper);
     }
 
     @Override
-    protected void aggregateMultiValueDims(Grouper<Integer> grouper)
+    protected void aggregateMultiValueDims(Grouper<IntKey> grouper)
     {
       aggregateMultiValueDims((IntGrouper) grouper);
     }
 
     private void aggregateSingleValueDims(IntGrouper grouper)
     {
+      // No need to track strategy internal state footprint, because array-based grouping does not use strategies.
+      // It accesses dimension selectors directly and only works on truly dictionary-coded columns.
+
       while (!cursor.isDone()) {
         final int key;
         if (dim != null) {
@@ -850,6 +929,9 @@ public class GroupByQueryEngineV2
 
     private void aggregateMultiValueDims(IntGrouper grouper)
     {
+      // No need to track strategy internal state footprint, because array-based grouping does not use strategies.
+      // It accesses dimension selectors directly and only works on truly dictionary-coded columns.
+
       if (dim == null) {
         throw new ISE("dim must exist");
       }
@@ -861,12 +943,17 @@ public class GroupByQueryEngineV2
       }
 
       while (!cursor.isDone()) {
-        int multiValuesSize = multiValues.size();
+        final int multiValuesSize = multiValues.size();
         if (multiValuesSize == 0) {
           if (!grouper.aggregate(GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE).isOk()) {
             return;
           }
         } else {
+          if (multiValuesSize > 1) {
+            // this check is done during the row aggregation as a dimension can become multi-value col if column
+            // capabilities is unknown.
+            checkIfMultiValueGroupingIsAllowed(dim.getName());
+          }
           for (; nextValIndex < multiValuesSize; nextValIndex++) {
             if (!grouper.aggregate(multiValues.get(nextValIndex)).isOk()) {
               return;
@@ -884,11 +971,12 @@ public class GroupByQueryEngineV2
     }
 
     @Override
-    protected void putToRow(Integer key, ResultRow resultRow)
+    protected void putToRow(IntKey key, ResultRow resultRow)
     {
+      final int intKey = key.intValue();
       if (dim != null) {
-        if (key != GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE) {
-          resultRow.set(dim.getResultRowPosition(), ((DimensionSelector) dim.getSelector()).lookupName(key));
+        if (intKey != GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE) {
+          resultRow.set(dim.getResultRowPosition(), ((DimensionSelector) dim.getSelector()).lookupName(intKey));
         } else {
           resultRow.set(dim.getResultRowPosition(), NullHandling.defaultStringValue());
         }
@@ -933,17 +1021,26 @@ public class GroupByQueryEngineV2
     }
 
     @Override
+    public ByteBuffer createKey()
+    {
+      return ByteBuffer.allocate(keySize);
+    }
+
+    @Override
     public ByteBuffer toByteBuffer(ByteBuffer key)
     {
       return key;
     }
 
     @Override
-    public ByteBuffer fromByteBuffer(ByteBuffer buffer, int position)
+    public void readFromByteBuffer(ByteBuffer dstBuffer, ByteBuffer srcBuffer, int position)
     {
-      final ByteBuffer dup = buffer.duplicate();
-      dup.position(position).limit(position + keySize);
-      return dup.slice();
+      dstBuffer.limit(keySize);
+      dstBuffer.position(0);
+
+      for (int i = 0; i < keySize; i++) {
+        dstBuffer.put(i, srcBuffer.get(position + i));
+      }
     }
 
     @Override

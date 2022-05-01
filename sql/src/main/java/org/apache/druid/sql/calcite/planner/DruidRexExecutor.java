@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexExecutor;
 import org.apache.calcite.rex.RexNode;
@@ -110,12 +109,11 @@ public class DruidRexExecutor implements RexExecutor
             throw new UnsupportedSQLQueryException("Illegal TIMESTAMP constant: %s", constExp);
           }
 
-          literal = rexBuilder.makeTimestampLiteral(
-              Calcites.jodaToCalciteTimestampString(
-                  DateTimes.utc(exprResult.asLong()),
-                  plannerContext.getTimeZone()
-              ),
-              RelDataType.PRECISION_NOT_SPECIFIED
+          literal = Calcites.jodaToCalciteTimestampLiteral(
+              rexBuilder,
+              DateTimes.utc(exprResult.asLong()),
+              plannerContext.getTimeZone(),
+              constExp.getType().getPrecision()
           );
         } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
           final BigDecimal bigDecimal;
