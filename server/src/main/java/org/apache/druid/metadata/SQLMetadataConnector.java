@@ -389,11 +389,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
               final Batch batch = handle.createBatch();
               if (!tableContainsColumn(handle, tableName, "type")) {
                 log.info("Adding column: type to table[%s]", tableName);
-                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN type VARCHAR(255) NULL", tableName));
+                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN type VARCHAR(255)", tableName));
               }
               if (!tableContainsColumn(handle, tableName, "group_id")) {
                 log.info("Adding column: group_id to table[%s]", tableName);
-                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255) NULL", tableName));
+                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255)", tableName));
               }
               batch.execute();
               return null;

@@ -21,16 +21,14 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
-import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
-import org.apache.druid.indexer.TaskLocation;
-import org.apache.druid.indexer.TaskState;
-import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.TaskMetadata;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
@@ -39,6 +37,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.joda.time.DateTime;
+import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
@@ -52,10 +51,8 @@ import org.skife.jdbi.v2.util.ByteArrayMapper;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -79,7 +76,9 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   private final String lockTable;
 
   private final TaskInfoMapper<EntryType, StatusType> taskInfoMapper;
-  private final TaskStatusPlusMapper taskStatusPlusMapper;
+  private final TaskMetadataInfoMapper taskMetadataInfoMapper;
+  private final TaskMetadataInfoMapperFromPayload taskMetadataInfoMapperFromPayload;
+  private final TaskMetadataMapper taskMetadataMapper;
 
   @SuppressWarnings("PMD.UnnecessaryFullyQualifiedName")
   public SQLMetadataStorageActionHandler(
@@ -106,7 +105,9 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     this.logTable = logTable;
     this.lockTable = lockTable;
     this.taskInfoMapper = new TaskInfoMapper<>(jsonMapper, entryType, statusType);
-    this.taskStatusPlusMapper = new TaskStatusPlusMapper(jsonMapper);
+    this.taskMetadataInfoMapper = new TaskMetadataInfoMapper(jsonMapper);
+    this.taskMetadataInfoMapperFromPayload = new TaskMetadataInfoMapperFromPayload(jsonMapper);
+    this.taskMetadataMapper = new TaskMetadataMapper(jsonMapper);
   }
 
   protected SQLMetadataConnector getConnector()
@@ -325,16 +326,34 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   @Override
-  public List<TaskStatusPlus> getTaskStatusPlusList(
+  public List<TaskInfo<TaskMetadata, StatusType>> getTaskMetadataInfosFromPayload(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String dataSource
+  )
+  {
+    return getTaskMetadataInfos(taskLookups, dataSource, true);
+  }
+
+  @Override
+  public List<TaskInfo<TaskMetadata, StatusType>> getTaskMetadataInfos(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String dataSource
+  )
+  {
+    return getTaskMetadataInfos(taskLookups, dataSource, false);
+  }
+
+  public List<TaskInfo<TaskMetadata, StatusType>> getTaskMetadataInfos(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String dataSource,
       boolean fetchPayload
   )
   {
-    taskStatusPlusMapper.setUsePayload(fetchPayload);
+    ResultSetMapper<TaskInfo<TaskMetadata, StatusType>> resultSetMapper =
+        fetchPayload ? taskMetadataInfoMapperFromPayload : taskMetadataInfoMapper;
     return getConnector().retryTransaction(
         (handle, status) -> {
-          final List<TaskStatusPlus> taskStatusPlusList = new ArrayList<>();
+          final List<TaskInfo<TaskMetadata, StatusType>> taskMetadataInfos = new ArrayList<>();
           for (Entry<TaskLookupType, TaskLookup> entry : taskLookups.entrySet()) {
             final Query<Map<String, Object>> query;
             switch (entry.getKey()) {
@@ -342,7 +361,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                 query = !fetchPayload
                         ? createActiveTaskSummaryStreamingQuery(handle, dataSource)
                         : createActiveTaskStreamingQuery(handle, dataSource);
-                taskStatusPlusList.addAll(query.map(taskStatusPlusMapper).list());
+                taskMetadataInfos.addAll(query.map(resultSetMapper).list());
                 break;
               case COMPLETE:
                 CompleteTaskLookup completeTaskLookup = (CompleteTaskLookup) entry.getValue();
@@ -351,13 +370,17 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                 query = !fetchPayload
                         ? createCompletedTaskSummaryStreamingQuery(handle, priorTo, limit, dataSource)
                         : createCompletedTaskStreamingQuery(handle, priorTo, limit, dataSource);
-                taskStatusPlusList.addAll(query.map(taskStatusPlusMapper).list());
+                taskMetadataInfos.addAll(query.map(resultSetMapper).list());
                 break;
               default:
                 throw new IAE("Unknown TaskLookupType: [%s]", entry.getKey());
             }
           }
-          return taskStatusPlusList;
+          for (TaskInfo<TaskMetadata, StatusType> taskMetadataInfo : taskMetadataInfos) {
+            System.out.println(taskMetadataInfo.getTask());
+          }
+          System.out.println("-------------------");
+          return taskMetadataInfos;
         },
         3,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
@@ -548,72 +571,106 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     return sql;
   }
 
-  static class TaskStatusPlusMapper implements ResultSetMapper<TaskStatusPlus>
+  class TaskMetadataInfoMapperFromPayload implements ResultSetMapper<TaskInfo<TaskMetadata, StatusType>>
   {
     private final ObjectMapper objectMapper;
-    private boolean usePayload;
 
-    TaskStatusPlusMapper(ObjectMapper objectMapper)
+    TaskMetadataInfoMapperFromPayload(ObjectMapper objectMapper)
     {
       this.objectMapper = objectMapper;
-      this.usePayload = true;
-    }
-
-    void setUsePayload(boolean usePayload)
-    {
-      this.usePayload = usePayload;
     }
 
     @Override
-    public TaskStatusPlus map(int index, ResultSet resultSet, StatementContext context)
+    public TaskInfo<TaskMetadata, StatusType> map(int index, ResultSet resultSet, StatementContext context)
         throws SQLException
     {
-      String type;
-      String groupId;
-      if (usePayload) {
-        try {
-          ObjectNode payload = objectMapper.readValue(resultSet.getBytes("payload"), ObjectNode.class);
-          type = payload.get("type").asText();
-          groupId = payload.get("groupId").asText();
-        }
-        catch (IOException e) {
-          log.error(e, "Encountered exception while deserializing task payload");
-          throw new SQLException(e);
-        }
-      } else {
-        type = resultSet.getString("type");
-        groupId = resultSet.getString("group_id");
-      }
+      return toTaskMetadataInfo(objectMapper, resultSet, true);
+    }
+  }
 
-      TaskState statusCode;
-      Long duration;
-      TaskLocation location;
-      String errorMsg;
+  class TaskMetadataInfoMapper implements ResultSetMapper<TaskInfo<TaskMetadata, StatusType>>
+  {
+    private final ObjectMapper objectMapper;
+
+    TaskMetadataInfoMapper(ObjectMapper objectMapper)
+    {
+      this.objectMapper = objectMapper;
+    }
+
+    @Override
+    public TaskInfo<TaskMetadata, StatusType> map(int index, ResultSet resultSet, StatementContext context)
+        throws SQLException
+    {
+      return toTaskMetadataInfo(objectMapper, resultSet, false);
+    }
+  }
+
+  private TaskInfo<TaskMetadata, StatusType> toTaskMetadataInfo(ObjectMapper objectMapper,
+                                                                       ResultSet resultSet,
+                                                                       boolean usePayload
+  ) throws SQLException
+  {
+    String type;
+    String groupId;
+    if (usePayload) {
       try {
-        ObjectNode status = objectMapper.readValue(resultSet.getBytes("status_payload"), ObjectNode.class);
-        statusCode = objectMapper.convertValue(status.get("status"), TaskState.class);
-        duration = status.get("duration").asLong();
-        location = objectMapper.convertValue(status.get("location"), TaskLocation.class);
-        errorMsg = status.get("errorMsg").asText();
+        ObjectNode payload = objectMapper.readValue(resultSet.getBytes("payload"), ObjectNode.class);
+        type = payload.get("type").asText();
+        groupId = payload.get("groupId").asText();
       }
       catch (IOException e) {
-        log.error(e, "Encountered exception while deserializing task status_payload");
+        log.error(e, "Encountered exception while deserializing task payload");
         throw new SQLException(e);
       }
+    } else {
+      type = resultSet.getString("type");
+      groupId = resultSet.getString("group_id");
+    }
 
-      return new TaskStatusPlus(
-          resultSet.getString("id"),
-          groupId,
-          type,
-          DateTimes.of(resultSet.getString("created_date")),
-          DateTimes.EPOCH,
-          statusCode,
-          statusCode.isComplete() ? RunnerTaskState.NONE : RunnerTaskState.WAITING,
-          duration,
-          location,
-          resultSet.getString("datasource"),
-          errorMsg
-      );
+    String id = resultSet.getString("id");
+    DateTime createdTime = DateTimes.of(resultSet.getString("created_date"));
+    StatusType status;
+    try {
+      status = objectMapper.readValue(resultSet.getBytes("status_payload"), statusType);
+    }
+    catch (IOException e) {
+      log.error(e, "Encountered exception while deserializing task status_payload");
+      throw new SQLException(e);
+    }
+    String datasource = resultSet.getString("datasource");
+    TaskMetadata taskMetadata = new TaskMetadata(id, groupId, type);
+
+    return new TaskInfo<>(id, createdTime, status, datasource, taskMetadata);
+  }
+
+  static class TaskMetadataMapper implements ResultSetMapper<TaskMetadata>
+  {
+    private final ObjectMapper objectMapper;
+
+    TaskMetadataMapper(ObjectMapper objectMapper)
+    {
+      this.objectMapper = objectMapper;
+    }
+
+    @Override
+    public TaskMetadata map(int index, ResultSet resultSet, StatementContext context)
+        throws SQLException
+    {
+      try {
+        ObjectNode payload = objectMapper.readValue(resultSet.getBytes("payload"), ObjectNode.class);
+        // If field is absent (older task version), use blank string to avoid a loop of migration of such tasks.
+        JsonNode type = payload.get("type");
+        JsonNode groupId = payload.get("groupId");
+        return new TaskMetadata(
+            resultSet.getString("id"),
+            groupId == null ? "" : groupId.asText(),
+            type == null ? "" : type.asText()
+        );
+      }
+      catch (IOException e) {
+        log.error(e, "Encountered exception while deserializing task payload");
+        throw new SQLException(e);
+      }
     }
   }
 
@@ -906,49 +963,80 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                             .orElse(null);
   }
 
+  private List<TaskMetadata> fetchTaskMetadatas(String tableName, String id, int limit)
+  {
+    List<TaskMetadata> taskMetadatas = new ArrayList<>();
+    connector.retryWithHandle(
+        new HandleCallback<Void>()
+        {
+          @Override
+          public Void withHandle(Handle handle)
+          {
+            String sql = StringUtils.format(
+                "SELECT * FROM %1$s WHERE id > '%2$s' AND type IS null ORDER BY id %3$s",
+                tableName,
+                id,
+                connector.limitClause(limit)
+            );
+            Query<Map<String, Object>> query = handle.createQuery(sql);
+            taskMetadatas.addAll(query.map(taskMetadataMapper).list());
+            return null;
+          }
+        }
+    );
+    return taskMetadatas;
+  }
+
+  private void updateTaskMetadatas(String tasksTable, List<TaskMetadata> taskMetadatas)
+  {
+    connector.retryWithHandle(
+        new HandleCallback<Void>()
+        {
+          @Override
+          public Void withHandle(Handle handle)
+          {
+            Batch batch = handle.createBatch();
+            String sql = "UPDATE %1$s SET type = '%2$s', group_id = '%3$s' WHERE id = '%4$s'";
+            for (TaskMetadata metadata : taskMetadatas) {
+              batch.add(StringUtils.format(sql, tasksTable, metadata.getType(), metadata.getGroupId(), metadata.getId())
+              );
+            }
+            batch.execute();
+            return null;
+          }
+        }
+    );
+  }
+
+
   @Override
   public boolean migrateTaskTable(String tableName)
   {
     log.info("Populate fields task and group_id of task entry table [%s] from payload", tableName);
-    try {
-      connector.retryWithHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws SQLException, IOException
-            {
-              ObjectMapper objectMapper = new ObjectMapper();
-              Connection connection = handle.getConnection();
-              Statement statement = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
-              boolean flag = true;
-              while (flag) {
-                // Should ideally use a cursor and sort by id for efficiency, but updates with ordering aren't allowed
-                String sql = StringUtils.format(
-                    "SELECT * FROM %1$s WHERE active = false AND type IS null %2$s",
-                    tableName,
-                    connector.limitClause(100)
-                );
-                ResultSet resultSet = statement.executeQuery(sql);
-                flag = false;
-                while (resultSet.next()) {
-                  ObjectNode payload = objectMapper.readValue(resultSet.getBytes("payload"), ObjectNode.class);
-                  resultSet.updateString("type", payload.get("type").asText());
-                  resultSet.updateString("group_id", payload.get("groupId").asText());
-                  resultSet.updateRow();
-                  flag = true;
-                }
-              }
-              statement.close();
-              return null;
-            }
-          }
-      );
-      log.info("Migration of tasks complete for table[%s]", tableName);
-      return true;
+    String id = "";
+    int limit = 100;
+    while (true) {
+      List<TaskMetadata> taskMetadatas;
+      try {
+        taskMetadatas = fetchTaskMetadatas(tableName, id, limit);
+      }
+      catch (Exception e) {
+        log.warn(e, "Task migration failed while reading entries from task table");
+        return false;
+      }
+      if (taskMetadatas.isEmpty()) {
+        break;
+      }
+      try {
+        updateTaskMetadatas(tableName, taskMetadatas);
+      }
+      catch (Exception e) {
+        log.warn(e, "Task migration failed while updating entries in task table");
+        return false;
+      }
+      id = taskMetadatas.get(taskMetadatas.size() - 1).getId();
     }
-    catch (Exception e) {
-      log.warn(e, "Exception migrating task table [%s]", tableName);
-      return false;
-    }
+    log.info("Task migration for table [%s] successful", tableName);
+    return true;
   }
 }

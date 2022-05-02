@@ -28,7 +28,6 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
-import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -172,25 +171,6 @@ public class HeapMemoryTaskStorage implements TaskStorage
     return listBuilder.build();
   }
 
-  private TaskStatusPlus toTaskStatusPlus(TaskInfo<Task, TaskStatus> taskInfo)
-  {
-    Task task = taskInfo.getTask();
-    TaskStatus status = taskInfo.getStatus();
-    return new TaskStatusPlus(
-        taskInfo.getId(),
-        task == null ? null : task.getGroupId(),
-        task == null ? null : task.getType(),
-        taskInfo.getCreatedTime(),
-        DateTimes.EPOCH,
-        status.getStatusCode(),
-        status.getStatusCode().isComplete() ? RunnerTaskState.NONE : RunnerTaskState.WAITING,
-        status.getDuration(),
-        status.getLocation(),
-        taskInfo.getDataSource(),
-        status.getErrorMsg()
-    );
-  }
-
   public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
   {
     final ImmutableList.Builder<TaskInfo<Task, TaskStatus>> listBuilder = ImmutableList.builder();
@@ -260,27 +240,10 @@ public class HeapMemoryTaskStorage implements TaskStorage
       @Nullable String datasource
   )
   {
-    final List<TaskStatusPlus> tasks = new ArrayList<>();
-    taskLookups.forEach((type, lookup) -> {
-      if (type == TaskLookupType.COMPLETE) {
-        CompleteTaskLookup completeTaskLookup = (CompleteTaskLookup) lookup;
-        tasks.addAll(
-            getRecentlyCreatedAlreadyFinishedTaskInfo(
-                completeTaskLookup.hasTaskCreatedTimeFilter()
-                ? completeTaskLookup
-                : completeTaskLookup.withDurationBeforeNow(config.getRecentlyFinishedThreshold()),
-                datasource
-            ).stream()
-             .map(taskInfo -> toTaskStatusPlus(taskInfo))
-             .collect(Collectors.toList())
-        );
-      } else {
-        tasks.addAll(getActiveTaskInfo(datasource).stream()
-                                                  .map(taskInfo -> toTaskStatusPlus(taskInfo))
-                                                  .collect(Collectors.toList()));
-      }
-    });
-    return tasks;
+    return getTaskInfos(taskLookups, datasource).stream()
+                                                .map(Task::toTaskMetadataInfo)
+                                                .map(TaskStatusPlus::fromTaskMetadataInfo)
+                                                .collect(Collectors.toList());
   }
 
   private List<TaskInfo<Task, TaskStatus>> getRecentlyCreatedAlreadyFinishedTaskInfoSince(

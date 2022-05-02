@@ -25,11 +25,10 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskMetadata;
 import org.apache.druid.indexer.TaskState;
-import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
@@ -45,7 +44,11 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.tweak.HandleCallback;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -467,68 +470,103 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test
+  public void testMigration()
+  {
+    int active = 1234;
+    for (int i = 0; i < active; i++) {
+      insertTaskInfo(createRandomTaskInfo(true), false);
+    }
+
+    int completed = 2345;
+    for (int i = 0; i < completed; i++) {
+      insertTaskInfo(createRandomTaskInfo(false), false);
+    }
+
+    Assert.assertEquals(active + completed, getUnmigratedTaskCount().intValue());
+
+    handler.migrateTaskTable(entryTable);
+
+    Assert.assertEquals(0, getUnmigratedTaskCount().intValue());
+  }
+
+  @Test
   public void testGetTaskStatusPlusList()
   {
     // SETUP
-    TaskInfo<Map<String, Object>, Map<String, Object>> activeUnaltered = getRandomTaskInfo(true);
+    TaskInfo<Map<String, Object>, Map<String, Object>> activeUnaltered = createRandomTaskInfo(true);
     insertTaskInfo(activeUnaltered, false);
 
-    TaskInfo<Map<String, Object>, Map<String, Object>> completedUnaltered = getRandomTaskInfo(false);
+    TaskInfo<Map<String, Object>, Map<String, Object>> completedUnaltered = createRandomTaskInfo(false);
     insertTaskInfo(completedUnaltered, false);
 
-    TaskInfo<Map<String, Object>, Map<String, Object>> activeAltered = getRandomTaskInfo(true);
+    TaskInfo<Map<String, Object>, Map<String, Object>> activeAltered = createRandomTaskInfo(true);
     insertTaskInfo(activeAltered, true);
 
-    TaskInfo<Map<String, Object>, Map<String, Object>> completedAltered = getRandomTaskInfo(false);
+    TaskInfo<Map<String, Object>, Map<String, Object>> completedAltered = createRandomTaskInfo(false);
     insertTaskInfo(completedAltered, true);
 
     Map<TaskLookup.TaskLookupType, TaskLookup> taskLookups = new HashMap<>();
     taskLookups.put(TaskLookup.TaskLookupType.ACTIVE, ActiveTaskLookup.getInstance());
     taskLookups.put(TaskLookup.TaskLookupType.COMPLETE, CompleteTaskLookup.of(null, Duration.millis(86400000)));
 
-    List<TaskStatusPlus> taskStatusPlusList;
+    List<TaskInfo<TaskMetadata, Map<String, Object>>> taskMetadataInfos;
 
     // BEFORE MIGRATION
 
     // Payload based fetch. task type and groupid will be populated
-    taskStatusPlusList = handler.getTaskStatusPlusList(taskLookups, null, true);
-    Assert.assertEquals(4, taskStatusPlusList.size());
-    verify(completedUnaltered, taskStatusPlusList, false, false, true);
-    verify(completedAltered, taskStatusPlusList, false, true, false);
-    verify(activeUnaltered, taskStatusPlusList, true, false, false);
-    verify(activeAltered, taskStatusPlusList, true, true, false);
+    taskMetadataInfos = handler.getTaskMetadataInfos(taskLookups, null, true);
+    Assert.assertEquals(4, taskMetadataInfos.size());
+    verifyTaskInfoToMetadataInfo(completedUnaltered, taskMetadataInfos, false);
+    verifyTaskInfoToMetadataInfo(completedAltered, taskMetadataInfos, false);
+    verifyTaskInfoToMetadataInfo(activeUnaltered, taskMetadataInfos, false);
+    verifyTaskInfoToMetadataInfo(activeAltered, taskMetadataInfos, false);
 
     // New columns based fetch before migration is complete. type and payload are null when altered = false
-    taskStatusPlusList = handler.getTaskStatusPlusList(taskLookups, null, false);
-    Assert.assertEquals(4, taskStatusPlusList.size());
-    verify(completedUnaltered, taskStatusPlusList, false, false, true);
-    verify(completedAltered, taskStatusPlusList, false, true, true);
-    verify(activeUnaltered, taskStatusPlusList, true, false, true);
-    verify(activeAltered, taskStatusPlusList, true, true, true);
+    taskMetadataInfos = handler.getTaskMetadataInfos(taskLookups, null, false);
+    Assert.assertEquals(4, taskMetadataInfos.size());
+    verifyTaskInfoToMetadataInfo(completedUnaltered, taskMetadataInfos, true);
+    verifyTaskInfoToMetadataInfo(completedAltered, taskMetadataInfos, false);
+    verifyTaskInfoToMetadataInfo(activeUnaltered, taskMetadataInfos, true);
+    verifyTaskInfoToMetadataInfo(activeAltered, taskMetadataInfos, false);
 
     // MIGRATION
     handler.migrateTaskTable(entryTable);
 
-    // Payload based fetch. task type and groupid will still be populated
-    taskStatusPlusList = handler.getTaskStatusPlusList(taskLookups, null, true);
-    Assert.assertEquals(4, taskStatusPlusList.size());
-    verify(completedUnaltered, taskStatusPlusList, false, false, false);
-    verify(completedAltered, taskStatusPlusList, false, true, false);
-    verify(activeUnaltered, taskStatusPlusList, true, false, false);
-    verify(activeAltered, taskStatusPlusList, true, true, false);
+    // Payload based fetch. task type and groupid will still be populated in tasks tab
+    taskMetadataInfos = handler.getTaskMetadataInfos(taskLookups, null, true);
+    Assert.assertEquals(4, taskMetadataInfos.size());
+    verifyTaskInfoToMetadataInfo(completedUnaltered, taskMetadataInfos, false);
+    verifyTaskInfoToMetadataInfo(completedAltered, taskMetadataInfos, false);
+    verifyTaskInfoToMetadataInfo(activeUnaltered, taskMetadataInfos, false);
+    verifyTaskInfoToMetadataInfo(activeAltered, taskMetadataInfos, false);
 
-    // New columns based fetch before migration is complete.
-    // type and payload are not null for completed task but are still null for active ones since they aren't migrated
-    // An active task will be eventually updated on its own due to insertion
-    taskStatusPlusList = handler.getTaskStatusPlusList(taskLookups, null, false);
-    Assert.assertEquals(4, taskStatusPlusList.size());
-    verify(completedUnaltered, taskStatusPlusList, false, false, false);
-    verify(completedAltered, taskStatusPlusList, false, true, false);
-    verify(activeUnaltered, taskStatusPlusList, true, false, true);
-    verify(activeAltered, taskStatusPlusList, true, true, false);
+    // New columns based fetch after migration is complete. All data must be populated in the tasks table
+    taskMetadataInfos = handler.getTaskMetadataInfos(taskLookups, null, false);
+    Assert.assertEquals(4, taskMetadataInfos.size());
+    verifyTaskInfoToMetadataInfo(completedUnaltered, taskMetadataInfos, false);
+    verifyTaskInfoToMetadataInfo(completedAltered, taskMetadataInfos, false);
+    verifyTaskInfoToMetadataInfo(activeUnaltered, taskMetadataInfos, false);
+    verifyTaskInfoToMetadataInfo(activeAltered, taskMetadataInfos, false);
   }
 
-  private TaskInfo<Map<String, Object>, Map<String, Object>> getRandomTaskInfo(boolean active)
+  private Integer getUnmigratedTaskCount()
+  {
+    return handler.getConnector().retryWithHandle(
+        new HandleCallback<Integer>()
+        {
+          @Override
+          public Integer withHandle(Handle handle) throws SQLException
+          {
+            String sql = String.format("SELECT COUNT(*) FROM %s WHERE type is NULL or group_id is NULL", entryTable);
+            ResultSet resultSet = handle.getConnection().createStatement().executeQuery(sql);
+            resultSet.next();
+            return resultSet.getInt(1);
+          }
+        }
+    );
+  }
+
+  private TaskInfo<Map<String, Object>, Map<String, Object>> createRandomTaskInfo(boolean active)
   {
     String id = UUID.randomUUID().toString();
     DateTime createdTime = DateTime.now(DateTimeZone.UTC);
@@ -577,37 +615,47 @@ public class SQLMetadataStorageActionHandlerTest
     }
   }
 
-  private void verify(TaskInfo<Map<String, Object>, Map<String, Object>> taskInfo, List<TaskStatusPlus> taskStatusPlusList,
-                      boolean active, boolean altered, boolean nullNewColumns)
+  private void verifyTaskInfoToMetadataInfo(TaskInfo<Map<String, Object>, Map<String, Object>> taskInfo,
+                                            List<TaskInfo<TaskMetadata, Map<String, Object>>> taskMetadataInfos,
+                                            boolean nullNewColumns)
   {
-    for (TaskStatusPlus taskStatusPlus : taskStatusPlusList) {
-      if (taskStatusPlus.getId().equals(taskInfo.getId())) {
-        verify(taskInfo, taskStatusPlus, active, altered, nullNewColumns);
+    for (TaskInfo<TaskMetadata, Map<String, Object>> taskMetadataInfo : taskMetadataInfos) {
+      if (taskMetadataInfo.getId().equals(taskInfo.getId())) {
+        verifyTaskInfoToMetadataInfo(taskInfo, taskMetadataInfo, nullNewColumns);
       }
       return;
     }
     Assert.fail();
   }
 
-  private void verify(TaskInfo<Map<String, Object>, Map<String, Object>> taskInfo, TaskStatusPlus taskStatusPlus,
-                      boolean active, boolean altered, boolean nullNewColumns)
+  private void verifyTaskInfoToMetadataInfo(TaskInfo<Map<String, Object>, Map<String, Object>> taskInfo,
+                                            TaskInfo<TaskMetadata, Map<String, Object>> taskMetadataInfo,
+                                            boolean nullNewColumns)
   {
-    Assert.assertEquals(taskInfo.getId(), taskStatusPlus.getId());
-    Assert.assertEquals(taskInfo.getCreatedTime(), taskStatusPlus.getCreatedTime());
-    Assert.assertEquals(taskInfo.getCreatedTime(), taskStatusPlus.getCreatedTime());
-    Assert.assertEquals(DateTimes.EPOCH, taskStatusPlus.getQueueInsertionTime());
-    Assert.assertEquals(active ? TaskState.RUNNING : TaskState.SUCCESS, taskStatusPlus.getStatusCode());
-    Assert.assertEquals(!active ? RunnerTaskState.NONE : RunnerTaskState.WAITING, taskStatusPlus.getRunnerStatusCode());
-    Assert.assertEquals(taskInfo.getStatus().get("duration"), taskStatusPlus.getDuration());
-    Assert.assertEquals(taskInfo.getStatus().get("location"), taskStatusPlus.getLocation());
-    Assert.assertEquals(taskInfo.getDataSource(), taskStatusPlus.getDataSource());
-    Assert.assertEquals(taskInfo.getStatus().get("errorMsg"), taskStatusPlus.getErrorMsg());
-    if (!altered && nullNewColumns) {
-      Assert.assertNull(taskStatusPlus.getType());
-      Assert.assertNull(taskStatusPlus.getGroupId());
+    Assert.assertEquals(taskInfo.getId(), taskMetadataInfo.getId());
+    Assert.assertEquals(taskInfo.getCreatedTime(), taskMetadataInfo.getCreatedTime());
+    Assert.assertEquals(taskInfo.getDataSource(), taskMetadataInfo.getDataSource());
+
+    verifyTaskStatus(taskInfo.getStatus(), taskMetadataInfo.getStatus());
+
+    Map<String, Object> task = taskInfo.getTask();
+    TaskMetadata taskMetadata = taskMetadataInfo.getTask();
+    Assert.assertEquals(task.get("id"), taskMetadata.getId());
+    if (nullNewColumns) {
+      Assert.assertNull(taskMetadata.getGroupId());
+      Assert.assertNull(taskMetadata.getType());
     } else {
-      Assert.assertEquals(taskInfo.getTask().get("type"), taskStatusPlus.getType());
-      Assert.assertEquals(taskInfo.getTask().get("groupId"), taskStatusPlus.getGroupId());
+      Assert.assertEquals(task.get("groupId"), taskMetadata.getGroupId());
+      Assert.assertEquals(task.get("type"), taskMetadata.getType());
     }
+  }
+
+  private void verifyTaskStatus(Map<String, Object> expected, Map<String, Object> actual)
+  {
+    Assert.assertEquals(expected.get("id"), actual.get("id"));
+    Assert.assertEquals(expected.get("duration"), actual.get("duration"));
+    Assert.assertEquals(expected.get("errorMsg"), actual.get("errorMsg"));
+    Assert.assertEquals(expected.get("status").toString(), actual.get("status"));
+    Assert.assertEquals(expected.get("location"), JSON_MAPPER.convertValue(actual.get("location"), TaskLocation.class));
   }
 }

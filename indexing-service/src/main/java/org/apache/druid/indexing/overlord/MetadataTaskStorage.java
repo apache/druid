@@ -28,6 +28,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskInfo;
+import org.apache.druid.indexer.TaskMetadata;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskLock;
@@ -121,11 +122,12 @@ public class MetadataTaskStorage implements TaskStorage
   @LifecycleStart
   public void start()
   {
+    // Case where active tasks
     metadataStorageConnector.createTaskTables();
     ExecutorService executorService = Executors.newSingleThreadExecutor();
-    taskMigrationCompleteFuture = executorService.submit(() -> {
-      return handler.migrateTaskTable(metadataStorageConnector.getTaskTableName());
-    });
+    taskMigrationCompleteFuture = executorService.submit(
+        () -> handler.migrateTaskTable(metadataStorageConnector.getTaskTableName())
+    );
   }
 
   @LifecycleStop
@@ -249,7 +251,7 @@ public class MetadataTaskStorage implements TaskStorage
       @Nullable String datasource
   )
   {
-    Map<TaskLookupType, TaskLookup> theTaskLookups = processTaskLookups(taskLookups);
+    Map<TaskLookupType, TaskLookup> processedTaskLookups = processTaskLookups(taskLookups);
     boolean fetchPayload = true;
     if (taskMigrationCompleteFuture.isDone()) {
       try {
@@ -259,8 +261,13 @@ public class MetadataTaskStorage implements TaskStorage
         log.info(e, "Exception getting task migration future");
       }
     }
+    List<TaskInfo<TaskMetadata, TaskStatus>> taskMetadataInfos = fetchPayload
+        ? handler.getTaskMetadataInfosFromPayload(processedTaskLookups, datasource)
+        : handler.getTaskMetadataInfos(processedTaskLookups, datasource);
     return Collections.unmodifiableList(
-        handler.getTaskStatusPlusList(theTaskLookups, datasource, fetchPayload)
+        taskMetadataInfos.stream()
+                         .map(TaskStatusPlus::fromTaskMetadataInfo)
+                         .collect(Collectors.toList())
     );
   }
 
@@ -268,21 +275,21 @@ public class MetadataTaskStorage implements TaskStorage
       Map<TaskLookupType, TaskLookup> taskLookups
   )
   {
-    Map<TaskLookupType, TaskLookup> theTaskLookups = Maps.newHashMapWithExpectedSize(taskLookups.size());
+    Map<TaskLookupType, TaskLookup> processedTaskLookups = Maps.newHashMapWithExpectedSize(taskLookups.size());
     for (Entry<TaskLookupType, TaskLookup> entry : taskLookups.entrySet()) {
       if (entry.getKey() == TaskLookupType.COMPLETE) {
         CompleteTaskLookup completeTaskLookup = (CompleteTaskLookup) entry.getValue();
-        theTaskLookups.put(
+        processedTaskLookups.put(
             entry.getKey(),
             completeTaskLookup.hasTaskCreatedTimeFilter()
             ? completeTaskLookup
             : completeTaskLookup.withDurationBeforeNow(config.getRecentlyFinishedThreshold())
         );
       } else {
-        theTaskLookups.put(entry.getKey(), entry.getValue());
+        processedTaskLookups.put(entry.getKey(), entry.getValue());
       }
     }
-    return theTaskLookups;
+    return processedTaskLookups;
   }
 
   @Override
