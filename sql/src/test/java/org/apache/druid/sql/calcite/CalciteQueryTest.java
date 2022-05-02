@@ -944,7 +944,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testPrimitiveStringLatestInSubqueryGroupBy() throws Exception
+  public void testStringLatestGroupBy() throws Exception
   {
     testQuery(
         "SELECT dim2, LATEST(dim4,10) AS val1 FROM druid.numfoo GROUP BY dim2",
@@ -972,7 +972,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"", "b"},
             new Object[]{"a", "b"},
             new Object[]{"abc", "b"}
-
         )
     );
   }
@@ -1032,6 +1031,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringLatestInSubquery() throws Exception
   {
+    //skipVectorize();
     testQuery(
         "SELECT SUM(val) FROM (SELECT dim2, LATEST(dim1, 10) AS val FROM foo GROUP BY dim2)",
         ImmutableList.of(

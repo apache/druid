@@ -39,6 +39,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
@@ -155,11 +156,17 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   @Override
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
+
+    ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
     VectorObjectSelector vSelector = selectorFactory.makeObjectSelector(fieldName);
     BaseLongVectorValueSelector timeSelector = (BaseLongVectorValueSelector) selectorFactory.makeValueSelector(
         timeColumn);
+    if (capabilities != null) {
+      return new StringLastVectorAggregator(timeSelector, vSelector, maxStringBytes);
+    } else {
+      return new StringLastVectorAggregator(null, vSelector, maxStringBytes);
+    }
 
-    return new StringLastVectorAggregator(timeSelector, vSelector, maxStringBytes, false);
   }
 
   @Override
