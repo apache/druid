@@ -20,9 +20,9 @@
 // Using fully qualified name for Pair class, since Calcite also has a same class name being used in the Parser.jj
 org.apache.druid.java.util.common.Pair<Granularity, String> PartitionGranularity() :
 {
-  SqlNode e = null;
-  Granularity granularity = null;
-  String unparseString = null;
+  SqlNode e;
+  Granularity granularity;
+  String unparseString;
 }
 {
   (

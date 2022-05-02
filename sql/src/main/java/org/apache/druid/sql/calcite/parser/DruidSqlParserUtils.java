@@ -31,7 +31,6 @@ import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlTimestampLiteral;
 import org.apache.calcite.tools.ValidationException;
-import org.apache.calcite.util.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -63,6 +62,7 @@ public class DruidSqlParserUtils
 {
 
   private static final Logger log = new Logger(DruidSqlParserUtils.class);
+  public static final String ALL = "all";
 
   /**
    * Delegates to {@code convertSqlNodeToGranularity} and converts the exceptions to {@link ParseException}
@@ -196,8 +196,8 @@ public class DruidSqlParserUtils
       DateTimeZone dateTimeZone
   ) throws ValidationException
   {
-    if (replaceTimeQuery instanceof SqlLiteral && "all".equalsIgnoreCase(((SqlLiteral) replaceTimeQuery).toValue())) {
-      return ImmutableList.of("all");
+    if (replaceTimeQuery instanceof SqlLiteral && ALL.equalsIgnoreCase(((SqlLiteral) replaceTimeQuery).toValue())) {
+      return ImmutableList.of(ALL);
     }
 
     DimFilter dimFilter = convertQueryToDimFilter(replaceTimeQuery, dateTimeZone);
@@ -213,7 +213,8 @@ public class DruidSqlParserUtils
       DateTime intervalStart = interval.getStart();
       DateTime intervalEnd = interval.getEnd();
       if (!granularity.bucketStart(intervalStart).equals(intervalStart) || !granularity.bucketStart(intervalEnd).equals(intervalEnd)) {
-        throw new ValidationException("OVERWRITE WHERE clause contains an interval which is not aligned with PARTITIONED BY granularity");
+        throw new ValidationException("OVERWRITE WHERE clause contains an interval " + intervals +
+                                      " which is not aligned with PARTITIONED BY granularity " + granularity);
       }
     }
     return intervals
@@ -225,53 +226,109 @@ public class DruidSqlParserUtils
   public static DimFilter convertQueryToDimFilter(SqlNode replaceTimeQuery, DateTimeZone dateTimeZone)
       throws ValidationException
   {
-    if (replaceTimeQuery instanceof SqlBasicCall) {
-      SqlBasicCall sqlBasicCall = (SqlBasicCall) replaceTimeQuery;
-      Pair<String, String> columnValuePair;
-      switch (sqlBasicCall.getOperator().getKind()) {
-        case AND:
-          List<DimFilter> dimFilters = new ArrayList<>();
-          for (SqlNode sqlNode : sqlBasicCall.getOperandList()) {
-            dimFilters.add(convertQueryToDimFilter(sqlNode, dateTimeZone));
-          }
-          return new AndDimFilter(dimFilters);
-        case OR:
-          dimFilters = new ArrayList<>();
-          for (SqlNode sqlNode : sqlBasicCall.getOperandList()) {
-            dimFilters.add(convertQueryToDimFilter(sqlNode, dateTimeZone));
-          }
-          return new OrDimFilter(dimFilters);
-        case NOT:
-          return new NotDimFilter(convertQueryToDimFilter(sqlBasicCall.getOperandList().get(0), dateTimeZone));
-        case GREATER_THAN_OR_EQUAL:
-          columnValuePair = createColumnValuePair(sqlBasicCall.getOperandList(), dateTimeZone);
-          return new BoundDimFilter(columnValuePair.left, columnValuePair.right, null, false, null, null, null, StringComparators.NUMERIC);
-        case LESS_THAN_OR_EQUAL:
-          columnValuePair = createColumnValuePair(sqlBasicCall.getOperandList(), dateTimeZone);
-          return new BoundDimFilter(columnValuePair.left, null, columnValuePair.right, null, false, null, null, StringComparators.NUMERIC);
-        case GREATER_THAN:
-          columnValuePair = createColumnValuePair(sqlBasicCall.getOperandList(), dateTimeZone);
-          return new BoundDimFilter(columnValuePair.left, columnValuePair.right, null, true, null, null, null, StringComparators.NUMERIC);
-        case LESS_THAN:
-          columnValuePair = createColumnValuePair(sqlBasicCall.getOperandList(), dateTimeZone);
-          return new BoundDimFilter(columnValuePair.left, null, columnValuePair.right, null, true, null, null, StringComparators.NUMERIC);
-        default:
-          throw new ValidationException("Unsupported operation in OVERWRITE WHERE clause: " + sqlBasicCall.getOperator().getName());
-      }
+    if (!(replaceTimeQuery instanceof SqlBasicCall)) {
+      log.error("Expected SqlBasicCall during parsing, but found " + replaceTimeQuery.getClass().getName());
+      throw new ValidationException("Invalid OVERWRITE WHERE clause");
     }
-    throw new ValidationException("Invalid OVERWRITE WHERE clause");
+    String columnName;
+    SqlBasicCall sqlBasicCall = (SqlBasicCall) replaceTimeQuery;
+    List<SqlNode> operandList = sqlBasicCall.getOperandList();
+    switch (sqlBasicCall.getOperator().getKind()) {
+      case AND:
+        List<DimFilter> dimFilters = new ArrayList<>();
+        for (SqlNode sqlNode : sqlBasicCall.getOperandList()) {
+          dimFilters.add(convertQueryToDimFilter(sqlNode, dateTimeZone));
+        }
+        return new AndDimFilter(dimFilters);
+      case OR:
+        dimFilters = new ArrayList<>();
+        for (SqlNode sqlNode : sqlBasicCall.getOperandList()) {
+          dimFilters.add(convertQueryToDimFilter(sqlNode, dateTimeZone));
+        }
+        return new OrDimFilter(dimFilters);
+      case NOT:
+        return new NotDimFilter(convertQueryToDimFilter(sqlBasicCall.getOperandList().get(0), dateTimeZone));
+      case GREATER_THAN_OR_EQUAL:
+        columnName = parseColumnName(operandList.get(0));
+        return new BoundDimFilter(
+            columnName,
+            parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
+            null,
+            false,
+            null,
+            null,
+            null,
+            StringComparators.NUMERIC
+        );
+      case LESS_THAN_OR_EQUAL:
+        columnName = parseColumnName(operandList.get(0));
+        return new BoundDimFilter(
+            columnName,
+            null,
+            parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
+            null,
+            false,
+            null,
+            null,
+            StringComparators.NUMERIC
+        );
+      case GREATER_THAN:
+        columnName = parseColumnName(operandList.get(0));
+        return new BoundDimFilter(
+            columnName,
+            parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
+            null,
+            true,
+            null,
+            null,
+            null,
+            StringComparators.NUMERIC
+        );
+      case LESS_THAN:
+        columnName = parseColumnName(operandList.get(0));
+        return new BoundDimFilter(
+            columnName,
+            null,
+            parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
+            null,
+            true,
+            null,
+            null,
+            StringComparators.NUMERIC
+        );
+      case BETWEEN:
+        columnName = parseColumnName(operandList.get(0));
+        return new BoundDimFilter(
+            columnName,
+            parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
+            parseTimeStampWithTimeZone(operandList.get(2), dateTimeZone),
+            false,
+            false,
+            null,
+            null,
+            StringComparators.NUMERIC
+        );
+      default:
+        throw new ValidationException("Unsupported operation in OVERWRITE WHERE clause: " + sqlBasicCall.getOperator().getName());
+    }
   }
 
-  public static Pair<String, String> createColumnValuePair(List<SqlNode> operands, DateTimeZone timeZone) throws ValidationException
+  public static String parseColumnName(SqlNode sqlNode) throws ValidationException
   {
-    SqlNode columnName = operands.get(0);
-    SqlNode timeLiteral = operands.get(1);
-    if (!(columnName instanceof SqlIdentifier) || !(timeLiteral instanceof SqlTimestampLiteral)) {
+    if (!(sqlNode instanceof SqlIdentifier)) {
+      throw new ValidationException("Expressions must be of the form __time <operator> TIMESTAMP");
+    }
+    return ((SqlIdentifier) sqlNode).getSimple();
+  }
+
+  public static String parseTimeStampWithTimeZone(SqlNode sqlNode, DateTimeZone timeZone) throws ValidationException
+  {
+    if (!(sqlNode instanceof SqlTimestampLiteral)) {
       throw new ValidationException("Expressions must be of the form __time <operator> TIMESTAMP");
     }
 
-    Timestamp sqlTimestamp = Timestamp.valueOf(((SqlTimestampLiteral) timeLiteral).toFormattedString());
+    Timestamp sqlTimestamp = Timestamp.valueOf(((SqlTimestampLiteral) sqlNode).toFormattedString());
     ZonedDateTime zonedTimestamp = sqlTimestamp.toLocalDateTime().atZone(timeZone.toTimeZone().toZoneId());
-    return Pair.of(columnName.toString(), String.valueOf(zonedTimestamp.toInstant().toEpochMilli()));
+    return String.valueOf(zonedTimestamp.toInstant().toEpochMilli());
   }
 }

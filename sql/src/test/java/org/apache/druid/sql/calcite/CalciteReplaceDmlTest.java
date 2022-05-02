@@ -146,8 +146,8 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceFromTableWithIntervalLargerThanOneGranularity()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO dst OVERWRITE WHERE"
-             + " __time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-05-01' "
+        .sql("REPLACE INTO dst OVERWRITE WHERE "
+             + "__time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-05-01' "
              + "SELECT * FROM foo PARTITIONED BY MONTH")
         .expectTarget("dst", FOO_TABLE_SIGNATURE)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
@@ -170,8 +170,8 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testReplaceFromTableWithComplexDeleteWhereClause()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO dst OVERWRITE WHERE"
-             + " __time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-02-01' "
+        .sql("REPLACE INTO dst OVERWRITE WHERE "
+             + "__time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-02-01' "
              + "OR __time >= TIMESTAMP '2000-03-01' AND __time < TIMESTAMP '2000-04-01' "
              + "SELECT * FROM foo PARTITIONED BY MONTH")
         .expectTarget("dst", FOO_TABLE_SIGNATURE)
@@ -186,6 +186,30 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                     "\"MONTH\"",
                     DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
                     "2000-01-01T00:00:00.000Z/2000-02-01T00:00:00.000Z,2000-03-01T00:00:00.000Z/2000-04-01T00:00:00.000Z"))
+                .build()
+        )
+        .verify();
+  }
+
+  @Test
+  public void testReplaceFromTableWithBetweenClause()
+  {
+    testIngestionQuery()
+        .sql("REPLACE INTO dst OVERWRITE WHERE "
+             + "__time BETWEEN TIMESTAMP '2000-01-01' AND TIMESTAMP '2000-01-31 23:59:59.999' "
+             + "SELECT * FROM foo PARTITIONED BY MONTH")
+        .expectTarget("dst", FOO_TABLE_SIGNATURE)
+        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
+                .context(ImmutableMap.of(
+                    DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
+                    "\"MONTH\"",
+                    DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
+                    "2000-01-01T00:00:00.000Z/2000-02-01T00:00:00.000Z"))
                 .build()
         )
         .verify();
@@ -234,7 +258,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-05 00:00:00' AND __time <= TIMESTAMP '2000-01-06 00:00:00' SELECT * FROM foo PARTITIONED BY MONTH")
         .expectValidationError(
             SqlPlanningException.class,
-            "OVERWRITE WHERE clause contains an interval which is not aligned with PARTITIONED BY granularity"
+            "OVERWRITE WHERE clause contains an interval [2000-01-05T00:00:00.000Z/2000-01-06T00:00:00.001Z] which is not aligned with PARTITIONED BY granularity {type=period, period=P1M, timeZone=UTC, origin=null}"
         )
         .verify();
   }
@@ -246,7 +270,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-05 00:00:00' AND __time <= TIMESTAMP '2000-02-05 00:00:00' SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "OVERWRITE WHERE clause contains an interval which is not aligned with PARTITIONED BY granularity"
+            "OVERWRITE WHERE clause contains an interval [2000-01-05T00:00:00.000Z/2000-02-05T00:00:00.001Z] which is not aligned with PARTITIONED BY granularity AllGranularity"
         )
         .verify();
   }
