@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.last;
 
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -49,12 +50,23 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
   private static final String FIELD_NAME = "FIELD_NAME";
   private static final String TIME_COL = "__time";
   private long[] times = {2436, 6879, 7888, 8224};
+  private long[] timesSame = {2436, 2436};
+  private SerializablePairLongString[] pairs = {
+      new SerializablePairLongString(2345100L, "last"),
+      new SerializablePairLongString(2345001L, "notLast")
+  };
+
   @Mock
   private VectorObjectSelector selector;
   @Mock
+  private VectorObjectSelector selectorForPairs;
+  @Mock
   private BaseLongVectorValueSelector timeSelector;
+  @Mock
+  private BaseLongVectorValueSelector timeSelectorForPairs;
   private ByteBuffer buf;
   private StringLastVectorAggregator target;
+  private StringLastVectorAggregator targetWithPairs;
 
   private StringLastAggregatorFactory stringLastAggregatorFactory;
   @Mock(answer = Answers.RETURNS_DEEP_STUBS)
@@ -68,7 +80,10 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
     buf = ByteBuffer.wrap(randomBytes);
     Mockito.doReturn(VALUES).when(selector).getObjectVector();
     Mockito.doReturn(times).when(timeSelector).getLongVector();
+    Mockito.doReturn(timesSame).when(timeSelectorForPairs).getLongVector();
+    Mockito.doReturn(pairs).when(selectorForPairs).getObjectVector();
     target = new StringLastVectorAggregator(timeSelector, selector, 10);
+    targetWithPairs = new StringLastVectorAggregator(timeSelectorForPairs, selectorForPairs, 10);
     clearBufferForPositions(0, 0);
 
 
@@ -76,6 +91,16 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
     Mockito.doReturn(timeSelector).when(selectorFactory).makeValueSelector(TIME_COL);
     stringLastAggregatorFactory = new StringLastAggregatorFactory(NAME, FIELD_NAME, TIME_COL, 10);
 
+  }
+
+  @Test
+  public void testAggregateWithPairs()
+  {
+    targetWithPairs.aggregate(buf, 0, 0, pairs.length);
+    Pair<Long, String> result = (Pair<Long, String>) targetWithPairs.get(buf, 0);
+    //Should come 0 as the last value as the left of the pair is greater
+    Assert.assertEquals(pairs[0].lhs.longValue(), result.lhs.longValue());
+    Assert.assertEquals(pairs[0].rhs, result.rhs);
   }
 
   @Test

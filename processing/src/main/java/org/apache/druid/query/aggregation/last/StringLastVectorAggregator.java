@@ -40,7 +40,6 @@ public class StringLastVectorAggregator implements VectorAggregator
   private final VectorObjectSelector valueSelector;
   private final int maxStringBytes;
   protected long lastTime;
-  protected String lastValue;
 
   public StringLastVectorAggregator(
       final BaseLongVectorValueSelector timeSelector,
@@ -69,47 +68,48 @@ public class StringLastVectorAggregator implements VectorAggregator
     Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
 
     lastTime = buf.getLong(position);
-    int index = endRow - 1;
+    int index;
     for (int i = endRow - 1; i >= startRow; i--) {
-      if (objectsWhichMightBeStrings[i] != null) {
-        index = i;
+      if (times[i] < lastTime && objectsWhichMightBeStrings[i] != null) {
         break;
       }
-    }
-    final boolean foldNeeded = StringFirstLastUtils.objectNeedsFoldCheck(objectsWhichMightBeStrings[index]);
-    if (foldNeeded) {
-      // Less efficient code path when folding is a possibility (we must read the value selector first just in case
-      // it's a foldable object).
-      final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromVectorSelectorsAtIndex(
-          timeSelector,
-          valueSelector,
-          index
-      );
-      if (inPair != null) {
-        final long lastTime = buf.getLong(position);
-        if (inPair.lhs >= lastTime) {
+      index = i;
+      final boolean foldNeeded = StringFirstLastUtils.objectNeedsFoldCheck(objectsWhichMightBeStrings[index]);
+      if (foldNeeded) {
+        // Less efficient code path when folding is a possibility (we must read the value selector first just in case
+        // it's a foldable object).
+        final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromVectorSelectorsAtIndex(
+            timeSelector,
+            valueSelector,
+            index
+        );
+        if (inPair != null) {
+          final long lastTime = buf.getLong(position);
+          if (inPair.lhs >= lastTime) {
+            StringFirstLastUtils.writePair(
+                buf,
+                position,
+                new SerializablePairLongString(inPair.lhs, inPair.rhs),
+                maxStringBytes
+            );
+          }
+        }
+      } else {
+        final long time = times[index];
+
+        if (time >= lastTime) {
+          final String value = DimensionHandlerUtils.convertObjectToString(objectsWhichMightBeStrings[index]);
+          lastTime = time;
           StringFirstLastUtils.writePair(
               buf,
               position,
-              new SerializablePairLongString(inPair.lhs, inPair.rhs),
+              new SerializablePairLongString(time, value),
               maxStringBytes
           );
         }
       }
-    } else {
-      final long time = times[index];
-
-      if (time >= lastTime) {
-        final String value = DimensionHandlerUtils.convertObjectToString(objectsWhichMightBeStrings[index]);
-        lastTime = time;
-        StringFirstLastUtils.writePair(
-            buf,
-            position,
-            new SerializablePairLongString(time, value),
-            maxStringBytes
-        );
-      }
     }
+
   }
 
   @Override
@@ -123,13 +123,14 @@ public class StringLastVectorAggregator implements VectorAggregator
   {
     long[] timeVector = timeSelector.getLongVector();
     Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
+    // one time check on first element to judge if elements are serializable pairs or not
+    final int startRow = rows == null ? 0 : rows[0];
+    final boolean foldNeeded = StringFirstLastUtils.objectNeedsFoldCheck(objectsWhichMightBeStrings[startRow]);
     for (int i = 0; i < numRows; i++) {
       int position = positions[i] + positionOffset;
       int row = rows == null ? i : rows[i];
       long lastTime = buf.getLong(position);
       if (timeVector[row] >= lastTime) {
-        //check if needs fold check or not
-        final boolean foldNeeded = StringFirstLastUtils.objectNeedsFoldCheck(objectsWhichMightBeStrings[row]);
         if (foldNeeded) {
           final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromVectorSelectorsAtIndex(
               timeSelector,
@@ -170,7 +171,7 @@ public class StringLastVectorAggregator implements VectorAggregator
   @Override
   public void close()
   {
-
+    // nothing to close
   }
 }
 

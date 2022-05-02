@@ -75,7 +75,8 @@ public class StringFirstLastUtils
   }
 
   /**
-   * Return the object at a particular index from the vector selectors
+   * Return the object at a particular index from the vector selectors.
+   * index of bounds issues is the responsibility of the caller
    */
   public static SerializablePairLongString readPairFromVectorSelectorsAtIndex(
       BaseLongVectorValueSelector timeSelector,

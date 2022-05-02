@@ -1031,7 +1031,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringLatestInSubquery() throws Exception
   {
-    //skipVectorize();
     testQuery(
         "SELECT SUM(val) FROM (SELECT dim2, LATEST(dim1, 10) AS val FROM foo GROUP BY dim2)",
         ImmutableList.of(
