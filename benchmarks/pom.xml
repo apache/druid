@@ -200,7 +200,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.6</version>
+        <version>3.1.0</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -210,7 +210,9 @@
             <configuration>
               <finalName>${uberjar.name}</finalName>
               <appendAssemblyId>false</appendAssemblyId>
-              <descriptor>assembly.xml</descriptor>
+              <descriptors>
+                <descriptor>assembly.xml</descriptor>
+              </descriptors>
               <archive>
                 <manifest>
                   <mainClass>org.openjdk.jmh.Main</mainClass>
