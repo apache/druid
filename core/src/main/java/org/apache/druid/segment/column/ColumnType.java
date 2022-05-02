@@ -34,10 +34,10 @@ public class ColumnType extends BaseTypeSignature<ValueType>
   public static final ColumnType DOUBLE = new ColumnType(ValueType.DOUBLE, null, null);
   public static final ColumnType FLOAT = new ColumnType(ValueType.FLOAT, null, null);
   // currently, arrays only come from expressions or aggregators
-  // and there are no native float expressions (or aggs which produce float arrays)
   public static final ColumnType STRING_ARRAY = new ColumnType(ValueType.ARRAY, null, STRING);
   public static final ColumnType LONG_ARRAY = new ColumnType(ValueType.ARRAY, null, LONG);
   public static final ColumnType DOUBLE_ARRAY = new ColumnType(ValueType.ARRAY, null, DOUBLE);
+  public static final ColumnType FLOAT_ARRAY = new ColumnType(ValueType.ARRAY, null, FLOAT);
   public static final ColumnType UNKNOWN_COMPLEX = new ColumnType(ValueType.COMPLEX, null, null);
 
   @JsonCreator
