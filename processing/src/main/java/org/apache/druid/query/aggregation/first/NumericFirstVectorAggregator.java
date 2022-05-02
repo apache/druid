@@ -81,7 +81,7 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
 
     // find the first non-null value
     final long earliestTime = timeVector[index];
-    if (earliestTime <= firstTime) {
+    if (earliestTime < firstTime) {
       firstTime = earliestTime;
       if (useDefault || nullValueVector == null || !nullValueVector[index]) {
         updateTimeWithValue(buf, position, firstTime, index);
@@ -120,7 +120,7 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
       int position = positions[i] + positionOffset;
       int row = rows == null ? i : rows[i];
       long firstTime = buf.getLong(position);
-      if (timeVector[row] <= firstTime) {
+      if (timeVector[row] < firstTime) {
         if (useDefault || nulls == null || !nulls[row]) {
           updateTimeWithValue(buf, position, timeVector[row], row);
         } else {
