@@ -256,16 +256,20 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     final Closer closer = Closer.create();
     for (final File file : files) {
       final MappingIterator<Entry<KeyType>> fileIterator = read(file, keySerde.keyClazz());
+
       iterators.add(
           CloseableIterators.withEmptyBaggage(
               Iterators.transform(
                   fileIterator,
                   new Function<Entry<KeyType>, Entry<KeyType>>()
                   {
+                    final ReusableEntry<KeyType> reusableEntry =
+                        ReusableEntry.create(keySerde, aggregatorFactories.length);
+
                     @Override
                     public Entry<KeyType> apply(Entry<KeyType> entry)
                     {
-                      final Object[] deserializedValues = new Object[entry.getValues().length];
+                      final Object[] deserializedValues = reusableEntry.getValues();
                       for (int i = 0; i < deserializedValues.length; i++) {
                         deserializedValues[i] = aggregatorFactories[i].deserialize(entry.getValues()[i]);
                         if (deserializedValues[i] instanceof Integer) {
@@ -273,7 +277,8 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
                           deserializedValues[i] = ((Integer) deserializedValues[i]).longValue();
                         }
                       }
-                      return new Entry<>(entry.getKey(), deserializedValues);
+                      reusableEntry.setKey(entry.getKey());
+                      return reusableEntry;
                     }
                   }
               )
@@ -327,7 +332,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     try {
       return spillMapper.readValues(
           spillMapper.getFactory().createParser(new LZ4BlockInputStream(new FileInputStream(file))),
-          spillMapper.getTypeFactory().constructParametricType(Entry.class, keyClazz)
+          spillMapper.getTypeFactory().constructParametricType(ReusableEntry.class, keyClazz)
       );
     }
     catch (IOException e) {
