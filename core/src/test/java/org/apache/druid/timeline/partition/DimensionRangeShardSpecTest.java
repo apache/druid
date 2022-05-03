@@ -415,6 +415,34 @@ public class DimensionRangeShardSpecTest
     );
     assertFalse(shard.possibleInDomain(domain));
   }
+  @Test
+  public void testPossibleInDomain_falsePruning()
+  {
+    setDimensions("planet", "country", "city");
+
+    final StringTuple start = StringTuple.create("Earth", "France", "Paris");
+    final StringTuple end = StringTuple.create("Mars", "USA", "New York");
+
+    final RangeSet<String> universalSet = TreeRangeSet.create();
+    universalSet.add(Range.all());
+
+    ShardSpec shard = new DimensionRangeShardSpec(dimensions, start, end, 0, null);
+    Map<String, RangeSet<String>> domain = new HashMap<>();
+
+    // {Earth} U {Mars} * (USA, INF) * (-INF, INF)
+    populateDomain(
+        domain,
+        getUnion(
+            getRangeSet(Range.singleton("Earth")),
+            getRangeSet(Range.singleton("Mars"))
+        ),
+        getUnion(
+            getRangeSet(Range.greaterThan("USA"))
+        ),
+        universalSet
+    );
+    assertTrue(shard.possibleInDomain(domain));
+  }
 
   private RangeSet<String> getRangeSet(Range range)
   {
