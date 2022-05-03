@@ -33,7 +33,7 @@ import React, { ChangeEvent } from 'react';
 import { Loader } from '../../../components';
 import { Deferred } from '../../../components/deferred/deferred';
 import { ColumnMetadata, copyAndAlert, groupBy, oneOf, prettyPrintSql } from '../../../utils';
-import { dataTypeToIcon } from '../query-utils';
+import { dataTypeToIcon } from '../../../utils/data-type-utils';
 
 import { NumberMenuItems, StringMenuItems, TimeMenuItems } from './column-tree-menu';
 

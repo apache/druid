@@ -2,7 +2,7 @@
 
 exports[`ParseDataTable matches snapshot 1`] = `
 <div
-  class="ReactTable parse-data-table -striped -highlight"
+  class="ReactTable parse-data-table -striped -highlight padded-header"
 >
   <div
     class="rt-table"
@@ -10,7 +10,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
   >
     <div
       class="rt-thead -header"
-      style="min-width: 135px;"
+      style="min-width: 175px;"
     >
       <div
         class="rt-tr"
@@ -29,7 +29,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
         <div
           class="rt-th rt-resizable-header"
           role="columnheader"
-          style="flex: 100 0 auto; width: 100px;"
+          style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           tabindex="-1"
         >
           <div
@@ -59,7 +59,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
     </div>
     <div
       class="rt-tbody"
-      style="min-width: 135px;"
+      style="min-width: 175px;"
     >
       <div
         class="rt-tr-group"
@@ -83,13 +83,13 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
-            <span
+            <div
               class="table-cell plain"
             >
               hello
-            </span>
+            </div>
           </div>
         </div>
       </div>
@@ -113,7 +113,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -141,7 +141,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -169,7 +169,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -197,7 +197,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -225,7 +225,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -253,7 +253,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -281,7 +281,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -309,7 +309,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -337,7 +337,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -365,7 +365,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -393,7 +393,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -421,7 +421,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -449,7 +449,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -477,7 +477,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -505,7 +505,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -533,7 +533,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -561,7 +561,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -589,7 +589,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -617,7 +617,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -645,7 +645,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -673,7 +673,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -701,7 +701,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -729,7 +729,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -757,7 +757,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -785,7 +785,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -813,7 +813,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -841,7 +841,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -869,7 +869,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -897,7 +897,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -925,7 +925,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -953,7 +953,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -981,7 +981,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -1009,7 +1009,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -1037,7 +1037,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -1065,7 +1065,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -1093,7 +1093,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -1121,7 +1121,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -1149,7 +1149,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -1177,7 +1177,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -1205,7 +1205,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -1233,7 +1233,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -1261,7 +1261,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -1289,7 +1289,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -1317,7 +1317,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -1345,7 +1345,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -1373,7 +1373,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -1401,7 +1401,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -1429,7 +1429,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                
@@ -1457,7 +1457,7 @@ exports[`ParseDataTable matches snapshot 1`] = `
           <div
             class="rt-td"
             role="gridcell"
-            style="flex: 100 0 auto; width: 100px;"
+            style="flex: 140 0 auto; width: 140px; max-width: 140px;"
           >
             <span>
                

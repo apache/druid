@@ -33,16 +33,24 @@ import {
   MoreButton,
   RefreshButton,
   SegmentTimeline,
+  TableClickableCell,
   TableColumnSelector,
+  TableFilterableCell,
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
+import {
+  booleanCustomTableFilter,
+  BooleanFilterInput,
+  parseFilterModeAndNeedle,
+  sqlQueryCustomTableFilter,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+} from '../../react-table';
 import { Api } from '../../singletons';
 import {
-  addFilter,
-  booleanCustomTableFilter,
   Capabilities,
   CapabilitiesMode,
   compact,
@@ -50,19 +58,14 @@ import {
   filterMap,
   formatBytes,
   formatInteger,
-  getNeedleAndMode,
   hasPopoverOpen,
   isNumberLikeNaN,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
-  makeBooleanFilter,
   NumberLike,
   queryDruidSql,
   QueryManager,
   QueryState,
-  sqlQueryCustomTableFilter,
-  STANDARD_TABLE_PAGE_SIZE,
-  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
   twoLines,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
@@ -275,12 +278,19 @@ END AS "time_span"`,
             if (f.id === 'shard_type') {
               // Special handling for shard_type that needs to be search in the shard_spec
               // Creates filters like `shard_spec LIKE '%"type":"numbered"%'`
-              const needleAndMode = getNeedleAndMode(f);
-              const closingQuote = needleAndMode.mode === 'exact' ? '"' : '';
-              return SqlComparison.like(
-                SqlRef.column('shard_spec'),
-                `%"type":"${needleAndMode.needle}${closingQuote}%`,
-              );
+              const modeAndNeedle = parseFilterModeAndNeedle(f);
+              if (!modeAndNeedle) return;
+              const shardSpecRef = SqlRef.column('shard_spec');
+              switch (modeAndNeedle.mode) {
+                case '=':
+                  return SqlComparison.like(shardSpecRef, `%"type":"${modeAndNeedle.needle}"%`);
+
+                case '!=':
+                  return SqlComparison.notLike(shardSpecRef, `%"type":"${modeAndNeedle.needle}"%`);
+
+                default:
+                  return SqlComparison.like(shardSpecRef, `%"type":"${modeAndNeedle.needle}%`);
+              }
             } else if (f.id.startsWith('is_')) {
               if (f.value === 'all') return;
               return SqlRef.columnWithQuotes(f.id).equal(f.value === 'true' ? 1 : 0);
@@ -466,6 +476,30 @@ END AS "time_span"`,
     return actions;
   }
 
+  private onDetail(segmentId: string, datasource: string): void {
+    this.setState({
+      segmentTableActionDialogId: segmentId,
+      datasourceTableActionDialogId: datasource,
+      actions: this.getSegmentActions(segmentId, datasource),
+    });
+  }
+
+  private renderFilterableCell(field: string, disableComparisons = false) {
+    const { segmentFilter } = this.state;
+
+    return (row: { value: any }) => (
+      <TableFilterableCell
+        field={field}
+        value={row.value}
+        filters={segmentFilter}
+        onFiltersChange={filters => this.setState({ segmentFilter: filters })}
+        disableComparisons={disableComparisons}
+      >
+        {row.value}
+      </TableFilterableCell>
+    );
+  }
+
   renderSegmentsTable() {
     const { segmentsState, segmentFilter, visibleColumns, groupByInterval } = this.state;
     const { capabilities } = this.props;
@@ -478,30 +512,13 @@ END AS "time_span"`,
 
     const avgRowSizeValues = segments.map(d => formatInteger(d.avg_row_size));
 
-    const renderFilterableCell = (field: string) => {
-      return (row: { value: any }) => {
-        const value = row.value;
-        return (
-          <a
-            onClick={() => {
-              this.setState({
-                segmentFilter: addFilter(segmentFilter, field, value),
-              });
-            }}
-          >
-            {value}
-          </a>
-        );
-      };
-    };
-
     const hasSql = capabilities.hasSql();
 
-    // Only allow filtering of columns other than datasource if in SQL mode or we are filtering on an exact datasource
+    // Only allow filtering of columns other than datasource if in SQL mode, or if we are filtering on an exact datasource
     const allowGeneralFilter =
       hasSql ||
       segmentFilter.some(
-        filter => filter.id === 'datasource' && getNeedleAndMode(filter).mode === 'exact',
+        filter => filter.id === 'datasource' && parseFilterModeAndNeedle(filter)?.mode === '=',
       );
 
     return (
@@ -513,10 +530,10 @@ END AS "time_span"`,
         manual
         filterable
         filtered={segmentFilter}
-        defaultSorted={[hasSql ? { id: 'start', desc: true } : { id: 'datasource', desc: false }]}
         onFilteredChange={filtered => {
           this.setState({ segmentFilter: filtered });
         }}
+        defaultSorted={[hasSql ? { id: 'start', desc: true } : { id: 'datasource', desc: false }]}
         onFetchData={tableState => {
           this.fetchData(groupByInterval, tableState);
         }}
@@ -531,15 +548,24 @@ END AS "time_span"`,
             Header: 'Segment ID',
             show: visibleColumns.shown('Segment ID'),
             accessor: 'segment_id',
-            width: 300,
+            width: 280,
             sortable: hasSql,
             filterable: allowGeneralFilter,
+            Cell: row => (
+              <TableClickableCell
+                onClick={() => this.onDetail(row.value, row.row.datasource)}
+                hoverIcon={IconNames.SEARCH_TEMPLATE}
+              >
+                {row.value}
+              </TableClickableCell>
+            ),
           },
           {
             Header: 'Datasource',
             show: visibleColumns.shown('Datasource'),
             accessor: 'datasource',
-            Cell: renderFilterableCell('datasource'),
+            width: 140,
+            Cell: this.renderFilterableCell('datasource'),
           },
           {
             Header: 'Interval',
@@ -549,36 +575,37 @@ END AS "time_span"`,
             sortable: hasSql,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
-            Cell: renderFilterableCell('interval'),
+            Cell: this.renderFilterableCell('interval'),
           },
           {
             Header: 'Start',
             show: visibleColumns.shown('Start'),
             accessor: 'start',
-            width: 120,
+            width: 160,
             sortable: hasSql,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
-            Cell: renderFilterableCell('start'),
+            Cell: this.renderFilterableCell('start'),
           },
           {
             Header: 'End',
             show: visibleColumns.shown('End'),
             accessor: 'end',
-            width: 120,
+            width: 160,
             sortable: hasSql,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
-            Cell: renderFilterableCell('end'),
+            Cell: this.renderFilterableCell('end'),
           },
           {
             Header: 'Version',
             show: visibleColumns.shown('Version'),
             accessor: 'version',
-            width: 120,
+            width: 160,
             sortable: hasSql,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
+            Cell: this.renderFilterableCell('version'),
           },
           {
             Header: 'Time span',
@@ -587,7 +614,7 @@ END AS "time_span"`,
             width: 100,
             sortable: hasSql,
             filterable: allowGeneralFilter,
-            Cell: renderFilterableCell('time_span'),
+            Cell: this.renderFilterableCell('time_span'),
           },
           {
             Header: 'Shard type',
@@ -595,6 +622,7 @@ END AS "time_span"`,
             id: 'shard_type',
             width: 100,
             sortable: false,
+            headerClassName: 'disable-comparisons',
             accessor: d => {
               let v: any;
               try {
@@ -604,7 +632,7 @@ END AS "time_span"`,
               if (typeof v?.type !== 'string') return '-';
               return v?.type;
             },
-            Cell: renderFilterableCell('shard_type'),
+            Cell: this.renderFilterableCell('shard_type', true),
           },
           {
             Header: 'Shard spec',
@@ -638,14 +666,16 @@ END AS "time_span"`,
                     values.map((x, i) => formatRangeDimensionValue(dimensions[i], x)).join('; ');
 
                   return (
-                    <div className="spec-detail range-detail" onClick={onShowFullShardSpec}>
+                    <TableClickableCell
+                      onClick={onShowFullShardSpec}
+                      hoverIcon={IconNames.EYE_OPEN}
+                    >
                       <span className="range-label">Start:</span>
                       {Array.isArray(v.start) ? formatEdge(v.start) : '-∞'}
                       <br />
                       <span className="range-label">End:</span>
                       {Array.isArray(v.end) ? formatEdge(v.end) : '∞'}
-                      {fullShardIcon}
-                    </div>
+                    </TableClickableCell>
                   );
                 }
 
@@ -703,6 +733,7 @@ END AS "time_span"`,
             width: 60,
             filterable: false,
             sortable: hasSql,
+            className: 'padded',
           },
           {
             Header: 'Size',
@@ -711,6 +742,8 @@ END AS "time_span"`,
             filterable: false,
             sortable: hasSql,
             defaultSortDesc: true,
+            width: 120,
+            className: 'padded',
             Cell: row => (
               <BracedText
                 text={
@@ -728,6 +761,8 @@ END AS "time_span"`,
             accessor: 'num_rows',
             filterable: false,
             defaultSortDesc: true,
+            width: 120,
+            className: 'padded',
             Cell: row => (
               <BracedText
                 text={row.original.is_available ? formatInteger(row.value) : '(unknown)'}
@@ -742,6 +777,7 @@ END AS "time_span"`,
             accessor: 'avg_row_size',
             filterable: false,
             width: 100,
+            className: 'padded',
             Cell: ({ value }) => {
               if (isNumberLikeNaN(value)) return '-';
               return (
@@ -760,34 +796,43 @@ END AS "time_span"`,
             width: 60,
             filterable: false,
             defaultSortDesc: true,
+            className: 'padded',
           },
           {
             Header: 'Is published',
             show: hasSql && visibleColumns.shown('Is published'),
             id: 'is_published',
             accessor: row => String(Boolean(row.is_published)),
-            Filter: makeBooleanFilter(),
+            Filter: BooleanFilterInput,
+            className: 'padded',
+            width: 100,
           },
           {
             Header: 'Is realtime',
             show: hasSql && visibleColumns.shown('Is realtime'),
             id: 'is_realtime',
             accessor: row => String(Boolean(row.is_realtime)),
-            Filter: makeBooleanFilter(),
+            Filter: BooleanFilterInput,
+            className: 'padded',
+            width: 100,
           },
           {
             Header: 'Is available',
             show: hasSql && visibleColumns.shown('Is available'),
             id: 'is_available',
             accessor: row => String(Boolean(row.is_available)),
-            Filter: makeBooleanFilter(),
+            Filter: BooleanFilterInput,
+            className: 'padded',
+            width: 100,
           },
           {
             Header: 'Is overshadowed',
             show: hasSql && visibleColumns.shown('Is overshadowed'),
             id: 'is_overshadowed',
             accessor: row => String(Boolean(row.is_overshadowed)),
-            Filter: makeBooleanFilter(),
+            Filter: BooleanFilterInput,
+            className: 'padded',
+            width: 100,
           },
           {
             Header: ACTION_COLUMN_LABEL,
@@ -803,11 +848,7 @@ END AS "time_span"`,
               return (
                 <ActionCell
                   onDetail={() => {
-                    this.setState({
-                      segmentTableActionDialogId: id,
-                      datasourceTableActionDialogId: datasource,
-                      actions: this.getSegmentActions(id, datasource),
-                    });
+                    this.onDetail(id, datasource);
                   }}
                   actions={this.getSegmentActions(id, datasource)}
                 />

@@ -16,42 +16,26 @@
  * limitations under the License.
  */
 
-@import './blueprint-overrides/common/colors';
-@import './blueprint-overrides/common/variables';
-@import '~@blueprintjs/core/src/common/variables';
+import { Icon, IconName } from '@blueprintjs/core';
+import React, { MouseEventHandler, ReactNode } from 'react';
 
-$header-bar-height: 50px;
-$view-control-bar-height: 30px;
-$standard-padding: 15px;
-$thin-padding: 10px;
+import './table-clickable-cell.scss';
 
-// various style variables
-
-$druid-brand: #2ceefb;
-$druid-brand2: #00b6bf;
-$druid-brand-background: #1c1c26;
-
-// ReactTable related
-
-$table-cell-v-padding: 10px;
-$table-cell-h-padding: 5px;
-
-@mixin card-background {
-  background: $white;
-  border-radius: $pt-border-radius;
-
-  .#{$bp-ns}-dark & {
-    background: $dark-gray3;
-  }
+export interface TableClickableCellProps {
+  onClick: MouseEventHandler<any>;
+  hoverIcon?: IconName;
+  children?: ReactNode;
 }
 
-@mixin card-like {
-  background: $white;
-  border-radius: $pt-border-radius;
-  box-shadow: $pt-elevation-shadow-1;
+export const TableClickableCell = React.memo(function TableClickableCell(
+  props: TableClickableCellProps,
+) {
+  const { onClick, hoverIcon, children } = props;
 
-  .#{$bp-ns}-dark & {
-    background: $dark-gray3;
-    box-shadow: $pt-dark-elevation-shadow-1;
-  }
-}
+  return (
+    <div className="table-clickable-cell" onClick={onClick}>
+      {children}
+      {hoverIcon && <Icon className="hover-icon" icon={hoverIcon} />}
+    </div>
+  );
+});
