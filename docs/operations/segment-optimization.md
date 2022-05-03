@@ -87,7 +87,7 @@ In this case, you may want to see only rows of the max version per interval (pai
 
 Once you find your segments need compaction, you can consider the below two options:
 
-  - Turning on the [automatic compaction of Coordinators](../design/coordinator.md#compacting-segments).
+  - Turning on the [automatic compaction of Coordinators](../design/coordinator.md#automatic-compaction).
   The Coordinator periodically submits [compaction tasks](../ingestion/tasks.md#compact) to re-index small segments.
   To enable the automatic compaction, you need to configure it for each dataSource via Coordinator's dynamic configuration.
   See [Automatic compaction configuration API](../operations/api-reference.md#automatic-compaction-configuration)

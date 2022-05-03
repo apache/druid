@@ -79,16 +79,16 @@ If a Historical process restarts or becomes unavailable for any reason, the Drui
 
 To ensure an even distribution of segments across Historical processes in the cluster, the Coordinator process will find the total size of all segments being served by every Historical process each time the Coordinator runs. For every Historical process tier in the cluster, the Coordinator process will determine the Historical process with the highest utilization and the Historical process with the lowest utilization. The percent difference in utilization between the two processes is computed, and if the result exceeds a certain threshold, a number of segments will be moved from the highest utilized process to the lowest utilized process. There is a configurable limit on the number of segments that can be moved from one process to another each time the Coordinator runs. Segments to be moved are selected at random and only moved if the resulting utilization calculation indicates the percentage difference between the highest and lowest servers has decreased.
 
-### Compacting segments
+### Automatic compaction
 
 The Druid Coordinator manages the automatic compaction system.
 Each run, the Coordinator compacts segments by merging small segments or splitting a large one. This is useful when the size of your segments is not optimized which may degrade query performance.
 See [Segment size optimization](../operations/segment-optimization.md) for details.
 
-The Coordinator first finds the segments to compact based on the [segment search policy](#segment-search-policy).
+The Coordinator first finds the segments to compact based on the [segment search policy](#segment-search-policy-in-automatic-compaction).
 Once some segments are found, it issues a [compaction task](../ingestion/tasks.md#compact) to compact those segments.
 The maximum number of running compaction tasks is `min(sum of worker capacity * slotRatio, maxSlots)`.
-Note that even though `min(sum of worker capacity * slotRatio, maxSlots)` = 0, at least one compaction task is always submitted
+Note that even if `min(sum of worker capacity * slotRatio, maxSlots) = 0`, at least one compaction task is always submitted
 if the compaction is enabled for a dataSource.
 See [Automatic compaction configuration API](../operations/api-reference.md#automatic-compaction-configuration) and [Automatic compaction configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) to enable and configure automatic compaction.
 
@@ -106,7 +106,7 @@ druid.coordinator.<SOME_GROUP_NAME>.duties=["compactSegments"]
 druid.coordinator.<SOME_GROUP_NAME>.period=<PERIOD_TO_RUN_COMPACTING_SEGMENTS_DUTY>
 ```
 
-### Segment search policy
+### Segment search policy in automatic compaction
 
 At every Coordinator run, this policy looks up time chunks from newest to oldest and checks whether the segments in those time chunks
 need compaction.

@@ -44,9 +44,10 @@ By default, compaction does not modify the underlying data of the segments. Howe
 Compaction does not improve performance in all situations. For example, if you rewrite your data with each ingestion task, you don't need to use compaction. See [Segment optimization](../operations/segment-optimization.md) for additional guidance to determine if compaction will help in your environment.
 
 ## Types of compaction
-You can configure the Druid Coordinator to perform automatic compaction, also called auto-compaction, for a datasource. Using a segment search policy, the Coordinator periodically identifies segments for compaction starting from newest to oldest. When the Coordinator discovers segments that have not been compacted or segments that were compacted with a different or changed spec, it submits compaction tasks for only those segments.
 
-Automatic compaction works in most use cases and should be your first option. To learn more about automatic compaction, see [Compacting Segments](../design/coordinator.md#compacting-segments).
+You can configure the Druid Coordinator to perform automatic compaction, also called auto-compaction, for a datasource. Using its [segment search policy](../design/coordinator.md#segment-search-policy-in-automatic-compaction), the Coordinator periodically identifies segments for compaction starting from newest to oldest. When the Coordinator discovers segments that have not been compacted or segments that were compacted with a different or changed spec, it submits compaction tasks for the time interval covering those segments.
+
+Automatic compaction works in most use cases and should be your first option. To learn more about automatic compaction, see [Compacting Segments](../design/coordinator.md#automatic-compaction).
 
 In cases where you require more control over compaction, you can manually submit compaction tasks. For example:
 
@@ -89,6 +90,7 @@ Even when the input segments have the same set of dimensions, the dimension orde
 If you want to control dimension ordering or ensure specific values for dimension types, you can configure a custom `dimensionsSpec` in the compaction task spec.
 
 ### Rollup
+
 Druid only rolls up the output segment when `rollup` is set for all input segments.
 See [Roll-up](../ingestion/rollup.md) for more details.
 You can check that your segments are rolled up or not by using [Segment Metadata Queries](../querying/segmentmetadataquery.md#analysistypes).
@@ -219,6 +221,6 @@ Druid supports two supported `inputSpec` formats:
 
 See the following topics for more information:
 - [Segment optimization](../operations/segment-optimization.md) for guidance to determine if compaction will help in your case.
-- [Compacting Segments](../design/coordinator.md#compacting-segments) for details on how the Coordinator manages automatic compaction.
+- [Compacting Segments](../design/coordinator.md#automatic-compaction) for details on how the Coordinator manages automatic compaction.
 - [Automatic compaction configuration API](../operations/api-reference.md#automatic-compaction-configuration)
 and [Automatic compaction configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for automatic compaction configuration information.
