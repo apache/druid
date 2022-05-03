@@ -29,7 +29,9 @@ import {
   ActionCell,
   MoreButton,
   RefreshButton,
+  TableClickableCell,
   TableColumnSelector,
+  TableFilterableCell,
   ViewControlBar,
 } from '../../components';
 import {
@@ -38,11 +40,14 @@ import {
   SupervisorTableActionDialog,
   TaskTableActionDialog,
 } from '../../dialogs';
+import {
+  booleanCustomTableFilter,
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+  syncFilterClauseById,
+} from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import {
-  addFilter,
-  addFilterRaw,
-  booleanCustomTableFilter,
   Capabilities,
   deepGet,
   formatDuration,
@@ -56,8 +61,6 @@ import {
   queryDruidSql,
   QueryManager,
   QueryState,
-  SMALL_TABLE_PAGE_SIZE,
-  SMALL_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 
@@ -88,7 +91,7 @@ interface SupervisorQueryResultRow {
   source: string;
   state: string;
   detailed_state: string;
-  suspended: number;
+  suspended: boolean;
 }
 
 interface TaskQueryResultRow {
@@ -196,7 +199,7 @@ export class IngestionView extends React.PureComponent<IngestionViewProps, Inges
   };
 
   static SUPERVISOR_SQL = `SELECT
-  "supervisor_id", "type", "source", "state", "detailed_state", "suspended"
+  "supervisor_id", "type", "source", "state", "detailed_state", "suspended" = 1 AS "suspended"
 FROM sys.supervisors
 ORDER BY "supervisor_id"`;
 
@@ -266,7 +269,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                 'n/a',
               state: deepGet(sup, 'state'),
               detailed_state: deepGet(sup, 'detailedState'),
-              suspended: Number(deepGet(sup, 'suspended')),
+              suspended: Boolean(deepGet(sup, 'suspended')),
             };
           });
         } else {
@@ -552,100 +555,129 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     );
   }
 
-  renderSupervisorTable() {
+  private renderSupervisorFilterableCell(field: string) {
+    const { supervisorFilter } = this.state;
+
+    return (row: { value: any }) => (
+      <TableFilterableCell
+        field={field}
+        value={row.value}
+        filters={supervisorFilter}
+        onFiltersChange={filters => this.setState({ supervisorFilter: filters })}
+      >
+        {row.value}
+      </TableFilterableCell>
+    );
+  }
+
+  private onSupervisorDetail(supervisor: SupervisorQueryResultRow) {
+    this.setState({
+      supervisorTableActionDialogId: supervisor.supervisor_id,
+      supervisorTableActionDialogActions: this.getSupervisorActions(
+        supervisor.supervisor_id,
+        supervisor.suspended,
+        supervisor.type,
+      ),
+    });
+  }
+
+  private renderSupervisorTable() {
     const { supervisorsState, hiddenSupervisorColumns, taskFilter, supervisorFilter } = this.state;
 
     const supervisors = supervisorsState.data || [];
     return (
-      <>
-        <ReactTable
-          data={supervisors}
-          loading={supervisorsState.loading}
-          noDataText={
-            supervisorsState.isEmpty() ? 'No supervisors' : supervisorsState.getErrorMessage() || ''
-          }
-          filtered={supervisorFilter}
-          onFilteredChange={filtered => {
-            const datasourceFilter = filtered.find(filter => filter.id === 'datasource');
-            let newTaskFilter = taskFilter.filter(filter => filter.id !== 'datasource');
-            if (datasourceFilter) {
-              newTaskFilter = addFilterRaw(
-                newTaskFilter,
-                datasourceFilter.id,
-                datasourceFilter.value,
-              );
-            }
-            this.setState({ supervisorFilter: filtered, taskFilter: newTaskFilter });
-          }}
-          filterable
-          defaultPageSize={SMALL_TABLE_PAGE_SIZE}
-          pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
-          showPagination={supervisors.length > SMALL_TABLE_PAGE_SIZE}
-          columns={[
-            {
-              Header: 'Datasource',
-              id: 'datasource',
-              accessor: 'supervisor_id',
-              width: 300,
-              show: hiddenSupervisorColumns.shown('Datasource'),
-            },
-            {
-              Header: 'Type',
-              id: 'type',
-              accessor: row => row.type,
-              show: hiddenSupervisorColumns.shown('Type'),
-            },
-            {
-              Header: 'Topic/Stream',
-              id: 'source',
-              accessor: row => row.source,
-              show: hiddenSupervisorColumns.shown('Topic/Stream'),
-            },
-            {
-              Header: 'Status',
-              id: 'status',
-              width: 300,
-              accessor: row => row.detailed_state,
-              Cell: row => (
+      <ReactTable
+        data={supervisors}
+        loading={supervisorsState.loading}
+        noDataText={
+          supervisorsState.isEmpty() ? 'No supervisors' : supervisorsState.getErrorMessage() || ''
+        }
+        filtered={supervisorFilter}
+        onFilteredChange={(filtered, column) => {
+          this.setState({
+            supervisorFilter: filtered,
+            taskFilter:
+              column.id === 'datasource'
+                ? syncFilterClauseById(taskFilter, filtered, 'datasource')
+                : taskFilter,
+          });
+        }}
+        filterable
+        defaultPageSize={SMALL_TABLE_PAGE_SIZE}
+        pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
+        showPagination={supervisors.length > SMALL_TABLE_PAGE_SIZE}
+        columns={[
+          {
+            Header: 'Datasource',
+            id: 'datasource',
+            accessor: 'supervisor_id',
+            width: 300,
+            show: hiddenSupervisorColumns.shown('Datasource'),
+            Cell: ({ value, original }) => (
+              <TableClickableCell
+                onClick={() => this.onSupervisorDetail(original)}
+                hoverIcon={IconNames.EDIT}
+              >
+                {value}
+              </TableClickableCell>
+            ),
+          },
+          {
+            Header: 'Type',
+            accessor: 'type',
+            width: 100,
+            Cell: this.renderSupervisorFilterableCell('type'),
+            show: hiddenSupervisorColumns.shown('Type'),
+          },
+          {
+            Header: 'Topic/Stream',
+            accessor: 'source',
+            width: 300,
+            Cell: this.renderSupervisorFilterableCell('source'),
+            show: hiddenSupervisorColumns.shown('Topic/Stream'),
+          },
+          {
+            Header: 'Status',
+            id: 'status',
+            width: 300,
+            accessor: 'detailed_state',
+            Cell: row => (
+              <TableFilterableCell
+                field="status"
+                value={row.value}
+                filters={supervisorFilter}
+                onFiltersChange={filters => this.setState({ supervisorFilter: filters })}
+              >
                 <span>
                   <span style={{ color: stateToColor(row.original.state) }}>&#x25cf;&nbsp;</span>
                   {row.value}
                 </span>
-              ),
-              show: hiddenSupervisorColumns.shown('Status'),
+              </TableFilterableCell>
+            ),
+            show: hiddenSupervisorColumns.shown('Status'),
+          },
+          {
+            Header: ACTION_COLUMN_LABEL,
+            id: ACTION_COLUMN_ID,
+            accessor: 'supervisor_id',
+            width: ACTION_COLUMN_WIDTH,
+            filterable: false,
+            Cell: row => {
+              const id = row.value;
+              const type = row.original.type;
+              const supervisorSuspended = row.original.suspended;
+              const supervisorActions = this.getSupervisorActions(id, supervisorSuspended, type);
+              return (
+                <ActionCell
+                  onDetail={() => this.onSupervisorDetail(row.original)}
+                  actions={supervisorActions}
+                />
+              );
             },
-            {
-              Header: ACTION_COLUMN_LABEL,
-              id: ACTION_COLUMN_ID,
-              accessor: 'supervisor_id',
-              width: ACTION_COLUMN_WIDTH,
-              filterable: false,
-              Cell: row => {
-                const id = row.value;
-                const type = row.original.type;
-                const supervisorSuspended = row.original.suspended;
-                const supervisorActions = this.getSupervisorActions(id, supervisorSuspended, type);
-                return (
-                  <ActionCell
-                    onDetail={() =>
-                      this.setState({
-                        supervisorTableActionDialogId: id,
-                        supervisorTableActionDialogActions: supervisorActions,
-                      })
-                    }
-                    actions={supervisorActions}
-                  />
-                );
-              },
-              show: hiddenSupervisorColumns.shown(ACTION_COLUMN_LABEL),
-            },
-          ]}
-        />
-        {this.renderResumeSupervisorAction()}
-        {this.renderSuspendSupervisorAction()}
-        {this.renderResetSupervisorAction()}
-        {this.renderTerminateSupervisorAction()}
-      </>
+            show: hiddenSupervisorColumns.shown(ACTION_COLUMN_LABEL),
+          },
+        ]}
+      />
     );
   }
 
@@ -712,208 +744,198 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     );
   }
 
-  renderTaskTable() {
+  private renderTaskFilterableCell(field: string) {
+    const { taskFilter } = this.state;
+
+    return (row: { value: any }) => (
+      <TableFilterableCell
+        field={field}
+        value={row.value}
+        filters={taskFilter}
+        onFiltersChange={filters => this.setState({ taskFilter: filters })}
+      >
+        {row.value}
+      </TableFilterableCell>
+    );
+  }
+
+  private onTaskDetail(task: TaskQueryResultRow) {
+    this.setState({
+      taskTableActionDialogId: task.task_id,
+      taskTableActionDialogStatus: task.status,
+      taskTableActionDialogActions: this.getTaskActions(
+        task.task_id,
+        task.datasource,
+        task.status,
+        task.type,
+      ),
+    });
+  }
+
+  private renderTaskTable() {
     const { tasksState, taskFilter, groupTasksBy, hiddenTaskColumns, supervisorFilter } =
       this.state;
 
     const tasks = tasksState.data || [];
     return (
-      <>
-        <ReactTable
-          data={tasks}
-          loading={tasksState.loading}
-          noDataText={tasksState.isEmpty() ? 'No tasks' : tasksState.getErrorMessage() || ''}
-          filterable
-          filtered={taskFilter}
-          onFilteredChange={filtered => {
-            const datasourceFilter = filtered.find(filter => filter.id === 'datasource');
-            let newSupervisorFilter = supervisorFilter.filter(filter => filter.id !== 'datasource');
-            if (datasourceFilter) {
-              newSupervisorFilter = addFilterRaw(
-                newSupervisorFilter,
-                datasourceFilter.id,
-                datasourceFilter.value,
+      <ReactTable
+        data={tasks}
+        loading={tasksState.loading}
+        noDataText={tasksState.isEmpty() ? 'No tasks' : tasksState.getErrorMessage() || ''}
+        filterable
+        filtered={taskFilter}
+        onFilteredChange={(filtered, column) => {
+          this.setState({
+            supervisorFilter:
+              column.id === 'datasource'
+                ? syncFilterClauseById(supervisorFilter, filtered, 'datasource')
+                : supervisorFilter,
+            taskFilter: filtered,
+          });
+        }}
+        defaultSorted={[{ id: 'status', desc: true }]}
+        pivotBy={groupTasksBy ? [groupTasksBy] : []}
+        defaultPageSize={SMALL_TABLE_PAGE_SIZE}
+        pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
+        showPagination={tasks.length > SMALL_TABLE_PAGE_SIZE}
+        columns={[
+          {
+            Header: 'Task ID',
+            accessor: 'task_id',
+            width: 440,
+            Cell: ({ value, original }) => (
+              <TableClickableCell
+                onClick={() => this.onTaskDetail(original)}
+                hoverIcon={IconNames.EDIT}
+              >
+                {value}
+              </TableClickableCell>
+            ),
+            Aggregated: () => '',
+            show: hiddenTaskColumns.shown('Task ID'),
+          },
+          {
+            Header: 'Group ID',
+            accessor: 'group_id',
+            width: 300,
+            Cell: this.renderTaskFilterableCell('group_id'),
+            Aggregated: () => '',
+            show: hiddenTaskColumns.shown('Group ID'),
+          },
+          {
+            Header: 'Type',
+            accessor: 'type',
+            width: 140,
+            Cell: this.renderTaskFilterableCell('type'),
+            show: hiddenTaskColumns.shown('Type'),
+          },
+          {
+            Header: 'Datasource',
+            accessor: 'datasource',
+            width: 200,
+            Cell: this.renderTaskFilterableCell('datasource'),
+            show: hiddenTaskColumns.shown('Datasource'),
+          },
+          {
+            Header: 'Location',
+            accessor: 'location',
+            width: 200,
+            Cell: this.renderTaskFilterableCell('location'),
+            Aggregated: () => '',
+            show: hiddenTaskColumns.shown('Location'),
+          },
+          {
+            Header: 'Created time',
+            accessor: 'created_time',
+            width: 190,
+            Cell: this.renderTaskFilterableCell('created_time'),
+            Aggregated: () => '',
+            show: hiddenTaskColumns.shown('Created time'),
+          },
+          {
+            Header: 'Status',
+            id: 'status',
+            width: 110,
+            className: 'padded',
+            accessor: row => ({
+              status: row.status,
+              created_time: row.created_time,
+              toString: () => row.status,
+            }),
+            Cell: row => {
+              if (row.aggregated) return '';
+              const { status } = row.original;
+              const errorMsg = row.original.error_msg;
+              return (
+                <span>
+                  <span style={{ color: statusToColor(status) }}>&#x25cf;&nbsp;</span>
+                  {status}
+                  {errorMsg && (
+                    <a onClick={() => this.setState({ alertErrorMsg: errorMsg })} title={errorMsg}>
+                      &nbsp;?
+                    </a>
+                  )}
+                </span>
               );
-            }
-            this.setState({ supervisorFilter: newSupervisorFilter, taskFilter: filtered });
-          }}
-          defaultSorted={[{ id: 'status', desc: true }]}
-          pivotBy={groupTasksBy ? [groupTasksBy] : []}
-          defaultPageSize={SMALL_TABLE_PAGE_SIZE}
-          pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
-          showPagination={tasks.length > SMALL_TABLE_PAGE_SIZE}
-          columns={[
-            {
-              Header: 'Task ID',
-              accessor: 'task_id',
-              width: 500,
-              Aggregated: () => '',
-              show: hiddenTaskColumns.shown('Task ID'),
             },
-            {
-              Header: 'Group ID',
-              accessor: 'group_id',
-              width: 300,
-              Aggregated: () => '',
-              Cell: row => {
-                const value = row.value;
-                return (
-                  <a
-                    onClick={() => {
-                      this.setState({ taskFilter: addFilter(taskFilter, 'group_id', value) });
-                    }}
-                  >
-                    {value}
-                  </a>
-                );
-              },
-              show: hiddenTaskColumns.shown('Group ID'),
-            },
-            {
-              Header: 'Type',
-              accessor: 'type',
-              width: 140,
-              Cell: row => {
-                const value = row.value;
-                return (
-                  <a
-                    onClick={() => {
-                      this.setState({ taskFilter: addFilter(taskFilter, 'type', value) });
-                    }}
-                  >
-                    {value}
-                  </a>
-                );
-              },
-              show: hiddenTaskColumns.shown('Type'),
-            },
-            {
-              Header: 'Datasource',
-              accessor: 'datasource',
-              Cell: row => {
-                const value = row.value;
-                return (
-                  <a
-                    onClick={() => {
-                      this.setState({ taskFilter: addFilter(taskFilter, 'datasource', value) });
-                    }}
-                  >
-                    {value}
-                  </a>
-                );
-              },
-              show: hiddenTaskColumns.shown('Datasource'),
-            },
+            sortMethod: (d1, d2) => {
+              const typeofD1 = typeof d1;
+              const typeofD2 = typeof d2;
+              if (typeofD1 !== typeofD2) return 0;
+              switch (typeofD1) {
+                case 'string':
+                  return IngestionView.statusRanking[d1] - IngestionView.statusRanking[d2];
 
-            {
-              Header: 'Location',
-              accessor: 'location',
-              Aggregated: () => '',
-              filterMethod: (filter: Filter, row: any) => {
-                return booleanCustomTableFilter(filter, row.location);
-              },
-              show: hiddenTaskColumns.shown('Location'),
-            },
-            {
-              Header: 'Created time',
-              accessor: 'created_time',
-              width: 190,
-              Aggregated: () => '',
-              show: hiddenTaskColumns.shown('Created time'),
-            },
-            {
-              Header: 'Status',
-              id: 'status',
-              width: 110,
-              accessor: row => ({
-                status: row.status,
-                created_time: row.created_time,
-                toString: () => row.status,
-              }),
-              Cell: row => {
-                if (row.aggregated) return '';
-                const { status } = row.original;
-                const errorMsg = row.original.error_msg;
-                return (
-                  <span>
-                    <span style={{ color: statusToColor(status) }}>&#x25cf;&nbsp;</span>
-                    {status}
-                    {errorMsg && (
-                      <a
-                        onClick={() => this.setState({ alertErrorMsg: errorMsg })}
-                        title={errorMsg}
-                      >
-                        &nbsp;?
-                      </a>
-                    )}
-                  </span>
-                );
-              },
-              sortMethod: (d1, d2) => {
-                const typeofD1 = typeof d1;
-                const typeofD2 = typeof d2;
-                if (typeofD1 !== typeofD2) return 0;
-                switch (typeofD1) {
-                  case 'string':
-                    return IngestionView.statusRanking[d1] - IngestionView.statusRanking[d2];
+                case 'object':
+                  return (
+                    IngestionView.statusRanking[d1.status] -
+                      IngestionView.statusRanking[d2.status] ||
+                    d1.created_time.localeCompare(d2.created_time)
+                  );
 
-                  case 'object':
-                    return (
-                      IngestionView.statusRanking[d1.status] -
-                        IngestionView.statusRanking[d2.status] ||
-                      d1.created_time.localeCompare(d2.created_time)
-                    );
-
-                  default:
-                    return 0;
-                }
-              },
-              filterMethod: (filter: Filter, row: any) => {
-                return booleanCustomTableFilter(filter, row.status.status);
-              },
-              show: hiddenTaskColumns.shown('Status'),
+                default:
+                  return 0;
+              }
             },
-            {
-              Header: 'Duration',
-              accessor: 'duration',
-              width: 70,
-              filterable: false,
-              Cell: row => (row.value > 0 ? formatDuration(row.value) : ''),
-              Aggregated: () => '',
-              show: hiddenTaskColumns.shown('Duration'),
+            filterMethod: (filter: Filter, row: any) => {
+              return booleanCustomTableFilter(filter, row.status.status);
             },
-            {
-              Header: ACTION_COLUMN_LABEL,
-              id: ACTION_COLUMN_ID,
-              accessor: 'task_id',
-              width: ACTION_COLUMN_WIDTH,
-              filterable: false,
-              Cell: row => {
-                if (row.aggregated) return '';
-                const id = row.value;
-                const type = row.row.type;
-                const { datasource, status } = row.original;
-                const taskActions = this.getTaskActions(id, datasource, status, type);
-                return (
-                  <ActionCell
-                    onDetail={() =>
-                      this.setState({
-                        taskTableActionDialogId: id,
-                        taskTableActionDialogStatus: status,
-                        taskTableActionDialogActions: taskActions,
-                      })
-                    }
-                    actions={taskActions}
-                  />
-                );
-              },
-              Aggregated: () => '',
-              show: hiddenTaskColumns.shown(ACTION_COLUMN_LABEL),
+            show: hiddenTaskColumns.shown('Status'),
+          },
+          {
+            Header: 'Duration',
+            accessor: 'duration',
+            width: 80,
+            filterable: false,
+            className: 'padded',
+            Cell: row => (row.value > 0 ? formatDuration(row.value) : ''),
+            Aggregated: () => '',
+            show: hiddenTaskColumns.shown('Duration'),
+          },
+          {
+            Header: ACTION_COLUMN_LABEL,
+            id: ACTION_COLUMN_ID,
+            accessor: 'task_id',
+            width: ACTION_COLUMN_WIDTH,
+            filterable: false,
+            Cell: row => {
+              if (row.aggregated) return '';
+              const id = row.value;
+              const type = row.row.type;
+              const { datasource, status } = row.original;
+              const taskActions = this.getTaskActions(id, datasource, status, type);
+              return (
+                <ActionCell
+                  onDetail={() => this.onTaskDetail(row.original)}
+                  actions={taskActions}
+                />
+              );
             },
-          ]}
-        />
-        {this.renderKillTaskAction()}
-      </>
+            Aggregated: () => '',
+            show: hiddenTaskColumns.shown(ACTION_COLUMN_LABEL),
+          },
+        ]}
+      />
     );
   }
 
@@ -1164,6 +1186,11 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             {this.renderTaskTable()}
           </div>
         </SplitterLayout>
+        {this.renderResumeSupervisorAction()}
+        {this.renderSuspendSupervisorAction()}
+        {this.renderResetSupervisorAction()}
+        {this.renderTerminateSupervisorAction()}
+        {this.renderKillTaskAction()}
         {supervisorSpecDialogOpen && (
           <SpecDialog
             onClose={this.closeSpecDialogs}

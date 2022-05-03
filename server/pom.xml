@@ -48,6 +48,13 @@
             <artifactId>druid-gcp-common</artifactId>
             <version>${project.parent.version}</version>
             <scope>runtime</scope>
+        </dependency>        
+        <dependency>
+            <!-- This is needed to bundle the web console -->
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-console</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid</groupId>
