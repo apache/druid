@@ -225,11 +225,11 @@ Note: If the JVM does not support CPU time measurement for the current thread, i
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`ingest/batch/append/count`|Count of `1` everytime a batch ingestion append job runs|dataSource, taskId, taskType|Always `1`.|
+|`ingest/batch/append/count`|Count of `1` every time a batch ingestion append job runs|dataSource, taskId, taskType|Always `1`.|
 |`ingest/batch/append/segments/count`|Count of segments created |dataSource, taskId, taskType|At least `1`.|
-|`ingest/batch/ovewrite/count`|Count of `1` everytime a batch ingestion overwrite job runs|dataSource, taskId, taskType|Always `1`.|
+|`ingest/batch/ovewrite/count`|Count of `1` every time a batch ingestion overwrite job runs|dataSource, taskId, taskType|Always `1`.|
 |`ingest/batch/ovewrite/segments/count`|Count of segments created |dataSource, taskId, taskType|At least `1`.|
-|`ingest/batch/replace/count`|Count of `1` everytime a batch ingestion replace job runs|dataSource, taskId, taskType|Always `1`.|
+|`ingest/batch/replace/count`|Count of `1` every time a batch ingestion replace job runs|dataSource, taskId, taskType|Always `1`.|
 |`ingest/batch/replace/segments/count`|Count of segments created |dataSource, taskId, taskType|At least `1`.|
 |`ingest/batch/replace/tombstones/count`|Count of tombstones created in this replace job|dataSource, taskId, taskType|It can be zero when replace could not find any empty time chunks in the input intervals. It cannot be more than number of segments.|
 
@@ -241,19 +241,19 @@ task's `IOConfig` as follows:
 |---------------------|-------------------|------|
 `true` | `false` | `APPEND`|
 `true` | `true  ` | Invalid combination, exception thrown. |
-`false` | `false` | `OVEWRITE` (this is the default for native batch ingestion). |
+`false` | `false` | `OVERWRITE` (this is the default for native batch ingestion). |
 `false` | `true` | `REPLACE`|
 
 ## Compaction ingestion metrics (Native parallel task)
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`ingest/compact/ovewrite/count`|Count of `1` everytime a compaction overwrite job runs|dataSource, taskId, taskType|Always `1`.|
-|`ingest/compact/replace/count`|Count of `1` everytime a compaction replace job runs|dataSource, taskId, taskType|Always `1`.|
+|`ingest/compact/ovewrite/count`|Count of `1` every time a compaction overwrite job runs|dataSource, taskId, taskType|Always `1`.|
+|`ingest/compact/replace/count`|Count of `1` every time a compaction replace job runs|dataSource, taskId, taskType|Always `1`.|
 
 |`isdDropExisting` | mode |
 |---------------------|-------------------|
-`false` |`OVEWRITE` (this is the default for compaction) |
+`false` |`OVERWRITE` (this is the default for compaction) |
 `true`  | `REPLACE`|
 
 ## Shuffle metrics (Native parallel task)
