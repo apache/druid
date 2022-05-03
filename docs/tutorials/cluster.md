@@ -135,8 +135,7 @@ We recommend running your favorite Linux distribution. You will also need Java 8
 > If needed, you can specify where to find Java using the environment variables
 > `DRUID_JAVA_HOME` or `JAVA_HOME`. For more details run the `bin/verify-java` script.
 
-Your OS package manager should be able to help for both Java. If your Ubuntu-based OS
-does not have a recent enough version of Java, WebUpd8 offers [packages for those
+For information about installing Java, see the documentation for your OS package manager. If your Ubuntu-based OS does not have a recent enough version of Java, WebUpd8 offers [packages for those
 OSes](http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.html).
 
 ## Download the distribution

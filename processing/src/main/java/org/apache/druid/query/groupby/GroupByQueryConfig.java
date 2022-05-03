@@ -106,6 +106,9 @@ public class GroupByQueryConfig
   private boolean vectorize = true;
 
   @JsonProperty
+  private boolean intermediateResultAsMapCompat = false;
+
+  @JsonProperty
   private boolean enableMultiValueUnnesting = true;
 
   public String getDefaultStrategy()
@@ -201,6 +204,11 @@ public class GroupByQueryConfig
   public boolean isVectorize()
   {
     return vectorize;
+  }
+
+  public boolean isIntermediateResultAsMapCompat()
+  {
+    return intermediateResultAsMapCompat;
   }
 
   public boolean isForcePushDownNestedQuery()

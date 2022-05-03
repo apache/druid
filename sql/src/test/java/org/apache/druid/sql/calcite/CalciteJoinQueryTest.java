@@ -72,6 +72,7 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.NumericTopNMetricSpec;
@@ -2387,6 +2388,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
       cannotVectorize();
     }
 
+    Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
+    maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
     testQuery(
         "SELECT DISTINCT __time FROM druid.foo WHERE __time IN (SELECT MAX(__time) FROM druid.foo)",
         queryContext,
@@ -2396,14 +2399,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                     join(
                         new TableDataSource(CalciteTests.DATASOURCE1),
                         new QueryDataSource(
-                            Druids.newTimeseriesQueryBuilder()
-                                .dataSource(CalciteTests.DATASOURCE1)
-                                .intervals(querySegmentSpec(Filtration.eternity()))
-                                .granularity(Granularities.ALL)
-                                .aggregators(new LongMaxAggregatorFactory("a0", "__time"))
-                                .context(QUERY_CONTEXT_DEFAULT)
-                                .build()
-                                .withOverriddenContext(queryContext)
+                            Druids.newTimeBoundaryQueryBuilder()
+                                  .dataSource(CalciteTests.DATASOURCE1)
+                                  .intervals(querySegmentSpec(Filtration.eternity()))
+                                  .bound(TimeBoundaryQuery.MAX_TIME)
+                                  .context(maxTimeQueryContext)
+                                  .build()
                         ),
                         "j0.",
                         equalsCondition(
@@ -2433,6 +2434,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     // Cannot vectorize JOIN operator.
     cannotVectorize();
 
+    Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
+    maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
     testQuery(
         "SELECT DISTINCT __time FROM druid.foo WHERE __time NOT IN (SELECT MAX(__time) FROM druid.foo)",
         queryContext,
@@ -2446,13 +2449,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 GroupByQuery
                                     .builder()
                                     .setDataSource(
-                                        Druids.newTimeseriesQueryBuilder()
-                                            .dataSource(CalciteTests.DATASOURCE1)
-                                            .intervals(querySegmentSpec(Filtration.eternity()))
-                                            .granularity(Granularities.ALL)
-                                            .aggregators(new LongMaxAggregatorFactory("a0", "__time"))
-                                            .context(QUERY_CONTEXT_DEFAULT)
-                                            .build()
+                                        Druids.newTimeBoundaryQueryBuilder()
+                                              .dataSource(CalciteTests.DATASOURCE1)
+                                              .intervals(querySegmentSpec(Filtration.eternity()))
+                                              .bound(TimeBoundaryQuery.MAX_TIME)
+                                              .context(maxTimeQueryContext)
+                                              .build()
                                     )
                                     .setInterval(querySegmentSpec(Filtration.eternity()))
                                     .setGranularity(Granularities.ALL)
@@ -3566,6 +3568,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
       cannotVectorize();
     }
 
+    Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
+    maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
     testQuery(
         "SELECT dim1, COUNT(*) FROM foo\n"
             + "WHERE dim1 IN ('abc', 'def')"
@@ -3580,28 +3584,26 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         join(
                             new TableDataSource(CalciteTests.DATASOURCE1),
                             new QueryDataSource(
-                                Druids.newTimeseriesQueryBuilder()
-                                    .dataSource(CalciteTests.DATASOURCE1)
-                                    .intervals(querySegmentSpec(Filtration.eternity()))
-                                    .granularity(Granularities.ALL)
-                                    .filters(selector("cnt", "1", null))
-                                    .aggregators(new LongMaxAggregatorFactory("a0", "__time"))
-                                    .context(QUERY_CONTEXT_DEFAULT)
-                                    .build()
+                                Druids.newTimeBoundaryQueryBuilder()
+                                      .dataSource(CalciteTests.DATASOURCE1)
+                                      .intervals(querySegmentSpec(Filtration.eternity()))
+                                      .bound(TimeBoundaryQuery.MAX_TIME)
+                                      .filters(selector("cnt", "1", null))
+                                      .context(maxTimeQueryContext)
+                                      .build()
                             ),
                             "j0.",
                             "(\"__time\" == \"j0.a0\")",
                             JoinType.INNER
                         ),
                         new QueryDataSource(
-                            Druids.newTimeseriesQueryBuilder()
-                                .dataSource(CalciteTests.DATASOURCE1)
-                                .intervals(querySegmentSpec(Filtration.eternity()))
-                                .granularity(Granularities.ALL)
-                                .filters(not(selector("cnt", "2", null)))
-                                .aggregators(new LongMaxAggregatorFactory("a0", "__time"))
-                                .context(QUERY_CONTEXT_DEFAULT)
-                                .build()
+                            Druids.newTimeBoundaryQueryBuilder()
+                                  .dataSource(CalciteTests.DATASOURCE1)
+                                  .intervals(querySegmentSpec(Filtration.eternity()))
+                                  .bound(TimeBoundaryQuery.MAX_TIME)
+                                  .filters(not(selector("cnt", "2", null)))
+                                  .context(maxTimeQueryContext)
+                                  .build()
                         ),
                         "_j0.",
                         "(\"__time\" == \"_j0.a0\")",
@@ -3626,6 +3628,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
 
+    Map<String, Object> minTimeQueryContext = new HashMap<>(queryContext);
+    minTimeQueryContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
+    Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
+    maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
     testQuery(
         "SELECT dim1, COUNT(*) FROM foo\n"
             + "WHERE dim1 IN ('abc', 'def')\n"
@@ -3641,13 +3647,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                             join(
                                 new TableDataSource(CalciteTests.DATASOURCE1),
                                 new QueryDataSource(
-                                    Druids.newTimeseriesQueryBuilder()
-                                        .dataSource(CalciteTests.DATASOURCE1)
-                                        .intervals(querySegmentSpec(Filtration.eternity()))
-                                        .granularity(Granularities.ALL)
-                                        .aggregators(new LongMaxAggregatorFactory("a0", "__time"))
-                                        .context(QUERY_CONTEXT_DEFAULT)
-                                        .build()
+                                    Druids.newTimeBoundaryQueryBuilder()
+                                          .dataSource(CalciteTests.DATASOURCE1)
+                                          .intervals(querySegmentSpec(Filtration.eternity()))
+                                          .bound(TimeBoundaryQuery.MAX_TIME)
+                                          .context(maxTimeQueryContext)
+                                          .build()
                                 ),
                                 "j0.",
                                 "(\"__time\" == \"j0.a0\")",
@@ -3657,15 +3662,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 GroupByQuery.builder()
                                     .setDataSource(
                                         new QueryDataSource(
-                                            Druids.newTimeseriesQueryBuilder()
-                                                .dataSource(CalciteTests.DATASOURCE1)
-                                                .intervals(querySegmentSpec(Filtration.eternity()))
-                                                .granularity(Granularities.ALL)
-                                                .aggregators(
-                                                    new LongMinAggregatorFactory("a0", "__time")
-                                                )
-                                                .context(QUERY_CONTEXT_DEFAULT)
-                                                .build()
+                                            Druids.newTimeBoundaryQueryBuilder()
+                                                  .dataSource(CalciteTests.DATASOURCE1)
+                                                  .intervals(querySegmentSpec(Filtration.eternity()))
+                                                  .bound(TimeBoundaryQuery.MIN_TIME)
+                                                  .context(minTimeQueryContext)
+                                                  .build()
                                         )
                                     )
                                     .setInterval(querySegmentSpec(Filtration.eternity()))
@@ -3730,6 +3732,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
 
+    Map<String, Object> minTimeQueryContext = new HashMap<>(queryContext);
+    minTimeQueryContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
+    Map<String, Object> maxTimeQueryContext = new HashMap<>(queryContext);
+    maxTimeQueryContext.put(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "a0");
     testQuery(
         "SELECT dim1, COUNT(*) FROM\n"
             + "foo\n"
@@ -3745,26 +3751,24 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         join(
                             new TableDataSource(CalciteTests.DATASOURCE1),
                             new QueryDataSource(
-                                Druids.newTimeseriesQueryBuilder()
-                                    .dataSource(CalciteTests.DATASOURCE1)
-                                    .intervals(querySegmentSpec(Filtration.eternity()))
-                                    .granularity(Granularities.ALL)
-                                    .aggregators(new LongMaxAggregatorFactory("a0", "__time"))
-                                    .context(QUERY_CONTEXT_DEFAULT)
-                                    .build()
+                                Druids.newTimeBoundaryQueryBuilder()
+                                      .dataSource(CalciteTests.DATASOURCE1)
+                                      .intervals(querySegmentSpec(Filtration.eternity()))
+                                      .bound(TimeBoundaryQuery.MAX_TIME)
+                                      .context(maxTimeQueryContext)
+                                      .build()
                             ),
                             "j0.",
                             "(\"__time\" == \"j0.a0\")",
                             JoinType.INNER
                         ),
                         new QueryDataSource(
-                            Druids.newTimeseriesQueryBuilder()
-                                .dataSource(CalciteTests.DATASOURCE1)
-                                .intervals(querySegmentSpec(Filtration.eternity()))
-                                .granularity(Granularities.ALL)
-                                .aggregators(new LongMinAggregatorFactory("a0", "__time"))
-                                .context(QUERY_CONTEXT_DEFAULT)
-                                .build()
+                            Druids.newTimeBoundaryQueryBuilder()
+                                  .dataSource(CalciteTests.DATASOURCE1)
+                                  .intervals(querySegmentSpec(Filtration.eternity()))
+                                  .bound(TimeBoundaryQuery.MIN_TIME)
+                                  .context(minTimeQueryContext)
+                                  .build()
                         ),
                         "_j0.",
                         "(\"__time\" == \"_j0.a0\")",

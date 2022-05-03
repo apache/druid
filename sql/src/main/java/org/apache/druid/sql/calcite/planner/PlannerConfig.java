@@ -20,13 +20,11 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.query.QueryContext;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 
-import java.util.Map;
 import java.util.Objects;
 
 public class PlannerConfig
@@ -158,43 +156,37 @@ public class PlannerConfig
     return useNativeQueryExplain;
   }
 
-  public PlannerConfig withOverrides(final Map<String, Object> context)
+  public PlannerConfig withOverrides(final QueryContext queryContext)
   {
-    if (context == null) {
+    if (queryContext.isEmpty()) {
       return this;
     }
 
     final PlannerConfig newConfig = new PlannerConfig();
     newConfig.metadataRefreshPeriod = getMetadataRefreshPeriod();
     newConfig.maxTopNLimit = getMaxTopNLimit();
-    newConfig.useApproximateCountDistinct = getContextBoolean(
-        context,
+    newConfig.useApproximateCountDistinct = queryContext.getAsBoolean(
         CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT,
         isUseApproximateCountDistinct()
     );
-    newConfig.useGroupingSetForExactDistinct = getContextBoolean(
-        context,
+    newConfig.useGroupingSetForExactDistinct = queryContext.getAsBoolean(
         CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
         isUseGroupingSetForExactDistinct()
     );
-    newConfig.useApproximateTopN = getContextBoolean(
-        context,
+    newConfig.useApproximateTopN = queryContext.getAsBoolean(
         CTX_KEY_USE_APPROXIMATE_TOPN,
         isUseApproximateTopN()
     );
-    newConfig.computeInnerJoinCostAsFilter = getContextBoolean(
-        context,
+    newConfig.computeInnerJoinCostAsFilter = queryContext.getAsBoolean(
         CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER,
         computeInnerJoinCostAsFilter
     );
-    newConfig.useNativeQueryExplain = getContextBoolean(
-        context,
+    newConfig.useNativeQueryExplain = queryContext.getAsBoolean(
         CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
         isUseNativeQueryExplain()
     );
     final int systemConfigMaxNumericInFilters = getMaxNumericInFilters();
-    final int queryContextMaxNumericInFilters = getContextInt(
-        context,
+    final int queryContextMaxNumericInFilters = queryContext.getAsInt(
         CTX_MAX_NUMERIC_IN_FILTERS,
         getMaxNumericInFilters()
     );
@@ -230,42 +222,6 @@ public class PlannerConfig
     }
     // all other cases return the valid query context value
     return queryContextMaxNumericInFilters;
-  }
-
-  private static int getContextInt(
-      final Map<String, Object> context,
-      final String parameter,
-      final int defaultValue
-  )
-  {
-    final Object value = context.get(parameter);
-    if (value == null) {
-      return defaultValue;
-    } else if (value instanceof String) {
-      return Numbers.parseInt(value);
-    } else if (value instanceof Integer) {
-      return (Integer) value;
-    } else {
-      throw new IAE("Expected parameter[%s] to be integer", parameter);
-    }
-  }
-
-  private static boolean getContextBoolean(
-      final Map<String, Object> context,
-      final String parameter,
-      final boolean defaultValue
-  )
-  {
-    final Object value = context.get(parameter);
-    if (value == null) {
-      return defaultValue;
-    } else if (value instanceof String) {
-      return Boolean.parseBoolean((String) value);
-    } else if (value instanceof Boolean) {
-      return (Boolean) value;
-    } else {
-      throw new IAE("Expected parameter[%s] to be boolean", parameter);
-    }
   }
 
   @Override
