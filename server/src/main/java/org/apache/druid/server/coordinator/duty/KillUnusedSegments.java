@@ -39,9 +39,10 @@ import java.util.List;
 
 /**
  * Completely removes information about unused segments who have an interval end that comes before
- * now - {@link #retainDuration}. retainDuration can be a positive or negative duration, negative meaning the interval
- * end target will be in the future. Also, retainDuration can be ignored, meaning that there is no upper bound to the
- * end interval of segments that will be killed. This action is called "to kill a segment".
+ * now - {@link #retainDuration} from the metadata store. retainDuration can be a positive or negative duration,
+ * negative meaning the interval end target will be in the future. Also, retainDuration can be ignored,
+ * meaning that there is no upper bound to the end interval of segments that will be killed. This action is called
+ * "to kill a segment".
  *
  * See org.apache.druid.indexing.common.task.KillUnusedSegmentsTask.
  */
@@ -154,9 +155,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   /**
    * Calculate the {@link DateTime} that wil form the upper bound when looking for segments that are
    * eligible to be killed. If ignoreDurationToRetain is true, we have no upper bound and return a DateTime object
-   * for 9999-12-31T23:59. This static date has to be used because the metastore is not comparing date objects, but rather
-   * varchar columns. This means DateTimes.MAX is less than the 21st century and beyond for according to the metastore, due to its
-   * year starting with a '1'
+   * for "max" time that works when comparing date strings.
    *
    * @return {@link DateTime} representing the upper bound time used when looking for segments to kill.
    */
@@ -164,7 +163,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   DateTime getEndTimeUpperLimit()
   {
     return ignoreRetainDuration
-           ? DateTimes.of(9999, 12, 31, 23, 59)
+           ? DateTimes.COMPARE_DATE_AS_STRING_MAX
            : DateTimes.nowUtc().minus(retainDuration);
   }
 

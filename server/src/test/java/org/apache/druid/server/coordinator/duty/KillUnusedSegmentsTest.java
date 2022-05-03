@@ -305,7 +305,7 @@ public class KillUnusedSegmentsTest
           )
       );
       Assert.assertEquals(
-          DateTimes.of(9999, 12, 31, 23, 59),
+          DateTimes.COMPARE_DATE_AS_STRING_MAX,
           unusedSegmentsKiller.getEndTimeUpperLimit()
       );
 
