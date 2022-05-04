@@ -190,6 +190,24 @@ public class DruidSqlParserUtils
     ));
   }
 
+  /**
+   * This method validates and converts a {@link SqlNode} representing a query into an optmizied list of intervals to
+   * be used in creating an ingestion spec. If the sqlNode is an SqlLiteral of {@link #ALL}, returns a singleton list of
+   * "ALL". Otherwise, it converts and optimizes the query using {@link MoveTimeFiltersToIntervals} into a list of
+   * intervals which contain all valid values of time as per the query.
+   *
+   * The following validations are performed
+   * 1. Only __time column and timestamp literals are present in the query
+   * 2. The interval after optimization is not empty
+   * 3. The operands in the expression are supported
+   * 4. The intervals after adjusting for timezone are aligned with the granularity parameter
+   *
+   * @param replaceTimeQuery Sql node representing the query
+   * @param granularity granularity of the query for validation
+   * @param dateTimeZone timezone
+   * @return List of string representation of intervals
+   * @throws ValidationException if the SqlNode cannot be converted to a list of intervals
+   */
   public static List<String> validateQueryAndConvertToIntervals(
       SqlNode replaceTimeQuery,
       Granularity granularity,
@@ -209,6 +227,10 @@ public class DruidSqlParserUtils
     filtration = MoveTimeFiltersToIntervals.instance().apply(filtration);
     List<Interval> intervals = filtration.getIntervals();
 
+    if (intervals.isEmpty()) {
+      throw new ValidationException("Intervals for replace are empty");
+    }
+
     for (Interval interval : intervals) {
       DateTime intervalStart = interval.getStart();
       DateTime intervalEnd = interval.getEnd();
@@ -223,6 +245,17 @@ public class DruidSqlParserUtils
         .collect(Collectors.toList());
   }
 
+
+  /**
+   * This method is used to convert an {@link SqlNode} representing a query into a {@link DimFilter} for the same query.
+   * It takes the timezone as a separate parameter, as Sql timestamps don't contain that information. Supported functions
+   * are AND, OR, NOT, >, <, >=, <= and BETWEEN operators in the sql query.
+   *
+   * @param replaceTimeQuery Sql node representing the query
+   * @param dateTimeZone timezone
+   * @return Dimfilter for the query
+   * @throws ValidationException if the SqlNode cannot be converted a Dimfilter
+   */
   public static DimFilter convertQueryToDimFilter(SqlNode replaceTimeQuery, DateTimeZone dateTimeZone)
       throws ValidationException
   {
@@ -313,6 +346,13 @@ public class DruidSqlParserUtils
     }
   }
 
+  /**
+   * Converts a {@link SqlNode} identifier into a string representation
+   *
+   * @param sqlNode the sql node
+   * @return string representing the column name
+   * @throws ValidationException if the sql node is not an SqlIdentifier
+   */
   public static String parseColumnName(SqlNode sqlNode) throws ValidationException
   {
     if (!(sqlNode instanceof SqlIdentifier)) {
@@ -321,6 +361,14 @@ public class DruidSqlParserUtils
     return ((SqlIdentifier) sqlNode).getSimple();
   }
 
+  /**
+   * Converts a {@link SqlNode} into a timestamp, taking into account the timezone
+   *
+   * @param sqlNode the sql node
+   * @param timeZone timezone
+   * @return the timestamp string as milliseconds from epoch
+   * @throws ValidationException if the sql node is not a SqlTimestampLiteral
+   */
   public static String parseTimeStampWithTimeZone(SqlNode sqlNode, DateTimeZone timeZone) throws ValidationException
   {
     if (!(sqlNode instanceof SqlTimestampLiteral)) {

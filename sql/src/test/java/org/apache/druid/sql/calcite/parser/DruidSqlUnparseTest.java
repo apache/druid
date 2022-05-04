@@ -29,6 +29,10 @@ import java.io.StringReader;
 
 import static org.junit.Assert.assertEquals;
 
+/**
+ * A class containing unit tests for testing implmentations of {@link org.apache.calcite.sql.SqlNode#unparse(SqlWriter, int, int)}
+ * in custom Druid SqlNode classes, like {@link DruidSqlInsert} and {@link DruidSqlReplace}.
+ */
 public class DruidSqlUnparseTest
 {
   @Test

@@ -276,6 +276,20 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testReplaceFromTableWithEmptyInterval()
+  {
+    testIngestionQuery()
+        .sql("REPLACE INTO dst OVERWRITE WHERE "
+             + "__time < TIMESTAMP '2000-01-01' AND __time > TIMESTAMP '2000-01-01' "
+             + "SELECT * FROM foo PARTITIONED BY MONTH")
+        .expectValidationError(
+            SqlPlanningException.class,
+            "Intervals for replace are empty"
+        )
+        .verify();
+  }
+
+  @Test
   public void testReplaceForWithInvalidInterval()
   {
     testIngestionQuery()
