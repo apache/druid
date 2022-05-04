@@ -79,8 +79,8 @@ public class KllDoublesSketchAggregatorFactoryTest
         null
     );
 
-    Assert.assertEquals(KllDoublesSketchAggregatorFactory.DEFAULT_K, factory.getK());
-    Assert.assertEquals(KllDoublesSketchAggregatorFactory.DEFAULT_MAX_STREAM_LENGTH, factory.getMaxStreamLength());
+    Assert.assertEquals(KllSketchAggregatorFactory.DEFAULT_K, factory.getK());
+    Assert.assertEquals(KllSketchAggregatorFactory.DEFAULT_MAX_STREAM_LENGTH, factory.getMaxStreamLength());
   }
 
   @Test
