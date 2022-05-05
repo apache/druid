@@ -165,7 +165,7 @@ public interface GroupByStrategy
   /**
    * Merge a variety of single-segment query runners into a combined runner. Used by
    * {@link org.apache.druid.query.groupby.GroupByQueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)}. In
-   * that sense, it is intended to go along with {@link #process(GroupByQuery, StorageAdapter)} (the runners created
+   * that sense, it is intended to go along with {@link #process(GroupByQuery, StorageAdapter, GroupByQueryMetrics)} (the runners created
    * by that method will be fed into this method).
    * <p>
    * This method is only called on data servers, like Historicals (not the Broker).
