@@ -40,6 +40,7 @@ import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 import org.apache.druid.segment.column.SpatialIndex;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.segment.filter.Filters;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
@@ -182,10 +183,22 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
       return new DictionaryEncodedStringBitmapColumnIndex()
       {
         @Override
+        public double estimateSelectivity(int totalRows)
+        {
+          return Math.min(1., (double) getBitmapForValue().size() / totalRows);
+        }
+
+        @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
         {
+
+          return bitmapResultFactory.wrapDimensionValue(getBitmapForValue());
+        }
+
+        private ImmutableBitmap getBitmapForValue()
+        {
           final int idx = dictionary.indexOf(value);
-          return bitmapResultFactory.wrapDimensionValue(getBitmap(idx));
+          return getBitmap(idx);
         }
       };
     }
@@ -196,46 +209,55 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
       return new DictionaryEncodedStringBitmapColumnIndex()
       {
         @Override
+        public double estimateSelectivity(int totalRows)
+        {
+          return Filters.estimateSelectivity(getBitmapsIterable().iterator(), totalRows);
+        }
+
+        @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
         {
-          return bitmapResultFactory.unionDimensionValueBitmaps(
-              () -> new Iterator<ImmutableBitmap>()
-              {
-                final Iterator<String> iterator = values.iterator();
-                int next = -1;
+          return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapsIterable());
+        }
 
-                @Override
-                public boolean hasNext()
-                {
-                  if (next < 0) {
-                    findNext();
-                  }
-                  return next >= 0;
-                }
+        private Iterable<ImmutableBitmap> getBitmapsIterable()
+        {
+          return () -> new Iterator<ImmutableBitmap>()
+          {
+            final Iterator<String> iterator = values.iterator();
+            int next = -1;
 
-                @Override
-                public ImmutableBitmap next()
-                {
-                  if (next < 0) {
-                    findNext();
-                    if (next < 0) {
-                      throw new NoSuchElementException();
-                    }
-                  }
-                  final int swap = next;
-                  next = -1;
-                  return getBitmap(swap);
-                }
+            @Override
+            public boolean hasNext()
+            {
+              if (next < 0) {
+                findNext();
+              }
+              return next >= 0;
+            }
 
-                private void findNext()
-                {
-                  while (next < 0 && iterator.hasNext()) {
-                    String nextValue = iterator.next();
-                    next = dictionary.indexOf(nextValue);
-                  }
+            @Override
+            public ImmutableBitmap next()
+            {
+              if (next < 0) {
+                findNext();
+                if (next < 0) {
+                  throw new NoSuchElementException();
                 }
               }
-          );
+              final int swap = next;
+              next = -1;
+              return getBitmap(swap);
+            }
+
+            private void findNext()
+            {
+              while (next < 0 && iterator.hasNext()) {
+                String nextValue = iterator.next();
+                next = dictionary.indexOf(nextValue);
+              }
+            }
+          };
         }
       };
     }
@@ -259,11 +281,25 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
       return new DictionaryEncodedStringBitmapColumnIndex()
       {
         @Override
+        public double estimateSelectivity(int totalRows)
+        {
+          return Filters.estimateSelectivity(
+              getBitmapIterable().iterator(),
+              totalRows
+          );
+        }
+
+        @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
         {
-          final Predicate<String> stringPredicate = matcherFactory.makeStringPredicate();
-          return bitmapResultFactory.unionDimensionValueBitmaps(() -> new Iterator<ImmutableBitmap>()
+          return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable());
+        }
+
+        private Iterable<ImmutableBitmap> getBitmapIterable()
+        {
+          return () -> new Iterator<ImmutableBitmap>()
           {
+            final Predicate<String> stringPredicate = matcherFactory.makeStringPredicate();
             final Iterator<String> iterator = dictionary.iterator();
             @Nullable
             String next = null;
@@ -307,7 +343,7 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
                 }
               }
             }
-          });
+          };
         }
       };
     }
@@ -337,28 +373,37 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
       return new DictionaryEncodedStringBitmapColumnIndex()
       {
         @Override
+        public double estimateSelectivity(int totalRows)
+        {
+          return Filters.estimateSelectivity(getBitmapIterable().iterator(), totalRows);
+        }
+
+        @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        {
+          return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable());
+        }
+
+        private Iterable<ImmutableBitmap> getBitmapIterable()
         {
           final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
           final int start = range.leftInt(), end = range.rightInt();
-          return bitmapResultFactory.unionDimensionValueBitmaps(
-              () -> new Iterator<ImmutableBitmap>()
-              {
-                final IntIterator rangeIterator = IntListUtils.fromTo(start, end).iterator();
+          return () -> new Iterator<ImmutableBitmap>()
+          {
+            final IntIterator rangeIterator = IntListUtils.fromTo(start, end).iterator();
 
-                @Override
-                public boolean hasNext()
-                {
-                  return rangeIterator.hasNext();
-                }
+            @Override
+            public boolean hasNext()
+            {
+              return rangeIterator.hasNext();
+            }
 
-                @Override
-                public ImmutableBitmap next()
-                {
-                  return getBitmap(rangeIterator.nextInt());
-                }
-              }
-          );
+            @Override
+            public ImmutableBitmap next()
+            {
+              return getBitmap(rangeIterator.nextInt());
+            }
+          };
         }
       };
     }
@@ -375,53 +420,63 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
       return new DictionaryEncodedStringBitmapColumnIndex()
       {
         @Override
+        public double estimateSelectivity(int totalRows)
+        {
+          return Filters.estimateSelectivity(getBitmapIterable().iterator(), totalRows);
+        }
+
+        @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        {
+
+          return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable());
+        }
+
+        private Iterable<ImmutableBitmap> getBitmapIterable()
         {
           final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
           final int start = range.leftInt(), end = range.rightInt();
-          return bitmapResultFactory.unionDimensionValueBitmaps(
-              () -> new Iterator<ImmutableBitmap>()
-              {
-                int currIndex = start;
-                int found;
+          return () -> new Iterator<ImmutableBitmap>()
+          {
+            int currIndex = start;
+            int found;
 
-                {
-                  found = findNext();
-                }
+            {
+              found = findNext();
+            }
 
-                private int findNext()
-                {
-                  while (currIndex < end && !matcher.apply(dictionary.get(currIndex))) {
-                    currIndex++;
-                  }
-
-                  if (currIndex < end) {
-                    return currIndex++;
-                  } else {
-                    return -1;
-                  }
-                }
-
-                @Override
-                public boolean hasNext()
-                {
-                  return found != -1;
-                }
-
-                @Override
-                public ImmutableBitmap next()
-                {
-                  int cur = found;
-
-                  if (cur == -1) {
-                    throw new NoSuchElementException();
-                  }
-
-                  found = findNext();
-                  return getBitmap(cur);
-                }
+            private int findNext()
+            {
+              while (currIndex < end && !matcher.apply(dictionary.get(currIndex))) {
+                currIndex++;
               }
-          );
+
+              if (currIndex < end) {
+                return currIndex++;
+              } else {
+                return -1;
+              }
+            }
+
+            @Override
+            public boolean hasNext()
+            {
+              return found != -1;
+            }
+
+            @Override
+            public ImmutableBitmap next()
+            {
+              int cur = found;
+
+              if (cur == -1) {
+                throw new NoSuchElementException();
+              }
+
+              found = findNext();
+              return getBitmap(cur);
+            }
+          };
         }
       };
     }

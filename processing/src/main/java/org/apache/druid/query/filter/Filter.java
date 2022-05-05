@@ -22,7 +22,6 @@ package org.apache.druid.query.filter;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
@@ -87,10 +86,7 @@ public interface Filter
    */
   default double estimateSelectivity(ColumnIndexSelector indexSelector)
   {
-    final long numMatchedRows = getBitmapColumnIndex(indexSelector).computeBitmapResult(
-        new DefaultBitmapResultFactory(indexSelector.getBitmapFactory())
-    ).size();
-    return Math.min(1., (double) numMatchedRows / indexSelector.getNumRows());
+    return getBitmapColumnIndex(indexSelector).estimateSelectivity(indexSelector.getNumRows());
   }
 
   /**

@@ -25,5 +25,7 @@ public interface BitmapColumnIndex
 {
   ColumnIndexCapabilities getIndexCapabilities();
 
+  double estimateSelectivity(int totalRows);
+
   <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory);
 }

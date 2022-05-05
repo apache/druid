@@ -67,6 +67,12 @@ public class NotFilter implements Filter
         }
 
         @Override
+        public double estimateSelectivity(int totalRows)
+        {
+          return 1. - baseFilter.estimateSelectivity(selector);
+        }
+
+        @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
         {
           return bitmapResultFactory.complement(
@@ -150,12 +156,6 @@ public class NotFilter implements Filter
   public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
   {
     return baseFilter.supportsSelectivityEstimation(columnSelector, indexSelector);
-  }
-
-  @Override
-  public double estimateSelectivity(ColumnIndexSelector indexSelector)
-  {
-    return 1. - baseFilter.estimateSelectivity(indexSelector);
   }
 
   @Override
