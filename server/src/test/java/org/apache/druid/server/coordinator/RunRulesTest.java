@@ -1458,6 +1458,55 @@ public class RunRulesTest
     EasyMock.verify(mockPeon);
   }
 
+  @Test
+  public void testRunRulesMaxSegmentsToLoadLimit()
+  {
+    mockCoordinator();
+    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+    mockEmptyPeon();
+
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Collections.singletonList(
+            new IntervalLoadRule(
+                Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
+                ImmutableMap.of("normal", 2)
+            )
+        )).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
+            "normal",
+            new ServerHolder(
+                new DruidServer("serverNorm", "hostNorm", null, 1000, ServerType.HISTORICAL, "normal", 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            ),
+            new ServerHolder(
+                new DruidServer("serverNorm2", "hostNorm2", null, 1000, ServerType.HISTORICAL, "normal", 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            )
+        )
+        .build();
+
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToLoad(20).build())
+        .build();
+
+    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
+    CoordinatorStats stats = afterParams.getCoordinatorStats();
+    Assert.assertEquals(20L, stats.getGlobalStat(LoadRule.AGGREGATE_ASSIGNED_COUNT));
+
+    exec.shutdown();
+    EasyMock.verify(mockPeon);
+  }
+
   private void mockCoordinator()
   {
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();

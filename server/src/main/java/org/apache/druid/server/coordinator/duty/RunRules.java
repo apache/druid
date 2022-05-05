@@ -30,6 +30,7 @@ import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
+import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -122,6 +123,12 @@ public class RunRules implements CoordinatorDuty
     }
 
     for (DataSegment segment : params.getUsedSegments()) {
+      if (stats.getGlobalStat(LoadRule.AGGREGATE_ASSIGNED_COUNT) >= params.getCoordinatorDynamicConfig().getMaxSegmentsToLoad()) {
+        log.info("Maximum number of segments [%d] have been loaded for the current RunRules execution.",
+                 params.getCoordinatorDynamicConfig().getMaxSegmentsToLoad());
+        break;
+      }
+
       if (overshadowed.contains(segment.getId())) {
         // Skipping overshadowed segments
         continue;

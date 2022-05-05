@@ -37,6 +37,7 @@ export interface CoordinatorDynamicConfig {
   decommissioningNodes?: string[];
   decommissioningMaxPercentOfMaxSegmentsToMove?: number;
   pauseCoordination?: boolean;
+  maxSegmentsToLoad?: number;
   maxNonPrimaryReplicantsToLoad?: number;
 }
 
@@ -250,6 +251,22 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
         Boolean flag for whether or not additional replication is needed for segments that have
         failed to load due to the expiry of coordinator load timeout. If this is set to true, the
         coordinator will attempt to replicate the failed segment on a different historical server.
+      </>
+    ),
+  },
+  {
+    name: 'maxNonSegmentsToLoad',
+    type: 'number',
+    defaultValue: 2147483647,
+    info: (
+      <>
+        This it the maximum number of segments - both primary and non-primary replicants - that can
+        be loaded per Coordination run. The default is equivalent to there being no limit. This
+        differs from maxNonPrimaryReplicantsToLoad because it includes the count of primary
+        replicants that are loaded in the limit. An operator may want to use this configuration to
+        prevent the coordinator from spining and loading many segments that are already loaded, but
+        appeared to be unavailable due to a temporary network issue causing some number of Historical
+        servers to have their segments go missing (or some other event that caused a similar event).
       </>
     ),
   },

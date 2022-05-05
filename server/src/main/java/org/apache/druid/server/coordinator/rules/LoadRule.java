@@ -55,7 +55,8 @@ import java.util.stream.Collectors;
 public abstract class LoadRule implements Rule
 {
   private static final EmittingLogger log = new EmittingLogger(LoadRule.class);
-  static final String ASSIGNED_COUNT = "assignedCount";
+  public static final String AGGREGATE_ASSIGNED_COUNT = "aggregateAssignedCount";
+  public static final String ASSIGNED_COUNT = "assignedCount";
   static final String DROPPED_COUNT = "droppedCount";
   public final String NON_PRIMARY_ASSIGNED_COUNT = "totalNonPrimaryReplicantsLoaded";
   public static final String REQUIRED_CAPACITY = "requiredCapacity";
@@ -184,6 +185,7 @@ public abstract class LoadRule implements Rule
 
       // numAssigned - 1 because we don't want to count the primary assignment
       stats.addToGlobalStat(NON_PRIMARY_ASSIGNED_COUNT, numAssigned - 1);
+      stats.addToGlobalStat(AGGREGATE_ASSIGNED_COUNT, numAssigned);
 
       stats.addToTieredStat(ASSIGNED_COUNT, tier, numAssigned);
 
@@ -310,6 +312,7 @@ public abstract class LoadRule implements Rule
           createLoadQueueSizeLimitingPredicate(params),
           segment
       );
+      stats.addToGlobalStat(AGGREGATE_ASSIGNED_COUNT, numAssigned);
       stats.addToGlobalStat(NON_PRIMARY_ASSIGNED_COUNT, numAssigned);
       stats.addToTieredStat(ASSIGNED_COUNT, tier, numAssigned);
     }

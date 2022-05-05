@@ -89,6 +89,7 @@ public class CoordinatorDynamicConfigTest
         9,
         false,
         false,
+        Integer.MAX_VALUE,
         Integer.MAX_VALUE
     );
 
@@ -111,6 +112,7 @@ public class CoordinatorDynamicConfigTest
         9,
         false,
         false,
+        Integer.MAX_VALUE,
         Integer.MAX_VALUE
     );
 
@@ -133,6 +135,7 @@ public class CoordinatorDynamicConfigTest
         5,
         false,
         false,
+        Integer.MAX_VALUE,
         Integer.MAX_VALUE
     );
 
@@ -155,6 +158,7 @@ public class CoordinatorDynamicConfigTest
         5,
         true,
         false,
+        Integer.MAX_VALUE,
         Integer.MAX_VALUE
     );
 
@@ -177,6 +181,7 @@ public class CoordinatorDynamicConfigTest
         5,
         true,
         false,
+        Integer.MAX_VALUE,
         Integer.MAX_VALUE
     );
 
@@ -199,6 +204,7 @@ public class CoordinatorDynamicConfigTest
         5,
         true,
         true,
+        Integer.MAX_VALUE,
         Integer.MAX_VALUE
     );
 
@@ -221,7 +227,31 @@ public class CoordinatorDynamicConfigTest
         5,
         true,
         true,
-        10
+        10,
+        Integer.MAX_VALUE
+    );
+
+    actual = CoordinatorDynamicConfig.builder().withMaxSegmentsToLoad(20).build(actual);
+    assertConfig(
+        actual,
+        1,
+        1,
+        1,
+        1,
+        10,
+        1,
+        1,
+        2,
+        true,
+        whitelist,
+        false,
+        1,
+        ImmutableSet.of("host1"),
+        5,
+        true,
+        true,
+        10,
+        20
     );
   }
 
@@ -245,7 +275,9 @@ public class CoordinatorDynamicConfigTest
         5,
         true,
         true,
-        10);
+        10,
+        20
+    );
     Assert.assertTrue(config.isKillUnusedSegmentsInAllDataSources());
     Assert.assertTrue(config.getSpecificDataSourcesToKillUnusedSegmentsIn().isEmpty());
   }
@@ -270,7 +302,9 @@ public class CoordinatorDynamicConfigTest
                                                                    5,
                                                                    true,
                                                                    true,
-                                                                   10);
+                                                                   10,
+                                                                   20
+    );
     Assert.assertFalse(config.isKillUnusedSegmentsInAllDataSources());
     Assert.assertEquals(ImmutableSet.of("test1"), config.getSpecificDataSourcesToKillUnusedSegmentsIn());
   }
@@ -320,6 +354,7 @@ public class CoordinatorDynamicConfigTest
         0,
         false,
         false,
+        Integer.MAX_VALUE,
         Integer.MAX_VALUE
     );
 
@@ -342,6 +377,7 @@ public class CoordinatorDynamicConfigTest
         0,
         false,
         false,
+        Integer.MAX_VALUE,
         Integer.MAX_VALUE
     );
 
@@ -364,6 +400,7 @@ public class CoordinatorDynamicConfigTest
         5,
         false,
         false,
+        Integer.MAX_VALUE,
         Integer.MAX_VALUE
     );
   }
@@ -412,8 +449,34 @@ public class CoordinatorDynamicConfigTest
         0,
         false,
         false,
+        Integer.MAX_VALUE,
         Integer.MAX_VALUE
     );
+  }
+
+  @Test
+  public void testInvalidMaxPrimaryReplicantsToLoad() throws Exception
+  {
+    try {
+      String jsonStr = "{\n"
+                       + "  \"maxSegmentsToLoad\": -1\n"
+                       + "}\n";
+
+      mapper.readValue(
+          mapper.writeValueAsString(
+              mapper.readValue(
+                  jsonStr,
+                  CoordinatorDynamicConfig.class
+              )
+          ),
+          CoordinatorDynamicConfig.class
+      );
+
+      Assert.fail("deserialization should fail.");
+    }
+    catch (JsonMappingException e) {
+      Assert.assertTrue(e.getCause() instanceof IllegalArgumentException);
+    }
   }
 
   @Test
@@ -530,6 +593,7 @@ public class CoordinatorDynamicConfigTest
         9,
         false,
         false,
+        Integer.MAX_VALUE,
         Integer.MAX_VALUE
     );
   }
@@ -579,6 +643,7 @@ public class CoordinatorDynamicConfigTest
         0,
         false,
         false,
+        Integer.MAX_VALUE,
         Integer.MAX_VALUE
     );
 
@@ -643,6 +708,7 @@ public class CoordinatorDynamicConfigTest
         0,
         false,
         false,
+        Integer.MAX_VALUE,
         Integer.MAX_VALUE
     );
   }
@@ -670,6 +736,7 @@ public class CoordinatorDynamicConfigTest
         70,
         false,
         false,
+        Integer.MAX_VALUE,
         Integer.MAX_VALUE
     );
   }
@@ -700,6 +767,7 @@ public class CoordinatorDynamicConfigTest
         70,
         false,
         false,
+        Integer.MAX_VALUE,
         Integer.MAX_VALUE
     );
   }
@@ -715,6 +783,7 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(
         current,
         new CoordinatorDynamicConfig.Builder(
+            null,
             null,
             null,
             null,
@@ -789,7 +858,8 @@ public class CoordinatorDynamicConfigTest
       int decommissioningMaxPercentOfMaxSegmentsToMove,
       boolean pauseCoordination,
       boolean replicateAfterLoadTimeout,
-      int maxNonPrimaryReplicantsToLoad
+      int maxNonPrimaryReplicantsToLoad,
+      int maxSegmentsToLoad
   )
   {
     Assert.assertEquals(
@@ -818,5 +888,6 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(pauseCoordination, config.getPauseCoordination());
     Assert.assertEquals(replicateAfterLoadTimeout, config.getReplicateAfterLoadTimeout());
     Assert.assertEquals(maxNonPrimaryReplicantsToLoad, config.getMaxNonPrimaryReplicantsToLoad());
+    Assert.assertEquals(maxSegmentsToLoad, config.getMaxSegmentsToLoad());
   }
 }
