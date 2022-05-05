@@ -36,6 +36,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 
 public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
@@ -67,20 +68,39 @@ public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogTy
       @Nullable String dataSource
   )
   {
-    String sql = StringUtils.format(
-        "SELECT "
-        + "  id, "
-        + "  status_payload, "
-        + "  created_date, "
-        + "  datasource, "
-        + "  payload "
-        + "FROM "
-        + "  %s "
-        + "WHERE "
-        + getWhereClauseForInactiveStatusesSinceQuery(dataSource)
-        + "ORDER BY created_date DESC",
-        getEntryTable()
-    );
+    return createCompletedTaskInfoQuery(handle, timestamp, maxNumStatuses, dataSource, false);
+  }
+
+  private Query<Map<String, Object>> createCompletedTaskInfoQuery(
+      Handle handle,
+      DateTime timestamp,
+      @Nullable Integer maxNumStatuses,
+      @Nullable String dataSource,
+      @Nullable Boolean isLite
+  )
+  {
+    String sql;
+    if (isLite != null && isLite) {
+      sql = createTaskInfoLiteQuery(
+          getWhereClauseForInactiveStatusesSinceQuery(dataSource)
+          + "ORDER BY created_date DESC"
+      );
+    } else {
+      sql = StringUtils.format(
+          "SELECT "
+          + "  id, "
+          + "  status_payload, "
+          + "  created_date, "
+          + "  datasource, "
+          + "  payload "
+          + "FROM "
+          + "  %s "
+          + "WHERE "
+          + getWhereClauseForInactiveStatusesSinceQuery(dataSource)
+          + "ORDER BY created_date DESC",
+          getEntryTable()
+      );
+    }
 
     if (maxNumStatuses != null) {
       sql += " LIMIT :n";
@@ -110,19 +130,67 @@ public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogTy
   @Nullable
   public TaskInfoLite getTaskInfoLite(String entryId)
   {
-    return getConnector().retryWithHandle(handle -> {
-      final String query = StringUtils.format(
-          "SELECT id, payload_json->>'groupId' AS group_id, payload_json->>'type' AS type, datasource, "
-          + "status_payload_json->>'location' AS location, created_date, status_payload_json->>'status' AS status, "
-          + "status_payload_json->>'duration' AS duration, status_payload_json->>'errorMsg' AS error_msg "
-          + "FROM %s WHERE id = :id",
-          getEntryTable()
-      );
-      return handle.createQuery(query)
-                   .bind("id", entryId)
-                   .map(taskInfoMapper)
-                   .first();
-    });
+    return getConnector().retryWithHandle(handle -> handle.createQuery(
+        createTaskInfoLiteQuery("id = :id"))
+        .bind("id", entryId)
+        .map(taskInfoMapper)
+        .first()
+    );
+  }
+
+  @Override
+  public List<TaskInfoLite> getActiveTaskInfoLite(@Nullable String dataSource)
+  {
+    return getConnector().retryWithHandle(
+        handle -> {
+          Query<Map<String, Object>> query = handle.createQuery(
+              createTaskInfoLiteQuery(getWhereClauseForActiveStatusesQuery(dataSource)));
+          if (dataSource != null) {
+            query = query.bind("ds", dataSource);
+          }
+          return query.map(taskInfoMapper).list();
+        });
+  }
+
+  public List<TaskInfoLite> getCompletedTaskInfoLite(
+      DateTime timestamp,
+      @Nullable Integer maxNumStatuses,
+      @Nullable String dataSource
+  )
+  {
+    return getConnector().retryWithHandle(
+        handle -> {
+          final Query<Map<String, Object>> query = createCompletedTaskInfoQuery(
+              handle,
+              timestamp,
+              maxNumStatuses,
+              dataSource,
+              true
+          );
+          return query.map(taskInfoMapper).list();
+        }
+    );
+  }
+
+  private String createTaskInfoLiteQuery(@Nullable String whereClause)
+  {
+    String query = StringUtils.format(
+        "SELECT "
+        + "  id, "
+        + "  payload_json->>'groupId' AS group_id, "
+        + "  payload_json->>'type' AS type, datasource, "
+        + "  status_payload_json->>'location' AS location, "
+        + "  created_date, "
+        + "  status_payload_json->>'status' AS status, "
+        + "  status_payload_json->>'duration' AS duration, "
+        + "  status_payload_json->>'errorMsg' AS error_msg "
+        + "FROM "
+        + "  %s "
+        + (whereClause != null ? "WHERE " + whereClause : ""),
+        getEntryTable()
+    );
+    log.info("Executing: '%s'", query);
+    return query;
   }
 
   @Deprecated

@@ -26,6 +26,7 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -102,12 +103,24 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
       @Nullable String datasource
   );
 
+  default List<TaskInfoLite> getCompletedTaskInfoLite(
+      DateTime timestamp,
+      @Nullable Integer maxNumStatuses,
+      @Nullable String datasource
+  ) {
+    return Collections.emptyList();
+  }
+
   /**
    * Return {@link TaskInfo} objects for all active entries
    *
    * @return list of {@link TaskInfo}
    */
   List<TaskInfo<EntryType, StatusType>> getActiveTaskInfo(@Nullable String dataSource);
+
+  default List<TaskInfoLite> getActiveTaskInfoLite(@Nullable String dataSource) {
+    return Collections.emptyList();
+  }
 
   /**
    * Add a lock to the given entry

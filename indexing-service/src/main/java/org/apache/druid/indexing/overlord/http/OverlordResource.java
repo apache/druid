@@ -595,7 +595,7 @@ public class OverlordResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getWaitingTasks(@Context final HttpServletRequest req)
   {
-    return getTasks("waiting", null, null, null, null, req);
+    return getTasks("waiting", null, null, null, null, false, req);
   }
 
   @GET
@@ -603,7 +603,7 @@ public class OverlordResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getPendingTasks(@Context final HttpServletRequest req)
   {
-    return getTasks("pending", null, null, null, null, req);
+    return getTasks("pending", null, null, null, null, false, req);
   }
 
   @GET
@@ -614,7 +614,7 @@ public class OverlordResource
       @Context final HttpServletRequest req
   )
   {
-    return getTasks("running", null, null, null, taskType, req);
+    return getTasks("running", null, null, null, taskType, false, req);
   }
 
   @GET
@@ -625,7 +625,7 @@ public class OverlordResource
       @Context final HttpServletRequest req
   )
   {
-    return getTasks("complete", null, null, maxTaskStatuses, null, req);
+    return getTasks("complete", null, null, maxTaskStatuses, null, false, req);
   }
 
   @GET
@@ -637,6 +637,7 @@ public class OverlordResource
       @QueryParam("createdTimeInterval") final String createdTimeInterval,
       @QueryParam("max") final Integer maxCompletedTasks,
       @QueryParam("type") final String type,
+      @QueryParam("lite") final Boolean isLite,
       @Context final HttpServletRequest req
   )
   {
@@ -668,6 +669,23 @@ public class OverlordResource
         );
       }
     }
+
+    if (isLite != null && isLite) {
+      return getTasksLite(state, dataSource, createdTimeInterval, maxCompletedTasks, type, req);
+    } else {
+      return getTasks(state, dataSource, createdTimeInterval, maxCompletedTasks, type, req);
+    }
+  }
+
+  public Response getTasks(
+      final String state,
+      final String dataSource,
+      final String createdTimeInterval,
+      final Integer maxCompletedTasks,
+      final String type,
+      final HttpServletRequest req
+  )
+  {
     List<TaskStatusPlus> finalTaskList = new ArrayList<>();
     Function<AnyTask, TaskStatusPlus> activeTaskTransformFunc = workItem -> new TaskStatusPlus(
         workItem.getTaskId(),
@@ -734,6 +752,111 @@ public class OverlordResource
             ));
       }
     }
+    if (state == null || "waiting".equals(StringUtils.toLowerCase(state))) {
+      final List<AnyTask> waitingWorkItems = filterActiveTasks(RunnerTaskState.WAITING, allActiveTasks);
+      List<TaskStatusPlus> transformedWaitingList = waitingWorkItems.stream()
+                                                                    .map(activeTaskTransformFunc::apply)
+                                                                    .collect(Collectors.toList());
+      finalTaskList.addAll(transformedWaitingList);
+    }
+    if (state == null || "pending".equals(StringUtils.toLowerCase(state))) {
+      final List<AnyTask> pendingWorkItems = filterActiveTasks(RunnerTaskState.PENDING, allActiveTasks);
+      List<TaskStatusPlus> transformedPendingList = pendingWorkItems.stream()
+                                                                    .map(activeTaskTransformFunc::apply)
+                                                                    .collect(Collectors.toList());
+      finalTaskList.addAll(transformedPendingList);
+    }
+    if (state == null || "running".equals(StringUtils.toLowerCase(state))) {
+      final List<AnyTask> runningWorkItems = filterActiveTasks(RunnerTaskState.RUNNING, allActiveTasks);
+      List<TaskStatusPlus> transformedRunningList = runningWorkItems.stream()
+                                                                    .map(activeTaskTransformFunc::apply)
+                                                                    .collect(Collectors.toList());
+      finalTaskList.addAll(transformedRunningList);
+    }
+    final List<TaskStatusPlus> authorizedList = securedTaskStatusPlus(
+        finalTaskList,
+        dataSource,
+        type,
+        req
+    );
+    return Response.ok(authorizedList).build();
+  }
+
+  public Response getTasksLite(
+      final String state,
+      final String dataSource,
+      final String createdTimeInterval,
+      final Integer maxCompletedTasks,
+      final String type,
+      final HttpServletRequest req
+  )
+  {
+    List<TaskStatusPlus> finalTaskList = new ArrayList<>();
+    Function<AnyTask, TaskStatusPlus> activeTaskTransformFunc = workItem -> new TaskStatusPlus(
+        workItem.getTaskId(),
+        workItem.getTaskGroupId(),
+        workItem.getTaskType(),
+        workItem.getCreatedTime(),
+        workItem.getQueueInsertionTime(),
+        workItem.getTaskState(),
+        workItem.getRunnerTaskState(),
+        null,
+        workItem.getLocation(),
+        workItem.getDataSource(),
+        null
+    );
+
+    Function<TaskInfoLite, TaskStatusPlus> completeTaskTransformFunc = taskInfo -> new TaskStatusPlus(
+        taskInfo.getId(),
+        taskInfo.getGroupId(),
+        taskInfo.getType(),
+        taskInfo.getCreatedTime(),
+        // Would be nice to include the real queue insertion time, but the
+        // TaskStorage API doesn't yet allow it.
+        DateTimes.EPOCH,
+        taskInfo.getStatus(),
+        RunnerTaskState.NONE,
+        taskInfo.getDuration(),
+        taskInfo.getLocation() == null ? TaskLocation.unknown() : taskInfo.getLocation(),
+        taskInfo.getDataSource(),
+        taskInfo.getErrorMsg()
+    );
+
+    //checking for complete tasks first to avoid querying active tasks if user only wants complete tasks
+    if (state == null || "complete".equals(StringUtils.toLowerCase(state))) {
+      Duration createdTimeDuration = null;
+      if (createdTimeInterval != null) {
+        final Interval theInterval = Intervals.of(StringUtils.replace(createdTimeInterval, "_", "/"));
+        createdTimeDuration = theInterval.toDuration();
+      }
+      final List<TaskInfoLite> taskInfoList =
+          taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDurationLite(maxCompletedTasks, createdTimeDuration, dataSource);
+      final List<TaskStatusPlus> completedTasks = taskInfoList.stream()
+                                                              .map(completeTaskTransformFunc::apply)
+                                                              .collect(Collectors.toList());
+      finalTaskList.addAll(completedTasks);
+    }
+
+    final List<TaskInfoLite> allActiveTaskInfo;
+    final List<AnyTask> allActiveTasks = new ArrayList<>();
+    if (state == null || !"complete".equals(StringUtils.toLowerCase(state))) {
+      allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfoLite(dataSource);
+      allActiveTaskInfo.forEach(task ->
+        allActiveTasks.add(
+            new AnyTask(
+                task.getId(),
+                task.getGroupId(),
+                task.getType(),
+                SettableFuture.create(),
+                task.getDataSource(),
+                null,
+                null,
+                task.getCreatedTime(),
+                DateTimes.EPOCH,
+                TaskLocation.unknown()
+            )));
+    }
+
     if (state == null || "waiting".equals(StringUtils.toLowerCase(state))) {
       final List<AnyTask> waitingWorkItems = filterActiveTasks(RunnerTaskState.WAITING, allActiveTasks);
       List<TaskStatusPlus> transformedWaitingList = waitingWorkItems.stream()

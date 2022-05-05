@@ -330,7 +330,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     return query;
   }
 
-  private String getWhereClauseForActiveStatusesQuery(String dataSource)
+  protected String getWhereClauseForActiveStatusesQuery(String dataSource)
   {
     String sql = StringUtils.format("active = TRUE ");
     if (dataSource != null) {

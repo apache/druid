@@ -447,7 +447,7 @@ public class OverlordResourceTest
         workerTaskRunnerQueryAdapter
     );
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
-        .getTasks(null, null, null, null, null, req)
+        .getTasks(null, null, null, null, null, null, req)
         .getEntity();
     Assert.assertEquals(4, responseObjects.size());
   }
@@ -543,7 +543,7 @@ public class OverlordResourceTest
     );
 
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
-        .getTasks(null, "allow", null, null, null, req)
+        .getTasks(null, "allow", null, null, null, null, req)
         .getEntity();
     Assert.assertEquals(7, responseObjects.size());
     Assert.assertEquals("id_5", responseObjects.get(0).getId());
@@ -610,6 +610,7 @@ public class OverlordResourceTest
             null,
             null,
             null,
+            null,
             req
         ).getEntity();
     Assert.assertEquals(1, responseObjects.size());
@@ -672,7 +673,7 @@ public class OverlordResourceTest
     );
 
     List<TaskStatusPlus> responseObjects = (List) overlordResource
-        .getTasks("running", "allow", null, null, null, req)
+        .getTasks("running", "allow", null, null, null, null, req)
         .getEntity();
 
     Assert.assertEquals(2, responseObjects.size());
@@ -737,7 +738,7 @@ public class OverlordResourceTest
     );
 
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
-        .getTasks("pending", null, null, null, null, req)
+        .getTasks("pending", null, null, null, null, null, req)
         .getEntity();
 
     Assert.assertEquals(1, responseObjects.size());
@@ -784,7 +785,7 @@ public class OverlordResourceTest
         workerTaskRunnerQueryAdapter
     );
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
-        .getTasks("complete", null, null, null, null, req)
+        .getTasks("complete", null, null, null, null, null, req)
         .getEntity();
     Assert.assertEquals(2, responseObjects.size());
     Assert.assertEquals("id_1", responseObjects.get(0).getId());
@@ -834,7 +835,7 @@ public class OverlordResourceTest
     );
     String interval = "2010-01-01_P1D";
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
-        .getTasks("complete", null, interval, null, null, req)
+        .getTasks("complete", null, interval, null, null, null, req)
         .getEntity();
     Assert.assertEquals(2, responseObjects.size());
     Assert.assertEquals("id_2", responseObjects.get(0).getId());
@@ -879,7 +880,7 @@ public class OverlordResourceTest
         workerTaskRunnerQueryAdapter
     );
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
-        .getTasks("complete", null, null, null, null, req)
+        .getTasks("complete", null, null, null, null, null, req)
         .getEntity();
     Assert.assertEquals(2, responseObjects.size());
     Assert.assertEquals("id_1", responseObjects.get(0).getId());
@@ -900,7 +901,7 @@ public class OverlordResourceTest
         workerTaskRunnerQueryAdapter
     );
     Object responseObject = overlordResource
-        .getTasks("blah", "ds_test", null, null, null, req)
+        .getTasks("blah", "ds_test", null, null, null, null, req)
         .getEntity();
     Assert.assertEquals(
         "Invalid state : blah, valid values are: [pending, waiting, running, complete]",

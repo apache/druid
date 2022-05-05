@@ -30,6 +30,7 @@ import org.apache.druid.metadata.EntryExistsException;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 
 public interface TaskStorage
@@ -161,6 +162,10 @@ public interface TaskStorage
    */
   List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource);
 
+  default List<TaskInfoLite> getActiveTaskInfoLite(@Nullable String dataSource) {
+    return Collections.emptyList();
+  }
+
   /**
    * Returns up to {@code maxTaskStatuses} {@link TaskInfo} objects of recently finished tasks as stored in the storage
    * facility. No particular order is guaranteed, but implementations are encouraged to return tasks in descending order
@@ -178,6 +183,14 @@ public interface TaskStorage
       @Nullable Duration durationBeforeNow,
       @Nullable String datasource
   );
+
+  default List<TaskInfoLite> getRecentlyCreatedAlreadyFinishedTaskInfoLite(
+      @Nullable Integer maxTaskStatuses,
+      @Nullable Duration durationBeforeNow,
+      @Nullable String datasource
+  ) {
+    return Collections.emptyList();
+  }
 
   /**
    * Returns a list of locks for a particular task.
