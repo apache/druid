@@ -264,7 +264,17 @@ public class OverlordResource
   @Path("/task/{taskid}/status")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(TaskResourceFilter.class)
-  public Response getTaskStatus(@PathParam("taskid") String taskid)
+  public Response getTaskStatus(
+      @PathParam("taskid") String taskid,
+      @QueryParam("lite") final Boolean isLite
+  )
+  {
+    return isLite != null && isLite
+           ? getTaskStatusLite(taskid)
+           : getTaskStatus(taskid);
+  }
+
+  protected Response getTaskStatusLite(String taskid)
   {
     final TaskInfoLite taskInfo = taskStorageQueryAdapter.getTaskInfoLite(taskid);
     TaskStatusResponse response = null;
@@ -331,12 +341,7 @@ public class OverlordResource
     return Response.status(status).entity(response).build();
   }
 
-  /*
-  @GET
-  @Path("/task/{taskid}/status")
-  @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(TaskResourceFilter.class)
-  public Response getTaskStatus(@PathParam("taskid") String taskid)
+  protected Response getTaskStatus(String taskid)
   {
     final TaskInfo<Task, TaskStatus> taskInfo = taskStorageQueryAdapter.getTaskInfo(taskid);
     TaskStatusResponse response = null;
@@ -402,7 +407,6 @@ public class OverlordResource
 
     return Response.status(status).entity(response).build();
   }
-  */
 
   @Deprecated
   @GET
