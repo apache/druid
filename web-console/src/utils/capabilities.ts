@@ -40,8 +40,9 @@ export interface CapabilitiesOptions {
 }
 
 export class Capabilities {
-  static STATUS_TIMEOUT = 2000;
+  static STATUS_TIMEOUT = 15000;
   static FULL: Capabilities;
+  static NO_SQL: Capabilities;
   static COORDINATOR_OVERLORD: Capabilities;
   static COORDINATOR: Capabilities;
   static OVERLORD: Capabilities;
@@ -55,7 +56,7 @@ export class Capabilities {
     // Check SQL endpoint
     try {
       await Api.instance.post(
-        '/druid/v2/sql',
+        '/druid/v2/sql?capabilities',
         { query: 'SELECT 1337', context: { timeout: Capabilities.STATUS_TIMEOUT } },
         { timeout: Capabilities.STATUS_TIMEOUT },
       );
@@ -65,7 +66,7 @@ export class Capabilities {
         return; // other failure
       }
       try {
-        await Api.instance.get('/status', { timeout: Capabilities.STATUS_TIMEOUT });
+        await Api.instance.get('/status?capabilities', { timeout: Capabilities.STATUS_TIMEOUT });
       } catch (e) {
         return; // total failure
       }
@@ -73,7 +74,7 @@ export class Capabilities {
 
       try {
         await Api.instance.post(
-          '/druid/v2',
+          '/druid/v2?capabilities',
           {
             queryType: 'dataSourceMetadata',
             dataSource: '__web_console_probe__',
@@ -95,11 +96,26 @@ export class Capabilities {
     return 'nativeAndSql';
   }
 
-  static async detectNode(node: 'coordinator' | 'overlord'): Promise<boolean | undefined> {
+  static async detectManagementProxy(): Promise<boolean> {
     try {
-      await Api.instance.get(`/proxy/${node}/status`, {
+      await Api.instance.get(`/proxy/coordinator/status?capabilities`, {
         timeout: Capabilities.STATUS_TIMEOUT,
       });
+    } catch (e) {
+      return false;
+    }
+
+    return true;
+  }
+
+  static async detectNode(node: 'coordinator' | 'overlord'): Promise<boolean> {
+    try {
+      await Api.instance.get(
+        `/druid/${node === 'overlord' ? 'indexer' : node}/v1/isLeader?capabilities`,
+        {
+          timeout: Capabilities.STATUS_TIMEOUT,
+        },
+      );
     } catch (e) {
       return false;
     }
@@ -114,11 +130,16 @@ export class Capabilities {
     const queryType = await Capabilities.detectQueryType();
     if (typeof queryType === 'undefined') return;
 
-    const coordinator = await Capabilities.detectNode('coordinator');
-    if (typeof coordinator === 'undefined') return;
-
-    const overlord = await Capabilities.detectNode('overlord');
-    if (typeof overlord === 'undefined') return;
+    let coordinator: boolean;
+    let overlord: boolean;
+    if (queryType === 'none') {
+      // must not be running on the router, figure out what node the console is on (or both?)
+      coordinator = await Capabilities.detectNode('coordinator');
+      overlord = await Capabilities.detectNode('overlord');
+    } else {
+      // must be running on the router, figure out if the management proxy is working
+      coordinator = overlord = await Capabilities.detectManagementProxy();
+    }
 
     return new Capabilities({
       queryType,
@@ -201,6 +222,11 @@ export class Capabilities {
 }
 Capabilities.FULL = new Capabilities({
   queryType: 'nativeAndSql',
+  coordinator: true,
+  overlord: true,
+});
+Capabilities.NO_SQL = new Capabilities({
+  queryType: 'nativeOnly',
   coordinator: true,
   overlord: true,
 });
