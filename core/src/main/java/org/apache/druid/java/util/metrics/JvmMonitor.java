@@ -44,7 +44,7 @@ public class JvmMonitor extends FeedDefiningMonitor
 
   @VisibleForTesting
   @Nullable
-  final GcCounters gcCounters;
+  final GcCollectors gcCollectors;
 
   @Nullable
   private final AllocationMetricCollector collector;
@@ -65,7 +65,7 @@ public class JvmMonitor extends FeedDefiningMonitor
     Preconditions.checkNotNull(dimensions);
     this.dimensions = ImmutableMap.copyOf(dimensions);
     this.collector = AllocationMetricCollectors.getAllocationMetricCollector();
-    this.gcCounters = new GcCounters();
+    this.gcCollectors = new GcCollectors();
   }
 
   @Override
@@ -89,6 +89,10 @@ public class JvmMonitor extends FeedDefiningMonitor
     }
   }
 
+  /**
+   * These metrics are going to be replaced by new jvm/gc/mem/* metrics
+   */
+  @Deprecated
   private void emitJvmMemMetrics(ServiceEmitter emitter)
   {
     // I have no idea why, but jvm/mem is slightly more than the sum of jvm/pool. Let's just include
@@ -139,70 +143,66 @@ public class JvmMonitor extends FeedDefiningMonitor
 
   private void emitGcMetrics(ServiceEmitter emitter)
   {
-    if (gcCounters != null) {
-      gcCounters.emit(emitter, dimensions);
+    if (gcCollectors != null) {
+      gcCollectors.emit(emitter, dimensions);
     }
   }
 
-  /**
-   * The following GC-related code is partially based on
-   * https://github.com/aragozin/jvm-tools/blob/e0e37692648951440aa1a4ea5046261cb360df70/
-   * sjk-core/src/main/java/org/gridkit/jvmtool/PerfCounterGcCpuUsageMonitor.java
-   */
-  private class GcCounters
+  private class GcCollectors
   {
-    private final List<GcCollectors> generations = new ArrayList<>();
+    private final List<GcCollector> collectors = new ArrayList<>();
+    private final List<GcSpaceCollector> spaceCollectors = new ArrayList<>();
 
-    GcCounters()
+    GcCollectors()
     {
       List<GarbageCollectorMXBean> collectorMxBeans = ManagementFactory.getGarbageCollectorMXBeans();
       for (GarbageCollectorMXBean collectorMxBean : collectorMxBeans) {
-        generations.add(new GcCollectors(collectorMxBean));
+        collectors.add(new GcCollector(collectorMxBean));
+      }
+
+      List<MemoryPoolMXBean> memoryPoolMXBeans = ManagementFactory.getMemoryPoolMXBeans();
+      for (MemoryPoolMXBean memoryPoolMXBean : memoryPoolMXBeans) {
+        spaceCollectors.add(new GcSpaceCollector(memoryPoolMXBean));
       }
 
     }
 
     void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
     {
-      for (GcCollectors generation : generations) {
-        generation.emit(emitter, dimensions);
+      for (GcCollector collector : collectors) {
+        collector.emit(emitter, dimensions);
+      }
+
+      for (GcSpaceCollector spaceCollector : spaceCollectors) {
+        spaceCollector.emit(emitter, dimensions);
       }
     }
   }
 
-  private class GcCollectors
+  private class GcCollector
   {
     private final String generation;
     private final String collectorName;
     private final GcGenerationCollector collector;
-    private final List<GcGenerationSpace> spaces = new ArrayList<>();
 
     private static final String GC_YOUNG_GENERATION_NAME = "young";
     private static final String GC_OLD_GENERATION_NAME = "old";
     private static final String GC_ZGC_GENERATION_NAME = "zgc";
 
-    private static final String GC_CMS_NAME = "cms";
-    private static final String GC_G1_NAME = "g1";
-    private static final String GC_PARALLEL_NAME = "parallel";
-    private static final String GC_SERIAL_NAME = "serial";
-    private static final String GC_ZGC_NAME = "zgc";
-    private static final String GC_SHENANDOAN_NAME = "shenandoah";
+    private static final String CMS_COLLECTOR_NAME = "cms";
+    private static final String G1_COLLECTOR_NAME = "g1";
+    private static final String PARALLEL_COLLECTOR_NAME = "parallel";
+    private static final String SERIAL_COLLECTOR_NAME = "serial";
+    private static final String ZGC_COLLECTOR_NAME = "zgc";
+    private static final String SHENANDOAN_COLLECTOR_NAME = "shenandoah";
 
-    GcCollectors(GarbageCollectorMXBean gcBean)
+    GcCollector(GarbageCollectorMXBean gcBean)
     {
       Pair<String, String> gcNamePair = getReadableName(gcBean.getName());
       this.generation = gcNamePair.lhs;
       this.collectorName = gcNamePair.rhs;
 
       collector = new GcGenerationCollector(gcBean);
-
-      List<MemoryPoolMXBean> memoryPoolMxBeans = ManagementFactory.getMemoryPoolMXBeans();
-      for (MemoryPoolMXBean memoryPoolMxBean : memoryPoolMxBeans) {
-        MemoryUsage collectionUsage = memoryPoolMxBean.getCollectionUsage();
-        if (collectionUsage != null) {
-          spaces.add(new GcGenerationSpace(collectionUsage, memoryPoolMxBean.getName()));
-        }
-      }
     }
 
     private Pair<String, String> getReadableName(String name)
@@ -210,37 +210,37 @@ public class JvmMonitor extends FeedDefiningMonitor
       switch (name) {
         //CMS
         case "ParNew":
-          return new Pair<>(GC_YOUNG_GENERATION_NAME, GC_CMS_NAME);
+          return new Pair<>(GC_YOUNG_GENERATION_NAME, CMS_COLLECTOR_NAME);
         case "ConcurrentMarkSweep":
-          return new Pair<>(GC_OLD_GENERATION_NAME, GC_CMS_NAME);
+          return new Pair<>(GC_OLD_GENERATION_NAME, CMS_COLLECTOR_NAME);
 
         // G1
         case "G1 Young Generation":
-          return new Pair<>(GC_YOUNG_GENERATION_NAME, GC_G1_NAME);
+          return new Pair<>(GC_YOUNG_GENERATION_NAME, G1_COLLECTOR_NAME);
         case "G1 Old Generation":
-          return new Pair<>(GC_OLD_GENERATION_NAME, GC_G1_NAME);
+          return new Pair<>(GC_OLD_GENERATION_NAME, G1_COLLECTOR_NAME);
 
         // Parallel
         case "PS Scavenge":
-          return new Pair<>(GC_YOUNG_GENERATION_NAME, GC_PARALLEL_NAME);
+          return new Pair<>(GC_YOUNG_GENERATION_NAME, PARALLEL_COLLECTOR_NAME);
         case "PS MarkSweep":
-          return new Pair<>(GC_OLD_GENERATION_NAME, GC_PARALLEL_NAME);
+          return new Pair<>(GC_OLD_GENERATION_NAME, PARALLEL_COLLECTOR_NAME);
 
         // Serial
         case "Copy":
-          return new Pair<>(GC_YOUNG_GENERATION_NAME, GC_SERIAL_NAME);
+          return new Pair<>(GC_YOUNG_GENERATION_NAME, SERIAL_COLLECTOR_NAME);
         case "MarkSweepCompact":
-          return new Pair<>(GC_OLD_GENERATION_NAME, GC_SERIAL_NAME);
+          return new Pair<>(GC_OLD_GENERATION_NAME, SERIAL_COLLECTOR_NAME);
 
         //zgc
         case "ZGC":
-          return new Pair<>(GC_ZGC_GENERATION_NAME, GC_ZGC_NAME);
+          return new Pair<>(GC_ZGC_GENERATION_NAME, ZGC_COLLECTOR_NAME);
 
         //Shenandoah
         case "Shenandoah Cycles":
-          return new Pair<>(GC_YOUNG_GENERATION_NAME, GC_SHENANDOAN_NAME);
+          return new Pair<>(GC_YOUNG_GENERATION_NAME, SHENANDOAN_COLLECTOR_NAME);
         case "Shenandoah Pauses":
-          return new Pair<>(GC_OLD_GENERATION_NAME, GC_SHENANDOAN_NAME);
+          return new Pair<>(GC_OLD_GENERATION_NAME, SHENANDOAN_COLLECTOR_NAME);
 
         default:
           return new Pair<>(name, name);
@@ -262,9 +262,6 @@ public class JvmMonitor extends FeedDefiningMonitor
         collector.emit(emitter, dimensionsCopy);
       }
 
-      for (GcGenerationSpace space : spaces) {
-        space.emit(emitter, dimensionsCopy);
-      }
     }
   }
 
@@ -291,6 +288,27 @@ public class JvmMonitor extends FeedDefiningMonitor
       long newCpuNanos = gcBean.getCollectionTime();
       emitter.emit(builder.build("jvm/gc/cpu", newCpuNanos - lastCpuNanos));
       lastCpuNanos = newCpuNanos;
+    }
+  }
+
+  private class GcSpaceCollector
+  {
+
+    private final List<GcGenerationSpace> spaces = new ArrayList<>();
+
+    public GcSpaceCollector(MemoryPoolMXBean memoryPoolMxBean)
+    {
+      MemoryUsage collectionUsage = memoryPoolMxBean.getCollectionUsage();
+      if (collectionUsage != null) {
+        spaces.add(new GcGenerationSpace(collectionUsage, memoryPoolMxBean.getName()));
+      }
+    }
+
+    void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
+    {
+      for (GcGenerationSpace space : spaces) {
+        space.emit(emitter, dimensions);
+      }
     }
   }
 
