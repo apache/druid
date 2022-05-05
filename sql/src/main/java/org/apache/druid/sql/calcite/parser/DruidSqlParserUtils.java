@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.parser;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -219,13 +218,14 @@ public class DruidSqlParserUtils
     }
 
     DimFilter dimFilter = convertQueryToDimFilter(replaceTimeQuery, dateTimeZone);
-    if (!ImmutableSet.of(ColumnHolder.TIME_COLUMN_NAME).equals(dimFilter.getRequiredColumns())) {
-      throw new ValidationException("Only " + ColumnHolder.TIME_COLUMN_NAME + " column is supported in OVERWRITE WHERE clause");
-    }
 
     Filtration filtration = Filtration.create(dimFilter);
     filtration = MoveTimeFiltersToIntervals.instance().apply(filtration);
     List<Interval> intervals = filtration.getIntervals();
+
+    if (filtration.getDimFilter() != null) {
+      throw new ValidationException("Only " + ColumnHolder.TIME_COLUMN_NAME + " column is supported in OVERWRITE WHERE clause");
+    }
 
     if (intervals.isEmpty()) {
       throw new ValidationException("Intervals for replace are empty");

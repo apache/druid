@@ -19,12 +19,10 @@
 
 package org.apache.druid.sql.calcite;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -59,20 +57,12 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
       "all"
   );
 
-  @Override
-  protected Map<String, Object> queryContextWithGranularity(Granularity granularity)
+  protected Map<String, Object> addReplaceTimeChunkToQueryContext(Map<String, Object> context, String replaceTimeChunks)
   {
-    String granularityString = null;
-    try {
-      granularityString = queryJsonMapper.writeValueAsString(granularity);
-    }
-    catch (JsonProcessingException e) {
-      Assert.fail(e.getMessage());
-    }
-    return ImmutableMap.of(
-        DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, granularityString,
-        DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS, "all"
-    );
+    return ImmutableMap.<String, Object>builder()
+                       .putAll(context)
+                       .put(DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS, replaceTimeChunks)
+                       .build();
   }
 
   @Test
@@ -106,12 +96,13 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
-                .context(ImmutableMap.of(
-                    DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
-                    "\"DAY\"",
-                    DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
-                    "2000-01-01T00:00:00.000Z/2000-01-02T00:00:00.000Z")
-                ).build()
+                .context(
+                    addReplaceTimeChunkToQueryContext(
+                        queryContextWithGranularity(Granularities.DAY),
+                        "2000-01-01T00:00:00.000Z/2000-01-02T00:00:00.000Z"
+                    )
+                )
+                .build()
         )
         .verify();
   }
@@ -132,12 +123,13 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
-                .context(ImmutableMap.of(
-                    DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
-                    "\"DAY\"",
-                    DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
-                    "2000-01-01T00:00:00.000Z/2000-01-02T00:00:00.000Z")
-                ).build()
+                .context(
+                    addReplaceTimeChunkToQueryContext(
+                        queryContextWithGranularity(Granularities.DAY),
+                        "2000-01-01T00:00:00.000Z/2000-01-02T00:00:00.000Z"
+                    )
+                )
+                .build()
         )
         .verify();
   }
@@ -156,11 +148,12 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
-                .context(ImmutableMap.of(
-                    DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
-                    "\"MONTH\"",
-                    DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
-                    "2000-01-01T00:00:00.000Z/2000-05-01T00:00:00.000Z"))
+                .context(
+                    addReplaceTimeChunkToQueryContext(
+                        queryContextWithGranularity(Granularities.MONTH),
+                        "2000-01-01T00:00:00.000Z/2000-05-01T00:00:00.000Z"
+                    )
+                )
                 .build()
         )
         .verify();
@@ -181,11 +174,12 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
-                .context(ImmutableMap.of(
-                    DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
-                    "\"MONTH\"",
-                    DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
-                    "2000-01-01T00:00:00.000Z/2000-02-01T00:00:00.000Z,2000-03-01T00:00:00.000Z/2000-04-01T00:00:00.000Z"))
+                .context(
+                    addReplaceTimeChunkToQueryContext(
+                        queryContextWithGranularity(Granularities.MONTH),
+                        "2000-01-01T00:00:00.000Z/2000-02-01T00:00:00.000Z,2000-03-01T00:00:00.000Z/2000-04-01T00:00:00.000Z"
+                    )
+                )
                 .build()
         )
         .verify();
@@ -205,11 +199,12 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
-                .context(ImmutableMap.of(
-                    DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
-                    "\"MONTH\"",
-                    DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
-                    "2000-01-01T00:00:00.000Z/2000-02-01T00:00:00.000Z"))
+                .context(
+                    addReplaceTimeChunkToQueryContext(
+                        queryContextWithGranularity(Granularities.MONTH),
+                        "2000-01-01T00:00:00.000Z/2000-02-01T00:00:00.000Z"
+                    )
+                )
                 .build()
         )
         .verify();
@@ -458,7 +453,12 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .virtualColumns(expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT))
                 .limit(10)
                 .offset(20)
-                .context(queryContextWithGranularity(Granularities.DAY))
+                .context(
+                    addReplaceTimeChunkToQueryContext(
+                        queryContextWithGranularity(Granularities.DAY),
+                        "all"
+                    )
+                )
                 .build()
         )
         .verify();
