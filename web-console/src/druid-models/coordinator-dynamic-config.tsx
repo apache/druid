@@ -280,7 +280,8 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
         this limit is hit, only primary replicants will be loaded for the remainder of the cycle.
         Tuning this value lower can help reduce the delay in loading primary segments when the
         cluster has a very large number of non-primary replicants to load (such as when a single
-        historical drops out of the cluster leaving many under-replicated segments).
+        historical drops out of the cluster leaving many under-replicated segments). This
+        configuration has no effect if the value is greater than the value of maxSegmentsToLoad
       </>
     ),
   },
