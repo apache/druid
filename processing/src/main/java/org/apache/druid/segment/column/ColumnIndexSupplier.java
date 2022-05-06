@@ -29,19 +29,17 @@ import javax.annotation.Nullable;
  * (and {@link org.apache.druid.segment.vector.VectorCursor}). This allows the engine to only scan the rows which match
  * the filter values, instead of performing a full scan of the column and using a
  * {@link org.apache.druid.query.filter.ValueMatcher}
- * (or {@link org.apache.druid.query.filter.vector.VectorValueMatcher}) to filter the values (or in addition to, in the
- * case of indexes which {@link ColumnIndexCapabilities#isExact()} is false, which must still use a value matcher
- * when using an index).
+ * (or {@link org.apache.druid.query.filter.vector.VectorValueMatcher}) to filter the values.
  */
 public interface ColumnIndexSupplier
 {
   /**
-   * Get a column 'index' of the specified type. If the index of the desired type is not available, this method will
-   * return null. If the value is non-null, the index may be used for the eventual construction of an
+   * Try to get a column 'index' of the specified type. If the index of the desired type is not available, this method
+   * will return null. If the value is non-null, the index may be used for the eventual construction of an
    * {@link org.apache.druid.segment.data.Offset} to form the basis of a {@link org.apache.druid.segment.Cursor}
    * (or {@link org.apache.druid.segment.vector.VectorOffset} and {@link org.apache.druid.segment.vector.VectorCursor})
    * which can greatly reduce the total number of rows which need to be scanned and processed.
    */
   @Nullable
-  <T> T getIndex(Class<T> clazz);
+  <T> T as(Class<T> clazz);
 }

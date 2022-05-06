@@ -283,7 +283,7 @@ public class UseIndexesStrategy extends SearchStrategy
           }
         } else {
           final DictionaryEncodedStringValueIndex bitmapIndex =
-              indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class);
+              indexSupplier.as(DictionaryEncodedStringValueIndex.class);
           for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
             String dimVal = extractionFn.apply(bitmapIndex.getValue(i));
             if (!searchQuerySpec.accept(dimVal)) {

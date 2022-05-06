@@ -120,7 +120,7 @@ public class AutoStrategy extends SearchStrategy
         final ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
         if (indexSupplier != null) {
           final DictionaryEncodedStringValueIndex bitmapIndex =
-              indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class);
+              indexSupplier.as(DictionaryEncodedStringValueIndex.class);
           if (bitmapIndex != null) {
             totalCard += bitmapIndex.getCardinality();
           }

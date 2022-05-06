@@ -73,7 +73,7 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
 
   @Nullable
   @Override
-  public <T> T getIndex(Class<T> clazz)
+  public <T> T as(Class<T> clazz)
   {
     if (clazz.equals(StringValueSetIndex.class)) {
       return (T) new GenericIndexedDictionaryEncodedStringValueSetIndex(bitmapFactory, dictionary, bitmaps);
@@ -185,7 +185,7 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
         @Override
         public double estimateSelectivity(int totalRows)
         {
-          return Math.min(1., (double) getBitmapForValue().size() / totalRows);
+          return Math.min(1, (double) getBitmapForValue().size() / totalRows);
         }
 
         @Override

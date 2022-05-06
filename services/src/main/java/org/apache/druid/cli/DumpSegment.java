@@ -354,7 +354,7 @@ public class DumpSegment extends GuiceRunnable
                     jg.writeNullField(columnName);
                   } else {
                     DictionaryEncodedStringValueIndex valueIndex =
-                        indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class);
+                        indexSupplier.as(DictionaryEncodedStringValueIndex.class);
                     if (valueIndex == null) {
                       jg.writeNullField(columnName);
                     } else {

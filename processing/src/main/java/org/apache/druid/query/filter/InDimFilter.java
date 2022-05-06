@@ -287,16 +287,16 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
       return null;
     }
     if (extractionFn == null) {
-      final ColumnIndexSupplier supplier = selector.getIndexSupplier(dimension);
+      final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(dimension);
 
-      if (supplier == null) {
+      if (indexSupplier == null) {
         // column doesn't exist, match against null
         return Filters.makeNullIndex(
             predicateFactory.makeStringPredicate().apply(null),
             selector
         );
       }
-      final StringValueSetIndex valueSetIndex = supplier.getIndex(StringValueSetIndex.class);
+      final StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
       if (valueSetIndex != null) {
         return valueSetIndex.forValues(values);
       }

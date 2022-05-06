@@ -149,7 +149,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     ColumnHolder columnHolder = index.getColumnHolder(dimension);
     if (columnHolder != null && columnHolder.getCapabilities().hasBitmapIndexes()) {
       ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
-      DictionaryEncodedStringValueIndex index = indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class);
+      DictionaryEncodedStringValueIndex index = indexSupplier.as(DictionaryEncodedStringValueIndex.class);
       return index.getCardinality() > 0 ? index.getValue(0) : null;
     }
     return null;
@@ -162,7 +162,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     ColumnHolder columnHolder = index.getColumnHolder(dimension);
     if (columnHolder != null && columnHolder.getCapabilities().hasBitmapIndexes()) {
       ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
-      DictionaryEncodedStringValueIndex index = indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class);
+      DictionaryEncodedStringValueIndex index = indexSupplier.as(DictionaryEncodedStringValueIndex.class);
       return index.getCardinality() > 0 ? index.getValue(index.getCardinality() - 1) : null;
     }
     return null;

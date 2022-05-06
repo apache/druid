@@ -74,8 +74,8 @@ public class SpatialFilter implements Filter
     if (!Filters.checkFilterTuningUseIndex(dimension, selector, filterTuning)) {
       return null;
     }
-    final ColumnIndexSupplier supplier = selector.getIndexSupplier(dimension);
-    SpatialIndex spatialIndex = supplier.getIndex(SpatialIndex.class);
+    final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(dimension);
+    final SpatialIndex spatialIndex = indexSupplier == null ? null : indexSupplier.as(SpatialIndex.class);
     if (spatialIndex == null) {
       return new AllFalseBitmapColumnIndex(selector);
     }

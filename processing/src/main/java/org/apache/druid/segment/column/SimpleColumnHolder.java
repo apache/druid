@@ -89,6 +89,7 @@ class SimpleColumnHolder implements ColumnHolder
     return columnSupplier == null ? UnknownTypeComplexColumn.instance() : columnSupplier.get();
   }
 
+  @Nullable
   @Override
   public ColumnIndexSupplier getIndexSupplier()
   {

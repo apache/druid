@@ -154,7 +154,7 @@ public class Filters
     Preconditions.checkNotNull(predicateFactory, "predicateFactory");
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(column);
     if (indexSupplier != null) {
-      final DruidPredicateIndex predicateIndex = indexSupplier.getIndex(DruidPredicateIndex.class);
+      final DruidPredicateIndex predicateIndex = indexSupplier.as(DruidPredicateIndex.class);
       if (predicateIndex != null) {
         return predicateIndex.forPredicate(predicateFactory);
       }
@@ -206,7 +206,7 @@ public class Filters
       numMatchedRows += bitmap.size();
     }
 
-    return Math.min(1., (double) numMatchedRows / totalNumRows);
+    return Math.min(1, (double) numMatchedRows / totalNumRows);
   }
 
   @Nullable
@@ -256,11 +256,10 @@ public class Filters
         return false;
       }
       if (filterTuning.hasValueCardinalityThreshold()) {
-        final ColumnIndexSupplier supplier = indexSelector.getIndexSupplier(columnName);
-        if (supplier != null) {
-          final DictionaryEncodedStringValueIndex valueIndex = supplier.getIndex(
-              DictionaryEncodedStringValueIndex.class
-          );
+        final ColumnIndexSupplier indexSupplier = indexSelector.getIndexSupplier(columnName);
+        if (indexSupplier != null) {
+          final DictionaryEncodedStringValueIndex valueIndex =
+              indexSupplier.as(DictionaryEncodedStringValueIndex.class);
           if (valueIndex != null) {
             final int cardinality = valueIndex.getCardinality();
             Integer min = filterTuning.getMinCardinalityToUseBitmapIndex();

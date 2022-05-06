@@ -74,15 +74,15 @@ public class LikeFilter implements Filter
     if (!Filters.checkFilterTuningUseIndex(dimension, selector, filterTuning)) {
       return null;
     }
-    final ColumnIndexSupplier supplier = selector.getIndexSupplier(dimension);
-    if (supplier == null) {
+    final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(dimension);
+    if (indexSupplier == null) {
       // Treat this as a column full of nulls
       return likeMatcher.matches(null)
              ? new AllTrueBitmapColumnIndex(selector)
              : new AllFalseBitmapColumnIndex(selector);
     }
     if (isSimpleEquals()) {
-      StringValueSetIndex valueIndex = supplier.getIndex(StringValueSetIndex.class);
+      StringValueSetIndex valueIndex = indexSupplier.as(StringValueSetIndex.class);
       if (valueIndex != null) {
         return valueIndex.forValue(
             NullHandling.emptyToNullIfNeeded(likeMatcher.getPrefix())
@@ -90,17 +90,11 @@ public class LikeFilter implements Filter
       }
     }
     if (isSimplePrefix()) {
-      final LexicographicalRangeIndex rangeIndex = supplier.getIndex(LexicographicalRangeIndex.class);
+      final LexicographicalRangeIndex rangeIndex = indexSupplier.as(LexicographicalRangeIndex.class);
       if (rangeIndex != null) {
         final String lower = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix());
         final String upper = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix()) + Character.MAX_VALUE;
-        return rangeIndex.forRange(
-            lower,
-            false,
-            upper,
-            false,
-            (value) -> likeMatcher.matchesSuffixOnly(value)
-        );
+        return rangeIndex.forRange(lower, false, upper,false, likeMatcher::matchesSuffixOnly);
       }
     }
 

@@ -38,7 +38,7 @@ public class NoIndexesColumnIndexSupplier implements ColumnIndexSupplier
 
   @Nullable
   @Override
-  public <T> T getIndex(Class<T> clazz)
+  public <T> T as(Class<T> clazz)
   {
     return null;
   }

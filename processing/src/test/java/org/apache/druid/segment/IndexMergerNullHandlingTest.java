@@ -182,10 +182,10 @@ public class IndexMergerNullHandlingTest
             );
 
             // Verify that the bitmap index for null is correct.
-            final DictionaryEncodedStringValueIndex valueIndex = columnHolder.getIndexSupplier().getIndex(
+            final DictionaryEncodedStringValueIndex valueIndex = columnHolder.getIndexSupplier().as(
                 DictionaryEncodedStringValueIndex.class
             );
-            final StringValueSetIndex valueSetIndex = columnHolder.getIndexSupplier().getIndex(
+            final StringValueSetIndex valueSetIndex = columnHolder.getIndexSupplier().as(
                 StringValueSetIndex.class
             );
 

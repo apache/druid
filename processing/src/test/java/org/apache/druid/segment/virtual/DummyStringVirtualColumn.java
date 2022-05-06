@@ -177,7 +177,7 @@ public class DummyStringVirtualColumn implements VirtualColumn
 
       @Nullable
       @Override
-      public <T> T getIndex(Class<T> clazz)
+      public <T> T as(Class<T> clazz)
       {
         if (enableBitmaps) {
           ColumnHolder holder = columnSelector.getColumnHolder(baseColumnName);
@@ -185,7 +185,7 @@ public class DummyStringVirtualColumn implements VirtualColumn
             return null;
           }
 
-          return holder.getIndexSupplier().getIndex(clazz);
+          return holder.getIndexSupplier().as(clazz);
         } else {
           return null;
         }

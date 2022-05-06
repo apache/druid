@@ -69,6 +69,9 @@ public class ColumnSelectorColumnIndexSelector implements ColumnIndexSelector
       indexSupplier = virtualColumns.getIndexSupplier(column, columnSelector);
     } else {
       final ColumnHolder columnHolder = columnSelector.getColumnHolder(column);
+      // for missing columns and columns with types that do not support filtering,
+      // treat the column as if it were full of nulls. This allows callers to fabricate an 'all true' or 'all false'
+      // index so that filters which match the values can still use "indexes".
       if (columnHolder == null || !columnHolder.getCapabilities().isFilterable()) {
         return null;
       }

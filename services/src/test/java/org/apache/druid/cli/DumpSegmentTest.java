@@ -89,7 +89,7 @@ public class DumpSegmentTest
     Mockito.when(queryableIndex.getColumnHolder("y")).thenReturn(yHolder);
 
     Mockito.when(xHolder.getIndexSupplier()).thenReturn(indexSupplier);
-    Mockito.when(indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class)).thenReturn(valueIndex);
+    Mockito.when(indexSupplier.as(DictionaryEncodedStringValueIndex.class)).thenReturn(valueIndex);
     Mockito.when(valueIndex.getCardinality()).thenReturn(1);
     Mockito.when(valueIndex.getBitmap(0)).thenReturn(bitmap);
     Mockito.when(valueIndex.getValue(0)).thenReturn("val");

@@ -185,7 +185,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
 
 
     EasyMock.expect(holder.getIndexSupplier()).andReturn(indexSupplier).atLeastOnce();
-    EasyMock.expect(indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class)).andReturn(index).atLeastOnce();
+    EasyMock.expect(indexSupplier.as(DictionaryEncodedStringValueIndex.class)).andReturn(index).atLeastOnce();
 
     EasyMock.expect(index.getCardinality()).andReturn(3).atLeastOnce();
     EasyMock.expect(index.getValue(0)).andReturn("a").atLeastOnce();
@@ -207,7 +207,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
     Assert.assertNotNull(filter.getBitmapColumnIndex(bitmapIndexSelector));
 
     DictionaryEncodedStringValueIndex listFilteredIndex =
-        bitmapIndexSelector.getIndexSupplier(ALLOW_VIRTUAL_NAME).getIndex(DictionaryEncodedStringValueIndex.class);
+        bitmapIndexSelector.getIndexSupplier(ALLOW_VIRTUAL_NAME).as(DictionaryEncodedStringValueIndex.class);
     Assert.assertEquals(-1, listFilteredIndex.getIndex("a"));
     Assert.assertEquals(0, listFilteredIndex.getIndex("b"));
     Assert.assertEquals(1, listFilteredIndex.getIndex("c"));
@@ -247,7 +247,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
                                                    .setHasBitmapIndexes(true)
             ).anyTimes();
     EasyMock.expect(holder.getIndexSupplier()).andReturn(indexSupplier).atLeastOnce();
-    EasyMock.expect(indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class)).andReturn(index).atLeastOnce();
+    EasyMock.expect(indexSupplier.as(DictionaryEncodedStringValueIndex.class)).andReturn(index).atLeastOnce();
     EasyMock.expect(index.getCardinality()).andReturn(3).atLeastOnce();
     EasyMock.expect(index.getValue(0)).andReturn("a").atLeastOnce();
     EasyMock.expect(index.getValue(1)).andReturn("b").atLeastOnce();
@@ -268,7 +268,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
     Assert.assertNotNull(filter.getBitmapColumnIndex(bitmapIndexSelector));
 
     DictionaryEncodedStringValueIndex listFilteredIndex =
-        bitmapIndexSelector.getIndexSupplier(DENY_VIRTUAL_NAME).getIndex(DictionaryEncodedStringValueIndex.class);
+        bitmapIndexSelector.getIndexSupplier(DENY_VIRTUAL_NAME).as(DictionaryEncodedStringValueIndex.class);
     Assert.assertEquals(-1, listFilteredIndex.getIndex("a"));
     Assert.assertEquals(-1, listFilteredIndex.getIndex("b"));
     Assert.assertEquals(0, listFilteredIndex.getIndex("c"));

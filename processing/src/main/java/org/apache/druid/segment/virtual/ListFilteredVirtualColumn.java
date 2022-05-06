@@ -180,13 +180,13 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     {
       @Nullable
       @Override
-      public <T> T getIndex(Class<T> clazz)
+      public <T> T as(Class<T> clazz)
       {
         final ColumnHolder holder = columnSelector.getColumnHolder(delegate.getDimension());
         if (holder == null) {
           return null;
         }
-        DictionaryEncodedStringValueIndex underlyingIndex = holder.getIndexSupplier().getIndex(
+        DictionaryEncodedStringValueIndex underlyingIndex = holder.getIndexSupplier().as(
             DictionaryEncodedStringValueIndex.class
         );
         if (underlyingIndex == null) {
@@ -376,7 +376,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
         @Override
         public double estimateSelectivity(int totalRows)
         {
-          return Math.min(1., (double) getBitmapForValue().size() / totalRows);
+          return Math.min(1, (double) getBitmapForValue().size() / totalRows);
         }
 
         @Override

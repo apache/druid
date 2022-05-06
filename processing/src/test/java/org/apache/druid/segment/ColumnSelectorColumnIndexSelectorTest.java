@@ -74,9 +74,9 @@ public class ColumnSelectorColumnIndexSelectorTest
     EasyMock.expect(holder.getColumn()).andReturn(stringColumn).anyTimes();
     EasyMock.expect(holder.getIndexSupplier()).andReturn(indexSupplier).anyTimes();
     StringValueSetIndex someIndex = EasyMock.createMock(StringValueSetIndex.class);
-    EasyMock.expect(indexSupplier.getIndex(StringValueSetIndex.class)).andReturn(someIndex).anyTimes();
+    EasyMock.expect(indexSupplier.as(StringValueSetIndex.class)).andReturn(someIndex).anyTimes();
     DictionaryEncodedStringValueIndex valueIndex = EasyMock.createMock(DictionaryEncodedStringValueIndex.class);
-    EasyMock.expect(indexSupplier.getIndex(DictionaryEncodedStringValueIndex.class)).andReturn(valueIndex).anyTimes();
+    EasyMock.expect(indexSupplier.as(DictionaryEncodedStringValueIndex.class)).andReturn(valueIndex).anyTimes();
     BitmapColumnIndex columnIndex = EasyMock.createMock(BitmapColumnIndex.class);
     ImmutableBitmap someBitmap = EasyMock.createMock(ImmutableBitmap.class);
     EasyMock.expect(valueIndex.getIndex("foo")).andReturn(0).anyTimes();
@@ -105,12 +105,12 @@ public class ColumnSelectorColumnIndexSelectorTest
   public void testStringDictionaryUseIndex()
   {
     final ColumnIndexSupplier supplier = indexSelector.getIndexSupplier(STRING_DICTIONARY_COLUMN_NAME);
-    DictionaryEncodedStringValueIndex bitmapIndex = supplier.getIndex(
+    DictionaryEncodedStringValueIndex bitmapIndex = supplier.as(
         DictionaryEncodedStringValueIndex.class
     );
     Assert.assertNotNull(bitmapIndex);
 
-    StringValueSetIndex valueIndex = supplier.getIndex(StringValueSetIndex.class);
+    StringValueSetIndex valueIndex = supplier.as(StringValueSetIndex.class);
     Assert.assertNotNull(valueIndex);
     ImmutableBitmap valueBitmap = valueIndex.forValue("foo")
                                             .computeBitmapResult(
@@ -124,12 +124,12 @@ public class ColumnSelectorColumnIndexSelectorTest
   public void testNonStringDictionaryDoNotUseIndex()
   {
     final ColumnIndexSupplier supplier = indexSelector.getIndexSupplier(NON_STRING_DICTIONARY_COLUMN_NAME);
-    DictionaryEncodedStringValueIndex bitmapIndex = supplier.getIndex(
+    DictionaryEncodedStringValueIndex bitmapIndex = supplier.as(
         DictionaryEncodedStringValueIndex.class
     );
     Assert.assertNull(bitmapIndex);
 
-    StringValueSetIndex valueIndex = supplier.getIndex(StringValueSetIndex.class);
+    StringValueSetIndex valueIndex = supplier.as(StringValueSetIndex.class);
     Assert.assertNull(valueIndex);
     EasyMock.verify(bitmapFactory, virtualColumns, index, indexSupplier);
   }

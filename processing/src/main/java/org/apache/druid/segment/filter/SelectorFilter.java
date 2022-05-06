@@ -83,11 +83,11 @@ public class SelectorFilter implements Filter
     if (!Filters.checkFilterTuningUseIndex(dimension, selector, filterTuning)) {
       return null;
     }
-    final ColumnIndexSupplier supplier = selector.getIndexSupplier(dimension);
-    if (supplier == null) {
+    final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(dimension);
+    if (indexSupplier == null) {
       return Filters.makeNullIndex(NullHandling.isNullOrEquivalent(value), selector);
     }
-    final StringValueSetIndex valueSetIndex = supplier.getIndex(StringValueSetIndex.class);
+    final StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
     if (valueSetIndex == null) {
       // column exists, but has no index
       return null;

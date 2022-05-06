@@ -29,8 +29,8 @@ import javax.annotation.Nullable;
  * value cardinality.
  *
  * This interface should only be used when it is beneficial to operate in such a manner, most filter implementations
- * should likely be using {@link StringValueSetIndex} or {@link LexicographicalRangeIndex} or some other higher level
- * index instead.
+ * should likely be using {@link StringValueSetIndex}, {@link DruidPredicateIndex}, {@link LexicographicalRangeIndex} or
+ * some other higher level index instead.
  */
 public interface DictionaryEncodedStringValueIndex
 {

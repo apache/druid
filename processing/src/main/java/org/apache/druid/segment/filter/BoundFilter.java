@@ -72,11 +72,11 @@ public class BoundFilter implements Filter
       return null;
     }
     if (supportShortCircuit()) {
-      final ColumnIndexSupplier supplier = selector.getIndexSupplier(boundDimFilter.getDimension());
-      if (supplier == null) {
+      final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(boundDimFilter.getDimension());
+      if (indexSupplier == null) {
         return Filters.makeNullIndex(doesMatchNull(), selector);
       }
-      final LexicographicalRangeIndex rangeIndex = supplier.getIndex(LexicographicalRangeIndex.class);
+      final LexicographicalRangeIndex rangeIndex = indexSupplier.as(LexicographicalRangeIndex.class);
       if (rangeIndex == null) {
         // column
         return null;
@@ -88,11 +88,7 @@ public class BoundFilter implements Filter
           boundDimFilter.isUpperStrict()
       );
     } else {
-      return Filters.makePredicateIndex(
-          boundDimFilter.getDimension(),
-          selector,
-          getPredicateFactory()
-      );
+      return Filters.makePredicateIndex(boundDimFilter.getDimension(), selector, getPredicateFactory());
     }
   }
 

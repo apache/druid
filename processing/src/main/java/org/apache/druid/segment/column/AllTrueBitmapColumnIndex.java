@@ -40,7 +40,7 @@ public class AllTrueBitmapColumnIndex implements BitmapColumnIndex
   @Override
   public double estimateSelectivity(int totalRows)
   {
-    return 1.;
+    return 1;
   }
 
   @Override

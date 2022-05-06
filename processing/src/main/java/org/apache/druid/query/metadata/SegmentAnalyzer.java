@@ -202,28 +202,22 @@ public class SegmentAnalyzer
     Comparable max = null;
     long size = 0;
     final int cardinality;
-    if (capabilities.hasBitmapIndexes()) {
-      ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
-      if (indexSupplier != null) {
-        final DictionaryEncodedStringValueIndex valueIndex = indexSupplier.getIndex(
-            DictionaryEncodedStringValueIndex.class
-        );
-        Preconditions.checkNotNull(valueIndex, "Column [%s] does not have a value index", columnName);
-        cardinality = valueIndex.getCardinality();
-        if (analyzingSize()) {
-          for (int i = 0; i < cardinality; ++i) {
-            String value = valueIndex.getValue(i);
-            if (value != null) {
-              size += StringUtils.estimatedBinaryLengthAsUTF8(value) * ((long) valueIndex.getBitmap(i).size());
-            }
+    final ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+    final DictionaryEncodedStringValueIndex valueIndex =
+        indexSupplier == null ? null : indexSupplier.as(DictionaryEncodedStringValueIndex.class);
+    if (valueIndex != null) {
+      cardinality = valueIndex.getCardinality();
+      if (analyzingSize()) {
+        for (int i = 0; i < cardinality; ++i) {
+          String value = valueIndex.getValue(i);
+          if (value != null) {
+            size += StringUtils.estimatedBinaryLengthAsUTF8(value) * ((long) valueIndex.getBitmap(i).size());
           }
         }
-        if (analyzingMinMax() && cardinality > 0) {
-          min = NullHandling.nullToEmptyIfNeeded(valueIndex.getValue(0));
-          max = NullHandling.nullToEmptyIfNeeded(valueIndex.getValue(cardinality - 1));
-        }
-      } else {
-        cardinality = 1;
+      }
+      if (analyzingMinMax() && cardinality > 0) {
+        min = NullHandling.nullToEmptyIfNeeded(valueIndex.getValue(0));
+        max = NullHandling.nullToEmptyIfNeeded(valueIndex.getValue(cardinality - 1));
       }
     } else if (capabilities.isDictionaryEncoded().isTrue()) {
       // fallback if no bitmap index
