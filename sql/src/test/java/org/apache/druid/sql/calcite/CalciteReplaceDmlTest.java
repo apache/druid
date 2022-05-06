@@ -246,6 +246,16 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .verify();
   }
 
+
+  @Test
+  public void testReplaceWithOrderBy()
+  {
+    testIngestionQuery()
+        .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo ORDER BY dim1 PARTITIONED BY ALL TIME")
+        .expectValidationError(SqlPlanningException.class, "Cannot have ORDER BY on a REPLACE query.")
+        .verify();
+  }
+
   @Test
   public void testReplaceForMisalignedPartitionInterval()
   {
