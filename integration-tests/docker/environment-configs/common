@@ -36,6 +36,7 @@ druid_auth_authenticator_basic_type=basic
 druid_auth_authenticatorChain=["basic"]
 druid_auth_authorizer_basic_type=basic
 druid_auth_authorizers=["basic"]
+druid_auth_authorizeQueryContextParams=true
 druid_client_https_certAlias=druid
 druid_client_https_keyManagerPassword=druid123
 druid_client_https_keyStorePassword=druid123

@@ -55,6 +55,8 @@ import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanQueryQueryToolChest;
 import org.apache.druid.query.scan.ScanQueryRunnerFactory;
+import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
+import org.apache.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
@@ -344,6 +346,7 @@ public class QueryStackTests
                 )
             )
             .put(GroupByQuery.class, groupByQueryRunnerFactory)
+            .put(TimeBoundaryQuery.class, new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER))
             .build()
     );
 

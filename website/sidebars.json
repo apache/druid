@@ -109,7 +109,7 @@
         "ids": [
           "querying/sql-api",
           "querying/sql-jdbc",
-          "querying/sql-connection-context"
+          "querying/sql-query-context"
         ]
       },
       {
