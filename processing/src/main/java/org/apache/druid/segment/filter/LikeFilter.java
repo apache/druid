@@ -94,7 +94,7 @@ public class LikeFilter implements Filter
       if (rangeIndex != null) {
         final String lower = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix());
         final String upper = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix()) + Character.MAX_VALUE;
-        return rangeIndex.forRange(lower, false, upper,false, likeMatcher::matchesSuffixOnly);
+        return rangeIndex.forRange(lower, false, upper, false, likeMatcher::matchesSuffixOnly);
       }
     }
 

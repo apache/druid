@@ -128,7 +128,7 @@ public class SegmentAnalyzer
           break;
         case STRING:
           if (index != null) {
-            analysis = analyzeStringColumn(capabilities, index.getColumnHolder(columnName), columnName);
+            analysis = analyzeStringColumn(capabilities, index.getColumnHolder(columnName));
           } else {
             analysis = analyzeStringColumn(capabilities, storageAdapter, columnName);
           }
@@ -194,8 +194,7 @@ public class SegmentAnalyzer
 
   private ColumnAnalysis analyzeStringColumn(
       final ColumnCapabilities capabilities,
-      final ColumnHolder columnHolder,
-      final String columnName
+      final ColumnHolder columnHolder
   )
   {
     Comparable min = null;
