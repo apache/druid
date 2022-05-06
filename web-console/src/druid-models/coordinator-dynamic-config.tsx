@@ -265,8 +265,9 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
         differs from maxNonPrimaryReplicantsToLoad because it includes the count of primary
         replicants that are loaded in the limit. An operator may want to use this configuration to
         prevent the coordinator from spinning and loading many segments that are already loaded, but
-        appeared to be unavailable due to a temporary network issue causing some number of Historical
-        servers to have their segments go missing (or some other event that caused a similar event).
+        appeared to be unavailable due to a temporary network issue causing some number of
+        Historical servers to have their segments go missing (or some other event that caused a
+        similar event).
       </>
     ),
   },
