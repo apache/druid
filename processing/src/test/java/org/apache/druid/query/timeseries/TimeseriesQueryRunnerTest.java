@@ -34,8 +34,10 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
+import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -220,7 +222,16 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .context(makeContext())
                                   .build();
 
-    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
+    StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("", "");
+    MetricsEmittingQueryRunner<Result<TimeseriesResultValue>> metricsEmittingQueryRunner =
+        new MetricsEmittingQueryRunner<Result<TimeseriesResultValue>>(
+            stubServiceEmitter,
+            new TimeseriesQueryQueryToolChest(),
+            runner,
+            (obj, lng) -> {},
+            (metrics) -> {}
+        ).withWaitMeasuredFromNow();
+    Iterable<Result<TimeseriesResultValue>> results = metricsEmittingQueryRunner.run(QueryPlus.wrap(query)).toList();
 
     final String[] expectedIndex = descending ?
                                    QueryRunnerTestHelper.EXPECTED_FULL_ON_INDEX_VALUES_DESC :
@@ -306,6 +317,11 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
       ++count;
     }
 
+    Assert.assertEquals(1, stubServiceEmitter.getEvents().size());
+    Assert.assertEquals(
+        vectorize,
+        stubServiceEmitter.getEvents().get(0).toMap().getOrDefault("vectorized", null)
+    );
     Assert.assertEquals(lastResult.toString(), expectedLast, lastResult.getTimestamp());
   }
 
