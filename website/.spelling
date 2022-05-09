@@ -558,6 +558,9 @@ useApproximateCountDistinct
 useGroupingSetForExactDistinct
 useApproximateTopN
 wikipedia
+enableTimeBoundaryPlanning
+TimeBoundary
+druid.query.default.context.enableTimeBoundaryPlanning
 IEC
  - ../docs/comparisons/druid-vs-elasticsearch.md
 100x
@@ -1651,7 +1654,6 @@ enableJoinFilterPushDown
 enableJoinFilterRewrite
 enableJoinFilterRewriteValueColumnFilters
 joinFilterRewriteMaxSize
-enableTimeBoundaryPlanning
  - ../docs/querying/querying.md
 7KiB
 DatasourceMetadata
