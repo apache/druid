@@ -255,7 +255,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
     ),
   },
   {
-    name: 'maxNonSegmentsToLoad',
+    name: 'maxSegmentsToLoad',
     type: 'number',
     defaultValue: 2147483647,
     info: (
