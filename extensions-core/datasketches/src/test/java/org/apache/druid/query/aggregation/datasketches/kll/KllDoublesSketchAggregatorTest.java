@@ -364,7 +364,7 @@ public class KllDoublesSketchAggregatorTest extends InitializedNullHandlingTest
     Object sketchObjectWithNulls = row.get(1);
     Assert.assertTrue(sketchObjectWithNulls instanceof Long);
     long sketchValueWithNulls = (long) sketchObjectWithNulls;
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 400 : 377, sketchValueWithNulls);
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? 400 : 355, sketchValueWithNulls);
 
     // post agg
     Object quantileObject = row.get(2);
