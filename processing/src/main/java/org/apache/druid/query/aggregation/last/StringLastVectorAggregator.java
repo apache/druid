@@ -70,7 +70,10 @@ public class StringLastVectorAggregator implements VectorAggregator
     lastTime = buf.getLong(position);
     int index;
     for (int i = endRow - 1; i >= startRow; i--) {
-      if (times[i] < lastTime && objectsWhichMightBeStrings[i] != null) {
+      if (objectsWhichMightBeStrings[i] == null) {
+        continue;
+      }
+      if (times[i] < lastTime) {
         break;
       }
       index = i;
@@ -123,9 +126,19 @@ public class StringLastVectorAggregator implements VectorAggregator
   {
     long[] timeVector = timeSelector.getLongVector();
     Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
-    // one time check on first element to judge if elements are serializable pairs or not
-    final int startRow = rows == null ? 0 : rows[0];
-    final boolean foldNeeded = StringFirstLastUtils.objectNeedsFoldCheck(objectsWhichMightBeStrings[startRow]);
+
+    // iterate once over the object vector to find first non null element and
+    // determine if the type is Pair or not
+    boolean foldNeeded = false;
+    for (Object obj : objectsWhichMightBeStrings) {
+      if (obj == null) {
+        continue;
+      } else {
+        foldNeeded = StringFirstLastUtils.objectNeedsFoldCheck(obj);
+        break;
+      }
+    }
+
     for (int i = 0; i < numRows; i++) {
       int position = positions[i] + positionOffset;
       int row = rows == null ? i : rows[i];
