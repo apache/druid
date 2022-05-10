@@ -125,6 +125,7 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
                               Long maxBackoffIntervalNanos)
   {
     try {
+      this.serviceUrl = serviceUrl;
       this.readerName = readerName;
       this.maxRecordsInSinglePoll = maxRecordsInSinglePoll;
       this.received = new ArrayBlockingQueue<>(this.maxRecordsInSinglePoll);
@@ -148,7 +149,7 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
       this.requestTimeoutMs = requestTimeoutMs;
       this.maxBackoffIntervalNanos = maxBackoffIntervalNanos;
 
-      client = PulsarClient.builder().serviceUrl(serviceUrl).build();
+      client = PulsarClient.builder().serviceUrl(this.serviceUrl).build();
 
     } catch (PulsarClientException e) {
       throw new RuntimeException(e);
