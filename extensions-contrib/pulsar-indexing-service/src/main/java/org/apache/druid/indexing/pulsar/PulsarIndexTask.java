@@ -97,8 +97,8 @@ public class PulsarIndexTask extends SeekableStreamIndexTask<Integer, Long, Byte
       }
 
       return new PulsarRecordSupplier(
-          getId(),
           ioConfig.getServiceUrl(),
+          getId(),
           maxRowsInMemory
       );
     } finally {

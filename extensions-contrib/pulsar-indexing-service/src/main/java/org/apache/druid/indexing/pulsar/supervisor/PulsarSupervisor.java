@@ -62,8 +62,8 @@ import java.util.stream.Collectors;
 public class PulsarSupervisor extends SeekableStreamSupervisor<Integer, Long, ByteEntity>
 {
 
-  public static final TypeReference<TreeMap<Integer, Map<Integer, String>>> CHECKPOINTS_TYPE_REF =
-      new TypeReference<TreeMap<Integer, Map<Integer, String>>>()
+  public static final TypeReference<TreeMap<Integer, Map<Integer, Long>>> CHECKPOINTS_TYPE_REF =
+      new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
       {
       };
 

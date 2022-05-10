@@ -1,7 +1,7 @@
 package org.apache.druid.indexing.pulsar;
 
 import com.google.common.collect.ImmutableSet;
-import io.vavr.Function2;
+import io.vavr.Function3;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
@@ -73,7 +73,7 @@ public class PulsarRecordSupplierTest extends EasyMockSupport
 
     CompletableFuture<Reader<byte[]>> completableFuture = createMock(CompletableFuture.class);
 
-    Function2<PulsarClient, String, CompletableFuture<Reader<byte[]>>> test = (pulsarClient, topic) -> {
+    Function3<PulsarClient, String, PulsarRecordSupplier, CompletableFuture<Reader<byte[]>>> test = (pulsarClient, topic, supplier) -> {
       return CompletableFuture.completedFuture(reader);
     };
 
@@ -99,7 +99,7 @@ public class PulsarRecordSupplierTest extends EasyMockSupport
 
     CompletableFuture<Reader<byte[]>> completableFuture = createMock(CompletableFuture.class);
 
-    Function2<PulsarClient, String, CompletableFuture<Reader<byte[]>>> test = (pulsarClient, topic) -> {
+    Function3<PulsarClient, String, PulsarRecordSupplier, CompletableFuture<Reader<byte[]>>> test = (pulsarClient, topic, supplier) -> {
       return CompletableFuture.completedFuture(reader);
     };
 

@@ -20,12 +20,13 @@
 package org.apache.druid.indexing.pulsar;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.vavr.Function2;
+import io.vavr.Function3;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.MessageId;
@@ -59,10 +60,13 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
 {
 
   private static final EmittingLogger log = new EmittingLogger(PulsarRecordSupplier.class);
-  protected static Function2<PulsarClient, String, CompletableFuture<Reader<byte[]>>> buildConsumer =
-      (PulsarClient client, String topic) -> {
+  protected static Function3<PulsarClient, String, PulsarRecordSupplier, CompletableFuture<Reader<byte[]>>> buildConsumer =
+      (PulsarClient client, String topic, PulsarRecordSupplier recordSupplier) -> {
         String readerName = topic + "-reader";
+
+
         return client.newReader()
+            .readerListener(recordSupplier)
             .readerName(readerName)
             .topic(topic)
             .startMessageId(MessageId.latest)
@@ -75,7 +79,7 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
   protected final String readerName;
   private final BlockingQueue<Message<byte[]>> received;
   private final Integer maxRecordsInSinglePoll;
-  private final Function2<PulsarClient, String, CompletableFuture<Reader<byte[]>>> consumerBuilder;
+  private final Function3<PulsarClient, String, PulsarRecordSupplier, CompletableFuture<Reader<byte[]>>> consumerBuilder;
   private PulsarClientException previousSeekFailure;
 
   public PulsarRecordSupplier(String serviceUrl, String readerName, Integer maxRecordsInSinglePoll)
@@ -95,7 +99,7 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
   @VisibleForTesting
   public PulsarRecordSupplier(
       String serviceUrl, String readerName, Integer maxRecordsInSinglePoll, PulsarClient client,
-      Function2<PulsarClient, String, CompletableFuture<Reader<byte[]>>> buildConsumer,
+      Function3<PulsarClient, String, PulsarRecordSupplier, CompletableFuture<Reader<byte[]>>> buildConsumer,
       BlockingQueue<Message<byte[]>> received
   )
   {
@@ -139,12 +143,12 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
             .getPartition(partition.getPartitionId())
             .toString();
 
-        futures.add(consumerBuilder.apply(client, topic).thenApplyAsync(reader -> {
+        futures.add(consumerBuilder.apply(client, topic, this).thenApplyAsync(reader -> {
           if (readerPartitions.containsKey(partition)) {
             reader.closeAsync();
           } else {
             // start reader at LATEST position
-            readerPartitions.put(partition, new CursorContainer(reader, MessageId.latest));
+            readerPartitions.put(partition, new CursorContainer(reader, MessageId.earliest));
           }
           return reader;
         }));
