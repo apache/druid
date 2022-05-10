@@ -16,23 +16,6 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
-import React from 'react';
-
-import { Capabilities } from '../../utils';
-
-import { DatasourcesView } from './datasource-view';
-
-describe('DatasourcesView', () => {
-  it('matches snapshot', () => {
-    const dataSourceView = shallow(
-      <DatasourcesView
-        goToQuery={() => {}}
-        goToTask={() => null}
-        goToSegments={() => {}}
-        capabilities={Capabilities.FULL}
-      />,
-    );
-    expect(dataSourceView).toMatchSnapshot();
-  });
-});
+export * from './react-table-inputs';
+export * from './react-table-pagination/react-table-pagination';
+export * from './react-table-utils';

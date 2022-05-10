@@ -34,6 +34,7 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -44,6 +45,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -85,7 +87,7 @@ class ExpressionTestHelper
               NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
           )
       ),
-      ImmutableMap.of()
+      new QueryContext()
   );
 
   private final RowSignature rowSignature;
@@ -137,7 +139,12 @@ class ExpressionTestHelper
 
   RexNode makeLiteral(DateTime timestamp)
   {
-    return rexBuilder.makeTimestampLiteral(Calcites.jodaToCalciteTimestampString(timestamp, DateTimeZone.UTC), 0);
+    return Calcites.jodaToCalciteTimestampLiteral(
+        rexBuilder,
+        timestamp,
+        DateTimeZone.UTC,
+        DruidTypeSystem.DEFAULT_TIMESTAMP_PRECISION
+    );
   }
 
   RexNode makeLiteral(Integer integer)

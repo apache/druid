@@ -16,9 +16,7 @@
  * limitations under the License.
  */
 
-function nonEmptyArray(a: any) {
-  return Array.isArray(a) && Boolean(a.length);
-}
+import { nonEmptyArray } from '../utils';
 
 export interface InputSource {
   type: string;

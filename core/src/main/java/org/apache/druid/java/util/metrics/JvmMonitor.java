@@ -22,6 +22,8 @@ package org.apache.druid.java.util.metrics;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -40,10 +42,15 @@ import java.lang.management.MemoryUsage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class JvmMonitor extends FeedDefiningMonitor
 {
   private static final Logger log = new Logger(JvmMonitor.class);
+  private static final Pattern PATTERN_GC_GENERATION =
+      Pattern.compile("^sun\\.gc\\.(?:generation|collector)\\.(\\d+)\\..*");
 
   private final Map<String, String[]> dimensions;
   private final long pid;
@@ -170,10 +177,41 @@ public class JvmMonitor extends FeedDefiningMonitor
       // in JDK11 jdk.internal.perf.Perf is not accessible, unless
       // --add-exports java.base/jdk.internal.perf=ALL-UNNAMED is set
       log.warn("Cannot initialize GC counters. If running JDK11 and above,"
-               + " add --add-exports java.base/jdk.internal.perf=ALL-UNNAMED"
+               + " add --add-exports=java.base/jdk.internal.perf=ALL-UNNAMED"
                + " to the JVM arguments to enable GC counters.");
     }
     return null;
+  }
+
+  @VisibleForTesting
+  static IntSet getGcGenerations(final Set<String> jStatCounterNames)
+  {
+    final IntSet retVal = new IntRBTreeSet();
+
+    for (final String counterName : jStatCounterNames) {
+      final Matcher m = PATTERN_GC_GENERATION.matcher(counterName);
+      if (m.matches()) {
+        retVal.add(Integer.parseInt(m.group(1)));
+      }
+    }
+
+    return retVal;
+  }
+
+  @VisibleForTesting
+  static String getGcGenerationName(final int genIndex)
+  {
+    switch (genIndex) {
+      case 0:
+        return "young";
+      case 1:
+        return "old";
+      case 2:
+        // Removed in Java 8 but still actual for previous Java versions
+        return "perm";
+      default:
+        return String.valueOf(genIndex);
+    }
   }
 
   /**
@@ -191,11 +229,8 @@ public class JvmMonitor extends FeedDefiningMonitor
       final JStatData jStatData = JStatData.connect(pid);
       final Map<String, JStatData.Counter<?>> jStatCounters = jStatData.getAllCounters();
 
-      generations.add(new GcGeneration(jStatCounters, 0, "young"));
-      generations.add(new GcGeneration(jStatCounters, 1, "old"));
-      // Removed in Java 8 but still actual for previous Java versions
-      if (jStatCounters.containsKey("sun.gc.generation.2.name")) {
-        generations.add(new GcGeneration(jStatCounters, 2, "perm"));
+      for (int genIndex : getGcGenerations(jStatCounters.keySet())) {
+        generations.add(new GcGeneration(jStatCounters, genIndex, getGcGenerationName(genIndex)));
       }
     }
 
@@ -210,6 +245,7 @@ public class JvmMonitor extends FeedDefiningMonitor
   private class GcGeneration
   {
     private final String name;
+    @Nullable
     private final GcGenerationCollector collector;
     private final List<GcGenerationSpace> spaces = new ArrayList<>();
 
@@ -217,11 +253,13 @@ public class JvmMonitor extends FeedDefiningMonitor
     {
       this.name = StringUtils.toLowerCase(name);
 
-      long spacesCount = ((JStatData.LongCounter) jStatCounters.get(
-          StringUtils.format("sun.gc.generation.%d.spaces", genIndex)
-      )).getLong();
-      for (long spaceIndex = 0; spaceIndex < spacesCount; spaceIndex++) {
-        spaces.add(new GcGenerationSpace(jStatCounters, genIndex, spaceIndex));
+      final String spacesCountKey = StringUtils.format("sun.gc.generation.%d.spaces", genIndex);
+
+      if (jStatCounters.containsKey(spacesCountKey)) {
+        final long spacesCount = ((JStatData.LongCounter) jStatCounters.get(spacesCountKey)).getLong();
+        for (long spaceIndex = 0; spaceIndex < spacesCount; spaceIndex++) {
+          spaces.add(new GcGenerationSpace(jStatCounters, genIndex, spaceIndex));
+        }
       }
 
       if (jStatCounters.containsKey(StringUtils.format("sun.gc.collector.%d.name", genIndex))) {
@@ -300,6 +338,8 @@ public class JvmMonitor extends FeedDefiningMonitor
           return "cms";
         case "G1 incremental collections":
           return "g1";
+        case "Shenandoah partial":
+          return "shenandoah";
 
         // Old gen
         case "MCS":
@@ -310,6 +350,8 @@ public class JvmMonitor extends FeedDefiningMonitor
           return "cms";
         case "G1 stop-the-world full collections":
           return "g1";
+        case "Shenandoah full":
+          return "shenandoah";
 
         default:
           return name;

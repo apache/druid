@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.23.0-SNAPSHOT</version>
+    <version>0.24.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -113,13 +113,14 @@
         <caffeine.version>2.8.0</caffeine.version>
         <jacoco.version>0.8.7</jacoco.version>
         <hibernate-validator.version>5.2.5.Final</hibernate-validator.version>
-        <httpclient.version>4.5.10</httpclient.version>
+        <httpclient.version>4.5.13</httpclient.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.5.9</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
         <com.google.apis.client.version>1.26.0</com.google.apis.client.version>
         <com.google.apis.compute.version>v1-rev20190607-${com.google.apis.client.version}</com.google.apis.compute.version>
         <com.google.apis.storage.version>v1-rev20190523-${com.google.apis.client.version}</com.google.apis.storage.version>
+        <jdk.surefire.argLine><!-- empty placeholder --></jdk.surefire.argLine>
         <repoOrgId>apache.snapshots</repoOrgId>
         <repoOrgName>Apache Snapshot Repository</repoOrgName>
         <repoOrgUrl>https://repository.apache.org/snapshots</repoOrgUrl>
@@ -1461,7 +1462,7 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>6.0.3</version>
+                <version>7.0.4</version>
                 <configuration>
                     <failBuildOnCVSS>7</failBuildOnCVSS>
                     <skipProvidedScope>true</skipProvidedScope>
@@ -1635,6 +1636,13 @@
             <activation>
                 <jdk>[9,)</jdk>
             </activation>
+            <properties>
+                <jdk.surefire.argLine>
+                    <!-- required for JvmMonitor tests on Java 11+ -->
+                    --add-exports=java.base/jdk.internal.perf=ALL-UNNAMED
+                    --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
+                </jdk.surefire.argLine>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -1718,7 +1726,9 @@
                             <trimStackTrace>false</trimStackTrace>
                             <!-- locale settings must be set on the command line before startup -->
                             <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
-                            <argLine>-Xmx768m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
+                            <argLine>
+                                ${jdk.surefire.argLine}
+                                -Xmx768m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
                                 -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                                 -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
                                 <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->

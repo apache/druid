@@ -31,6 +31,8 @@ export function dataTypeToIcon(dataType: string): IconName {
       return IconNames.FONT;
 
     case 'BIGINT':
+    case 'DECIMAL':
+    case 'REAL':
     case 'LONG':
     case 'FLOAT':
     case 'DOUBLE':
@@ -51,5 +53,42 @@ export function dataTypeToIcon(dataType: string): IconName {
       if (typeUpper.startsWith('ARRAY')) return IconNames.ARRAY;
       if (typeUpper.startsWith('COMPLEX')) return IconNames.ASTERISK;
       return IconNames.HELP;
+  }
+}
+
+export function dataTypeToColumnWidth(dataType: string | undefined): number {
+  const typeUpper = String(dataType).toUpperCase();
+
+  switch (typeUpper) {
+    case 'TIMESTAMP':
+      return 180;
+
+    case 'VARCHAR':
+    case 'STRING':
+      return 150;
+
+    case 'BIGINT':
+    case 'DECIMAL':
+    case 'REAL':
+    case 'LONG':
+    case 'FLOAT':
+    case 'DOUBLE':
+      return 120;
+
+    case 'ARRAY<STRING>':
+      return 200;
+
+    case 'ARRAY<LONG>':
+    case 'ARRAY<FLOAT>':
+    case 'ARRAY<DOUBLE>':
+      return 180;
+
+    case 'COMPLEX<JSON>':
+      return 300;
+
+    default:
+      if (typeUpper.startsWith('ARRAY')) return 200;
+      if (typeUpper.startsWith('COMPLEX')) return 150;
+      return 180;
   }
 }

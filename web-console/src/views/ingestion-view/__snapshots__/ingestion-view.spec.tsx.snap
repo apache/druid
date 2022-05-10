@@ -154,6 +154,7 @@ exports[`IngestionView matches snapshot 1`] = `
         columns={
           Array [
             Object {
+              "Cell": [Function],
               "Header": "Datasource",
               "accessor": "supervisor_id",
               "id": "datasource",
@@ -161,21 +162,23 @@ exports[`IngestionView matches snapshot 1`] = `
               "width": 300,
             },
             Object {
+              "Cell": [Function],
               "Header": "Type",
-              "accessor": [Function],
-              "id": "type",
+              "accessor": "type",
               "show": true,
+              "width": 100,
             },
             Object {
+              "Cell": [Function],
               "Header": "Topic/Stream",
-              "accessor": [Function],
-              "id": "source",
+              "accessor": "source",
               "show": true,
+              "width": 300,
             },
             Object {
               "Cell": [Function],
               "Header": "Status",
-              "accessor": [Function],
+              "accessor": "detailed_state",
               "id": "status",
               "show": true,
               "width": 300,
@@ -426,10 +429,11 @@ exports[`IngestionView matches snapshot 1`] = `
           Array [
             Object {
               "Aggregated": [Function],
+              "Cell": [Function],
               "Header": "Task ID",
               "accessor": "task_id",
               "show": true,
-              "width": 500,
+              "width": 440,
             },
             Object {
               "Aggregated": [Function],
@@ -451,16 +455,19 @@ exports[`IngestionView matches snapshot 1`] = `
               "Header": "Datasource",
               "accessor": "datasource",
               "show": true,
+              "width": 200,
             },
             Object {
               "Aggregated": [Function],
+              "Cell": [Function],
               "Header": "Location",
               "accessor": "location",
-              "filterMethod": [Function],
               "show": true,
+              "width": 200,
             },
             Object {
               "Aggregated": [Function],
+              "Cell": [Function],
               "Header": "Created time",
               "accessor": "created_time",
               "show": true,
@@ -470,6 +477,7 @@ exports[`IngestionView matches snapshot 1`] = `
               "Cell": [Function],
               "Header": "Status",
               "accessor": [Function],
+              "className": "padded",
               "filterMethod": [Function],
               "id": "status",
               "show": true,
@@ -481,9 +489,10 @@ exports[`IngestionView matches snapshot 1`] = `
               "Cell": [Function],
               "Header": "Duration",
               "accessor": "duration",
+              "className": "padded",
               "filterable": false,
               "show": true,
-              "width": 70,
+              "width": 80,
             },
             Object {
               "Aggregated": [Function],

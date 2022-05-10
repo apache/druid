@@ -136,49 +136,51 @@ The following example illustrates the configuration for a parallel indexing task
       "metricsSpec": [
         {
           "type": "count",
-              "name": "count"
-            },
-            {
-              "type": "doubleSum",
-              "name": "added",
-              "fieldName": "added"
-            },
-            {
-              "type": "doubleSum",
-              "name": "deleted",
-              "fieldName": "deleted"
-            },
-            {
-              "type": "doubleSum",
-              "name": "delta",
-              "fieldName": "delta"
-            }
-        ],
-        "granularitySpec": {
-          "segmentGranularity": "DAY",
-          "queryGranularity": "second",
-          "intervals" : [ "2013-08-31/2013-09-02" ]
+          "name": "count"
+        },
+        {
+          "type": "doubleSum",
+          "name": "added",
+          "fieldName": "added"
+        },
+        {
+          "type": "doubleSum",
+          "name": "deleted",
+          "fieldName": "deleted"
+        },
+        {
+          "type": "doubleSum",
+          "name": "delta",
+          "fieldName": "delta"
         }
+      ],
+      "granularitySpec": {
+        "segmentGranularity": "DAY",
+        "queryGranularity": "second",
+        "intervals": [
+          "2013-08-31/2013-09-02"
+        ]
+      }
     },
     "ioConfig": {
-        "type": "index_parallel",
-        "inputSource": {
-          "type": "local",
-          "baseDir": "examples/indexing/",
-          "filter": "wikipedia_index_data*"
-        },
-        "inputFormat": {
-          "type": "json"
-        }
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "local",
+        "baseDir": "examples/indexing/",
+        "filter": "wikipedia_index_data*"
+      },
+      "inputFormat": {
+        "type": "json"
+      }
     },
     "tuningConfig": {
-        "type": "index_parallel",
-        "partitionsSpec": {
-             "type": "single_dim",
-             "partitionDimension": "country",
-             "targetRowsPerSegment": 5000000
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "single_dim",
+        "partitionDimension": "country",
+        "targetRowsPerSegment": 5000000
       },
-        "maxNumConcurrentSubTasks": 2
+      "maxNumConcurrentSubTasks": 2
     }
   }
 }

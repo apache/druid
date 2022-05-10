@@ -19,6 +19,8 @@
 
 package org.apache.druid.java.util.metrics;
 
+import com.google.common.collect.ImmutableSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -54,6 +56,41 @@ public class JvmMonitorTest
       }
       Thread.sleep(10);
     }
+  }
+
+  @Test
+  public void testGetGcGenerations()
+  {
+    Assert.assertEquals(
+        IntSet.of(0, 1),
+        JvmMonitor.getGcGenerations(
+            ImmutableSet.of(
+                "sun.gc.collector.0.name",
+                "sun.gc.collector.1.name",
+                "sun.gc.generation.1.spaces"
+            )
+        )
+    );
+
+    Assert.assertEquals(
+        IntSet.of(1, 2),
+        JvmMonitor.getGcGenerations(
+            ImmutableSet.of(
+                "sun.gc.generation.1.spaces",
+                "sun.gc.collector.2.name",
+                "sun.gc.somethingelse.3.name"
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testGetGcGenerationName()
+  {
+    Assert.assertEquals("young", JvmMonitor.getGcGenerationName(0));
+    Assert.assertEquals("old", JvmMonitor.getGcGenerationName(1));
+    Assert.assertEquals("perm", JvmMonitor.getGcGenerationName(2));
+    Assert.assertEquals("3", JvmMonitor.getGcGenerationName(3));
   }
 
   private static class GcTrackingEmitter implements Emitter
