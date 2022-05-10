@@ -434,21 +434,13 @@ public class CompactionTask extends AbstractBatchIndexTask
       return;
     }
 
-    BatchIngestionMode mode = getBatchIngestionMode(
-        false, // compact never supports append mode
-        isDropExisting
-    );
-    // compact does not support APPEND
-    switch (mode) {
-      case REPLACE:
-        emitter.emit(buildEvent("compact/replace/count", 1));
-        break;
-      case OVERWRITE:
-        emitter.emit(buildEvent("compact/overwrite/count", 1));
-        break;
-      default:
-        throw new ISE("Invalid compact ingestion mode [%s]", mode);
+    // compact does not support appendToExisting
+    if (isDropExisting) {
+      emitter.emit(buildEvent("compact/replace/count", 1));
+    } else {
+      emitter.emit(buildEvent("compact/overwrite/count", 1));
     }
+
   }
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception

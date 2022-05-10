@@ -143,12 +143,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   private static String makeGroupId(IndexIngestionSpec ingestionSchema)
   {
-    return makeGroupId(ingestionSchema.ioConfig.appendToExisting, ingestionSchema.dataSchema.getDataSource());
+    return makeGroupId(ingestionSchema.ioConfig.getBatchIngestionMode(), ingestionSchema.dataSchema.getDataSource());
   }
 
-  private static String makeGroupId(boolean isAppendToExisting, String dataSource)
+  private static String makeGroupId(BatchIOConfig.BatchIngestionMode batchIngestionMode, String dataSource)
   {
-    if (isAppendToExisting) {
+    if (batchIngestionMode == BatchIOConfig.BatchIngestionMode.APPEND) {
       // Shared locking group for all tasks that append, since they are OK to run concurrently.
       return StringUtils.format("%s_append_%s", TYPE, dataSource);
     } else {
@@ -251,8 +251,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @Override
   public boolean requireLockExistingSegments()
   {
-    return isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig)
-           || !ingestionSchema.ioConfig.isAppendToExisting();
+    return isGuaranteedRollup(ingestionSchema.ioConfig.getBatchIngestionMode(), ingestionSchema.tuningConfig)
+           || (ingestionSchema.ioConfig.batchIngestionMode != BatchIOConfig.BatchIngestionMode.APPEND);
   }
 
   @Override
@@ -270,7 +270,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @Override
   public boolean isPerfectRollup()
   {
-    return isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig);
+    return isGuaranteedRollup(ingestionSchema.ioConfig.getBatchIngestionMode(), ingestionSchema.tuningConfig);
   }
 
   @Nullable
@@ -444,9 +444,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     try {
 
       // emit metric for sequential batch ingestion mode:
-      emitBatchIngestionModeMetrics(toolbox.getEmitter(), ingestionSchema.getIOConfig().isAppendToExisting(),
-                                    ingestionSchema.getIOConfig().isDropExisting()
-      );
+      emitBatchIngestionModeMetrics(toolbox.getEmitter(), ingestionSchema.getIOConfig().getBatchIngestionMode());
 
       log.debug("Found chat handler of class[%s]", toolbox.getChatHandlerProvider().getClass().getName());
 
@@ -881,7 +879,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             null,
             dataSchema,
             getTaskLockHelper(),
-            ingestionSchema.getIOConfig().isAppendToExisting(),
+            ingestionSchema.getIOConfig().getBatchIngestionMode(),
             partitionAnalysis.getPartitionsSpec(),
             null
         );
@@ -947,10 +945,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           );
 
       Set<DataSegment> tombStones = Collections.emptySet();
-      if (ingestionSchema.getIOConfig().isDropExisting()) {
-        TombstoneHelper tombstoneHelper = new TombstoneHelper(pushed.getSegments(),
-                                                              ingestionSchema.getDataSchema(),
-                                                              toolbox.getTaskActionClient());
+      if (ingestionSchema.getIOConfig().getBatchIngestionMode() == BatchIOConfig.BatchIngestionMode.REPLACE) {
+        // check whether to generate tombstones...
+        TombstoneHelper tombstoneHelper = new TombstoneHelper(
+            pushed.getSegments(),
+            ingestionSchema.getDataSchema(),
+            toolbox.getTaskActionClient()
+        );
 
         List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals();
         // now find the versions for the tombstone intervals
@@ -970,12 +971,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         emitMetric(toolbox.getEmitter(), "batch/replace/segments/count", pushed.getSegments().size());
 
         log.debugSegments(tombStones, "To publish tombstones");
-      } else {
-        if (ingestionSchema.getIOConfig().isAppendToExisting()) {
-          emitMetric(toolbox.getEmitter(), "batch/append/segments/count", pushed.getSegments().size());
-        } else {
-          emitMetric(toolbox.getEmitter(), "batch/ovewrite/segments/count", pushed.getSegments().size());
-        }
+      } else if (ingestionSchema.getIOConfig().getBatchIngestionMode() == BatchIOConfig.BatchIngestionMode.APPEND) {
+        emitMetric(toolbox.getEmitter(), "batch/append/segments/count", pushed.getSegments().size());
+      } else if (ingestionSchema.getIOConfig().getBatchIngestionMode() != BatchIOConfig.BatchIngestionMode.OVERWRITE) {
+        emitMetric(toolbox.getEmitter(), "batch/overwrite/segments/count", pushed.getSegments().size());
       }
 
       // Probably we can publish atomicUpdateGroup along with segments.
@@ -1077,8 +1076,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         throw new IAE("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
       }
 
-      if (ioConfig.isDropExisting() && dataSchema.getGranularitySpec().inputIntervals().isEmpty()) {
-        throw new IAE("GranularitySpec's intervals cannot be empty when setting dropExisting to true.");
+      if (ioConfig.batchIngestionMode == BatchIOConfig.BatchIngestionMode.REPLACE && dataSchema.getGranularitySpec()
+                                                                                               .inputIntervals()
+                                                                                               .isEmpty()) {
+        throw new IAE("GranularitySpec's intervals cannot be empty for replace.");
       }
 
       if (ioConfig.getInputSource() != null && ioConfig.getInputSource().needsFormat()) {
@@ -1125,8 +1126,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     private final FirehoseFactory firehoseFactory;
     private final InputSource inputSource;
     private final InputFormat inputFormat;
-    private final boolean appendToExisting;
-    private final boolean dropExisting;
+    private BatchIngestionMode batchIngestionMode;
 
     @JsonCreator
     public IndexIOConfig(
@@ -1146,12 +1146,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       this.firehoseFactory = firehoseFactory;
       this.inputSource = inputSource;
       this.inputFormat = inputFormat;
-      this.appendToExisting = appendToExisting == null ? DEFAULT_APPEND_TO_EXISTING : appendToExisting;
-      this.dropExisting = dropExisting == null ? DEFAULT_DROP_EXISTING : dropExisting;
-      if (this.dropExisting && this.appendToExisting) {
-        throw new IAE("Cannot both drop existing segments and append to existing segments. "
-                      + "Either dropExisting or appendToExisting should be set to false");
-      }
+      batchIngestionMode = computeBatchIngestionMode(appendToExisting, dropExisting);
     }
 
     // old constructor for backward compatibility
@@ -1159,6 +1154,32 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public IndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting, @Nullable Boolean dropExisting)
     {
       this(firehoseFactory, null, null, appendToExisting, dropExisting);
+    }
+
+    private static BatchIngestionMode computeBatchIngestionMode(
+        @Nullable Boolean isAppendToExisting,
+        @Nullable Boolean isDropExisting
+    )
+    {
+
+      isAppendToExisting = isAppendToExisting == null ? false : isAppendToExisting;
+      isDropExisting = isDropExisting == null ? false : isDropExisting;
+
+      if (!isAppendToExisting && isDropExisting) {
+        return BatchIngestionMode.REPLACE;
+      } else if (isAppendToExisting && !isDropExisting) {
+        return BatchIngestionMode.APPEND;
+      } else if (!isAppendToExisting && !isDropExisting) {
+        return BatchIngestionMode.OVERWRITE;
+      }
+      throw new IAE("Cannot simultaneously replace and append to existing segments. "
+                    + "Either dropExisting or appendToExisting should be set to false");
+    }
+
+    @Override
+    public BatchIngestionMode getBatchIngestionMode()
+    {
+      return batchIngestionMode;
     }
 
     @Nullable
@@ -1207,19 +1228,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return Preconditions.checkNotNull(inputFormat, "inputFormat");
     }
 
-    @Override
-    @JsonProperty
-    public boolean isAppendToExisting()
-    {
-      return appendToExisting;
-    }
-
-    @Override
-    @JsonProperty
-    public boolean isDropExisting()
-    {
-      return dropExisting;
-    }
   }
 
   public static class IndexTuningConfig implements AppenderatorConfig

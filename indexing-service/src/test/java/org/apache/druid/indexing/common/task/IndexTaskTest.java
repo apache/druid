@@ -858,7 +858,7 @@ public class IndexTaskTest extends IngestionTestBase
     // Expect exception if reingest with dropExisting and null intervals is attempted
     expectedException.expect(IAE.class);
     expectedException.expectMessage(
-        "GranularitySpec's intervals cannot be empty when setting dropExisting to true."
+        "GranularitySpec's intervals cannot be empty for replace."
     );
     IndexTask indexTask = new IndexTask(
         null,
@@ -2700,7 +2700,7 @@ public class IndexTaskTest extends IngestionTestBase
   {
     expectedException.expect(IAE.class);
     expectedException.expectMessage(
-        "Cannot both drop existing segments and append to existing segments. Either dropExisting or appendToExisting should be set to false"
+        "Cannot simultaneously replace and append to existing segments. Either dropExisting or appendToExisting should be set to false"
     );
     new IndexTask(
         null,

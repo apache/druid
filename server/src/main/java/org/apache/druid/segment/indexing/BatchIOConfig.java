@@ -19,19 +19,48 @@
 
 package org.apache.druid.segment.indexing;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.java.util.common.StringUtils;
 
 /**
  * IOConfig for all batch tasks except compactionTask.
  */
 public interface BatchIOConfig extends IOConfig
 {
+  enum BatchIngestionMode
+  {
+    REPLACE,
+    APPEND,
+    OVERWRITE;
+
+    @JsonCreator
+    public static BatchIngestionMode fromString(String name)
+    {
+      if (name == null) {
+        return null;
+      }
+      return valueOf(StringUtils.toUpperCase(name));
+    }
+  }
+
   InputSource getInputSource();
 
   InputFormat getInputFormat();
 
-  boolean isAppendToExisting();
+  @JsonProperty
+  default boolean isAppendToExisting()
+  {
+    return getBatchIngestionMode() == BatchIngestionMode.APPEND;
+  }
 
-  boolean isDropExisting();
+  @JsonProperty
+  default boolean isDropExisting()
+  {
+    return getBatchIngestionMode() == BatchIngestionMode.REPLACE;
+  }
+
+  BatchIngestionMode getBatchIngestionMode();
 }

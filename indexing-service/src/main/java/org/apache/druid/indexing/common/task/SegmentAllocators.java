@@ -24,6 +24,7 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.batch.parallel.SupervisorTaskAccess;
 import org.apache.druid.indexing.common.task.batch.partition.CompletePartitionAnalysis;
+import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
@@ -43,19 +44,19 @@ public final class SegmentAllocators
       final @Nullable SupervisorTaskAccess supervisorTaskAccess,
       final DataSchema dataSchema,
       final TaskLockHelper taskLockHelper,
-      final boolean appendToExisting,
+      final BatchIOConfig.BatchIngestionMode batchIngestionMode,
       final PartitionsSpec partitionsSpec,
       final @Nullable Boolean useLineageBasedSegmentAllocation
   ) throws IOException
   {
-    if (appendToExisting || taskLockHelper.isUseSegmentLock()) {
+    if (batchIngestionMode == BatchIOConfig.BatchIngestionMode.APPEND || taskLockHelper.isUseSegmentLock()) {
       return new OverlordCoordinatingSegmentAllocator(
           toolbox,
           sequenceName,
           supervisorTaskAccess,
           dataSchema,
           taskLockHelper,
-          appendToExisting,
+          batchIngestionMode,
           partitionsSpec
       );
     } else {

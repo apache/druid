@@ -46,6 +46,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
@@ -558,7 +559,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
                   null,
                   baseInputSource.withSplit(split),
                   getIngestionSchema().getIOConfig().getInputFormat(),
-                  getIngestionSchema().getIOConfig().isAppendToExisting(),
+                  getIngestionSchema().getIOConfig().getBatchIngestionMode() == BatchIOConfig.BatchIngestionMode.APPEND,
                   null
               ),
               getIngestionSchema().getTuningConfig()
@@ -684,7 +685,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           new SupervisorTaskAccess(getSupervisorTaskId(), taskClient),
           getIngestionSchema().getDataSchema(),
           getTaskLockHelper(),
-          getIngestionSchema().getIOConfig().isAppendToExisting(),
+          getIngestionSchema().getIOConfig().getBatchIngestionMode(),
           partitionsSpec,
           true
       );

@@ -26,6 +26,7 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.segment.indexing.BatchIOConfig;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -99,8 +100,8 @@ abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends
             firehoseFactory,
             inputSource,
             ingestionSchema.getIOConfig().getInputFormat(),
-            ingestionSchema.getIOConfig().isAppendToExisting(),
-            ingestionSchema.getIOConfig().isDropExisting()
+            ingestionSchema.getIOConfig().getBatchIngestionMode() == BatchIOConfig.BatchIngestionMode.APPEND,
+            ingestionSchema.getIOConfig().getBatchIngestionMode() == BatchIOConfig.BatchIngestionMode.REPLACE
         ),
         ingestionSchema.getTuningConfig()
     );

@@ -115,6 +115,7 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
@@ -1932,8 +1933,11 @@ public class CompactionTaskTest
 
       // assert ioConfig
       final ParallelIndexIOConfig ioConfig = ingestionSchema.getIOConfig();
-      Assert.assertFalse(ioConfig.isAppendToExisting());
-      Assert.assertEquals(expectedDropExisting, ioConfig.isDropExisting());
+      Assert.assertFalse(ioConfig.getBatchIngestionMode() == BatchIOConfig.BatchIngestionMode.APPEND);
+      Assert.assertEquals(
+          expectedDropExisting,
+          ioConfig.getBatchIngestionMode() == BatchIOConfig.BatchIngestionMode.REPLACE
+      );
       final InputSource inputSource = ioConfig.getInputSource();
       Assert.assertTrue(inputSource instanceof DruidInputSource);
       final DruidInputSource druidInputSource = (DruidInputSource) inputSource;

@@ -33,6 +33,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
+import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.BuildingNumberedShardSpec;
@@ -189,8 +190,8 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
                 firehoseFactory,
                 inputSource,
                 ingestionSchema.getIOConfig().getInputFormat(),
-                ingestionSchema.getIOConfig().isAppendToExisting(),
-                ingestionSchema.getIOConfig().isDropExisting()
+                ingestionSchema.getIOConfig().getBatchIngestionMode() == BatchIOConfig.BatchIngestionMode.APPEND,
+                ingestionSchema.getIOConfig().getBatchIngestionMode() == BatchIOConfig.BatchIngestionMode.REPLACE
             ),
             ingestionSchema.getTuningConfig()
         ),

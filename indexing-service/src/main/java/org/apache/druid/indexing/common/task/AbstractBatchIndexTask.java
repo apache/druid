@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -68,6 +67,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
+import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -309,11 +309,14 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
         Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
     );
-    final boolean useSharedLock = ioConfig.isAppendToExisting() && getContextValue(Tasks.USE_SHARED_LOCK, false);
+    BatchIOConfig.BatchIngestionMode batchIngestionMode = ioConfig.getBatchIngestionMode();
+    final boolean useSharedLock = batchIngestionMode == BatchIOConfig.BatchIngestionMode.APPEND
+                                  && getContextValue(Tasks.USE_SHARED_LOCK, false);
     // Respect task context value most.
-    if (forceTimeChunkLock || ioConfig.isDropExisting()) {
-      log.info("forceTimeChunkLock[%s] or isDropExisting[%s] is set to true. Use timeChunk lock",
-               forceTimeChunkLock, ioConfig.isDropExisting()
+    if (forceTimeChunkLock || batchIngestionMode == BatchIOConfig.BatchIngestionMode.REPLACE) {
+      log.info(
+          "forceTimeChunkLock[%s] is set to true or mode[%s] is replace. Use timeChunk lock",
+          forceTimeChunkLock, batchIngestionMode
       );
       taskLockHelper = new TaskLockHelper(false, useSharedLock);
       if (!intervals.isEmpty()) {
@@ -508,10 +511,13 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    * the start partition ID of the set of perfectly rolled up segments is 0. Instead it might need to store an ordinal
    * in addition to the partition ID which represents the ordinal in the perfectly rolled up segment set.
    */
-  public static boolean isGuaranteedRollup(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
+  public static boolean isGuaranteedRollup(
+      BatchIOConfig.BatchIngestionMode batchIngestionMode,
+      IndexTuningConfig tuningConfig
+  )
   {
     Preconditions.checkArgument(
-        !tuningConfig.isForceGuaranteedRollup() || !ioConfig.isAppendToExisting(),
+        !(batchIngestionMode == BatchIOConfig.BatchIngestionMode.APPEND && tuningConfig.isForceGuaranteedRollup()),
         "Perfect rollup cannot be guaranteed when appending to existing dataSources"
     );
     return tuningConfig.isForceGuaranteedRollup();
@@ -863,37 +869,11 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     );
   }
 
-  public enum BatchIngestionMode
-  {
-    REPLACE,
-    APPEND,
-    OVERWRITE;
-
-    @JsonCreator
-    public static BatchIngestionMode fromString(String name)
-    {
-      if (name == null) {
-        return null;
-      }
-      return valueOf(StringUtils.toUpperCase(name));
-    }
-  }
 
   protected ServiceEventBuilder<ServiceMetricEvent> buildEvent(String subMetrics, Number value)
   {
     // make "base" metric name similar (i.e. "ingest") to the existing ingestion shuffle metrics
     return getMetricBuilder().build(StringUtils.format("ingest/%s", subMetrics), value);
-  }
-
-  protected static BatchIngestionMode getBatchIngestionMode(boolean isAppendToExisting, boolean isDropExisting)
-  {
-    if (isAppendToExisting) {
-      return BatchIngestionMode.APPEND;
-    } else if (isDropExisting) {
-      return BatchIngestionMode.REPLACE;
-    } else {
-      return BatchIngestionMode.OVERWRITE;
-    }
   }
 
   protected void emitMetric(
@@ -911,15 +891,11 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
   protected void emitBatchIngestionModeMetrics(
       ServiceEmitter emitter,
-      boolean isAppendToExisting,
-      boolean isDropExisting
+      BatchIOConfig.BatchIngestionMode mode
   )
   {
 
-    BatchIngestionMode mode = getBatchIngestionMode(
-        isAppendToExisting,
-        isDropExisting
-    );
+
     switch (mode) {
       case APPEND:
         emitMetric(emitter, "batch/append/count", 1);
@@ -931,7 +907,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         emitMetric(emitter, "batch/overwrite/count", 1);
         break;
       default:
-        throw new ISE("Invalid batch ingestion mode [%s]", mode);
+        log.error("We should never hit this code, mode %s: ", mode.name());
+        break;
     }
   }
 }
