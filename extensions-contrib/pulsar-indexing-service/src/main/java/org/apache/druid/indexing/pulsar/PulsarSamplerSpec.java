@@ -29,6 +29,7 @@ import org.apache.druid.indexing.pulsar.supervisor.PulsarSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSamplerSpec;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
+import org.apache.druid.segment.indexing.TuningConfig;
 
 import javax.annotation.Nullable;
 
@@ -52,9 +53,29 @@ public class PulsarSamplerSpec extends SeekableStreamSamplerSpec
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-      PulsarSupervisorIOConfig ioConfig = (PulsarSupervisorIOConfig) PulsarSamplerSpec.this.ioConfig;
+      PulsarSupervisorIOConfig pulsarIOConfig = (PulsarSupervisorIOConfig) PulsarSamplerSpec.this.ioConfig;
 
-      return new PulsarRecordSupplier(ioConfig.getServiceUrl(), READER_NAME, (int) ioConfig.getPollTimeout());
+      return new PulsarRecordSupplier(pulsarIOConfig.getServiceUrl(),
+          READER_NAME,
+          TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY,
+          pulsarIOConfig.getAuthPluginClassName(),
+          pulsarIOConfig.getAuthParams(),
+          pulsarIOConfig.getOperationTimeoutMs(),
+          pulsarIOConfig.getStatsIntervalSeconds(),
+          pulsarIOConfig.getNumIoThreads(),
+          pulsarIOConfig.getNumListenerThreads(),
+          pulsarIOConfig.getUseTcpNoDelay(),
+          pulsarIOConfig.getUseTls(),
+          pulsarIOConfig.getTlsTrustCertsFilePath(),
+          pulsarIOConfig.getTlsAllowInsecureConnection(),
+          pulsarIOConfig.getTlsHostnameVerificationEnable(),
+          pulsarIOConfig.getConcurrentLookupRequest(),
+          pulsarIOConfig.getMaxLookupRequest(),
+          pulsarIOConfig.getMaxNumberOfRejectedRequestPerConnection(),
+          pulsarIOConfig.getKeepAliveIntervalSeconds(),
+          pulsarIOConfig.getConnectionTimeoutMs(),
+          pulsarIOConfig.getRequestTimeoutMs(),
+          pulsarIOConfig.getMaxBackoffIntervalNanos());
     } finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
     }

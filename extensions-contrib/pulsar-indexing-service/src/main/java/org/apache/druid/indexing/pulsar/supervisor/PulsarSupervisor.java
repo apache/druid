@@ -264,10 +264,30 @@ public class PulsarSupervisor extends SeekableStreamSupervisor<Integer, Long, By
   @Override
   protected RecordSupplier<Integer, Long, ByteEntity> setupRecordSupplier()
   {
-    String serviceUrl = (String) ((PulsarSupervisorIOConfig) getIoConfig()).getServiceUrl();
-    return new PulsarRecordSupplier(serviceUrl,
+    PulsarSupervisorIOConfig ioConfig = (PulsarSupervisorIOConfig) getIoConfig();
+
+    return new PulsarRecordSupplier(ioConfig.getServiceUrl(),
         StringUtils.format("PulsarSupervisor-%s", spec.getDataSchema().getDataSource()),
-        TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY);
+        TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY,
+        ioConfig.getAuthPluginClassName(),
+        ioConfig.getAuthParams(),
+        ioConfig.getOperationTimeoutMs(),
+        ioConfig.getStatsIntervalSeconds(),
+        ioConfig.getNumIoThreads(),
+        ioConfig.getNumListenerThreads(),
+        ioConfig.getUseTcpNoDelay(),
+        ioConfig.getUseTls(),
+        ioConfig.getTlsTrustCertsFilePath(),
+        ioConfig.getTlsAllowInsecureConnection(),
+        ioConfig.getTlsHostnameVerificationEnable(),
+        ioConfig.getConcurrentLookupRequest(),
+        ioConfig.getMaxLookupRequest(),
+        ioConfig.getMaxNumberOfRejectedRequestPerConnection(),
+        ioConfig.getKeepAliveIntervalSeconds(),
+        ioConfig.getConnectionTimeoutMs(),
+        ioConfig.getRequestTimeoutMs(),
+        ioConfig.getMaxBackoffIntervalNanos()
+        );
   }
 
   @Override

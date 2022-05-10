@@ -26,7 +26,6 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.MessageId;
@@ -60,10 +59,10 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
 {
 
   private static final EmittingLogger log = new EmittingLogger(PulsarRecordSupplier.class);
-  protected static Function3<PulsarClient, String, PulsarRecordSupplier, CompletableFuture<Reader<byte[]>>> buildConsumer =
+  protected static Function3<PulsarClient, String, PulsarRecordSupplier, CompletableFuture<Reader<byte[]>>>
+      buildConsumer =
       (PulsarClient client, String topic, PulsarRecordSupplier recordSupplier) -> {
         String readerName = topic + "-reader";
-
 
         return client.newReader()
             .readerListener(recordSupplier)
@@ -79,18 +78,78 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
   protected final String readerName;
   private final BlockingQueue<Message<byte[]>> received;
   private final Integer maxRecordsInSinglePoll;
-  private final Function3<PulsarClient, String, PulsarRecordSupplier, CompletableFuture<Reader<byte[]>>> consumerBuilder;
+  private final Function3<PulsarClient, String, PulsarRecordSupplier, CompletableFuture<Reader<byte[]>>>
+      consumerBuilder;
   private PulsarClientException previousSeekFailure;
 
-  public PulsarRecordSupplier(String serviceUrl, String readerName, Integer maxRecordsInSinglePoll)
+  protected final String serviceUrl;
+  protected final String authPluginClassName;
+  protected final String authParams;
+  protected final Long operationTimeoutMs;
+  protected final Long statsIntervalSeconds;
+  protected final Integer numIoThreads;
+  protected final Integer numListenerThreads;
+  protected final Boolean useTcpNoDelay;
+  protected final Boolean useTls;
+  protected final String tlsTrustCertsFilePath;
+  protected final Boolean tlsAllowInsecureConnection;
+  protected final Boolean tlsHostnameVerificationEnable;
+  protected final Integer concurrentLookupRequest;
+  protected final Integer maxLookupRequest;
+  protected final Integer maxNumberOfRejectedRequestPerConnection;
+  protected final Integer keepAliveIntervalSeconds;
+  protected final Integer connectionTimeoutMs;
+  protected final Integer requestTimeoutMs;
+  protected final Long maxBackoffIntervalNanos;
+
+  public PulsarRecordSupplier(String serviceUrl,
+                              String readerName,
+                              Integer maxRecordsInSinglePoll,
+                              String authPluginClassName,
+                              String authParams,
+                              Long operationTimeoutMs,
+                              Long statsIntervalSeconds,
+                              Integer numIoThreads,
+                              Integer numListenerThreads,
+                              Boolean useTcpNoDelay,
+                              Boolean useTls,
+                              String tlsTrustCertsFilePath,
+                              Boolean tlsAllowInsecureConnection,
+                              Boolean tlsHostnameVerificationEnable,
+                              Integer concurrentLookupRequest,
+                              Integer maxLookupRequest,
+                              Integer maxNumberOfRejectedRequestPerConnection,
+                              Integer keepAliveIntervalSeconds,
+                              Integer connectionTimeoutMs,
+                              Integer requestTimeoutMs,
+                              Long maxBackoffIntervalNanos)
   {
     try {
       this.readerName = readerName;
       this.maxRecordsInSinglePoll = maxRecordsInSinglePoll;
       this.received = new ArrayBlockingQueue<>(this.maxRecordsInSinglePoll);
       this.consumerBuilder = buildConsumer;
+      this.authPluginClassName = authPluginClassName;
+      this.authParams = authParams;
+      this.operationTimeoutMs = operationTimeoutMs;
+      this.statsIntervalSeconds = statsIntervalSeconds;
+      this.numIoThreads = numIoThreads;
+      this.numListenerThreads = numListenerThreads;
+      this.useTcpNoDelay = useTcpNoDelay;
+      this.useTls = useTls;
+      this.tlsTrustCertsFilePath = tlsTrustCertsFilePath;
+      this.tlsAllowInsecureConnection = tlsAllowInsecureConnection;
+      this.tlsHostnameVerificationEnable = tlsHostnameVerificationEnable;
+      this.concurrentLookupRequest = concurrentLookupRequest;
+      this.maxLookupRequest = maxLookupRequest;
+      this.maxNumberOfRejectedRequestPerConnection = maxNumberOfRejectedRequestPerConnection;
+      this.keepAliveIntervalSeconds = keepAliveIntervalSeconds;
+      this.connectionTimeoutMs = connectionTimeoutMs;
+      this.requestTimeoutMs = requestTimeoutMs;
+      this.maxBackoffIntervalNanos = maxBackoffIntervalNanos;
 
       client = PulsarClient.builder().serviceUrl(serviceUrl).build();
+
     } catch (PulsarClientException e) {
       throw new RuntimeException(e);
     }
@@ -103,11 +162,30 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
       BlockingQueue<Message<byte[]>> received
   )
   {
+    this.serviceUrl = serviceUrl;
     this.readerName = readerName;
     this.maxRecordsInSinglePoll = maxRecordsInSinglePoll;
     this.received = received;
     this.client = client;
     this.consumerBuilder = buildConsumer;
+    this.authPluginClassName = null;
+    this.authParams = null;
+    this.operationTimeoutMs = null;
+    this.statsIntervalSeconds = null;
+    this.numIoThreads = null;
+    this.numListenerThreads = null;
+    this.useTcpNoDelay = null;
+    this.useTls = null;
+    this.tlsTrustCertsFilePath = null;
+    this.tlsAllowInsecureConnection = null;
+    this.tlsHostnameVerificationEnable = null;
+    this.concurrentLookupRequest = null;
+    this.maxLookupRequest = null;
+    this.maxNumberOfRejectedRequestPerConnection = null;
+    this.keepAliveIntervalSeconds = null;
+    this.connectionTimeoutMs = null;
+    this.requestTimeoutMs = null;
+    this.maxBackoffIntervalNanos = null;
   }
 
   private static <T> T wrapExceptions(Callable<T> callable)
@@ -353,5 +431,100 @@ public class PulsarRecordSupplier implements RecordSupplier<Integer, Long, ByteE
       this.reader = reader;
       this.position = position;
     }
+  }
+
+  public String getServiceUrl()
+  {
+    return serviceUrl;
+  }
+
+  public String getAuthPluginClassName()
+  {
+    return authPluginClassName;
+  }
+
+  public String getAuthParams()
+  {
+    return authParams;
+  }
+
+  public Long getOperationTimeoutMs()
+  {
+    return operationTimeoutMs;
+  }
+
+  public Long getStatsIntervalSeconds()
+  {
+    return statsIntervalSeconds;
+  }
+
+  public Integer getNumIoThreads()
+  {
+    return numIoThreads;
+  }
+
+  public Integer getNumListenerThreads()
+  {
+    return numListenerThreads;
+  }
+
+  public Boolean getUseTcpNoDelay()
+  {
+    return useTcpNoDelay;
+  }
+
+  public Boolean getUseTls()
+  {
+    return useTls;
+  }
+
+  public String getTlsTrustCertsFilePath()
+  {
+    return tlsTrustCertsFilePath;
+  }
+
+  public Boolean getTlsAllowInsecureConnection()
+  {
+    return tlsAllowInsecureConnection;
+  }
+
+  public Boolean getTlsHostnameVerificationEnable()
+  {
+    return tlsHostnameVerificationEnable;
+  }
+
+  public Integer getConcurrentLookupRequest()
+  {
+    return concurrentLookupRequest;
+  }
+
+  public Integer getMaxLookupRequest()
+  {
+    return maxLookupRequest;
+  }
+
+  public Integer getMaxNumberOfRejectedRequestPerConnection()
+  {
+    return maxNumberOfRejectedRequestPerConnection;
+  }
+
+  public Integer getKeepAliveIntervalSeconds()
+  {
+    return keepAliveIntervalSeconds;
+  }
+
+  public Integer getConnectionTimeoutMs()
+  {
+    return connectionTimeoutMs;
+  }
+
+  public Integer getRequestTimeoutMs()
+  {
+    return requestTimeoutMs;
+  }
+
+  public Long getMaxBackoffIntervalNanos()
+  {
+    return maxBackoffIntervalNanos;
   }
 }

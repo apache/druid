@@ -99,7 +99,25 @@ public class PulsarIndexTask extends SeekableStreamIndexTask<Integer, Long, Byte
       return new PulsarRecordSupplier(
           ioConfig.getServiceUrl(),
           getId(),
-          maxRowsInMemory
+          maxRowsInMemory,
+          ioConfig.getAuthPluginClassName(),
+          ioConfig.getAuthParams(),
+          ioConfig.getOperationTimeoutMs(),
+          ioConfig.getStatsIntervalSeconds(),
+          ioConfig.getNumIoThreads(),
+          ioConfig.getNumListenerThreads(),
+          ioConfig.getUseTcpNoDelay(),
+          ioConfig.getUseTls(),
+          ioConfig.getTlsTrustCertsFilePath(),
+          ioConfig.getTlsAllowInsecureConnection(),
+          ioConfig.getTlsHostnameVerificationEnable(),
+          ioConfig.getConcurrentLookupRequest(),
+          ioConfig.getMaxLookupRequest(),
+          ioConfig.getMaxNumberOfRejectedRequestPerConnection(),
+          ioConfig.getKeepAliveIntervalSeconds(),
+          ioConfig.getConnectionTimeoutMs(),
+          ioConfig.getRequestTimeoutMs(),
+          ioConfig.getMaxBackoffIntervalNanos()
       );
     } finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
