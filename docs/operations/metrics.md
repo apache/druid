@@ -237,7 +237,7 @@ Note: If the JVM does not support CPU time measurement for the current thread, i
 of the `isAppendToExisting` and `isDropExisting` flags in the
 task's `IOConfig` as follows:
 
-|`isAppendToExisting` | `isdDropExisting` | mode |
+|`isAppendToExisting` | `isDropExisting` | mode |
 |---------------------|-------------------|------|
 `true` | `false` | `APPEND`|
 `true` | `true  ` | Invalid combination, exception thrown. |
@@ -251,7 +251,7 @@ task's `IOConfig` as follows:
 |`ingest/compact/ovewrite/count`|Count of `1` every time a compaction overwrite job runs|dataSource, taskId, taskType|Always `1`.|
 |`ingest/compact/replace/count`|Count of `1` every time a compaction replace job runs|dataSource, taskId, taskType|Always `1`.|
 
-|`isdDropExisting` | mode |
+|`isDropExisting` | mode |
 |---------------------|-------------------|
 `false` |`OVERWRITE` (this is the default for compaction) |
 `true`  | `REPLACE`|
