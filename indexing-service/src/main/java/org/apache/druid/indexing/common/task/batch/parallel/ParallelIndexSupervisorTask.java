@@ -933,7 +933,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             // determine numShards based on maxRowsPerSegment and the cardinality
             estimatedNumShards = Math.round(estimatedCardinality / maxRowsPerSegment);
           }
-          LOG.debug("estimatedNumShards %d given estimated cardinality %.2f and maxRowsPerSegment %d",
+          LOG.info("estimatedNumShards %d given estimated cardinality %.2f and maxRowsPerSegment %d",
                     estimatedNumShards, estimatedCardinality, maxRowsPerSegment
           );
           // We have seen this before in the wild in situations where more shards should have been created,
