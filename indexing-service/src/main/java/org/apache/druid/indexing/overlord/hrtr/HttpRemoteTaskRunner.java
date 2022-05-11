@@ -50,6 +50,7 @@ import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
@@ -76,6 +77,8 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
@@ -83,6 +86,7 @@ import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.zookeeper.KeeperException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -182,6 +186,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   private final HttpRemoteTaskRunnerConfig config;
 
   private final TaskStorage taskStorage;
+  private final ServiceEmitter emitter;
 
   // ZK_CLEANUP_TODO : Remove these when RemoteTaskRunner and WorkerTaskMonitor are removed.
   private static final Joiner JOINER = Joiner.on("/");
@@ -203,7 +208,8 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       TaskStorage taskStorage,
       @Nullable CuratorFramework cf,
-      IndexerZkConfig indexerZkConfig
+      IndexerZkConfig indexerZkConfig,
+      ServiceEmitter emitter
   )
   {
     this.smileMapper = smileMapper;
@@ -212,6 +218,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
     this.taskStorage = taskStorage;
     this.workerConfigRef = workerConfigRef;
+    this.emitter = emitter;
 
     this.pendingTasksExec = Execs.multiThreaded(
         config.getPendingTasksRunnerNumThreads(),
@@ -1548,6 +1555,14 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                 taskItem.setWorker(worker);
                 taskItem.setState(HttpRemoteTaskRunnerWorkItem.State.RUNNING);
                 log.info("Task[%s] started RUNNING on worker[%s].", taskId, worker.getHost());
+
+                final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+                IndexTaskUtils.setTaskDimensions(metricBuilder, taskItem.getTask());
+                emitter.emit(metricBuilder.build(
+                    "task/pending/time",
+                    new Duration(taskItem.getCreatedTime(), DateTimes.nowUtc()).getMillis())
+                );
+
                 // fall through
               case RUNNING:
                 if (worker.getHost().equals(taskItem.getWorker().getHost())) {

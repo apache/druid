@@ -43,14 +43,18 @@ import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 {
@@ -879,11 +883,22 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectCurrentTimeAndDateLosAngeles() throws Exception
   {
+    final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    context.put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00.123Z");
+    context.put(PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES);
+
     DateTimeZone timeZone = DateTimes.inferTzFromString(LOS_ANGELES);
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        QUERY_CONTEXT_LOS_ANGELES,
-        "SELECT CURRENT_TIMESTAMP, CURRENT_DATE, CURRENT_DATE + INTERVAL '1' DAY",
+        context,
+        "SELECT "
+        + "CURRENT_TIMESTAMP, "
+        + "CURRENT_TIMESTAMP(0), "
+        + "CURRENT_TIMESTAMP(1), "
+        + "CURRENT_TIMESTAMP(2), "
+        + "CURRENT_TIMESTAMP(3), "
+        + "CURRENT_DATE, "
+        + "CURRENT_DATE + INTERVAL '1' DAY",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -895,28 +910,63 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                                 // but intentional because they are what Calcite gives us.
                                 // See DruidLogicalValuesRule.getValueFromLiteral()
                                 // and Calcites.calciteDateTimeLiteralToJoda.
-                                new DateTime("2000-01-01T00Z", timeZone).withZone(DateTimeZone.UTC).getMillis(),
+                                new DateTime("2000-01-01T00:00:00.123Z", timeZone)
+                                    .withZone(DateTimeZone.UTC).getMillis(),
+                                new DateTime("2000-01-01T00:00:00.000Z", timeZone)
+                                    .withZone(DateTimeZone.UTC).getMillis(),
+                                new DateTime("2000-01-01T00:00:00.100Z", timeZone)
+                                    .withZone(DateTimeZone.UTC).getMillis(),
+                                new DateTime("2000-01-01T00:00:00.120Z", timeZone)
+                                    .withZone(DateTimeZone.UTC).getMillis(),
+                                new DateTime("2000-01-01T00:00:00.123Z", timeZone)
+                                    .withZone(DateTimeZone.UTC).getMillis(),
                                 new DateTime("1999-12-31", timeZone).withZone(DateTimeZone.UTC).getMillis(),
                                 new DateTime("2000-01-01", timeZone).withZone(DateTimeZone.UTC).getMillis()
                             }
                         ),
                         RowSignature.builder()
                             .add("CURRENT_TIMESTAMP", ColumnType.LONG)
-                            .add("CURRENT_DATE", ColumnType.LONG)
+                            .add("EXPR$1", ColumnType.LONG)
                             .add("EXPR$2", ColumnType.LONG)
+                            .add("EXPR$3", ColumnType.LONG)
+                            .add("EXPR$4", ColumnType.LONG)
+                            .add("CURRENT_DATE", ColumnType.LONG)
+                            .add("EXPR$6", ColumnType.LONG)
                             .build()
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("CURRENT_DATE", "CURRENT_TIMESTAMP", "EXPR$2")
+                .columns("CURRENT_DATE", "CURRENT_TIMESTAMP", "EXPR$1", "EXPR$2", "EXPR$3", "EXPR$4", "EXPR$6")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .legacy(false)
-                .context(QUERY_CONTEXT_LOS_ANGELES)
+                .context(context)
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{timestamp("2000-01-01T00Z", LOS_ANGELES), day("1999-12-31"), day("2000-01-01")}
+            new Object[]{
+                timestamp("2000-01-01T00:00:00.123Z", LOS_ANGELES),
+                timestamp("2000-01-01T00:00:00.000Z", LOS_ANGELES),
+                timestamp("2000-01-01T00:00:00.100Z", LOS_ANGELES),
+                timestamp("2000-01-01T00:00:00.120Z", LOS_ANGELES),
+                timestamp("2000-01-01T00:00:00.123Z", LOS_ANGELES),
+                day("1999-12-31"),
+                day("2000-01-01")
+            }
         )
+    );
+  }
+
+  @Test
+  public void testSelectCurrentTimePrecisionTooHigh() throws Exception
+  {
+    testQueryThrows(
+        "SELECT CURRENT_TIMESTAMP(4)",
+        expectedException -> {
+          expectedException.expect(SqlPlanningException.class);
+          expectedException.expectMessage(
+              "Argument to function 'CURRENT_TIMESTAMP' must be a valid precision between '0' and '3'"
+          );
+        }
     );
   }
 

@@ -19,14 +19,11 @@
 
 package org.apache.druid.segment.filter;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.LikeDimFilter;
@@ -37,9 +34,15 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.column.AllFalseBitmapColumnIndex;
+import org.apache.druid.segment.column.AllTrueBitmapColumnIndex;
+import org.apache.druid.segment.column.BitmapColumnIndex;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.LexicographicalRangeIndex;
+import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -65,15 +68,42 @@ public class LikeFilter implements Filter
   }
 
   @Override
-  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  @Nullable
+  public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable(selector));
-  }
+    if (!Filters.checkFilterTuningUseIndex(dimension, selector, filterTuning)) {
+      return null;
+    }
+    final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(dimension);
+    if (indexSupplier == null) {
+      // Treat this as a column full of nulls
+      return likeMatcher.matches(null)
+             ? new AllTrueBitmapColumnIndex(selector)
+             : new AllFalseBitmapColumnIndex(selector);
+    }
+    if (isSimpleEquals()) {
+      StringValueSetIndex valueIndex = indexSupplier.as(StringValueSetIndex.class);
+      if (valueIndex != null) {
+        return valueIndex.forValue(
+            NullHandling.emptyToNullIfNeeded(likeMatcher.getPrefix())
+        );
+      }
+    }
+    if (isSimplePrefix()) {
+      final LexicographicalRangeIndex rangeIndex = indexSupplier.as(LexicographicalRangeIndex.class);
+      if (rangeIndex != null) {
+        final String lower = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix());
+        final String upper = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix()) + Character.MAX_VALUE;
+        return rangeIndex.forRange(lower, false, upper, false, likeMatcher::matchesSuffixOnly);
+      }
+    }
 
-  @Override
-  public double estimateSelectivity(BitmapIndexSelector selector)
-  {
-    return Filters.estimateSelectivity(getBitmapIterable(selector).iterator(), selector.getNumRows());
+    // fallback to predicate index
+    return Filters.makePredicateIndex(
+        dimension,
+        selector,
+        likeMatcher.predicateFactory(extractionFn)
+    );
   }
 
   @Override
@@ -132,62 +162,9 @@ public class LikeFilter implements Filter
   }
 
   @Override
-  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
-  {
-    return selector.getBitmapIndex(dimension) != null;
-  }
-
-  @Override
-  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-  {
-    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
   {
     return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
-  }
-
-  private Iterable<ImmutableBitmap> getBitmapIterable(final BitmapIndexSelector selector)
-  {
-    if (isSimpleEquals()) {
-      // Verify that dimension equals prefix.
-      return ImmutableList.of(
-          selector.getBitmapIndex(
-              dimension,
-              NullHandling.emptyToNullIfNeeded(likeMatcher.getPrefix())
-          )
-      );
-    } else if (isSimplePrefix()) {
-      // Verify that dimension startsWith prefix, and is accepted by likeMatcher.matchesSuffixOnly.
-      final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
-
-      if (bitmapIndex == null) {
-        // Treat this as a column full of nulls
-        return ImmutableList.of(likeMatcher.matches(null) ? Filters.allTrue(selector) : Filters.allFalse(selector));
-      }
-
-      final String lower = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix());
-      final String upper = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix()) + Character.MAX_VALUE;
-
-      // Union bitmaps for all matching dimension values in range.
-      // Use lazy iterator to allow unioning bitmaps one by one and avoid materializing all of them at once.
-      return bitmapIndex.getBitmapsInRange(
-          lower,
-          false,
-          upper,
-          false,
-          (value) -> likeMatcher.matchesSuffixOnly(value)
-      );
-    } else {
-      // fallback
-      return Filters.matchPredicateNoUnion(
-          dimension,
-          selector,
-          likeMatcher.predicateFactory(extractionFn).makeStringPredicate()
-      );
-    }
   }
 
   /**

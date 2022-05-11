@@ -50,14 +50,13 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
-import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -76,6 +75,7 @@ import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.RowBasedStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -517,11 +517,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     final Filter theFilter = makeFilter(filter);
     final Filter postFilteringFilter = new Filter()
     {
-      @Override
-      public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
-      {
-        throw new UnsupportedOperationException();
-      }
 
       @Override
       public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
@@ -530,19 +525,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public boolean supportsBitmapIndex(BitmapIndexSelector selector)
-      {
-        return false;
-      }
-
-      @Override
-      public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-      {
-        return false;
-      }
-
-      @Override
-      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
       {
         return false;
       }
@@ -554,9 +537,16 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public double estimateSelectivity(BitmapIndexSelector indexSelector)
+      public double estimateSelectivity(ColumnIndexSelector indexSelector)
       {
         return 1.0;
+      }
+
+      @Nullable
+      @Override
+      public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
+      {
+        return null;
       }
     };
 
@@ -591,28 +581,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     final Filter theFilter = makeFilter(filter);
     final Filter postFilteringFilter = new Filter()
     {
-      @Override
-      public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
-      {
-        throw new UnsupportedOperationException();
-      }
 
       @Override
       public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
       {
         return theFilter.makeMatcher(factory);
-      }
-
-      @Override
-      public boolean supportsBitmapIndex(BitmapIndexSelector selector)
-      {
-        return false;
-      }
-
-      @Override
-      public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-      {
-        return false;
       }
 
       @Override
@@ -634,15 +607,22 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
       {
         return false;
       }
 
       @Override
-      public double estimateSelectivity(BitmapIndexSelector indexSelector)
+      public double estimateSelectivity(ColumnIndexSelector indexSelector)
       {
         return 1.0;
+      }
+
+      @Nullable
+      @Override
+      public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
+      {
+        return null;
       }
     };
 

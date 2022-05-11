@@ -50,6 +50,7 @@ import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentResultValue;
@@ -207,6 +208,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   private static final Closer RESOURCE_CLOSER = Closer.create();
 
   private final QueryRunner<ResultRow> runner;
+  private final QueryRunner<ResultRow> originalRunner;
   private final GroupByQueryRunnerFactory factory;
   private final GroupByQueryConfig config;
   private final boolean vectorize;
@@ -449,7 +451,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
           final String testName = StringUtils.format("config=%s, runner=%s, vectorize=%s", config, runner, vectorize);
 
           // Add vectorization tests for any indexes that support it.
-          if (!vectorize || QueryRunnerTestHelper.isTestRunnerVectorizable(runner)) {
+          if (!vectorize ||
+              (QueryRunnerTestHelper.isTestRunnerVectorizable(runner) &&
+               config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2))) {
             constructors.add(new Object[]{testName, config, factory, runner, vectorize});
           }
         }
@@ -476,6 +480,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     this.config = config;
     this.factory = factory;
     this.runner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
+    this.originalRunner = runner;
     String runnerName = runner.toString();
     this.vectorize = vectorize;
   }
@@ -752,7 +757,15 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         )
     );
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    StubServiceEmitter serviceEmitter = new StubServiceEmitter("", "");
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQueryWithEmitter(
+        factory,
+        originalRunner,
+        query,
+        serviceEmitter
+    );
+    Assert.assertEquals(1, serviceEmitter.getEvents().size());
+    Assert.assertEquals(vectorize, serviceEmitter.getEvents().get(0).toMap().getOrDefault("vectorized", null));
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
 

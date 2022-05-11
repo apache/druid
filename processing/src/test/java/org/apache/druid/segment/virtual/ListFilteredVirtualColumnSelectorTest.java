@@ -28,17 +28,18 @@ import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.ColumnSelector;
-import org.apache.druid.segment.ColumnSelectorBitmapIndexSelector;
+import org.apache.druid.segment.ColumnSelectorColumnIndexSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.SelectorFilter;
@@ -168,9 +169,10 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
 
     ColumnSelector selector = EasyMock.createMock(ColumnSelector.class);
     ColumnHolder holder = EasyMock.createMock(ColumnHolder.class);
-    BitmapIndex index = EasyMock.createMock(BitmapIndex.class);
+    DictionaryEncodedStringValueIndex index = EasyMock.createMock(DictionaryEncodedStringValueIndex.class);
     ImmutableBitmap bitmap = EasyMock.createMock(ImmutableBitmap.class);
     BitmapFactory bitmapFactory = EasyMock.createMock(BitmapFactory.class);
+    ColumnIndexSupplier indexSupplier = EasyMock.createMock(ColumnIndexSupplier.class);
 
     EasyMock.expect(selector.getColumnHolder(COLUMN_NAME)).andReturn(holder).atLeastOnce();
     EasyMock.expect(selector.getColumnCapabilities(COLUMN_NAME))
@@ -181,7 +183,9 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
                                                    .setHasBitmapIndexes(true)
             ).anyTimes();
 
-    EasyMock.expect(holder.getBitmapIndex()).andReturn(index).atLeastOnce();
+
+    EasyMock.expect(holder.getIndexSupplier()).andReturn(indexSupplier).atLeastOnce();
+    EasyMock.expect(indexSupplier.as(DictionaryEncodedStringValueIndex.class)).andReturn(index).atLeastOnce();
 
     EasyMock.expect(index.getCardinality()).andReturn(3).atLeastOnce();
     EasyMock.expect(index.getValue(0)).andReturn("a").atLeastOnce();
@@ -189,21 +193,21 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
     EasyMock.expect(index.getValue(2)).andReturn("c").atLeastOnce();
 
     EasyMock.expect(index.getBitmap(2)).andReturn(bitmap).once();
-    EasyMock.expect(index.getBitmapFactory()).andReturn(bitmapFactory).once();
     EasyMock.expect(index.hasNulls()).andReturn(true).once();
 
-    EasyMock.replay(selector, holder, index, bitmap, bitmapFactory);
+    EasyMock.replay(selector, holder, indexSupplier, index, bitmap, bitmapFactory);
 
-    ColumnSelectorBitmapIndexSelector bitmapIndexSelector = new ColumnSelectorBitmapIndexSelector(
+    ColumnSelectorColumnIndexSelector bitmapIndexSelector = new ColumnSelectorColumnIndexSelector(
         new RoaringBitmapFactory(),
         VirtualColumns.create(Collections.singletonList(virtualColumn)),
         selector
     );
 
     SelectorFilter filter = new SelectorFilter(ALLOW_VIRTUAL_NAME, "a");
-    Assert.assertTrue(filter.shouldUseBitmapIndex(bitmapIndexSelector));
+    Assert.assertNotNull(filter.getBitmapColumnIndex(bitmapIndexSelector));
 
-    BitmapIndex listFilteredIndex = bitmapIndexSelector.getBitmapIndex(ALLOW_VIRTUAL_NAME);
+    DictionaryEncodedStringValueIndex listFilteredIndex =
+        bitmapIndexSelector.getIndexSupplier(ALLOW_VIRTUAL_NAME).as(DictionaryEncodedStringValueIndex.class);
     Assert.assertEquals(-1, listFilteredIndex.getIndex("a"));
     Assert.assertEquals(0, listFilteredIndex.getIndex("b"));
     Assert.assertEquals(1, listFilteredIndex.getIndex("c"));
@@ -211,10 +215,9 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
     Assert.assertEquals("b", listFilteredIndex.getValue(0));
     Assert.assertEquals("c", listFilteredIndex.getValue(1));
     Assert.assertEquals(bitmap, listFilteredIndex.getBitmap(1));
-    Assert.assertEquals(bitmapFactory, listFilteredIndex.getBitmapFactory());
     Assert.assertTrue(listFilteredIndex.hasNulls());
 
-    EasyMock.verify(selector, holder, index, bitmap, bitmapFactory);
+    EasyMock.verify(selector, holder, indexSupplier, index, bitmap, bitmapFactory);
   }
 
   @Test
@@ -230,8 +233,9 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
 
     ColumnSelector selector = EasyMock.createMock(ColumnSelector.class);
     ColumnHolder holder = EasyMock.createMock(ColumnHolder.class);
-    BitmapIndex index = EasyMock.createMock(BitmapIndex.class);
+    DictionaryEncodedStringValueIndex index = EasyMock.createMock(DictionaryEncodedStringValueIndex.class);
     ImmutableBitmap bitmap = EasyMock.createMock(ImmutableBitmap.class);
+    ColumnIndexSupplier indexSupplier = EasyMock.createMock(ColumnIndexSupplier.class);
     BitmapFactory bitmapFactory = EasyMock.createMock(BitmapFactory.class);
 
     EasyMock.expect(selector.getColumnHolder(COLUMN_NAME)).andReturn(holder).atLeastOnce();
@@ -242,38 +246,37 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
                                                    .setDictionaryValuesSorted(true)
                                                    .setHasBitmapIndexes(true)
             ).anyTimes();
-    EasyMock.expect(holder.getBitmapIndex()).andReturn(index).atLeastOnce();
-
+    EasyMock.expect(holder.getIndexSupplier()).andReturn(indexSupplier).atLeastOnce();
+    EasyMock.expect(indexSupplier.as(DictionaryEncodedStringValueIndex.class)).andReturn(index).atLeastOnce();
     EasyMock.expect(index.getCardinality()).andReturn(3).atLeastOnce();
     EasyMock.expect(index.getValue(0)).andReturn("a").atLeastOnce();
     EasyMock.expect(index.getValue(1)).andReturn("b").atLeastOnce();
     EasyMock.expect(index.getValue(2)).andReturn("c").atLeastOnce();
 
     EasyMock.expect(index.getBitmap(0)).andReturn(bitmap).once();
-    EasyMock.expect(index.getBitmapFactory()).andReturn(bitmapFactory).once();
     EasyMock.expect(index.hasNulls()).andReturn(true).once();
 
-    EasyMock.replay(selector, holder, index, bitmap, bitmapFactory);
+    EasyMock.replay(selector, holder, indexSupplier, index, bitmap, bitmapFactory);
 
-    ColumnSelectorBitmapIndexSelector bitmapIndexSelector = new ColumnSelectorBitmapIndexSelector(
+    ColumnSelectorColumnIndexSelector bitmapIndexSelector = new ColumnSelectorColumnIndexSelector(
         new RoaringBitmapFactory(),
         VirtualColumns.create(Collections.singletonList(virtualColumn)),
         selector
     );
 
     SelectorFilter filter = new SelectorFilter(DENY_VIRTUAL_NAME, "c");
-    Assert.assertTrue(filter.shouldUseBitmapIndex(bitmapIndexSelector));
+    Assert.assertNotNull(filter.getBitmapColumnIndex(bitmapIndexSelector));
 
-    BitmapIndex listFilteredIndex = bitmapIndexSelector.getBitmapIndex(DENY_VIRTUAL_NAME);
+    DictionaryEncodedStringValueIndex listFilteredIndex =
+        bitmapIndexSelector.getIndexSupplier(DENY_VIRTUAL_NAME).as(DictionaryEncodedStringValueIndex.class);
     Assert.assertEquals(-1, listFilteredIndex.getIndex("a"));
     Assert.assertEquals(-1, listFilteredIndex.getIndex("b"));
     Assert.assertEquals(0, listFilteredIndex.getIndex("c"));
     Assert.assertEquals(1, listFilteredIndex.getCardinality());
     Assert.assertEquals(bitmap, listFilteredIndex.getBitmap(1));
-    Assert.assertEquals(bitmapFactory, listFilteredIndex.getBitmapFactory());
     Assert.assertTrue(listFilteredIndex.hasNulls());
 
-    EasyMock.verify(selector, holder, index, bitmap, bitmapFactory);
+    EasyMock.verify(selector, holder, indexSupplier, index, bitmap, bitmapFactory);
   }
 
   private void assertCapabilities(VirtualizedColumnSelectorFactory selectorFactory, String columnName)

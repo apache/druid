@@ -28,12 +28,12 @@ import java.util.List;
  */
 public class MergeIterable<T> implements Iterable<T>
 {
-  private final Comparator<T> comparator;
-  private final Iterable<Iterable<T>> baseIterables;
+  private final Comparator<? super T> comparator;
+  private final Iterable<? extends Iterable<? extends T>> baseIterables;
 
   public MergeIterable(
-      Comparator<T> comparator,
-      Iterable<Iterable<T>> baseIterables
+      Iterable<? extends Iterable<? extends T>> baseIterables,
+      Comparator<? super T> comparator
   )
   {
     this.comparator = comparator;
@@ -43,11 +43,11 @@ public class MergeIterable<T> implements Iterable<T>
   @Override
   public Iterator<T> iterator()
   {
-    List<Iterator<T>> iterators = new ArrayList<>();
-    for (Iterable<T> baseIterable : baseIterables) {
+    List<Iterator<? extends T>> iterators = new ArrayList<>();
+    for (Iterable<? extends T> baseIterable : baseIterables) {
       iterators.add(baseIterable.iterator());
     }
 
-    return new MergeIterator<>(comparator, iterators);
+    return new MergeIterator<>(iterators, comparator);
   }
 }

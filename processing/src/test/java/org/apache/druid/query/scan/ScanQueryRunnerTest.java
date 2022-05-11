@@ -36,9 +36,11 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -211,7 +213,16 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         .virtualColumns(EXPR_COLUMN)
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+    StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("", "");
+    MetricsEmittingQueryRunner<ScanResultValue> metricsEmittingQueryRunner =
+        new MetricsEmittingQueryRunner<ScanResultValue>(
+            stubServiceEmitter,
+            TOOL_CHEST,
+            runner,
+            (obj, lng) -> {},
+            (metrics) -> {}
+        ).withWaitMeasuredFromNow();
+    Iterable<ScanResultValue> results = metricsEmittingQueryRunner.run(QueryPlus.wrap(query)).toList();
 
     List<ScanResultValue> expectedResults = toExpected(
         toFullEvents(V_0112_0114),
@@ -219,6 +230,8 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         0,
         3
     );
+    Assert.assertEquals(1, stubServiceEmitter.getEvents().size());
+    Assert.assertEquals(false, stubServiceEmitter.getEvents().get(0).toMap().getOrDefault("vectorized", null));
     verify(expectedResults, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
   }
 

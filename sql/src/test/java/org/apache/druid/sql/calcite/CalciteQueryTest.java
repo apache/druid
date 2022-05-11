@@ -683,8 +683,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testLatestAggregators() throws Exception
   {
-    // Cannot vectorize until StringLast is vectorized
-    skipVectorize();
+
     testQuery(
         "SELECT "
         + "LATEST(cnt), LATEST(m1), LATEST(dim1, 10), "
@@ -944,6 +943,39 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testStringLatestGroupBy() throws Exception
+  {
+    testQuery(
+        "SELECT dim2, LATEST(dim4,10) AS val1 FROM druid.numfoo GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "_d0")))
+                        .setAggregatorSpecs(aggregators(
+                                                new StringLastAggregatorFactory("a0", "dim4", null, 10)
+                                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{null, "b"},
+            new Object[]{"", "a"},
+            new Object[]{"a", "b"},
+            new Object[]{"abc", "b"}
+        )
+        : ImmutableList.of(
+            new Object[]{"", "b"},
+            new Object[]{"a", "b"},
+            new Object[]{"abc", "b"}
+        )
+    );
+  }
+
   // This test the off-heap (buffer) version of the EarliestAggregator (Double/Float/Long)
   @Test
   public void testPrimitiveEarliestInSubquery() throws Exception
@@ -999,9 +1031,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringLatestInSubquery() throws Exception
   {
-    // Cannot vectorize LATEST aggregator for Strings
-    skipVectorize();
-
     testQuery(
         "SELECT SUM(val) FROM (SELECT dim2, LATEST(dim1, 10) AS val FROM foo GROUP BY dim2)",
         ImmutableList.of(
@@ -5525,6 +5554,48 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT COUNT(*) FROM druid.foo "
         + "WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2001-01-01 00:00:00'",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Intervals.of("2000-01-01/2001-01-01")))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
+        )
+    );
+  }
+
+  @Test
+  public void testCountStarWithBetweenTimeFilterUsingMilliseconds() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo "
+        + "WHERE __time BETWEEN TIMESTAMP '2000-01-01 00:00:00' AND TIMESTAMP '2000-12-31 23:59:59.999'",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Intervals.of("2000-01-01/2001-01-01")))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
+        )
+    );
+  }
+
+  @Test
+  public void testCountStarWithBetweenTimeFilterUsingMillisecondsInStringLiterals() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo "
+        + "WHERE __time BETWEEN '2000-01-01 00:00:00' AND '2000-12-31 23:59:59.999'",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)

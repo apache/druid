@@ -21,7 +21,9 @@ package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.sql.calcite.table.RowSignatures;
@@ -35,11 +37,13 @@ public class ObjectWriter implements ResultFormat.Writer
   static final String TYPE_HEADER_NAME = "type";
   static final String SQL_TYPE_HEADER_NAME = "sqlType";
 
+  private final SerializerProvider serializers;
   private final JsonGenerator jsonGenerator;
   private final OutputStream outputStream;
 
   public ObjectWriter(final OutputStream outputStream, final ObjectMapper jsonMapper) throws IOException
   {
+    this.serializers = jsonMapper.getSerializerProviderInstance();
     this.jsonGenerator = jsonMapper.getFactory().createGenerator(outputStream);
     this.outputStream = outputStream;
 
@@ -83,7 +87,7 @@ public class ObjectWriter implements ResultFormat.Writer
   public void writeRowField(final String name, @Nullable final Object value) throws IOException
   {
     jsonGenerator.writeFieldName(name);
-    jsonGenerator.writeObject(value);
+    JacksonUtils.writeObjectUsingSerializerProvider(jsonGenerator, serializers, value);
   }
 
   @Override

@@ -499,6 +499,12 @@ public class ForkingTaskRunnerTest
       @Override
       int waitForTaskProcessToComplete(Task task, ProcessHolder processHolder, File logFile, File reportsFile)
       {
+        WorkerConfig workerConfig = new WorkerConfig();
+        Assert.assertEquals(1L, (long) this.getWorkerUsedTaskSlotCount());
+        Assert.assertEquals(workerConfig.getCapacity(), (long) this.getWorkerTotalTaskSlotCount());
+        Assert.assertEquals(workerConfig.getCapacity() - 1, (long) this.getWorkerIdleTaskSlotCount());
+        Assert.assertEquals(workerConfig.getCategory(), this.getWorkerCategory());
+        Assert.assertEquals(workerConfig.getVersion(), this.getWorkerVersion());
         return 1;
       }
     };
@@ -507,5 +513,7 @@ public class ForkingTaskRunnerTest
     Assert.assertTrue(e.getMessage().endsWith(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY
                                               + " in context of task: " + task.getId() + " must be an array of strings.")
     );
+    Assert.assertEquals(1L, (long) forkingTaskRunner.getWorkerFailedTaskCount());
+    Assert.assertEquals(0L, (long) forkingTaskRunner.getWorkerSuccessfulTaskCount());
   }
 }

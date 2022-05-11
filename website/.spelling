@@ -55,6 +55,7 @@ DRUIDVERSION
 DataSketches
 DateTime
 DateType
+dimensionsSpec
 DimensionSpec
 DimensionSpecs
 Dockerfile
@@ -112,6 +113,7 @@ InputFormat
 InputSource
 InputSources
 Integer.MAX_VALUE
+ioConfig
 JBOD
 JDBC
 JDK
@@ -558,6 +560,9 @@ useApproximateCountDistinct
 useGroupingSetForExactDistinct
 useApproximateTopN
 wikipedia
+enableTimeBoundaryPlanning
+TimeBoundary
+druid.query.default.context.enableTimeBoundaryPlanning
 IEC
  - ../docs/comparisons/druid-vs-elasticsearch.md
 100x
@@ -671,7 +676,6 @@ baseDataSource
 baseDataSource-hashCode
 classpathPrefix
 derivativeDataSource
-dimensionsSpec
 druid.extensions.hadoopDependenciesDir
 hadoopDependencyCoordinates
 maxTaskCount
@@ -1132,7 +1136,6 @@ datetime
 f.example.com
 filePattern
 forceExtendableShardSpecs
-granularitySpec
 ignoreInvalidRows
 ignoreWhenNoSegments
 indexSpecForIntermediatePersists
@@ -1842,7 +1845,6 @@ cpuacct
 dataSourceName
 datetime
 defaultHistory
-dimensionsSpec
 doubleMax
 doubleMin
 doubleSum
@@ -1861,6 +1863,7 @@ druid_taskLock
 druid_taskLog
 druid_tasks
 DruidQueryRel
+durationToRetain
 ec2
 equalDistribution
 extractionFn

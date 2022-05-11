@@ -163,7 +163,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         null,
         10,
-        new Duration("PT0s")
+        new Duration("PT0s"),
+        false
     );
     pathChildrenCache = new PathChildrenCache(
         curator,
@@ -943,6 +944,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         10,
         new Duration("PT0s"),
+        false,
         false
     );
     CoordinatorCustomDutyGroup compactSegmentCustomGroup = new CoordinatorCustomDutyGroup("group1", Duration.standardSeconds(1), ImmutableList.of(new CompactSegments(differentConfigUsedInCustomGroup, null, null)));

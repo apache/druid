@@ -25,10 +25,7 @@ import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.BitmapIndex;
-import org.apache.druid.segment.column.BitmapIndexes;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
@@ -47,6 +44,7 @@ import java.util.Objects;
  */
 public class NullColumnPartSerde implements ColumnPartSerde
 {
+
   private static final Serializer NOOP_SERIALIZER = new Serializer()
   {
     @Override
@@ -62,32 +60,21 @@ public class NullColumnPartSerde implements ColumnPartSerde
   };
 
   private final int numRows;
-  private final BitmapSerdeFactory bitmapSerdeFactory;
   private final NullDictionaryEncodedColumn nullDictionaryEncodedColumn;
-  private final BitmapIndex bitmapIndex;
 
   @JsonCreator
   public NullColumnPartSerde(
-      @JsonProperty("numRows") int numRows,
-      @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory
+      @JsonProperty("numRows") int numRows
   )
   {
     this.numRows = numRows;
-    this.bitmapSerdeFactory = bitmapSerdeFactory;
     this.nullDictionaryEncodedColumn = new NullDictionaryEncodedColumn();
-    this.bitmapIndex = BitmapIndexes.forNilColumn(() -> numRows, bitmapSerdeFactory.getBitmapFactory());
   }
 
   @JsonProperty
   public int getNumRows()
   {
     return numRows;
-  }
-
-  @JsonProperty
-  public BitmapSerdeFactory getBitmapSerdeFactory()
-  {
-    return bitmapSerdeFactory;
   }
 
   @Nullable
@@ -101,12 +88,13 @@ public class NullColumnPartSerde implements ColumnPartSerde
   public Deserializer getDeserializer()
   {
     return (buffer, builder, columnConfig) -> {
-      builder
-          .setHasMultipleValues(false)
-          .setHasNulls(true)
-          .setFilterable(true)
-          .setBitmapIndex(Suppliers.ofInstance(bitmapIndex));
-      builder.setDictionaryEncodedColumnSupplier(Suppliers.ofInstance(nullDictionaryEncodedColumn));
+      builder.setHasMultipleValues(false)
+             .setHasNulls(true)
+             .setFilterable(true)
+             // this is a bit sneaky, we set supplier to null here to act like a null column instead of a column
+             // without any indexes, which is the default state
+             .setIndexSupplier(null, true, false)
+             .setDictionaryEncodedColumnSupplier(Suppliers.ofInstance(nullDictionaryEncodedColumn));
     };
   }
 
@@ -120,14 +108,13 @@ public class NullColumnPartSerde implements ColumnPartSerde
       return false;
     }
     NullColumnPartSerde partSerde = (NullColumnPartSerde) o;
-    return numRows == partSerde.numRows
-           && bitmapSerdeFactory.equals(partSerde.bitmapSerdeFactory);
+    return numRows == partSerde.numRows;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(numRows, bitmapSerdeFactory);
+    return Objects.hash(numRows);
   }
 
   private final class NullDictionaryEncodedColumn implements DictionaryEncodedColumn<String>

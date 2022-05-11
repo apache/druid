@@ -409,6 +409,7 @@ Supported runtime properties:
 |--------|-----------|-------|
 |`druid.query.groupBy.defaultStrategy`|Default groupBy query strategy.|v2|
 |`druid.query.groupBy.singleThreaded`|Merge results using a single thread.|false|
+|`druid.query.groupBy.intermediateResultAsMapCompat`|Whether Brokers are able to understand map-based result rows. Setting this to `true` adds some overhead to all groupBy queries. It is required for compatibility with data servers running versions older than 0.16.0, which introduced [array-based result rows](#array-based-result-rows).|false|
 
 Supported query contexts:
 

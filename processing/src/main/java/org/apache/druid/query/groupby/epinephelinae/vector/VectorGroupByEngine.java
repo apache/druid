@@ -21,7 +21,6 @@ package org.apache.druid.query.groupby.epinephelinae.vector;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
-import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
@@ -34,6 +33,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.AggregateResult;
 import org.apache.druid.query.groupby.epinephelinae.BufferArrayGrouper;
@@ -41,6 +41,7 @@ import org.apache.druid.query.groupby.epinephelinae.CloseableGrouperIterator;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.query.groupby.epinephelinae.HashVectorGrouper;
 import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
+import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
@@ -128,7 +129,8 @@ public class VectorGroupByEngine
       @Nullable final DateTime fudgeTimestamp,
       @Nullable final Filter filter,
       final Interval interval,
-      final GroupByQueryConfig config
+      final GroupByQueryConfig config,
+      @Nullable final GroupByQueryMetrics groupByQueryMetrics
   )
   {
     if (!canVectorize(query, storageAdapter, filter)) {
@@ -147,7 +149,7 @@ public class VectorGroupByEngine
                 query.getVirtualColumns(),
                 false,
                 QueryContexts.getVectorSize(query),
-                null
+                groupByQueryMetrics
             );
 
             if (cursor == null) {
@@ -252,7 +254,7 @@ public class VectorGroupByEngine
     private long selectorInternalFootprint = 0;
 
     @Nullable
-    private CloseableGrouperIterator<Memory, ResultRow> delegate = null;
+    private CloseableGrouperIterator<MemoryPointer, ResultRow> delegate = null;
 
     VectorGroupByEngineIterator(
         final GroupByQuery query,
@@ -374,7 +376,7 @@ public class VectorGroupByEngine
       return grouper;
     }
 
-    private CloseableGrouperIterator<Memory, ResultRow> initNewDelegate()
+    private CloseableGrouperIterator<MemoryPointer, ResultRow> initNewDelegate()
     {
       // Method must not be called unless there's a current bucketInterval.
       assert bucketInterval != null;

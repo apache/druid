@@ -812,7 +812,8 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.coordinator.kill.pendingSegments.on`|Boolean flag for whether or not the Coordinator clean up old entries in the `pendingSegments` table of metadata store. If set to true, Coordinator will check the created time of most recently complete task. If it doesn't exist, it finds the created time of the earliest running/pending/waiting tasks. Once the created time is found, then for all dataSources not in the `killPendingSegmentsSkipList` (see [Dynamic configuration](#dynamic-configuration)), Coordinator will ask the Overlord to clean up the entries 1 day or more older than the found created time in the `pendingSegments` table. This will be done periodically based on `druid.coordinator.period.indexingPeriod` specified.|true|
 |`druid.coordinator.kill.on`|Boolean flag for whether or not the Coordinator should submit kill task for unused segments, that is, hard delete them from metadata store and deep storage. If set to true, then for all whitelisted dataSources (or optionally all), Coordinator will submit tasks periodically based on `period` specified. These kill tasks will delete all unused segments except for the last `durationToRetain` period. A whitelist can be set via dynamic configuration `killDataSourceWhitelist` described later.|true|
 |`druid.coordinator.kill.period`|How often to send kill tasks to the indexing service. Value must be greater than `druid.coordinator.period.indexingPeriod`. Only applies if kill is turned on.|P1D (1 Day)|
-|`druid.coordinator.kill.durationToRetain`| Do not kill unused segments in last `durationToRetain`, must be greater or equal to 0. Only applies and MUST be specified if kill is turned on.|`P90D`|
+|`druid.coordinator.kill.durationToRetain`|Only applies if you set `druid.coordinator.kill.on` to `true`. This value is ignored if `druid.coordinator.kill.ignoreDurationToRetain` is `true`. Valid configurations must be a ISO8601 period. Druid will not kill unused segments whose interval end date is beyond `now - durationToRetain`. `durationToRetain` can be a negative ISO8601 period, which would result in `now - durationToRetain` to be in the future.|`P90D`|
+|`druid.coordinator.kill.ignoreDurationToRetain`|A way to override `druid.coordinator.kill.durationToRetain` and tell the coordinator that you do not care about the end date of unused segment intervals when it comes to killing them. If true, the coordinator considers all unused segments as eligible to be killed.|false|
 |`druid.coordinator.kill.maxSegments`|Kill at most n unused segments per kill task submission, must be greater than 0. Only applies and MUST be specified if kill is turned on.|100|
 |`druid.coordinator.balancer.strategy`|Specify the type of balancing strategy for the coordinator to use to distribute segments among the historicals. `cachingCost` is logically equivalent to `cost` but is more CPU-efficient on large clusters. `diskNormalized` weights the costs according to the servers' disk usage ratios - there are known issues with this strategy distributing segments unevenly across the cluster. `random` distributes segments among services randomly.|`cost`|
 |`druid.coordinator.balancer.cachingCost.awaitInitialization`|Whether to wait for segment view initialization before creating the `cachingCost` balancing strategy. This property is enabled only when `druid.coordinator.balancer.strategy` is `cachingCost`. If set to 'true', the Coordinator will not start to assign segments, until the segment view is initialized. If set to 'false', the Coordinator will fallback to use the `cost` balancing strategy only if the segment view is not initialized yet. Notes, it may take much time to wait for the initialization since the `cachingCost` balancing strategy involves much computing to build itself.|false|
@@ -951,14 +952,14 @@ These configuration options control the behavior of the Lookup dynamic configura
 |`druid.manager.lookups.threadPoolSize`|How many processes can be managed concurrently (concurrent POST and DELETE requests). Requests this limit will wait in a queue until a slot becomes available.|10|
 |`druid.manager.lookups.period`|How many milliseconds between checks for configuration changes|30_000|
 
-##### Compaction Dynamic Configuration
+##### Automatic compaction dynamic configuration
 
-Compaction configurations can also be set or updated dynamically using
-[Coordinator's API](../operations/api-reference.md#compaction-configuration) without restarting Coordinators.
+You can set or update automatic compaction properties dynamically using the
+[Coordinator API](../operations/api-reference.md#automatic-compaction-configuration) without restarting Coordinators.
 
-For details about segment compaction, please check [Segment Size Optimization](../operations/segment-optimization.md).
+For details about segment compaction, see [Segment size optimization](../operations/segment-optimization.md).
 
-A description of the compaction config is:
+You can configure automatic compaction through the following properties:
 
 |Property|Description|Required|
 |--------|-----------|--------|
@@ -966,16 +967,16 @@ A description of the compaction config is:
 |`taskPriority`|[Priority](../ingestion/tasks.md#priority) of compaction task.|no (default = 25)|
 |`inputSegmentSizeBytes`|Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.|no (default = Long.MAX_VALUE)|
 |`maxRowsPerSegment`|Max number of rows per segment after compaction.|no|
-|`skipOffsetFromLatest`|The offset for searching segments to be compacted in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Strongly recommended to set for realtime dataSources. See [Data handling with compaction](../ingestion/compaction.md#data-handling-with-compaction)|no (default = "P1D")|
-|`tuningConfig`|Tuning config for compaction tasks. See below [Compaction Task TuningConfig](#automatic-compaction-tuningconfig).|no|
+|`skipOffsetFromLatest`|The offset for searching segments to be compacted in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Strongly recommended to set for realtime dataSources. See [Data handling with compaction](../ingestion/compaction.md#data-handling-with-compaction).|no (default = "P1D")|
+|`tuningConfig`|Tuning config for compaction tasks. See below [Automatic compaction tuningConfig](#automatic-compaction-tuningconfig).|no|
 |`taskContext`|[Task context](../ingestion/tasks.md#context) for compaction tasks.|no|
-|`granularitySpec`|Custom `granularitySpec`. See [Automatic compaction granularitySpec](#automatic-compaction-granularityspec)|No|
-|`dimensionsSpec`|Custom `dimensionsSpec`. See [Automatic compaction dimensionsSpec](#automatic-compaction-dimensions-spec)|No|
-|`transformSpec`|Custom `transformSpec`. See [Automatic compaction transformSpec](#automatic-compaction-transform-spec)|No|
+|`granularitySpec`|Custom `granularitySpec`. See [Automatic compaction granularitySpec](#automatic-compaction-granularityspec).|No|
+|`dimensionsSpec`|Custom `dimensionsSpec`. See [Automatic compaction dimensionsSpec](#automatic-compaction-dimensionsspec).|No|
+|`transformSpec`|Custom `transformSpec`. See [Automatic compaction transformSpec](#automatic-compaction-transformspec).|No|
 |`metricsSpec`|Custom [`metricsSpec`](../ingestion/ingestion-spec.md#metricsspec). The compaction task preserves any existing metrics regardless of whether `metricsSpec` is specified. If `metricsSpec` is specified, Druid does not reapply any aggregators matching the metric names specified in `metricsSpec` to rows that already have the associated metrics. For rows that do not already have the metric specified in `metricsSpec`, Druid applies the metric aggregator on the source column, then proceeds to combine the metrics across segments as usual. If `metricsSpec` is not specified, Druid automatically discovers the metrics in the existing segments and combines existing metrics with the same metric name across segments. Aggregators for metrics with the same name are assumed to be compatible for combining across segments, otherwise the compaction task may fail.|No|
-|`ioConfig`|IO config for compaction tasks. See below [Compaction Task IOConfig](#automatic-compaction-ioconfig).|no|
+|`ioConfig`|IO config for compaction tasks. See [Automatic compaction ioConfig](#automatic-compaction-ioconfig).|no|
 
-An example of compaction config is:
+Automatic compaction config example:
 
 ```json
 {
@@ -989,10 +990,10 @@ An example of compaction config is:
 Compaction tasks fail when higher priority tasks cause Druid to revoke their locks. By default, realtime tasks like ingestion have a higher priority than compaction tasks. Therefore frequent conflicts between compaction tasks and realtime tasks can cause the coordinator's automatic compaction to get stuck.
 You may see this issue with streaming ingestion from Kafka and Kinesis, which ingest late-arriving data. To mitigate this problem, set `skipOffsetFromLatest` to a value large enough so that arriving data tends to fall outside the offset value from the current time. This way you can avoid conflicts between compaction tasks and realtime ingestion tasks.
 
-###### Automatic compaction TuningConfig
+###### Automatic compaction tuningConfig
 
-Auto compaction supports a subset of the [tuningConfig for Parallel task](../ingestion/native-batch.md#tuningconfig).
-The below is a list of the supported configurations for auto compaction.
+Auto-compaction supports a subset of the [tuningConfig for Parallel task](../ingestion/native-batch.md#tuningconfig).
+The below is a list of the supported configurations for auto-compaction.
 
 |Property|Description|Required|
 |--------|-----------|--------|
@@ -1022,22 +1023,22 @@ The below is a list of the supported configurations for auto compaction.
 |`queryGranularity`|The resolution of timestamp storage within each segment. Defaults to 'null', which preserves the original query granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
 |`rollup`|Whether to enable ingestion-time rollup or not. Defaults to 'null', which preserves the original setting. Note that once data is rollup, individual records can no longer be recovered. |No|
 
-###### Automatic compaction dimensions spec
+###### Automatic compaction dimensionsSpec
 
 |Field|Description|Required|
 |-----|-----------|--------|
 |`dimensions`| A list of dimension names or objects. Defaults to 'null', which preserves the original dimensions. Note that setting this will cause segments manually compacted with `dimensionExclusions` to be compacted again.|No|
 
-###### Automatic compaction transform spec
+###### Automatic compaction transformSpec
 
 |Field|Description|Required|
 |-----|-----------|--------|
 |`filter`| The `filter` conditionally filters input rows during compaction. Only rows that pass the filter will be included in the compacted segments. Any of Druid's standard [query filters](../querying/filters.md) can be used. Defaults to 'null', which will not filter any row. |No|
 
-###### Automatic compaction IOConfig
+###### Automatic compaction ioConfig
 
-Auto compaction supports a subset of the [IOConfig for Parallel task](../ingestion/native-batch.md).
-The below is a list of the supported configurations for auto compaction.
+Auto-compaction supports a subset of the [ioConfig for Parallel task](../ingestion/native-batch.md).
+The below is a list of the supported configurations for auto-compaction.
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|
