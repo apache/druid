@@ -81,7 +81,8 @@ public class KillDatasourceMetadataTest
         new Duration(Long.MAX_VALUE),
         new Duration("PT1S"),
         10,
-        null
+        null,
+        false
     );
     killDatasourceMetadata = new KillDatasourceMetadata(druidCoordinatorConfig, mockIndexerMetadataStorageCoordinator, mockMetadataSupervisorManager);
     killDatasourceMetadata.run(mockDruidCoordinatorRuntimeParams);
@@ -112,7 +113,8 @@ public class KillDatasourceMetadataTest
         new Duration("PT6S"),
         new Duration("PT1S"),
         10,
-        null
+        null,
+        false
     );
     killDatasourceMetadata = new KillDatasourceMetadata(druidCoordinatorConfig, mockIndexerMetadataStorageCoordinator, mockMetadataSupervisorManager);
     killDatasourceMetadata.run(mockDruidCoordinatorRuntimeParams);
@@ -141,7 +143,8 @@ public class KillDatasourceMetadataTest
         new Duration("PT3S"),
         new Duration("PT1S"),
         10,
-        null
+        null,
+        false
     );
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage("Coordinator datasource metadata kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod");
@@ -169,7 +172,8 @@ public class KillDatasourceMetadataTest
         new Duration("PT6S"),
         new Duration("PT-1S"),
         10,
-        null
+        null,
+        false
     );
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage("Coordinator datasource metadata kill retainDuration must be >= 0");
@@ -199,7 +203,8 @@ public class KillDatasourceMetadataTest
         new Duration("PT6S"),
         new Duration("PT1S"),
         10,
-        null
+        null,
+        false
     );
     killDatasourceMetadata = new KillDatasourceMetadata(druidCoordinatorConfig, mockIndexerMetadataStorageCoordinator, mockMetadataSupervisorManager);
     killDatasourceMetadata.run(mockDruidCoordinatorRuntimeParams);
