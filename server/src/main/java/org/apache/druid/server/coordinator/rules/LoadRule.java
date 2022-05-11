@@ -239,10 +239,10 @@ public abstract class LoadRule implements Rule
       final String tier = entry.getKey();
 
       String noAvailability = StringUtils.format(
-          "No available [%s] servers or node capacity to assign primary segment[%s]! Expected Replicants[%d]",
+          "No available [%s] servers or node capacity to assign primary segment [%s]! %s",
           tier,
           segment.getId(),
-          targetReplicantsInTier
+          getReplicationLogString()
       );
 
       final List<ServerHolder> holders = getFilteredHolders(
@@ -299,7 +299,7 @@ public abstract class LoadRule implements Rule
     for (final Object2IntMap.Entry<String> entry : targetReplicants.object2IntEntrySet()) {
       final String tier = entry.getKey();
       if (tier.equals(tierToSkip)) {
-        log.info("Skipping replica assignment for tier [%s]", tier);
+        log.info("Skipping replica assignment for segment [%s] to tier [%s]", segment.getId(), tier);
         continue;
       }
       final int numAssigned = assignReplicasForTier(
@@ -334,10 +334,10 @@ public abstract class LoadRule implements Rule
     }
 
     String noAvailability = StringUtils.format(
-        "No available [%s] servers or node capacity to assign segment[%s]! Expected Replicants[%d]",
+        "No available [%s] servers or node capacity to assign segment [%s]! %s",
         tier,
         segment.getId(),
-        targetReplicantsInTier
+        getReplicationLogString()
     );
 
     final List<ServerHolder> holders = getFilteredHolders(tier, params.getDruidCluster(), predicate);
@@ -350,7 +350,7 @@ public abstract class LoadRule implements Rule
     final ReplicationThrottler throttler = params.getReplicationManager();
     for (int numAssigned = 0; numAssigned < numToAssign; numAssigned++) {
       if (!throttler.canCreateReplicant(tier)) {
-        log.info("Throttling replication for segment [%s] in tier [%s]", segment.getId(), tier);
+        log.info("Throttling replication for segment [%s] in tier [%s]. %s", segment.getId(), tier, getReplicationLogString());
         return numAssigned;
       }
 
@@ -371,10 +371,11 @@ public abstract class LoadRule implements Rule
       final String holderHost = holder.getServer().getHost();
       throttler.registerReplicantCreation(tier, segmentId, holderHost);
       log.info(
-          "Assigning 'replica' for segment [%s] to server [%s] in tier [%s]",
+          "Assigning 'replica' for segment [%s] to server [%s] in tier [%s]. %s",
           segment.getId(),
           holder.getServer().getName(),
-          holder.getServer().getTier()
+          holder.getServer().getTier(),
+          getReplicationLogString()
       );
       holder.getPeon().loadSegment(segment, () -> throttler.unregisterReplicantCreation(tier, segmentId));
     }
@@ -393,11 +394,8 @@ public abstract class LoadRule implements Rule
   {
     final DruidCluster druidCluster = params.getDruidCluster();
 
-    // This enforces that loading is completed before we attempt to drop stuffs as a safety measure.
-    if (loadingInProgress(druidCluster)) {
-      log.info("Loading in progress, skipping drop until loading is complete");
-      return;
-    }
+
+    final boolean isLoading = loadingInProgress(druidCluster);
 
     for (final Object2IntMap.Entry<String> entry : currentReplicants.object2IntEntrySet()) {
       final String tier = entry.getKey();
@@ -412,6 +410,16 @@ public abstract class LoadRule implements Rule
         final int currentReplicantsInTier = entry.getIntValue();
         final int numToDrop = currentReplicantsInTier - targetReplicants.getOrDefault(tier, 0);
         if (numToDrop > 0) {
+          // This enforces that loading is completed before we attempt to drop stuffs as a safety measure.
+          if (isLoading) {
+            log.info(
+                "Loading in progress for segment [%s], skipping drop from tier [%s] until loading is complete! %s",
+                segment.getId(),
+                tier,
+                getReplicationLogString()
+            );
+            break;
+          }
           numDropped = dropForTier(numToDrop, holders, segment, params.getBalancerStrategy());
         } else {
           numDropped = 0;
@@ -515,4 +523,21 @@ public abstract class LoadRule implements Rule
   public abstract Map<String, Integer> getTieredReplicants();
 
   public abstract int getNumReplicants(String tier);
+
+  protected String getReplicationLogString()
+  {
+    StringBuilder builder = new StringBuilder("Current replication: [");
+    for (final Object2IntMap.Entry<String> entry : currentReplicants.object2IntEntrySet()) {
+      final String tier = entry.getKey();
+      // [hot:1/2][cold:2/2]
+      builder.append("[")
+             .append(tier)
+             .append(":")
+             .append(entry.getIntValue())
+             .append("/")
+             .append(targetReplicants.getInt(tier))
+             .append("]");
+    }
+    return builder.append("]").toString();
+  }
 }
