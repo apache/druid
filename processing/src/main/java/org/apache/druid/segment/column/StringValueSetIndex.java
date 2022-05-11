@@ -17,35 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.query.filter;
+package org.apache.druid.segment.column;
 
-import com.google.errorprone.annotations.MustBeClosed;
-import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.collections.spatial.ImmutableRTree;
-import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.column.BitmapIndex;
-import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.data.CloseableIndexed;
 
 import javax.annotation.Nullable;
+import java.util.Set;
 
 /**
+ * Index on individual values, and provides bitmaps for the rows which contain these values
  */
-public interface BitmapIndexSelector extends ColumnInspector
+public interface StringValueSetIndex
 {
-  @MustBeClosed
-  @Nullable
-  CloseableIndexed<String> getDimensionValues(String dimension);
+  /**
+   * Get the {@link ImmutableBitmap} corresponding to the supplied value
+   */
+  BitmapColumnIndex forValue(@Nullable String value);
 
-  @Deprecated
-  ColumnCapabilities.Capable hasMultipleValues(String dimension);
-
-  int getNumRows();
-  BitmapFactory getBitmapFactory();
-  @Nullable
-  BitmapIndex getBitmapIndex(String dimension);
-  @Nullable
-  ImmutableBitmap getBitmapIndex(String dimension, String value);
-  ImmutableRTree getSpatialIndex(String dimension);
+  /**
+   * Get an {@link Iterable} of {@link ImmutableBitmap} corresponding to the specified set of values (if they are
+   * contained in the underlying column)
+   */
+  BitmapColumnIndex forValues(Set<String> values);
 }

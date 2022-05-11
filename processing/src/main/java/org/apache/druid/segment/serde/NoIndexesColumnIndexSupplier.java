@@ -17,36 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.serde;
 
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 
 import javax.annotation.Nullable;
 
 /**
+ * Default implementation of {@link ColumnIndexSupplier} for columns which do not
+ * have any indexes.
  */
-public interface ColumnHolder
+public class NoIndexesColumnIndexSupplier implements ColumnIndexSupplier
 {
-  String TIME_COLUMN_NAME = "__time";
-  String DOUBLE_STORAGE_TYPE_PROPERTY = "druid.indexing.doubleStorage";
+  private static final NoIndexesColumnIndexSupplier INSTANCE = new NoIndexesColumnIndexSupplier();
 
-  static boolean storeDoubleAsFloat()
+  public static NoIndexesColumnIndexSupplier getInstance()
   {
-    String value = System.getProperty(DOUBLE_STORAGE_TYPE_PROPERTY, "double");
-    return !"double".equals(StringUtils.toLowerCase(value));
+    return INSTANCE;
   }
 
-  ColumnCapabilities getCapabilities();
-
-  int getLength();
-  BaseColumn getColumn();
-
   @Nullable
-  ColumnIndexSupplier getIndexSupplier();
-
-  /**
-   * Returns a new instance of a {@link SettableColumnValueSelector}, corresponding to the type of this column.
-   */
-  SettableColumnValueSelector makeNewSettableColumnValueSelector();
+  @Override
+  public <T> T as(Class<T> clazz)
+  {
+    return null;
+  }
 }

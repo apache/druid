@@ -19,34 +19,12 @@
 
 package org.apache.druid.segment.column;
 
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
-
-import javax.annotation.Nullable;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 
 /**
+ * Uses a {@link DruidPredicateFactory} to construct a {@link BitmapColumnIndex}
  */
-public interface ColumnHolder
+public interface DruidPredicateIndex
 {
-  String TIME_COLUMN_NAME = "__time";
-  String DOUBLE_STORAGE_TYPE_PROPERTY = "druid.indexing.doubleStorage";
-
-  static boolean storeDoubleAsFloat()
-  {
-    String value = System.getProperty(DOUBLE_STORAGE_TYPE_PROPERTY, "double");
-    return !"double".equals(StringUtils.toLowerCase(value));
-  }
-
-  ColumnCapabilities getCapabilities();
-
-  int getLength();
-  BaseColumn getColumn();
-
-  @Nullable
-  ColumnIndexSupplier getIndexSupplier();
-
-  /**
-   * Returns a new instance of a {@link SettableColumnValueSelector}, corresponding to the type of this column.
-   */
-  SettableColumnValueSelector makeNewSettableColumnValueSelector();
+  BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory);
 }

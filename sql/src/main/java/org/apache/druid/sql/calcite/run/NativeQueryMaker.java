@@ -140,7 +140,7 @@ public class NativeQueryMaker implements QueryMaker
     // a BoundFilter is created internally for each of the values
     // whereas when Vi s are String the Filters are converted as BoundFilter to SelectorFilter to InFilter
     // which takes lesser processing for bitmaps
-    // So in a case where user executes a query with multiple numeric INs, flame graph shows BoundFilter.getBitmapResult
+    // So in a case where user executes a query with multiple numeric INs, flame graph shows BoundFilter.getBitmapColumnIndex
     // and BoundFilter.match predicate eating up processing time which stalls a historical for a query with large number
     // of numeric INs (> 10K). In such cases user should change the query to specify the IN clauses as String
     // Instead of IN(v1,v2,v3) user should specify IN('v1','v2','v3')

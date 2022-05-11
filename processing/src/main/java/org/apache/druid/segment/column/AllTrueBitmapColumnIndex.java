@@ -19,34 +19,36 @@
 
 package org.apache.druid.segment.column;
 
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
+import org.apache.druid.query.BitmapResultFactory;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 
-import javax.annotation.Nullable;
-
-/**
- */
-public interface ColumnHolder
+public class AllTrueBitmapColumnIndex implements BitmapColumnIndex
 {
-  String TIME_COLUMN_NAME = "__time";
-  String DOUBLE_STORAGE_TYPE_PROPERTY = "druid.indexing.doubleStorage";
+  private final ColumnIndexSelector selector;
 
-  static boolean storeDoubleAsFloat()
+  public AllTrueBitmapColumnIndex(ColumnIndexSelector indexSelector)
   {
-    String value = System.getProperty(DOUBLE_STORAGE_TYPE_PROPERTY, "double");
-    return !"double".equals(StringUtils.toLowerCase(value));
+    this.selector = indexSelector;
   }
 
-  ColumnCapabilities getCapabilities();
+  @Override
+  public ColumnIndexCapabilities getIndexCapabilities()
+  {
+    return SimpleColumnIndexCapabilities.getConstant();
+  }
 
-  int getLength();
-  BaseColumn getColumn();
+  @Override
+  public double estimateSelectivity(int totalRows)
+  {
+    return 1;
+  }
 
-  @Nullable
-  ColumnIndexSupplier getIndexSupplier();
-
-  /**
-   * Returns a new instance of a {@link SettableColumnValueSelector}, corresponding to the type of this column.
-   */
-  SettableColumnValueSelector makeNewSettableColumnValueSelector();
+  @Override
+  public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+  {
+    return bitmapResultFactory.wrapAllTrue(
+        selector.getBitmapFactory()
+                .complement(selector.getBitmapFactory().makeEmptyImmutableBitmap(), selector.getNumRows())
+    );
+  }
 }

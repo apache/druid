@@ -17,36 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.query.filter;
 
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
+import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 
 import javax.annotation.Nullable;
 
 /**
  */
-public interface ColumnHolder
+public interface ColumnIndexSelector extends ColumnInspector
 {
-  String TIME_COLUMN_NAME = "__time";
-  String DOUBLE_STORAGE_TYPE_PROPERTY = "druid.indexing.doubleStorage";
+  int getNumRows();
 
-  static boolean storeDoubleAsFloat()
-  {
-    String value = System.getProperty(DOUBLE_STORAGE_TYPE_PROPERTY, "double");
-    return !"double".equals(StringUtils.toLowerCase(value));
-  }
-
-  ColumnCapabilities getCapabilities();
-
-  int getLength();
-  BaseColumn getColumn();
-
-  @Nullable
-  ColumnIndexSupplier getIndexSupplier();
+  BitmapFactory getBitmapFactory();
 
   /**
-   * Returns a new instance of a {@link SettableColumnValueSelector}, corresponding to the type of this column.
+   * Get the {@link ColumnIndexSupplier} of a column. If the column exists, but does not support indexes, this method
+   * will return a non-null index supplier, likely {@link org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier}.
+   * Columns which are 'missing' will return a null value from this method, which allows for filters to act on this
+   * information to produce an all true or all false index depending on how the filter matches the null value.
    */
-  SettableColumnValueSelector makeNewSettableColumnValueSelector();
+  @Nullable
+  ColumnIndexSupplier getIndexSupplier(String column);
 }

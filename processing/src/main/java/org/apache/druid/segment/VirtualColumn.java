@@ -23,9 +23,10 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
@@ -294,16 +295,15 @@ public interface VirtualColumn extends Cacheable
   boolean usesDotNotation();
 
   /**
-   * Returns the BitmapIndex for efficient filtering on columns that support it. This method is only used if
-   * {@link ColumnCapabilities} returned from {@link #capabilities(String)} has flag for BitmapIndex support.
-   * @param columnName
-   * @param selector
-   * @return BitmapIndex
+   * Get the {@link ColumnIndexSupplier} for the specified virtual column, with the assistance of a
+   * {@link ColumnSelector} to allow reading things from segments. If the virtual column has no indexes, this method
+   * will return null, or may also return a non-null supplier whose methods may return null values - having a supplier
+   * is no guarantee that the column has indexes.
    */
   @SuppressWarnings("unused")
   @Nullable
-  default BitmapIndex getBitmapIndex(String columnName, ColumnSelector selector)
+  default ColumnIndexSupplier getIndexSupplier(String columnName, ColumnSelector columnSelector)
   {
-    throw new UnsupportedOperationException("not supported");
+    return NoIndexesColumnIndexSupplier.getInstance();
   }
 }

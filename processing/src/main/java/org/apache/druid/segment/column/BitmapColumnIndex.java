@@ -17,35 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.segment.serde;
+package org.apache.druid.segment.column;
 
-import com.google.common.base.Supplier;
-import org.apache.druid.collections.spatial.ImmutableRTree;
-import org.apache.druid.segment.column.SpatialIndex;
+import org.apache.druid.query.BitmapResultFactory;
 
-/**
- */
-public class SpatialIndexColumnPartSupplier implements Supplier<SpatialIndex>
+public interface BitmapColumnIndex
 {
-  private final ImmutableRTree indexedTree;
+  ColumnIndexCapabilities getIndexCapabilities();
 
-  public SpatialIndexColumnPartSupplier(
-      ImmutableRTree indexedTree
-  )
-  {
-    this.indexedTree = indexedTree;
-  }
+  double estimateSelectivity(int totalRows);
 
-  @Override
-  public SpatialIndex get()
-  {
-    return new SpatialIndex()
-    {
-      @Override
-      public ImmutableRTree getRTree()
-      {
-        return indexedTree;
-      }
-    };
-  }
+  <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory);
 }
