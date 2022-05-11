@@ -420,7 +420,13 @@ public abstract class LoadRule implements Rule
             );
             break;
           }
-          numDropped = dropForTier(numToDrop, holders, segment, params.getBalancerStrategy());
+          numDropped = dropForTier(
+              numToDrop,
+              holders,
+              segment,
+              params.getBalancerStrategy(),
+              getReplicationLogString()
+          );
         } else {
           numDropped = 0;
         }
@@ -450,7 +456,8 @@ public abstract class LoadRule implements Rule
       final int numToDrop,
       final NavigableSet<ServerHolder> holdersInTier,
       final DataSegment segment,
-      final BalancerStrategy balancerStrategy
+      final BalancerStrategy balancerStrategy,
+      final String replicationLog
   )
   {
     Map<Boolean, TreeSet<ServerHolder>> holders = holdersInTier.stream()
@@ -461,9 +468,9 @@ public abstract class LoadRule implements Rule
                                                                ));
     TreeSet<ServerHolder> decommissioningServers = holders.get(true);
     TreeSet<ServerHolder> activeServers = holders.get(false);
-    int left = dropSegmentFromServers(balancerStrategy, segment, decommissioningServers, numToDrop);
+    int left = dropSegmentFromServers(balancerStrategy, segment, decommissioningServers, numToDrop, replicationLog);
     if (left > 0) {
-      left = dropSegmentFromServers(balancerStrategy, segment, activeServers, left);
+      left = dropSegmentFromServers(balancerStrategy, segment, activeServers, left, replicationLog);
     }
     if (left != 0) {
       log.warn("I have no servers serving [%s]?", segment.getId());
@@ -472,9 +479,11 @@ public abstract class LoadRule implements Rule
   }
 
   private static int dropSegmentFromServers(
-      BalancerStrategy balancerStrategy,
-      DataSegment segment,
-      NavigableSet<ServerHolder> holders, int numToDrop
+      final BalancerStrategy balancerStrategy,
+      final DataSegment segment,
+      final NavigableSet<ServerHolder> holders,
+      int numToDrop,
+      final String replicationLog
   )
   {
     final Iterator<ServerHolder> iterator = balancerStrategy.pickServersToDrop(segment, holders);
@@ -487,10 +496,11 @@ public abstract class LoadRule implements Rule
       final ServerHolder holder = iterator.next();
       if (holder.isServingSegment(segment)) {
         log.info(
-            "Dropping segment [%s] on server [%s] in tier [%s]",
+            "Dropping segment [%s] on server [%s] in tier [%s]. %s",
             segment.getId(),
             holder.getServer().getName(),
-            holder.getServer().getTier()
+            holder.getServer().getTier(),
+            replicationLog
         );
         holder.getPeon().dropSegment(segment, null);
         numToDrop--;
