@@ -40,11 +40,33 @@ Users can now cancel SQL queries just like native queries can be cancelled. A ne
 
 ## Metrics
 
+### Query metrics now also set the `vectorized` dimension by default. This can be helpful in understanding performance profile of queries.
+
+[12464](https://github.com/apache/druid/pull/12464)
+
+### Auto-compaction duty also report duty metrics now. A dimension to indicate the duty group has also been added.
+
+[12352](https://github.com/apache/druid/pull/12352) 
+
 ## Cloud integrations
+
+### Allow authenticating via Shared access resource for azure storage
+
+[12266](https://github.com/apache/druid/pull/12266) 
 
 ## Other changes
 
 # Security fixes
+
+## Support for access control on setting query contexts
+
+Today, any context params are allowed to users. This can cause 1) a bad UX if the context param is not matured yet or 2) even query failure or system fault in the worst case if a sensitive param is abused, ex) maxSubqueryRows. Druid now has an ability to limit context params per user role. That means, a query will fail if you have a context param set in the query that is not allowed to you. 
+
+The context param authorization can be enabled using druid.auth.authorizeQueryContextParams. This is disabled by default to avoid any hassle when performing an upgrade.
+
+[12396](https://github.com/apache/druid/pull/12396)
+
+## 
 
 # Performance improvements
 
@@ -57,7 +79,20 @@ Druid 0.23.0 contains over 68 bug fixes. You can find the complete list [here](h
 
 # Upgrading to 0.23.0
 
+Consider the following changes and updates when upgrading from Druid 0.22.x to 0.23.0. If you're updating from an earlier version than 0.22.1, see the release notes of the relevant intermediate versions.
+
+
+
 # Developer notices
+
+## updated airline dependency to 2.x
+
+https://github.com/airlift/airline is no longer maintained and so druid has upgraded to https://github.com/rvesse/airline (Airline 2) to use an actively
+maintained version, while minimizing breaking changes.
+
+This is a backwards incompatible change, and custom extensions relying on the CliCommandCreator extension point will also need to be updated.
+
+[12270](https://github.com/apache/druid/pull/12270)
 
 # Known issues
 
