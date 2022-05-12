@@ -596,6 +596,16 @@ libraries:
 
 ---
 
+name: IPAddress
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 5.3.4
+libraries:
+  - com.github.seancfoley: ipaddress
+
+---
+
 name: Apache Commons Collections
 license_category: binary
 module: java-core

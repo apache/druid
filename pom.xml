@@ -246,6 +246,11 @@
                <artifactId>commons-net</artifactId>
                <version>3.6</version>
            </dependency>
+          <dependency>
+              <groupId>com.github.seancfoley</groupId>
+              <artifactId>ipaddress</artifactId>
+              <version>5.3.4</version>
+          </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
