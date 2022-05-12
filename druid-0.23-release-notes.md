@@ -18,16 +18,21 @@ Apache Druid 0.23.0 contains over 450 new features, bug fixes, performance enhan
 ## Native Batch Ingestion
 
 ### Multi-dimensional range partitioning
+Multi-dimensional range partitioning allows users to partition their data on the ranges of any number of dimensions. It develops further on the concepts behind "single-dim" partitioning and is now arguably the most preferable secondary partitioning both for query performance and storage efficiency.
 [11848](https://github.com/apache/druid/pull/11848)
 [11973](https://github.com/apache/druid/pull/11973)
 
 ## SQL
 
 ### Human-readable and actionable SQL error messages
+Till 0.22.1, if a SQL query is not supported, users get a very cryptic and unhelpful error message. With this change, error message will include exactly what part of their SQL query is not supported by druid. One such example is executing a scan query that is ordered on a dimension other than time column. 
 [11911](https://github.com/apache/druid/pull/11911)
 
 ### Cancel API for SQL queries
+Users can now cancel SQL queries just like native queries can be cancelled. A new API has been added for cancelling SQL queries. Web-console now users this API to cancel SQL queries. Earlier, it only used to close the client connection while sql query keeps running in druid. 
+
 [11643](https://github.com/apache/druid/pull/11643)
+[11738](https://github.com/apache/druid/pull/11738)
 
 ## Coordinator/Overlord
 
