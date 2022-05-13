@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeSet;
 
 public class IndexedTableJoinable implements Joinable
@@ -104,10 +105,7 @@ public class IndexedTableJoinable implements Joinable
     try (final IndexedTable.Reader reader = table.columnReader(columnPosition)) {
       // Sorted set to encourage "in" filters that result from this method to do dictionary lookups in order.
       // The hopes are that this will improve locality and therefore improve performance.
-      //
-      // Note: we are using Comparators.naturalNullsFirst() because it prevents the need for lambda-wrapping in
-      // InDimFilter's "createStringPredicate" method.
-      final Set<String> allValues = new TreeSet<>(Comparators.naturalNullsFirst());
+      final Set<String> allValues = createValuesSet();
 
       for (int i = 0; i < table.numRows(); i++) {
         final String s = DimensionHandlerUtils.convertObjectToString(reader.read(i));
@@ -147,7 +145,7 @@ public class IndexedTableJoinable implements Joinable
       return Optional.empty();
     }
     try (final Closer closer = Closer.create()) {
-      Set<String> correlatedValues = new HashSet<>();
+      Set<String> correlatedValues = createValuesSet();
       if (table.keyColumns().contains(searchColumnName)) {
         IndexedTable.Index index = table.columnIndex(filterColumnPosition);
         IndexedTable.Reader reader = table.columnReader(correlatedColumnPosition);
@@ -195,5 +193,13 @@ public class IndexedTableJoinable implements Joinable
   public Optional<Closeable> acquireReferences()
   {
     return table.acquireReferences();
+  }
+
+  /**
+   * Create a Set that InDimFilter will accept without incurring a copy.
+   */
+  private static Set<String> createValuesSet()
+  {
+    return new TreeSet<>(Comparators.naturalNullsFirst());
   }
 }

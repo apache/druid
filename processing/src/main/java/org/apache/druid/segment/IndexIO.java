@@ -460,6 +460,7 @@ public class IndexIO
             new DictionaryEncodedStringIndexSupplier(
                 new ConciseBitmapFactory(),
                 index.getDimValueLookup(dimension),
+                index.getDimValueUtf8Lookup(dimension),
                 bitmaps,
                 spatialIndex
             ),

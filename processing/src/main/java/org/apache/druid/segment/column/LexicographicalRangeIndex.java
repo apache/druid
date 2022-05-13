@@ -39,18 +39,18 @@ public interface LexicographicalRangeIndex
       boolean endStrict
   )
   {
-    return forRange(startValue, startStrict, endValue, endStrict, (index) -> true);
+    return forRange(startValue, startStrict, endValue, endStrict, null);
   }
 
   /**
    * Get an {@link BitmapColumnIndex} corresponding to the values supplied in the specified range whose dictionary ids
-   * also match some predicate, such as to match a prefix
+   * also match some predicate, such as to match a prefix. Null matchers are equivalent to always-true.
    */
   BitmapColumnIndex forRange(
       @Nullable String startValue,
       boolean startStrict,
       @Nullable String endValue,
       boolean endStrict,
-      Predicate<String> matcher
+      @Nullable Predicate<String> matcher
   );
 }

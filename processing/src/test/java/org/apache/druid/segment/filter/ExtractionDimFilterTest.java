@@ -26,6 +26,7 @@ import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.DimExtractionFn;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ColumnIndexSelector;
@@ -49,6 +50,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Map;
 
@@ -117,6 +119,10 @@ public class ExtractionDimFilterTest extends InitializedNullHandlingTest
         return new DictionaryEncodedStringIndexSupplier(
             factory,
             GenericIndexed.fromIterable(Collections.singletonList("foo1"), GenericIndexed.STRING_STRATEGY),
+            GenericIndexed.fromIterable(
+                Collections.singletonList(ByteBuffer.wrap(StringUtils.toUtf8("foo1"))),
+                GenericIndexed.BYTE_BUFFER_STRATEGY
+            ),
             GenericIndexed.fromIterable(Collections.singletonList(foo1BitMap), serdeFactory.getObjectStrategy()),
             null
         );

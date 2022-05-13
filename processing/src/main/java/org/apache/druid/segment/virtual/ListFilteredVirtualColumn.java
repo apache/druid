@@ -60,6 +60,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
+import java.util.SortedSet;
 
 /**
  * {@link VirtualColumn} form of {@link ListFilteredDimensionSpec}, powered by
@@ -309,7 +310,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
       return -(minIndex + 1);
     }
 
-    Iterable<ImmutableBitmap> getBitmapsInRange(Predicate<String> matcher, int start, int end)
+    Iterable<ImmutableBitmap> getBitmapsInRange(@Nullable Predicate<String> matcher, int start, int end)
     {
       return () -> new Iterator<ImmutableBitmap>()
       {
@@ -322,7 +323,8 @@ public class ListFilteredVirtualColumn implements VirtualColumn
 
         private int findNext()
         {
-          while (currIndex < end && !matcher.apply(delegate.getValue(idMapping.getReverseId(currIndex)))) {
+          while (currIndex < end
+                 && !(matcher == null || matcher.apply(delegate.getValue(idMapping.getReverseId(currIndex))))) {
             currIndex++;
           }
 
@@ -397,7 +399,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     }
 
     @Override
-    public BitmapColumnIndex forValues(Set<String> values)
+    public BitmapColumnIndex forSortedValues(SortedSet<String> values)
     {
       return new BaseVirtualIndex()
       {
@@ -511,7 +513,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
         boolean startStrict,
         @Nullable String endValue,
         boolean endStrict,
-        Predicate<String> matcher
+        @Nullable Predicate<String> matcher
     )
     {
       return new BaseVirtualIndex()
