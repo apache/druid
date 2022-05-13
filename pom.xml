@@ -84,7 +84,7 @@
         <!-- sql/src/main/codegen/config.fmpp is based on a file from calcite-core, and needs to be
           updated when upgrading Calcite. Refer to the top-level comments in that file for details. -->
         <calcite.version>1.21.0</calcite.version>
-        <datasketches.version>3.1.0</datasketches.version>
+        <datasketches.version>3.2.0</datasketches.version>
         <datasketches.memory.version>2.0.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
