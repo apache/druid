@@ -20,27 +20,48 @@
 package org.apache.druid.sql.calcite.parser;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlTimestampLiteral;
+import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.filter.AndDimFilter;
+import org.apache.druid.query.filter.BoundDimFilter;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.OrDimFilter;
+import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.sql.calcite.expression.TimeUnits;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
+import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.filtration.MoveTimeFiltersToIntervals;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Interval;
 import org.joda.time.Period;
+import org.joda.time.base.AbstractInterval;
 
+import java.sql.Timestamp;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class DruidSqlParserUtils
 {
 
   private static final Logger log = new Logger(DruidSqlParserUtils.class);
+  public static final String ALL = "all";
 
   /**
    * Delegates to {@code convertSqlNodeToGranularity} and converts the exceptions to {@link ParseException}
@@ -166,5 +187,196 @@ public class DruidSqlParserUtils
         sqlNode.toString(),
         TimeFloorOperatorConversion.SQL_FUNCTION_NAME
     ));
+  }
+
+  /**
+   * This method validates and converts a {@link SqlNode} representing a query into an optmizied list of intervals to
+   * be used in creating an ingestion spec. If the sqlNode is an SqlLiteral of {@link #ALL}, returns a singleton list of
+   * "ALL". Otherwise, it converts and optimizes the query using {@link MoveTimeFiltersToIntervals} into a list of
+   * intervals which contain all valid values of time as per the query.
+   *
+   * The following validations are performed
+   * 1. Only __time column and timestamp literals are present in the query
+   * 2. The interval after optimization is not empty
+   * 3. The operands in the expression are supported
+   * 4. The intervals after adjusting for timezone are aligned with the granularity parameter
+   *
+   * @param replaceTimeQuery Sql node representing the query
+   * @param granularity granularity of the query for validation
+   * @param dateTimeZone timezone
+   * @return List of string representation of intervals
+   * @throws ValidationException if the SqlNode cannot be converted to a list of intervals
+   */
+  public static List<String> validateQueryAndConvertToIntervals(
+      SqlNode replaceTimeQuery,
+      Granularity granularity,
+      DateTimeZone dateTimeZone
+  ) throws ValidationException
+  {
+    if (replaceTimeQuery instanceof SqlLiteral && ALL.equalsIgnoreCase(((SqlLiteral) replaceTimeQuery).toValue())) {
+      return ImmutableList.of(ALL);
+    }
+
+    DimFilter dimFilter = convertQueryToDimFilter(replaceTimeQuery, dateTimeZone);
+
+    Filtration filtration = Filtration.create(dimFilter);
+    filtration = MoveTimeFiltersToIntervals.instance().apply(filtration);
+    List<Interval> intervals = filtration.getIntervals();
+
+    if (filtration.getDimFilter() != null) {
+      throw new ValidationException("Only " + ColumnHolder.TIME_COLUMN_NAME + " column is supported in OVERWRITE WHERE clause");
+    }
+
+    if (intervals.isEmpty()) {
+      throw new ValidationException("Intervals for replace are empty");
+    }
+
+    for (Interval interval : intervals) {
+      DateTime intervalStart = interval.getStart();
+      DateTime intervalEnd = interval.getEnd();
+      if (!granularity.bucketStart(intervalStart).equals(intervalStart) || !granularity.bucketStart(intervalEnd).equals(intervalEnd)) {
+        throw new ValidationException("OVERWRITE WHERE clause contains an interval " + intervals +
+                                      " which is not aligned with PARTITIONED BY granularity " + granularity);
+      }
+    }
+    return intervals
+        .stream()
+        .map(AbstractInterval::toString)
+        .collect(Collectors.toList());
+  }
+
+
+  /**
+   * This method is used to convert an {@link SqlNode} representing a query into a {@link DimFilter} for the same query.
+   * It takes the timezone as a separate parameter, as Sql timestamps don't contain that information. Supported functions
+   * are AND, OR, NOT, >, <, >=, <= and BETWEEN operators in the sql query.
+   *
+   * @param replaceTimeQuery Sql node representing the query
+   * @param dateTimeZone timezone
+   * @return Dimfilter for the query
+   * @throws ValidationException if the SqlNode cannot be converted a Dimfilter
+   */
+  public static DimFilter convertQueryToDimFilter(SqlNode replaceTimeQuery, DateTimeZone dateTimeZone)
+      throws ValidationException
+  {
+    if (!(replaceTimeQuery instanceof SqlBasicCall)) {
+      log.error("Expected SqlBasicCall during parsing, but found " + replaceTimeQuery.getClass().getName());
+      throw new ValidationException("Invalid OVERWRITE WHERE clause");
+    }
+    String columnName;
+    SqlBasicCall sqlBasicCall = (SqlBasicCall) replaceTimeQuery;
+    List<SqlNode> operandList = sqlBasicCall.getOperandList();
+    switch (sqlBasicCall.getOperator().getKind()) {
+      case AND:
+        List<DimFilter> dimFilters = new ArrayList<>();
+        for (SqlNode sqlNode : sqlBasicCall.getOperandList()) {
+          dimFilters.add(convertQueryToDimFilter(sqlNode, dateTimeZone));
+        }
+        return new AndDimFilter(dimFilters);
+      case OR:
+        dimFilters = new ArrayList<>();
+        for (SqlNode sqlNode : sqlBasicCall.getOperandList()) {
+          dimFilters.add(convertQueryToDimFilter(sqlNode, dateTimeZone));
+        }
+        return new OrDimFilter(dimFilters);
+      case NOT:
+        return new NotDimFilter(convertQueryToDimFilter(sqlBasicCall.getOperandList().get(0), dateTimeZone));
+      case GREATER_THAN_OR_EQUAL:
+        columnName = parseColumnName(operandList.get(0));
+        return new BoundDimFilter(
+            columnName,
+            parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
+            null,
+            false,
+            null,
+            null,
+            null,
+            StringComparators.NUMERIC
+        );
+      case LESS_THAN_OR_EQUAL:
+        columnName = parseColumnName(operandList.get(0));
+        return new BoundDimFilter(
+            columnName,
+            null,
+            parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
+            null,
+            false,
+            null,
+            null,
+            StringComparators.NUMERIC
+        );
+      case GREATER_THAN:
+        columnName = parseColumnName(operandList.get(0));
+        return new BoundDimFilter(
+            columnName,
+            parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
+            null,
+            true,
+            null,
+            null,
+            null,
+            StringComparators.NUMERIC
+        );
+      case LESS_THAN:
+        columnName = parseColumnName(operandList.get(0));
+        return new BoundDimFilter(
+            columnName,
+            null,
+            parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
+            null,
+            true,
+            null,
+            null,
+            StringComparators.NUMERIC
+        );
+      case BETWEEN:
+        columnName = parseColumnName(operandList.get(0));
+        return new BoundDimFilter(
+            columnName,
+            parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
+            parseTimeStampWithTimeZone(operandList.get(2), dateTimeZone),
+            false,
+            false,
+            null,
+            null,
+            StringComparators.NUMERIC
+        );
+      default:
+        throw new ValidationException("Unsupported operation in OVERWRITE WHERE clause: " + sqlBasicCall.getOperator().getName());
+    }
+  }
+
+  /**
+   * Converts a {@link SqlNode} identifier into a string representation
+   *
+   * @param sqlNode the sql node
+   * @return string representing the column name
+   * @throws ValidationException if the sql node is not an SqlIdentifier
+   */
+  public static String parseColumnName(SqlNode sqlNode) throws ValidationException
+  {
+    if (!(sqlNode instanceof SqlIdentifier)) {
+      throw new ValidationException("Expressions must be of the form __time <operator> TIMESTAMP");
+    }
+    return ((SqlIdentifier) sqlNode).getSimple();
+  }
+
+  /**
+   * Converts a {@link SqlNode} into a timestamp, taking into account the timezone
+   *
+   * @param sqlNode the sql node
+   * @param timeZone timezone
+   * @return the timestamp string as milliseconds from epoch
+   * @throws ValidationException if the sql node is not a SqlTimestampLiteral
+   */
+  public static String parseTimeStampWithTimeZone(SqlNode sqlNode, DateTimeZone timeZone) throws ValidationException
+  {
+    if (!(sqlNode instanceof SqlTimestampLiteral)) {
+      throw new ValidationException("Expressions must be of the form __time <operator> TIMESTAMP");
+    }
+
+    Timestamp sqlTimestamp = Timestamp.valueOf(((SqlTimestampLiteral) sqlNode).toFormattedString());
+    ZonedDateTime zonedTimestamp = sqlTimestamp.toLocalDateTime().atZone(timeZone.toTimeZone().toZoneId());
+    return String.valueOf(zonedTimestamp.toInstant().toEpochMilli());
   }
 }
