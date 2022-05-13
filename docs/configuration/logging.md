@@ -25,7 +25,7 @@ title: "Logging"
 
 Apache Druid processes will emit logs that are useful for debugging to log files. 
 These processes also emit periodic [metrics](../configuration/index.md#enabling-metrics) about their state.
-Metric logs are can be disabled with `-Ddruid.emitter.logging.logLevel=debug`.
+Metric info logs can be disabled with `-Ddruid.emitter.logging.logLevel=debug`.
 
 Druid uses [log4j2](http://logging.apache.org/log4j/2.x/) for logging. 
 The default configuration file log4j2.xml ships with Druid under conf/druid/{config}/_common/log4j2.xml .
