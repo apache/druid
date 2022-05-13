@@ -72,6 +72,10 @@ The context param authorization can be enabled using druid.auth.authorizeQueryCo
 
 ### General performance
 
+### Ingestion
+
+- More accurate memory estimations while building an on-heap incremental index. Rather than using the max possible size of an aggregated row, Druid can now use (based on a task context flag) a closer estimate of the actual heap footprint of an aggregated row. This enables the indexer to fit more rows in memory before doing an intermediate persist. [12073](https://github.com/apache/druid/pull/12073)
+
 ### SQL
 
 # Bug fixes
