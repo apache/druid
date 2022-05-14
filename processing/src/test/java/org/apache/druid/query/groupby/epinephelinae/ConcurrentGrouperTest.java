@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.QueryTimeoutException;
@@ -78,7 +79,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
   private final Supplier<ByteBuffer> bufferSupplier;
   private final int concurrencyHint;
   private final int parallelCombineThreads;
-  private final ExecutorService exec = Executors.newFixedThreadPool(8);
+  private final ExecutorService exec;
   private final boolean mergeThreadLocal;
   private final Closer closer = Closer.create();
 
@@ -140,6 +141,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
         return buffer;
       }
     };
+    this.exec = Execs.multiThreaded(concurrencyHint, "ConcurrentGrouperTest-%d");
   }
 
   @Test()

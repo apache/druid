@@ -424,8 +424,16 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
 
     ListenableFuture<List<CloseableIterator<Entry<KeyType>>>> future = Futures.allAsList(futures);
     try {
-      final long timeout = queryTimeoutAt - System.currentTimeMillis();
-      return hasQueryTimeout ? future.get(timeout, TimeUnit.MILLISECONDS) : future.get();
+      if (!hasQueryTimeout) {
+        return future.get();
+      } else {
+        final long timeout = queryTimeoutAt - System.currentTimeMillis();
+        if (timeout > 0) {
+          return future.get(timeout, TimeUnit.MILLISECONDS);
+        } else {
+          throw new TimeoutException();
+        }
+      }
     }
     catch (InterruptedException | CancellationException e) {
       GuavaUtils.cancelAll(true, future, futures);
