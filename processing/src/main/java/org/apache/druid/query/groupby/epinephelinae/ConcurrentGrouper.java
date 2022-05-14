@@ -242,6 +242,10 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
             );
             grouper.init();
             groupers.add(grouper);
+
+            if (mergeThreadLocal) {
+              grouper.setSpillingAllowed(true);
+            }
           }
 
           initialized = true;
@@ -267,34 +271,47 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       throw new ISE("Grouper is closed");
     }
 
-    if (mergeThreadLocal) {
-      return aggregateThreadLocal(key, keyHash);
-    } else if (!spilling) {
-      final SpillingGrouper<KeyType> hashBasedGrouper = groupers.get(grouperNumberForKeyHash(keyHash));
+    final SpillingGrouper<KeyType> tlGrouper = threadLocalGrouper.get();
 
-      synchronized (hashBasedGrouper) {
-        if (!spilling) {
-          final AggregateResult aggregateResult = hashBasedGrouper.aggregate(key, keyHash);
+    if (mergeThreadLocal) {
+      // Always thread-local grouping: expect to get more memory use, but no thread contention.
+      return tlGrouper.aggregate(key, keyHash);
+    } else if (spilling) {
+      // Switch to thread-local grouping after spilling starts. No thread contention.
+      synchronized (tlGrouper) {
+        tlGrouper.setSpillingAllowed(true);
+        return tlGrouper.aggregate(key, keyHash);
+      }
+    } else {
+      // Use keyHash to find a grouper prior to spilling.
+      // There is potential here for thread contention, but it reduces memory use.
+      final SpillingGrouper<KeyType> subGrouper = groupers.get(grouperNumberForKeyHash(keyHash));
+
+      synchronized (subGrouper) {
+        if (subGrouper.isSpillingAllowed() && subGrouper != tlGrouper) {
+          // Another thread already started treating this grouper as its thread-local grouper. So, switch to ours.
+          // Fall through to release the lock on subGrouper and do the aggregation with tlGrouper.
+        } else {
+          final AggregateResult aggregateResult = subGrouper.aggregate(key, keyHash);
+
           if (aggregateResult.isOk()) {
             return AggregateResult.ok();
           } else {
             // Expecting all-or-nothing behavior.
             assert aggregateResult.getCount() == 0;
             spilling = true;
+
+            // Fall through to release the lock on subGrouper and do the aggregation with tlGrouper.
           }
         }
       }
+
+      synchronized (tlGrouper) {
+        assert spilling;
+        tlGrouper.setSpillingAllowed(true);
+        return tlGrouper.aggregate(key, keyHash);
+      }
     }
-
-    assert spilling;
-    return aggregateThreadLocal(key, keyHash);
-  }
-
-  private AggregateResult aggregateThreadLocal(KeyType key, int keyHash)
-  {
-    final SpillingGrouper<KeyType> tlGrouper = threadLocalGrouper.get();
-    tlGrouper.setSpillingAllowed(true);
-    return tlGrouper.aggregate(key, keyHash);
   }
 
   @Override
