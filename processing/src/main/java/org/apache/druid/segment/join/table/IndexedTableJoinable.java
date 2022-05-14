@@ -33,12 +33,10 @@ import org.apache.druid.segment.join.Joinable;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeSet;
 
 public class IndexedTableJoinable implements Joinable

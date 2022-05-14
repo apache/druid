@@ -190,7 +190,7 @@ public class ByteBufferUtils
       }
     }
 
-    return Long.compare(length1, length2);
+    return Integer.compare(length1, length2);
   }
 
   /**
