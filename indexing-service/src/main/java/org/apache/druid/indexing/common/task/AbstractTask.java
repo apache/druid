@@ -30,12 +30,9 @@ import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.ForbiddenException;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -167,19 +164,6 @@ public abstract class AbstractTask implements Task
     return TaskStatus.success(getId());
   }
 
-  /**
-   * Authorizes WRITE action on a task's datasource
-   *
-   * @throws ForbiddenException if not authorized
-   */
-  public void authorizeRequestForDatasourceWrite(
-      HttpServletRequest request,
-      AuthorizerMapper authorizerMapper
-  ) throws ForbiddenException
-  {
-    IndexTaskUtils.authorizeRequestForDatasourceWrite(request, dataSource, authorizerMapper);
-  }
-
   @Override
   public boolean equals(Object o)
   {
@@ -223,5 +207,16 @@ public abstract class AbstractTask implements Task
   public Map<String, Object> getContext()
   {
     return context;
+  }
+
+  /**
+   * Whether maximum memory usage should be considered in estimation for indexing tasks.
+   */
+  protected boolean isUseMaxMemoryEstimates()
+  {
+    return getContextValue(
+        Tasks.USE_MAX_MEMORY_ESTIMATES,
+        Tasks.DEFAULT_USE_MAX_MEMORY_ESTIMATES
+    );
   }
 }

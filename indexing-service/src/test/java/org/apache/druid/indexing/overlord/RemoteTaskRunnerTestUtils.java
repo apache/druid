@@ -47,6 +47,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.zookeeper.CreateMode;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -270,7 +271,8 @@ public class RemoteTaskRunnerTestUtils
           pathChildrenCacheFactory,
           httpClient,
           workerConfigRef,
-          provisioningStrategy
+          provisioningStrategy,
+          new NoopServiceEmitter()
       );
     }
 

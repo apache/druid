@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.ITRetryUtil;
@@ -46,7 +45,6 @@ import java.util.Map;
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITCompactionSparseColumnTest extends AbstractIndexerTest
 {
-  private static final Logger LOG = new Logger(ITCompactionTaskTest.class);
   private static final String INDEX_DATASOURCE = "sparse_column_index_test";
 
   private static final String INDEX_TASK = "/indexer/sparse_column_index_task.json";
@@ -81,19 +79,19 @@ public class ITCompactionSparseColumnTest extends AbstractIndexerTest
           () -> coordinator.areSegmentsLoaded(fullDatasourceName),
           "Segment Compaction"
       );
-      // Verify compacted data
+      // Verify compacted data.
       // Compacted data only have one segments. First segment have the following rows:
-      // The ordering of the columns will be "dimB", "dimA", "dimC" (This is the same as the ordering in the initial
-      // ingestion task)
+      // The ordering of the columns will be "dimB", "dimA", "dimC", "dimD", "dimE", "dimF"
+      // (This is the same as the ordering in the initial ingestion task).
       List<List<Object>> segmentRows = ImmutableList.of(
-          Arrays.asList(1442016000000L, "F", null, "C", 1, 1),
-          Arrays.asList(1442016000000L, "J", null, "C", 1, 1),
-          Arrays.asList(1442016000000L, "R", null, "J", 1, 1),
-          Arrays.asList(1442016000000L, "S", null, "Z", 1, 1),
-          Arrays.asList(1442016000000L, "T", null, "H", 1, 1),
-          Arrays.asList(1442016000000L, "X", null, "H", 3, 3),
-          Arrays.asList(1442016000000L, "X", "A", null, 1, 1),
-          Arrays.asList(1442016000000L, "Z", null, "H", 1, 1)
+          Arrays.asList(1442016000000L, "F", "C", null, null, null, null, 1, 1),
+          Arrays.asList(1442016000000L, "J", "C", null, null, null, null, 1, 1),
+          Arrays.asList(1442016000000L, "R", "J", null, null, null, null, 1, 1),
+          Arrays.asList(1442016000000L, "S", "Z", null, null, null, null, 1, 1),
+          Arrays.asList(1442016000000L, "T", "H", null, null, null, null, 1, 1),
+          Arrays.asList(1442016000000L, "X", null, "A", null, null, null, 1, 1),
+          Arrays.asList(1442016000000L, "X", "H", null, null, null, null, 3, 3),
+          Arrays.asList(1442016000000L, "Z", "H", null, null, null, null, 1, 1)
       );
       verifyCompactedData(segmentRows);
     }
@@ -121,7 +119,7 @@ public class ITCompactionSparseColumnTest extends AbstractIndexerTest
           () -> coordinator.areSegmentsLoaded(fullDatasourceName),
           "Segment Compaction"
       );
-      // Verify compacted data
+      // Verify compacted data.
       // Compacted data only have one segments. First segment have the following rows:
       // The ordering of the columns will be "dimA", "dimB", "dimC"
       List<List<Object>> segmentRows = ImmutableList.of(
@@ -160,7 +158,7 @@ public class ITCompactionSparseColumnTest extends AbstractIndexerTest
           () -> coordinator.areSegmentsLoaded(fullDatasourceName),
           "Segment Compaction"
       );
-      // Verify compacted data
+      // Verify compacted data.
       // Compacted data only have one segments. First segment have the following rows:
       // The ordering of the columns will be "dimC", "dimB", "dimA"
       List<List<Object>> segment1Rows = ImmutableList.of(
@@ -183,28 +181,28 @@ public class ITCompactionSparseColumnTest extends AbstractIndexerTest
     List<Map<String, List<List<Object>>>> expectedResultBeforeCompaction = new ArrayList<>();
     // First segments have the following rows:
     List<List<Object>> segment1Rows = ImmutableList.of(
-        ImmutableList.of(1442016000000L, "F", "C", 1, 1),
-        ImmutableList.of(1442016000000L, "J", "C", 1, 1),
-        ImmutableList.of(1442016000000L, "X", "H", 1, 1)
+        Arrays.asList(1442016000000L, "F", "C", null, null, null, null, 1, 1),
+        Arrays.asList(1442016000000L, "J", "C", null, null, null, null, 1, 1),
+        Arrays.asList(1442016000000L, "X", "H", null, null, null, null, 1, 1)
     );
     expectedResultBeforeCompaction.add(ImmutableMap.of("events", segment1Rows));
     // Second segments have the following rows:
     List<List<Object>> segment2Rows = ImmutableList.of(
-        ImmutableList.of(1442016000000L, "S", "Z", 1, 1),
-        ImmutableList.of(1442016000000L, "X", "H", 1, 1),
-        ImmutableList.of(1442016000000L, "Z", "H", 1, 1)
+        Arrays.asList(1442016000000L, "S", "Z", null, null, null, null, 1, 1),
+        Arrays.asList(1442016000000L, "X", "H", null, null, null, null, 1, 1),
+        Arrays.asList(1442016000000L, "Z", "H", null, null, null, null, 1, 1)
     );
     expectedResultBeforeCompaction.add(ImmutableMap.of("events", segment2Rows));
     // Third segments have the following rows:
     List<List<Object>> segment3Rows = ImmutableList.of(
-        ImmutableList.of(1442016000000L, "R", "J", 1, 1),
-        ImmutableList.of(1442016000000L, "T", "H", 1, 1),
-        ImmutableList.of(1442016000000L, "X", "H", 1, 1)
+        Arrays.asList(1442016000000L, "R", "J", null, null, null, null, 1, 1),
+        Arrays.asList(1442016000000L, "T", "H", null, null, null, null, 1, 1),
+        Arrays.asList(1442016000000L, "X", "H", null, null, null, null, 1, 1)
     );
     expectedResultBeforeCompaction.add(ImmutableMap.of("events", segment3Rows));
     // Fourth segments have the following rows:
     List<List<Object>> segment4Rows = ImmutableList.of(
-        ImmutableList.of(1442016000000L, "X", "A", 1, 1)
+        Arrays.asList(1442016000000L, "X", null, "A", null, null, null, 1, 1)
     );
     expectedResultBeforeCompaction.add(ImmutableMap.of("events", segment4Rows));
     verifyQueryResult(expectedResultBeforeCompaction, 10, 10, 1);

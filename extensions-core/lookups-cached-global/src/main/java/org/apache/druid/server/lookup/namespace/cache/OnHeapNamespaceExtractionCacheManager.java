@@ -29,6 +29,7 @@ import org.apache.druid.server.lookup.namespace.NamespaceExtractionConfig;
 
 import java.lang.ref.WeakReference;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -50,9 +51,7 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
    * <p>{@link WeakReference} doesn't override Object's identity equals() and hashCode(), so effectively this map plays
    * like concurrent {@link java.util.IdentityHashMap}.
    */
-  private final Set<WeakReference<ConcurrentMap<String, String>>> caches = Collections.newSetFromMap(
-      new ConcurrentHashMap<WeakReference<ConcurrentMap<String, String>>, Boolean>()
-  );
+  private final Set<WeakReference<Map<String, String>>> caches = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
   @Inject
   public OnHeapNamespaceExtractionCacheManager(
@@ -66,7 +65,7 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
 
   private void expungeCollectedCaches()
   {
-    for (Iterator<WeakReference<ConcurrentMap<String, String>>> iterator = caches.iterator(); iterator.hasNext(); ) {
+    for (Iterator<WeakReference<Map<String, String>>> iterator = caches.iterator(); iterator.hasNext(); ) {
       WeakReference<?> cacheRef = iterator.next();
       if (cacheRef.get() == null) {
         // This may not necessarily mean leak of CacheHandler, because disposeCache() may be called concurrently with
@@ -85,10 +84,32 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
   public CacheHandler createCache()
   {
     ConcurrentMap<String, String> cache = new ConcurrentHashMap<>();
-    WeakReference<ConcurrentMap<String, String>> cacheRef = new WeakReference<>(cache);
+    WeakReference<Map<String, String>> cacheRef = new WeakReference<>(cache);
     expungeCollectedCaches();
     caches.add(cacheRef);
     return new CacheHandler(this, cache, cacheRef);
+  }
+
+  @Override
+  public CacheHandler allocateCache()
+  {
+    Map<String, String> cache = new HashMap<>();
+    // untracked, but disposing will explode if we don't create a weak reference here
+    return new CacheHandler(this, cache, new WeakReference<>(cache));
+  }
+
+  @Override
+  public CacheHandler attachCache(CacheHandler cache)
+  {
+    if (caches.contains((WeakReference<Map<String, String>>) cache.id)) {
+      throw new ISE("cache [%s] is already attached", cache.id);
+    }
+    // this cache is not thread-safe, make sure nothing ever writes to it
+    Map<String, String> immutable = Collections.unmodifiableMap(cache.getCache());
+    WeakReference<Map<String, String>> cacheRef = new WeakReference<>(immutable);
+    expungeCollectedCaches();
+    caches.add(cacheRef);
+    return new CacheHandler(this, immutable, cacheRef);
   }
 
   @Override
@@ -113,8 +134,8 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
     long numEntries = 0;
     long size = 0;
     expungeCollectedCaches();
-    for (WeakReference<ConcurrentMap<String, String>> cacheRef : caches) {
-      final ConcurrentMap<String, String> cache = cacheRef.get();
+    for (WeakReference<Map<String, String>> cacheRef : caches) {
+      final Map<String, String> cache = cacheRef.get();
       if (cache == null) {
         continue;
       }

@@ -48,7 +48,15 @@ public interface QueryableIndex extends ColumnSelector, Closeable
    * The close method shouldn't actually be here as this is nasty. We will adjust it in the future.
    * @throws IOException if an exception was thrown closing the index
    */
-  //@Deprecated // This is still required for SimpleQueryableIndex. It should not go away unitl SimpleQueryableIndex is fixed
+  //@Deprecated // This is still required for SimpleQueryableIndex. It should not go away until SimpleQueryableIndex is fixed
   @Override
   void close();
+
+  /**
+   * @return true if this index was created from a tombstone or false otherwise
+   */
+  default boolean isFromTombstone()
+  {
+    return false;
+  }
 }

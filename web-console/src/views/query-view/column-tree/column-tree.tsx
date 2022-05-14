@@ -33,13 +33,12 @@ import React, { ChangeEvent } from 'react';
 import { Loader } from '../../../components';
 import { Deferred } from '../../../components/deferred/deferred';
 import { ColumnMetadata, copyAndAlert, groupBy, oneOf, prettyPrintSql } from '../../../utils';
-import { dataTypeToIcon } from '../query-utils';
+import { dataTypeToIcon } from '../../../utils/data-type-utils';
 
 import { NumberMenuItems, StringMenuItems, TimeMenuItems } from './column-tree-menu';
 
 import './column-tree.scss';
 
-const LAST_DAY = SqlExpression.parse(`__time >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
 const COUNT_STAR = SqlFunction.COUNT_STAR.as('Count');
 
 function getCountExpression(columnNames: string[]): SqlExpression {
@@ -69,11 +68,20 @@ interface HandleColumnClickOptions {
   columnName: string;
   columnType: string;
   parsedQuery: SqlQuery | undefined;
+  defaultWhere: SqlExpression | undefined;
   onQueryChange: (query: SqlQuery, run: boolean) => void;
 }
 
 function handleColumnShow(options: HandleColumnClickOptions): void {
-  const { columnSchema, columnTable, columnName, columnType, parsedQuery, onQueryChange } = options;
+  const {
+    columnSchema,
+    columnTable,
+    columnName,
+    columnType,
+    parsedQuery,
+    defaultWhere,
+    onQueryChange,
+  } = options;
 
   let from: SqlExpression;
   let where: SqlExpression | undefined;
@@ -84,7 +92,7 @@ function handleColumnShow(options: HandleColumnClickOptions): void {
     aggregates = parsedQuery.getAggregateSelectExpressions();
   } else if (columnSchema === 'druid') {
     from = SqlTableRef.create(columnTable);
-    where = LAST_DAY;
+    where = defaultWhere;
   } else {
     from = SqlTableRef.create(columnTable, columnSchema);
   }
@@ -118,9 +126,11 @@ export interface ColumnTreeProps {
   columnMetadataLoading: boolean;
   columnMetadata?: readonly ColumnMetadata[];
   getParsedQuery: () => SqlQuery | undefined;
+  defaultWhere?: SqlExpression;
   onQueryChange: (query: SqlQuery, run?: boolean) => void;
   defaultSchema?: string;
   defaultTable?: string;
+  highlightTable?: string;
 }
 
 export interface ColumnTreeState {
@@ -154,7 +164,14 @@ export function getJoinColumns(parsedQuery: SqlQuery, _table: string) {
 
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
-    const { columnMetadata, defaultSchema, defaultTable, onQueryChange } = props;
+    const {
+      columnMetadata,
+      defaultSchema,
+      defaultTable,
+      defaultWhere,
+      onQueryChange,
+      highlightTable,
+    } = props;
 
     if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
       const columnTree = groupBy(
@@ -169,6 +186,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
             (metadata, tableName): TreeNodeInfo => ({
               id: tableName,
               icon: IconNames.TH,
+              className: tableName === highlightTable ? 'highlight' : undefined,
               label: (
                 <Popover2
                   position={Position.RIGHT}
@@ -195,7 +213,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                           if (parsedQuery && parsedQuery.getFirstTableName() === tableName) {
                             return parsedQuery.getWhereExpression();
                           } else if (schemaName === 'druid') {
-                            return defaultToAllTime ? undefined : LAST_DAY;
+                            return defaultToAllTime ? undefined : defaultWhere;
                           } else {
                             return;
                           }
@@ -210,7 +228,9 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 onQueryChange(
                                   getQueryOnTable()
                                     .changeSelectExpressions(
-                                      metadata.map(child => SqlRef.column(child.COLUMN_NAME)),
+                                      metadata
+                                        .map(child => child.COLUMN_NAME)
+                                        .map(columnName => SqlRef.column(columnName)),
                                     )
                                     .changeWhereExpression(getWhere()),
                                   true,
@@ -351,47 +371,38 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                   {tableName}
                 </Popover2>
               ),
-              childNodes: metadata
-                .map(
-                  (columnData): TreeNodeInfo => ({
-                    id: columnData.COLUMN_NAME,
-                    icon: dataTypeToIcon(columnData.DATA_TYPE),
-                    label: (
-                      <Popover2
-                        position={Position.RIGHT}
-                        autoFocus={false}
-                        content={
-                          <Deferred
-                            content={() => {
-                              const parsedQuery = props.getParsedQuery();
-                              return (
-                                <Menu>
-                                  <MenuItem
-                                    icon={IconNames.FULLSCREEN}
-                                    text={`Show: ${columnData.COLUMN_NAME}`}
-                                    onClick={() => {
-                                      handleColumnShow({
-                                        columnSchema: schemaName,
-                                        columnTable: tableName,
-                                        columnName: columnData.COLUMN_NAME,
-                                        columnType: columnData.DATA_TYPE,
-                                        parsedQuery,
-                                        onQueryChange: onQueryChange,
-                                      });
-                                    }}
-                                  />
-                                  {parsedQuery &&
-                                    oneOf(columnData.DATA_TYPE, 'BIGINT', 'FLOAT', 'DOUBLE') && (
-                                      <NumberMenuItems
-                                        table={tableName}
-                                        schema={schemaName}
-                                        columnName={columnData.COLUMN_NAME}
-                                        parsedQuery={parsedQuery}
-                                        onQueryChange={onQueryChange}
-                                      />
-                                    )}
-                                  {parsedQuery && columnData.DATA_TYPE === 'VARCHAR' && (
-                                    <StringMenuItems
+              childNodes: metadata.map(
+                (columnData): TreeNodeInfo => ({
+                  id: columnData.COLUMN_NAME,
+                  icon: dataTypeToIcon(columnData.DATA_TYPE),
+                  label: (
+                    <Popover2
+                      position={Position.RIGHT}
+                      autoFocus={false}
+                      content={
+                        <Deferred
+                          content={() => {
+                            const parsedQuery = props.getParsedQuery();
+                            return (
+                              <Menu>
+                                <MenuItem
+                                  icon={IconNames.FULLSCREEN}
+                                  text={`Show: ${columnData.COLUMN_NAME}`}
+                                  onClick={() => {
+                                    handleColumnShow({
+                                      columnSchema: schemaName,
+                                      columnTable: tableName,
+                                      columnName: columnData.COLUMN_NAME,
+                                      columnType: columnData.DATA_TYPE,
+                                      parsedQuery,
+                                      defaultWhere,
+                                      onQueryChange: onQueryChange,
+                                    });
+                                  }}
+                                />
+                                {parsedQuery &&
+                                  oneOf(columnData.DATA_TYPE, 'BIGINT', 'FLOAT', 'DOUBLE') && (
+                                    <NumberMenuItems
                                       table={tableName}
                                       schema={schemaName}
                                       columnName={columnData.COLUMN_NAME}
@@ -399,39 +410,45 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                       onQueryChange={onQueryChange}
                                     />
                                   )}
-                                  {parsedQuery && columnData.DATA_TYPE === 'TIMESTAMP' && (
-                                    <TimeMenuItems
-                                      table={tableName}
-                                      schema={schemaName}
-                                      columnName={columnData.COLUMN_NAME}
-                                      parsedQuery={parsedQuery}
-                                      onQueryChange={onQueryChange}
-                                    />
-                                  )}
-                                  <MenuItem
-                                    icon={IconNames.CLIPBOARD}
-                                    text={`Copy: ${columnData.COLUMN_NAME}`}
-                                    onClick={() => {
-                                      copyAndAlert(
-                                        columnData.COLUMN_NAME,
-                                        `${columnData.COLUMN_NAME} query copied to clipboard`,
-                                      );
-                                    }}
+                                {parsedQuery && columnData.DATA_TYPE === 'VARCHAR' && (
+                                  <StringMenuItems
+                                    table={tableName}
+                                    schema={schemaName}
+                                    columnName={columnData.COLUMN_NAME}
+                                    parsedQuery={parsedQuery}
+                                    onQueryChange={onQueryChange}
                                   />
-                                </Menu>
-                              );
-                            }}
-                          />
-                        }
-                      >
-                        {columnData.COLUMN_NAME}
-                      </Popover2>
-                    ),
-                  }),
-                )
-                .sort((a, b) =>
-                  String(a.id).toLowerCase().localeCompare(String(b.id).toLowerCase()),
-                ),
+                                )}
+                                {parsedQuery && columnData.DATA_TYPE === 'TIMESTAMP' && (
+                                  <TimeMenuItems
+                                    table={tableName}
+                                    schema={schemaName}
+                                    columnName={columnData.COLUMN_NAME}
+                                    parsedQuery={parsedQuery}
+                                    onQueryChange={onQueryChange}
+                                  />
+                                )}
+                                <MenuItem
+                                  icon={IconNames.CLIPBOARD}
+                                  text={`Copy: ${columnData.COLUMN_NAME}`}
+                                  onClick={() => {
+                                    copyAndAlert(
+                                      columnData.COLUMN_NAME,
+                                      `${columnData.COLUMN_NAME} query copied to clipboard`,
+                                    );
+                                  }}
+                                />
+                              </Menu>
+                            );
+                          }}
+                        />
+                      }
+                    >
+                      {columnData.COLUMN_NAME}
+                    </Popover2>
+                  ),
+                }),
+              ),
             }),
           ),
         }),

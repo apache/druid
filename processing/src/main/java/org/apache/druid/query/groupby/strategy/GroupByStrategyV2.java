@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -60,6 +59,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GroupByBinaryFnV2;
 import org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
@@ -72,7 +72,9 @@ import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.utils.CloseableUtils;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -455,9 +457,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
           finalResultSupplier
       );
     }
-    catch (Exception ex) {
-      CloseQuietly.close(resultSupplier);
-      throw ex;
+    catch (Throwable e) {
+      throw CloseableUtils.closeAndWrapInCatch(e, resultSupplier);
     }
   }
 
@@ -591,9 +592,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
           resultSupplierOne //this will close resources allocated by resultSupplierOne after sequence read
       );
     }
-    catch (Exception ex) {
-      CloseQuietly.close(resultSupplierOne);
-      throw ex;
+    catch (Throwable e) {
+      throw CloseableUtils.closeAndWrapInCatch(e, resultSupplierOne);
     }
   }
 
@@ -613,16 +613,17 @@ public class GroupByStrategyV2 implements GroupByStrategy
               new LazySequence<>(
                   () -> Sequences.withBaggage(
                       memoizedSupplier.get().results(dimsToInclude),
-                      closeOnSequenceRead ? () -> CloseQuietly.close(memoizedSupplier.get()) : () -> {}
+                      closeOnSequenceRead
+                      ? () -> CloseableUtils.closeAndWrapExceptions(memoizedSupplier.get())
+                      : () -> {}
                   )
               ),
           subtotalQuery,
           null
       );
     }
-    catch (Exception ex) {
-      CloseQuietly.close(baseResultsSupplier.get());
-      throw ex;
+    catch (Throwable e) {
+      throw CloseableUtils.closeAndWrapInCatch(e, baseResultsSupplier.get());
     }
   }
 
@@ -691,13 +692,18 @@ public class GroupByStrategyV2 implements GroupByStrategy
   }
 
   @Override
-  public Sequence<ResultRow> process(GroupByQuery query, StorageAdapter storageAdapter)
+  public Sequence<ResultRow> process(
+      GroupByQuery query,
+      StorageAdapter storageAdapter,
+      @Nullable GroupByQueryMetrics groupByQueryMetrics
+  )
   {
     return GroupByQueryEngineV2.process(
         query,
         storageAdapter,
         bufferPool,
-        configSupplier.get().withOverrides(query)
+        configSupplier.get().withOverrides(query),
+        groupByQueryMetrics
     );
   }
 

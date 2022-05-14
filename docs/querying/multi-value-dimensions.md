@@ -32,7 +32,7 @@ array of values instead of a single value, such as the `tags` values in the foll
 
 This document describes filtering and grouping behavior for multi-value dimensions. For information about the internal representation of multi-value dimensions, see
 [segments documentation](../design/segments.md#multi-value-columns). Examples in this document
-are in the form of [native Druid queries](querying.md). Refer to the [Druid SQL documentation](sql.md) for details
+are in the form of [native Druid queries](querying.md). Refer to the [Druid SQL documentation](sql-multivalue-string-functions.md) for details
 about using multi-value string dimensions in SQL.
 
 ## Overview
@@ -375,3 +375,10 @@ This query returns the following result:
 Note that, for groupBy queries, you could get similar result with a [having spec](having.md) but using a filtered
 `dimensionSpec` is much more efficient because that gets applied at the lowest level in the query processing pipeline.
 Having specs are applied at the outermost level of groupBy query processing.
+
+## Disable GroupBy on multi-value columns
+
+You can disable the implicit unnesting behavior for groupBy by setting groupByEnableMultiValueUnnesting: false in your 
+query context. In this mode, the groupBy engine will return an error instead of completing the query. This is a safety 
+feature for situations where you believe that all dimensions are singly-valued and want the engine to reject any 
+multi-valued dimensions that were inadvertently included.

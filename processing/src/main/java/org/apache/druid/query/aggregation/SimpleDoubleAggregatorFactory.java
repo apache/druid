@@ -150,7 +150,7 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
   }
 
   @Override
-  public ColumnType getType()
+  public ColumnType getIntermediateType()
   {
     if (storeDoubleAsFloat) {
       return ColumnType.FLOAT;

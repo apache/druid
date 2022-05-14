@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import junitparams.JUnitParamsRunner;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
@@ -38,11 +37,14 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlParameter;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This class has copied a subset of the tests in {@link CalciteQueryTest} and replaced various parts of queries with
@@ -50,7 +52,6 @@ import org.junit.runner.RunWith;
  * were merely chosen to produce a selection of parameter types and positions within query expressions and have been
  * renamed to reflect this
  */
-@RunWith(JUnitParamsRunner.class)
 public class CalciteParameterQueryTest extends BaseCalciteQueryTest
 {
   @Test
@@ -575,8 +576,8 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMissingParameter() throws Exception
   {
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("Parameter: [?0] is not bound");
+    expectedException.expect(SqlPlanningException.class);
+    expectedException.expectMessage("Parameter at position[0] is not bound");
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
@@ -590,8 +591,8 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPartiallyMissingParameter() throws Exception
   {
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("Parameter: [?1] is not bound");
+    expectedException.expect(SqlPlanningException.class);
+    expectedException.expectMessage("Parameter at position[1] is not bound");
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
@@ -599,6 +600,22 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(),
         ImmutableList.of(new Object[]{3L}),
         ImmutableList.of(new SqlParameter(SqlType.BIGINT, 3L))
+    );
+  }
+
+  @Test
+  public void testPartiallyMissingParameterInTheMiddle() throws Exception
+  {
+    List<SqlParameter> params = new ArrayList<>();
+    params.add(null);
+    params.add(new SqlParameter(SqlType.INTEGER, 1));
+    expectedException.expect(SqlPlanningException.class);
+    expectedException.expectMessage("Parameter at position[0] is not bound");
+    testQuery(
+        "SELECT 1 + ?, dim1 FROM foo LIMIT ?",
+        ImmutableList.of(),
+        ImmutableList.of(),
+        params
     );
   }
 

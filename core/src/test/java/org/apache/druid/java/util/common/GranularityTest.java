@@ -880,6 +880,75 @@ public class GranularityTest
     Assert.assertTrue(Granularity.IS_FINER_THAN.compare(ALL, all) == 0);
   }
 
+  @Test
+  public void testGranularitiesFinerThanDay()
+  {
+    Assert.assertEquals(
+        ImmutableList.of(
+            Granularities.DAY,
+            Granularities.SIX_HOUR,
+            Granularities.HOUR,
+            Granularities.THIRTY_MINUTE,
+            Granularities.FIFTEEN_MINUTE,
+            Granularities.TEN_MINUTE,
+            Granularities.FIVE_MINUTE,
+            Granularities.MINUTE,
+            Granularities.SECOND
+        ),
+        Granularity.granularitiesFinerThan(Granularities.DAY)
+    );
+  }
+
+  @Test
+  public void testGranularitiesFinerThanHour()
+  {
+    Assert.assertEquals(
+        ImmutableList.of(
+            Granularities.HOUR,
+            Granularities.THIRTY_MINUTE,
+            Granularities.FIFTEEN_MINUTE,
+            Granularities.TEN_MINUTE,
+            Granularities.FIVE_MINUTE,
+            Granularities.MINUTE,
+            Granularities.SECOND
+        ),
+        Granularity.granularitiesFinerThan(Granularities.HOUR)
+    );
+  }
+
+  @Test
+  public void testGranularitiesFinerThanAll()
+  {
+    Assert.assertEquals(
+        ImmutableList.of(
+            Granularities.ALL,
+            Granularities.YEAR,
+            Granularities.QUARTER,
+            Granularities.MONTH,
+            Granularities.WEEK,
+            Granularities.DAY,
+            Granularities.SIX_HOUR,
+            Granularities.HOUR,
+            Granularities.THIRTY_MINUTE,
+            Granularities.FIFTEEN_MINUTE,
+            Granularities.TEN_MINUTE,
+            Granularities.FIVE_MINUTE,
+            Granularities.MINUTE,
+            Granularities.SECOND
+        ),
+        Granularity.granularitiesFinerThan(Granularities.ALL)
+    );
+  }
+
+  @Test
+  public void testGranularitiesFinerThanNone()
+  {
+    Assert.assertEquals(
+        ImmutableList.of(),
+        Granularity.granularitiesFinerThan(Granularities.NONE)
+    );
+  }
+
   private static class PathDate
   {
     public final String path;

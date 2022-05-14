@@ -19,25 +19,25 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.ImmutableBitmapValues;
 import org.apache.druid.segment.data.IndexedIterable;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableLongColumnValueSelector;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -51,6 +51,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
+ *
  */
 public class QueryableIndexIndexableAdapter implements IndexableAdapter
 {
@@ -65,6 +66,11 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     numRows = input.getNumRows();
     availableDimensions = ImmutableList.copyOf(input.getAvailableDimensions());
     this.metadata = input.getMetadata();
+  }
+
+  public QueryableIndex getQueryableIndex()
+  {
+    return input;
   }
 
   @Override
@@ -197,7 +203,6 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     private final TimeAndDimsPointer markedRowPointer;
 
     boolean first = true;
-    int memoizedOffset = -1;
 
     RowIteratorImpl()
     {
@@ -279,7 +284,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     @Override
     public void close()
     {
-      CloseQuietly.close(closer);
+      CloseableUtils.closeAndWrapExceptions(closer);
     }
 
     @Override
@@ -333,20 +338,6 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
         markedMetricSelectors[i].setValueFrom(rowMetricSelectors[i]);
       }
     }
-
-    /**
-     * Used in {@link RowFilteringIndexAdapter}
-     */
-    void memoizeOffset()
-    {
-      memoizedOffset = offset.getOffset();
-    }
-
-    void resetToMemoizedOffset()
-    {
-      offset.setCurrentOffset(memoizedOffset);
-      setRowPointerValues();
-    }
   }
 
   @Override
@@ -385,7 +376,11 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       return BitmapValues.EMPTY;
     }
 
-    final BitmapIndex bitmaps = columnHolder.getBitmapIndex();
+    final ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+    if (indexSupplier == null) {
+      return BitmapValues.EMPTY;
+    }
+    final DictionaryEncodedStringValueIndex bitmaps = indexSupplier.as(DictionaryEncodedStringValueIndex.class);
     if (bitmaps == null) {
       return BitmapValues.EMPTY;
     }
@@ -395,23 +390,6 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     } else {
       return BitmapValues.EMPTY;
     }
-  }
-
-  @VisibleForTesting
-  BitmapValues getBitmapIndex(String dimension, String value)
-  {
-    final ColumnHolder columnHolder = input.getColumnHolder(dimension);
-
-    if (columnHolder == null) {
-      return BitmapValues.EMPTY;
-    }
-
-    final BitmapIndex bitmaps = columnHolder.getBitmapIndex();
-    if (bitmaps == null) {
-      return BitmapValues.EMPTY;
-    }
-
-    return new ImmutableBitmapValues(bitmaps.getBitmap(bitmaps.getIndex(value)));
   }
 
   @Override

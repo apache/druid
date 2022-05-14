@@ -19,8 +19,10 @@
 
 package org.apache.druid.query.aggregation.variance.sql;
 
+import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -34,6 +36,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.aggregation.stats.DruidStatsModule;
 import org.apache.druid.query.aggregation.variance.StandardDeviationPostAggregator;
 import org.apache.druid.query.aggregation.variance.VarianceAggregatorCollector;
 import org.apache.druid.query.aggregation.variance.VarianceAggregatorFactory;
@@ -77,6 +80,12 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
   );
 
   @Override
+  public Iterable<? extends Module> getJacksonModules()
+  {
+    return Iterables.concat(super.getJacksonModules(), new DruidStatsModule().getJacksonModules());
+  }
+
+  @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
   {
     final QueryableIndex index =
@@ -92,9 +101,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                                                  .add(new DoubleDimensionSchema("d1"))
                                                  .add(new FloatDimensionSchema("f1"))
                                                  .add(new LongDimensionSchema("l1"))
-                                                 .build(),
-                                    null,
-                                    null
+                                                 .build()
                                 )
                             )
                             .withMetrics(

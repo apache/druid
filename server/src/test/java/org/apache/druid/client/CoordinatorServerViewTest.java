@@ -292,7 +292,8 @@ public class CoordinatorServerViewTest extends CuratorTestBase
         zkPathsConfig,
         curator,
         jsonMapper,
-        Predicates.alwaysTrue()
+        Predicates.alwaysTrue(),
+        "test"
     )
     {
       @Override

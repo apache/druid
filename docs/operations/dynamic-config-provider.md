@@ -25,7 +25,6 @@ title: "Dynamic Config Providers"
 Druid relies on dynamic config providers to supply multiple related sets of credentials, secrets, and configurations within a Druid extension. Dynamic config providers are intended to eventually replace [PasswordProvider](./password-provider.md).
 
 By default, Druid includes an environment variable dynamic config provider that supports Kafka consumer configuration in [Kafka ingestion](../development/extensions-core/kafka-ingestion.md).
-- Kafka consumer configuration in [Kafka ingestion](../development/extensions-core/kafka-ingestion.md)
 
 To develop a custom extension of the `DynamicConfigProvider` interface that is registered at Druid process startup, see [Adding a new DynamicConfigProvider implementation](../development/modules.md#adding-a-new-dynamicconfigprovider-implementation).
 
@@ -63,8 +62,8 @@ When you define the consumer properties in the supervisor spec, use the dynamic 
 ...
    "consumerProperties": {
         "bootstrap.servers": "localhost:9092",
-        "ssl.keystore.location": "/opt/kafka/config/kafka01.keystore.jks"
-        "ssl.truststore.location": "/opt/kafka/config/kafka.truststore.jks"
+        "ssl.keystore.location": "/opt/kafka/config/kafka01.keystore.jks",
+        "ssl.truststore.location": "/opt/kafka/config/kafka.truststore.jks",
         "druid.dynamic.config.provider": {
           "type": "environment",
           "variables": {

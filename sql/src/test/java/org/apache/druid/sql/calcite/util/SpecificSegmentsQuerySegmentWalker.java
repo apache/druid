@@ -38,7 +38,6 @@ import org.apache.druid.segment.MapSegmentWrangler;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.ClientQuerySegmentWalker;
@@ -146,7 +145,11 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
 
   public SpecificSegmentsQuerySegmentWalker add(final DataSegment descriptor, final QueryableIndex index)
   {
-    final Segment segment = new QueryableIndexSegment(index, descriptor.getId());
+    final ReferenceCountingSegment segment =
+        ReferenceCountingSegment.wrapSegment(
+            new QueryableIndexSegment(index, descriptor.getId()),
+            descriptor.getShardSpec()
+        );
     final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = timelines.computeIfAbsent(
         descriptor.getDataSource(),
         datasource -> new VersionedIntervalTimeline<>(Ordering.natural())
@@ -154,10 +157,10 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     timeline.add(
         descriptor.getInterval(),
         descriptor.getVersion(),
-        descriptor.getShardSpec().createChunk(ReferenceCountingSegment.wrapSegment(segment, descriptor.getShardSpec()))
+        descriptor.getShardSpec().createChunk(segment)
     );
     segments.add(descriptor);
-    closeables.add(index);
+    closeables.add(segment);
     return this;
   }
 

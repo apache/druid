@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -59,6 +60,11 @@ public interface Expr extends Cacheable
   default boolean isNullLiteral()
   {
     // Overridden by things that are null literals.
+    return false;
+  }
+
+  default boolean isIdentifier()
+  {
     return false;
   }
 
@@ -125,6 +131,9 @@ public interface Expr extends Cacheable
    * Programatically rewrite the {@link Expr} tree with a {@link Shuttle}. Each {@link Expr} is responsible for
    * ensuring the {@link Shuttle} can visit all of its {@link Expr} children, as well as updating its children
    * {@link Expr} with the results from the {@link Shuttle}, before finally visiting an updated form of itself.
+   *
+   * When this Expr is the result of {@link ExprMacroTable.ExprMacro#apply}, all of the original arguments to the
+   * macro must be visited, including arguments that may have been "baked in" to this Expr.
    */
   Expr visit(Shuttle shuttle);
 
@@ -157,6 +166,7 @@ public interface Expr extends Cacheable
    * Check if an expression can be 'vectorized', for a given set of inputs. If this method returns true,
    * {@link #buildVectorized} is expected to produce a {@link ExprVectorProcessor} which can evaluate values in batches
    * to use with vectorized query engines.
+   *
    * @param inspector
    */
   default boolean canVectorize(InputBindingInspector inspector)
@@ -167,6 +177,7 @@ public interface Expr extends Cacheable
   /**
    * Builds a 'vectorized' expression processor, that can operate on batches of input values for use in vectorized
    * query engines.
+   *
    * @param inspector
    */
   default <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
@@ -188,16 +199,22 @@ public interface Expr extends Cacheable
   interface InputBindingInspector
   {
     /**
-     * Get the {@link ExpressionType} from the backing store for a given identifier (this is likely a column, but could be other
-     * things depending on the backing adapter)
+     * Get the {@link ExpressionType} from the backing store for a given identifier (this is likely a column, but
+     * could be other things depending on the backing adapter)
      */
     @Nullable
     ExpressionType getType(String name);
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isNumeric} with a value of true.
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isNumeric} with a value
+     * of true (or null, which is not a type)
      *
      * There must be at least one expression with a computable numeric output type for this method to return true.
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
      */
     default boolean areNumeric(List<Expr> args)
     {
@@ -213,9 +230,15 @@ public interface Expr extends Cacheable
     }
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isNumeric} with a value of true.
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isNumeric} with a value
+     * of true (or null, which is not a type)
      *
      * There must be at least one expression with a computable numeric output type for this method to return true.
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
      */
     default boolean areNumeric(Expr... args)
     {
@@ -223,10 +246,53 @@ public interface Expr extends Cacheable
     }
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isPrimitive()} (non-array) with a
-     * value of true.
+     * Check if all arguments are the same type (or null, which is not a type)
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
+     */
+    default boolean areSameTypes(List<Expr> args)
+    {
+      ExpressionType currentType = null;
+      boolean allSame = true;
+      for (Expr arg : args) {
+        ExpressionType argType = arg.getOutputType(this);
+        if (argType == null) {
+          continue;
+        }
+        if (currentType == null) {
+          currentType = argType;
+        }
+        allSame &= Objects.equals(argType, currentType);
+      }
+      return allSame;
+    }
+
+    /**
+     * Check if all arguments are the same type (or null, which is not a type)
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
+     */
+    default boolean areSameTypes(Expr... args)
+    {
+      return areSameTypes(Arrays.asList(args));
+    }
+
+    /**
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isPrimitive()}
+     * (non-array) with a value of true (or null, which is not a type)
      *
      * There must be at least one expression with a computable scalar output type for this method to return true.
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
      */
     default boolean areScalar(List<Expr> args)
     {
@@ -242,10 +308,15 @@ public interface Expr extends Cacheable
     }
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isPrimitive()} (non-array) with a
-     * value of true.
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isPrimitive()}
+     * (non-array) with a value of true (or null, which is not a type)
      *
      * There must be at least one expression with a computable scalar output type for this method to return true.
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
      */
     default boolean areScalar(Expr... args)
     {
@@ -284,7 +355,7 @@ public interface Expr extends Cacheable
   /**
    * Mechanism to supply values to back {@link IdentifierExpr} during expression evaluation
    */
-  interface ObjectBinding
+  interface ObjectBinding extends InputBindingInspector
   {
     /**
      * Get value binding for string identifier of {@link IdentifierExpr}
@@ -329,6 +400,17 @@ public interface Expr extends Cacheable
      * Provide the {@link Shuttle} with an {@link Expr} to inspect and potentially rewrite.
      */
     Expr visit(Expr expr);
+
+    default List<Expr> visitAll(List<Expr> exprs)
+    {
+      final List<Expr> newExprs = new ArrayList<>();
+
+      for (final Expr arg : exprs) {
+        newExprs.add(visit(arg));
+      }
+
+      return newExprs;
+    }
   }
 
   /**
@@ -364,13 +446,15 @@ public interface Expr extends Cacheable
   @SuppressWarnings("JavadocReference")
   class BindingAnalysis
   {
+    public static final BindingAnalysis EMTPY = new BindingAnalysis();
+
     private final ImmutableSet<IdentifierExpr> freeVariables;
     private final ImmutableSet<IdentifierExpr> scalarVariables;
     private final ImmutableSet<IdentifierExpr> arrayVariables;
     private final boolean hasInputArrays;
     private final boolean isOutputArray;
 
-    BindingAnalysis()
+    public BindingAnalysis()
     {
       this(ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of(), false, false);
     }

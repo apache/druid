@@ -137,14 +137,14 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     return new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
-                .withDimensionsSpec(new DimensionsSpec(
-                    Arrays.asList(
-                        new StringDimensionSchema("dimA"),
-                        new LongDimensionSchema("metA")
-                    ),
-                    null,
-                    null
-                ))
+                .withDimensionsSpec(
+                    new DimensionsSpec(
+                        Arrays.asList(
+                            new StringDimensionSchema("dimA"),
+                            new LongDimensionSchema("metA")
+                        )
+                    )
+                )
                 .withRollup(withRollup)
                 .build()
         )
@@ -357,8 +357,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, bufferPool),
-            NOOP_QUERYWATCHER,
-            bufferPool
+            NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             druidProcessingConfig,
@@ -375,8 +374,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, bufferPool),
-            NOOP_QUERYWATCHER,
-            bufferPool
+            NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             tooSmallDruidProcessingConfig,

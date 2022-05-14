@@ -15,6 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+@import '../../variables';
+
 $side-bar-width: 120px;
 
 .status-dialog {
@@ -23,13 +26,13 @@ $side-bar-width: 120px;
     height: 500px;
   }
 
-  &.bp3-dialog {
+  &.#{$bp-ns}-dialog {
     margin-top: 5vh;
     top: 5%;
     width: 60vw;
     height: 90vh;
 
-    .bp3-dialog-body {
+    .#{$bp-ns}-dialog-body {
       position: relative;
 
       .main-container {
@@ -50,7 +53,7 @@ $side-bar-width: 120px;
       }
     }
 
-    .bp3-dialog-footer {
+    .#{$bp-ns}-dialog-footer {
       position: relative;
       display: inline;
       overflow: auto;

@@ -172,7 +172,7 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
   @SuppressWarnings("unchecked")
   private <T extends BaseColumn> T getCachedColumn(final String columnName, final Class<T> clazz)
   {
-    return (T) columnCache.computeIfAbsent(
+    final BaseColumn cachedColumn = columnCache.computeIfAbsent(
         columnName,
         name -> {
           ColumnHolder holder = index.getColumnHolder(name);
@@ -185,6 +185,12 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
           }
         }
     );
+
+    if (cachedColumn != null && clazz.isAssignableFrom(cachedColumn.getClass())) {
+      return (T) cachedColumn;
+    } else {
+      return null;
+    }
   }
 
   @Override
@@ -192,12 +198,9 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     if (virtualColumns.exists(columnName)) {
-      return virtualColumns.getColumnCapabilities(
-          QueryableIndexStorageAdapter.getColumnInspectorForIndex(index),
-          columnName
-      );
+      return virtualColumns.getColumnCapabilities(index, columnName);
     }
 
-    return QueryableIndexStorageAdapter.getColumnCapabilities(index, columnName);
+    return index.getColumnCapabilities(columnName);
   }
 }

@@ -34,6 +34,7 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -121,17 +122,9 @@ public class TestIndex
       new StringDimensionSchema("null_column", null, false)
   );
 
-  public static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
-      DIMENSION_SCHEMAS,
-      null,
-      null
-  );
+  public static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(DIMENSION_SCHEMAS);
 
-  public static final DimensionsSpec DIMENSIONS_SPEC_NO_BITMAPS = new DimensionsSpec(
-      DIMENSION_SCHEMAS_NO_BITMAP,
-      null,
-      null
-  );
+  public static final DimensionsSpec DIMENSIONS_SPEC_NO_BITMAPS = new DimensionsSpec(DIMENSION_SCHEMAS_NO_BITMAP);
 
   public static final String[] DOUBLE_METRICS = new String[]{"index", "indexMin", "indexMaxPlusTen"};
   public static final String[] FLOAT_METRICS = new String[]{"indexFloat", "indexMinFloat", "indexMaxFloat"};
@@ -191,11 +184,11 @@ public class TestIndex
       File bottomFile = new File(tmpFile, "bottom");
       File mergedFile = new File(tmpFile, "merged");
 
-      topFile.mkdirs();
+      FileUtils.mkdirp(topFile);
+      FileUtils.mkdirp(bottomFile);
+      FileUtils.mkdirp(mergedFile);
       topFile.deleteOnExit();
-      bottomFile.mkdirs();
       bottomFile.deleteOnExit();
-      mergedFile.mkdirs();
       mergedFile.deleteOnExit();
 
       INDEX_MERGER.persist(top, DATA_INTERVAL, topFile, INDEX_SPEC, null);
@@ -320,7 +313,7 @@ public class TestIndex
     final StringInputRowParser parser = new StringInputRowParser(
         new DelimitedParseSpec(
             new TimestampSpec("ts", "iso", null),
-            new DimensionsSpec(DIMENSION_SCHEMAS, null, null),
+            DIMENSIONS_SPEC,
             "\t",
             "\u0001",
             Arrays.asList(COLUMNS),
@@ -377,7 +370,7 @@ public class TestIndex
     try {
       File someTmpFile = File.createTempFile("billy", "yay");
       someTmpFile.delete();
-      someTmpFile.mkdirs();
+      FileUtils.mkdirp(someTmpFile);
       someTmpFile.deleteOnExit();
 
       INDEX_MERGER.persist(index, someTmpFile, INDEX_SPEC, null);

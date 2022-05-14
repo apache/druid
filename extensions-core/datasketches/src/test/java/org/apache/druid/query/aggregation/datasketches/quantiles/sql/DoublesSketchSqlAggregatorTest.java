@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.datasketches.quantiles.sql;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -89,12 +90,15 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   );
 
   @Override
+  public Iterable<? extends Module> getJacksonModules()
+  {
+    return Iterables.concat(super.getJacksonModules(), new DoublesSketchModule().getJacksonModules());
+  }
+
+  @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
   {
     DoublesSketchModule.registerSerde();
-    for (Module mod : new DoublesSketchModule().getJacksonModules()) {
-      CalciteTests.getJsonMapper().registerModule(mod);
-    }
 
     final QueryableIndex index =
         IndexBuilder.create(CalciteTests.getJsonMapper())
@@ -560,7 +564,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       ),
                       new ExpressionPostAggregator(
                           "p3",
-                          "(p2 + 1000)",
+                          "(\"p2\" + 1000)",
                           null,
                           TestExprMacroTable.INSTANCE
                       ),
@@ -574,7 +578,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       ),
                       new ExpressionPostAggregator(
                           "p6",
-                          "(p5 + 1000)",
+                          "(\"p5\" + 1000)",
                           null,
                           TestExprMacroTable.INSTANCE
                       ),
@@ -586,7 +590,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           ),
                           0.5f
                       ),
-                      new ExpressionPostAggregator("p9", "abs(p8)", null, TestExprMacroTable.INSTANCE),
+                      new ExpressionPostAggregator("p9", "abs(\"p8\")", null, TestExprMacroTable.INSTANCE),
                       new DoublesSketchToQuantilesPostAggregator(
                           "p11",
                           new FieldAccessPostAggregator(
@@ -629,7 +633,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       ),
                       new ExpressionPostAggregator(
                           "p20",
-                          "replace(replace(p19,'HeapCompactDoublesSketch','HeapUpdateDoublesSketch'),"
+                          "replace(replace(\"p19\",'HeapCompactDoublesSketch','HeapUpdateDoublesSketch'),"
                           + "'Combined Buffer Capacity     : 6',"
                           + "'Combined Buffer Capacity     : 8')",
                           null,
@@ -824,14 +828,14 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFailWithSmallMaxStreamLength() throws Exception
+  public void testSuccessWithSmallMaxStreamLength() throws Exception
   {
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(
         DoublesSketchApproxQuantileSqlAggregator.CTX_APPROX_QUANTILE_DS_MAX_STREAM_LENGTH,
         1
     );
-    testQueryThrows(
+    testQuery(
         "SELECT\n"
         + "APPROX_QUANTILE_DS(m1, 0.01),\n"
         + "APPROX_QUANTILE_DS(cnt, 0.5)\n"
@@ -852,11 +856,13 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   )
                   .context(context)
                   .build()
-        ),
-        expectedException -> {
-          expectedException.expect(IllegalStateException.class);
-          expectedException.expectMessage("NullPointerException was thrown while updating Doubles sketch");
-        }
+            ),
+            ImmutableList.of(
+                new Object[]{
+                    1.0,
+                    1.0
+                }
+            )
     );
   }
 

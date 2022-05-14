@@ -135,9 +135,7 @@ public class NestedQueryPushDownTest
                         new StringDimensionSchema("dimB"),
                         new LongDimensionSchema("metA"),
                         new LongDimensionSchema("metB")
-                    ),
-                    null,
-                    null
+                    )
                 ))
                 .build()
         )
@@ -315,8 +313,7 @@ public class NestedQueryPushDownTest
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, bufferPool),
-            NOOP_QUERYWATCHER,
-            bufferPool
+            NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             druidProcessingConfig,
@@ -333,8 +330,7 @@ public class NestedQueryPushDownTest
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, bufferPool),
-            NOOP_QUERYWATCHER,
-            bufferPool
+            NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             druidProcessingConfig,

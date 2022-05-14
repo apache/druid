@@ -49,6 +49,7 @@ import java.util.Map;
 
 public class ProtobufReader extends IntermediateRowParsingReader<DynamicMessage>
 {
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private final InputRowSchema inputRowSchema;
   private final InputEntity source;
   private final JSONPathSpec flattenSpec;
@@ -84,25 +85,30 @@ public class ProtobufReader extends IntermediateRowParsingReader<DynamicMessage>
   }
 
   @Override
+  protected InputEntity source()
+  {
+    return source;
+  }
+
+  @Override
   protected List<InputRow> parseInputRows(DynamicMessage intermediateRow) throws ParseException, JsonProcessingException
   {
     Map<String, Object> record;
 
-    if (flattenSpec == null) {
+    if (flattenSpec == null || JSONPathSpec.DEFAULT.equals(flattenSpec)) {
       try {
         record = CollectionUtils.mapKeys(intermediateRow.getAllFields(), k -> k.getJsonName());
       }
       catch (Exception ex) {
-        throw new ParseException(ex, "Protobuf message could not be parsed");
+        throw new ParseException(null, ex, "Protobuf message could not be parsed");
       }
     } else {
       try {
         String json = JsonFormat.printer().print(intermediateRow);
-        JsonNode document = new ObjectMapper().readValue(json, JsonNode.class);
-        record = recordFlattener.flatten(document);
+        record = recordFlattener.flatten(OBJECT_MAPPER.readValue(json, JsonNode.class));
       }
       catch (InvalidProtocolBufferException e) {
-        throw new ParseException(e, "Protobuf message could not be parsed");
+        throw new ParseException(null, e, "Protobuf message could not be parsed");
       }
     }
 

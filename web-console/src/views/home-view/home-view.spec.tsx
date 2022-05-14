@@ -23,7 +23,7 @@ import { Capabilities } from '../../utils';
 
 import { HomeView } from './home-view';
 
-describe('home view', () => {
+describe('HomeView', () => {
   it('matches snapshot (full)', () => {
     const homeView = shallow(<HomeView capabilities={Capabilities.FULL} />);
     expect(homeView).toMatchSnapshot();

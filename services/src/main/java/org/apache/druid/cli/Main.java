@@ -19,10 +19,11 @@
 
 package org.apache.druid.cli;
 
+import com.github.rvesse.airline.Cli;
+import com.github.rvesse.airline.builder.CliBuilder;
+import com.github.rvesse.airline.help.Help;
+import com.github.rvesse.airline.parser.errors.ParseException;
 import com.google.inject.Injector;
-import io.airlift.airline.Cli;
-import io.airlift.airline.Help;
-import io.airlift.airline.ParseException;
 import io.netty.util.SuppressForbidden;
 import org.apache.druid.cli.validate.DruidJsonValidator;
 import org.apache.druid.guice.ExtensionsConfig;
@@ -49,7 +50,7 @@ public class Main
   @SuppressForbidden(reason = "System#out")
   public static void main(String[] args)
   {
-    final Cli.CliBuilder<Runnable> builder = Cli.builder("druid");
+    final CliBuilder<Runnable> builder = Cli.builder("druid");
 
     builder.withDescription("Druid command-line runner.")
            .withDefaultCommand(Help.class)

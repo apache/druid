@@ -279,6 +279,13 @@ public class ServerManager implements QuerySegmentWalker
       final AtomicLong cpuTimeAccumulator
   )
   {
+
+    // Short-circuit when the index comes from a tombstone (it has no data by definition),
+    // check for null also since no all segments (higher level ones) will have QueryableIndex...
+    if (segment.asQueryableIndex() != null && segment.asQueryableIndex().isFromTombstone()) {
+      return new NoopQueryRunner<>();
+    }
+
     final SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
     final SegmentId segmentId = segment.getId();
     final Interval segmentInterval = segment.getDataInterval();

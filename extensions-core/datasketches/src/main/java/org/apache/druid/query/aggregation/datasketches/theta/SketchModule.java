@@ -65,6 +65,12 @@ public class SketchModule implements DruidModule
     SqlBindings.addOperatorConversion(binder, ThetaSketchSetIntersectOperatorConversion.class);
     SqlBindings.addOperatorConversion(binder, ThetaSketchSetUnionOperatorConversion.class);
     SqlBindings.addOperatorConversion(binder, ThetaSketchSetNotOperatorConversion.class);
+
+    SqlBindings.addApproxCountDistinctChoice(
+        binder,
+        ThetaSketchApproxCountDistinctSqlAggregator.NAME,
+        ThetaSketchApproxCountDistinctSqlAggregator.class
+    );
   }
 
   @Override

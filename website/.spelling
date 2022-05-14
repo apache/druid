@@ -38,6 +38,7 @@ BCP
 Base64
 Base64-encoded
 ByteBuffer
+concat
 CIDR
 CORS
 CNF
@@ -54,6 +55,7 @@ DRUIDVERSION
 DataSketches
 DateTime
 DateType
+dimensionsSpec
 DimensionSpec
 DimensionSpecs
 Dockerfile
@@ -78,7 +80,9 @@ Enums
 FirehoseFactory
 FlattenSpec
 Float.NEGATIVE_INFINITY
+Float.NEGATIVE_INFINITY.
 Float.POSITIVE_INFINITY
+Float.POSITIVE_INFINITY.
 ForwardedRequestCustomizer
 GC
 GPG
@@ -109,6 +113,7 @@ InputFormat
 InputSource
 InputSources
 Integer.MAX_VALUE
+ioConfig
 JBOD
 JDBC
 JDK
@@ -137,7 +142,9 @@ LZ4
 LZO
 LimitSpec
 Long.MAX_VALUE
+Long.MAX_VALUE.
 Long.MIN_VALUE
+Long.MIN_VALUE.
 Lucene
 MapBD
 MapDB
@@ -289,6 +296,7 @@ influxdb
 ingestionSpec
 injective
 inlined
+inSubQueryThreshold
 interruptible
 jackson-jq
 javadoc
@@ -308,6 +316,7 @@ lookback
 lookups
 mapreduce
 masse
+maxNumericInFilters
 maxNumFiles
 maxNumSegments
 max_map_count
@@ -389,6 +398,7 @@ rollups
 rsync
 runtime
 schemas
+schemaless
 searchable
 secondaryPartitionPruning
 seekable-stream
@@ -419,6 +429,7 @@ timeseries
 timestamp
 timestamps
 tradeoffs
+transformSpec
 tsv
 ulimit
 unannounce
@@ -459,6 +470,101 @@ wildcards
 xml
 znode
 znodes
+APPROX_COUNT_DISTINCT
+APPROX_QUANTILE
+ARRAY_AGG
+BIGINT
+CATALOG_NAME
+CHARACTER_MAXIMUM_LENGTH
+CHARACTER_OCTET_LENGTH
+CHARACTER_SET_NAME
+COLLATION_NAME
+COLUMN_DEFAULT
+COLUMN_NAME
+Concats
+DATA_TYPE
+DATETIME_PRECISION
+DEFAULT_CHARACTER_SET_CATALOG
+DEFAULT_CHARACTER_SET_NAME
+DEFAULT_CHARACTER_SET_SCHEMA
+ISODOW
+ISOYEAR
+IS_NULLABLE
+JDBC_TYPE
+MIDDLE_MANAGER
+NULLable
+NUMERIC_PRECISION
+NUMERIC_PRECISION_RADIX
+NUMERIC_SCALE
+ORDINAL_POSITION
+PT1M
+PT5M
+SCHEMA_NAME
+SCHEMA_OWNER
+SERVER_SEGMENTS
+SMALLINT
+SQL_PATH
+STRING_AGG
+SYSTEM_TABLE
+TABLE_CATALOG
+TABLE_NAME
+TABLE_SCHEMA
+TABLE_TYPE
+TIME_PARSE
+TIME_SHIFT
+TINYINT
+VARCHAR
+avg_num_rows
+avg_size
+created_time
+current_size
+detailed_state
+druid.server.maxSize
+druid.server.tier
+druid.sql.planner.maxSemiJoinRowsInMemory
+druid.sql.planner.sqlTimeZone
+druid.sql.planner.useApproximateCountDistinct
+druid.sql.planner.useGroupingSetForExactDistinct
+druid.sql.planner.useApproximateTopN
+error_msg
+exprs
+group_id
+interval_expr
+is_active
+is_available
+is_leader
+is_overshadowed
+is_published
+is_realtime
+java.sql.Types
+last_compaction_state
+max_size
+num_replicas
+num_rows
+num_segments
+partition_num
+plaintext_port
+queue_insertion_time
+runner_status
+segment_id
+server_type
+shard_spec
+sqlTimeZone
+supervisor_id
+sys
+sys.segments
+task_id
+timestamp_expr
+tls_port
+total_size
+useApproximateCountDistinct
+useGroupingSetForExactDistinct
+useApproximateTopN
+wikipedia
+enableTimeBoundaryPlanning
+TimeBoundary
+druid.query.default.context.enableTimeBoundaryPlanning
+IEC
  - ../docs/comparisons/druid-vs-elasticsearch.md
 100x
  - ../docs/configuration/logging.md
@@ -466,10 +572,11 @@ _common
  - ../docs/dependencies/deep-storage.md
 druid-hdfs-storage
 druid-s3-extensions
+druid.sql.planner.maxNumericInFilters
  - ../docs/dependencies/metadata-storage.md
 BasicDataSource
  - ../docs/dependencies/zookeeper.md
-LeadershipLatch
+LeaderLatch
 3.5.x
 3.4.x
  - ../docs/design/auth.md
@@ -510,6 +617,12 @@ Papache-release
 Pdist
 Ddruid.console.skip
 yaml
+Phadoop3
+dist-hadoop3
+hadoop3
+hadoop2
+2.x.x
+3.x.x
  - ../docs/development/extensions-contrib/ambari-metrics-emitter.md
 ambari-metrics
 metricName
@@ -524,6 +637,7 @@ maxFetchCapacityBytes
 maxFetchRetry
 prefetchTriggerBytes
 shardSpecs
+sharedAccessStorageToken
  - ../docs/development/extensions-contrib/cloudfiles.md
 StaticCloudFilesFirehose
 cloudfiles
@@ -563,7 +677,6 @@ baseDataSource
 baseDataSource-hashCode
 classpathPrefix
 derivativeDataSource
-dimensionsSpec
 druid.extensions.hadoopDependenciesDir
 hadoopDependencyCoordinates
 maxTaskCount
@@ -587,6 +700,7 @@ doubleMeanNoNulls
 doubleMin
 doubleSum
 druid.generic.useDefaultValueForNull
+druid.generic.ignoreNullsForStringCardinality
 limitSpec
 longMax
 longAny
@@ -1023,7 +1137,6 @@ datetime
 f.example.com
 filePattern
 forceExtendableShardSpecs
-granularitySpec
 ignoreInvalidRows
 ignoreWhenNoSegments
 indexSpecForIntermediatePersists
@@ -1078,6 +1191,7 @@ appendToExisting
 baseDir
 chatHandlerNumRetries
 chatHandlerTimeout
+cityName
 connectorConfig
 countryName
 dataSchema's
@@ -1107,6 +1221,39 @@ totalNumMergeTasks
 StaticS3Firehose
 prefetchTriggerBytes
 awaitSegmentAvailabilityTimeoutMillis
+ - ../docs/ingestion/native-batch-firehose.md
+LocalFirehose 
+baseDir
+HttpFirehose 
+httpAuthenticationUsername
+DefaultPassword
+PasswordProviders
+EnvironmentVariablePasswordProvider
+ingestSegment 
+maxInputSegmentBytesPerTask
+150MB
+foldCase
+sqls
+connectorConfig
+InlineFirehose 
+CombiningFirehose
+httpAuthenticationPassword 
+ - ../docs/ingestion/native-batch-input-source.md
+accessKeyId
+secretAccessKey
+accessKeyId
+httpAuthenticationPassword
+countryName
+ - ../docs/ingestion/native-batch-simple-task.md
+dataSchema's
+appendToExisting
+dropExisting
+timeChunk 
+PartitionsSpec
+forceGuaranteedRollup
+reportParseExceptions
+pushTimeout
+segmentWriteOutMediumFactory
  - ../docs/ingestion/schema-design.md
 product_category
 product_id
@@ -1173,6 +1320,7 @@ getExponent
 hypot
 ipv4_match
 ipv4_parse
+isnull
 ipv4_stringify
 java.lang.Math
 java.lang.String
@@ -1182,6 +1330,7 @@ lpad
 ltrim
 nextUp
 nextafter
+notnull
 nvl
 parse_long
 regexp_extract
@@ -1193,6 +1342,7 @@ result2
 rint
 rpad
 rtrim
+safe_divide
 scalb
 signum
 str1
@@ -1282,11 +1432,14 @@ Sys
 SysMonitor
 TaskCountStatsMonitor
 TaskSlotCountStatsMonitor
+WorkerTaskCountStatsMonitor
 bufferCapacity
 bufferpoolName
 cms
 cpuName
 cpuTime
+druid.server.http.numThreads
+druid.server.http.queueSize
 fsDevName
 fsDirName
 fsOptions
@@ -1309,9 +1462,13 @@ numMetrics
 poolKind
 poolName
 remoteAddress
+segmentAvailabilityConfirmed
 serviceName
 taskStatus
 taskType
+threadPoolNumBusyThreads.
+threadPoolNumIdleThreads
+threadPoolNumTotalThreads.
  - ../docs/operations/other-hadoop.md
 CDH
 Classloader
@@ -1405,6 +1562,7 @@ D1
 D2
 D3
 druid.query.groupBy.defaultStrategy
+druid.query.groupBy.maxSelectorDictionarySize
 druid.query.groupBy.maxMergingDictionarySize
 druid.query.groupBy.maxOnDiskStorage
 druid.query.groupBy.maxResults.
@@ -1414,9 +1572,12 @@ maxResults
 orderby
 orderbys
 outputName
+pre-existing
 pushdown
 row1
 subtotalsSpec
+unnested
+unnesting
  - ../docs/querying/having.md
 HavingSpec
 HavingSpecs
@@ -1447,6 +1608,8 @@ row4
 t3
 t4
 t5
+groupByEnableMultiValueUnnesting
+unnesting
  - ../docs/querying/multitenancy.md
 500ms
 tenant_id
@@ -1465,7 +1628,12 @@ druid.broker.cache.useResultLevelCache
 druid.historical.cache.populateCache
 druid.historical.cache.useCache
 enableParallelMerge
+enableJoinLeftTableScanDirect
+enableJoinFilterPushDown
+enableJoinFilterRewrite
+enableJoinFilterRewriteValueColumnFilters
 floatSum
+joinFilterRewriteMaxSize
 maxQueuedBytes
 maxScatterGatherBytes
 minTopNThreshold
@@ -1483,6 +1651,10 @@ useCache
 useResultLevelCache
 vectorSize
 enableJoinLeftTableScanDirect
+enableJoinFilterPushDown
+enableJoinFilterRewrite
+enableJoinFilterRewriteValueColumnFilters
+joinFilterRewriteMaxSize
  - ../docs/querying/querying.md
 7KiB
 DatasourceMetadata
@@ -1532,99 +1704,8 @@ TopNMetricSpec
 compareTo
 file12
 file2
- - ../docs/querying/sql.md
-APPROX_COUNT_DISTINCT
-APPROX_QUANTILE
-ARRAY_AGG
-BIGINT
-CATALOG_NAME
-CHARACTER_MAXIMUM_LENGTH
-CHARACTER_OCTET_LENGTH
-CHARACTER_SET_NAME
-COLLATION_NAME
-COLUMN_DEFAULT
-COLUMN_NAME
-Concats
-DATA_TYPE
-DATETIME_PRECISION
-DEFAULT_CHARACTER_SET_CATALOG
-DEFAULT_CHARACTER_SET_NAME
-DEFAULT_CHARACTER_SET_SCHEMA
-ISODOW
-ISOYEAR
-IS_NULLABLE
-JDBC_TYPE
-MIDDLE_MANAGER
-NULLable
-NUMERIC_PRECISION
-NUMERIC_PRECISION_RADIX
-NUMERIC_SCALE
-ORDINAL_POSITION
-PT1M
-PT5M
-SCHEMA_NAME
-SCHEMA_OWNER
-SERVER_SEGMENTS
-SMALLINT
-SQL_PATH
-STRING_AGG
-SYSTEM_TABLE
-TABLE_CATALOG
-TABLE_NAME
-TABLE_SCHEMA
-TABLE_TYPE
-TIME_PARSE
-TIME_SHIFT
-TINYINT
-VARCHAR
-avg_num_rows
-avg_size
-created_time
-current_size
-detailed_state
-druid.server.maxSize
-druid.server.tier
-druid.sql.planner.maxSemiJoinRowsInMemory
-druid.sql.planner.sqlTimeZone
-druid.sql.planner.useApproximateCountDistinct
-druid.sql.planner.useGroupingSetForExactDistinct
-druid.sql.planner.useApproximateTopN
-error_msg
-exprs
-group_id
-interval_expr
-is_active
-is_available
-is_leader
-is_overshadowed
-is_published
-is_realtime
-java.sql.Types
-last_compaction_state
-max_size
-num_replicas
-num_rows
-num_segments
-partition_num
-plaintext_port
-queue_insertion_time
-runner_status
-segment_id
-server_type
-shard_spec
-sqlTimeZone
-supervisor_id
-sys
-sys.segments
-task_id
-timestamp_expr
-tls_port
-total_size
-useApproximateCountDistinct
-useGroupingSetForExactDistinct
-useApproximateTopN
-wikipedia
-IEC
+ - ../docs/querying/sql-operators.md
+_x_
  - ../docs/querying/timeseriesquery.md
 fieldName1
 fieldName2
@@ -1694,6 +1775,7 @@ GiB
 5MiB
 8u60
 Autoscaler
+APPROX_COUNT_DISTINCT_BUILTIN
 AvaticaConnectionBalancer
 EventReceiverFirehose
 File.getFreeSpace
@@ -1782,6 +1864,7 @@ druid_taskLock
 druid_taskLog
 druid_tasks
 DruidQueryRel
+durationToRetain
 ec2
 equalDistribution
 extractionFn
@@ -1880,7 +1963,6 @@ dimensionExclusions
 expr
 jackson-jq
 missingValue
-schemaless
 skipBytesInMemoryOverheadCheck
 spatialDimensions
 useFieldDiscovery
@@ -1927,3 +2009,4 @@ PiB
 protobuf
 Golang
 multiValueHandling
+_n_

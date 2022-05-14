@@ -20,6 +20,7 @@
 package org.apache.druid.client.indexing;
 
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -41,11 +42,23 @@ public interface IndexingServiceClient
       int compactionTaskPriority,
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
+      @Nullable ClientCompactionTaskDimensionsSpec dimensionsSpec,
+      @Nullable AggregatorFactory[] metricsSpec,
+      @Nullable ClientCompactionTaskTransformSpec transformSpec,
       @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context
   );
 
+  /**
+   * Gets the total worker capacity of the current state of the cluster. This can be -1 if it cannot be determined.
+   */
   int getTotalWorkerCapacity();
+
+  /**
+   * Gets the total worker capacity of the cluster including auto scaling capability (scaling to max workers).
+   * This can be -1 if it cannot be determined or if auto scaling is not configured.
+   */
+  int getTotalWorkerCapacityWithAutoScale();
 
   String runTask(String taskId, Object taskObject);
 

@@ -53,7 +53,8 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   private static final String LDAP_AUTHENTICATOR = "ldap";
   private static final String LDAP_AUTHORIZER = "ldapauth";
 
-  private static final String EXPECTED_AVATICA_AUTH_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: BasicSecurityAuthenticationException: User LDAP authentication failed.";
+  private static final String EXPECTED_AVATICA_AUTH_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: QueryInterruptedException: User LDAP authentication failed. -> BasicSecurityAuthenticationException: User LDAP authentication failed.";
+  private static final String EXPECTED_AVATICA_AUTHZ_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: RuntimeException: org.apache.druid.server.security.ForbiddenException: Allowed:false, Message: -> ForbiddenException: Allowed:false, Message:";
 
   @Inject
   IntegrationTestingConfig config;
@@ -80,7 +81,7 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   @Test
   public void test_systemSchemaAccess_stateOnlyNoLdapGroupUser() throws Exception
   {
-    HttpUtil.makeRequest(stateOnlyUserClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
+    HttpUtil.makeRequest(getHttpClient(User.STATE_ONLY_USER), HttpMethod.GET, config.getBrokerUrl() + "/status", null);
 
     // as user that can only read STATE
     LOG.info("Checking sys.segments query as stateOnlyNoLdapGroupUser...");
@@ -120,38 +121,38 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
 
 
   @Override
-  protected void setupDatasourceReadOnlyUser() throws Exception
+  protected void setupDatasourceOnlyUser() throws Exception
   {
     createRoleWithPermissionsAndGroupMapping(
-        "datasourceReadOnlyGroup",
-        ImmutableMap.of("datasourceReadOnlyRole", DATASOURCE_READ_ONLY_PERMISSIONS)
+        "datasourceOnlyGroup",
+        ImmutableMap.of("datasourceOnlyRole", DATASOURCE_ONLY_PERMISSIONS)
     );
   }
 
   @Override
-  protected void setupDatasourceReadAndSysTableUser() throws Exception
+  protected void setupDatasourceAndContextParamsUser() throws Exception
   {
     createRoleWithPermissionsAndGroupMapping(
-        "datasourceReadWithSysGroup",
-        ImmutableMap.of("datasourceReadWithSysRole", DATASOURCE_READ_SYS_PERMISSIONS)
+        "datasourceAndContextParamsGroup",
+        ImmutableMap.of("datasourceAndContextParamsRole", DATASOURCE_QUERY_CONTEXT_PERMISSIONS)
     );
   }
 
   @Override
-  protected void setupDatasourceWriteAndSysTableUser() throws Exception
+  protected void setupDatasourceAndSysTableUser() throws Exception
   {
     createRoleWithPermissionsAndGroupMapping(
-        "datasourceWriteWithSysGroup",
-        ImmutableMap.of("datasourceWriteWithSysRole", DATASOURCE_WRITE_SYS_PERMISSIONS)
+        "datasourceWithSysGroup",
+        ImmutableMap.of("datasourceWithSysRole", DATASOURCE_SYS_PERMISSIONS)
     );
   }
 
   @Override
-  protected void setupDatasourceReadAndSysAndStateUser() throws Exception
+  protected void setupDatasourceAndSysAndStateUser() throws Exception
   {
     createRoleWithPermissionsAndGroupMapping(
-        "datasourceReadWithStateGroup",
-        ImmutableMap.of("datasourceReadWithStateRole", DATASOURCE_READ_SYS_STATE_PERMISSIONS)
+        "datasourceWithStateGroup",
+        ImmutableMap.of("datasourceWithStateRole", DATASOURCE_SYS_STATE_PERMISSIONS)
     );
   }
 
@@ -205,20 +206,26 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   }
 
   @Override
-  protected Properties getAvaticaConnectionProperties()
+  protected String getExpectedAvaticaAuthzError()
+  {
+    return EXPECTED_AVATICA_AUTHZ_ERROR;
+  }
+
+  @Override
+  protected Properties getAvaticaConnectionPropertiesForInvalidAdmin()
   {
     Properties connectionProperties = new Properties();
     connectionProperties.setProperty("user", "admin");
-    connectionProperties.setProperty("password", "priest");
+    connectionProperties.setProperty("password", "invalid_password");
     return connectionProperties;
   }
 
   @Override
-  protected Properties getAvaticaConnectionPropertiesFailure()
+  protected Properties getAvaticaConnectionPropertiesForUser(User user)
   {
     Properties connectionProperties = new Properties();
-    connectionProperties.setProperty("user", "admin");
-    connectionProperties.setProperty("password", "wrongpassword");
+    connectionProperties.setProperty("user", user.getName());
+    connectionProperties.setProperty("password", user.getPassword());
     return connectionProperties;
   }
 
@@ -227,6 +234,7 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
       Map<String, List<ResourceAction>> roleTopermissions
   ) throws Exception
   {
+    final HttpClient adminClient = getHttpClient(User.ADMIN);
     roleTopermissions.keySet().forEach(role -> HttpUtil.makeRequest(
         adminClient,
         HttpMethod.POST,
@@ -278,6 +286,7 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
       String role
   )
   {
+    final HttpClient adminClient = getHttpClient(User.ADMIN);
     HttpUtil.makeRequest(
         adminClient,
         HttpMethod.POST,

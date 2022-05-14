@@ -67,6 +67,8 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.data.ComparableList;
+import org.apache.druid.segment.data.ComparableStringArray;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -222,7 +224,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     verifyOutputNames(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
 
     this.universalTimestamp = computeUniversalTimestamp();
-    this.resultRowSignature = computeResultRowSignature();
+    this.resultRowSignature = computeResultRowSignature(RowSignature.Finalization.UNKNOWN);
     this.havingSpec = havingSpec;
     this.limitSpec = LimitSpec.nullToNoopLimitSpec(limitSpec);
     this.subtotalsSpec = verifySubtotalsSpec(subtotalsSpec, this.dimensions);
@@ -320,14 +322,32 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   }
 
   /**
-   * Returns a list of field names, of the same size as {@link #getResultRowSizeWithPostAggregators()}, in the
-   * order that they will appear in ResultRows for this query.
+   * Equivalent to {@code getResultRowSignature(Finalization.UNKNOWN)}.
    *
    * @see ResultRow for documentation about the order that fields will be in
    */
   public RowSignature getResultRowSignature()
   {
     return resultRowSignature;
+  }
+
+  /**
+   * Returns a result row signature, of the same size as {@link #getResultRowSizeWithPostAggregators()}, in the
+   * order that they will appear in ResultRows for this query.
+   *
+   * Aggregator types in the signature depend on the value of {@code finalization}.
+   *
+   * If finalization is {@link RowSignature.Finalization#UNKNOWN}, this method returns a cached object.
+   *
+   * @see ResultRow for documentation about the order that fields will be in
+   */
+  public RowSignature getResultRowSignature(final RowSignature.Finalization finalization)
+  {
+    if (finalization == RowSignature.Finalization.UNKNOWN) {
+      return resultRowSignature;
+    } else {
+      return computeResultRowSignature(finalization);
+    }
   }
 
   /**
@@ -481,7 +501,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return forcePushDown;
   }
 
-  private RowSignature computeResultRowSignature()
+  private RowSignature computeResultRowSignature(final RowSignature.Finalization finalization)
   {
     final RowSignature.Builder builder = RowSignature.builder();
 
@@ -490,7 +510,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     }
 
     return builder.addDimensions(dimensions)
-                  .addAggregators(aggregatorSpecs)
+                  .addAggregators(aggregatorSpecs, finalization)
                   .addPostAggregators(postAggregatorSpecs)
                   .build();
   }
@@ -572,7 +592,11 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         needsReverseList.add(false);
         final ColumnType type = dimensions.get(i).getOutputType();
         dimensionTypes.add(type);
-        comparators.add(StringComparators.LEXICOGRAPHIC);
+        if (type.isNumeric()) {
+          comparators.add(StringComparators.NUMERIC);
+        } else {
+          comparators.add(StringComparators.LEXICOGRAPHIC);
+        }
       }
     }
 
@@ -757,6 +781,15 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         } else {
           dimCompare = comparator.compare(String.valueOf(lhsObj), String.valueOf(rhsObj));
         }
+      } else if (dimensionType.equals(ColumnType.STRING_ARRAY)) {
+        final ComparableStringArray lhsArr = DimensionHandlerUtils.convertToComparableStringArray(lhsObj);
+        final ComparableStringArray rhsArr = DimensionHandlerUtils.convertToComparableStringArray(rhsObj);
+        dimCompare = Comparators.<Comparable>naturalNullsFirst().compare(lhsArr, rhsArr);
+      } else if (dimensionType.equals(ColumnType.LONG_ARRAY)
+                 || dimensionType.equals(ColumnType.DOUBLE_ARRAY)) {
+        final ComparableList lhsArr = DimensionHandlerUtils.convertToList(lhsObj);
+        final ComparableList rhsArr = DimensionHandlerUtils.convertToList(rhsObj);
+        dimCompare = Comparators.<Comparable>naturalNullsFirst().compare(lhsArr, rhsArr);
       } else {
         dimCompare = comparator.compare((String) lhsObj, (String) rhsObj);
       }

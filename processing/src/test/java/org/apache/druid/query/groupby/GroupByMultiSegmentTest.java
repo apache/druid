@@ -135,9 +135,7 @@ public class GroupByMultiSegmentTest
                     Arrays.asList(
                         new StringDimensionSchema("dimA"),
                         new LongDimensionSchema("metA")
-                    ),
-                    null,
-                    null
+                    )
                 ))
                 .withRollup(withRollup)
                 .build()
@@ -268,8 +266,7 @@ public class GroupByMultiSegmentTest
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, bufferPool),
-            NOOP_QUERYWATCHER,
-            bufferPool
+            NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             druidProcessingConfig,

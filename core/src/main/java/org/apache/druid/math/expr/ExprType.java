@@ -19,8 +19,6 @@
 
 package org.apache.druid.math.expr;
 
-import it.unimi.dsi.fastutil.bytes.Byte2ObjectArrayMap;
-import it.unimi.dsi.fastutil.bytes.Byte2ObjectMap;
 import org.apache.druid.segment.column.TypeDescriptor;
 
 /**
@@ -28,31 +26,11 @@ import org.apache.druid.segment.column.TypeDescriptor;
  */
 public enum ExprType implements TypeDescriptor
 {
-  DOUBLE((byte) 0x01),
-  LONG((byte) 0x02),
-  STRING((byte) 0x03),
-  ARRAY((byte) 0x04),
-  COMPLEX((byte) 0x05);
-
-  private static final Byte2ObjectMap<ExprType> TYPE_BYTES = new Byte2ObjectArrayMap<>(ExprType.values().length);
-
-  static {
-    for (ExprType type : ExprType.values()) {
-      TYPE_BYTES.put(type.getId(), type);
-    }
-  }
-
-  final byte id;
-
-  ExprType(byte id)
-  {
-    this.id = id;
-  }
-
-  public byte getId()
-  {
-    return id;
-  }
+  DOUBLE,
+  LONG,
+  STRING,
+  ARRAY,
+  COMPLEX;
 
   @Override
   public boolean isNumeric()
@@ -70,10 +48,5 @@ public enum ExprType implements TypeDescriptor
   public boolean isArray()
   {
     return this == ExprType.ARRAY;
-  }
-
-  public static ExprType fromByte(byte id)
-  {
-    return TYPE_BYTES.get(id);
   }
 }

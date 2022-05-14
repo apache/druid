@@ -31,7 +31,9 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.clients.OverlordResourceTestClient;
 import org.apache.druid.testing.clients.TaskResponseObject;
+import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.joda.time.Interval;
 
@@ -62,6 +64,10 @@ public abstract class AbstractIndexerTest
   protected ObjectMapper smileMapper;
   @Inject
   protected TestQueryHelper queryHelper;
+  @Inject
+  protected SqlTestQueryHelper sqlQueryHelper;
+  @Inject
+  protected DataLoaderHelper dataLoaderHelper;
 
   @Inject
   protected IntegrationTestingConfig config;

@@ -42,6 +42,8 @@ import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.ConstantDimensionSelector;
+import org.apache.druid.segment.ConstantMultiValueDimensionSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.RowAdapters;
@@ -827,5 +829,36 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     Assert.assertTrue(caps.hasMultipleValues().isUnknown());
     Assert.assertTrue(caps.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
+  }
+
+  @Test
+  public void testConstantDimensionSelectors()
+  {
+    ExpressionVirtualColumn constant = new ExpressionVirtualColumn(
+        "constant",
+        Parser.parse("1 + 2", TestExprMacroTable.INSTANCE),
+        ColumnType.LONG
+    );
+    DimensionSelector constantSelector = constant.makeDimensionSelector(
+        DefaultDimensionSpec.of("constant"),
+        COLUMN_SELECTOR_FACTORY
+    );
+    Assert.assertTrue(constantSelector instanceof ConstantDimensionSelector);
+    Assert.assertEquals("3", constantSelector.getObject());
+
+
+    ExpressionVirtualColumn multiConstant = new ExpressionVirtualColumn(
+        "multi",
+        Parser.parse("string_to_array('a,b,c', ',')", TestExprMacroTable.INSTANCE),
+        ColumnType.STRING
+    );
+
+    DimensionSelector multiConstantSelector = multiConstant.makeDimensionSelector(
+        DefaultDimensionSpec.of("multiConstant"),
+        COLUMN_SELECTOR_FACTORY
+    );
+
+    Assert.assertTrue(multiConstantSelector instanceof ConstantMultiValueDimensionSelector);
+    Assert.assertEquals(ImmutableList.of("a", "b", "c"), multiConstantSelector.getObject());
   }
 }

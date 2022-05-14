@@ -25,6 +25,7 @@ import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -40,7 +41,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
-public class LocalFirehoseFactoryTest
+public class LocalFirehoseFactoryTest extends InitializedNullHandlingTest
 {
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -78,9 +79,7 @@ public class LocalFirehoseFactoryTest
                 null
             ),
             new DimensionsSpec(
-                DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a")),
-                new ArrayList<>(),
-                new ArrayList<>()
+                DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a"))
             ),
             ",",
             Arrays.asList("timestamp", "a"),

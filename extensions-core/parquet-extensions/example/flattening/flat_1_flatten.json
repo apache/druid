@@ -46,6 +46,11 @@
                 "type": "path",
                 "name": "list",
                 "expr": "$.listDim"
+              },
+              {
+                "type": "path",
+                "name": "listLength",
+                "expr": "$.listDim.length()"
               }
             ]
           },

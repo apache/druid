@@ -48,5 +48,5 @@ fi
 # Build Hadoop docker if needed
 if [ -n "$DRUID_INTEGRATION_TEST_BUILD_HADOOP_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_BUILD_HADOOP_DOCKER" == true ]
 then
-  docker build -t druid-it/hadoop:2.8.5  --build-arg APACHE_ARCHIVE_MIRROR_HOST $HADOOP_DOCKER_DIR
+    docker build -t druid-it/hadoop:9.9.9  --build-arg APACHE_ARCHIVE_MIRROR_HOST $HADOOP_DOCKER_DIR
 fi

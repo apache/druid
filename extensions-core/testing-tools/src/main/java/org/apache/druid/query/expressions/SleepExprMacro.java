@@ -85,8 +85,7 @@ public class SleepExprMacro implements ExprMacro
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new SleepExpr(newArg));
+        return shuttle.visit(apply(shuttle.visitAll(args)));
       }
 
       /**

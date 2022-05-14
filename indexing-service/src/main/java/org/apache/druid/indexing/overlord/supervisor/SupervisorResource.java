@@ -33,6 +33,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -65,7 +66,7 @@ import java.util.stream.Collectors;
 @Path("/druid/indexer/v1/supervisor")
 public class SupervisorResource
 {
-  private static final Function<VersionedSupervisorSpec, Iterable<ResourceAction>> SPEC_DATASOURCE_WRITE_RA_GENERATOR =
+  private static final Function<VersionedSupervisorSpec, Iterable<ResourceAction>> SPEC_DATASOURCE_READ_RA_GENERATOR =
       supervisorSpec -> {
         if (supervisorSpec.getSpec() == null) {
           return null;
@@ -75,7 +76,7 @@ public class SupervisorResource
         }
         return Iterables.transform(
             supervisorSpec.getSpec().getDataSources(),
-            AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR
+            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
         );
       };
 
@@ -281,6 +282,33 @@ public class SupervisorResource
     );
   }
 
+  @GET
+  @Path("/{id}/parseErrors")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response getAllTaskParseErrors(
+      @PathParam("id") final String id
+  )
+  {
+    return asLeaderWithSupervisorManager(
+        manager -> {
+          Optional<List<ParseExceptionReport>> parseErrors = manager.getSupervisorParseErrors(id);
+          if (!parseErrors.isPresent()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity(
+                               ImmutableMap.of(
+                                   "error",
+                                   StringUtils.format("[%s] does not exist", id)
+                               )
+                           )
+                           .build();
+          }
+
+          return Response.ok(parseErrors.get()).build();
+        }
+    );
+  }
+
   @POST
   @Path("/{id}/resume")
   @Produces(MediaType.APPLICATION_JSON)
@@ -376,7 +404,7 @@ public class SupervisorResource
             AuthorizationUtils.filterAuthorizedResources(
                 req,
                 manager.getSupervisorHistory(),
-                SPEC_DATASOURCE_WRITE_RA_GENERATOR,
+                SPEC_DATASOURCE_READ_RA_GENERATOR,
                 authorizerMapper
             )
         ).build()
@@ -400,7 +428,7 @@ public class SupervisorResource
                     AuthorizationUtils.filterAuthorizedResources(
                         req,
                         historyForId,
-                        SPEC_DATASOURCE_WRITE_RA_GENERATOR,
+                        SPEC_DATASOURCE_READ_RA_GENERATOR,
                         authorizerMapper
                     )
                 );

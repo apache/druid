@@ -19,21 +19,21 @@
 
 package org.apache.druid.timeline.partition;
 
-import com.google.common.base.Preconditions;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableRangeSet;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
-import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.DateTimes;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.ArrayList;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -41,74 +41,7 @@ import java.util.Map;
  */
 public class SingleDimensionShardSpecTest
 {
-  @Test
-  public void testIsInChunk()
-  {
-    Map<SingleDimensionShardSpec, List<Pair<Boolean, Map<String, String>>>> tests = ImmutableMap.<SingleDimensionShardSpec, List<Pair<Boolean, Map<String, String>>>>builder()
-        .put(
-            makeSpec(null, null),
-            makeListOfPairs(
-                true, null,
-                true, "a",
-                true, "h",
-                true, "p",
-                true, "y"
-            )
-        )
-        .put(
-            makeSpec(null, "m"),
-            makeListOfPairs(
-                true, null,
-                true, "a",
-                true, "h",
-                false, "p",
-                false, "y"
-            )
-        )
-        .put(
-            makeSpec("a", "h"),
-            makeListOfPairs(
-                false, null,
-                true, "a",
-                false, "h",
-                false, "p",
-                false, "y"
-            )
-        )
-        .put(
-            makeSpec("d", "u"),
-            makeListOfPairs(
-                false, null,
-                false, "a",
-                true, "h",
-                true, "p",
-                false, "y"
-            )
-        )
-        .put(
-            makeSpec("h", null),
-            makeListOfPairs(
-                false, null,
-                false, "a",
-                true, "h",
-                true, "p",
-                true, "y"
-            )
-        )
-        .build();
-
-    for (Map.Entry<SingleDimensionShardSpec, List<Pair<Boolean, Map<String, String>>>> entry : tests.entrySet()) {
-      SingleDimensionShardSpec spec = entry.getKey();
-      for (Pair<Boolean, Map<String, String>> pair : entry.getValue()) {
-        final InputRow inputRow = new MapBasedInputRow(
-            0,
-            ImmutableList.of("billy"),
-            Maps.transformValues(pair.rhs, input -> input)
-        );
-        Assert.assertEquals(StringUtils.format("spec[%s], row[%s]", spec, inputRow), pair.lhs, spec.isInChunk(inputRow));
-      }
-    }
-  }
+  private final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   @Test
   public void testPossibleInDomain()
@@ -150,6 +83,113 @@ public class SingleDimensionShardSpecTest
     Assert.assertFalse(shardSpec.sharePartitionSpace(new NumberedOverwritePartialShardSpec(0, 2, 1)));
   }
 
+  @Test
+  public void testSerde() throws IOException
+  {
+    testSerde(new SingleDimensionShardSpec("dim", null, null, 10, null));
+    testSerde(new SingleDimensionShardSpec("dim", "abc", null, 5, 10));
+    testSerde(new SingleDimensionShardSpec("dim", null, "xyz", 10, 1));
+    testSerde(new SingleDimensionShardSpec("dim", "abc", "xyz", 10, null));
+  }
+
+  @Test
+  public void testDeserialize() throws JsonProcessingException
+  {
+    final String json = "{\"type\": \"single\","
+                        + " \"dimension\": \"dim\","
+                        + " \"start\": \"abc\","
+                        + "\"end\": \"xyz\","
+                        + "\"partitionNum\": 5,"
+                        + "\"numCorePartitions\": 10}";
+    ShardSpec shardSpec = OBJECT_MAPPER.readValue(json, ShardSpec.class);
+    Assert.assertTrue(shardSpec instanceof SingleDimensionShardSpec);
+    Assert.assertEquals(ShardSpec.Type.SINGLE, shardSpec.getType());
+
+    SingleDimensionShardSpec singleDimShardSpec = (SingleDimensionShardSpec) shardSpec;
+    Assert.assertEquals(
+        new SingleDimensionShardSpec("dim", "abc", "xyz", 5, 10),
+        singleDimShardSpec
+    );
+  }
+
+  @Test
+  public void testShardSpecLookup()
+  {
+    final List<ShardSpec> shardSpecs = ImmutableList.of(
+        new SingleDimensionShardSpec("dim", null, "c", 1, 1),
+        new SingleDimensionShardSpec("dim", "c", "h", 2, 1),
+        new SingleDimensionShardSpec("dim", "h", null, 3, 1)
+    );
+    final ShardSpecLookup lookup = shardSpecs.get(0).getLookup(shardSpecs);
+    final long currentTime = DateTimes.nowUtc().getMillis();
+    Assert.assertEquals(
+        shardSpecs.get(0),
+        lookup.getShardSpec(
+            currentTime,
+            new MapBasedInputRow(
+                currentTime,
+                Collections.singletonList("dim"),
+                ImmutableMap.of("dim", "a", "time", currentTime)
+            )
+        )
+    );
+
+    Assert.assertEquals(
+        shardSpecs.get(0),
+        lookup.getShardSpec(
+            currentTime,
+            new MapBasedInputRow(
+                currentTime,
+                Collections.singletonList("dim"),
+                ImmutableMap.of("time", currentTime)
+            )
+        )
+    );
+
+    Assert.assertEquals(
+        shardSpecs.get(0),
+        lookup.getShardSpec(
+            currentTime,
+            new MapBasedInputRow(
+                currentTime,
+                Collections.singletonList("dim"),
+                ImmutableMap.of("dim", Arrays.asList("a", "b"), "time", currentTime)
+            )
+        )
+    );
+
+    Assert.assertEquals(
+        shardSpecs.get(1),
+        lookup.getShardSpec(
+            currentTime,
+            new MapBasedInputRow(
+                currentTime,
+                Collections.singletonList("dim"),
+                ImmutableMap.of("dim", "g", "time", currentTime)
+            )
+        )
+    );
+
+    Assert.assertEquals(
+        shardSpecs.get(2),
+        lookup.getShardSpec(
+            currentTime,
+            new MapBasedInputRow(
+                currentTime,
+                Collections.singletonList("dim"),
+                ImmutableMap.of("dim", "k", "time", currentTime)
+            )
+        )
+    );
+  }
+
+  private void testSerde(SingleDimensionShardSpec shardSpec) throws IOException
+  {
+    String json = OBJECT_MAPPER.writeValueAsString(shardSpec);
+    SingleDimensionShardSpec deserializedSpec = OBJECT_MAPPER.readValue(json, SingleDimensionShardSpec.class);
+    Assert.assertEquals(shardSpec, deserializedSpec);
+  }
+
   private static RangeSet<String> rangeSet(List<Range<String>> ranges)
   {
     ImmutableRangeSet.Builder<String> builder = ImmutableRangeSet.builder();
@@ -168,23 +208,4 @@ public class SingleDimensionShardSpecTest
   {
     return new SingleDimensionShardSpec(dimension, start, end, 0, SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS);
   }
-
-  private Map<String, String> makeMap(String value)
-  {
-    return value == null ? ImmutableMap.of() : ImmutableMap.of("billy", value);
-  }
-
-  private List<Pair<Boolean, Map<String, String>>> makeListOfPairs(Object... arguments)
-  {
-    Preconditions.checkState(arguments.length % 2 == 0);
-
-    final ArrayList<Pair<Boolean, Map<String, String>>> retVal = new ArrayList<>();
-
-    for (int i = 0; i < arguments.length; i += 2) {
-      retVal.add(Pair.of((Boolean) arguments[i], makeMap((String) arguments[i + 1])));
-    }
-
-    return retVal;
-  }
-
 }

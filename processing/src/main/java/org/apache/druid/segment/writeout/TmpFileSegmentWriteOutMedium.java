@@ -35,7 +35,7 @@ public final class TmpFileSegmentWriteOutMedium implements SegmentWriteOutMedium
   TmpFileSegmentWriteOutMedium(File outDir) throws IOException
   {
     File tmpOutputFilesDir = new File(outDir, "tmpOutputFiles");
-    org.apache.commons.io.FileUtils.forceMkdir(tmpOutputFilesDir);
+    FileUtils.mkdirp(tmpOutputFilesDir);
     closer.register(() -> FileUtils.deleteDirectory(tmpOutputFilesDir));
     this.dir = tmpOutputFilesDir;
   }
@@ -52,6 +52,14 @@ public final class TmpFileSegmentWriteOutMedium implements SegmentWriteOutMedium
     closer.register(file::delete);
     closer.register(ch);
     return new FileWriteOutBytes(file, ch);
+  }
+
+  @Override
+  public SegmentWriteOutMedium makeChildWriteOutMedium() throws IOException
+  {
+    TmpFileSegmentWriteOutMedium tmpFileSegmentWriteOutMedium = new TmpFileSegmentWriteOutMedium(dir);
+    closer.register(tmpFileSegmentWriteOutMedium);
+    return tmpFileSegmentWriteOutMedium;
   }
 
   @Override
