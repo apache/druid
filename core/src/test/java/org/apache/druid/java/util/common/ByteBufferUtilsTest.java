@@ -100,8 +100,8 @@ public class ByteBufferUtilsTest
     );
 
     // Tests involving the full range of bytes
-    for (byte i = Byte.MIN_VALUE ; i < Byte.MAX_VALUE ; i++) {
-      for (byte j = Byte.MIN_VALUE ; j < Byte.MAX_VALUE ; j++) {
+    for (byte i = Byte.MIN_VALUE; i < Byte.MAX_VALUE; i++) {
+      for (byte j = Byte.MIN_VALUE; j < Byte.MAX_VALUE; j++) {
         final int cmp = Integer.compare(Byte.toUnsignedInt(i), Byte.toUnsignedInt(j));
 
         MatcherAssert.assertThat(
