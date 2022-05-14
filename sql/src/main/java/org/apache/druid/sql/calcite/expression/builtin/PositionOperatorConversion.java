@@ -24,6 +24,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
@@ -32,7 +33,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 public class PositionOperatorConversion implements SqlOperatorConversion
 {
-  private static final DruidExpression ZERO = DruidExpression.fromExpression("0");
+  private static final DruidExpression ZERO = DruidExpression.ofLiteral(ColumnType.LONG, "0");
 
   @Override
   public SqlOperator calciteOperator()
@@ -51,26 +52,29 @@ public class PositionOperatorConversion implements SqlOperatorConversion
         plannerContext,
         rowSignature,
         rexNode,
-        druidExpressions -> {
-          final DruidExpression fromIndexExpression;
-          if (druidExpressions.size() > 2) {
-            fromIndexExpression = DruidExpression.fromExpression(
-                StringUtils.format("(%s - 1)", druidExpressions.get(2).getExpression())
-            );
-          } else {
-            fromIndexExpression = ZERO;
-          }
-
-          return DruidExpression.fromExpression(
-              StringUtils.format(
+        druidExpressions -> DruidExpression.ofExpression(
+            ColumnType.LONG,
+            (args) -> {
+              final DruidExpression fromIndexExpression;
+              if (args.size() > 2) {
+                fromIndexExpression = DruidExpression.ofExpression(
+                    ColumnType.LONG,
+                    (_args) -> StringUtils.format("(%s - 1)", _args.get(2).getExpression()),
+                    args
+                );
+              } else {
+                fromIndexExpression = ZERO;
+              }
+              return StringUtils.format(
                   "(%s + 1)",
                   DruidExpression.functionCall(
                       "strpos",
-                      ImmutableList.of(druidExpressions.get(1), druidExpressions.get(0), fromIndexExpression)
+                      ImmutableList.of(args.get(1), args.get(0), fromIndexExpression)
                   )
-              )
-          );
-        }
+              );
+            },
+            druidExpressions
+        )
     );
   }
 }

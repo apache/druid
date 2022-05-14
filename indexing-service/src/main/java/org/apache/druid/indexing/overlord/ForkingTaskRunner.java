@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
@@ -27,6 +28,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -61,6 +63,7 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.server.metrics.MonitorsConfig;
+import org.apache.druid.server.metrics.WorkerTaskCountStatsProvider;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.joda.time.DateTime;
@@ -81,13 +84,14 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Runs tasks in separate processes using the "internal peon" verb.
  */
 public class ForkingTaskRunner
     extends BaseRestorableTaskRunner<ForkingTaskRunner.ForkingTaskRunnerWorkItem>
-    implements TaskLogStreamer
+    implements TaskLogStreamer, WorkerTaskCountStatsProvider
 {
   private static final EmittingLogger LOGGER = new EmittingLogger(ForkingTaskRunner.class);
   private static final String CHILD_PROPERTY_PREFIX = "druid.indexer.fork.property.";
@@ -98,8 +102,14 @@ public class ForkingTaskRunner
   private final ListeningExecutorService exec;
   private final PortFinder portFinder;
   private final StartupLoggingConfig startupLoggingConfig;
+  private final WorkerConfig workerConfig;
 
   private volatile boolean stopping = false;
+
+  private static final AtomicLong LAST_REPORTED_FAILED_TASK_COUNT = new AtomicLong();
+  private static final AtomicLong FAILED_TASK_COUNT = new AtomicLong();
+  private static final AtomicLong SUCCESSFUL_TASK_COUNT = new AtomicLong();
+  private static final AtomicLong LAST_REPORTED_SUCCESSFUL_TASK_COUNT = new AtomicLong();
 
   @Inject
   public ForkingTaskRunner(
@@ -120,6 +130,7 @@ public class ForkingTaskRunner
     this.node = node;
     this.portFinder = new PortFinder(config.getStartPort(), config.getEndPort(), config.getPorts());
     this.startupLoggingConfig = startupLoggingConfig;
+    this.workerConfig = workerConfig;
     this.exec = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(workerConfig.getCapacity(), "forking-task-runner-%d")
     );
@@ -213,6 +224,24 @@ public class ForkingTaskRunner
                           Iterables.addAll(
                               command,
                               new QuotableWhiteSpaceSplitter((String) taskJavaOpts)
+                          );
+                        }
+
+                        // Override task specific javaOptsArray
+                        try {
+                          List<String> taskJavaOptsArray = jsonMapper.convertValue(
+                              task.getContextValue(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY),
+                              new TypeReference<List<String>>() {}
+                          );
+                          if (taskJavaOptsArray != null) {
+                            Iterables.addAll(command, taskJavaOptsArray);
+                          }
+                        }
+                        catch (Exception e) {
+                          throw new IllegalArgumentException(
+                              ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY
+                              + " in context of task: " + task.getId() + " must be an array of strings.",
+                              e
                           );
                         }
 
@@ -377,7 +406,11 @@ public class ForkingTaskRunner
                             )
                         );
                       }
-
+                      if (status.isSuccess()) {
+                        SUCCESSFUL_TASK_COUNT.incrementAndGet();
+                      } else {
+                        FAILED_TASK_COUNT.incrementAndGet();
+                      }
                       TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
                       return status;
                     }
@@ -666,36 +699,91 @@ public class ForkingTaskRunner
   }
 
   @Override
-  public long getTotalTaskSlotCount()
+  public Map<String, Long> getTotalTaskSlotCount()
   {
-    if (config.getPorts() != null && !config.getPorts().isEmpty()) {
-      return config.getPorts().size();
-    }
-    return config.getEndPort() - config.getStartPort() + 1;
+    return ImmutableMap.of(workerConfig.getCategory(), getTotalTaskSlotCountLong());
+  }
+
+  public long getTotalTaskSlotCountLong()
+  {
+    return workerConfig.getCapacity();
   }
 
   @Override
-  public long getIdleTaskSlotCount()
+  public Map<String, Long> getIdleTaskSlotCount()
   {
-    return Math.max(getTotalTaskSlotCount() - getUsedTaskSlotCount(), 0);
+    return ImmutableMap.of(workerConfig.getCategory(), Math.max(getTotalTaskSlotCountLong() - getUsedTaskSlotCountLong(), 0));
   }
 
   @Override
-  public long getUsedTaskSlotCount()
+  public Map<String, Long> getUsedTaskSlotCount()
+  {
+    return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(portFinder.findUsedPortCount()));
+  }
+
+  public long getUsedTaskSlotCountLong()
   {
     return portFinder.findUsedPortCount();
   }
 
   @Override
-  public long getLazyTaskSlotCount()
+  public Map<String, Long> getLazyTaskSlotCount()
   {
-    return 0;
+    return ImmutableMap.of(workerConfig.getCategory(), 0L);
   }
 
   @Override
-  public long getBlacklistedTaskSlotCount()
+  public Map<String, Long> getBlacklistedTaskSlotCount()
   {
-    return 0;
+    return ImmutableMap.of(workerConfig.getCategory(), 0L);
+  }
+
+  @Override
+  public Long getWorkerFailedTaskCount()
+  {
+    long failedTaskCount = FAILED_TASK_COUNT.get();
+    long lastReportedFailedTaskCount = LAST_REPORTED_FAILED_TASK_COUNT.get();
+    LAST_REPORTED_FAILED_TASK_COUNT.set(failedTaskCount);
+    return failedTaskCount - lastReportedFailedTaskCount;
+  }
+
+  @Override
+  public Long getWorkerIdleTaskSlotCount()
+  {
+    return Math.max(getTotalTaskSlotCountLong() - getUsedTaskSlotCountLong(), 0);
+  }
+
+  @Override
+  public Long getWorkerUsedTaskSlotCount()
+  {
+    return (long) portFinder.findUsedPortCount();
+  }
+
+  @Override
+  public Long getWorkerTotalTaskSlotCount()
+  {
+    return getTotalTaskSlotCountLong();
+  }
+
+  @Override
+  public String getWorkerCategory()
+  {
+    return workerConfig.getCategory();
+  }
+
+  @Override
+  public String getWorkerVersion()
+  {
+    return workerConfig.getVersion();
+  }
+
+  @Override
+  public Long getWorkerSuccessfulTaskCount()
+  {
+    long successfulTaskCount = SUCCESSFUL_TASK_COUNT.get();
+    long lastReportedSuccessfulTaskCount = LAST_REPORTED_SUCCESSFUL_TASK_COUNT.get();
+    LAST_REPORTED_SUCCESSFUL_TASK_COUNT.set(successfulTaskCount);
+    return successfulTaskCount - lastReportedSuccessfulTaskCount;
   }
 
   protected static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem

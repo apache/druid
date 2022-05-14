@@ -93,7 +93,7 @@ public class TimeseriesQueryQueryToolChestTest
                 ImmutableList.of(
                     new CountAggregatorFactory("metric1"),
                     new LongSumAggregatorFactory("metric0", "metric0"),
-                    new StringLastAggregatorFactory("complexMetric", "test", null)
+                    new StringLastAggregatorFactory("complexMetric", "test", null, null)
                 ),
                 ImmutableList.of(new ConstantPostAggregator("post", 10)),
                 0,

@@ -71,7 +71,7 @@ public class GuavaUtils
 
   /**
    * If first argument is not null, return it, else return the other argument. Sort of like
-   * {@link com.google.common.base.Objects#firstNonNull(Object, Object)} except will not explode if both arguments are
+   * {@link com.google.common.base.Objects#firstNonNull(T, T)} except will not explode if both arguments are
    * null.
    */
   @Nullable
@@ -85,7 +85,8 @@ public class GuavaUtils
 
   /**
    * Cancel futures manually, because sometime we can't cancel all futures in {@link com.google.common.util.concurrent.Futures.CombinedFuture}
-   * automatically. Especially when we call {@link  com.google.common.util.concurrent.Futures#allAsList(Iterable)} to create a batch of
+   * automatically. Especially when we call
+   * {@link  static <V> ListenableFuture<List<V>> com.google.common.util.concurrent.Futures#allAsList(Iterable<? extends ListenableFuture <? extends V>> futures)} to create a batch of
    * future.
    * @param mayInterruptIfRunning {@code true} if the thread executing this
    * task should be interrupted; otherwise, in-progress tasks are allowed

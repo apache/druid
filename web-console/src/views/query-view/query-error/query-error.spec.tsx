@@ -21,7 +21,7 @@ import React from 'react';
 
 import { QueryError } from './query-error';
 
-describe('query error', () => {
+describe('QueryError', () => {
   it('matches snapshot', () => {
     const queryError = shallow(
       <QueryError

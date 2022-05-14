@@ -115,8 +115,10 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   {
     DruidOperatorTable operatorTable = injector.getInstance(DruidOperatorTable.class);
     Assert.assertNotNull(operatorTable);
+
+    // Should be a singleton.
     DruidOperatorTable other = injector.getInstance(DruidOperatorTable.class);
-    Assert.assertNotSame(other, operatorTable);
+    Assert.assertSame(other, operatorTable);
   }
 
   @Test
@@ -124,8 +126,10 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   {
     PlannerFactory plannerFactory = injector.getInstance(PlannerFactory.class);
     Assert.assertNotNull(PlannerFactory.class);
+
+    // Should be a singleton.
     PlannerFactory other = injector.getInstance(PlannerFactory.class);
-    Assert.assertNotSame(other, plannerFactory);
+    Assert.assertSame(other, plannerFactory);
   }
 
   @Test

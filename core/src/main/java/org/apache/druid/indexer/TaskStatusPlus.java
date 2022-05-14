@@ -48,7 +48,7 @@ public class TaskStatusPlus
   public TaskStatusPlus(
       String id,
       @Nullable String groupId,
-      String type, // nullable for backward compatibility
+      @Nullable String type, // nullable for backward compatibility
       DateTime createdTime,
       DateTime queueInsertionTime,
       @Nullable TaskState statusCode,

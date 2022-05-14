@@ -66,13 +66,11 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   public QueryRunner<ScanResultValue> mergeResults(final QueryRunner<ScanResultValue> runner)
   {
     return (queryPlus, responseContext) -> {
-      // Ensure "legacy" is a non-null value, such that all other nodes this query is forwarded to will treat it
-      // the same way, even if they have different default legacy values.
-      //
-      // Also, remove "offset" and add it to the "limit" (we won't push the offset down, just apply it here, at the
-      // merge at the top of the stack).
       final ScanQuery originalQuery = ((ScanQuery) (queryPlus.getQuery()));
+      ScanQuery.verifyOrderByForNativeExecution(originalQuery);
 
+      // Remove "offset" and add it to the "limit" (we won't push the offset down, just apply it here, at the
+      // merge at the top of the stack).
       final long newLimit;
       if (!originalQuery.isLimited()) {
         // Unlimited stays unlimited.
@@ -87,6 +85,8 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         newLimit = originalQuery.getScanRowsLimit() + originalQuery.getScanRowsOffset();
       }
 
+      // Ensure "legacy" is a non-null value, such that all other nodes this query is forwarded to will treat it
+      // the same way, even if they have different default legacy values.
       final ScanQuery queryToRun = originalQuery.withNonNullLegacy(scanQueryConfig)
                                                 .withOffset(0)
                                                 .withLimit(newLimit);

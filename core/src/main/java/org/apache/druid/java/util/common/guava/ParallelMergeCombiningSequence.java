@@ -77,7 +77,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   private final int queueSize;
   private final boolean hasTimeout;
   private final long timeoutAtNanos;
-  private final int queryPriority; // not currently used :(
   private final int yieldAfter;
   private final int batchSize;
   private final int parallelism;
@@ -107,7 +106,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     this.combineFn = combineFn;
     this.hasTimeout = hasTimeout;
     this.timeoutAtNanos = System.nanoTime() + TimeUnit.NANOSECONDS.convert(timeoutMillis, TimeUnit.MILLISECONDS);
-    this.queryPriority = queryPriority;
     this.parallelism = parallelism;
     this.yieldAfter = yieldAfter;
     this.batchSize = batchSize;
@@ -267,6 +265,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    * {@link MergeCombineAction} do a final merge combine of all the parallel computed results, again pushing
    * {@link ResultBatch} into a {@link BlockingQueue} with a {@link QueuePusher}.
    */
+  @SuppressWarnings("serial")
   private static class MergeCombinePartitioningAction<T> extends RecursiveAction
   {
     private final List<Sequence<T>> sequences;
@@ -321,7 +320,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       try {
         final int parallelTaskCount = computeNumTasks();
 
-        // if we have a small number of sequences to merge, or computed paralellism is too low, do not run in parallel,
+        // if we have a small number of sequences to merge, or computed parallelism is too low, do not run in parallel,
         // just serially perform the merge-combine with a single task
         if (parallelTaskCount < 2) {
           LOG.debug(
@@ -360,6 +359,9 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       catch (Throwable t) {
         closeAllCursors(sequenceCursors);
         cancellationGizmo.cancel(t);
+        // Should be the following, but can' change due to lack of
+        // unit tests.
+        // out.offer((ParallelMergeCombiningSequence.ResultBatch<T>) ResultBatch.TERMINAL);
         out.offer(ResultBatch.TERMINAL);
       }
     }
@@ -449,14 +451,14 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       // running, minus 1 for the task that is running this calculation (as it will be replaced with the parallel tasks)
       final int utilizationEstimate = runningThreadCount + submissionCount - 1;
 
-      // 'computed parallelism' is the remaineder of the 'max parallelism' less current 'utilization estimate'
+      // 'computed parallelism' is the remainder of the 'max parallelism' less current 'utilization estimate'
       final int computedParallelismForUtilization = maxParallelism - utilizationEstimate;
 
       // try to balance partition size with partition count so we don't end up with layer 2 'final merge' task that has
       // significantly more work to do than the layer 1 'parallel' tasks.
       final int computedParallelismForSequences = (int) Math.floor(Math.sqrt(sequences.size()));
 
-      // compute total number of layer 1 'parallel' tasks, for the utilzation parallelism, subtract 1 as the final merge
+      // compute total number of layer 1 'parallel' tasks, for the utilization parallelism, subtract 1 as the final merge
       // task will take the remaining slot
       final int computedOptimalParallelism = Math.min(
           computedParallelismForSequences,
@@ -484,7 +486,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     }
   }
 
-
   /**
    * This {@link RecursiveAction} is the work-horse of the {@link ParallelMergeCombiningSequence}, it merge-combines
    * a set of {@link BatchedResultsCursor} and produces output to a {@link BlockingQueue} with the help of a
@@ -501,6 +502,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    * how many times a task has continued executing, and utilized to compute a cumulative moving average of task run time
    * per amount yielded in order to 'smooth' out the continual adjustment.
    */
+  @SuppressWarnings("serial")
   private static class MergeCombineAction<T> extends RecursiveAction
   {
     private final PriorityQueue<BatchedResultsCursor<T>> pQueue;
@@ -539,6 +541,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       this.cancellationGizmo = cancellationGizmo;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     protected void compute()
     {
@@ -682,6 +685,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    * majority of its time will be spent managed blocking until results are ready for each cursor, or will be incredibly
    * short lived if all inputs are already available.
    */
+  @SuppressWarnings("serial")
   private static class PrepareMergeCombineInputsAction<T> extends RecursiveAction
   {
     private final List<BatchedResultsCursor<T>> partition;
@@ -717,6 +721,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       this.cancellationGizmo = cancellationGizmo;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     protected void compute()
     {
@@ -756,7 +761,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       }
     }
   }
-
 
   /**
    * {@link ForkJoinPool} friendly {@link BlockingQueue} feeder, adapted from 'QueueTaker' of Java documentation on
@@ -816,7 +820,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     }
   }
 
-
   /**
    * Holder object for an ordered batch of results from a sequence. Batching the results vastly reduces the amount of
    * blocking that is needed to move results between stages of {@link MergeCombineAction} done in parallel, allowing
@@ -824,6 +827,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    */
   static class ResultBatch<E>
   {
+    @SuppressWarnings("rawtypes")
     static final ResultBatch TERMINAL = new ResultBatch();
 
     @Nullable
@@ -893,7 +897,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     }
   }
 
-
   /**
    * {@link ForkJoinPool} friendly conversion of {@link Sequence} to {@link Yielder< ResultBatch >}
    */
@@ -933,7 +936,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       return batchYielder != null;
     }
   }
-
 
   /**
    * Provides a higher level cursor interface to provide individual results out {@link ResultBatch} provided by
@@ -985,6 +987,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       return ordering.compare(get(), o.get());
     }
 
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     public boolean equals(Object o)
     {
@@ -1000,7 +1003,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       return Objects.hash(ordering);
     }
   }
-
 
   /**
    * {@link BatchedResultsCursor} that wraps a {@link Yielder} of {@link ResultBatch} to provide individual rows
@@ -1071,7 +1073,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       }
     }
   }
-
 
   /**
    * {@link BatchedResultsCursor} that wraps a {@link BlockingQueue} of {@link ResultBatch} to provide individual
@@ -1154,7 +1155,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       return resultBatch != null;
     }
   }
-
 
   /**
    * Token to allow any {@link RecursiveAction} signal the others and the output sequence that something bad happened
@@ -1266,7 +1266,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   }
 
   /**
-   * Holder to accumlate metrics for all work done {@link ParallelMergeCombiningSequence}, containing layer 1 task
+   * Holder to accumulate metrics for all work done {@link ParallelMergeCombiningSequence}, containing layer 1 task
    * metrics in {@link #partitionMetrics} and final merge task metrics in {@link #mergeMetrics}, in order to compute
    * {@link MergeCombineMetrics} after the {@link ParallelMergeCombiningSequence} is completely consumed.
    */

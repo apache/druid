@@ -33,7 +33,7 @@ import org.apache.druid.data.input.StringTuple;
  */
 public class ArrayOfStringTuplesSerDe extends ArrayOfItemsSerDe<StringTuple>
 {
-  private static final ArrayOfStringsSerDe STRINGS_SERDE = new ArrayOfStringsSerDe();
+  private static final ArrayOfStringsNullSafeSerde STRINGS_SERDE = new ArrayOfStringsNullSafeSerde();
 
   @Override
   public byte[] serializeToByteArray(StringTuple[] items)

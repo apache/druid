@@ -21,7 +21,7 @@ import React from 'react';
 
 import { TableColumnSelector } from './table-column-selector';
 
-describe('table column', () => {
+describe('TableColumnSelector', () => {
   it('matches snapshot', () => {
     const tableColumn = (
       <TableColumnSelector

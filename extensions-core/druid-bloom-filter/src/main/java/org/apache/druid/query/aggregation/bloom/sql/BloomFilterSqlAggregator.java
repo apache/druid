@@ -37,10 +37,8 @@ import org.apache.druid.query.aggregation.bloom.BloomFilterAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -114,10 +112,10 @@ public class BloomFilterSqlAggregator implements SqlAggregator
 
           // Check input for equivalence.
           final boolean inputMatches;
-          final VirtualColumn virtualInput = virtualColumnRegistry.findVirtualColumns(theFactory.requiredFields())
-                                                                  .stream()
-                                                                  .findFirst()
-                                                                  .orElse(null);
+          final DruidExpression virtualInput = virtualColumnRegistry.findVirtualColumnExpressions(theFactory.requiredFields())
+                                                                    .stream()
+                                                                    .findFirst()
+                                                                    .orElse(null);
           if (virtualInput == null) {
             if (input.isDirectColumnAccess()) {
               inputMatches =
@@ -128,7 +126,7 @@ public class BloomFilterSqlAggregator implements SqlAggregator
                   input.getSimpleExtraction().getExtractionFn().equals(theFactory.getField().getExtractionFn());
             }
           } else {
-            inputMatches = ((ExpressionVirtualColumn) virtualInput).getExpression().equals(input.getExpression());
+            inputMatches = virtualInput.equals(input);
           }
 
           final boolean matches = inputMatches && theFactory.getMaxNumEntries() == maxNumEntries;
@@ -161,14 +159,13 @@ public class BloomFilterSqlAggregator implements SqlAggregator
           input.getSimpleExtraction().getExtractionFn()
       );
     } else {
-      VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-          plannerContext,
+      String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           input,
           inputOperand.getType()
       );
       spec = new DefaultDimensionSpec(
-          virtualColumn.getOutputName(),
-          StringUtils.format("%s:%s", name, virtualColumn.getOutputName())
+          virtualColumnName,
+          StringUtils.format("%s:%s", name, virtualColumnName)
       );
     }
 

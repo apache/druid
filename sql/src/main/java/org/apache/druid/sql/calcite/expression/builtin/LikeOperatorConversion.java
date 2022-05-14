@@ -26,7 +26,6 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -79,14 +78,13 @@ public class LikeOperatorConversion extends DirectOperatorConversion
           druidExpression.getSimpleExtraction().getExtractionFn()
       );
     } else if (virtualColumnRegistry != null) {
-      VirtualColumn v = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-          plannerContext,
+      String v = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           druidExpression,
           operands.get(0).getType()
       );
 
       return new LikeDimFilter(
-          v.getOutputName(),
+          v,
           RexLiteral.stringValue(operands.get(1)),
           operands.size() > 2 ? RexLiteral.stringValue(operands.get(2)) : null,
           null

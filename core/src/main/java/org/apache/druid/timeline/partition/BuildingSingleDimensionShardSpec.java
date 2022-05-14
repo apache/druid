@@ -37,8 +37,6 @@ import java.util.Objects;
  */
 public class BuildingSingleDimensionShardSpec extends BuildingDimensionRangeShardSpec
 {
-  public static final String TYPE = "building_single_dim";
-
   private final String dimension;
 
   @Nullable
@@ -108,6 +106,12 @@ public class BuildingSingleDimensionShardSpec extends BuildingDimensionRangeShar
   public <T> PartitionChunk<T> createChunk(T obj)
   {
     return new NumberedPartitionChunk<>(getPartitionNum(), 0, obj);
+  }
+
+  @Override
+  public String getType()
+  {
+    return Type.BUILDING_SINGLE_DIM;
   }
 
   @Override

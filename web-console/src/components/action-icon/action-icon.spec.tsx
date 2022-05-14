@@ -22,7 +22,7 @@ import React from 'react';
 
 import { ActionIcon } from './action-icon';
 
-describe('action icon', () => {
+describe('ActionIcon', () => {
   it('matches snapshot', () => {
     const actionIcon = <ActionIcon icon={IconNames.CLIPBOARD} />;
     const { container } = render(actionIcon);

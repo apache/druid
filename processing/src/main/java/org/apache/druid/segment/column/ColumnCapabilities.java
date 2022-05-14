@@ -105,6 +105,12 @@ public interface ColumnCapabilities extends TypeSignature<ValueType>
     return ColumnTypeFactory.ofType(this);
   }
 
+  @Override
+  default <T> TypeStrategy<T> getStrategy()
+  {
+    return ColumnTypeFactory.getInstance().getTypeStrategy(toColumnType());
+  }
+
   enum Capable
   {
     FALSE,
@@ -178,7 +184,7 @@ public interface ColumnCapabilities extends TypeSignature<ValueType>
   }
 
   /**
-   * This interface define the shape of a mechnism to allow for bespoke coercion of {@link Capable#UNKNOWN} into
+   * This interface defines the shape of a mechnism to allow for bespoke coercion of {@link Capable#UNKNOWN} into
    * {@link Capable#TRUE} or {@link Capable#FALSE} for each {@link Capable} of a {@link ColumnCapabilities}, as is
    * appropriate for the situation of the caller.
    */

@@ -373,24 +373,19 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
   public Optional<ByteSource> findPartitionFile(String supervisorTaskId, String subTaskId, Interval interval, int bucketId)
   {
     IdUtils.validateId("supervisorTaskId", supervisorTaskId);
+    IdUtils.validateId("subTaskId", subTaskId);
     for (StorageLocation location : shuffleDataLocations) {
       final File partitionDir = new File(location.getPath(), getPartitionDirPath(supervisorTaskId, interval, bucketId));
       if (partitionDir.exists()) {
         supervisorTaskCheckTimes.put(supervisorTaskId, getExpiryTimeFromNow());
-        final File[] segmentFiles = partitionDir.listFiles();
-        if (segmentFiles == null) {
-          return Optional.empty();
+        final File segmentFile = new File(partitionDir, subTaskId);
+        if (segmentFile.exists()) {
+          return Optional.of(Files.asByteSource(segmentFile));
         } else {
-          for (File segmentFile : segmentFiles) {
-            if (segmentFile.getName().equals(subTaskId)) {
-              return Optional.of(Files.asByteSource(segmentFile));
-            }
-          }
           return Optional.empty();
         }
       }
     }
-
     return Optional.empty();
   }
 

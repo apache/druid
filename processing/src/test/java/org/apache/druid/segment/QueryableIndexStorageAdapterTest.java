@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -30,6 +31,8 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -235,6 +238,71 @@ public class QueryableIndexStorageAdapterTest
     public void test_supportsLookupNameUtf8_partialNull()
     {
       Assert.assertTrue(partialNullSelector.supportsLookupNameUtf8());
+    }
+  }
+
+  public static class ManySelectorsOneColumnTest extends InitializedNullHandlingTest
+  {
+    private Cursor cursor;
+    private ColumnSelectorFactory columnSelectorFactory;
+    private final Closer closer = Closer.create();
+
+    @Before
+    public void setUp()
+    {
+      final QueryableIndex index = TestIndex.getMMappedTestIndex();
+      final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index);
+      final Sequence<Cursor> cursors = adapter.makeCursors(
+          null,
+          Intervals.ETERNITY,
+          VirtualColumns.EMPTY,
+          Granularities.ALL,
+          false,
+          null
+      );
+      final Yielder<Cursor> cursorYielder = Yielders.each(cursors);
+      cursor = cursorYielder.get();
+      columnSelectorFactory = cursor.getColumnSelectorFactory();
+      closer.register(cursorYielder);
+    }
+
+    @After
+    public void testDown() throws IOException
+    {
+      closer.close();
+    }
+
+    @Test
+    public void testTwoSelectorsOneComplexColumn()
+    {
+      final ColumnValueSelector<?> valueSelector = columnSelectorFactory.makeColumnValueSelector("quality_uniques");
+      MatcherAssert.assertThat(valueSelector.getObject(), CoreMatchers.instanceOf(HyperLogLogCollector.class));
+
+      final DimensionSelector dimensionSelector =
+          columnSelectorFactory.makeDimensionSelector(DefaultDimensionSpec.of("quality_uniques"));
+      Assert.assertNull(dimensionSelector.getObject());
+    }
+
+    @Test
+    public void testTwoSelectorsOneNumericColumn()
+    {
+      final ColumnValueSelector<?> valueSelector = columnSelectorFactory.makeColumnValueSelector("index");
+      MatcherAssert.assertThat(valueSelector.getObject(), CoreMatchers.instanceOf(Double.class));
+
+      final DimensionSelector dimensionSelector =
+          columnSelectorFactory.makeDimensionSelector(DefaultDimensionSpec.of("index"));
+      Assert.assertEquals("100.0", dimensionSelector.getObject());
+    }
+
+    @Test
+    public void testTwoSelectorsOneStringColumn()
+    {
+      final ColumnValueSelector<?> valueSelector = columnSelectorFactory.makeColumnValueSelector("market");
+      MatcherAssert.assertThat(valueSelector.getObject(), CoreMatchers.instanceOf(String.class));
+
+      final DimensionSelector dimensionSelector =
+          columnSelectorFactory.makeDimensionSelector(DefaultDimensionSpec.of("market"));
+      MatcherAssert.assertThat(dimensionSelector.getObject(), CoreMatchers.instanceOf(String.class));
     }
   }
 }

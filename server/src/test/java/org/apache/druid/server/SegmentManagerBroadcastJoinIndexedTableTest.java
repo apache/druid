@@ -38,7 +38,6 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
@@ -340,7 +339,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     final File segmentDir = new File(segmentDeepStorageDir, storageDir);
     FileUtils.mkdirp(segmentDir);
 
-    IndexMerger indexMerger =
+    IndexMergerV9 indexMerger =
         new IndexMergerV9(objectMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
 
     SegmentizerFactory factory = new BroadcastJoinableMMappedQueryableSegmentizerFactory(indexIO, KEY_COLUMNS);

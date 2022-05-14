@@ -55,6 +55,7 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.LogicalSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -74,12 +75,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @RunWith(Parameterized.class)
-public class SegmentMetadataQueryTest
+public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private static final SegmentMetadataQueryRunnerFactory FACTORY = new SegmentMetadataQueryRunnerFactory(
       new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()),
       QueryRunnerTestHelper.NOOP_QUERYWATCHER
@@ -194,13 +191,13 @@ public class SegmentMetadataQueryTest
 
     int preferedSize1 = 0;
     int placementSize2 = 0;
-    int overallSize1 = 152334;
-    int overallSize2 = 152334;
+    int overallSize1 = 153543;
+    int overallSize2 = 153543;
     if (bitmaps) {
       preferedSize1 = mmap1 ? 10881 : 10764;
       placementSize2 = mmap2 ? 10881 : 0;
-      overallSize1 = mmap1 ? 200136 : 200831;
-      overallSize2 = mmap2 ? 200136 : 200831;
+      overallSize1 = mmap1 ? 201345 : 200831;
+      overallSize2 = mmap2 ? 201345 : 200831;
     }
     expectedSegmentAnalysis1 = new SegmentAnalysis(
         id1.toString(),
@@ -242,7 +239,8 @@ public class SegmentMetadataQueryTest
                 "preferred",
                 null
             )
-        ), overallSize1,
+        ),
+        overallSize1,
         1209,
         null,
         null,
@@ -289,8 +287,9 @@ public class SegmentMetadataQueryTest
                 null,
                 null
             )
-            // null_column will be included only for incremental index, which makes a little bigger result than expected
-        ), overallSize2,
+        ),
+        // null_column will be included only for incremental index, which makes a little bigger result than expected
+        overallSize2,
         1209,
         null,
         null,
@@ -323,8 +322,8 @@ public class SegmentMetadataQueryTest
                 false,
                 0,
                 0,
-                null,
-                null,
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
                 null
             ),
             "placementish",
@@ -335,8 +334,8 @@ public class SegmentMetadataQueryTest
                 false,
                 0,
                 0,
-                null,
-                null,
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
                 null
             )
         ),
@@ -395,8 +394,8 @@ public class SegmentMetadataQueryTest
                 false,
                 0,
                 1,
-                null,
-                null,
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
                 null
             ),
             "placementish",
@@ -407,8 +406,8 @@ public class SegmentMetadataQueryTest
                 false,
                 0,
                 9,
-                null,
-                null,
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
                 null
             )
         ),
@@ -467,8 +466,8 @@ public class SegmentMetadataQueryTest
                 false,
                 0,
                 1,
-                null,
-                null,
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
                 null
             ),
             "quality_uniques",
@@ -678,8 +677,8 @@ public class SegmentMetadataQueryTest
                 false,
                 0,
                 0,
-                null,
-                null,
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
                 null
             )
         ),
@@ -742,8 +741,8 @@ public class SegmentMetadataQueryTest
                 false,
                 0,
                 0,
-                null,
-                null,
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
                 null
             )
         ),
@@ -802,8 +801,8 @@ public class SegmentMetadataQueryTest
                 false,
                 0,
                 0,
-                null,
-                null,
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
                 null
             )
         ),
@@ -862,8 +861,8 @@ public class SegmentMetadataQueryTest
                 false,
                 0,
                 0,
-                null,
-                null,
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
                 null
             )
         ),
@@ -1367,5 +1366,22 @@ public class SegmentMetadataQueryTest
         null
     );
     testSegmentMetadataQueryWithDefaultAnalysisMerge("floatNumericNull", analysis);
+  }
+
+  @Test
+  public void testStringNullOnlyColumn()
+  {
+    ColumnAnalysis analysis = new ColumnAnalysis(
+        ColumnType.STRING,
+        ValueType.STRING.toString(),
+        false,
+        true,
+        0,
+        1,
+        NullHandling.defaultStringValue(),
+        NullHandling.defaultStringValue(),
+        null
+    );
+    testSegmentMetadataQueryWithDefaultAnalysisMerge("null_column", analysis);
   }
 }

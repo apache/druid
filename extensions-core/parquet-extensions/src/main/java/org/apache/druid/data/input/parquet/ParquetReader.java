@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.parquet.example.data.Group;
 import org.apache.parquet.hadoop.example.GroupReadSupport;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -57,7 +58,7 @@ public class ParquetReader extends IntermediateRowParsingReader<Group>
       InputRowSchema inputRowSchema,
       InputEntity source,
       File temporaryDirectory,
-      JSONPathSpec flattenSpec,
+      @Nullable JSONPathSpec flattenSpec,
       boolean binaryAsString
   )
   {
@@ -129,6 +130,12 @@ public class ParquetReader extends IntermediateRowParsingReader<Group>
         closer.close();
       }
     };
+  }
+
+  @Override
+  protected InputEntity source()
+  {
+    return source;
   }
 
   @Override

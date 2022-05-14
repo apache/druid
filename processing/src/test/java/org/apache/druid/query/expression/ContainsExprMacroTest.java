@@ -22,7 +22,6 @@ package org.apache.druid.query.expression;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.InputBindings;
 import org.junit.Assert;
 import org.junit.Test;
@@ -53,7 +52,7 @@ public class ContainsExprMacroTest extends MacroTestBase
   {
     final ExprEval<?> result = eval("contains_string(a, 'oba')", InputBindings.withMap(ImmutableMap.of("a", "foobar")));
     Assert.assertEquals(
-        ExprEval.ofBoolean(true, ExprType.LONG).value(),
+        ExprEval.ofLongBoolean(true).value(),
         result.value()
     );
   }
@@ -63,7 +62,7 @@ public class ContainsExprMacroTest extends MacroTestBase
   {
     final ExprEval<?> result = eval("contains_string(a, 'bar')", InputBindings.withMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals(
-        ExprEval.ofBoolean(false, ExprType.LONG).value(),
+        ExprEval.ofLongBoolean(false).value(),
         result.value()
     );
   }
@@ -77,7 +76,7 @@ public class ContainsExprMacroTest extends MacroTestBase
 
     final ExprEval<?> result = eval("contains_string(a, null)", InputBindings.withMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals(
-        ExprEval.ofBoolean(true, ExprType.LONG).value(),
+        ExprEval.ofLongBoolean(true).value(),
         result.value()
     );
   }
@@ -87,7 +86,7 @@ public class ContainsExprMacroTest extends MacroTestBase
   {
     final ExprEval<?> result = eval("contains_string(a, '')", InputBindings.withMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals(
-        ExprEval.ofBoolean(true, ExprType.LONG).value(),
+        ExprEval.ofLongBoolean(true).value(),
         result.value()
     );
   }
@@ -101,7 +100,7 @@ public class ContainsExprMacroTest extends MacroTestBase
 
     final ExprEval<?> result = eval("contains_string(a, null)", InputBindings.withMap(ImmutableMap.of("a", "")));
     Assert.assertEquals(
-        ExprEval.ofBoolean(true, ExprType.LONG).value(),
+        ExprEval.ofLongBoolean(true).value(),
         result.value()
     );
   }
@@ -111,7 +110,7 @@ public class ContainsExprMacroTest extends MacroTestBase
   {
     final ExprEval<?> result = eval("contains_string(a, '')", InputBindings.withMap(ImmutableMap.of("a", "")));
     Assert.assertEquals(
-        ExprEval.ofBoolean(true, ExprType.LONG).value(),
+        ExprEval.ofLongBoolean(true).value(),
         result.value()
     );
   }
@@ -125,7 +124,7 @@ public class ContainsExprMacroTest extends MacroTestBase
 
     final ExprEval<?> result = eval("contains_string(a, null)", InputBindings.nilBindings());
     Assert.assertEquals(
-        ExprEval.ofBoolean(true, ExprType.LONG).value(),
+        ExprEval.ofLongBoolean(true).value(),
         result.value()
     );
   }
@@ -135,7 +134,7 @@ public class ContainsExprMacroTest extends MacroTestBase
   {
     final ExprEval<?> result = eval("contains_string(a, '')", InputBindings.nilBindings());
     Assert.assertEquals(
-        ExprEval.ofBoolean(!NullHandling.sqlCompatible(), ExprType.LONG).value(),
+        ExprEval.ofLongBoolean(!NullHandling.sqlCompatible()).value(),
         result.value()
     );
   }

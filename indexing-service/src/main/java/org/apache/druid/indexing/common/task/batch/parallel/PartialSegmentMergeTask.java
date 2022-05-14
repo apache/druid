@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.FileUtils;
@@ -42,6 +43,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
@@ -282,7 +284,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
                     getDataSource(),
                     interval,
                     Preconditions.checkNotNull(
-                        ParallelIndexSupervisorTask.findVersion(intervalToVersion, interval),
+                        AbstractBatchIndexTask.findVersion(intervalToVersion, interval),
                         "version for interval[%s]",
                         interval
                     ),
@@ -339,8 +341,11 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
               indexesToMerge,
               dataSchema.getGranularitySpec().isRollup(),
               dataSchema.getAggregators(),
+              dataSchema.getDimensionsSpec(),
               outDir,
               tuningConfig.getIndexSpec(),
+              tuningConfig.getIndexSpecForIntermediatePersists(),
+              new BaseProgressIndicator(),
               tuningConfig.getSegmentWriteOutMediumFactory(),
               tuningConfig.getMaxColumnsToMerge()
           )

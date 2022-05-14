@@ -381,7 +381,7 @@ public class HllSketchAggregatorFactoryTest
     }
 
     @Override
-    public ColumnType getType()
+    public ColumnType getIntermediateType()
     {
       return new ColumnType(ValueType.COMPLEX, DUMMY_TYPE_NAME, null);
     }

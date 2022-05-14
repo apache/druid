@@ -85,10 +85,10 @@ public class RemoteTaskActionClientTest
     responseBody.put("result", expectedLocks);
     String strResult = objectMapper.writeValueAsString(responseBody);
     final HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
+    EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
     EasyMock.replay(response);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        HttpResponseStatus.OK,
         response,
         StandardCharsets.UTF_8
     ).addChunk(strResult);
@@ -120,10 +120,10 @@ public class RemoteTaskActionClientTest
 
     // return status code 200 and a list with size equals 1
     final HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
+    EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.BAD_REQUEST).anyTimes();
     EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
     EasyMock.replay(response);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        HttpResponseStatus.BAD_REQUEST,
         response,
         StandardCharsets.UTF_8
     ).addChunk("testSubmitWithIllegalStatusCode");

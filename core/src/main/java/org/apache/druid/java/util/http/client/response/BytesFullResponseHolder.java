@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.http.client.response;
 
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -30,9 +29,9 @@ public class BytesFullResponseHolder extends FullResponseHolder<byte[]>
 {
   private final List<byte[]> chunks;
 
-  public BytesFullResponseHolder(HttpResponseStatus status, HttpResponse response)
+  public BytesFullResponseHolder(HttpResponse response)
   {
-    super(status, response);
+    super(response);
     this.chunks = new ArrayList<>();
   }
 

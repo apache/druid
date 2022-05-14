@@ -35,8 +35,6 @@ import java.util.Objects;
  */
 public class HashBucketShardSpec implements BucketNumberedShardSpec<BuildingHashBasedNumberedShardSpec>
 {
-  public static final String TYPE = "bucket_hash";
-
   private final int bucketId;
   private final int numBuckets;
   private final List<String> partitionDimensions;
@@ -108,6 +106,12 @@ public class HashBucketShardSpec implements BucketNumberedShardSpec<BuildingHash
         partitionDimensions,
         numBuckets
     ).createHashLookup(shardSpecs);
+  }
+
+  @Override
+  public String getType()
+  {
+    return Type.BUCKET_HASH;
   }
 
   @Override

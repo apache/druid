@@ -86,8 +86,10 @@ public abstract class NumericDimensionMergerV9 implements DimensionMergerV9
   }
 
   @Override
-  public final boolean canSkip()
+  public boolean hasOnlyNulls()
   {
+    // We have not implemented handling null-only numeric dimensions yet.
+    // In the future, this should return true when the dimension has only nulls.
     return false;
   }
 }

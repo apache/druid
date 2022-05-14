@@ -33,6 +33,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -277,6 +278,33 @@ public class SupervisorResource
           }
 
           return Response.ok(stats.get()).build();
+        }
+    );
+  }
+
+  @GET
+  @Path("/{id}/parseErrors")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response getAllTaskParseErrors(
+      @PathParam("id") final String id
+  )
+  {
+    return asLeaderWithSupervisorManager(
+        manager -> {
+          Optional<List<ParseExceptionReport>> parseErrors = manager.getSupervisorParseErrors(id);
+          if (!parseErrors.isPresent()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity(
+                               ImmutableMap.of(
+                                   "error",
+                                   StringUtils.format("[%s] does not exist", id)
+                               )
+                           )
+                           .build();
+          }
+
+          return Response.ok(parseErrors.get()).build();
         }
     );
   }

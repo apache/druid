@@ -148,7 +148,7 @@ public class DimensionRangeBucketShardSpecTest
     final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
     mapper.registerSubtypes(new NamedType(
         DimensionRangeBucketShardSpec.class,
-        DimensionRangeBucketShardSpec.TYPE
+        ShardSpec.Type.BUCKET_RANGE
     ));
     mapper.setInjectableValues(new Std().addValue(ObjectMapper.class, mapper));
     final DimensionRangeBucketShardSpec original = new DimensionRangeBucketShardSpec(
@@ -158,11 +158,9 @@ public class DimensionRangeBucketShardSpecTest
         StringTuple.create("end1", "end2")
     );
     final String json = mapper.writeValueAsString(original);
-    final DimensionRangeBucketShardSpec fromJson = (DimensionRangeBucketShardSpec) mapper.readValue(
-        json,
-        ShardSpec.class
-    );
-    Assert.assertEquals(original, fromJson);
+    ShardSpec shardSpec = mapper.readValue(json, ShardSpec.class);
+    Assert.assertEquals(ShardSpec.Type.BUCKET_RANGE, shardSpec.getType());
+    Assert.assertEquals(original, shardSpec);
   }
 
   @Test

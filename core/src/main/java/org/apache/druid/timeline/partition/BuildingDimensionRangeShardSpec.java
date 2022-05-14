@@ -39,8 +39,6 @@ import java.util.Objects;
  */
 public class BuildingDimensionRangeShardSpec implements BuildingShardSpec<DimensionRangeShardSpec>
 {
-  public static final String TYPE = "building_range";
-
   private final int bucketId;
   private final List<String> dimensions;
   @Nullable
@@ -122,6 +120,12 @@ public class BuildingDimensionRangeShardSpec implements BuildingShardSpec<Dimens
   public <T> PartitionChunk<T> createChunk(T obj)
   {
     return new NumberedPartitionChunk<>(partitionId, 0, obj);
+  }
+
+  @Override
+  public String getType()
+  {
+    return Type.BUILDING_RANGE;
   }
 
   @Override

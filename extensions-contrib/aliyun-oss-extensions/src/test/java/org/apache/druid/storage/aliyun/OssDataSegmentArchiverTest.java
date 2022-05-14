@@ -26,6 +26,8 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -72,8 +74,8 @@ public class OssDataSegmentArchiverTest
     }
   };
   private static final OssStorageConfig PUSHER_CONFIG = new OssStorageConfig();
-  private static final OSS OSS_CLIENT = EasyMock.createStrictMock(OSSClient.class);
-  private static final OssDataSegmentPuller PULLER = new OssDataSegmentPuller(OSS_CLIENT);
+  private static final Supplier<OSS> OSS_CLIENT = Suppliers.ofInstance(EasyMock.createStrictMock(OSSClient.class));
+  private static final OssDataSegmentPuller PULLER = new OssDataSegmentPuller(OSS_CLIENT.get());
   private static final DataSegment SOURCE_SEGMENT = DataSegment
       .builder()
       .binaryVersion(1)

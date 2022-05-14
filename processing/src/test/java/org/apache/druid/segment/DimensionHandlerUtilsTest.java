@@ -19,29 +19,154 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DoubleDimensionSchema;
+import org.apache.druid.data.input.impl.FloatDimensionSchema;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
-public class DimensionHandlerUtilsTest
+public class DimensionHandlerUtilsTest extends InitializedNullHandlingTest
 {
-  @Test
-  public void testRegisterDimensionHandlerProvider()
+
+  private static final String DIM_NAME = "dim";
+  private static final String TYPE = "testType";
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
+  @BeforeClass
+  public static void setupTests()
   {
     DimensionHandlerUtils.registerDimensionHandlerProvider(
-        "testType",
-        d -> new DoubleDimensionHandler(d)
+        TYPE,
+        d -> new DoubleDimensionHandler(d) {
+          @Override
+          public DimensionSchema getDimensionSchema(ColumnCapabilities capabilities)
+          {
+            return new TestDimensionSchema(d, null, capabilities.hasBitmapIndexes());
+          }
+        }
     );
+  }
 
+  @Test
+  public void testGetHandlerFromComplexCapabilities()
+  {
+    ColumnCapabilities capabilities = new ColumnCapabilitiesImpl().setType(ColumnType.ofComplex(TYPE));
     DimensionHandler dimensionHandler = DimensionHandlerUtils.getHandlerFromCapabilities(
-        "dim",
-        new ColumnCapabilitiesImpl().setType(new ColumnType(ValueType.COMPLEX, "testType", null)),
+        DIM_NAME,
+        capabilities,
         null
     );
 
-    Assert.assertEquals("dim", dimensionHandler.getDimensionName());
+    Assert.assertEquals(DIM_NAME, dimensionHandler.getDimensionName());
     Assert.assertTrue(dimensionHandler instanceof DoubleDimensionHandler);
+    Assert.assertTrue(dimensionHandler.getDimensionSchema(capabilities) instanceof TestDimensionSchema);
+  }
+
+  @Test
+  public void testGetHandlerFromUnknownComplexCapabilities()
+  {
+    expectedException.expect(ISE.class);
+    expectedException.expectMessage("Can't find DimensionHandlerProvider for typeName [unknown]");
+    ColumnCapabilities capabilities = new ColumnCapabilitiesImpl().setType(ColumnType.ofComplex("unknown"));
+    DimensionHandlerUtils.getHandlerFromCapabilities(
+        DIM_NAME,
+        capabilities,
+        null
+    );
+  }
+
+  @Test
+  public void testGetHandlerFromStringCapabilities()
+  {
+    ColumnCapabilities stringCapabilities = ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities()
+                                                                  .setHasBitmapIndexes(true)
+                                                                  .setDictionaryEncoded(true)
+                                                                  .setDictionaryValuesUnique(true)
+                                                                  .setDictionaryValuesUnique(true);
+    DimensionHandler stringHandler = DimensionHandlerUtils.getHandlerFromCapabilities(
+        DIM_NAME,
+        stringCapabilities,
+        DimensionSchema.MultiValueHandling.SORTED_SET
+    );
+    Assert.assertTrue(stringHandler instanceof StringDimensionHandler);
+    Assert.assertTrue(stringHandler.getDimensionSchema(stringCapabilities) instanceof StringDimensionSchema);
+  }
+
+  @Test
+  public void testGetHandlerFromFloatCapabilities()
+  {
+    ColumnCapabilities capabilities =
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT);
+    DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(
+        DIM_NAME,
+        capabilities,
+        null
+    );
+    Assert.assertTrue(handler instanceof FloatDimensionHandler);
+    Assert.assertTrue(handler.getDimensionSchema(capabilities) instanceof FloatDimensionSchema);
+  }
+
+  @Test
+  public void testGetHandlerFromDoubleCapabilities()
+  {
+    ColumnCapabilities capabilities =
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE);
+    DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(
+        DIM_NAME,
+        capabilities,
+        null
+    );
+    Assert.assertTrue(handler instanceof DoubleDimensionHandler);
+    Assert.assertTrue(handler.getDimensionSchema(capabilities) instanceof DoubleDimensionSchema);
+  }
+
+  @Test
+  public void testGetHandlerFromLongCapabilities()
+  {
+    ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG);
+    DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(
+        DIM_NAME,
+        capabilities,
+        null
+    );
+    Assert.assertTrue(handler instanceof LongDimensionHandler);
+    Assert.assertTrue(handler.getDimensionSchema(capabilities) instanceof LongDimensionSchema);
+  }
+
+  private static class TestDimensionSchema extends DimensionSchema
+  {
+
+    protected TestDimensionSchema(
+        String name,
+        MultiValueHandling multiValueHandling,
+        boolean createBitmapIndex
+    )
+    {
+      super(name, multiValueHandling, createBitmapIndex);
+    }
+
+    @Override
+    public String getTypeName()
+    {
+      return TYPE;
+    }
+
+    @Override
+    public ColumnType getColumnType()
+    {
+      return ColumnType.ofComplex(TYPE);
+    }
   }
 }

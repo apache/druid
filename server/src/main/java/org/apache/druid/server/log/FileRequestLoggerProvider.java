@@ -49,7 +49,6 @@ public class FileRequestLoggerProvider implements RequestLoggerProvider
   @NotNull
   private ScheduledExecutorFactory factory = null;
 
-
   @JacksonInject
   @NotNull
   @Json

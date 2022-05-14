@@ -33,6 +33,14 @@ import java.nio.ByteBuffer;
  * GroupByQueryEngineV2.
  *
  * Each GroupByColumnSelectorStrategy is associated with a single dimension.
+ *
+ * Strategies may have internal state, such as the dictionary maintained by
+ * {@link DictionaryBuildingStringGroupByColumnSelectorStrategy}. Callers should assume that the internal
+ * state footprint starts out empty (zero bytes) and is also reset to zero on each call to {@link #reset()}. Each call
+ * to {@link #initColumnValues} or {@link #writeToKeyBuffer(int, ColumnValueSelector, ByteBuffer)} returns the
+ * incremental increase in internal state footprint that happened as a result of that particular call.
+ *
+ * @see org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSelector the vectorized version
  */
 public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
 {
@@ -77,8 +85,11 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
    * @param selector    Value selector for a column.
    * @param columnIndex Index of the column within the row values array
    * @param valuess     Row values array, one index per column
+   *
+   * @return estimated increase in internal state footprint, in bytes, as a result of this operation. May be zero if
+   * memory did not increase as a result of this operation. Will not be negative.
    */
-  void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess);
+  int initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess);
 
   /**
    * Read the first value within a row values object (e. g. {@link org.apache.druid.segment.data.IndexedInts}, as the value in
@@ -88,14 +99,14 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
    * If the size of the row is > 0, write 1 to stack[] at columnIndex, otherwise write 0.
    *
    * @param keyBufferPosition Starting offset for this column's value within the grouping key.
-   * @param columnIndex       Index of the column within the row values array
+   * @param dimensionIndex    Index of this dimension within the {@code stack} array
    * @param rowObj            Row value object for this column
    * @param keyBuffer         grouping key
    * @param stack             array containing the current within-row value index for each column
    */
   void initGroupingKeyColumnValue(
       int keyBufferPosition,
-      int columnIndex,
+      int dimensionIndex,
       Object rowObj,
       ByteBuffer keyBuffer,
       int[] stack
@@ -123,30 +134,35 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
   );
 
   /**
-   * Retrieve a single object using the {@link ColumnValueSelector}.  The reading column must have a single value.
-   *
-   * @param selector Value selector for a column
-   *
-   * @return an object retrieved from the column
-   */
-  Object getOnlyValue(ColumnValueSelector selector);
-
-  /**
-   * Write a given object to the keyBuffer at keyBufferPosition.
+   * Write a single object from the given selector to the keyBuffer at keyBufferPosition. The reading column must
+   * have a single value. The position of the keyBuffer may be modified.
    *
    * @param keyBufferPosition starting offset for this column's value within the grouping key
-   * @param obj               row value object retrieved from {@link #getOnlyValue(ColumnValueSelector)}
+   * @param selector          selector to retrieve row value object from
    * @param keyBuffer         grouping key
+   *
+   * @return estimated increase in internal state footprint, in bytes, as a result of this operation. May be zero if
+   * memory did not increase as a result of this operation. Will not be negative.
    */
-  void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer);
+  int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer);
 
   /**
    * Return BufferComparator for values written using this strategy when limit is pushed down to segment scan.
+   *
    * @param keyBufferPosition starting offset for this column's value within the grouping key
-   * @param stringComparator stringComparator from LimitSpec for this column. If this is null, implementations
-   *                         will use the {@link org.apache.druid.query.ordering.StringComparators#LEXICOGRAPHIC}
-   *                         comparator.
+   * @param stringComparator  stringComparator from LimitSpec for this column. If this is null, implementations
+   *                          will use the {@link org.apache.druid.query.ordering.StringComparators#LEXICOGRAPHIC}
+   *                          comparator.
+   *
    * @return BufferComparator for comparing values written
    */
   Grouper.BufferComparator bufferComparator(int keyBufferPosition, @Nullable StringComparator stringComparator);
+
+  /**
+   * Reset any internal state held by this selector.
+   *
+   * After this method is called, any row objects or key objects generated by any methods of this class must be
+   * considered unreadable. Calling {@link #processValueFromGroupingKey} on that memory has undefined behavior.
+   */
+  void reset();
 }

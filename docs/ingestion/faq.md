@@ -86,7 +86,7 @@ You can use a [segment metadata query](../querying/segmentmetadataquery.md) for 
 ## How can I Reindex existing data in Druid with schema changes?
 
 You can use DruidInputSource with the [Parallel task](../ingestion/native-batch.md) to ingest existing druid segments using a new schema and change the name, dimensions, metrics, rollup, etc. of the segment.
-See [DruidInputSource](../ingestion/native-batch.md#druid-input-source) for more details.
+See [DruidInputSource](./native-batch-input-source.md) for more details.
 Or, if you use hadoop based ingestion, then you can use "dataSource" input spec to do reindexing.
 
 See the [Update existing data](../ingestion/data-management.md#update) section of the data management page for more details.
@@ -95,7 +95,7 @@ See the [Update existing data](../ingestion/data-management.md#update) section o
 
 In a lot of situations you may want coarser granularity for older data. Example, any data older than 1 month has only hour level granularity but newer data has minute level granularity. This use case is same as re-indexing.
 
-To do this use the [DruidInputSource](../ingestion/native-batch.md#druid-input-source) and run a [Parallel task](../ingestion/native-batch.md). The DruidInputSource will allow you to take in existing segments from Druid and aggregate them and feed them back into Druid. It will also allow you to filter the data in those segments while feeding it back in. This means if there are rows you want to delete, you can just filter them away during re-ingestion.
+To do this use the [DruidInputSource](./native-batch-input-source.md) and run a [Parallel task](../ingestion/native-batch.md). The DruidInputSource will allow you to take in existing segments from Druid and aggregate them and feed them back into Druid. It will also allow you to filter the data in those segments while feeding it back in. This means if there are rows you want to delete, you can just filter them away during re-ingestion.
 Typically the above will be run as a batch job to say everyday feed in a chunk of data and aggregate it.
 Or, if you use hadoop based ingestion, then you can use "dataSource" input spec to do reindexing.
 
