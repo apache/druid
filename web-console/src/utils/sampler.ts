@@ -139,13 +139,15 @@ export interface HeaderFromSampleResponseOptions {
   ignoreTimeColumn?: boolean;
   columnOrder?: string[];
   suffixColumnOrder?: string[];
+  useInput?: boolean;
 }
 
 export function headerFromSampleResponse(options: HeaderFromSampleResponseOptions): string[] {
-  const { sampleResponse, ignoreTimeColumn, columnOrder, suffixColumnOrder } = options;
+  const { sampleResponse, ignoreTimeColumn, columnOrder, suffixColumnOrder, useInput } = options;
 
+  const key = useInput ? 'input' : 'parsed';
   let columns = arrangeWithPrefixSuffix(
-    dedupe(sampleResponse.data.flatMap(s => (s.parsed ? Object.keys(s.parsed) : []))),
+    dedupe(sampleResponse.data.flatMap(s => (s[key] ? Object.keys(s[key]!) : []))),
     columnOrder || [TIME_COLUMN],
     suffixColumnOrder || [],
   );

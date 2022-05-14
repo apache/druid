@@ -69,6 +69,15 @@ module.exports = env => {
     },
     target: 'web',
     resolve: {
+      alias: {
+        // ./node_modules/@blueprintjs/core/src/common/_mixins.scss imports color definitions
+        // from the "lib" folder in @blueprintjs/colors but we need to import it from the "src"
+        // folder. The "src" version includes "!default" in variable definitions, which allows
+        // us to override color variables, but the "lib" version does not.
+        //
+        // Maps './node_modules/@blueprintjs/colors/lib/scss/colors.scss' to './node_modules/@blueprintjs/colors/src/_colors.scss'
+        '@blueprintjs/colors/lib/scss/colors': '@blueprintjs/colors/src/_colors',
+      },
       extensions: ['.tsx', '.ts', '.js', '.scss', '.css'],
       fallback: {
         os: false,

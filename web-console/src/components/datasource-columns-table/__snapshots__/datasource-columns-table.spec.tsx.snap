@@ -67,10 +67,14 @@ exports[`DatasourceColumnsTable matches snapshot on error 1`] = `
           Object {
             "Header": "Column name",
             "accessor": "COLUMN_NAME",
+            "className": "padded",
+            "width": 300,
           },
           Object {
             "Header": "Data type",
             "accessor": "DATA_TYPE",
+            "className": "padded",
+            "width": 200,
           },
         ]
       }
@@ -224,10 +228,14 @@ exports[`DatasourceColumnsTable matches snapshot on init 1`] = `
           Object {
             "Header": "Column name",
             "accessor": "COLUMN_NAME",
+            "className": "padded",
+            "width": 300,
           },
           Object {
             "Header": "Data type",
             "accessor": "DATA_TYPE",
+            "className": "padded",
+            "width": 200,
           },
         ]
       }
@@ -393,10 +401,14 @@ exports[`DatasourceColumnsTable matches snapshot on no data 1`] = `
           Object {
             "Header": "Column name",
             "accessor": "COLUMN_NAME",
+            "className": "padded",
+            "width": 300,
           },
           Object {
             "Header": "Data type",
             "accessor": "DATA_TYPE",
+            "className": "padded",
+            "width": 200,
           },
         ]
       }
@@ -550,10 +562,14 @@ exports[`DatasourceColumnsTable matches snapshot on some data 1`] = `
           Object {
             "Header": "Column name",
             "accessor": "COLUMN_NAME",
+            "className": "padded",
+            "width": 300,
           },
           Object {
             "Header": "Data type",
             "accessor": "DATA_TYPE",
+            "className": "padded",
+            "width": 200,
           },
         ]
       }

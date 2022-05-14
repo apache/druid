@@ -69,6 +69,8 @@ public class QueryContexts
   public static final String ENABLE_DEBUG = "debug";
   public static final String BY_SEGMENT_KEY = "bySegment";
   public static final String BROKER_SERVICE_NAME = "brokerService";
+  public static final String IN_SUB_QUERY_THRESHOLD_KEY = "inSubQueryThreshold";
+  public static final String TIME_BOUNDARY_PLANNING_KEY = "enableTimeBoundaryPlanning";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
@@ -91,6 +93,8 @@ public class QueryContexts
   public static final boolean DEFAULT_USE_FILTER_CNF = false;
   public static final boolean DEFAULT_SECONDARY_PARTITION_PRUNING = true;
   public static final boolean DEFAULT_ENABLE_DEBUG = false;
+  public static final int DEFAULT_IN_SUB_QUERY_THRESHOLD = Integer.MAX_VALUE;
+  public static final boolean DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING = false;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
@@ -335,6 +339,21 @@ public class QueryContexts
     return parseBoolean(queryContext, ENABLE_DEBUG, DEFAULT_ENABLE_DEBUG);
   }
 
+  public static int getInSubQueryThreshold(Map<String, Object> context)
+  {
+    return getInSubQueryThreshold(context, DEFAULT_IN_SUB_QUERY_THRESHOLD);
+  }
+
+  public static int getInSubQueryThreshold(Map<String, Object> context, int defaultValue)
+  {
+    return parseInt(context, IN_SUB_QUERY_THRESHOLD_KEY, defaultValue);
+  }
+
+  public static boolean isTimeBoundaryPlanningEnabled(Map<String, Object> queryContext)
+  {
+    return parseBoolean(queryContext, TIME_BOUNDARY_PLANNING_KEY, DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING);
+  }
+
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)
   {
     Object obj = query.getContextValue(MAX_SCATTER_GATHER_BYTES_KEY);
@@ -438,6 +457,12 @@ public class QueryContexts
   static <T> int parseInt(Query<T> query, String key, int defaultValue)
   {
     final Object val = query.getContextValue(key);
+    return val == null ? defaultValue : Numbers.parseInt(val);
+  }
+
+  static int parseInt(Map<String, Object> context, String key, int defaultValue)
+  {
+    final Object val = context.get(key);
     return val == null ? defaultValue : Numbers.parseInt(val);
   }
 

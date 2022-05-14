@@ -28,7 +28,7 @@ export const CenterMessage = React.memo(function CenterMessage(props: CenterMess
   const { children } = props;
 
   return (
-    <div className="center-message bp3-input">
+    <div className="center-message bp4-input">
       <div className="center-message-inner">{children}</div>
     </div>
   );

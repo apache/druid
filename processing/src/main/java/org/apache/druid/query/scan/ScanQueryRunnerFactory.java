@@ -373,7 +373,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       if (timeoutAt == null || timeoutAt == 0L) {
         responseContext.putTimeoutTime(JodaUtils.MAX_INSTANT);
       }
-      return engine.process((ScanQuery) query, segment, responseContext);
+      return engine.process((ScanQuery) query, segment, responseContext, queryPlus.getQueryMetrics());
     }
   }
 }

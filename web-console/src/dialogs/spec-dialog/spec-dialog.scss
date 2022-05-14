@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .spec-dialog {
-  &.bp3-dialog {
+  &.#{$bp-ns}-dialog {
     top: 5%;
     width: 90%;
   }

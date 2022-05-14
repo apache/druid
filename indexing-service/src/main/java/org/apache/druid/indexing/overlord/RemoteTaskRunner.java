@@ -54,6 +54,7 @@ import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningService;
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
@@ -74,6 +75,8 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
@@ -179,6 +182,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
   private final ConcurrentMap<String, ScheduledFuture> removedWorkerCleanups = new ConcurrentHashMap<>();
   private final ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy;
+  private final ServiceEmitter emitter;
   private ProvisioningService provisioningService;
 
   public RemoteTaskRunner(
@@ -189,7 +193,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       PathChildrenCacheFactory.Builder pathChildrenCacheFactory,
       HttpClient httpClient,
       Supplier<WorkerBehaviorConfig> workerConfigRef,
-      ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy
+      ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy,
+      ServiceEmitter emitter
   )
   {
     this.jsonMapper = jsonMapper;
@@ -213,6 +218,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         config.getPendingTasksRunnerNumThreads(),
         "rtr-pending-tasks-runner-%d"
     );
+    this.emitter = emitter;
   }
 
   @Override
@@ -934,6 +940,13 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         return false;
       }
 
+      final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+      IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+      emitter.emit(metricBuilder.build(
+          "task/pending/time",
+          new Duration(workItem.getQueueInsertionTime(), DateTimes.nowUtc()).getMillis())
+      );
+
       RemoteTaskRunnerWorkItem newWorkItem = workItem.withWorker(theZkWorker.getWorker(), null);
       runningTasks.put(task.getId(), newWorkItem);
       log.info("Task %s switched from pending to running (on [%s])", task.getId(), newWorkItem.getWorker().getHost());
@@ -1514,6 +1527,12 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   Map<String, String> getWorkersWithUnacknowledgedTask()
   {
     return workersWithUnacknowledgedTask;
+  }
+
+  @VisibleForTesting
+  ProvisioningStrategy<WorkerTaskRunner> getProvisioningStrategy()
+  {
+    return provisioningStrategy;
   }
 
   @Override

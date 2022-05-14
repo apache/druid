@@ -6,13 +6,14 @@ exports[`DatasourcesCard matches snapshot 1`] = `
   href="#datasources"
 >
   <div
-    class="bp3-card bp3-interactive bp3-elevation-1"
+    class="bp4-card bp4-interactive bp4-elevation-1"
   >
     <h5
-      class="bp3-heading"
+      class="bp4-heading"
     >
       <span
-        class="bp3-icon bp3-icon-multi-select"
+        aria-hidden="true"
+        class="bp4-icon bp4-icon-multi-select"
         icon="multi-select"
       >
         <svg
@@ -22,9 +23,6 @@ exports[`DatasourcesCard matches snapshot 1`] = `
           viewBox="0 0 16 16"
           width="16"
         >
-          <desc>
-            multi-select
-          </desc>
           <path
             d="M12 3.98H4c-.55 0-1 .45-1 1v1h8v5h1c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm3-3H7c-.55 0-1 .45-1 1v1h8v5h1c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm-6 6H1c-.55 0-1 .45-1 1v5c0 .55.45 1 1 1h8c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm-1 5H2v-3h6v3z"
             fill-rule="evenodd"

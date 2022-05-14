@@ -580,7 +580,8 @@ public class BatchAppenderatorsTest
                 null,
                 false,
                 false,
-                mode.name()
+                mode.name(),
+                null
             ),
             null,
             null,

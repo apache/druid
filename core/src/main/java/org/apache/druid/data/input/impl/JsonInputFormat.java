@@ -74,7 +74,11 @@ public class JsonInputFormat extends NestedInputFormat
     super(flattenSpec);
     this.featureSpec = featureSpec == null ? Collections.emptyMap() : featureSpec;
     this.objectMapper = new ObjectMapper();
-    this.keepNullColumns = keepNullColumns == null ? false : keepNullColumns;
+    if (keepNullColumns != null) {
+      this.keepNullColumns = keepNullColumns;
+    } else {
+      this.keepNullColumns = flattenSpec != null && flattenSpec.isUseFieldDiscovery();
+    }
     for (Entry<String, Boolean> entry : this.featureSpec.entrySet()) {
       Feature feature = Feature.valueOf(entry.getKey());
       objectMapper.configure(feature, entry.getValue());
@@ -86,6 +90,12 @@ public class JsonInputFormat extends NestedInputFormat
   public Map<String, Boolean> getFeatureSpec()
   {
     return featureSpec;
+  }
+
+  @JsonProperty
+  public boolean isKeepNullColumns()
+  {
+    return keepNullColumns;
   }
 
   @Override

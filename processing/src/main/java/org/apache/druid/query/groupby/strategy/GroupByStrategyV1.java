@@ -41,6 +41,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryEngine;
 import org.apache.druid.query.groupby.GroupByQueryHelper;
+import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
@@ -51,6 +52,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
@@ -233,7 +235,8 @@ public class GroupByStrategyV1 implements GroupByStrategy
                         outerQuery.withQuerySegmentSpec(
                             new MultipleIntervalSegmentSpec(ImmutableList.of(interval))
                         ),
-                        new IncrementalIndexStorageAdapter(innerQueryResultIndex)
+                        new IncrementalIndexStorageAdapter(innerQueryResultIndex),
+                        null
                     );
                   }
                 }
@@ -269,10 +272,14 @@ public class GroupByStrategyV1 implements GroupByStrategy
   }
 
   @Override
-  public Sequence<ResultRow> process(final GroupByQuery query, final StorageAdapter storageAdapter)
+  public Sequence<ResultRow> process(
+      final GroupByQuery query,
+      final StorageAdapter storageAdapter,
+      @Nullable final GroupByQueryMetrics groupByQueryMetrics
+  )
   {
     return Sequences.map(
-        engine.process(query, storageAdapter),
+        engine.process(query, storageAdapter, groupByQueryMetrics),
         row -> GroupByQueryHelper.toResultRow(query, row)
     );
   }

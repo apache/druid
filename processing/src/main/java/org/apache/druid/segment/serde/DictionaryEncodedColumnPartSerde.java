@@ -303,6 +303,8 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         final boolean hasMultipleValues = Feature.MULTI_VALUE.isSet(rFlags) || Feature.MULTI_VALUE_V3.isSet(rFlags);
 
+        builder.setType(ValueType.STRING);
+
         // Duplicate the first buffer since we are reading the dictionary twice.
         final GenericIndexed<String> rDictionary = GenericIndexed.read(
             buffer.duplicate(),
@@ -315,8 +317,6 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
             GenericIndexed.BYTE_BUFFER_STRATEGY,
             builder.getFileMapper()
         );
-
-        builder.setType(ValueType.STRING);
 
         final WritableSupplier<ColumnarInts> rSingleValuedColumn;
         final WritableSupplier<ColumnarMultiInts> rMultiValuedColumn;
@@ -338,30 +338,39 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
             rMultiValuedColumn,
             columnConfig.columnCacheSizeBytes()
         );
+
         builder
             .setHasMultipleValues(hasMultipleValues)
             .setHasNulls(firstDictionaryEntry == null)
             .setDictionaryEncodedColumnSupplier(dictionaryEncodedColumnSupplier);
 
+        GenericIndexed<ImmutableBitmap> rBitmaps = null;
+        ImmutableRTree rSpatialIndex = null;
         if (!Feature.NO_BITMAP_INDEX.isSet(rFlags)) {
-          GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
+          rBitmaps = GenericIndexed.read(
               buffer,
               bitmapSerdeFactory.getObjectStrategy(),
               builder.getFileMapper()
           );
-          builder.setBitmapIndex(
-              new StringBitmapIndexColumnPartSupplier(
-                  bitmapSerdeFactory.getBitmapFactory(),
-                  rBitmaps,
-                  rDictionary
-              )
-          );
         }
 
         if (buffer.hasRemaining()) {
-          ImmutableRTree rSpatialIndex =
-              new ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory()).fromByteBufferWithSize(buffer);
-          builder.setSpatialIndex(new SpatialIndexColumnPartSupplier(rSpatialIndex));
+          rSpatialIndex = new ImmutableRTreeObjectStrategy(
+              bitmapSerdeFactory.getBitmapFactory()
+          ).fromByteBufferWithSize(buffer);
+        }
+
+        if (rBitmaps != null || rSpatialIndex != null) {
+          builder.setIndexSupplier(
+              new DictionaryEncodedStringIndexSupplier(
+                  bitmapSerdeFactory.getBitmapFactory(),
+                  rDictionary,
+                  rBitmaps,
+                  rSpatialIndex
+              ),
+              rBitmaps != null,
+              rSpatialIndex != null
+          );
         }
       }
 

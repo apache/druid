@@ -183,7 +183,7 @@ public class AppenderatorsTest
           objectMapper,
           () -> 0
       );
-      IndexMerger indexMerger = new IndexMergerV9(
+      IndexMergerV9 indexMerger = new IndexMergerV9(
           objectMapper,
           indexIO,
           OffHeapMemorySegmentWriteOutMediumFactory.instance()

@@ -85,10 +85,11 @@ const DruidLogo = React.memo(function DruidLogo() {
 
 interface RestrictedModeProps {
   capabilities: Capabilities;
+  onUnrestrict(capabilities: Capabilities): void;
 }
 
 const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeProps) {
-  const { capabilities } = props;
+  const { capabilities, onUnrestrict } = props;
   const mode = capabilities.getModeExtended();
 
   let label: string;
@@ -136,7 +137,8 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
         <p>
           It appears that you are accessing the console on the Coordinator/Overlord shared service.
           Due to the lack of access to some APIs on this service the console will operate in a
-          limited mode. The full version of the console can be accessed on the Router service.
+          limited mode. The unrestricted version of the console can be accessed on the Router
+          service.
         </p>
       );
       break;
@@ -157,8 +159,8 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
       message = (
         <p>
           It appears that you are accessing the console on the Overlord service. Due to the lack of
-          access to some APIs on this service the console will operate in a limited mode. The full
-          version of the console can be accessed on the Router service.
+          access to some APIs on this service the console will operate in a limited mode. The
+          unrestricted version of the console can be accessed on the Router service.
         </p>
       );
       break;
@@ -168,7 +170,8 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
       message = (
         <p>
           Due to the lack of access to some APIs on this service the console will operate in a
-          limited mode. The full version of the console can be accessed on the Router service.
+          limited mode. The unrestricted version of the console can be accessed on the Router
+          service.
         </p>
       );
       break;
@@ -187,6 +190,27 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
             </ExternalLink>
             .
           </p>
+          <p>
+            It is possible that there is an issue with the capability detection. You can enable the
+            unrestricted console but certain features might not work if the underlying APIs are not
+            available.
+          </p>
+          <p>
+            <Button
+              icon={IconNames.WARNING_SIGN}
+              text={`Temporarily unrestrict console${capabilities.hasSql() ? '' : ' (with SQL)'}`}
+              onClick={() => onUnrestrict(Capabilities.FULL)}
+            />
+          </p>
+          {!capabilities.hasSql() && (
+            <p>
+              <Button
+                icon={IconNames.WARNING_SIGN}
+                text="Temporarily unrestrict console (without SQL)"
+                onClick={() => onUnrestrict(Capabilities.NO_SQL)}
+              />
+            </p>
+          )}
         </PopoverText>
       }
       position={Position.BOTTOM_RIGHT}
@@ -199,10 +223,11 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
 export interface HeaderBarProps {
   active: HeaderActiveTab;
   capabilities: Capabilities;
+  onUnrestrict(capabilities: Capabilities): void;
 }
 
 export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
-  const { active, capabilities } = props;
+  const { active, capabilities, onUnrestrict } = props;
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [doctorDialogOpen, setDoctorDialogOpen] = useState(false);
   const [coordinatorDynamicConfigDialogOpen, setCoordinatorDynamicConfigDialogOpen] =
@@ -296,6 +321,12 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
                 onClick={() => setForcedMode(Capabilities.OVERLORD)}
               />
             )}
+            {capabilitiesMode !== 'no-proxy' && (
+              <MenuItem
+                text="Force no management proxy mode"
+                onClick={() => setForcedMode(Capabilities.NO_PROXY)}
+              />
+            )}
           </>
         )}
       </MenuItem>
@@ -365,7 +396,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         />
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>
-        <RestrictedMode capabilities={capabilities} />
+        <RestrictedMode capabilities={capabilities} onUnrestrict={onUnrestrict} />
         <Popover2 content={configMenu} position={Position.BOTTOM_RIGHT}>
           <Button minimal icon={IconNames.COG} />
         </Popover2>
