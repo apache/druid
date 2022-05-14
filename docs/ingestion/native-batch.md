@@ -339,26 +339,14 @@ In hash partitioning, the partition function is used to compute hash of partitio
 
 #### Single-dimension range partitioning
 
-> Single dimension range partitioning is currently not supported in the sequential mode of the Parallel task.
+> Single dimension range partitioning is not supported in the sequential mode of the `index_parallel` task type.
+
+Range partitioning has [several benefits](#benefits-of-range-partitioning) related to storage footprint and query
+performance.
 
 The Parallel task will use one subtask when you set `maxNumConcurrentSubTasks` to 1.
 
 When you use this technique to partition your data, segment sizes may be unequally distributed if the data in your `partitionDimension` is also unequally distributed.  Therefore, to avoid imbalance in data layout, review the distribution of values in your source data before deciding on a partitioning strategy.
-
-Range partitioning has several benefits:
-
-1. Lower storage footprint due to combining similar data into the same segments, which improves compressibility.
-2. Better query performance due to Broker-level segment pruning, which removes segments from
-   consideration when they cannot possibly contain data matching the query filter.
-
-For Broker-level segment pruning to be effective, you must include the `partitionDimension` in the
-`WHERE` clause at query time, using a filter that supports pruning. Filters that support pruning
-include:
-
-- Equality on literals that match the type of the column, like `x = 'foo'` and `x IN ('foo', 'bar')`
-  where `x` is a string; or `x = 3` and `x IN (2, 3)` where `x` is numeric.
-- Comparison between string columns and string literals, like `x < 'foo'` or other comparisons
-  involving `<`, `>`, `<=`, or `>=`. Comparisons involving numbers do not support pruning.
 
 Range partitioning is not possible on multi-value dimensions. If the provided
 `partitionDimension` is multi-value, your ingestion job will report an error.
@@ -402,39 +390,12 @@ them to create the final segments. Finally, they push the final segments to the 
 #### Multi-dimension range partitioning
 
 > Multiple dimension (multi-dimension) range partitioning is an experimental feature.
-> Multi-dimension range partitioning is currently not supported in the sequential mode of the
-> Parallel task.
+> Multi-dimension range partitioning is not supported in the sequential mode of the
+> `index_parallel` task type.
 
-When you use multi-dimension range partitioning for your data, Druid is able to distribute segment
-sizes more evenly than with single dimension partitioning.
-
-Range partitioning has several benefits:
-
-1. Lower storage footprint due to combining similar data into the same segments, which improves compressibility.
-2. Better query performance due to Broker-level segment pruning, which removes segments from
-   consideration when they cannot possibly contain data matching the query filter.
-
-For Broker-level segment pruning to be effective, you must include a set of `partitionDimensions`,
-starting from the left, in the `WHERE` clause at query time using filters that support pruning.
-Filters that support pruning include:
-
-- Equality on literals that match the type of the column, like `x = 'foo'` and `x IN ('foo', 'bar')`
-  where `x` is a string; or `x = 3` and `x IN (2, 3)` where `x` is numeric.
-- Comparison between string columns and string literals, like `x < 'foo'` or other comparisons
-  involving `<`, `>`, `<=`, or `>=`. Comparisons involving numbers do not support pruning.
-
-For example, given the following `partitionDimensions`:
-
-```json
-"partitionsSpec": {
-  "type": "range",
-  "partitionDimensions": ["coutryName", "cityName"],
-  "targetRowsPerSegment": 5000
-}
-```
-
-Queries using filters that support pruning on "countryName" by itself, or on both "countryName" and
-"cityName", will be able to take advantage of Broker-level pruning.
+Range partitioning has [several benefits](#benefits-of-range-partitioning) related to storage footprint and query
+performance. Multi-dimension range partitioning improves over single-dimension range partitioning by allowing
+Druid to distribute segment sizes more evenly, and to prune on more dimensions.
 
 Range partitioning is not possible on multi-value dimensions. If one of the provided
 `partitionDimensions` is multi-value, your ingestion job will report an error.
@@ -446,6 +407,39 @@ Range partitioning is not possible on multi-value dimensions. If one of the prov
 |targetRowsPerSegment|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|none|either this or `maxRowsPerSegment`|
 |maxRowsPerSegment|Soft max for the number of rows to include in a partition.|none|either this or `targetRowsPerSegment`|
 |assumeGrouped|Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.|false|no|
+
+#### Benefits of range partitioning
+
+Range partitioning, either `single_dim` or `range`, has several benefits:
+
+1. Lower storage footprint due to combining similar data into the same segments, which improves compressibility.
+2. Better query performance due to Broker-level segment pruning, which removes segments from
+   consideration when they cannot possibly contain data matching the query filter.
+
+For Broker-level segment pruning to be effective, you must include partition dimensions in the `WHERE` clause. Each
+partition dimension can participate in pruning if the prior partition dimensions (those to its left) are also
+participating, and if the query uses filters that support pruning.
+
+Filters that support pruning include:
+
+- Equality on string literals, like `x = 'foo'` and `x IN ('foo', 'bar')` where `x` is a string.
+- Comparison between string columns and string literals, like `x < 'foo'` or other comparisons
+  involving `<`, `>`, `<=`, or `>=`.
+
+For example, if you configure the following `range` partitioning during ingestion:
+
+```json
+"partitionsSpec": {
+  "type": "range",
+  "partitionDimensions": ["coutryName", "cityName"],
+  "targetRowsPerSegment": 5000
+}
+```
+
+Then, filters like `WHERE countryName = 'United States'` or `WHERE countryName = 'United States' AND cityName = 'New York'`
+can make use of pruning. However, `WHERE cityName = 'New York'` cannot make use of pruning, because countryName is not
+involved. The clause `WHERE cityName LIKE 'New%'` cannot make use of pruning either, because LIKE filters do not
+support pruning.
 
 ### HTTP status endpoints
 
