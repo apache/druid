@@ -42,7 +42,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentQueryRunner;
@@ -94,7 +93,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 public class NestedQueryPushDownTest
@@ -251,19 +249,19 @@ public class NestedQueryPushDownTest
 
     NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<>(
         "GroupByBenchmark-computeBufferPool",
-        new OffheapBufferGenerator("compute", 10_000_000),
+        () -> ByteBuffer.allocate(10_000_000),
         0,
         Integer.MAX_VALUE
     );
 
     // limit of 3 is required since we simulate running historical running nested query and broker doing the final merge
     BlockingPool<ByteBuffer> mergePool = new DefaultBlockingPool<>(
-        new OffheapBufferGenerator("merge", 10_000_000),
+        () -> ByteBuffer.allocate(10_000_000),
         10
     );
     // limit of 3 is required since we simulate running historical running nested query and broker doing the final merge
     BlockingPool<ByteBuffer> mergePool2 = new DefaultBlockingPool<>(
-        new OffheapBufferGenerator("merge", 10_000_000),
+        () -> ByteBuffer.allocate(10_000_000),
         10
     );
 
@@ -864,34 +862,6 @@ public class NestedQueryPushDownTest
     );
     runners.add(groupByFactory2.getToolchest().preMergeQueryDecoration(tooSmallRunner));
     return runners;
-  }
-
-  private static class OffheapBufferGenerator implements Supplier<ByteBuffer>
-  {
-    private static final Logger log = new Logger(OffheapBufferGenerator.class);
-
-    private final String description;
-    private final int computationBufferSize;
-    private final AtomicLong count = new AtomicLong(0);
-
-    public OffheapBufferGenerator(String description, int computationBufferSize)
-    {
-      this.description = description;
-      this.computationBufferSize = computationBufferSize;
-    }
-
-    @Override
-    public ByteBuffer get()
-    {
-      log.info(
-          "Allocating new %s buffer[%,d] of size[%,d]",
-          description,
-          count.getAndIncrement(),
-          computationBufferSize
-      );
-
-      return ByteBuffer.allocateDirect(computationBufferSize);
-    }
   }
 
   private static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunnerForSegment(

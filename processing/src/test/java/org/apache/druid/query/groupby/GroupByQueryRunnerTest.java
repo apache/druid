@@ -389,24 +389,10 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
     final CloseableStupidPool<ByteBuffer> bufferPool = new CloseableStupidPool<>(
         "GroupByQueryEngine-bufferPool",
-        new Supplier<ByteBuffer>()
-        {
-          @Override
-          public ByteBuffer get()
-          {
-            return ByteBuffer.allocateDirect(processingConfig.intermediateComputeSizeBytes());
-          }
-        }
+        () -> ByteBuffer.allocate(processingConfig.intermediateComputeSizeBytes())
     );
     final CloseableDefaultBlockingPool<ByteBuffer> mergeBufferPool = new CloseableDefaultBlockingPool<>(
-        new Supplier<ByteBuffer>()
-        {
-          @Override
-          public ByteBuffer get()
-          {
-            return ByteBuffer.allocateDirect(processingConfig.intermediateComputeSizeBytes());
-          }
-        },
+        () -> ByteBuffer.allocate(processingConfig.intermediateComputeSizeBytes()),
         processingConfig.getNumMergeBuffers()
     );
     final GroupByStrategySelector strategySelector = new GroupByStrategySelector(

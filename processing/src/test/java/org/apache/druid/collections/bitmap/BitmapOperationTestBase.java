@@ -19,8 +19,11 @@
 
 package org.apache.druid.collections.bitmap;
 
+import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
+import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.roaringbitmap.buffer.BufferFastAggregation;
@@ -28,11 +31,15 @@ import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Random;
 
 public abstract class BitmapOperationTestBase
@@ -48,6 +55,8 @@ public abstract class BitmapOperationTestBase
   static final ImmutableBitmap[] GENERIC_ROARING = new ImmutableBitmap[NUM_BITMAPS];
   static final ConciseBitmapFactory CONCISE_FACTORY = new ConciseBitmapFactory();
   static final RoaringBitmapFactory ROARING_FACTORY = new RoaringBitmapFactory();
+  @GuardedBy("CLOSEABLES")
+  static final Map<Class<?>, List<Closeable>> CLOSEABLES = new HashMap<>();
   static Random rand = new Random(0);
   static long totalConciseBytes = 0;
   static long totalRoaringBytes = 0;
@@ -60,14 +69,31 @@ public abstract class BitmapOperationTestBase
     NullHandling.initializeForTests();
   }
 
-  protected static ImmutableConciseSet makeOffheapConcise(ImmutableConciseSet concise)
+  protected static ResourceHolder<ImmutableConciseSet> makeOffheapConcise(ImmutableConciseSet concise)
   {
     final byte[] bytes = concise.toBytes();
     totalConciseBytes += bytes.length;
     conciseCount++;
-    final ByteBuffer buf = ByteBuffer.allocateDirect(bytes.length).put(bytes);
+
+    final ResourceHolder<ByteBuffer> bufHolder = ByteBufferUtils.allocateDirect(bytes.length);
+    final ByteBuffer buf = bufHolder.get().put(bytes);
     buf.rewind();
-    return new ImmutableConciseSet(buf.asIntBuffer());
+    final ImmutableConciseSet bitmap = new ImmutableConciseSet(buf.asIntBuffer());
+
+    return new ResourceHolder<ImmutableConciseSet>()
+    {
+      @Override
+      public ImmutableConciseSet get()
+      {
+        return bitmap;
+      }
+
+      @Override
+      public void close()
+      {
+        bufHolder.close();
+      }
+    };
   }
 
   protected static ImmutableRoaringBitmap writeImmutable(MutableRoaringBitmap r, ByteBuffer buf) throws IOException
@@ -111,13 +137,29 @@ public abstract class BitmapOperationTestBase
     System.out.flush();
   }
 
-  protected static ImmutableRoaringBitmap makeOffheapRoaring(MutableRoaringBitmap r) throws IOException
+  protected static ResourceHolder<ImmutableRoaringBitmap> makeOffheapRoaring(MutableRoaringBitmap r) throws IOException
   {
     final int size = r.serializedSizeInBytes();
-    final ByteBuffer buf = ByteBuffer.allocateDirect(size);
+    final ResourceHolder<ByteBuffer> bufHolder = ByteBufferUtils.allocateDirect(size);
+    final ByteBuffer buf = bufHolder.get();
     totalRoaringBytes += size;
     roaringCount++;
-    return writeImmutable(r, buf);
+    final ImmutableRoaringBitmap bitmap = writeImmutable(r, buf);
+
+    return new ResourceHolder<ImmutableRoaringBitmap>()
+    {
+      @Override
+      public ImmutableRoaringBitmap get()
+      {
+        return bitmap;
+      }
+
+      @Override
+      public void close()
+      {
+        bufHolder.close();
+      }
+    };
   }
 
   protected static ImmutableRoaringBitmap makeImmutableRoaring(MutableRoaringBitmap r) throws IOException
