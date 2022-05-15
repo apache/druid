@@ -1733,7 +1733,7 @@
                             <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
                             <argLine>
                                 ${jdk.surefire.argLine}
-                                -Xmx768m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
+                                -Xmx1280m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
                                 -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                                 -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
                                 <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
