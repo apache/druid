@@ -110,7 +110,7 @@ public class CompressionStrategyTest
   }
 
   @Test
-  public void testDirectMemoryOperations() throws IOException
+  public void testDirectMemoryOperations()
   {
     ByteBuffer compressionOut = compressionStrategy.getCompressor().allocateOutBuffer(originalData.length, closer);
     ByteBuffer compressed = compressionStrategy.getCompressor().compress(ByteBuffer.wrap(originalData), compressionOut);

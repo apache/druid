@@ -108,5 +108,15 @@ public class BitmapOperationAgainstConsecutiveRunsTest extends BitmapOperationTe
         throw new RuntimeException(e);
       }
     }
+
+    for (int i = 0; i < NUM_BITMAPS; i++) {
+      CONCISE[i] = null;
+      OFF_HEAP_CONCISE[i] = null;
+      ROARING[i] = null;
+      IMMUTABLE_ROARING[i] = null;
+      OFF_HEAP_ROARING[i] = null;
+      GENERIC_CONCISE[i] = null;
+      GENERIC_ROARING[i] = null;
+    }
   }
 }

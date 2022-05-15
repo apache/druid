@@ -33,6 +33,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
+ *
  */
 public class ByteBufferUtils
 {
@@ -149,7 +150,8 @@ public class ByteBufferUtils
    */
   public static ResourceHolder<ByteBuffer> allocateDirect(final int size)
   {
-    class DirectByteBufferHolder implements ResourceHolder<ByteBuffer> {
+    class DirectByteBufferHolder implements ResourceHolder<ByteBuffer>
+    {
       private final AtomicBoolean closed = new AtomicBoolean(false);
       private volatile ByteBuffer buf = ByteBuffer.allocateDirect(size);
 
