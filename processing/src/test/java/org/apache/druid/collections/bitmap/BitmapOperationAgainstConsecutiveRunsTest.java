@@ -21,11 +21,9 @@ package org.apache.druid.collections.bitmap;
 
 import org.apache.druid.extendedset.intset.ConciseSet;
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
-import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
-import java.io.IOException;
 import java.util.BitSet;
 
 public class BitmapOperationAgainstConsecutiveRunsTest extends BitmapOperationTestBase
@@ -68,16 +66,10 @@ public class BitmapOperationAgainstConsecutiveRunsTest extends BitmapOperationTe
       ROARING[i] = r;
       IMMUTABLE_ROARING[i] = makeImmutableRoaring(r);
       OFF_HEAP_ROARING[i] = makeOffheapRoaring(r);
-      GENERIC_CONCISE[i] = new WrappedImmutableConciseBitmap(OFF_HEAP_CONCISE[i].get());
-      GENERIC_ROARING[i] = new WrappedImmutableRoaringBitmap(OFF_HEAP_ROARING[i].get());
+      GENERIC_CONCISE[i] = new WrappedImmutableConciseBitmap(OFF_HEAP_CONCISE[i]);
+      GENERIC_ROARING[i] = new WrappedImmutableRoaringBitmap(OFF_HEAP_ROARING[i]);
     }
     unionCount = expectedUnion.cardinality();
     printSizeStats(DENSITY, "Random Alternating Bitmap");
-  }
-
-  @AfterClass
-  public static void tearDownClass() throws IOException
-  {
-    reset();
   }
 }
