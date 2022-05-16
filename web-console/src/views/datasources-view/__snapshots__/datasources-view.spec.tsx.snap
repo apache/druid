@@ -2,7 +2,7 @@
 
 exports[`DatasourcesView matches snapshot 1`] = `
 <div
-  className="datasource-view app-view"
+  className="datasources-view app-view"
 >
   <Memo(ViewControlBar)
     label="Datasources"
@@ -164,10 +164,11 @@ exports[`DatasourcesView matches snapshot 1`] = `
           "Cell": [Function],
           "Header": "Availability",
           "accessor": "num_segments",
+          "className": "padded",
           "filterable": false,
-          "minWidth": 200,
           "show": true,
           "sortMethod": [Function],
+          "width": 220,
         },
         Object {
           "Cell": [Function],
@@ -177,9 +178,10 @@ exports[`DatasourcesView matches snapshot 1`] = `
             detail
           </React.Fragment>,
           "accessor": "num_segments_to_load",
+          "className": "padded",
           "filterable": false,
-          "minWidth": 100,
           "show": true,
+          "width": 180,
         },
         Object {
           "Cell": [Function],
@@ -189,6 +191,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
             data size
           </React.Fragment>,
           "accessor": "total_data_size",
+          "className": "padded",
           "filterable": false,
           "show": true,
           "width": 100,
@@ -201,6 +204,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
             minimum / average / maximum
           </React.Fragment>,
           "accessor": "avg_segment_rows",
+          "className": "padded",
           "filterable": false,
           "show": true,
           "width": 220,
@@ -213,6 +217,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
             minimum / average / maximum
           </React.Fragment>,
           "accessor": "avg_segment_size",
+          "className": "padded",
           "filterable": false,
           "show": false,
           "width": 270,
@@ -225,6 +230,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
             granularity
           </React.Fragment>,
           "accessor": [Function],
+          "className": "padded",
           "filterable": false,
           "id": "segment_granularity",
           "show": false,
@@ -238,6 +244,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
             rows
           </React.Fragment>,
           "accessor": "total_rows",
+          "className": "padded",
           "filterable": false,
           "show": true,
           "width": 100,
@@ -250,6 +257,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
             (bytes)
           </React.Fragment>,
           "accessor": "avg_row_size",
+          "className": "padded",
           "filterable": false,
           "show": true,
           "width": 100,
@@ -262,6 +270,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
             size
           </React.Fragment>,
           "accessor": "replicated_size",
+          "className": "padded",
           "filterable": false,
           "show": true,
           "width": 100,
@@ -283,6 +292,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
             bytes / segments / intervals
           </React.Fragment>,
           "accessor": [Function],
+          "className": "padded",
           "filterable": false,
           "id": "percentCompacted",
           "show": true,
@@ -296,6 +306,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
             compacted
           </React.Fragment>,
           "accessor": [Function],
+          "className": "padded",
           "filterable": false,
           "id": "leftToBeCompacted",
           "show": true,
@@ -307,8 +318,8 @@ exports[`DatasourcesView matches snapshot 1`] = `
           "accessor": [Function],
           "filterable": false,
           "id": "retention",
-          "minWidth": 100,
           "show": true,
+          "width": 200,
         },
         Object {
           "Cell": [Function],

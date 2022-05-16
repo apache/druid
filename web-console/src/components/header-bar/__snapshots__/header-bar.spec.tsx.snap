@@ -76,6 +76,7 @@ exports[`HeaderBar matches snapshot 1`] = `
           "queryType": "nativeAndSql",
         }
       }
+      onUnrestrict={[Function]}
     />
     <Blueprint4.Popover2
       boundary="clippingParents"

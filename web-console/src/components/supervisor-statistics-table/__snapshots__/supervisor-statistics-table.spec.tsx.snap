@@ -81,13 +81,17 @@ exports[`SupervisorStatisticsTable matches snapshot on error 1`] = `
           Object {
             "Header": "Task ID",
             "accessor": [Function],
+            "className": "padded",
             "id": "task_id",
+            "width": 400,
           },
           Object {
             "Cell": [Function],
             "Header": "Totals",
             "accessor": [Function],
+            "className": "padded",
             "id": "total",
+            "width": 200,
           },
         ]
       }
@@ -255,13 +259,17 @@ exports[`SupervisorStatisticsTable matches snapshot on init 1`] = `
           Object {
             "Header": "Task ID",
             "accessor": [Function],
+            "className": "padded",
             "id": "task_id",
+            "width": 400,
           },
           Object {
             "Cell": [Function],
             "Header": "Totals",
             "accessor": [Function],
+            "className": "padded",
             "id": "total",
+            "width": 200,
           },
         ]
       }
@@ -455,13 +463,17 @@ exports[`SupervisorStatisticsTable matches snapshot on no data 1`] = `
           Object {
             "Header": "Task ID",
             "accessor": [Function],
+            "className": "padded",
             "id": "task_id",
+            "width": 400,
           },
           Object {
             "Cell": [Function],
             "Header": "Totals",
             "accessor": [Function],
+            "className": "padded",
             "id": "total",
+            "width": 200,
           },
         ]
       }
@@ -629,31 +641,41 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
           Object {
             "Header": "Task ID",
             "accessor": [Function],
+            "className": "padded",
             "id": "task_id",
+            "width": 400,
           },
           Object {
             "Cell": [Function],
             "Header": "Totals",
             "accessor": [Function],
+            "className": "padded",
             "id": "total",
+            "width": 200,
           },
           Object {
             "Cell": [Function],
             "Header": "1m",
             "accessor": [Function],
+            "className": "padded",
             "id": "1m",
+            "width": 200,
           },
           Object {
             "Cell": [Function],
             "Header": "5m",
             "accessor": [Function],
+            "className": "padded",
             "id": "5m",
+            "width": 200,
           },
           Object {
             "Cell": [Function],
             "Header": "15m",
             "accessor": [Function],
+            "className": "padded",
             "id": "15m",
+            "width": 200,
           },
         ]
       }

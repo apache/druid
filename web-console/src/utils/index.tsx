@@ -18,6 +18,7 @@
 
 export * from './capabilities';
 export * from './column-metadata';
+export * from './data-type-utils';
 export * from './date';
 export * from './druid-lookup';
 export * from './druid-query';
