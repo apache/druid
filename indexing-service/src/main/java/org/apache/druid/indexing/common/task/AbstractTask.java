@@ -28,11 +28,14 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.HashMap;
@@ -41,6 +44,11 @@ import java.util.Map;
 
 public abstract class AbstractTask implements Task
 {
+
+  // This is mainly to avoid using combinations of IOConfig flags to figure out the ingestion mode and
+  // also to use the mode as dimension in metrics
+  private final IngestionMode ingestionMode;
+
   @JsonIgnore
   private final String id;
 
@@ -57,9 +65,33 @@ public abstract class AbstractTask implements Task
 
   private ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
 
+  protected AbstractTask(String id, String dataSource, Map<String, Object> context, IngestionMode ingestionMode)
+  {
+    this(id, null, null, dataSource, context, ingestionMode);
+  }
+
   protected AbstractTask(String id, String dataSource, Map<String, Object> context)
   {
-    this(id, null, null, dataSource, context);
+    this(id, null, null, dataSource, context, IngestionMode.NONE);
+  }
+
+  protected AbstractTask(
+      String id,
+      @Nullable String groupId,
+      @Nullable TaskResource taskResource,
+      String dataSource,
+      @Nullable Map<String, Object> context,
+      @Nonnull IngestionMode ingestionMode
+  )
+  {
+    this.id = Preconditions.checkNotNull(id, "id");
+    this.groupId = groupId == null ? id : groupId;
+    this.taskResource = taskResource == null ? new TaskResource(id, 1) : taskResource;
+    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
+    // Copy the given context into a new mutable map because the Druid indexing service can add some internal contexts.
+    this.context = context == null ? new HashMap<>() : new HashMap<>(context);
+    this.ingestionMode = ingestionMode == null ? IngestionMode.NONE : ingestionMode;
+    IndexTaskUtils.setTaskDimensions(metricBuilder, this);
   }
 
   protected AbstractTask(
@@ -70,13 +102,7 @@ public abstract class AbstractTask implements Task
       @Nullable Map<String, Object> context
   )
   {
-    this.id = Preconditions.checkNotNull(id, "id");
-    this.groupId = groupId == null ? id : groupId;
-    this.taskResource = taskResource == null ? new TaskResource(id, 1) : taskResource;
-    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-    // Copy the given context into a new mutable map because the Druid indexing service can add some internal contexts.
-    this.context = context == null ? new HashMap<>() : new HashMap<>(context);
-    IndexTaskUtils.setTaskDimensions(metricBuilder, this);
+    this(id, groupId, taskResource, dataSource, context, IngestionMode.NONE);
   }
 
   public static String getOrMakeId(@Nullable String id, final String typeName, String dataSource)
@@ -228,4 +254,45 @@ public abstract class AbstractTask implements Task
   {
     return metricBuilder;
   }
+
+  @Override
+  public IngestionMode getIngestionMode()
+  {
+    return ingestionMode;
+  }
+
+  protected static IngestionMode computeIngestionMode(
+      @Nullable Boolean isAppendToExisting,
+      @Nullable Boolean isDropExisting
+  )
+  {
+
+    isAppendToExisting = isAppendToExisting == null ? false : isAppendToExisting;
+    isDropExisting = isDropExisting == null ? false : isDropExisting;
+
+    if (!isAppendToExisting && isDropExisting) {
+      return IngestionMode.REPLACE;
+    } else if (isAppendToExisting && !isDropExisting) {
+      return IngestionMode.APPEND;
+    } else if (!isAppendToExisting && !isDropExisting) {
+      return IngestionMode.REPLACE_LEGACY;
+    }
+    throw new IAE("Cannot simultaneously replace and append to existing segments. "
+                  + "Either dropExisting or appendToExisting should be set to false");
+  }
+
+  public void emitMetric(
+      ServiceEmitter emitter,
+      String metric,
+      Number value
+  )
+  {
+
+    if (emitter == null || metric == null || value == null) {
+      return;
+    }
+    emitter.emit(getMetricBuilder().build(metric, value));
+  }
+
+
 }

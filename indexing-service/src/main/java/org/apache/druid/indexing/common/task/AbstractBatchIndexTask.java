@@ -60,14 +60,11 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
-import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -130,9 +127,9 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   // Store lock versions
   Map<Interval, String> intervalToVersion = new HashMap<>();
 
-  protected AbstractBatchIndexTask(String id, String dataSource, Map<String, Object> context)
+  protected AbstractBatchIndexTask(String id, String dataSource, Map<String, Object> context, IngestionMode ingestionMode)
   {
-    super(id, dataSource, context);
+    super(id, dataSource, context, ingestionMode);
     maxAllowedLockCount = -1;
   }
 
@@ -142,10 +139,11 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       @Nullable TaskResource taskResource,
       String dataSource,
       @Nullable Map<String, Object> context,
-      int maxAllowedLockCount
+      int maxAllowedLockCount,
+      IngestionMode ingestionMode
   )
   {
-    super(id, groupId, taskResource, dataSource, context);
+    super(id, groupId, taskResource, dataSource, context, ingestionMode);
     this.maxAllowedLockCount = maxAllowedLockCount;
   }
 
@@ -309,14 +307,14 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
         Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
     );
-    BatchIOConfig.BatchIngestionMode batchIngestionMode = ioConfig.getBatchIngestionMode();
-    final boolean useSharedLock = batchIngestionMode == BatchIOConfig.BatchIngestionMode.APPEND
+    IngestionMode ingestionMode = getIngestionMode();
+    final boolean useSharedLock = ingestionMode == IngestionMode.APPEND
                                   && getContextValue(Tasks.USE_SHARED_LOCK, false);
     // Respect task context value most.
-    if (forceTimeChunkLock || batchIngestionMode == BatchIOConfig.BatchIngestionMode.REPLACE) {
+    if (forceTimeChunkLock || ingestionMode == IngestionMode.REPLACE) {
       log.info(
           "forceTimeChunkLock[%s] is set to true or mode[%s] is replace. Use timeChunk lock",
-          forceTimeChunkLock, batchIngestionMode
+          forceTimeChunkLock, ingestionMode
       );
       taskLockHelper = new TaskLockHelper(false, useSharedLock);
       if (!intervals.isEmpty()) {
@@ -512,12 +510,12 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    * in addition to the partition ID which represents the ordinal in the perfectly rolled up segment set.
    */
   public static boolean isGuaranteedRollup(
-      BatchIOConfig.BatchIngestionMode batchIngestionMode,
+      IngestionMode ingestionMode,
       IndexTuningConfig tuningConfig
   )
   {
     Preconditions.checkArgument(
-        !(batchIngestionMode == BatchIOConfig.BatchIngestionMode.APPEND && tuningConfig.isForceGuaranteedRollup()),
+        !(ingestionMode == IngestionMode.APPEND && tuningConfig.isForceGuaranteedRollup()),
         "Perfect rollup cannot be guaranteed when appending to existing dataSources"
     );
     return tuningConfig.isForceGuaranteedRollup();
@@ -869,46 +867,4 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     );
   }
 
-
-  protected ServiceEventBuilder<ServiceMetricEvent> buildEvent(String subMetrics, Number value)
-  {
-    // make "base" metric name similar (i.e. "ingest") to the existing ingestion shuffle metrics
-    return getMetricBuilder().build(StringUtils.format("ingest/%s", subMetrics), value);
-  }
-
-  protected void emitMetric(
-      ServiceEmitter emitter,
-      String metric,
-      Number value
-  )
-  {
-
-    if (emitter == null) {
-      return;
-    }
-    emitter.emit(buildEvent(metric, value));
-  }
-
-  protected void emitBatchIngestionModeMetrics(
-      ServiceEmitter emitter,
-      BatchIOConfig.BatchIngestionMode mode
-  )
-  {
-
-
-    switch (mode) {
-      case APPEND:
-        emitMetric(emitter, "batch/append/count", 1);
-        break;
-      case REPLACE:
-        emitMetric(emitter, "batch/replace/count", 1);
-        break;
-      case OVERWRITE:
-        emitMetric(emitter, "batch/overwrite/count", 1);
-        break;
-      default:
-        log.error("We should never hit this code, mode %s: ", mode.name());
-        break;
-    }
-  }
 }

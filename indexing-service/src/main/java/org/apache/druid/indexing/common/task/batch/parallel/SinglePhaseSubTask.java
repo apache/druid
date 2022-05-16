@@ -39,6 +39,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
+import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -55,7 +56,6 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
-import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
@@ -162,7 +162,11 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         groupId,
         taskResource,
         ingestionSchema.getDataSchema().getDataSource(),
-        context
+        context,
+        AbstractTask.computeIngestionMode(
+            ingestionSchema.getIOConfig().isAppendToExisting(),
+            ingestionSchema.getIOConfig().isDropExisting()
+        )
     );
 
     if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup()) {
@@ -173,8 +177,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
-    this.missingIntervalsInOverwriteMode = ingestionSchema.getIOConfig().getBatchIngestionMode()
-                                           != BatchIOConfig.BatchIngestionMode.APPEND
+    this.missingIntervalsInOverwriteMode = ingestionSchema.getIOConfig().isAppendToExisting() != true
                                            && ingestionSchema.getDataSchema()
                                                              .getGranularitySpec()
                                                              .inputIntervals()
@@ -300,7 +303,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   @Override
   public boolean requireLockExistingSegments()
   {
-    return ingestionSchema.getIOConfig().getBatchIngestionMode() != BatchIOConfig.BatchIngestionMode.APPEND;
+    return getIngestionMode() != IngestionMode.APPEND;
   }
 
   @Override
@@ -390,7 +393,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         new SupervisorTaskAccess(getSupervisorTaskId(), taskClient),
         getIngestionSchema().getDataSchema(),
         getTaskLockHelper(),
-        ingestionSchema.getIOConfig().getBatchIngestionMode(),
+        getIngestionMode(),
         partitionsSpec,
         useLineageBasedSegmentAllocation
     );

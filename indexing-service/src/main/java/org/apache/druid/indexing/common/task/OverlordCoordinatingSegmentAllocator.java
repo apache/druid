@@ -30,7 +30,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.TaskLockHelper.OverwritingRootGenerationPartitions;
 import org.apache.druid.indexing.common.task.batch.parallel.SupervisorTaskAccess;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -56,7 +55,7 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocatorFor
       final @Nullable SupervisorTaskAccess supervisorTaskAccess,
       final DataSchema dataSchema,
       final TaskLockHelper taskLockHelper,
-      final BatchIOConfig.BatchIngestionMode batchIngestionMode,
+      final AbstractTask.IngestionMode ingestionMode,
       final PartitionsSpec partitionsSpec
   )
   {
@@ -73,7 +72,7 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocatorFor
               .bucketInterval(row.getTimestamp())
               .or(granularitySpec.getSegmentGranularity().bucket(row.getTimestamp()));
           final PartialShardSpec partialShardSpec = createPartialShardSpec(
-              batchIngestionMode,
+              ingestionMode,
               partitionsSpec,
               taskLockHelper,
               interval
@@ -108,7 +107,7 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocatorFor
   }
 
   private static PartialShardSpec createPartialShardSpec(
-      BatchIOConfig.BatchIngestionMode batchIngestionMode,
+      AbstractTask.IngestionMode ingestionMode,
       PartitionsSpec partitionsSpec,
       TaskLockHelper taskLockHelper,
       Interval interval
@@ -116,8 +115,8 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocatorFor
   {
     if (partitionsSpec.getType() == SecondaryPartitionType.LINEAR) {
       if (taskLockHelper.isUseSegmentLock()) {
-        if (taskLockHelper.hasOverwritingRootGenerationPartition(interval) && (batchIngestionMode
-                                                                               != BatchIOConfig.BatchIngestionMode.APPEND)) {
+        if (taskLockHelper.hasOverwritingRootGenerationPartition(interval) && (ingestionMode
+                                                                               != AbstractTask.IngestionMode.APPEND)) {
           final OverwritingRootGenerationPartitions overwritingRootGenerationPartitions = taskLockHelper
               .getOverwritingRootGenerationPartition(interval);
           if (overwritingRootGenerationPartitions == null) {

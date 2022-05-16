@@ -197,7 +197,15 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JacksonInject RetryPolicyFactory retryPolicyFactory
   )
   {
-    super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context, -1);
+    super(
+        getOrMakeId(id, TYPE, dataSource),
+        null,
+        taskResource,
+        dataSource,
+        context,
+        -1,
+        computeIngestionMode(false, ioConfig.isDropExisting())
+    );
     Checks.checkOneNotNullOrEmpty(
         ImmutableList.of(
             new Property<>("ioConfig", ioConfig),
@@ -433,14 +441,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     if (emitter == null) {
       return;
     }
-
-    // compact does not support appendToExisting
-    if (isDropExisting) {
-      emitter.emit(buildEvent("compact/replace/count", 1));
-    } else {
-      emitter.emit(buildEvent("compact/overwrite/count", 1));
-    }
-
+    emitMetric(emitter, "ingest/count", 1);
   }
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception

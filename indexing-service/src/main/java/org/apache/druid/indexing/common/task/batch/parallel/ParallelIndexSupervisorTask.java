@@ -65,7 +65,6 @@ import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
-import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
@@ -211,25 +210,29 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         taskResource,
         ingestionSchema.getDataSchema().getDataSource(),
         context,
-        ingestionSchema.getTuningConfig().getMaxAllowedLockCount()
+        ingestionSchema.getTuningConfig().getMaxAllowedLockCount(),
+        computeIngestionMode(
+            ingestionSchema.getIOConfig().isAppendToExisting(),
+            ingestionSchema.getIOConfig().isDropExisting()
+        )
     );
 
     this.ingestionSchema = ingestionSchema;
     this.baseSubtaskSpecName = baseSubtaskSpecName == null ? getId() : baseSubtaskSpecName;
-    if (ingestionSchema.getIOConfig().getBatchIngestionMode() == BatchIOConfig.BatchIngestionMode.REPLACE &&
+    if (getIngestionMode() == IngestionMode.REPLACE &&
         ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals().isEmpty()) {
       throw new ISE("GranularitySpec's intervals cannot be empty when using replace.");
     }
 
-    if (isGuaranteedRollup(ingestionSchema.getIOConfig().getBatchIngestionMode(), ingestionSchema.getTuningConfig())) {
+    if (isGuaranteedRollup(getIngestionMode(), ingestionSchema.getTuningConfig())) {
       checkPartitionsSpecForForceGuaranteedRollup(ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec());
     }
 
     this.baseInputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
         ingestionSchema.getDataSchema().getParser()
     );
-    this.missingIntervalsInOverwriteMode = (ingestionSchema.getIOConfig().getBatchIngestionMode()
-                                            != BatchIOConfig.BatchIngestionMode.APPEND)
+    this.missingIntervalsInOverwriteMode = (getIngestionMode()
+                                            != IngestionMode.APPEND)
                                            && ingestionSchema.getDataSchema()
                                                              .getGranularitySpec()
                                                              .inputIntervals()
@@ -418,14 +421,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Override
   public boolean requireLockExistingSegments()
   {
-    return ingestionSchema.getIOConfig().getBatchIngestionMode() != BatchIOConfig.BatchIngestionMode.APPEND;
+    return getIngestionMode() != IngestionMode.APPEND;
   }
 
   @Override
   public boolean isPerfectRollup()
   {
     return isGuaranteedRollup(
-        getIngestionSchema().getIOConfig().getBatchIngestionMode(),
+        getIngestionMode(),
         getIngestionSchema().getTuningConfig()
     );
   }
@@ -445,7 +448,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
-
 
     if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
         != TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS) {
@@ -486,11 +488,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
       if (isParallelMode()) {
         // emit metric for parallel batch ingestion mode:
-        emitBatchIngestionModeMetrics(toolbox.getEmitter(), ingestionSchema.getIOConfig().getBatchIngestionMode());
+        emitMetric(toolbox.getEmitter(), "ingest/count", 1);
 
         this.toolbox = toolbox;
         if (isGuaranteedRollup(
-            ingestionSchema.getIOConfig().getBatchIngestionMode(),
+            getIngestionMode(),
             ingestionSchema.getTuningConfig()
         )) {
           return runMultiPhaseParallel(toolbox);
@@ -1080,8 +1082,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     );
 
 
-    Set<DataSegment> tombStones;
-    if (ingestionSchema.getIOConfig().getBatchIngestionMode() == BatchIOConfig.BatchIngestionMode.REPLACE) {
+    Set<DataSegment> tombStones = Collections.emptySet();
+    if (getIngestionMode() == IngestionMode.REPLACE) {
       TombstoneHelper tombstoneHelper = new TombstoneHelper(
           newSegments,
           ingestionSchema.getDataSchema(),
@@ -1101,18 +1103,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         }
 
         tombStones = tombstoneHelper.computeTombstones(tombstonesAnShards);
-        // emit segment count before adding tombstones:
-        emitMetric(toolbox.getEmitter(), "batch/replace/segments/count", newSegments.size());
         // add tombstones
         newSegments.addAll(tombStones);
-        emitMetric(toolbox.getEmitter(), "batch/replace/tombstones/count", tombStones.size());
 
         LOG.debugSegments(tombStones, "To publish tombstones");
       }
-    } else if (ingestionSchema.getIOConfig().getBatchIngestionMode() == BatchIOConfig.BatchIngestionMode.APPEND) {
-      emitMetric(toolbox.getEmitter(), "batch/append/segments/count", newSegments.size());
-    } else if (ingestionSchema.getIOConfig().getBatchIngestionMode() == BatchIOConfig.BatchIngestionMode.OVERWRITE) {
-      emitMetric(toolbox.getEmitter(), "batch/ovewrite/segments/count", newSegments.size());
     }
 
     final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
@@ -1128,6 +1123,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     if (published) {
       LOG.info("Published [%d] segments", newSegments.size());
+
+      // segment metrics:
+      emitMetric(toolbox.getEmitter(), "ingest/tombstones/count", tombStones.size());
+      emitMetric(toolbox.getEmitter(), "ingest/segments/count", newSegments.size());
+
     } else {
       throw new ISE("Failed to publish segments");
     }
@@ -1658,7 +1658,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     if (isParallelMode()) {
       if (isGuaranteedRollup(
-          ingestionSchema.getIOConfig().getBatchIngestionMode(),
+          getIngestionMode(),
           ingestionSchema.getTuningConfig()
       )) {
         return doGetRowStatsAndUnparseableEventsParallelMultiPhase(

@@ -144,6 +144,31 @@ If SQL is enabled, the Broker will emit the following metrics for SQL.
 
 ## Ingestion metrics
 
+## General native ingestion metrics
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`ingest/count`|Count of `1` every time an ingestion job runs (includes compaction jobs). Aggregate using dimensions. |dataSource, taskId, taskType, taskIngestionMode|Always `1`.|
+|`ingest/segments/count`|Count of final segments created by job (includes tombstones). |dataSource, taskId, taskType, taskIngestionMode|At least `1`.|
+|`ingest/tombstones/count`|Count of tombstones created by job |dataSource, taskId, taskType, taskIngestionMode|Zero or more for replace. Always zero for non-replace tasks (always zero for legacy replace, see below).|
+
+The `taskIngestionMode` dimension includes the following modes: 
+`APPEND`, `REPLACE_LEGACY`, and `REPLACE`. The `APPEND` mode indicates a native
+ingestion job that is appending to existing segments; `REPLACE` a native ingestion
+job replacing existing segments using tombstones; 
+and `REPLACE_LEGACY` the original replace before tombstones.
+
+The mode is decided using the values
+of the `isAppendToExisting` and `isDropExisting` flags in the
+task's `IOConfig` as follows:
+
+|`isAppendToExisting` | `isDropExisting` | mode |
+|---------------------|-------------------|------|
+`true` | `false` | `APPEND`|
+`true` | `true  ` | Invalid combination, exception thrown. |
+`false` | `false` | `REPLACE_LEGACY` (this is the default for native batch ingestion). |
+`false` | `true` | `REPLACE`|
+
 ### Ingestion metrics for Kafka
 
 These metrics apply to the [Kafka indexing service](../development/extensions-core/kafka-ingestion.md).
@@ -221,40 +246,7 @@ Note: If the JVM does not support CPU time measurement for the current thread, i
 |`worker/taskSlot/total/count`|Number of total task slots on the reporting worker per emission period. This metric is only available if the WorkerTaskCountStatsMonitor module is included.|category, version.|Varies.|
 |`worker/taskSlot/used/count`|Number of busy task slots on the reporting worker per emission period. This metric is only available if the WorkerTaskCountStatsMonitor module is included.|category, version.|Varies.|
 
-## Batch ingestion metrics (Native parallel task)
 
-|Metric|Description|Dimensions|Normal Value|
-|------|-----------|----------|------------|
-|`ingest/batch/append/count`|Count of `1` every time a batch ingestion append job runs|dataSource, taskId, taskType|Always `1`.|
-|`ingest/batch/append/segments/count`|Count of segments created |dataSource, taskId, taskType|At least `1`.|
-|`ingest/batch/ovewrite/count`|Count of `1` every time a batch ingestion overwrite job runs|dataSource, taskId, taskType|Always `1`.|
-|`ingest/batch/ovewrite/segments/count`|Count of segments created |dataSource, taskId, taskType|At least `1`.|
-|`ingest/batch/replace/count`|Count of `1` every time a batch ingestion replace job runs|dataSource, taskId, taskType|Always `1`.|
-|`ingest/batch/replace/segments/count`|Count of segments created |dataSource, taskId, taskType|At least `1`.|
-|`ingest/batch/replace/tombstones/count`|Count of tombstones created in this replace job|dataSource, taskId, taskType|It can be zero when replace could not find any empty time chunks in the input intervals. It cannot be more than number of segments.|
-
-`APPEND`, `OVERWRITE`, and `REPLACE` are decided using the values
-of the `isAppendToExisting` and `isDropExisting` flags in the
-task's `IOConfig` as follows:
-
-|`isAppendToExisting` | `isDropExisting` | mode |
-|---------------------|-------------------|------|
-`true` | `false` | `APPEND`|
-`true` | `true  ` | Invalid combination, exception thrown. |
-`false` | `false` | `OVERWRITE` (this is the default for native batch ingestion). |
-`false` | `true` | `REPLACE`|
-
-## Compaction ingestion metrics (Native parallel task)
-
-|Metric|Description|Dimensions|Normal Value|
-|------|-----------|----------|------------|
-|`ingest/compact/ovewrite/count`|Count of `1` every time a compaction overwrite job runs|dataSource, taskId, taskType|Always `1`.|
-|`ingest/compact/replace/count`|Count of `1` every time a compaction replace job runs|dataSource, taskId, taskType|Always `1`.|
-
-|`isDropExisting` | mode |
-|---------------------|-------------------|
-`false` |`OVERWRITE` (this is the default for compaction) |
-`true`  | `REPLACE`|
 
 ## Shuffle metrics (Native parallel task)
 

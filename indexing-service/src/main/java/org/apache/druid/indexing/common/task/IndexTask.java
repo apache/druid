@@ -136,19 +136,22 @@ import java.util.function.Predicate;
 
 public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 {
+
+
+
   public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
 
   private static final Logger log = new Logger(IndexTask.class);
   private static final String TYPE = "index";
 
-  private static String makeGroupId(IndexIngestionSpec ingestionSchema)
+  private static String makeGroupId(IndexIngestionSpec ingestionSchema, IngestionMode ingestionMode)
   {
-    return makeGroupId(ingestionSchema.ioConfig.getBatchIngestionMode(), ingestionSchema.dataSchema.getDataSource());
+    return makeGroupId(ingestionSchema.dataSchema.getDataSource(), ingestionMode);
   }
 
-  private static String makeGroupId(BatchIOConfig.BatchIngestionMode batchIngestionMode, String dataSource)
+  private static String makeGroupId(String dataSource, IngestionMode ingestionMode)
   {
-    if (batchIngestionMode == BatchIOConfig.BatchIngestionMode.APPEND) {
+    if (ingestionMode == IngestionMode.APPEND) {
       // Shared locking group for all tasks that append, since they are OK to run concurrently.
       return StringUtils.format("%s_append_%s", TYPE, dataSource);
     } else {
@@ -191,7 +194,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   {
     this(
         id,
-        makeGroupId(ingestionSchema),
+        makeGroupId(
+            ingestionSchema,
+            computeIngestionMode(
+                ingestionSchema.getIOConfig().isAppendToExisting(),
+                ingestionSchema.getIOConfig().isDropExisting()
+            )
+        ),
         taskResource,
         ingestionSchema.dataSchema.getDataSource(),
         null,
@@ -218,7 +227,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         resource,
         dataSource,
         context,
-        maxAllowedLockCount
+        maxAllowedLockCount,
+        computeIngestionMode(
+            ingestionSchema.getIOConfig().isAppendToExisting(),
+            ingestionSchema.getIOConfig().isDropExisting()
+        )
+
     );
     this.baseSequenceName = baseSequenceName == null ? getId() : baseSequenceName;
     this.ingestionSchema = ingestionSchema;
@@ -251,8 +265,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @Override
   public boolean requireLockExistingSegments()
   {
-    return isGuaranteedRollup(ingestionSchema.ioConfig.getBatchIngestionMode(), ingestionSchema.tuningConfig)
-           || (ingestionSchema.ioConfig.batchIngestionMode != BatchIOConfig.BatchIngestionMode.APPEND);
+    return isGuaranteedRollup(getIngestionMode(), ingestionSchema.tuningConfig)
+           || (getIngestionMode() != IngestionMode.APPEND);
   }
 
   @Override
@@ -270,7 +284,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @Override
   public boolean isPerfectRollup()
   {
-    return isGuaranteedRollup(ingestionSchema.ioConfig.getBatchIngestionMode(), ingestionSchema.tuningConfig);
+    return isGuaranteedRollup(getIngestionMode(), ingestionSchema.tuningConfig);
   }
 
   @Nullable
@@ -444,7 +458,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     try {
 
       // emit metric for sequential batch ingestion mode:
-      emitBatchIngestionModeMetrics(toolbox.getEmitter(), ingestionSchema.getIOConfig().getBatchIngestionMode());
+      emitMetric(toolbox.getEmitter(), "ingest/count", 1);
 
       log.debug("Found chat handler of class[%s]", toolbox.getChatHandlerProvider().getClass().getName());
 
@@ -879,7 +893,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             null,
             dataSchema,
             getTaskLockHelper(),
-            ingestionSchema.getIOConfig().getBatchIngestionMode(),
+            getIngestionMode(),
             partitionAnalysis.getPartitionsSpec(),
             null
         );
@@ -945,7 +959,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           );
 
       Set<DataSegment> tombStones = Collections.emptySet();
-      if (ingestionSchema.getIOConfig().getBatchIngestionMode() == BatchIOConfig.BatchIngestionMode.REPLACE) {
+      if (getIngestionMode() == IngestionMode.REPLACE) {
         // check whether to generate tombstones...
         TombstoneHelper tombstoneHelper = new TombstoneHelper(
             pushed.getSegments(),
@@ -967,14 +981,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
         tombStones = tombstoneHelper.computeTombstones(tombstonesAndVersions);
 
-        emitMetric(toolbox.getEmitter(), "batch/replace/tombstones/count", tombStones.size());
-        emitMetric(toolbox.getEmitter(), "batch/replace/segments/count", pushed.getSegments().size());
 
         log.debugSegments(tombStones, "To publish tombstones");
-      } else if (ingestionSchema.getIOConfig().getBatchIngestionMode() == BatchIOConfig.BatchIngestionMode.APPEND) {
-        emitMetric(toolbox.getEmitter(), "batch/append/segments/count", pushed.getSegments().size());
-      } else if (ingestionSchema.getIOConfig().getBatchIngestionMode() != BatchIOConfig.BatchIngestionMode.OVERWRITE) {
-        emitMetric(toolbox.getEmitter(), "batch/overwrite/segments/count", pushed.getSegments().size());
       }
 
       // Probably we can publish atomicUpdateGroup along with segments.
@@ -1017,6 +1025,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             buildSegmentsMeters.getThrownAway()
         );
         log.info("Published [%s] segments", published.getSegments().size());
+
+        // publish metrics:
+        emitMetric(toolbox.getEmitter(), "ingest/tombstones/count", tombStones.size());
+        // segments count metric is documented to include tombstones
+        emitMetric(toolbox.getEmitter(), "ingest/segments/count",
+                   published.getSegments().size() + tombStones.size()
+        );
+
         log.debugSegments(published.getSegments(), "Published segments");
 
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
@@ -1076,9 +1092,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         throw new IAE("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
       }
 
-      if (ioConfig.batchIngestionMode == BatchIOConfig.BatchIngestionMode.REPLACE && dataSchema.getGranularitySpec()
-                                                                                               .inputIntervals()
-                                                                                               .isEmpty()) {
+      IngestionMode ingestionMode = AbstractTask.computeIngestionMode(
+          ioConfig.isAppendToExisting(),
+          ioConfig.isDropExisting()
+      );
+      if (ingestionMode == IngestionMode.REPLACE && dataSchema.getGranularitySpec()
+                                                              .inputIntervals()
+                                                              .isEmpty()) {
         throw new IAE("GranularitySpec's intervals cannot be empty for replace.");
       }
 
@@ -1121,12 +1141,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @JsonTypeName("index")
   public static class IndexIOConfig implements BatchIOConfig
   {
-    private static final boolean DEFAULT_APPEND_TO_EXISTING = false;
 
     private final FirehoseFactory firehoseFactory;
     private final InputSource inputSource;
     private final InputFormat inputFormat;
-    private BatchIngestionMode batchIngestionMode;
+    private boolean appendToExisting;
+    private boolean dropExisting;
 
     @JsonCreator
     public IndexIOConfig(
@@ -1146,7 +1166,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       this.firehoseFactory = firehoseFactory;
       this.inputSource = inputSource;
       this.inputFormat = inputFormat;
-      batchIngestionMode = computeBatchIngestionMode(appendToExisting, dropExisting);
+      this.appendToExisting = appendToExisting == null ? BatchIOConfig.DEFAULT_APPEND_EXISTING : appendToExisting;
+      this.dropExisting = dropExisting == null ? BatchIOConfig.DEFAULT_DROP_EXISTING : dropExisting;
     }
 
     // old constructor for backward compatibility
@@ -1154,32 +1175,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public IndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting, @Nullable Boolean dropExisting)
     {
       this(firehoseFactory, null, null, appendToExisting, dropExisting);
-    }
-
-    private static BatchIngestionMode computeBatchIngestionMode(
-        @Nullable Boolean isAppendToExisting,
-        @Nullable Boolean isDropExisting
-    )
-    {
-
-      isAppendToExisting = isAppendToExisting == null ? false : isAppendToExisting;
-      isDropExisting = isDropExisting == null ? false : isDropExisting;
-
-      if (!isAppendToExisting && isDropExisting) {
-        return BatchIngestionMode.REPLACE;
-      } else if (isAppendToExisting && !isDropExisting) {
-        return BatchIngestionMode.APPEND;
-      } else if (!isAppendToExisting && !isDropExisting) {
-        return BatchIngestionMode.OVERWRITE;
-      }
-      throw new IAE("Cannot simultaneously replace and append to existing segments. "
-                    + "Either dropExisting or appendToExisting should be set to false");
-    }
-
-    @Override
-    public BatchIngestionMode getBatchIngestionMode()
-    {
-      return batchIngestionMode;
     }
 
     @Nullable
@@ -1228,6 +1223,17 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return Preconditions.checkNotNull(inputFormat, "inputFormat");
     }
 
+    @Override
+    public boolean isAppendToExisting()
+    {
+      return appendToExisting;
+    }
+
+    @Override
+    public boolean isDropExisting()
+    {
+      return dropExisting;
+    }
   }
 
   public static class IndexTuningConfig implements AppenderatorConfig
@@ -1756,4 +1762,5 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
              '}';
     }
   }
+
 }

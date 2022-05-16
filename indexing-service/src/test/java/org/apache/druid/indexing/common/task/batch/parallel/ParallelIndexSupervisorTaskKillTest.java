@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.hamcrest.CoreMatchers;
@@ -332,8 +331,8 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
                   null,
                   baseInputSource.withSplit(split),
                   getIngestionSchema().getIOConfig().getInputFormat(),
-                  getIngestionSchema().getIOConfig().getBatchIngestionMode() == BatchIOConfig.BatchIngestionMode.APPEND,
-                  getIngestionSchema().getIOConfig().getBatchIngestionMode() == BatchIOConfig.BatchIngestionMode.REPLACE
+                  getIngestionSchema().getIOConfig().isAppendToExisting(),
+                  getIngestionSchema().getIOConfig().isDropExisting()
               ),
               getIngestionSchema().getTuningConfig()
           ),
