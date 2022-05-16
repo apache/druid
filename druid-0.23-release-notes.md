@@ -38,6 +38,29 @@ Users can now cancel SQL queries just like native queries can be cancelled. A ne
 
 ## Web console
 
+- Query view can now cancel all queries issued from it (#11738)
+- The auto refresh functions will now run in foreground only (#11750) this prevents forgotten background console tabs from putting any load on the cluster.
+- Add a `Segment size` (in bytes) column to the Datasources view (#11797)
+  
+<img width="264" alt="image" src="https://user-images.githubusercontent.com/177816/167921423-b6ca2a24-4af7-4b48-bff7-3c16e3e9c398.png">
+
+- Format numbers with commas in the query view (#12031)
+- Add a JSON Diff view for supervisor specs (#12085)
+
+![image](https://user-images.githubusercontent.com/177816/167922122-32466a67-0364-4f7e-93d0-0675abc29158.png)
+
+- Improve the formatting and info contents of code auto suggestion docs (#12085)
+
+![image](https://user-images.githubusercontent.com/177816/167922311-99c79f49-0aa1-4ae4-903d-097fae7ee3f4.png)
+
+- Add shard detail column to segments view (#12212)
+
+![image](https://user-images.githubusercontent.com/177816/167922493-8e621a41-631c-4eae-9005-359c5aab7473.png)
+
+- Avoid refreshing tables if a menu is open (#12435)
+- Misc other bug fixes and usability improvements 
+
+
 ## Metrics
 
 ### Query metrics now also set the `vectorized` dimension by default. This can be helpful in understanding performance profile of queries.
