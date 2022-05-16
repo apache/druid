@@ -1502,6 +1502,8 @@
                             @{jacocoArgLine}
                             -Xmx1500m
                             -XX:MaxDirectMemorySize=512m
+                            -XX:+ExitOnOutOfMemoryError
+                            -XX:+HeapDumpOnOutOfMemoryError
                             -Duser.language=en
                             -Duser.GroupByQueryRunnerTest.javacountry=US
                             -Dfile.encoding=UTF-8
@@ -1734,6 +1736,8 @@
                             <argLine>
                                 ${jdk.surefire.argLine}
                                 -Xmx768m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
+                                -XX:+ExitOnOutOfMemoryError
+                                -XX:+HeapDumpOnOutOfMemoryError
                                 -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                                 -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
                                 <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
