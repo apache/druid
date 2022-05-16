@@ -19,6 +19,7 @@
 
 package org.apache.druid.query;
 
+import com.google.common.collect.Iterables;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
@@ -82,20 +83,12 @@ public class TestBufferPool implements NonBlockingPool<ByteBuffer>, BlockingPool
   @Override
   public ResourceHolder<ByteBuffer> take()
   {
-    synchronized (this) {
-      if (numOutstanding < maxCount) {
-        final ResourceHolder<ByteBuffer> holder = generator.get();
-        final ByteBuffer o = holder.get();
-        numOutstanding++;
-        return new ReferenceCountingResourceHolder<>(o, () -> {
-          synchronized (this) {
-            numOutstanding--;
-            holder.close();
-          }
-        });
-      } else {
-        throw new ISE("Too many objects outstanding [%d]", numOutstanding);
-      }
+    final List<ReferenceCountingResourceHolder<ByteBuffer>> holders = takeBatch(1);
+
+    if (holders.isEmpty()) {
+      throw new ISE("Too many objects outstanding");
+    } else {
+      return Iterables.getOnlyElement(holders);
     }
   }
 
@@ -109,7 +102,7 @@ public class TestBufferPool implements NonBlockingPool<ByteBuffer>, BlockingPool
   public List<ReferenceCountingResourceHolder<ByteBuffer>> takeBatch(int elementNum)
   {
     synchronized (this) {
-      if (numOutstanding + elementNum < maxCount) {
+      if (numOutstanding + elementNum <= maxCount) {
         final List<ReferenceCountingResourceHolder<ByteBuffer>> retVal = new ArrayList<>();
 
         try {
