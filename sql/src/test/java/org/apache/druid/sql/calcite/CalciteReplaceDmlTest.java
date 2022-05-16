@@ -369,6 +369,24 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testReplaceWithoutOverwriteClause()
+  {
+    testIngestionQuery()
+        .sql("REPLACE INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .expectValidationError(SqlPlanningException.class, "Missing time chunk information in OVERWRITE clause for REPLACE, set it to OVERWRITE WHERE <__time based condition> or set it to overwrite the entire table with OVERWRITE ALL.")
+        .verify();
+  }
+
+  @Test
+  public void testReplaceWithoutCompleteOverwriteClause()
+  {
+    testIngestionQuery()
+        .sql("REPLACE INTO dst OVERWRITE SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .expectValidationError(SqlPlanningException.class, "Missing time chunk information in OVERWRITE clause for REPLACE, set it to OVERWRITE WHERE <__time based condition> or set it to overwrite the entire table with OVERWRITE ALL.")
+        .verify();
+  }
+
+  @Test
   public void testReplaceIntoSystemTable()
   {
     testIngestionQuery()

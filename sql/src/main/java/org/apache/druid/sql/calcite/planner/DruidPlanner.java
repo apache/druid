@@ -899,7 +899,7 @@ public class DruidPlanner implements Closeable
 
       SqlNode replaceTimeQuery = druidSqlReplace.getReplaceTimeQuery();
       if (replaceTimeQuery == null) {
-        throw new ValidationException("Missing time chunk information in DELETE WHERE clause for replace.");
+        throw new ValidationException("Missing time chunk information in OVERWRITE clause for REPLACE, set it to OVERWRITE WHERE <__time based condition> or set it to overwrite the entire table with OVERWRITE ALL.");
       }
 
       Granularity ingestionGranularity = druidSqlReplace.getPartitionedBy();

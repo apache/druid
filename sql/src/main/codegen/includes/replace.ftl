@@ -28,7 +28,7 @@ SqlNode DruidSqlReplaceEof() :
     // Using fully qualified name for Pair class, since Calcite also has a same class name being used in the Parser.jj
     org.apache.druid.java.util.common.Pair<Granularity, String> partitionedBy = new org.apache.druid.java.util.common.Pair(null, null);
     final Pair<SqlNodeList, SqlNodeList> p;
-    final SqlNode replaceTimeQuery;
+    SqlNode replaceTimeQuery = null;
 }
 {
     <REPLACE> { s = span(); }
@@ -41,8 +41,9 @@ SqlNode DruidSqlReplaceEof() :
             }
         }
     ]
-    <OVERWRITE>
-    replaceTimeQuery = ReplaceTimeQuery()
+    [
+        <OVERWRITE> replaceTimeQuery = ReplaceTimeQuery()
+    ]
     source = OrderedQueryOrExpr(ExprContext.ACCEPT_QUERY)
     // PARTITIONED BY is necessary, but is kept optional in the grammar. It is asserted that it is not missing in the
     // DruidSqlInsert constructor so that we can return a custom error message.
