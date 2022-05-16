@@ -26,8 +26,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.collections.CloseableDefaultBlockingPool;
-import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -53,6 +51,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
+import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
@@ -91,7 +90,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -537,27 +535,17 @@ public class GroupByLimitPushDownMultiNodeMergeTest
   {
     executorService = Execs.multiThreaded(3, "GroupByThreadPool[%d]");
 
-    final CloseableStupidPool<ByteBuffer> bufferPool = new CloseableStupidPool<>(
-        "GroupByBenchmark-computeBufferPool",
-        () -> ByteBuffer.allocate(10_000_000),
-        0,
-        Integer.MAX_VALUE
-    );
-
+    final TestBufferPool bufferPool = TestBufferPool.offHeap(10_000_000, Integer.MAX_VALUE);
+    final TestBufferPool mergePool = TestBufferPool.offHeap(10_000_000, 2);
     // limit of 2 is required since we simulate both historical merge and broker merge in the same process
-    final CloseableDefaultBlockingPool<ByteBuffer> mergePool = new CloseableDefaultBlockingPool<>(
-        () -> ByteBuffer.allocate(10_000_000),
-        2
-    );
-    // limit of 2 is required since we simulate both historical merge and broker merge in the same process
-    final CloseableDefaultBlockingPool<ByteBuffer> mergePool2 = new CloseableDefaultBlockingPool<>(
-        () -> ByteBuffer.allocate(10_000_000),
-        2
-    );
+    final TestBufferPool mergePool2 = TestBufferPool.offHeap(10_000_000, 2);
 
-    resourceCloser.register(bufferPool);
-    resourceCloser.register(mergePool);
-    resourceCloser.register(mergePool2);
+    resourceCloser.register(() -> {
+      // Verify that all objects have been returned to the pools.
+      Assert.assertEquals(0, bufferPool.getOutstandingObjectCount());
+      Assert.assertEquals(0, mergePool.getOutstandingObjectCount());
+      Assert.assertEquals(0, mergePool2.getOutstandingObjectCount());
+    });
 
     final GroupByQueryConfig config = new GroupByQueryConfig()
     {

@@ -30,8 +30,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import org.apache.druid.collections.CloseableDefaultBlockingPool;
-import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
@@ -68,6 +66,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TestBigDecimalSumAggregatorFactory;
+import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -158,7 +157,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -387,12 +385,12 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   )
   {
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final CloseableStupidPool<ByteBuffer> bufferPool = new CloseableStupidPool<>(
-        "GroupByQueryEngine-bufferPool",
-        () -> ByteBuffer.allocate(processingConfig.intermediateComputeSizeBytes())
+    final TestBufferPool bufferPool = TestBufferPool.offHeap(
+        processingConfig.intermediateComputeSizeBytes(),
+        Integer.MAX_VALUE
     );
-    final CloseableDefaultBlockingPool<ByteBuffer> mergeBufferPool = new CloseableDefaultBlockingPool<>(
-        () -> ByteBuffer.allocate(processingConfig.intermediateComputeSizeBytes()),
+    final TestBufferPool mergeBufferPool = TestBufferPool.offHeap(
+        processingConfig.intermediateComputeSizeBytes(),
         processingConfig.getNumMergeBuffers()
     );
     final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
@@ -415,10 +413,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     final Closer closer = Closer.create();
     closer.register(() -> {
       // Verify that all objects have been returned to the pool.
-      Assert.assertEquals(bufferPool.poolSize(), bufferPool.objectsCreatedCount());
-      bufferPool.close();
+      Assert.assertEquals(0, bufferPool.getOutstandingObjectCount());
+      Assert.assertEquals(0, mergeBufferPool.getOutstandingObjectCount());
     });
-    closer.register(mergeBufferPool);
     return Pair.of(new GroupByQueryRunnerFactory(strategySelector, toolChest), closer);
   }
 

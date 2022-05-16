@@ -147,6 +147,10 @@ public class ByteBufferUtils
   /**
    * Same as {@link ByteBuffer#allocateDirect(int)}, but returns a closeable {@link ResourceHolder} that
    * frees the buffer upon close.
+   *
+   * Direct (off-heap) buffers are an alternative to on-heap buffers that allow memory to be managed
+   * outside the purview of the garbage collector. It's most useful when allocating big chunks of memory,
+   * like processing buffers.
    */
   public static ResourceHolder<ByteBuffer> allocateDirect(final int size)
   {
