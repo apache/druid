@@ -852,28 +852,7 @@ public class DruidPlanner implements Closeable
       Granularity ingestionGranularity = druidSqlInsert.getPartitionedBy();
 
       if (druidSqlInsert.getClusteredBy() != null) {
-        // If we have a CLUSTERED BY clause, extract the information in that CLUSTERED BY and create a new
-        // SqlOrderBy node
-        SqlNode offset = null;
-        SqlNode fetch = null;
-
-        if (query instanceof SqlOrderBy) {
-          SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
-          // This represents the underlying query free of OFFSET, FETCH and ORDER BY clauses
-          // For a sqlOrderBy.query like "SELECT dim1, sum(dim2) FROM foo OFFSET 10 FETCH 30 ORDER BY dim1 GROUP
-          // BY dim1 this would represent the "SELECT dim1, sum(dim2) from foo GROUP BY dim1
-          query = sqlOrderBy.query;
-          offset = sqlOrderBy.offset;
-          fetch = sqlOrderBy.fetch;
-        }
-        // Creates a new SqlOrderBy query, which may have our CLUSTERED BY overwritten
-        query = new SqlOrderBy(
-            query.getParserPosition(),
-            query,
-            druidSqlInsert.getClusteredBy(),
-            offset,
-            fetch
-        );
+        query = DruidSqlParserUtils.convertClusterByToOrderBy(query, druidSqlInsert.getClusteredBy());
       }
 
       if (!query.isA(SqlKind.QUERY)) {
@@ -893,7 +872,7 @@ public class DruidPlanner implements Closeable
         SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
         SqlNodeList orderByList = sqlOrderBy.orderList;
         if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
-          throw new ValidationException("Cannot have ORDER BY on a REPLACE query.");
+          throw new ValidationException("Cannot have ORDER BY on a REPLACE query, use CLUSTERED BY instead.");
         }
       }
 
@@ -904,6 +883,10 @@ public class DruidPlanner implements Closeable
 
       Granularity ingestionGranularity = druidSqlReplace.getPartitionedBy();
       List<String> replaceIntervals = DruidSqlParserUtils.validateQueryAndConvertToIntervals(replaceTimeQuery, ingestionGranularity, dateTimeZone);
+
+      if (druidSqlReplace.getClusteredBy() != null) {
+        query = DruidSqlParserUtils.convertClusterByToOrderBy(query, druidSqlReplace.getClusteredBy());
+      }
 
       if (!query.isA(SqlKind.QUERY)) {
         throw new ValidationException(StringUtils.format("Cannot execute [%s].", query.getKind()));

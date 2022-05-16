@@ -51,6 +51,9 @@ public class DruidSqlReplace extends SqlInsert
 
   private final SqlNode replaceTimeQuery;
 
+  @Nullable
+  private final SqlNodeList clusteredBy;
+
   /**
    * While partitionedBy and partitionedByStringForUnparse can be null as arguments to the constructor, this is
    * disallowed (semantically) and the constructor performs checks to ensure that. This helps in producing friendly
@@ -61,6 +64,7 @@ public class DruidSqlReplace extends SqlInsert
       @Nonnull SqlInsert insertNode,
       @Nullable Granularity partitionedBy,
       @Nullable String partitionedByStringForUnparse,
+      @Nullable SqlNodeList clusteredBy,
       @Nonnull SqlNode replaceTimeQuery
   ) throws ParseException
   {
@@ -79,6 +83,8 @@ public class DruidSqlReplace extends SqlInsert
     this.partitionedByStringForUnparse = Preconditions.checkNotNull(partitionedByStringForUnparse);
 
     this.replaceTimeQuery = replaceTimeQuery;
+
+    this.clusteredBy = clusteredBy;
   }
 
   public SqlNode getReplaceTimeQuery()
@@ -89,6 +95,12 @@ public class DruidSqlReplace extends SqlInsert
   public Granularity getPartitionedBy()
   {
     return partitionedBy;
+  }
+
+  @Nullable
+  public SqlNodeList getClusteredBy()
+  {
+    return clusteredBy;
   }
 
   @Nonnull
@@ -125,5 +137,14 @@ public class DruidSqlReplace extends SqlInsert
 
     writer.keyword("PARTITIONED BY");
     writer.keyword(partitionedByStringForUnparse);
+
+    if (getClusteredBy() != null) {
+      writer.keyword("CLUSTERED BY");
+      SqlWriter.Frame frame = writer.startList("", "");
+      for (SqlNode clusterByOpts : getClusteredBy().getList()) {
+        clusterByOpts.unparse(writer, leftPrec, rightPrec);
+      }
+      writer.endList(frame);
+    }
   }
 }

@@ -28,6 +28,8 @@ import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlTimestampLiteral;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.StringUtils;
@@ -245,6 +247,38 @@ public class DruidSqlParserUtils
         .collect(Collectors.toList());
   }
 
+  /**
+   * Extracts and converts the information in the CLUSTERED BY clause to a new SqlOrderBy node.
+   *
+   * @param query sql query
+   * @param clusteredByList List of clustered by columns
+   * @return SqlOrderBy node containing the clusteredByList information
+   */
+  public static SqlOrderBy convertClusterByToOrderBy(SqlNode query, SqlNodeList clusteredByList)
+  {
+    // If we have a CLUSTERED BY clause, extract the information in that CLUSTERED BY and create a new
+    // SqlOrderBy node
+    SqlNode offset = null;
+    SqlNode fetch = null;
+
+    if (query instanceof SqlOrderBy) {
+      SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
+      // This represents the underlying query free of OFFSET, FETCH and ORDER BY clauses
+      // For a sqlOrderBy.query like "SELECT dim1, sum(dim2) FROM foo OFFSET 10 FETCH 30 ORDER BY dim1 GROUP
+      // BY dim1 this would represent the "SELECT dim1, sum(dim2) from foo GROUP BY dim1
+      query = sqlOrderBy.query;
+      offset = sqlOrderBy.offset;
+      fetch = sqlOrderBy.fetch;
+    }
+    // Creates a new SqlOrderBy query, which may have our CLUSTERED BY overwritten
+    return new SqlOrderBy(
+        query.getParserPosition(),
+        query,
+        clusteredByList,
+        offset,
+        fetch
+    );
+  }
 
   /**
    * This method is used to convert an {@link SqlNode} representing a query into a {@link DimFilter} for the same query.
