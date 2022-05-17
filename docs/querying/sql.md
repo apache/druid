@@ -36,7 +36,7 @@ For information on permissions needed to make SQL queries, see [Defining SQL per
 This topic introduces Druid SQL syntax.
 For more information and SQL querying options see:
 - [Data types](./sql-data-types.md) for a list of supported data types for Druid columns.
-- [Aggregation functions](./sql-aggregations.md) for a list o aggregation functions available for Druid SQL SELECT statements.
+- [Aggregation functions](./sql-aggregations.md) for a list of aggregation functions available for Druid SQL SELECT statements.
 - [Scalar functions](./sql-scalar.md) for Druid SQL scalar functions including numeric and string functions, IP address functions, Sketch functions, and more.
 - [SQL multi-value string functions](./sql-multivalue-string-functions.md) for operations you can perform on string dimensions containing multiple values.
 - [Query translation](./sql-translation.md) for information about how Druid translates SQL queries to native queries before running them.
