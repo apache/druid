@@ -65,7 +65,7 @@ public class DruidSqlReplace extends SqlInsert
       @Nullable Granularity partitionedBy,
       @Nullable String partitionedByStringForUnparse,
       @Nullable SqlNodeList clusteredBy,
-      @Nonnull SqlNode replaceTimeQuery
+      @Nullable SqlNode replaceTimeQuery
   ) throws ParseException
   {
     super(
@@ -75,8 +75,11 @@ public class DruidSqlReplace extends SqlInsert
         insertNode.getSource(),
         insertNode.getTargetColumnList()
     );
+    if (replaceTimeQuery == null) {
+      throw new ParseException("Missing time chunk information in OVERWRITE clause for REPLACE, set it to OVERWRITE WHERE <__time based condition> or set it to overwrite the entire table with OVERWRITE ALL.");
+    }
     if (partitionedBy == null) {
-      throw new ParseException("REPLACE statements must specify PARTITIONED BY clause explictly");
+      throw new ParseException("REPLACE statements must specify PARTITIONED BY clause explicitly");
     }
     this.partitionedBy = partitionedBy;
 

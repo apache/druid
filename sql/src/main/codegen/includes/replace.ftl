@@ -29,7 +29,7 @@ SqlNode DruidSqlReplaceEof() :
     org.apache.druid.java.util.common.Pair<Granularity, String> partitionedBy = new org.apache.druid.java.util.common.Pair(null, null);
     SqlNodeList clusteredBy = null;
     final Pair<SqlNodeList, SqlNodeList> p;
-    final SqlNode replaceTimeQuery;
+    SqlNode replaceTimeQuery = null;
 }
 {
     <REPLACE> { s = span(); }
@@ -42,8 +42,9 @@ SqlNode DruidSqlReplaceEof() :
             }
         }
     ]
-    <OVERWRITE>
-    replaceTimeQuery = ReplaceTimeQuery()
+    [
+        <OVERWRITE> replaceTimeQuery = ReplaceTimeQuery()
+    ]
     source = OrderedQueryOrExpr(ExprContext.ACCEPT_QUERY)
     // PARTITIONED BY is necessary, but is kept optional in the grammar. It is asserted that it is not missing in the
     // DruidSqlInsert constructor so that we can return a custom error message.
