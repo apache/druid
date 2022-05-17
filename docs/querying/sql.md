@@ -26,9 +26,15 @@ sidebar_label: "Druid SQL overview"
 > Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
 > This document describes the SQL language.
 
-You can query data in Druid datasources using Druid SQL. This topic describes the Druid SQL syntax and includes a brief description of the way [Druid handles SQL queries internally](#druid-SQL-internals).
+You can query data in Druid datasources using [Druid SQL](./sql.md). Druid translates SQL queries into its [native query language](./querying.md). To learn about translation and how to get the best performance from Druid SQL, see [SQL query translation](./sql-translation.md).
 
-For more information see:
+Druid SQL planning occurs on the Broker.
+Set [Broker runtime properties](../configuration/index.md#sql) to configure the query plan and JDBC querying.
+
+For information on permissions needed to make SQL queries, see [Defining SQL permissions](../operations/security-user-auth.md#sql-permissions).
+
+This topic introduces Druid SQL syntax.
+For more information and SQL querying options see:
 - [Data types](./sql-data-types.md) for a list of supported data types for Druid columns.
 - [Aggregation functions](./sql-aggregations.md) for a list o aggregation functions available for Druid SQL SELECT statements.
 - [Scalar functions](./sql-scalar.md) for Druid SQL scalar functions including numeric and string functions, IP address functions, Sketch functions, and more.
@@ -250,15 +256,7 @@ To solve this issue, explicitly provide the type of the dynamic parameter using 
 SELECT * FROM druid.foo WHERE dim1 like CONCAT('%', CAST (? AS VARCHAR), '%')
 ```
 
-## Druid SQL internals
 
-Druid uses [Apache Calcite](https://calcite.apache.org/) to parse and plan SQL queries.
-Druid translates SQL statements into its native JSON-based query language.
-Other than the slight overhead of translating SQL on the Broker, there isn't an
-additional performance penalty to using Druid SQL compared to native queries. For more information, see [Query translation](./sql-translation.md).
 
-Druid SQL planning occurs on the Broker.
-Set [Broker runtime properties](../configuration/index.md#sql) to configure the query plan and JDBC querying.
 
-See [Defining SQL permissions](../operations/security-user-auth.md#sql-permissions)
-for information on permissions needed to make SQL queries.
+

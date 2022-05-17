@@ -26,9 +26,11 @@ sidebar_label: "SQL query translation"
 > Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
 > This document describes the SQL language.
 
+Druid uses [Apache Calcite](https://calcite.apache.org/) to parse and plan SQL queries.
+Druid translates SQL statements into its [native JSON-based query language](querying.md).
+In general, the slight overhead of translating SQL on the Broker is the only minor performance penalty to using Druid SQL compared to native queries.
 
-Druid SQL translates SQL queries to [native queries](querying.md) before running them, and understanding how this
-translation works is key to getting good performance.
+This topic in includes best practices and tools to help you achieve good performance and minimize the impact of translation.
 
 ## Best practices
 
@@ -60,7 +62,7 @@ appreciated.
 
 ## Interpreting EXPLAIN PLAN output
 
-The [EXPLAIN PLAN](sql-syntax.md#explain-plan) functionality can help you understand how a given SQL query will
+The [EXPLAIN PLAN](sql.md#explain-plan) functionality can help you understand how a given SQL query will
 be translated to native. For simple queries that do not involve subqueries or joins, the output of EXPLAIN PLAN
 is easy to interpret. The native query that will run is embedded as JSON inside a "DruidQueryRel" line:
 
