@@ -352,6 +352,29 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testReplaceContainingWithList()
+  {
+    testIngestionQuery()
+        .sql("REPLACE INTO dst OVERWRITE ALL WITH foo_data AS (SELECT * FROM foo) SELECT dim1, dim3 FROM foo_data PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("dst", RowSignature.builder()
+                                         .add("dim1", ColumnType.STRING)
+                                         .add("dim3", ColumnType.STRING)
+                                         .build()
+        )
+        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("dim1", "dim3")
+                .context(REPLACE_ALL_TIME_CHUNKS)
+                .build()
+        )
+        .verify();
+  }
+
+  @Test
   public void testReplaceIntoInvalidDataSourceName()
   {
     testIngestionQuery()
