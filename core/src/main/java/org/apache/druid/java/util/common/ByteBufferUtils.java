@@ -151,6 +151,9 @@ public class ByteBufferUtils
    * Direct (off-heap) buffers are an alternative to on-heap buffers that allow memory to be managed
    * outside the purview of the garbage collector. It's most useful when allocating big chunks of memory,
    * like processing buffers.
+   *
+   * Holders cannot be closed more than once. Attempting to close a holder twice will earn you an
+   * {@link IllegalStateException}.
    */
   public static ResourceHolder<ByteBuffer> allocateDirect(final int size)
   {
@@ -179,7 +182,7 @@ public class ByteBufferUtils
           buf = null;
           free(theBuf);
         } else {
-          log.warn("Double-free of buffer ignored.");
+          throw new ISE("Already closed");
         }
       }
     }
