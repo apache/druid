@@ -65,7 +65,16 @@
       "ingestion/faq"
     ],
     "Querying": [
-      "querying/sql",
+      {
+        "type": "subcategory",
+        "label": "Druid SQL",
+        "ids": [
+          "querying/sql",
+          "querying/sql-data-types",
+          "querying/sql-metadata-tables",
+          "querying/sql-translation"
+        ]
+      },
       "querying/querying",
       "querying/query-execution",
       "querying/troubleshooting",
@@ -81,15 +90,6 @@
           "querying/caching",
           "querying/using-caching",
           "querying/query-context"
-        ]
-      },
-      {
-        "type": "subcategory",
-        "label": "Druid SQL",
-        "ids": [
-          "querying/sql-data-types",
-          "querying/sql-metadata-tables",
-          "querying/sql-translation"
         ]
       },
       {

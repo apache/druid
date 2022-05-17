@@ -1,7 +1,7 @@
 ---
 id: sql
 title: "Druid SQL overview"
-sidebar_label: "Druid SQL overview"
+sidebar_label: "Overview and syntax"
 ---
 
 <!--
@@ -41,12 +41,12 @@ For more information and SQL querying options see:
 - [SQL multi-value string functions](./sql-multivalue-string-functions.md) for operations you can perform on string dimensions containing multiple values.
 - [Query translation](./sql-translation.md) for information about how Druid translates SQL queries to native queries before running them.
 
-For information about APIs and programmatic interfaces, see:
+For information about APIs, see:
 - [Druid SQL API](./sql-api.md) for information on the HTTP API.
 - [SQL JDBC driver API](./sql-jdbc.md) for information about the JDBC driver API.
 - [SQL query context](./sql-query-context.md) for information about the query context parameters that affect SQL planning.
 
-## Druid SQL syntax
+## Syntax
 
 Druid SQL supports SELECT queries with the following structure:
 

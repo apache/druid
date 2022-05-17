@@ -30,7 +30,7 @@ Druid uses [Apache Calcite](https://calcite.apache.org/) to parse and plan SQL q
 Druid translates SQL statements into its [native JSON-based query language](querying.md).
 In general, the slight overhead of translating SQL on the Broker is the only minor performance penalty to using Druid SQL compared to native queries.
 
-This topic in includes best practices and tools to help you achieve good performance and minimize the impact of translation.
+This topic includes best practices and tools to help you achieve good performance and minimize the impact of translation.
 
 ## Best practices
 
