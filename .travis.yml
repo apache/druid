@@ -391,7 +391,7 @@ jobs:
       jdk: openjdk11
       env:
         - MAVEN_PROJECTS='core,indexing-hadoop,indexing-service,processing'
-      script: ${MVN} test -B -pl ${MAVEN_PROJECTS} -Ddruid.console.skip=true -DargLine=-Xmx3000m -T1C
+      script: ${MVN} test -B -pl ${MAVEN_PROJECTS} -Ddruid.console.skip=true -DargLine=-Xmx3000m
 
     - name: "Build and test on ARM64 CPU architecture (2)"
       stage: Tests - phase 2
@@ -402,7 +402,7 @@ jobs:
       jdk: openjdk11
       env:
         - MAVEN_PROJECTS='core,sql,server,services'
-      script: ${MVN} test -B -pl ${MAVEN_PROJECTS} -Ddruid.console.skip=true -DargLine=-Xmx3000m -T1C
+      script: ${MVN} test -B -pl ${MAVEN_PROJECTS} -Ddruid.console.skip=true -DargLine=-Xmx3000m
 
     - name: "web console end-to-end test"
       before_install: *setup_generate_license

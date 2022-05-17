@@ -177,7 +177,7 @@ public class ByteBufferUtils
         if (closed.compareAndSet(false, true)) {
           final ByteBuffer theBuf = buf;
           buf = null;
-          ByteBufferUtils.free(theBuf);
+          free(theBuf);
         } else {
           log.warn("Double-free of buffer ignored.");
         }
