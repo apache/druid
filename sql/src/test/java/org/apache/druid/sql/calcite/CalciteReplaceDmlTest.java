@@ -36,6 +36,7 @@ import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -54,7 +55,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
       DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
       "{\"type\":\"all\"}",
       DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
-      "all"
+      DruidSqlParserUtils.ALL
   );
 
   protected Map<String, Object> addReplaceTimeChunkToQueryContext(Map<String, Object> context, String replaceTimeChunks)
@@ -252,7 +253,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo ORDER BY dim1 PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlPlanningException.class, "Cannot have ORDER BY on a REPLACE query.")
+        .expectValidationError(SqlPlanningException.class, "Cannot have ORDER BY on a REPLACE query, use CLUSTERED BY instead.")
         .verify();
   }
 
@@ -344,6 +345,29 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
+                .context(REPLACE_ALL_TIME_CHUNKS)
+                .build()
+        )
+        .verify();
+  }
+
+  @Test
+  public void testReplaceContainingWithList()
+  {
+    testIngestionQuery()
+        .sql("REPLACE INTO dst OVERWRITE ALL WITH foo_data AS (SELECT * FROM foo) SELECT dim1, dim3 FROM foo_data PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("dst", RowSignature.builder()
+                                         .add("dim1", ColumnType.STRING)
+                                         .add("dim3", ColumnType.STRING)
+                                         .build()
+        )
+        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("dim1", "dim3")
                 .context(REPLACE_ALL_TIME_CHUNKS)
                 .build()
         )
@@ -484,8 +508,45 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .context(
                     addReplaceTimeChunkToQueryContext(
                         queryContextWithGranularity(Granularities.DAY),
-                        "all"
+                        DruidSqlParserUtils.ALL
                     )
+                )
+                .build()
+        )
+        .verify();
+  }
+
+  @Test
+  public void testReplaceWithClusteredBy()
+  {
+    // Test correctness of the query when CLUSTERED BY clause is present
+    RowSignature targetRowSignature = RowSignature.builder()
+                                                  .add("__time", ColumnType.LONG)
+                                                  .add("floor_m1", ColumnType.FLOAT)
+                                                  .add("dim1", ColumnType.STRING)
+                                                  .build();
+
+    testIngestionQuery()
+        .sql(
+            "REPLACE INTO druid.dst OVERWRITE ALL SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo PARTITIONED BY DAY CLUSTERED BY 2, dim1")
+        .expectTarget("dst", targetRowSignature)
+        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "dim1", "v0")
+                .virtualColumns(expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT))
+                .orderBy(
+                    ImmutableList.of(
+                        new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
+                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)
+                    )
+                )
+                .context(
+                    addReplaceTimeChunkToQueryContext(
+                        queryContextWithGranularity(Granularities.DAY),
+                        DruidSqlParserUtils.ALL)
                 )
                 .build()
         )

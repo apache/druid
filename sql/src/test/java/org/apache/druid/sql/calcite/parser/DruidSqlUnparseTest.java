@@ -53,12 +53,13 @@ public class DruidSqlUnparseTest
   @Test
   public void testUnparseReplaceAll() throws ParseException
   {
-    String sqlQuery = "REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME";
+    String sqlQuery = "REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME CLUSTERED BY dim1";
     String prettySqlQuery = "REPLACE INTO \"dst\"\n"
                             + "OVERWRITE ALL\n"
                             + "(SELECT *\n"
                             + "    FROM \"foo\")\n"
-                            + "PARTITIONED BY ALL TIME";
+                            + "PARTITIONED BY ALL TIME "
+                            + "CLUSTERED BY \"dim1\"";
 
     DruidSqlParserImpl druidSqlParser = createTestParser(sqlQuery);
     DruidSqlReplace druidSqlReplace = (DruidSqlReplace) druidSqlParser.DruidSqlReplaceEof();
@@ -70,12 +71,13 @@ public class DruidSqlUnparseTest
   @Test
   public void testUnparseReplaceWhere() throws ParseException
   {
-    String sqlQuery = "REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' SELECT * FROM foo PARTITIONED BY DAY";
+    String sqlQuery = "REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' SELECT * FROM foo PARTITIONED BY DAY CLUSTERED BY dim1";
     String prettySqlQuery = "REPLACE INTO \"dst\"\n"
                             + "OVERWRITE \"__time\" >= TIMESTAMP '2000-01-01 00:00:00' AND \"__time\" < TIMESTAMP '2000-01-02 00:00:00'\n"
                             + "(SELECT *\n"
                             + "    FROM \"foo\")\n"
-                            + "PARTITIONED BY DAY";
+                            + "PARTITIONED BY DAY "
+                            + "CLUSTERED BY \"dim1\"";
     DruidSqlParserImpl druidSqlParser = createTestParser(sqlQuery);
     DruidSqlReplace druidSqlReplace = (DruidSqlReplace) druidSqlParser.DruidSqlReplaceEof();
 
