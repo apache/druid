@@ -70,7 +70,7 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
   }
 
   @AfterClass
-  public static void tearDownClass() throws IOException
+  public static void tearDownClass()
   {
     BUFFER_POOLS.close();
     BUFFER_POOLS = null;
@@ -79,6 +79,8 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
+    setUpClass();
+
     final GroupByQueryConfig v1Config = new GroupByQueryConfig()
     {
       @Override

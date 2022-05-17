@@ -455,7 +455,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @AfterClass
-  public static void tearDownClass() throws IOException
+  public static void tearDownClass()
   {
     BUFFER_POOLS.close();
     BUFFER_POOLS = null;

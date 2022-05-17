@@ -82,7 +82,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   }
 
   @AfterClass
-  public static void tearDownClass() throws IOException
+  public static void tearDownClass()
   {
     BUFFER_POOLS.close();
     BUFFER_POOLS = null;
@@ -92,6 +92,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   @Parameterized.Parameters(name = "{0}, vectorize = {1}")
   public static Iterable<Object[]> constructorFeeder()
   {
+    setUpClass();
     GroupByQueryConfig config = new GroupByQueryConfig();
     config.setMaxIntermediateRows(10000);
     final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(config, BUFFER_POOLS);
