@@ -34,7 +34,7 @@ sidebar_label: "Scalar functions"
 > Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
 > This document describes the SQL language.
 
-Druid SQL includes scalar functions that include numeric and string functions, IP address functions, Sketch functions, and more, as described on this page. 
+[Druid SQL](./sql.md) includes scalar functions that include numeric and string functions, IP address functions, Sketch functions, and more, as described on this page. 
 
 
 ## Numeric functions
@@ -96,7 +96,7 @@ String functions accept strings, and return a type appropriate to the function.
 |`CHAR_LENGTH(expr)`|Alias for `LENGTH`.|
 |`CHARACTER_LENGTH(expr)`|Alias for `LENGTH`.|
 |`STRLEN(expr)`|Alias for `LENGTH`.|
-|`LOOKUP(expr, lookupName)`|Look up `expr` in a registered [query-time lookup table](lookups.md). Note that lookups can also be queried directly using the [`lookup` schema](sql-syntax.md#from).|
+|`LOOKUP(expr, lookupName)`|Look up `expr` in a registered [query-time lookup table](lookups.md). Note that lookups can also be queried directly using the [`lookup` schema](sql.md#from).|
 |`LOWER(expr)`|Returns `expr` in all lowercase.|
 |`UPPER(expr)`|Returns `expr` in all uppercase.|
 |`PARSE_LONG(string, [radix])`|Parses a string into a long (BIGINT) with the given radix, or 10 (decimal) if a radix is not provided.|
