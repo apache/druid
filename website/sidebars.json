@@ -87,7 +87,6 @@
         "type": "subcategory",
         "label": "Druid SQL",
         "ids": [
-          "querying/sql-syntax",
           "querying/sql-data-types",
           "querying/sql-metadata-tables",
           "querying/sql-translation"
