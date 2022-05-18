@@ -130,6 +130,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private static final String TASK_PHASE_FAILURE_MSG = "Failed in phase[%s]. See task logs for details.";
 
+  // Sometimes Druid estimates one shard for hash partitioning despite conditions
+  // indicating that there ought to be more than one. We have not been able to
+  // reproduce but looking at the code around where the following constant is used one
+  // possibility is that the sketch's estimate is negative. If that case happens
+  // code has been added to log it and to set the estimate to the value of the
+  // following constant. It is not necessary to parametize this value since if this
+  // happens it is a bug and the new logging may now provide some evidence to reproduce
+  // and fix
+  private static final long DEFAULT_NUM_SHARDS_WHEN_ESTIMATE_GOES_NEGATIVE = 7L;
+
   private final ParallelIndexIngestionSpec ingestionSchema;
   /**
    * Base name for the {@link SubTaskSpec} ID.
@@ -922,10 +932,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           final double estimatedCardinality = union.getEstimate();
           final long estimatedNumShards;
           if (estimatedCardinality <= 0) {
-            // I don't think we can use the estimate in any way being negative, seven sounds like a nice prime number
-            // it is ok if we end up not filling them all, the ingestion code handles that
-            // Seven on the other hand will at least create some shards rather than potentially a single huge one
-            estimatedNumShards = 7L;
+            estimatedNumShards = DEFAULT_NUM_SHARDS_WHEN_ESTIMATE_GOES_NEGATIVE;
             LOG.warn("Estimated cardinality for union of estimates is zero or less: %.2f, setting num shards to %d",
                      estimatedCardinality, estimatedNumShards
             );
