@@ -211,10 +211,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         ingestionSchema.getDataSchema().getDataSource(),
         context,
         ingestionSchema.getTuningConfig().getMaxAllowedLockCount(),
-        computeIngestionMode(
-            ingestionSchema.getIOConfig().isAppendToExisting(),
-            ingestionSchema.getIOConfig().isDropExisting()
-        )
+        computeIngestionMode(ingestionSchema.getIOConfig())
     );
 
     this.ingestionSchema = ingestionSchema;

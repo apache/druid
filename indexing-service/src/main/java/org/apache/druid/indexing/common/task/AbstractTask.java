@@ -33,6 +33,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
@@ -63,7 +64,7 @@ public abstract class AbstractTask implements Task
 
   private final Map<String, Object> context;
 
-  private ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+  private final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
 
   protected AbstractTask(String id, String dataSource, Map<String, Object> context, IngestionMode ingestionMode)
   {
@@ -90,7 +91,7 @@ public abstract class AbstractTask implements Task
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     // Copy the given context into a new mutable map because the Druid indexing service can add some internal contexts.
     this.context = context == null ? new HashMap<>() : new HashMap<>(context);
-    this.ingestionMode = ingestionMode == null ? IngestionMode.NONE : ingestionMode;
+    this.ingestionMode = ingestionMode;
     IndexTaskUtils.setTaskDimensions(metricBuilder, this);
   }
 
@@ -261,20 +262,46 @@ public abstract class AbstractTask implements Task
     return ingestionMode;
   }
 
-  protected static IngestionMode computeIngestionMode(
-      @Nullable Boolean isAppendToExisting,
-      @Nullable Boolean isDropExisting
-  )
+  protected static IngestionMode computeIngestionMode(@Nullable CompactionIOConfig ioConfig)
   {
+    final boolean isAppendToExisting;
+    final boolean isDropExisting;
 
-    isAppendToExisting = isAppendToExisting == null ? false : isAppendToExisting;
-    isDropExisting = isDropExisting == null ? false : isDropExisting;
+    if (ioConfig == null) {
+      isAppendToExisting = BatchIOConfig.DEFAULT_APPEND_EXISTING;
+      isDropExisting = BatchIOConfig.DEFAULT_DROP_EXISTING;
+    } else {
+      isAppendToExisting = BatchIOConfig.DEFAULT_APPEND_EXISTING;
+      isDropExisting = ioConfig.isDropExisting();
+    }
 
+    return computeIngestionMode(isAppendToExisting, isDropExisting);
+  }
+
+  protected static IngestionMode computeIngestionMode(@Nullable BatchIOConfig ioConfig)
+  {
+    final boolean isAppendToExisting;
+    final boolean isDropExisting;
+
+    if (ioConfig == null) {
+      isAppendToExisting = BatchIOConfig.DEFAULT_APPEND_EXISTING;
+      isDropExisting = BatchIOConfig.DEFAULT_DROP_EXISTING;
+    } else {
+      isAppendToExisting = ioConfig.isAppendToExisting();
+      isDropExisting = ioConfig.isDropExisting();
+    }
+
+    return computeIngestionMode(isAppendToExisting, isDropExisting);
+
+  }
+
+  protected static IngestionMode computeIngestionMode(boolean isAppendToExisting, boolean isDropExisting)
+  {
     if (!isAppendToExisting && isDropExisting) {
       return IngestionMode.REPLACE;
     } else if (isAppendToExisting && !isDropExisting) {
       return IngestionMode.APPEND;
-    } else if (!isAppendToExisting && !isDropExisting) {
+    } else if (!isAppendToExisting) {
       return IngestionMode.REPLACE_LEGACY;
     }
     throw new IAE("Cannot simultaneously replace and append to existing segments. "

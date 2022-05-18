@@ -43,12 +43,12 @@ public final class SegmentAllocators
       final @Nullable SupervisorTaskAccess supervisorTaskAccess,
       final DataSchema dataSchema,
       final TaskLockHelper taskLockHelper,
-      final AbstractTask.IngestionMode ingestionMode,
+      final Task.IngestionMode ingestionMode,
       final PartitionsSpec partitionsSpec,
       final @Nullable Boolean useLineageBasedSegmentAllocation
   ) throws IOException
   {
-    if (ingestionMode == AbstractTask.IngestionMode.APPEND || taskLockHelper.isUseSegmentLock()) {
+    if (ingestionMode == Task.IngestionMode.APPEND || taskLockHelper.isUseSegmentLock()) {
       return new OverlordCoordinatingSegmentAllocator(
           toolbox,
           sequenceName,

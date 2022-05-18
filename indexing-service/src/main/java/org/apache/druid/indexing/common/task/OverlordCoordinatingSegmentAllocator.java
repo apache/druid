@@ -55,7 +55,7 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocatorFor
       final @Nullable SupervisorTaskAccess supervisorTaskAccess,
       final DataSchema dataSchema,
       final TaskLockHelper taskLockHelper,
-      final AbstractTask.IngestionMode ingestionMode,
+      final Task.IngestionMode ingestionMode,
       final PartitionsSpec partitionsSpec
   )
   {
@@ -107,7 +107,7 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocatorFor
   }
 
   private static PartialShardSpec createPartialShardSpec(
-      AbstractTask.IngestionMode ingestionMode,
+      Task.IngestionMode ingestionMode,
       PartitionsSpec partitionsSpec,
       TaskLockHelper taskLockHelper,
       Interval interval
@@ -116,7 +116,7 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocatorFor
     if (partitionsSpec.getType() == SecondaryPartitionType.LINEAR) {
       if (taskLockHelper.isUseSegmentLock()) {
         if (taskLockHelper.hasOverwritingRootGenerationPartition(interval) && (ingestionMode
-                                                                               != AbstractTask.IngestionMode.APPEND)) {
+                                                                               != Task.IngestionMode.APPEND)) {
           final OverwritingRootGenerationPartitions overwritingRootGenerationPartitions = taskLockHelper
               .getOverwritingRootGenerationPartition(interval);
           if (overwritingRootGenerationPartitions == null) {

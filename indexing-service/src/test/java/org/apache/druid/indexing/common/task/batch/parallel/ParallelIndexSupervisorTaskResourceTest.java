@@ -684,8 +684,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           new SupervisorTaskAccess(getSupervisorTaskId(), taskClient),
           getIngestionSchema().getDataSchema(),
           getTaskLockHelper(),
-          AbstractTask.computeIngestionMode(getIngestionSchema().getIOConfig().isAppendToExisting(),
-                                            getIngestionSchema().getIOConfig().isDropExisting()),
+          AbstractTask.computeIngestionMode(getIngestionSchema().getIOConfig()),
           partitionsSpec,
           true
       );

@@ -163,10 +163,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         taskResource,
         ingestionSchema.getDataSchema().getDataSource(),
         context,
-        AbstractTask.computeIngestionMode(
-            ingestionSchema.getIOConfig().isAppendToExisting(),
-            ingestionSchema.getIOConfig().isDropExisting()
-        )
+        AbstractTask.computeIngestionMode(ingestionSchema.getIOConfig())
     );
 
     if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup()) {
