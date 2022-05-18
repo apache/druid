@@ -27,8 +27,8 @@ import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregat
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -58,13 +58,13 @@ public class BloomFilterAggregatorFactoryTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("count", ValueType.LONG)
-                    .add("bloom", ValueType.COMPLEX)
-                    .add("bloomMerge", ValueType.COMPLEX)
-                    .add("bloom-access", ValueType.COMPLEX)
-                    .add("bloom-finalize", ValueType.COMPLEX)
-                    .add("bloomMerge-access", ValueType.COMPLEX)
-                    .add("bloomMerge-finalize", ValueType.COMPLEX)
+                    .add("count", ColumnType.LONG)
+                    .add("bloom", BloomFilterAggregatorFactory.TYPE)
+                    .add("bloomMerge", BloomFilterAggregatorFactory.TYPE)
+                    .add("bloom-access", BloomFilterAggregatorFactory.TYPE)
+                    .add("bloom-finalize", BloomFilterAggregatorFactory.TYPE)
+                    .add("bloomMerge-access", BloomFilterAggregatorFactory.TYPE)
+                    .add("bloomMerge-finalize", BloomFilterAggregatorFactory.TYPE)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );

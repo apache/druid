@@ -18,6 +18,7 @@
 
 import { Button, Classes, Dialog, Intent, TextArea } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
 import React from 'react';
 
@@ -26,12 +27,14 @@ import { AppToaster } from '../../singletons';
 import './show-value-dialog.scss';
 
 export interface ShowValueDialogProps {
-  onClose: () => void;
+  title?: string;
   str: string;
+  size?: 'normal' | 'large';
+  onClose: () => void;
 }
 
 export const ShowValueDialog = React.memo(function ShowValueDialog(props: ShowValueDialogProps) {
-  const { onClose, str } = props;
+  const { title, onClose, str, size } = props;
 
   function handleCopy() {
     copy(str, { format: 'text/plain' });
@@ -42,8 +45,13 @@ export const ShowValueDialog = React.memo(function ShowValueDialog(props: ShowVa
   }
 
   return (
-    <Dialog className="show-value-dialog" isOpen onClose={onClose} title="Full value">
-      <TextArea value={str} />
+    <Dialog
+      className={classNames('show-value-dialog', size || 'normal')}
+      isOpen
+      onClose={onClose}
+      title={title || 'Full value'}
+    >
+      <TextArea value={str} spellCheck={false} />
       <div className={Classes.DIALOG_FOOTER_ACTIONS}>
         <Button icon={IconNames.DUPLICATE} text="Copy" onClick={handleCopy} />
         <Button text="Close" intent={Intent.PRIMARY} onClick={onClose} />

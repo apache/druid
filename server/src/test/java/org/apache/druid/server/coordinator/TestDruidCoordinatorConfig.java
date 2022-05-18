@@ -23,7 +23,6 @@ import org.joda.time.Duration;
 
 public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
 {
-
   private final Duration coordinatorStartDelay;
   private final Duration coordinatorPeriod;
   private final Duration coordinatorIndexingPeriod;
@@ -42,6 +41,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final Duration coordinatorDatasourceKillDurationToRetain;
   private final Duration getLoadQueuePeonRepeatDelay;
   private final int coordinatorKillMaxSegments;
+  private final boolean compactionSkipLockedIntervals;
+  private final boolean coordinatorKillIgnoreDurationToRetain;
 
   public TestDruidCoordinatorConfig(
       Duration coordinatorStartDelay,
@@ -61,7 +62,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration coordinatorDatasourceKillPeriod,
       Duration coordinatorDatasourceKillDurationToRetain,
       int coordinatorKillMaxSegments,
-      Duration getLoadQueuePeonRepeatDelay
+      Duration getLoadQueuePeonRepeatDelay,
+      boolean coordinatorKillIgnoreDurationToRetain
   )
   {
     this.coordinatorStartDelay = coordinatorStartDelay;
@@ -82,6 +84,53 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.coordinatorDatasourceKillDurationToRetain = coordinatorDatasourceKillDurationToRetain;
     this.coordinatorKillMaxSegments = coordinatorKillMaxSegments;
     this.getLoadQueuePeonRepeatDelay = getLoadQueuePeonRepeatDelay;
+    this.compactionSkipLockedIntervals = true;
+    this.coordinatorKillIgnoreDurationToRetain = coordinatorKillIgnoreDurationToRetain;
+  }
+
+  public TestDruidCoordinatorConfig(
+      Duration coordinatorStartDelay,
+      Duration coordinatorPeriod,
+      Duration coordinatorIndexingPeriod,
+      Duration metadataStoreManagementPeriod,
+      Duration loadTimeoutDelay,
+      Duration coordinatorKillPeriod,
+      Duration coordinatorKillDurationToRetain,
+      Duration coordinatorSupervisorKillPeriod,
+      Duration coordinatorSupervisorKillDurationToRetain,
+      Duration coordinatorAuditKillPeriod,
+      Duration coordinatorAuditKillDurationToRetain,
+      Duration coordinatorCompactionKillPeriod,
+      Duration coordinatorRuleKillPeriod,
+      Duration coordinatorRuleKillDurationToRetain,
+      Duration coordinatorDatasourceKillPeriod,
+      Duration coordinatorDatasourceKillDurationToRetain,
+      int coordinatorKillMaxSegments,
+      Duration getLoadQueuePeonRepeatDelay,
+      boolean compactionSkipLockedIntervals,
+      boolean coordinatorKillIgnoreDurationToRetain
+  )
+  {
+    this.coordinatorStartDelay = coordinatorStartDelay;
+    this.coordinatorPeriod = coordinatorPeriod;
+    this.coordinatorIndexingPeriod = coordinatorIndexingPeriod;
+    this.metadataStoreManagementPeriod = metadataStoreManagementPeriod;
+    this.loadTimeoutDelay = loadTimeoutDelay;
+    this.coordinatorKillPeriod = coordinatorKillPeriod;
+    this.coordinatorKillDurationToRetain = coordinatorKillDurationToRetain;
+    this.coordinatorSupervisorKillPeriod = coordinatorSupervisorKillPeriod;
+    this.coordinatorSupervisorKillDurationToRetain = coordinatorSupervisorKillDurationToRetain;
+    this.coordinatorAuditKillPeriod = coordinatorAuditKillPeriod;
+    this.coordinatorAuditKillDurationToRetain = coordinatorAuditKillDurationToRetain;
+    this.coordinatorCompactionKillPeriod = coordinatorCompactionKillPeriod;
+    this.coordinatorRuleKillPeriod = coordinatorRuleKillPeriod;
+    this.coordinatorRuleKillDurationToRetain = coordinatorRuleKillDurationToRetain;
+    this.coordinatorDatasourceKillPeriod = coordinatorDatasourceKillPeriod;
+    this.coordinatorDatasourceKillDurationToRetain = coordinatorDatasourceKillDurationToRetain;
+    this.coordinatorKillMaxSegments = coordinatorKillMaxSegments;
+    this.getLoadQueuePeonRepeatDelay = getLoadQueuePeonRepeatDelay;
+    this.compactionSkipLockedIntervals = compactionSkipLockedIntervals;
+    this.coordinatorKillIgnoreDurationToRetain = coordinatorKillIgnoreDurationToRetain;
   }
 
   @Override
@@ -190,5 +239,17 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   public Duration getLoadQueuePeonRepeatDelay()
   {
     return getLoadQueuePeonRepeatDelay;
+  }
+
+  @Override
+  public boolean getCompactionSkipLockedIntervals()
+  {
+    return compactionSkipLockedIntervals;
+  }
+
+  @Override
+  public boolean getCoordinatorKillIgnoreDurationToRetain()
+  {
+    return coordinatorKillIgnoreDurationToRetain;
   }
 }

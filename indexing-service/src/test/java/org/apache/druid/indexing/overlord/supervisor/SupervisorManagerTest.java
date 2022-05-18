@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.overlord.supervisor;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.java.util.common.DateTimes;
@@ -185,6 +186,21 @@ public class SupervisorManagerTest extends EasyMockSupport
     replayAll();
 
     Map<String, List<VersionedSupervisorSpec>> history = manager.getSupervisorHistory();
+    verifyAll();
+
+    Assert.assertEquals(supervisorHistory, history);
+  }
+
+  @Test
+  public void testGetSupervisorHistoryForId()
+  {
+    String id = "test-supervisor-1";
+    List<VersionedSupervisorSpec> supervisorHistory = ImmutableList.of();
+
+    EasyMock.expect(metadataSupervisorManager.getAllForId(id)).andReturn(supervisorHistory);
+    replayAll();
+
+    List<VersionedSupervisorSpec> history = manager.getSupervisorHistoryForId(id);
     verifyAll();
 
     Assert.assertEquals(supervisorHistory, history);

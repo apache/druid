@@ -43,6 +43,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -126,7 +127,8 @@ public class ClosedSegmentsSinksBatchAppenderatorDriverTest extends EasyMockSupp
     checkSegmentStates(2, SegmentState.PUSHED_AND_DROPPED);
 
     final SegmentsAndCommitMetadata published =
-        driver.publishAll(null, null, makeOkPublisher(), Function.identity()).get(TIMEOUT, TimeUnit.MILLISECONDS);
+        driver.publishAll(null, null, Collections.emptySet(), makeOkPublisher(), Function.identity())
+              .get(TIMEOUT, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(
         ImmutableSet.of(
@@ -160,7 +162,8 @@ public class ClosedSegmentsSinksBatchAppenderatorDriverTest extends EasyMockSupp
     }
 
     final SegmentsAndCommitMetadata published =
-        driver.publishAll(null, null, makeOkPublisher(), Function.identity()).get(TIMEOUT, TimeUnit.MILLISECONDS);
+        driver.publishAll(null, null, Collections.emptySet(), makeOkPublisher(), Function.identity())
+              .get(TIMEOUT, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(
         ImmutableSet.of(

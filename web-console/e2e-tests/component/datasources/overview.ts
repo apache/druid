@@ -33,8 +33,9 @@ enum DatasourceColumn {
   AVAILABILITY,
   SEGMENT_LOAD_DROP,
   TOTAL_DATA_SIZE,
-  SEGMENT_SIZE,
-  SEGMENT_GRANULARITY,
+  SEGMENT_ROWS,
+  // SEGMENT_SIZE, (Hidden by default)
+  // SEGMENT_GRANULARITY, (Hidden by default)
   TOTAL_ROWS,
   AVG_ROW_SIZE,
   REPLICATED_SIZE,
@@ -123,13 +124,13 @@ export class DatasourcesOverview {
       throw new Error(`Could not find datasource: ${datasourceName}`);
     }
 
-    const editActions = await this.page.$$('span[icon=wrench]');
+    const editActions = await this.page.$$('.action-cell span[icon=more]');
     await editActions[index].click();
     await this.waitForPopupMenu();
   }
 
   private async waitForPopupMenu(): Promise<void> {
-    await this.page.waitForSelector('ul.bp3-menu');
+    await this.page.waitForSelector('ul.bp4-menu');
   }
 
   async triggerCompaction(): Promise<void> {

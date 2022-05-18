@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.http.client.response;
 
 import com.google.common.io.ByteSource;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
@@ -57,18 +56,16 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
   @Override
   public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
-    ChannelBufferInputStream channelStream = null;
-    try {
-      channelStream = new ChannelBufferInputStream(response.getContent());
+    try (ChannelBufferInputStream channelStream = new ChannelBufferInputStream(response.getContent())) {
       queue.put(channelStream);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
     }
     catch (InterruptedException e) {
       log.error(e, "Queue appending interrupted");
       Thread.currentThread().interrupt();
       throw new RuntimeException(e);
-    }
-    finally {
-      CloseQuietly.close(channelStream);
     }
     byteCount.addAndGet(response.getContent().readableBytes());
     return ClientResponse.finished(
@@ -112,20 +109,18 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
     final ChannelBuffer channelBuffer = chunk.getContent();
     final int bytes = channelBuffer.readableBytes();
     if (bytes > 0) {
-      ChannelBufferInputStream channelStream = null;
-      try {
-        channelStream = new ChannelBufferInputStream(channelBuffer);
+      try (ChannelBufferInputStream channelStream = new ChannelBufferInputStream(channelBuffer)) {
         queue.put(channelStream);
         // Queue.size() can be expensive in some implementations, but LinkedBlockingQueue.size is just an AtomicLong
         log.debug("Added stream. Queue length %d", queue.size());
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
       }
       catch (InterruptedException e) {
         log.warn(e, "Thread interrupted while adding to queue");
         Thread.currentThread().interrupt();
         throw new RuntimeException(e);
-      }
-      finally {
-        CloseQuietly.close(channelStream);
       }
       byteCount.addAndGet(bytes);
     } else {

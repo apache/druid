@@ -23,10 +23,13 @@ import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql2rel.SqlRexContext;
 import org.apache.calcite.sql2rel.SqlRexConvertlet;
 import org.apache.calcite.sql2rel.SqlRexConvertletTable;
@@ -43,12 +46,24 @@ public class DruidConvertletTable implements SqlRexConvertletTable
   // Apply a convertlet that doesn't do anything other than a "dumb" call translation.
   private static final SqlRexConvertlet BYPASS_CONVERTLET = StandardConvertletTable.INSTANCE::convertCall;
 
+  /**
+   * Use instead of {@link SqlStdOperatorTable#CURRENT_TIMESTAMP} to get the proper default precision.
+   */
+  private static final SqlFunction CURRENT_TIMESTAMP =
+      new CurrentTimestampSqlFunction("CURRENT_TIMESTAMP", SqlTypeName.TIMESTAMP);
+
+  /**
+   * Use instead of {@link SqlStdOperatorTable#LOCALTIMESTAMP} to get the proper default precision.
+   */
+  private static final SqlFunction LOCALTIMESTAMP =
+      new CurrentTimestampSqlFunction("LOCALTIMESTAMP", SqlTypeName.TIMESTAMP);
+
   private static final List<SqlOperator> CURRENT_TIME_CONVERTLET_OPERATORS =
       ImmutableList.<SqlOperator>builder()
-          .add(SqlStdOperatorTable.CURRENT_TIMESTAMP)
+          .add(CURRENT_TIMESTAMP)
           .add(SqlStdOperatorTable.CURRENT_TIME)
           .add(SqlStdOperatorTable.CURRENT_DATE)
-          .add(SqlStdOperatorTable.LOCALTIMESTAMP)
+          .add(LOCALTIMESTAMP)
           .add(SqlStdOperatorTable.LOCALTIME)
           .build();
 
@@ -130,11 +145,20 @@ public class DruidConvertletTable implements SqlRexConvertletTable
     public RexNode convertCall(final SqlRexContext cx, final SqlCall call)
     {
       final SqlOperator operator = call.getOperator();
-      if (operator.equals(SqlStdOperatorTable.CURRENT_TIMESTAMP)
-          || operator.equals(SqlStdOperatorTable.LOCALTIMESTAMP)) {
-        return cx.getRexBuilder().makeTimestampLiteral(
-            Calcites.jodaToCalciteTimestampString(plannerContext.getLocalNow(), plannerContext.getTimeZone()),
-            RelDataType.PRECISION_NOT_SPECIFIED
+      if (CURRENT_TIMESTAMP.equals(operator) || LOCALTIMESTAMP.equals(operator)) {
+        int precision = DruidTypeSystem.DEFAULT_TIMESTAMP_PRECISION;
+
+        if (call.operandCount() > 0) {
+          // Call is CURRENT_TIMESTAMP(precision) or LOCALTIMESTAMP(precision)
+          final SqlLiteral precisionLiteral = call.operand(0);
+          precision = precisionLiteral.intValue(true);
+        }
+
+        return Calcites.jodaToCalciteTimestampLiteral(
+            cx.getRexBuilder(),
+            plannerContext.getLocalNow(),
+            plannerContext.getTimeZone(),
+            precision
         );
       } else if (operator.equals(SqlStdOperatorTable.CURRENT_TIME) || operator.equals(SqlStdOperatorTable.LOCALTIME)) {
         return cx.getRexBuilder().makeTimeLiteral(

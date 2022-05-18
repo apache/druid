@@ -26,7 +26,7 @@ sidebar_label: "Granularities"
 > Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 > This document describes the native
 > language. For information about time functions available in SQL, refer to the
-> [SQL documentation](sql.md#time-functions).
+> [SQL documentation](sql-scalar.md#date-and-time-functions).
 
 Granularity determines how to bucket data across the time dimension, or how to aggregate data by hour, day, minute, etc.
 

@@ -23,20 +23,20 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -76,12 +76,14 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
       SerializablePair.createNullHandlingComparator(Long::compare, true);
 
   private final String fieldName;
+  private final String timeColumn;
   private final String name;
 
   @JsonCreator
   public LongFirstAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName
+      @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("timeColumn") @Nullable final String timeColumn
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -89,6 +91,7 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
 
     this.name = name;
     this.fieldName = fieldName;
+    this.timeColumn = timeColumn == null ? ColumnHolder.TIME_COLUMN_NAME : timeColumn;
   }
 
   @Override
@@ -99,7 +102,7 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
       return NIL_AGGREGATOR;
     } else {
       return new LongFirstAggregator(
-          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector
       );
     }
@@ -113,7 +116,7 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
       return NIL_BUFFER_AGGREGATOR;
     } else {
       return new LongFirstBufferAggregator(
-          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector
       );
     }
@@ -153,7 +156,7 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongFirstAggregatorFactory(name, name)
+    return new LongFirstAggregatorFactory(name, name, timeColumn)
     {
       @Override
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
@@ -218,7 +221,7 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.singletonList(new LongFirstAggregatorFactory(fieldName, fieldName));
+    return Collections.singletonList(new LongFirstAggregatorFactory(fieldName, fieldName, timeColumn));
   }
 
   @Override
@@ -251,34 +254,38 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
     return fieldName;
   }
 
+  @JsonProperty
+  public String getTimeColumn()
+  {
+    return timeColumn;
+  }
+
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(ColumnHolder.TIME_COLUMN_NAME, fieldName);
+    return Arrays.asList(timeColumn, fieldName);
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
-
-    return ByteBuffer.allocate(1 + fieldNameBytes.length)
-                     .put(AggregatorUtil.LONG_FIRST_CACHE_TYPE_ID)
-                     .put(fieldNameBytes)
-                     .array();
+    return new CacheKeyBuilder(AggregatorUtil.LONG_FIRST_CACHE_TYPE_ID)
+        .appendString(fieldName)
+        .appendString(timeColumn)
+        .build();
   }
 
   @Override
-  public ValueType getType()
+  public ColumnType getIntermediateType()
   {
     // if we don't pretend to be a primitive, group by v1 gets sad and doesn't work because no complex type serde
-    return ValueType.LONG;
+    return ColumnType.LONG;
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getResultType()
   {
-    return ValueType.LONG;
+    return ColumnType.LONG;
   }
 
   @Override
@@ -300,7 +307,7 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
 
     LongFirstAggregatorFactory that = (LongFirstAggregatorFactory) o;
 
-    return fieldName.equals(that.fieldName) && name.equals(that.name);
+    return fieldName.equals(that.fieldName) && timeColumn.equals(that.timeColumn) && name.equals(that.name);
   }
 
   @Override
@@ -317,6 +324,7 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
     return "LongFirstAggregatorFactory{" +
            "name='" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
+           ", timeColumn='" + timeColumn + '\'' +
            '}';
   }
 }

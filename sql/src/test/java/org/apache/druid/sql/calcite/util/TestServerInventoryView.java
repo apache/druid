@@ -187,8 +187,11 @@ public class TestServerInventoryView implements TimelineServerView
     timelineCallbackExecs.forEach(
         execAndCallback -> execAndCallback.lhs.execute(() -> {
           execAndCallback.rhs.serverSegmentRemoved(whichServer, segment);
-          // assume that all replicas have been removed and fire this one too
-          execAndCallback.rhs.segmentRemoved(segment);
+
+          // Fire segmentRemoved if all replicas have been removed.
+          if (!segments.contains(segment) && !brokerSegments.contains(segment) && !realtimeSegments.contains(segment)) {
+            execAndCallback.rhs.segmentRemoved(segment);
+          }
         })
     );
   }

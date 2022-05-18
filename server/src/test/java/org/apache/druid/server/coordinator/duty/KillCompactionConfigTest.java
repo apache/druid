@@ -104,7 +104,8 @@ public class KillCompactionConfigTest
         null,
         null,
         10,
-        null
+        null,
+        false
     );
     killCompactionConfig = new KillCompactionConfig(
         druidCoordinatorConfig,
@@ -114,9 +115,9 @@ public class KillCompactionConfigTest
         mockConnectorConfig
     );
     killCompactionConfig.run(mockDruidCoordinatorRuntimeParams);
-    Mockito.verifyZeroInteractions(mockSqlSegmentsMetadataManager);
-    Mockito.verifyZeroInteractions(mockJacksonConfigManager);
-    Mockito.verifyZeroInteractions(mockServiceEmitter);
+    Mockito.verifyNoInteractions(mockSqlSegmentsMetadataManager);
+    Mockito.verifyNoInteractions(mockJacksonConfigManager);
+    Mockito.verifyNoInteractions(mockServiceEmitter);
   }
 
   @Test
@@ -140,7 +141,8 @@ public class KillCompactionConfigTest
         null,
         null,
         10,
-        null
+        null,
+        false
     );
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage("Coordinator compaction configuration kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod");
@@ -189,7 +191,8 @@ public class KillCompactionConfigTest
         null,
         null,
         10,
-        null
+        null,
+        false
     );
     killCompactionConfig = new KillCompactionConfig(
         druidCoordinatorConfig,
@@ -199,7 +202,7 @@ public class KillCompactionConfigTest
         mockConnectorConfig
     );
     killCompactionConfig.run(mockDruidCoordinatorRuntimeParams);
-    Mockito.verifyZeroInteractions(mockSqlSegmentsMetadataManager);
+    Mockito.verifyNoInteractions(mockSqlSegmentsMetadataManager);
     final ArgumentCaptor<ServiceEventBuilder> emittedEventCaptor = ArgumentCaptor.forClass(ServiceEventBuilder.class);
     Mockito.verify(mockServiceEmitter).emit(emittedEventCaptor.capture());
     Assert.assertEquals(KillCompactionConfig.COUNT_METRIC, emittedEventCaptor.getValue().build(ImmutableMap.of()).toMap().get("metric"));
@@ -230,7 +233,10 @@ public class KillCompactionConfigTest
         null,
         new Period(3600),
         null,
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null),
+        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
+        null,
+        null,
+        null,
         null,
         ImmutableMap.of("key", "val")
     );
@@ -242,7 +248,10 @@ public class KillCompactionConfigTest
         null,
         new Period(3600),
         null,
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null),
+        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
+        null,
+        null,
+        null,
         null,
         ImmutableMap.of("key", "val")
     );
@@ -288,7 +297,8 @@ public class KillCompactionConfigTest
         null,
         null,
         10,
-        null
+        null,
+        false
     );
     killCompactionConfig = new KillCompactionConfig(
         druidCoordinatorConfig,
@@ -346,7 +356,10 @@ public class KillCompactionConfigTest
         null,
         new Period(3600),
         null,
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null),
+        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
+        null,
+        null,
+        null,
         null,
         ImmutableMap.of("key", "val")
     );
@@ -404,7 +417,8 @@ public class KillCompactionConfigTest
         null,
         null,
         10,
-        null
+        null,
+        false
     );
     killCompactionConfig = new KillCompactionConfig(
         druidCoordinatorConfig,

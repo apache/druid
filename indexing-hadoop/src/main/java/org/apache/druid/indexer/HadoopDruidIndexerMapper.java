@@ -80,7 +80,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
                 "Encountered row with timestamp that cannot be represented as a long: [%s]",
                 inputRow
             );
-            throw new ParseException(errorMsg);
+            throw new ParseException(null, errorMsg);
           }
 
           if (granularitySpec.inputIntervals().isEmpty()

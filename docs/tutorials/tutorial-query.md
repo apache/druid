@@ -90,7 +90,7 @@ returns the number of edits for the page. Make the same column name change in th
       The `COUNT()` function is one of many functions available for use in Druid SQL queries. You can mouse over a function name
       in the autocomplete menu to see a brief description of a function. Also, you can find more information in the Druid 
       documentation; for example, the `COUNT()` function is documented in 
-      [Aggregation functions](../querying/sql.md#aggregation-functions). 
+      [Aggregation functions](../querying/sql-aggregations.md). 
 
    The query should now be:
 
@@ -216,7 +216,13 @@ Retrieved 10 rows in 0.06s.
 ### Query SQL over HTTP
 
 
-You can submit queries directly to the Druid Broker over HTTP. 
+You can submit native queries [directly to the Druid Broker over HTTP](../querying/sql-api.md#submit-a-query). The request body should be a JSON object, with the value for the key `query` containing text of the query:
+
+```json
+{
+  "query": "SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE \"__time\" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY page ORDER BY Edits DESC LIMIT 10"
+}
+```
 
 The tutorial package includes an example file that contains the SQL query shown above at `quickstart/tutorial/wikipedia-top-pages-sql.json`. Let's submit that query to the Druid Broker:
 

@@ -171,6 +171,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                          || (e instanceof DBIException && isTransientException(e.getCause())));
   }
 
+  /**
+   * Vendor specific errors that are not covered by {@link #isTransientException(Throwable)}
+   */
   protected boolean connectorIsTransientException(Throwable e)
   {
     return false;
@@ -280,7 +283,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             ),
             StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName),
             StringUtils.format(
-                "CREATE INDEX idx_%1$s_datasource_used_end ON %1$s(dataSource, used, %2$send%2$s)",
+                "CREATE INDEX idx_%1$s_datasource_used_end_start ON %1$s(dataSource, used, %2$send%2$s, start)",
                 tableName,
                 getQuoteString()
             )

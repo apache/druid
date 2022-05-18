@@ -151,7 +151,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", endpoint='" + endpoint + '\'' +
            ", replicas=" + getReplicas() +
            ", taskCount=" + getTaskCount() +
-           ", autoScalerConfig=" + getAutoscalerConfig() +
+           ", autoScalerConfig=" + getAutoScalerConfig() +
            ", taskDuration=" + getTaskDuration() +
            ", startDelay=" + getStartDelay() +
            ", period=" + getPeriod() +

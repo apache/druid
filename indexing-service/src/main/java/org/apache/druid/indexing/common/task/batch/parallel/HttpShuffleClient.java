@@ -88,7 +88,7 @@ public class HttpShuffleClient implements ShuffleClient<GenericPartitionLocation
     );
     final File unzippedDir = new File(partitionDir, StringUtils.format("unzipped_%s", location.getSubTaskId()));
     try {
-      org.apache.commons.io.FileUtils.forceMkdir(unzippedDir);
+      FileUtils.mkdirp(unzippedDir);
       CompressionUtils.unzip(zippedFile, unzippedDir);
     }
     finally {

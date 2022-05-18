@@ -75,4 +75,9 @@ public interface Overshadowable<T extends Overshadowable>
    * {@link VersionedIntervalTimeline}.
    */
   short getAtomicUpdateGroupSize();
+
+  default boolean hasData()
+  {
+    return true;
+  }
 }

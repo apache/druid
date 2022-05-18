@@ -59,6 +59,7 @@ import org.joda.time.Interval;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
@@ -334,34 +335,39 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
     return Optional.absent();
   }
 
+  /* This method should be never called in peons */
   @Override
-  public long getTotalTaskSlotCount()
+  public Map<String, Long> getTotalTaskSlotCount()
   {
-    return 1;
+    throw new UnsupportedOperationException();
   }
 
+  /* This method should be never called in peons */
   @Override
-  public long getIdleTaskSlotCount()
+  public Map<String, Long> getIdleTaskSlotCount()
   {
-    return runningItem == null ? 1 : 0;
+    throw new UnsupportedOperationException();
   }
 
+  /* This method should be never called in peons */
   @Override
-  public long getUsedTaskSlotCount()
+  public Map<String, Long> getUsedTaskSlotCount()
   {
-    return runningItem == null ? 0 : 1;
+    throw new UnsupportedOperationException();
   }
 
+  /* This method should be never called in peons */
   @Override
-  public long getLazyTaskSlotCount()
+  public Map<String, Long> getLazyTaskSlotCount()
   {
-    return 0;
+    throw new UnsupportedOperationException();
   }
 
+  /* This method should be never called in peons */
   @Override
-  public long getBlacklistedTaskSlotCount()
+  public Map<String, Long> getBlacklistedTaskSlotCount()
   {
-    return 0;
+    throw new UnsupportedOperationException();
   }
 
   @Override

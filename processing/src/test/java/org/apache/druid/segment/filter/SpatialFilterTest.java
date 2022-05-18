@@ -28,6 +28,7 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.SpatialDimensionSchema;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
@@ -121,21 +122,20 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                 .withQueryGranularity(Granularities.DAY)
                 .withMetrics(METRIC_AGGS)
                 .withDimensionsSpec(
-                    new DimensionsSpec(
-                        null,
-                        null,
-                        Arrays.asList(
-                            new SpatialDimensionSchema(
-                                "dim.geo",
-                                Arrays.asList("lat", "long")
-                            ),
-                            new SpatialDimensionSchema(
-                                "spatialIsRad",
-                                Arrays.asList("lat2", "long2")
-                            )
-
-                        )
-                    )
+                    DimensionsSpec.builder()
+                                  .setSpatialDimensions(
+                                      Arrays.asList(
+                                          new SpatialDimensionSchema(
+                                              "dim.geo",
+                                              Arrays.asList("lat", "long")
+                                          ),
+                                          new SpatialDimensionSchema(
+                                              "spatialIsRad",
+                                              Arrays.asList("lat2", "long2")
+                                          )
+                                      )
+                                  )
+                                  .build()
                 ).build()
         )
         .setMaxRowCount(NUM_POINTS)
@@ -270,7 +270,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
     IncrementalIndex theIndex = makeIncrementalIndex();
     File tmpFile = File.createTempFile("billy", "yay");
     tmpFile.delete();
-    tmpFile.mkdirs();
+    FileUtils.mkdirp(tmpFile);
     tmpFile.deleteOnExit();
 
     INDEX_MERGER.persist(theIndex, tmpFile, indexSpec, null);
@@ -287,20 +287,20 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Arrays.asList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  Arrays.asList("lat", "long")
-                              ),
-                              new SpatialDimensionSchema(
-                                  "spatialIsRad",
-                                  Arrays.asList("lat2", "long2")
-                              )
-                          )
-                      )
+                      DimensionsSpec.builder()
+                                    .setSpatialDimensions(
+                                        Arrays.asList(
+                                            new SpatialDimensionSchema(
+                                                "dim.geo",
+                                                Arrays.asList("lat", "long")
+                                            ),
+                                            new SpatialDimensionSchema(
+                                                "spatialIsRad",
+                                                Arrays.asList("lat2", "long2")
+                                            )
+                                        )
+                                    )
+                                    .build()
                   ).build()
           )
           .setMaxRowCount(1000)
@@ -313,20 +313,20 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Arrays.asList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  Arrays.asList("lat", "long")
-                              ),
-                              new SpatialDimensionSchema(
-                                  "spatialIsRad",
-                                  Arrays.asList("lat2", "long2")
-                              )
-                          )
-                      )
+                      DimensionsSpec.builder()
+                                    .setSpatialDimensions(
+                                        Arrays.asList(
+                                            new SpatialDimensionSchema(
+                                                "dim.geo",
+                                                Arrays.asList("lat", "long")
+                                            ),
+                                            new SpatialDimensionSchema(
+                                                "spatialIsRad",
+                                                Arrays.asList("lat2", "long2")
+                                            )
+                                        )
+                                    )
+                                    .build()
                   ).build()
           )
           .setMaxRowCount(1000)
@@ -339,20 +339,20 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Arrays.asList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  Arrays.asList("lat", "long")
-                              ),
-                              new SpatialDimensionSchema(
-                                  "spatialIsRad",
-                                  Arrays.asList("lat2", "long2")
-                              )
-                          )
-                      )
+                      DimensionsSpec.builder()
+                                    .setSpatialDimensions(
+                                        Arrays.asList(
+                                            new SpatialDimensionSchema(
+                                                "dim.geo",
+                                                Arrays.asList("lat", "long")
+                                            ),
+                                            new SpatialDimensionSchema(
+                                                "spatialIsRad",
+                                                Arrays.asList("lat2", "long2")
+                                            )
+                                        )
+                                    )
+                                    .build()
                   ).build()
           )
           .setMaxRowCount(NUM_POINTS)
@@ -488,13 +488,13 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
       File thirdFile = new File(tmpFile, "third");
       File mergedFile = new File(tmpFile, "merged");
 
-      firstFile.mkdirs();
+      FileUtils.mkdirp(firstFile);
+      FileUtils.mkdirp(secondFile);
+      FileUtils.mkdirp(thirdFile);
+      FileUtils.mkdirp(mergedFile);
       firstFile.deleteOnExit();
-      secondFile.mkdirs();
       secondFile.deleteOnExit();
-      thirdFile.mkdirs();
       thirdFile.deleteOnExit();
-      mergedFile.mkdirs();
       mergedFile.deleteOnExit();
 
       INDEX_MERGER.persist(first, DATA_INTERVAL, firstFile, indexSpec, null);

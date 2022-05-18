@@ -21,83 +21,80 @@ package org.apache.druid.indexer.partitions;
 
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Partition a segment by a single dimension.
  */
-public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSpec
+public class SingleDimensionPartitionsSpec extends DimensionRangePartitionsSpec
 {
   public static final String NAME = "single_dim";
   static final String OLD_NAME = "dimension";  // for backward compatibility
 
-  private static final String PARITION_DIMENSION = "partitionDimension";
-  private static final String MAX_PARTITION_SIZE = "maxPartitionSize";
-  private static final String FORCE_GUARANTEED_ROLLUP_COMPATIBLE = "";
+  private static final String PARTITION_DIMENSION = "partitionDimension";
 
-  private final Integer targetRowsPerSegment;
-  private final Integer maxRowsPerSegment;
   private final String partitionDimension;
-  private final boolean assumeGrouped;
-
-  // Values for these fields are derived from the one above:
-  private final int resolvedMaxRowPerSegment;
 
   @JsonCreator
   public SingleDimensionPartitionsSpec(
-      @JsonProperty(DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT) @Nullable Integer targetRowsPerSegment,
-      @JsonProperty(PartitionsSpec.MAX_ROWS_PER_SEGMENT) @Nullable Integer maxRowsPerSegment,
-      @JsonProperty(PARITION_DIMENSION) @Nullable String partitionDimension,
-      @JsonProperty("assumeGrouped") boolean assumeGrouped,  // false by default
+      @JsonProperty(TARGET_ROWS_PER_SEGMENT) @Nullable Integer targetRowsPerSegment,
+      @JsonProperty(MAX_ROWS_PER_SEGMENT) @Nullable Integer maxRowsPerSegment,
+      @JsonProperty(PARTITION_DIMENSION) @Nullable String partitionDimension,
+      @JsonProperty(ASSUME_GROUPED) boolean assumeGrouped,  // false by default
 
       // Deprecated properties preserved for backward compatibility:
-      @Deprecated @JsonProperty(DimensionBasedPartitionsSpec.TARGET_PARTITION_SIZE) @Nullable
+      @Deprecated @JsonProperty(TARGET_PARTITION_SIZE) @Nullable
           Integer targetPartitionSize,  // prefer targetRowsPerSegment
       @Deprecated @JsonProperty(MAX_PARTITION_SIZE) @Nullable
           Integer maxPartitionSize  // prefer maxRowsPerSegment
   )
   {
-    Integer adjustedTargetRowsPerSegment = PartitionsSpec.resolveHistoricalNullIfNeeded(targetRowsPerSegment);
-    Integer adjustedMaxRowsPerSegment = PartitionsSpec.resolveHistoricalNullIfNeeded(maxRowsPerSegment);
+    super(
+        computeTargetRows(targetRowsPerSegment, targetPartitionSize),
+        computeMaxRows(maxRowsPerSegment, maxPartitionSize),
+        partitionDimension == null ? Collections.emptyList() : Collections.singletonList(partitionDimension),
+        assumeGrouped
+    );
+    this.partitionDimension = partitionDimension;
+  }
+
+  private static Integer computeTargetRows(Integer targetRows, Integer targetPartitionSize)
+  {
+    Integer adjustedTargetRowsPerSegment = PartitionsSpec.resolveHistoricalNullIfNeeded(targetRows);
     Integer adjustedTargetPartitionSize = PartitionsSpec.resolveHistoricalNullIfNeeded(targetPartitionSize);
-    Integer adjustedMaxPartitionSize = PartitionsSpec.resolveHistoricalNullIfNeeded(maxPartitionSize);
 
     Property<Integer> target = Checks.checkAtMostOneNotNull(
-        DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT,
+        TARGET_ROWS_PER_SEGMENT,
         adjustedTargetRowsPerSegment,
-        DimensionBasedPartitionsSpec.TARGET_PARTITION_SIZE,
+        TARGET_PARTITION_SIZE,
         adjustedTargetPartitionSize
     );
 
+    return target.getValue();
+  }
+
+  private static Integer computeMaxRows(Integer maxRows, Integer maxPartitionSize)
+  {
+    Integer adjustedMaxRowsPerSegment = PartitionsSpec.resolveHistoricalNullIfNeeded(maxRows);
+    Integer adjustedMaxPartitionSize = PartitionsSpec.resolveHistoricalNullIfNeeded(maxPartitionSize);
+
     Property<Integer> max = Checks.checkAtMostOneNotNull(
-        PartitionsSpec.MAX_ROWS_PER_SEGMENT,
+        MAX_ROWS_PER_SEGMENT,
         adjustedMaxRowsPerSegment,
         MAX_PARTITION_SIZE,
         adjustedMaxPartitionSize
     );
 
-    Preconditions.checkArgument(
-        (target.getValue() == null) != (max.getValue() == null),
-        "Exactly one of " + target.getName() + " or " + max.getName() + " must be present"
-    );
-
-    this.partitionDimension = partitionDimension;
-    this.assumeGrouped = assumeGrouped;
-    this.targetRowsPerSegment = target.getValue();
-    this.maxRowsPerSegment = max.getValue();
-
-    this.resolvedMaxRowPerSegment = resolveMaxRowsPerSegment(target, max);
+    return max.getValue();
   }
 
   @VisibleForTesting
@@ -111,53 +108,6 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
     this(targetRowsPerSegment, maxRowsPerSegment, partitionDimension, assumeGrouped, null, null);
   }
 
-  private static int resolveMaxRowsPerSegment(Property<Integer> target, Property<Integer> max)
-  {
-    final int resolvedValue;
-
-    if (target.getValue() != null) {
-      Preconditions.checkArgument(target.getValue() > 0, target.getName() + " must be greater than 0");
-      try {
-        resolvedValue = Math.addExact(target.getValue(), (target.getValue() / 2));
-      }
-      catch (ArithmeticException e) {
-        throw new IllegalArgumentException(target.getName() + " is too large");
-      }
-    } else {
-      Preconditions.checkArgument(max.getValue() > 0, max.getName() + " must be greater than 0");
-      resolvedValue = max.getValue();
-    }
-    return resolvedValue;
-  }
-
-  @JsonProperty
-  @Override
-  @Nullable
-  public Integer getTargetRowsPerSegment()
-  {
-    return targetRowsPerSegment;
-  }
-
-  @Override
-  public SecondaryPartitionType getType()
-  {
-    return SecondaryPartitionType.RANGE;
-  }
-
-  @JsonIgnore
-  @Override
-  @NotNull
-  public Integer getMaxRowsPerSegment()
-  {
-    return resolvedMaxRowPerSegment;  // NOTE: This returns the *resolved* value
-  }
-
-  @JsonProperty(PartitionsSpec.MAX_ROWS_PER_SEGMENT)
-  private Integer getMaxRowsPerSegmentForJson()
-  {
-    return maxRowsPerSegment;
-  }
-
   @JsonProperty
   @Nullable
   public String getPartitionDimension()
@@ -165,33 +115,35 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
     return partitionDimension;
   }
 
-  @JsonProperty
-  public boolean isAssumeGrouped()
+  /**
+   * Returns a Map to be used for serializing objects of this class. This is to
+   * ensure that a new field added in {@link DimensionRangePartitionsSpec} does
+   * not get serialized when serializing a {@code SingleDimensionPartitionsSpec}.
+   *
+   * @return A map containing only the keys {@code "partitionDimension"},
+   * {@code "targetRowsPerSegment"}, {@code "maxRowsPerSegments"} and
+   * {@code "assumeGrouped"}.
+   */
+  @JsonValue
+  public Map<String, Object> getSerializableObject()
   {
-    return assumeGrouped;
-  }
+    Map<String, Object> jsonMap = new HashMap<>();
+    jsonMap.put(TARGET_ROWS_PER_SEGMENT, getTargetRowsPerSegment());
+    jsonMap.put(MAX_ROWS_PER_SEGMENT, getMaxRowsPerSegmentForJson());
+    jsonMap.put(PARTITION_DIMENSION, getPartitionDimension());
+    jsonMap.put(ASSUME_GROUPED, isAssumeGrouped());
 
-  @JsonIgnore
-  @Override
-  public List<String> getPartitionDimensions()
-  {
-    return partitionDimension == null ? Collections.emptyList() : Collections.singletonList(partitionDimension);
+    return jsonMap;
   }
 
   @Override
   public String getForceGuaranteedRollupIncompatiblityReason()
   {
     if (getPartitionDimension() == null) {
-      return PARITION_DIMENSION + " must be specified";
+      return PARTITION_DIMENSION + " must be specified";
     }
 
     return FORCE_GUARANTEED_ROLLUP_COMPATIBLE;
-  }
-
-  @Override
-  public boolean needsDeterminePartitions(boolean useForHadoopTask)
-  {
-    return true;
   }
 
   @Override
@@ -204,34 +156,24 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
       return false;
     }
     SingleDimensionPartitionsSpec that = (SingleDimensionPartitionsSpec) o;
-    return assumeGrouped == that.assumeGrouped &&
-           resolvedMaxRowPerSegment == that.resolvedMaxRowPerSegment &&
-           Objects.equals(targetRowsPerSegment, that.targetRowsPerSegment) &&
-           Objects.equals(maxRowsPerSegment, that.maxRowsPerSegment) &&
-           Objects.equals(partitionDimension, that.partitionDimension);
+    return super.equals(that);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(
-        targetRowsPerSegment,
-        maxRowsPerSegment,
-        partitionDimension,
-        assumeGrouped,
-        resolvedMaxRowPerSegment
-    );
+    return super.hashCode();
   }
 
   @Override
   public String toString()
   {
     return "SingleDimensionPartitionsSpec{" +
-           "targetRowsPerSegment=" + targetRowsPerSegment +
-           ", maxRowsPerSegment=" + maxRowsPerSegment +
+           "targetRowsPerSegment=" + getTargetRowsPerSegment() +
+           ", maxRowsPerSegment=" + getMaxRowsPerSegmentForJson() +
            ", partitionDimension='" + partitionDimension + '\'' +
-           ", assumeGrouped=" + assumeGrouped +
-           ", resolvedMaxRowPerSegment=" + resolvedMaxRowPerSegment +
+           ", assumeGrouped=" + isAssumeGrouped() +
+           ", resolvedMaxRowPerSegment=" + getMaxRowsPerSegment() +
            '}';
   }
 }

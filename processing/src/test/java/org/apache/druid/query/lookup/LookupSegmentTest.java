@@ -21,7 +21,6 @@ package org.apache.druid.query.lookup;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -184,17 +183,22 @@ public class LookupSegmentTest
         null
     );
 
-    final Cursor cursor = Iterables.getOnlyElement(cursors.toList());
     final List<Pair<String, String>> kvs = new ArrayList<>();
 
+    cursors.accumulate(
+        null,
+        (ignored, cursor) -> {
+          final ColumnValueSelector keySelector = cursor.getColumnSelectorFactory().makeColumnValueSelector("k");
+          final ColumnValueSelector valueSelector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
 
-    final ColumnValueSelector keySelector = cursor.getColumnSelectorFactory().makeColumnValueSelector("k");
-    final ColumnValueSelector valueSelector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+          while (!cursor.isDone()) {
+            kvs.add(Pair.of(String.valueOf(keySelector.getObject()), String.valueOf(valueSelector.getObject())));
+            cursor.advanceUninterruptibly();
+          }
 
-    while (!cursor.isDone()) {
-      kvs.add(Pair.of(String.valueOf(keySelector.getObject()), String.valueOf(valueSelector.getObject())));
-      cursor.advanceUninterruptibly();
-    }
+          return null;
+        }
+    );
 
     Assert.assertEquals(
         ImmutableList.of(

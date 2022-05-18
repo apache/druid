@@ -168,7 +168,7 @@ If no used segments are found for the given inputs, this API returns `204 No Con
 #### Metadata store information
 
 > Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
-> [`sys.segments`](../querying/sql.md#segments-table) table.
+> [`sys.segments`](../querying/sql-metadata-tables.md#segments-table) table.
 
 ##### GET
 
@@ -242,7 +242,7 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 
 * `/druid/coordinator/v1/datasources`
 
-Returns a list of datasource names found in the cluster as seen by the coordinator. This view is updated every [`druid.coordinator.period`](../configuration/index.html#coordinator-operation).
+Returns a list of datasource names found in the cluster as seen by the coordinator. This view is updated every [`druid.coordinator.period`](../configuration/index.md#coordinator-operation).
 
 * `/druid/coordinator/v1/datasources?simple`
 
@@ -458,52 +458,52 @@ to filter by interval and limit the number of results respectively.
 
 Update overlord dynamic worker configuration.
 
-#### Compaction Status
+#### Automatic compaction status
 
 ##### GET
 
 * `/druid/coordinator/v1/compaction/progress?dataSource={dataSource}`
 
 Returns the total size of segments awaiting compaction for the given dataSource. 
-This is only valid for dataSource which has compaction enabled. 
+The specified dataSource must have automatic compaction enabled.
 
 ##### GET
 
 * `/druid/coordinator/v1/compaction/status`
 
-Returns the status and statistics from the auto compaction run of all dataSources which have auto compaction enabled in the latest run.
-The response payload includes a list of `latestStatus` objects. Each `latestStatus` represents the status for a dataSource (which has/had auto compaction enabled). 
+Returns the status and statistics from the auto-compaction run of all dataSources which have auto-compaction enabled in the latest run.
+The response payload includes a list of `latestStatus` objects. Each `latestStatus` represents the status for a dataSource (which has/had auto-compaction enabled).
 The `latestStatus` object has the following keys:
 * `dataSource`: name of the datasource for this status information
-* `scheduleStatus`: auto compaction scheduling status. Possible values are `NOT_ENABLED` and `RUNNING`. Returns `RUNNING ` if the dataSource has an active auto compaction config submitted otherwise, `NOT_ENABLED`
-* `bytesAwaitingCompaction`: total bytes of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction)
-* `bytesCompacted`: total bytes of this datasource that are already compacted with the spec set in the auto compaction config.
-* `bytesSkipped`: total bytes of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.
-* `segmentCountAwaitingCompaction`: total number of segments of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction)
-* `segmentCountCompacted`: total number of segments of this datasource that are already compacted with the spec set in the auto compaction config.
-* `segmentCountSkipped`: total number of segments of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.
-* `intervalCountAwaitingCompaction`: total number of intervals of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction)
-* `intervalCountCompacted`: total number of intervals of this datasource that are already compacted with the spec set in the auto compaction config.
-* `intervalCountSkipped`: total number of intervals of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.
+* `scheduleStatus`: auto-compaction scheduling status. Possible values are `NOT_ENABLED` and `RUNNING`. Returns `RUNNING ` if the dataSource has an active auto-compaction config submitted. Otherwise, returns `NOT_ENABLED`.
+* `bytesAwaitingCompaction`: total bytes of this datasource waiting to be compacted by the auto-compaction (only consider intervals/segments that are eligible for auto-compaction)
+* `bytesCompacted`: total bytes of this datasource that are already compacted with the spec set in the auto-compaction config
+* `bytesSkipped`: total bytes of this datasource that are skipped (not eligible for auto-compaction) by the auto-compaction
+* `segmentCountAwaitingCompaction`: total number of segments of this datasource waiting to be compacted by the auto-compaction (only consider intervals/segments that are eligible for auto-compaction)
+* `segmentCountCompacted`: total number of segments of this datasource that are already compacted with the spec set in the auto-compaction config
+* `segmentCountSkipped`: total number of segments of this datasource that are skipped (not eligible for auto-compaction) by the auto-compaction
+* `intervalCountAwaitingCompaction`: total number of intervals of this datasource waiting to be compacted by the auto-compaction (only consider intervals/segments that are eligible for auto-compaction)
+* `intervalCountCompacted`: total number of intervals of this datasource that are already compacted with the spec set in the auto-compaction config
+* `intervalCountSkipped`: total number of intervals of this datasource that are skipped (not eligible for auto-compaction) by the auto-compaction
 
 ##### GET
 
 * `/druid/coordinator/v1/compaction/status?dataSource={dataSource}`
 
 Similar to the API `/druid/coordinator/v1/compaction/status` above but filters response to only return information for the {dataSource} given. 
-Note that {dataSource} given must have/had auto compaction enabled.
+Note that {dataSource} given must have/had auto-compaction enabled.
 
-#### Compaction Configuration
+#### Automatic compaction configuration
 
 ##### GET
 
 * `/druid/coordinator/v1/config/compaction`
 
-Returns all compaction configs.
+Returns all automatic compaction configs.
 
 * `/druid/coordinator/v1/config/compaction/{dataSource}`
 
-Returns a compaction config of a dataSource.
+Returns an automatic compaction config of a dataSource.
 
 ##### POST
 
@@ -517,15 +517,15 @@ will be set for them.
 
 * `/druid/coordinator/v1/config/compaction`
 
-Creates or updates the compaction config for a dataSource.
-See [Compaction Configuration](../configuration/index.md#compaction-dynamic-configuration) for configuration details.
+Creates or updates the automatic compaction config for a dataSource.
+See [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for configuration details.
 
 
 ##### DELETE
 
 * `/druid/coordinator/v1/config/compaction/{dataSource}`
 
-Removes the compaction config for a dataSource.
+Removes the automatic compaction config for a dataSource.
 
 #### Server information
 
@@ -659,7 +659,7 @@ Returns a list of objects of the currently active supervisors.
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
-|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.md#operations) for details.|
+|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-supervisor-operations.md) for details.|
 |`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details), e.g. [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md))|
 |`healthy`|Boolean|true or false indicator of overall supervisor health|
 |`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
@@ -671,7 +671,7 @@ Returns a list of objects of the currently active supervisors and their current 
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
-|`state`|String|basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.md#operations) for details.|
+|`state`|String|basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-supervisor-operations.md) for details.|
 |`detailedState`|String|supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md))|
 |`healthy`|Boolean|true or false indicator of overall supervisor health|
 |`suspended`|Boolean|true or false indicator of whether the supervisor is in suspended state|
@@ -871,9 +871,9 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 ##### GET
 
 > Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
-> [`INFORMATION_SCHEMA.TABLES`](../querying/sql.md#tables-table),
-> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql.md#columns-table), and
-> [`sys.segments`](../querying/sql.md#segments-table) tables.
+> [`INFORMATION_SCHEMA.TABLES`](../querying/sql-metadata-tables.md#tables-table),
+> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql-metadata-tables.md#columns-table), and
+> [`sys.segments`](../querying/sql-metadata-tables.md#segments-table) tables.
 
 * `/druid/v2/datasources`
 
@@ -892,7 +892,7 @@ druid.query.segmentMetadata.defaultHistory
 Returns the dimensions of the datasource.
 
 > This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.md) instead
-> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql.md#metadata-tables)
+> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql-metadata-tables.md)
 > if you're using SQL.
 
 * `/druid/v2/datasources/{dataSourceName}/metrics`
@@ -900,7 +900,7 @@ Returns the dimensions of the datasource.
 Returns the metrics of the datasource.
 
 > This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.md) instead
-> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql.md#metadata-tables)
+> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql-metadata-tables.md)
 > if you're using SQL.
 
 * `/druid/v2/datasources/{dataSourceName}/candidates?intervals={comma-separated-intervals}&numCandidates={numCandidates}`
@@ -936,9 +936,9 @@ Returns segment information lists including server locations for the given query
 #### GET
 
 > Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
-> [`INFORMATION_SCHEMA.TABLES`](../querying/sql.md#tables-table),
-> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql.md#columns-table), and
-> [`sys.segments`](../querying/sql.md#segments-table) tables.
+> [`INFORMATION_SCHEMA.TABLES`](../querying/sql-metadata-tables.md#tables-table),
+> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql-metadata-tables.md#columns-table), and
+> [`sys.segments`](../querying/sql-metadata-tables.md#segments-table) tables.
 
 * `/druid/v2/datasources`
 

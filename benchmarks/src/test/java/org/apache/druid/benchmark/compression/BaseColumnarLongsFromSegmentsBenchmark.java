@@ -19,12 +19,14 @@
 
 package org.apache.druid.benchmark.compression;
 
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
 import java.io.File;
+import java.io.IOException;
 
 @State(Scope.Benchmark)
 public class BaseColumnarLongsFromSegmentsBenchmark extends BaseColumnarLongsBenchmark
@@ -78,11 +80,11 @@ public class BaseColumnarLongsFromSegmentsBenchmark extends BaseColumnarLongsBen
     return StringUtils.format("%s-%s-longs-%s.bin", encoding, segmentName, columnName);
   }
 
-  File getTmpDir()
+  File getTmpDir() throws IOException
   {
     final String dirPath = StringUtils.format("tmp/encoding/%s", segmentName);
     File dir = new File(dirPath);
-    dir.mkdirs();
+    FileUtils.mkdirp(dir);
     return dir;
   }
 }

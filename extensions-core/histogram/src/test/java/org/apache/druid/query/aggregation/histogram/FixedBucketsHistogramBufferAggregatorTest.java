@@ -28,8 +28,8 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -167,11 +167,11 @@ public class FixedBucketsHistogramBufferAggregatorTest
         RowSignature.builder()
                     .addTimeColumn()
                     .add("fixedHisto", null)
-                    .add("fixedHistoBin", ValueType.COMPLEX)
-                    .add("fixedHisto-access", ValueType.COMPLEX)
-                    .add("fixedHisto-finalize", ValueType.STRING)
-                    .add("fixedHistoBin-access", ValueType.COMPLEX)
-                    .add("fixedHistoBin-finalize", ValueType.COMPLEX)
+                    .add("fixedHistoBin", FixedBucketsHistogramAggregator.TYPE)
+                    .add("fixedHisto-access", FixedBucketsHistogramAggregator.TYPE)
+                    .add("fixedHisto-finalize", ColumnType.STRING)
+                    .add("fixedHistoBin-access", FixedBucketsHistogramAggregator.TYPE)
+                    .add("fixedHistoBin-finalize", FixedBucketsHistogramAggregator.TYPE)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );

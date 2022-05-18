@@ -21,7 +21,7 @@ import React from 'react';
 
 import { FilterTable } from './filter-table';
 
-describe('filter table', () => {
+describe('FilterTable', () => {
   it('matches snapshot', () => {
     const sampleData = {
       header: ['c1'],

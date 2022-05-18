@@ -15,6 +15,7 @@
         "id": "merged",
         "columns": {
           "location": {
+            "typeSignature": "STRING",
             "type": "STRING",
             "size": 0,
             "hasMultipleValues": false,
@@ -25,6 +26,7 @@
             "errorMessage": null
           },
           "user_id_sketch": {
+            "typeSignature": "COMPLEX<thetaSketch>",
             "type": "thetaSketch",
             "size": 0,
             "hasMultipleValues": false,
@@ -35,6 +37,7 @@
             "errorMessage": null
           },
           "other_metric": {
+            "typeSignature": "COMPLEX<thetaSketch>",
             "type": "thetaSketch",
             "size": 0,
             "hasMultipleValues": false,
@@ -45,6 +48,7 @@
             "errorMessage": null
           },
           "__time": {
+            "typeSignature": "LONG",
             "type": "LONG",
             "size": 0,
             "hasMultipleValues": false,
@@ -55,6 +59,7 @@
             "errorMessage": null
           },
           "product": {
+            "typeSignature": "STRING",
             "type": "STRING",
             "size": 0,
             "hasMultipleValues": false,

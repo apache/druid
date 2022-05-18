@@ -27,7 +27,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.Assert;
 import org.junit.Test;
@@ -84,7 +84,7 @@ public class TimeseriesQueryTest
                   new ExpressionVirtualColumn(
                       "index",
                       "\"fieldFromVirtualColumn\"",
-                      ValueType.LONG,
+                      ColumnType.LONG,
                       ExprMacroTable.nil()
                   )
               )

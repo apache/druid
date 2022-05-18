@@ -511,7 +511,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return RowSignature.builder()
                        .addTimeColumn()
                        .addDimensions(Collections.singletonList(query.getDimensionSpec()))
-                       .addAggregators(query.getAggregatorSpecs())
+                       .addAggregators(query.getAggregatorSpecs(), RowSignature.Finalization.UNKNOWN)
                        .addPostAggregators(query.getPostAggregatorSpecs())
                        .build();
   }

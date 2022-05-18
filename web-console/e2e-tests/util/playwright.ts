@@ -50,6 +50,13 @@ export async function getLabeledInput(page: playwright.Page, label: string): Pro
   );
 }
 
+export async function getLabeledTextarea(page: playwright.Page, label: string): Promise<string> {
+  return await page.$eval(
+    `//*[text()="${label}"]/following-sibling::div//textarea`,
+    el => (el as HTMLInputElement).value,
+  );
+}
+
 export async function setLabeledInput(
   page: playwright.Page,
   label: string,

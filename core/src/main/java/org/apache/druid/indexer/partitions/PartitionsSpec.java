@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = SingleDimensionPartitionsSpec.NAME, value = SingleDimensionPartitionsSpec.class),
     @JsonSubTypes.Type(name = SingleDimensionPartitionsSpec.OLD_NAME, value = SingleDimensionPartitionsSpec.class),  // for backward compatibility
+    @JsonSubTypes.Type(name = DimensionRangePartitionsSpec.NAME, value = DimensionRangePartitionsSpec.class),
     @JsonSubTypes.Type(name = HashedPartitionsSpec.NAME, value = HashedPartitionsSpec.class),
     @JsonSubTypes.Type(name = DynamicPartitionsSpec.NAME, value = DynamicPartitionsSpec.class)
 })

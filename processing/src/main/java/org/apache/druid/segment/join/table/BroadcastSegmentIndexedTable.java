@@ -39,8 +39,8 @@ import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.timeline.SegmentId;
@@ -90,9 +90,9 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
     );
 
     RowSignature.Builder sigBuilder = RowSignature.builder();
-    sigBuilder.add(ColumnHolder.TIME_COLUMN_NAME, ValueType.LONG);
+    sigBuilder.add(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG);
     for (String column : queryableIndex.getColumnNames()) {
-      sigBuilder.add(column, adapter.getColumnCapabilities(column).getType());
+      sigBuilder.add(column, adapter.getColumnCapabilities(column).toColumnType());
     }
     this.rowSignature = sigBuilder.build();
 
@@ -103,7 +103,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
       final RowBasedIndexBuilder m;
       final String columnName = rowSignature.getColumnName(i);
       if (keyColumns.contains(columnName)) {
-        final ValueType keyType =
+        final ColumnType keyType =
             rowSignature.getColumnType(i).orElse(IndexedTableJoinMatcher.DEFAULT_KEY_TYPE);
 
         m = new RowBasedIndexBuilder(keyType);

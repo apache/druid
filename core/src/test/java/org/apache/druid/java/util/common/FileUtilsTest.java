@@ -19,12 +19,17 @@
 
 package org.apache.druid.java.util.common;
 
+import com.google.common.base.Predicates;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -33,7 +38,7 @@ import java.nio.file.Files;
 public class FileUtilsTest
 {
   @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -41,7 +46,7 @@ public class FileUtilsTest
   @Test
   public void testMap() throws IOException
   {
-    File dataFile = folder.newFile("data");
+    File dataFile = temporaryFolder.newFile("data");
     long buffersMemoryBefore = BufferUtils.totalMemoryUsedByDirectAndMappedBuffers();
     try (RandomAccessFile raf = new RandomAccessFile(dataFile, "rw")) {
       raf.write(42);
@@ -57,7 +62,7 @@ public class FileUtilsTest
   @Test
   public void testWriteAtomically() throws IOException
   {
-    final File tmpDir = folder.newFolder();
+    final File tmpDir = temporaryFolder.newFolder();
     final File tmpFile = new File(tmpDir, "file1");
     FileUtils.writeAtomically(tmpFile, out -> {
       out.write(StringUtils.toUtf8("foo"));
@@ -140,5 +145,71 @@ public class FileUtilsTest
       baseDir.setWritable(true);
       Files.delete(baseDir.toPath());
     }
+  }
+
+  @Test
+  public void testMkdirp() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder();
+    final File testDirectory = new File(tmpDir, "test");
+
+    FileUtils.mkdirp(testDirectory);
+    Assert.assertTrue(testDirectory.isDirectory());
+
+    FileUtils.mkdirp(testDirectory);
+    Assert.assertTrue(testDirectory.isDirectory());
+  }
+
+  @Test
+  public void testMkdirpCannotCreateOverExistingFile() throws IOException
+  {
+    final File tmpFile = temporaryFolder.newFile();
+
+    expectedException.expect(IOException.class);
+    expectedException.expectMessage("Cannot create directory");
+    FileUtils.mkdirp(tmpFile);
+  }
+
+  @Test
+  public void testMkdirpCannotCreateInNonWritableDirectory() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder();
+    final File testDirectory = new File(tmpDir, "test");
+    tmpDir.setWritable(false);
+    try {
+      final IOException e = Assert.assertThrows(IOException.class, () -> FileUtils.mkdirp(testDirectory));
+
+      MatcherAssert.assertThat(
+          e,
+          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Cannot create directory"))
+      );
+    }
+    finally {
+      tmpDir.setWritable(true);
+    }
+
+    // Now it should work.
+    FileUtils.mkdirp(testDirectory);
+    Assert.assertTrue(testDirectory.isDirectory());
+  }
+
+  @Test
+  public void testCopyLarge() throws IOException
+  {
+    final File dstDirectory = temporaryFolder.newFolder();
+    final File dstFile = new File(dstDirectory, "dst");
+    final String data = "test data to write";
+
+    final long result = FileUtils.copyLarge(
+        () -> new ByteArrayInputStream(StringUtils.toUtf8(data)),
+        dstFile,
+        new byte[1024],
+        Predicates.alwaysFalse(),
+        3,
+        null
+    );
+
+    Assert.assertEquals(data.length(), result);
+    Assert.assertEquals(data, StringUtils.fromUtf8(Files.readAllBytes(dstFile.toPath())));
   }
 }

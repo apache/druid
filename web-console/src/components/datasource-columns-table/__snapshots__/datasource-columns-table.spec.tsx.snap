@@ -67,10 +67,14 @@ exports[`DatasourceColumnsTable matches snapshot on error 1`] = `
           Object {
             "Header": "Column name",
             "accessor": "COLUMN_NAME",
+            "className": "padded",
+            "width": 300,
           },
           Object {
             "Header": "Data type",
             "accessor": "DATA_TYPE",
+            "className": "padded",
+            "width": 200,
           },
         ]
       }
@@ -79,7 +83,7 @@ exports[`DatasourceColumnsTable matches snapshot on error 1`] = `
       defaultFilterMethod={[Function]}
       defaultFiltered={Array []}
       defaultPage={0}
-      defaultPageSize={20}
+      defaultPageSize={25}
       defaultResized={Array []}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
@@ -130,9 +134,6 @@ exports[`DatasourceColumnsTable matches snapshot on error 1`] = `
       pageJumpText="jump to page"
       pageSizeOptions={
         Array [
-          5,
-          10,
-          20,
           25,
           50,
           100,
@@ -149,7 +150,7 @@ exports[`DatasourceColumnsTable matches snapshot on error 1`] = `
       rowsText="rows"
       showPageJump={true}
       showPageSizeOptions={true}
-      showPagination={true}
+      showPagination={false}
       showPaginationBottom={true}
       showPaginationTop={false}
       sortable={true}
@@ -227,10 +228,14 @@ exports[`DatasourceColumnsTable matches snapshot on init 1`] = `
           Object {
             "Header": "Column name",
             "accessor": "COLUMN_NAME",
+            "className": "padded",
+            "width": 300,
           },
           Object {
             "Header": "Data type",
             "accessor": "DATA_TYPE",
+            "className": "padded",
+            "width": 200,
           },
         ]
       }
@@ -239,7 +244,7 @@ exports[`DatasourceColumnsTable matches snapshot on init 1`] = `
       defaultFilterMethod={[Function]}
       defaultFiltered={Array []}
       defaultPage={0}
-      defaultPageSize={20}
+      defaultPageSize={25}
       defaultResized={Array []}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
@@ -290,9 +295,6 @@ exports[`DatasourceColumnsTable matches snapshot on init 1`] = `
       pageJumpText="jump to page"
       pageSizeOptions={
         Array [
-          5,
-          10,
-          20,
           25,
           50,
           100,
@@ -309,7 +311,7 @@ exports[`DatasourceColumnsTable matches snapshot on init 1`] = `
       rowsText="rows"
       showPageJump={true}
       showPageSizeOptions={true}
-      showPagination={true}
+      showPagination={false}
       showPaginationBottom={true}
       showPaginationTop={false}
       sortable={true}
@@ -399,10 +401,14 @@ exports[`DatasourceColumnsTable matches snapshot on no data 1`] = `
           Object {
             "Header": "Column name",
             "accessor": "COLUMN_NAME",
+            "className": "padded",
+            "width": 300,
           },
           Object {
             "Header": "Data type",
             "accessor": "DATA_TYPE",
+            "className": "padded",
+            "width": 200,
           },
         ]
       }
@@ -411,7 +417,7 @@ exports[`DatasourceColumnsTable matches snapshot on no data 1`] = `
       defaultFilterMethod={[Function]}
       defaultFiltered={Array []}
       defaultPage={0}
-      defaultPageSize={20}
+      defaultPageSize={25}
       defaultResized={Array []}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
@@ -462,9 +468,6 @@ exports[`DatasourceColumnsTable matches snapshot on no data 1`] = `
       pageJumpText="jump to page"
       pageSizeOptions={
         Array [
-          5,
-          10,
-          20,
           25,
           50,
           100,
@@ -481,7 +484,7 @@ exports[`DatasourceColumnsTable matches snapshot on no data 1`] = `
       rowsText="rows"
       showPageJump={true}
       showPageSizeOptions={true}
-      showPagination={true}
+      showPagination={false}
       showPaginationBottom={true}
       showPaginationTop={false}
       sortable={true}
@@ -559,10 +562,14 @@ exports[`DatasourceColumnsTable matches snapshot on some data 1`] = `
           Object {
             "Header": "Column name",
             "accessor": "COLUMN_NAME",
+            "className": "padded",
+            "width": 300,
           },
           Object {
             "Header": "Data type",
             "accessor": "DATA_TYPE",
+            "className": "padded",
+            "width": 200,
           },
         ]
       }
@@ -582,7 +589,7 @@ exports[`DatasourceColumnsTable matches snapshot on some data 1`] = `
       defaultFilterMethod={[Function]}
       defaultFiltered={Array []}
       defaultPage={0}
-      defaultPageSize={20}
+      defaultPageSize={25}
       defaultResized={Array []}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
@@ -633,9 +640,6 @@ exports[`DatasourceColumnsTable matches snapshot on some data 1`] = `
       pageJumpText="jump to page"
       pageSizeOptions={
         Array [
-          5,
-          10,
-          20,
           25,
           50,
           100,
@@ -652,7 +656,7 @@ exports[`DatasourceColumnsTable matches snapshot on some data 1`] = `
       rowsText="rows"
       showPageJump={true}
       showPageSizeOptions={true}
-      showPagination={true}
+      showPagination={false}
       showPaginationBottom={true}
       showPaginationTop={false}
       sortable={true}

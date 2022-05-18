@@ -86,7 +86,8 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocatorFor
               previousSegmentId,
               skipSegmentLineageCheck,
               partialShardSpec,
-              taskLockHelper.getLockGranularityToUse()
+              taskLockHelper.getLockGranularityToUse(),
+              taskLockHelper.getLockTypeToUse()
           );
         }
     );

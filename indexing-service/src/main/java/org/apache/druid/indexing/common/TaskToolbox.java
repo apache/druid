@@ -27,7 +27,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.inject.Provider;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -43,6 +42,7 @@ import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
@@ -372,7 +372,7 @@ public class TaskToolbox
   {
     final File tmpDir = new File(taskWorkDir, "indexing-tmp");
     try {
-      FileUtils.forceMkdir(tmpDir);
+      FileUtils.mkdirp(tmpDir);
     }
     catch (IOException e) {
       throw new RuntimeException(e);

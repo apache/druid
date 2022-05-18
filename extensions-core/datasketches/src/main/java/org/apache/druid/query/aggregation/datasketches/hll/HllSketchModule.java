@@ -65,6 +65,12 @@ public class HllSketchModule implements DruidModule
     SqlBindings.addOperatorConversion(binder, HllSketchEstimateWithErrorBoundsOperatorConversion.class);
     SqlBindings.addOperatorConversion(binder, HllSketchSetUnionOperatorConversion.class);
     SqlBindings.addOperatorConversion(binder, HllSketchToStringOperatorConversion.class);
+
+    SqlBindings.addApproxCountDistinctChoice(
+        binder,
+        HllSketchApproxCountDistinctSqlAggregator.NAME,
+        HllSketchApproxCountDistinctSqlAggregator.class
+    );
   }
 
   @Override

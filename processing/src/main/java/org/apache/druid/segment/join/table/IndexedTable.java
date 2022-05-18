@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ReferenceCountedObject;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ReadableOffset;
@@ -119,7 +120,7 @@ public interface IndexedTable extends ReferenceCountedObject, Closeable
     /**
      * Returns the natural key type for the index.
      */
-    ValueType keyType();
+    ColumnType keyType();
 
     /**
      * Returns whether keys are unique in this index. If this returns true, then {@link #find(Object)} will only ever

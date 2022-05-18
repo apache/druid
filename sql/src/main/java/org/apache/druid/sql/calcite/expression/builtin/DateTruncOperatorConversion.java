@@ -35,6 +35,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.Period;
 
@@ -106,13 +107,14 @@ public class DateTruncOperatorConversion implements SqlOperatorConversion
             throw new IAE("Operator[%s] cannot truncate to[%s]", calciteOperator().getName(), truncType);
           }
 
-          return DruidExpression.fromFunctionCall(
+          return DruidExpression.ofFunctionCall(
+              Calcites.getColumnTypeForRelDataType(rexNode.getType()),
               "timestamp_floor",
               ImmutableList.of(
                   arg,
-                  DruidExpression.fromExpression(DruidExpression.stringLiteral(truncPeriod.toString())),
-                  DruidExpression.fromExpression(DruidExpression.stringLiteral(null)),
-                  DruidExpression.fromExpression(DruidExpression.stringLiteral(plannerContext.getTimeZone().getID()))
+                  DruidExpression.ofStringLiteral(truncPeriod.toString()),
+                  DruidExpression.ofStringLiteral(null),
+                  DruidExpression.ofStringLiteral(plannerContext.getTimeZone().getID())
               )
           );
         }

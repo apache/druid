@@ -21,6 +21,7 @@ package org.apache.druid.query.groupby.epinephelinae;
 
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 
 import java.io.Closeable;
 
@@ -62,7 +63,7 @@ public interface VectorGrouper extends Closeable
   void close();
 
   /**
-   * Iterate through entry buckets. Each bucket's key is a {@link Memory} object in native byte order.
+   * Iterate through entry buckets. Each bucket's key is a {@link MemoryPointer} object in native byte order.
    * <p>
    * After you are done with the iterator returned by this method, you should either call {@link #close()} (if you are
    * done with the VectorGrouper) or {@link #reset()} (if you want to reuse it).
@@ -71,5 +72,5 @@ public interface VectorGrouper extends Closeable
    *
    * @return entry iterator
    */
-  CloseableIterator<Grouper.Entry<Memory>> iterator();
+  CloseableIterator<Grouper.Entry<MemoryPointer>> iterator();
 }
