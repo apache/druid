@@ -39,7 +39,6 @@ import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Assert;
@@ -53,7 +52,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-public class BaseHashJoinSegmentStorageAdapterTest extends InitializedNullHandlingTest
+public class BaseHashJoinSegmentStorageAdapterTest
 {
   public static JoinFilterRewriteConfig DEFAULT_JOIN_FILTER_REWRITE_CONFIG = new JoinFilterRewriteConfig(
       true,

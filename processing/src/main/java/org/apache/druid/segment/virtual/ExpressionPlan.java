@@ -270,7 +270,6 @@ public class ExpressionPlan
                                          .setType(ColumnType.STRING)
                                          .setDictionaryValuesSorted(false)
                                          .setDictionaryValuesUnique(false)
-                                         .setHasBitmapIndexes(false)
                                          .setHasNulls(true);
           }
         }
