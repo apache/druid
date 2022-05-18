@@ -33,7 +33,8 @@ sidebar_label: "Aggregation functions"
 > Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
 > This document describes the SQL language.
 
-You can use aggregation functions in the SELECT clause of any query.
+You can use aggregation functions in the SELECT clause of any [Druid SQL](./sql.md) query.
+
 Filter any aggregator using the FILTER clause, for example:
 
 ```
