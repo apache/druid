@@ -1516,6 +1516,7 @@
                         <trimStackTrace>false</trimStackTrace>
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                        <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
                     </configuration>
                 </plugin>
                 <plugin>
