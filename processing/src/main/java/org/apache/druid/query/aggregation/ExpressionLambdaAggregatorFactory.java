@@ -302,7 +302,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     FactorizePlan thePlan = new FactorizePlan(metricFactory);
     return new ExpressionLambdaAggregator(
         thePlan,
-        maxSizeBytes.getBytesInInt()
+        getMaxIntermediateSize()
     );
   }
 
@@ -312,7 +312,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     FactorizePlan thePlan = new FactorizePlan(metricFactory);
     return new ExpressionLambdaBufferAggregator(
         thePlan,
-        maxSizeBytes.getBytesInInt()
+        getMaxIntermediateSize()
     );
   }
 
