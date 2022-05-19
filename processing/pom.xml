@@ -288,6 +288,8 @@
                         ${jdk.surefire.argLine}
                         -Xmx512m
                         -XX:MaxDirectMemorySize=2500m
+                        -XX:+ExitOnOutOfMemoryError
+                        -XX:+HeapDumpOnOutOfMemoryError
                         -Duser.language=en
                         -Duser.GroupByQueryRunnerTest.javacountry=US
                         -Dfile.encoding=UTF-8
@@ -315,6 +317,8 @@
                             <argLine>
                                 ${jdk.surefire.argLine}
                                 -server -Xms3G -Xmx3G -Djub.consumers=CONSOLE,H2 -Djub.db.file=benchmarks/benchmarks
+                                -XX:+ExitOnOutOfMemoryError
+                                -XX:+HeapDumpOnOutOfMemoryError
                             </argLine>
                             <groups>org.apache.druid.collections.test.annotation.Benchmark</groups>
                             <excludedGroups>org.apache.druid.collections.test.annotation.Dummy</excludedGroups>

@@ -21,6 +21,8 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
+import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.junit.After;
 import org.junit.Assert;
@@ -112,11 +114,14 @@ public class CompressionStrategyTest
   {
     ByteBuffer compressionOut = compressionStrategy.getCompressor().allocateOutBuffer(originalData.length, closer);
     ByteBuffer compressed = compressionStrategy.getCompressor().compress(ByteBuffer.wrap(originalData), compressionOut);
-    ByteBuffer output = ByteBuffer.allocateDirect(originalData.length);
-    compressionStrategy.getDecompressor().decompress(compressed, compressed.remaining(), output);
-    byte[] checkArray = new byte[DATA_SIZER];
-    output.get(checkArray);
-    Assert.assertArrayEquals("Uncompressed data does not match", originalData, checkArray);
+
+    try (final ResourceHolder<ByteBuffer> holder = ByteBufferUtils.allocateDirect(originalData.length)) {
+      final ByteBuffer output = holder.get();
+      compressionStrategy.getDecompressor().decompress(compressed, compressed.remaining(), output);
+      byte[] checkArray = new byte[DATA_SIZER];
+      output.get(checkArray);
+      Assert.assertArrayEquals("Uncompressed data does not match", originalData, checkArray);
+    }
   }
 
   @Test(timeout = 60_000L)

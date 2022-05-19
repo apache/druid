@@ -22,8 +22,6 @@ package org.apache.druid.server;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.cache.CacheConfig;
-import org.apache.druid.collections.CloseableStupidPool;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DataSource;
@@ -40,10 +38,12 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.RetryQueryRunnerConfig;
+import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
@@ -77,9 +77,9 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.junit.Assert;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -276,14 +276,16 @@ public class QueryStackTests
       final Supplier<Integer> minTopNThresholdSupplier
   )
   {
-    final CloseableStupidPool<ByteBuffer> stupidPool = new CloseableStupidPool<>(
-        "TopNQueryRunnerFactory-bufferPool",
-        () -> ByteBuffer.allocate(COMPUTE_BUFFER_SIZE)
-    );
+    final TestBufferPool testBufferPool = TestBufferPool.offHeap(COMPUTE_BUFFER_SIZE, Integer.MAX_VALUE);
+    closer.register(() -> {
+      // Verify that all objects have been returned to the pool.
+      Assert.assertEquals(0, testBufferPool.getOutstandingObjectCount());
+    });
 
-    closer.register(stupidPool);
+    final TestGroupByBuffers groupByBuffers =
+        closer.register(TestGroupByBuffers.createFromProcessingConfig(processingConfig));
 
-    final Pair<GroupByQueryRunnerFactory, Closer> factoryCloserPair =
+    final GroupByQueryRunnerFactory groupByQueryRunnerFactory =
         GroupByQueryRunnerTest.makeQueryRunnerFactory(
             GroupByQueryRunnerTest.DEFAULT_MAPPER,
             new GroupByQueryConfig()
@@ -294,11 +296,9 @@ public class QueryStackTests
                 return GroupByStrategySelector.STRATEGY_V2;
               }
             },
+            groupByBuffers,
             processingConfig
         );
-
-    final GroupByQueryRunnerFactory groupByQueryRunnerFactory = factoryCloserPair.lhs;
-    closer.register(factoryCloserPair.rhs);
 
     final QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
         ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
@@ -333,7 +333,7 @@ public class QueryStackTests
             .put(
                 TopNQuery.class,
                 new TopNQueryRunnerFactory(
-                    stupidPool,
+                    testBufferPool,
                     new TopNQueryQueryToolChest(new TopNQueryConfig()
                     {
                       @Override
