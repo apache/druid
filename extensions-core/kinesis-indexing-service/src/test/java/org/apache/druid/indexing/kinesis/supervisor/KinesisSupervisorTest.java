@@ -3885,26 +3885,26 @@ public class KinesisSupervisorTest extends EasyMockSupport
   public KinesisSupervisor isCurrentSetup(DateTime minMessageTime, DateTime maxMessageTime)
   {
     KinesisSupervisor supervisor = getSupervisor(
-            1,
-            1,
-            true,
-            "PT1H",
-            new Period("P1D"),
-            new Period("P1D"),
-            false,
-            42,
-            42,
-            dataSchema,
-            tuningConfig
+        1,
+        1,
+        true,
+        "PT1H",
+        new Period("P1D"),
+        new Period("P1D"),
+        false,
+        42,
+        42,
+        dataSchema,
+        tuningConfig
     );
 
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
-            42,
-            ImmutableMap.of(SHARD_ID1, "3"),
-            Optional.of(minMessageTime),
-            Optional.of(maxMessageTime),
-            ImmutableSet.of("id1", "id2", "id3", "id4"),
-            ImmutableSet.of()
+        42,
+        ImmutableMap.of(SHARD_ID1, "3"),
+        Optional.of(minMessageTime),
+        Optional.of(maxMessageTime),
+        ImmutableSet.of("id1", "id2", "id3", "id4"),
+        ImmutableSet.of()
     );
 
     return supervisor;
@@ -3916,22 +3916,22 @@ public class KinesisSupervisorTest extends EasyMockSupport
     DateTime minMessageTime = DateTimes.nowUtc();
     DateTime maxMessageTime = DateTimes.nowUtc().plus(10000);
 
-    KinesisSupervisor supervisor = isCurrentSetup(minMessageTime,maxMessageTime);
+    KinesisSupervisor supervisor = isCurrentSetup(minMessageTime, maxMessageTime);
 
     KinesisIndexTask taskFromStorage = createKinesisIndexTask(
-            "id1",
-            0,
-            new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(
-                    SHARD_ID1,
-                    "3"
-            ), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(
-                    SHARD_ID1,
-                    KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
-            )),
-            minMessageTime,
-            maxMessageTime,
-            dataSchema
+        "id1",
+        0,
+        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(
+            SHARD_ID1,
+            "3"
+        ), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(
+            SHARD_ID1,
+            KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
+        )),
+        minMessageTime,
+        maxMessageTime,
+        dataSchema
     );
 
     EasyMock.expect(taskStorage.getTask("id1"))
@@ -3950,24 +3950,24 @@ public class KinesisSupervisorTest extends EasyMockSupport
     DateTime minMessageTime = DateTimes.nowUtc();
     DateTime maxMessageTime = DateTimes.nowUtc().plus(10000);
 
-    KinesisSupervisor supervisor = isCurrentSetup(minMessageTime,maxMessageTime);
+    KinesisSupervisor supervisor = isCurrentSetup(minMessageTime, maxMessageTime);
 
     DataSchema modifiedDataSchema = getDataSchema("some other datasource");
 
     KinesisIndexTask taskFromStorageMismatchedDataSchema = createKinesisIndexTask(
-            "id2",
-            0,
-            new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(
-                    SHARD_ID1,
-                    "3"
-            ), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(
-                    SHARD_ID1,
-                    KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
-            )),
-            minMessageTime,
-            maxMessageTime,
-            modifiedDataSchema
+        "id2",
+        0,
+        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(
+            SHARD_ID1,
+            "3"
+        ), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(
+            SHARD_ID1,
+            KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
+        )),
+        minMessageTime,
+        maxMessageTime,
+        modifiedDataSchema
     );
 
     EasyMock.expect(taskStorage.getTask("id2"))
@@ -3986,61 +3986,61 @@ public class KinesisSupervisorTest extends EasyMockSupport
     DateTime minMessageTime = DateTimes.nowUtc();
     DateTime maxMessageTime = DateTimes.nowUtc().plus(10000);
 
-    KinesisSupervisor supervisor = isCurrentSetup(minMessageTime,maxMessageTime);
+    KinesisSupervisor supervisor = isCurrentSetup(minMessageTime, maxMessageTime);
 
     KinesisSupervisorTuningConfig modifiedTuningConfig = new KinesisSupervisorTuningConfig(
-            null,
-            1000,
-            null,
-            null,
-            50000,
-            null,
-            new Period("P1Y"),
-            new File("/test"),
-            null,
-            null,
-            null,
-            false,
-            null,
-            null,
-            null,
-            null,
-            numThreads,
-            TEST_CHAT_THREADS,
-            TEST_CHAT_RETRIES,
-            TEST_HTTP_TIMEOUT,
-            TEST_SHUTDOWN_TIMEOUT,
-            null,
-            null,
-            null,
-            5000,
-            null,
-            null,
-            null,
-            null,
-            42, // This property is different from tuningConfig
-            null,
-            null,
-            null,
-            null,
-            null
+        null,
+        1000,
+        null,
+        null,
+        50000,
+        null,
+        new Period("P1Y"),
+        new File("/test"),
+        null,
+        null,
+        null,
+        false,
+        null,
+        null,
+        null,
+        null,
+        numThreads,
+        TEST_CHAT_THREADS,
+        TEST_CHAT_RETRIES,
+        TEST_HTTP_TIMEOUT,
+        TEST_SHUTDOWN_TIMEOUT,
+        null,
+        null,
+        null,
+        5000,
+        null,
+        null,
+        null,
+        null,
+        42, // This property is different from tuningConfig
+        null,
+        null,
+        null,
+        null,
+        null
     );
 
     KinesisIndexTask taskFromStorageMismatchedTuningConfig = createKinesisIndexTask(
-            "id3",
-            0,
-            new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(
-                    SHARD_ID1,
-                    "3"
-            ), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(
-                    SHARD_ID1,
-                    KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
-            )),
-            minMessageTime,
-            maxMessageTime,
-            dataSchema,
-            modifiedTuningConfig
+        "id3",
+        0,
+        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(
+            SHARD_ID1,
+            "3"
+        ), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(
+            SHARD_ID1,
+            KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
+        )),
+        minMessageTime,
+        maxMessageTime,
+        dataSchema,
+        modifiedTuningConfig
     );
 
     EasyMock.expect(taskStorage.getTask("id3"))
@@ -4059,26 +4059,26 @@ public class KinesisSupervisorTest extends EasyMockSupport
     DateTime minMessageTime = DateTimes.nowUtc();
     DateTime maxMessageTime = DateTimes.nowUtc().plus(10000);
 
-    KinesisSupervisor supervisor = isCurrentSetup(minMessageTime,maxMessageTime);
+    KinesisSupervisor supervisor = isCurrentSetup(minMessageTime, maxMessageTime);
 
     KinesisIndexTask taskFromStorageMismatchedPartitionsWithTaskGroup = createKinesisIndexTask(
-            "id4",
-            0,
-            new SeekableStreamStartSequenceNumbers<>(
-                    "stream",
-                    ImmutableMap.of(
-                            SHARD_ID1,
-                            "4" // this is the mismatch
-                    ),
-                    ImmutableSet.of()
+        "id4",
+        0,
+        new SeekableStreamStartSequenceNumbers<>(
+            "stream",
+            ImmutableMap.of(
+                SHARD_ID1,
+                "4" // this is the mismatch
             ),
-            new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(
-                    SHARD_ID1,
-                    KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
-            )),
-            minMessageTime,
-            maxMessageTime,
-            dataSchema
+            ImmutableSet.of()
+        ),
+        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(
+            SHARD_ID1,
+            KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
+        )),
+        minMessageTime,
+        maxMessageTime,
+        dataSchema
     );
 
     EasyMock.expect(taskStorage.getTask("id4"))
