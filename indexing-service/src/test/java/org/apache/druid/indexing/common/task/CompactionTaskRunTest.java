@@ -973,7 +973,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     // maxRowsPerSegment is set to 2 inside the runIndexTask methods
     Pair<TaskStatus, List<DataSegment>> result = runIndexTask();
     Assert.assertEquals(6, result.rhs.size());
-    
+
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory,
@@ -1097,7 +1097,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         Intervals.of("2014-01-01T02:00:00.000Z/2014-01-01T03:00:00.000Z"),
         realSegmentsAfterFullCompaction.get(2).getInterval()
     );
-    
+
   }
 
   @Test
@@ -1596,7 +1596,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
   private TaskToolbox createTaskToolbox(ObjectMapper objectMapper, Task task) throws IOException
   {
     final SegmentCacheManager loader = new SegmentLocalCacheManager(
-        new SegmentLoaderConfig() {
+        new SegmentLoaderConfig()
+        {
           @Override
           public List<StorageLocationConfig> getLocations()
           {
@@ -1606,59 +1607,41 @@ public class CompactionTaskRunTest extends IngestionTestBase
         objectMapper
     );
 
-    return new TaskToolbox(
-        new TaskConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            null,
-            null,
-            null,
-            false,
-            false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-            null
-        ),
-        null,
-        createActionClient(task),
-        null,
-        new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()),
-        new NoopDataSegmentKiller(),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        NoopJoinableFactory.INSTANCE,
-        null,
-        loader,
-        objectMapper,
-        temporaryFolder.newFolder(),
-        getIndexIO(),
-        null,
-        null,
-        null,
-        getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)),
-        null,
-        null,
-        null,
-        null,
-        new NoopTestTaskReportFileWriter(),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new NoopChatHandlerProvider(),
-        testUtils.getRowIngestionMetersFactory(),
-        new TestAppenderatorsManager(),
-        indexingServiceClient,
-        coordinatorClient,
-        null,
-        null
-    );
+    return new TaskToolbox.Builder()
+        .config(
+            new TaskConfig(
+                null,
+                null,
+                null,
+                null,
+                null,
+                false,
+                null,
+                null,
+                null,
+                false,
+                false,
+                TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+                null
+            )
+        )
+        .taskActionClient(createActionClient(task))
+        .segmentPusher(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()))
+        .dataSegmentKiller(new NoopDataSegmentKiller())
+        .joinableFactory(NoopJoinableFactory.INSTANCE)
+        .segmentCacheManager(loader)
+        .jsonMapper(objectMapper)
+        .taskWorkDir(temporaryFolder.newFolder())
+        .indexIO(getIndexIO())
+        .indexMergerV9(getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
+        .taskReportFileWriter(new NoopTestTaskReportFileWriter())
+        .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
+        .chatHandlerProvider(new NoopChatHandlerProvider())
+        .rowIngestionMetersFactory(testUtils.getRowIngestionMetersFactory())
+        .appenderatorsManager(new TestAppenderatorsManager())
+        .indexingServiceClient(indexingServiceClient)
+        .coordinatorClient(coordinatorClient)
+        .build();
   }
 
   private List<String> getCSVFormatRowsFromSegments(List<DataSegment> segments) throws Exception
