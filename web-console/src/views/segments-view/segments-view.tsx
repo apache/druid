@@ -252,7 +252,7 @@ END AS "time_span"`,
     super(props, context);
 
     const segmentFilter: Filter[] = [];
-    if (props.datasource) segmentFilter.push({ id: 'datasource', value: `"${props.datasource}"` });
+    if (props.datasource) segmentFilter.push({ id: 'datasource', value: `=${props.datasource}` });
     if (props.onlyUnavailable) segmentFilter.push({ id: 'is_available', value: 'false' });
 
     this.state = {
