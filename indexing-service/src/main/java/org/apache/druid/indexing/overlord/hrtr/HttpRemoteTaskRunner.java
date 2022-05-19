@@ -408,7 +408,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       return false;
     }
 
-    log.info("Asking Worker[%s] to run task[%s]", workerHost, taskId);
+    log.info("Assigning task [%s] to worker [%s]", taskId, workerHost);
 
     if (workerHolder.assignTask(workItem.getTask())) {
       // Don't assign new tasks until the task we just assigned is actually running

@@ -919,10 +919,10 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     synchronized (statusLock) {
       if (!zkWorkers.containsKey(worker) || lazyWorkers.containsKey(worker)) {
         // the worker might have been killed or marked as lazy
-        log.info("Not assigning task to already removed worker[%s]", worker);
+        log.debug("Not assigning task to already removed worker[%s]", worker);
         return false;
       }
-      log.info("Coordinator asking Worker[%s] to add task[%s]", worker, task.getId());
+      log.info("Assigning task [%s] to worker [%s]", task.getId(), worker);
 
       CuratorUtils.createIfNotExists(
           cf,
@@ -949,7 +949,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
       RemoteTaskRunnerWorkItem newWorkItem = workItem.withWorker(theZkWorker.getWorker(), null);
       runningTasks.put(task.getId(), newWorkItem);
-      log.info("Task %s switched from pending to running (on [%s])", task.getId(), newWorkItem.getWorker().getHost());
+      log.info("Task [%s] started running on worker [%s]", task.getId(), newWorkItem.getWorker().getHost());
       TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.running(task.getId()));
 
       // Syncing state with Zookeeper - don't assign new tasks until the task we just assigned is actually running
