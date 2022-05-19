@@ -106,13 +106,13 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
       private boolean isStringMatch(String stringValue)
       {
         IPv4Address iPv4Address = IPv4AddressExprUtils.parse(stringValue);
-        return iPv4Address != null && subnetString.contains(iPv4Address.toAddressString());
+        return iPv4Address != null && subnetString.prefixContains(iPv4Address.toAddressString());
       }
 
       private boolean isLongMatch(long longValue)
       {
         IPv4Address iPv4Address = IPv4AddressExprUtils.parse(longValue);
-        return iPv4Address != null && subnetString.contains(iPv4Address.toAddressString());
+        return iPv4Address != null && subnetString.prefixContains(iPv4Address.toAddressString());
       }
 
       @Override
