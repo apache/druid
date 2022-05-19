@@ -28,9 +28,8 @@ import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.junit.rules.ExternalResource;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * JUnit rule to capture a class's logger output to an in-memory buffer to allow verification of log messages in tests.
@@ -50,7 +49,7 @@ public class LoggerCaptureRule extends ExternalResource
   @Override
   protected void before()
   {
-    inMemoryAppender = new InMemoryAppender();
+    inMemoryAppender = new InMemoryAppender(targetClass);
     LoggerContext loggerContext = (LoggerContext) LogManager.getContext(false);
     Configuration configuration = loggerContext.getConfiguration();
     targetClassLoggerConfig = configuration.getLoggerConfig(targetClass.getName());
@@ -78,23 +77,29 @@ public class LoggerCaptureRule extends ExternalResource
   {
     static final String NAME = InMemoryAppender.class.getName();
 
-    private final List<LogEvent> logEvents;
+    private final String targetLoggerName;
 
-    InMemoryAppender()
+    // logEvents has concurrent iteration and modification in CuratorModuleTest::exitsJvmWhenMaxRetriesExceeded(), needs to be thread safe
+    private final CopyOnWriteArrayList<LogEvent> logEvents;
+
+    InMemoryAppender(Class<?> targetClass)
     {
       super(NAME, null, null);
-      logEvents = new ArrayList<>();
+      targetLoggerName = targetClass.getName();
+      logEvents = new CopyOnWriteArrayList<>();
     }
 
     @Override
     public void append(LogEvent logEvent)
     {
-      logEvents.add(logEvent);
+      if (logEvent.getLoggerName().equals(targetLoggerName)) {
+        logEvents.add(logEvent);
+      }
     }
 
     List<LogEvent> getLogEvents()
     {
-      return Collections.unmodifiableList(logEvents);
+      return logEvents;
     }
 
     void clearLogEvents()

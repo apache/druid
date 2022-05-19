@@ -29,7 +29,8 @@ import org.apache.druid.indexer.path.DatasourcePathSpec;
 import org.apache.druid.indexer.path.MultiplePathSpec;
 import org.apache.druid.indexer.path.PathSpec;
 import org.apache.druid.indexer.path.StaticPathSpec;
-import org.apache.druid.indexer.path.UsedSegmentLister;
+import org.apache.druid.indexer.path.UsedSegmentsRetriever;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -44,6 +45,7 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
@@ -267,7 +269,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
 
   private HadoopDruidIndexerConfig testRunUpdateSegmentListIfDatasourcePathSpecIsUsed(
       PathSpec datasourcePathSpec,
-      Interval jobInterval
+      @Nullable Interval jobInterval
   )
       throws Exception
   {
@@ -297,25 +299,31 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
         HadoopIngestionSpec.class
     );
 
-    UsedSegmentLister segmentLister = EasyMock.createMock(UsedSegmentLister.class);
+    UsedSegmentsRetriever segmentsRetriever = EasyMock.createMock(UsedSegmentsRetriever.class);
 
-    EasyMock.expect(
-        segmentLister.getUsedSegmentsForIntervals(
-            TEST_DATA_SOURCE,
-            Collections.singletonList(jobInterval != null ? jobInterval.overlap(TEST_DATA_SOURCE_INTERVAL) : null)
+    EasyMock
+        .expect(
+            segmentsRetriever.retrieveUsedSegmentsForIntervals(
+                TEST_DATA_SOURCE,
+                Collections.singletonList(jobInterval != null ? jobInterval.overlap(TEST_DATA_SOURCE_INTERVAL) : null),
+                Segments.ONLY_VISIBLE
+            )
         )
-    ).andReturn(ImmutableList.of(SEGMENT));
+        .andReturn(ImmutableList.of(SEGMENT));
 
-    EasyMock.expect(
-        segmentLister.getUsedSegmentsForIntervals(
-            TEST_DATA_SOURCE2,
-            Collections.singletonList(jobInterval != null ? jobInterval.overlap(TEST_DATA_SOURCE_INTERVAL2) : null)
+    EasyMock
+        .expect(
+            segmentsRetriever.retrieveUsedSegmentsForIntervals(
+                TEST_DATA_SOURCE2,
+                Collections.singletonList(jobInterval != null ? jobInterval.overlap(TEST_DATA_SOURCE_INTERVAL2) : null),
+                Segments.ONLY_VISIBLE
+            )
         )
-    ).andReturn(ImmutableList.of(SEGMENT2));
+        .andReturn(ImmutableList.of(SEGMENT2));
 
-    EasyMock.replay(segmentLister);
+    EasyMock.replay(segmentsRetriever);
 
-    spec = HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(spec, jsonMapper, segmentLister);
+    HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(spec, jsonMapper, segmentsRetriever);
     return HadoopDruidIndexerConfig.fromString(jsonMapper.writeValueAsString(spec));
   }
 }

@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executor;
 
 /**
@@ -121,4 +122,17 @@ public interface TaskRunner
    * @return ScalingStats if the runner has an underlying resource which can scale, Optional.absent() otherwise
    */
   Optional<ScalingStats> getScalingStats();
+
+  /**
+   * APIs useful for emitting statistics for @TaskSlotCountStatsMonitor
+   */
+  Map<String, Long> getTotalTaskSlotCount();
+
+  Map<String, Long> getIdleTaskSlotCount();
+
+  Map<String, Long> getUsedTaskSlotCount();
+
+  Map<String, Long> getLazyTaskSlotCount();
+
+  Map<String, Long> getBlacklistedTaskSlotCount();
 }

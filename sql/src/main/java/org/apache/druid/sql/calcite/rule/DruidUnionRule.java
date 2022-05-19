@@ -23,40 +23,60 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Union;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.DruidUnionRel;
 
 import java.util.List;
 
+/**
+ * Rule that creates a {@link DruidUnionRel} from some {@link DruidRel} inputs.
+ */
 public class DruidUnionRule extends RelOptRule
 {
-  private static final DruidUnionRule INSTANCE = new DruidUnionRule();
+  private final PlannerContext plannerContext;
 
-  private DruidUnionRule()
+  public DruidUnionRule(PlannerContext plannerContext)
   {
-    super(operand(Union.class, unordered(operand(DruidRel.class, any()))));
+    super(
+        operand(
+            Union.class,
+            operand(DruidRel.class, none()),
+            operand(DruidRel.class, none())
+        )
+    );
+    this.plannerContext = plannerContext;
   }
 
-  public static DruidUnionRule instance()
+  @Override
+  public boolean matches(RelOptRuleCall call)
   {
-    return INSTANCE;
+    // Make DruidUnionRule and DruidUnionDataSourceRule mutually exclusive.
+    final Union unionRel = call.rel(0);
+    final DruidRel<?> firstDruidRel = call.rel(1);
+    final DruidRel<?> secondDruidRel = call.rel(2);
+    return !DruidUnionDataSourceRule.isCompatible(unionRel, firstDruidRel, secondDruidRel, null);
   }
 
   @Override
   public void onMatch(final RelOptRuleCall call)
   {
     final Union unionRel = call.rel(0);
-    final DruidRel someDruidRel = call.rel(1);
+    final DruidRel<?> someDruidRel = call.rel(1);
     final List<RelNode> inputs = unionRel.getInputs();
 
+    // Can only do UNION ALL.
     if (unionRel.all) {
-      // Can only do UNION ALL.
-      call.transformTo(DruidUnionRel.create(
-          someDruidRel.getQueryMaker(),
-          unionRel.getRowType(),
-          inputs,
-          -1
-      ));
+      call.transformTo(
+          DruidUnionRel.create(
+              someDruidRel.getPlannerContext(),
+              unionRel.getRowType(),
+              inputs,
+              -1
+          )
+      );
+    } else {
+      plannerContext.setPlanningError("SQL requires 'UNION' but only 'UNION ALL' is supported.");
     }
   }
 }

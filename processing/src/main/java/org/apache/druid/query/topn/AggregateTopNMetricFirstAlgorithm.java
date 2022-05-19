@@ -36,6 +36,13 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
+ * This {@link TopNAlgorithm} is tailored to processing aggregates on high cardility columns which are likely to have
+ * larger result sets. Internally it uses a 2 phase approach to compute the top-n result using the
+ * {@link PooledTopNAlgorithm} for each phase. The first phase is to process the segment with only the order-by
+ * aggregator to compute which values constitute the top 'n' results. With this information, a actual result set
+ * is computed by a second run of the {@link PooledTopNAlgorithm}, this time with all aggregators, but only considering
+ * the values from the 'n' results to avoid performing any aggregations that would have been thrown away for results
+ * that didn't make the top-n.
  */
 public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], TopNParams>
 {
@@ -73,7 +80,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
         AggregatorUtil.condensedAggregators(query.getAggregatorSpecs(), query.getPostAggregatorSpecs(), metric);
 
     if (condensedAggPostAggPair.lhs.isEmpty() && condensedAggPostAggPair.rhs.isEmpty()) {
-      throw new ISE("WTF! Can't find the metric to do topN over?");
+      throw new ISE("Can't find the topN metric");
     }
     // Run topN for only a single metric
     TopNQuery singleMetricQuery = new TopNQueryBuilder(query)

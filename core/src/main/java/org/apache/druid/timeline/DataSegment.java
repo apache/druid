@@ -21,6 +21,7 @@ package org.apache.druid.timeline;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -55,6 +56,9 @@ import java.util.stream.Collectors;
 @PublicApi
 public class DataSegment implements Comparable<DataSegment>, Overshadowable<DataSegment>
 {
+
+  public static final String TOMBSTONE_LOADSPEC_TYPE = "tombstone";
+
   /*
    * The difference between this class and org.apache.druid.segment.Segment is that this class contains the segment
    * metadata only, while org.apache.druid.segment.Segment represents the actual body of segment data, queryable.
@@ -70,8 +74,13 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     @VisibleForTesting
     public static final PruneSpecsHolder DEFAULT = new PruneSpecsHolder();
 
-    @Inject(optional = true) @PruneLoadSpec boolean pruneLoadSpec = false;
-    @Inject(optional = true) @PruneLastCompactionState boolean pruneLastCompactionState = false;
+    @Inject(optional = true)
+    @PruneLoadSpec
+    boolean pruneLoadSpec = false;
+
+    @Inject(optional = true)
+    @PruneLastCompactionState
+    boolean pruneLastCompactionState = false;
   }
 
   private static final Interner<String> STRING_INTERNER = Interners.newWeakInterner();
@@ -94,7 +103,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   /**
    * Stores some configurations of the compaction task which created this segment.
    * This field is filled in the metadata store only when "storeCompactionState" is set true in the context of the
-   * compaction task which is false by default.
+   * task. True by default see {@link org.apache.druid.indexing.common.task.Tasks#DEFAULT_STORE_COMPACTION_STATE}.
    * Also, this field can be pruned in many Druid modules when this class is loaded from the metadata store.
    * See {@link PruneLastCompactionState} for details.
    */
@@ -102,6 +111,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   private final CompactionState lastCompactionState;
   private final long size;
 
+  @VisibleForTesting
   public DataSegment(
       SegmentId segmentId,
       Map<String, Object> loadSpec,
@@ -161,7 +171,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       List<String> dimensions,
       List<String> metrics,
       ShardSpec shardSpec,
-      CompactionState lastCompactionState,
+      @Nullable CompactionState lastCompactionState,
       Integer binaryVersion,
       long size
   )
@@ -204,6 +214,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   )
   {
     this.id = SegmentId.of(dataSource, interval, version, shardSpec);
+    // prune loadspec if needed
     this.loadSpec = pruneSpecsHolder.pruneLoadSpec ? PRUNED_LOAD_SPEC : prepareLoadSpec(loadSpec);
     // Deduplicating dimensions and metrics lists as a whole because they are very likely the same for the same
     // dataSource
@@ -214,6 +225,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
                                ? null
                                : prepareCompactionState(lastCompactionState);
     this.binaryVersion = binaryVersion;
+    Preconditions.checkArgument(size >= 0);
     this.size = size;
   }
 
@@ -310,6 +322,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public CompactionState getLastCompactionState()
   {
     return lastCompactionState;
@@ -332,6 +345,11 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   public SegmentId getId()
   {
     return id;
+  }
+
+  public boolean isTombstone()
+  {
+    return getShardSpec().getType().equals(ShardSpec.Type.TOMBSTONE);
   }
 
   @Override
@@ -416,6 +434,11 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   public DataSegment withBinaryVersion(int binaryVersion)
   {
     return builder(this).binaryVersion(binaryVersion).build();
+  }
+
+  public DataSegment withLastCompactionState(CompactionState compactionState)
+  {
+    return builder(this).lastCompactionState(compactionState).build();
   }
 
   @Override
@@ -582,4 +605,11 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       );
     }
   }
+
+  @Override
+  public boolean hasData()
+  {
+    return !isTombstone();
+  }
+
 }

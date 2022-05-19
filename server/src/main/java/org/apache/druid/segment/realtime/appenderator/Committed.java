@@ -77,8 +77,7 @@ public class Committed
 
   public Committed without(final String identifierAsString)
   {
-    final Map<String, Integer> newHydrants = new HashMap<>();
-    newHydrants.putAll(hydrants);
+    final Map<String, Integer> newHydrants = new HashMap<>(hydrants);
     newHydrants.remove(identifierAsString);
     return new Committed(newHydrants, metadata);
   }

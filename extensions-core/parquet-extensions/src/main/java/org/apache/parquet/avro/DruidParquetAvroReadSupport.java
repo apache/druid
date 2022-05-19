@@ -110,7 +110,7 @@ public class DruidParquetAvroReadSupport extends AvroReadSupport<GenericRecord>
   )
   {
     // coercing this value to false by default here to be friendlier default behavior
-    // see https://github.com/apache/incubator-druid/issues/5433#issuecomment-388539306
+    // see https://github.com/apache/druid/issues/5433#issuecomment-388539306
     String jobProp = "parquet.avro.add-list-element-records";
     Boolean explicitlySet = configuration.getBoolean(jobProp, false);
     if (!explicitlySet) {

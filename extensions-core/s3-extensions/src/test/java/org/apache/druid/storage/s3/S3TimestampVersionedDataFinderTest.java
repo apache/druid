@@ -46,10 +46,12 @@ public class S3TimestampVersionedDataFinderTest
     object0.setBucketName(bucket);
     object0.setKey(keyPrefix + "/renames-0.gz");
     object0.setLastModified(new Date(0));
+    object0.setSize(10);
 
     object1.setBucketName(bucket);
     object1.setKey(keyPrefix + "/renames-1.gz");
     object1.setLastModified(new Date(1));
+    object1.setSize(10);
 
     final ListObjectsV2Result result = new ListObjectsV2Result();
     result.getObjectSummaries().add(object0);
@@ -116,6 +118,7 @@ public class S3TimestampVersionedDataFinderTest
     object0.setBucketName(bucket);
     object0.setKey(keyPrefix + "/renames-0.gz");
     object0.setLastModified(new Date(0));
+    object0.setSize(10);
 
     final ListObjectsV2Result result = new ListObjectsV2Result();
     result.getObjectSummaries().add(object0);
@@ -153,6 +156,7 @@ public class S3TimestampVersionedDataFinderTest
     object0.setBucketName(bucket);
     object0.setKey(keyPrefix + "/renames-0.gz");
     object0.setLastModified(new Date(0));
+    object0.setSize(10);
 
     final ListObjectsV2Result result = new ListObjectsV2Result();
     result.getObjectSummaries().add(object0);

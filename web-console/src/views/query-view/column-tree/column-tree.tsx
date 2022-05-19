@@ -16,274 +16,439 @@
  * limitations under the License.
  */
 
-import {
-  HTMLSelect,
-  IconName,
-  ITreeNode,
-  Menu,
-  MenuItem,
-  Popover,
-  Position,
-  Tree,
-} from '@blueprintjs/core';
+import { HTMLSelect, Menu, MenuItem, Position, Tree, TreeNodeInfo } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { refExpressionFactory, SqlQuery, stringFactory } from 'druid-query-toolkit';
+import { Popover2 } from '@blueprintjs/popover2';
+import {
+  SqlComparison,
+  SqlExpression,
+  SqlFunction,
+  SqlJoinPart,
+  SqlQuery,
+  SqlRef,
+  SqlTableRef,
+} from 'druid-query-toolkit';
 import React, { ChangeEvent } from 'react';
 
 import { Loader } from '../../../components';
 import { Deferred } from '../../../components/deferred/deferred';
-import { copyAndAlert, escapeSqlIdentifier, groupBy } from '../../../utils';
-import { ColumnMetadata } from '../../../utils/column-metadata';
+import { ColumnMetadata, copyAndAlert, groupBy, oneOf, prettyPrintSql } from '../../../utils';
+import { dataTypeToIcon } from '../../../utils/data-type-utils';
 
 import { NumberMenuItems, StringMenuItems, TimeMenuItems } from './column-tree-menu';
 
 import './column-tree.scss';
 
-function handleTableClick(
-  tableSchema: string,
-  nodeData: ITreeNode,
-  onQueryStringChange: (queryString: string, run: boolean) => void,
-): void {
-  let columns: string[];
-  if (nodeData.childNodes) {
-    columns = nodeData.childNodes.map(child => escapeSqlIdentifier(String(child.label)));
-  } else {
-    columns = ['*'];
+const COUNT_STAR = SqlFunction.COUNT_STAR.as('Count');
+
+function getCountExpression(columnNames: string[]): SqlExpression {
+  for (const columnName of columnNames) {
+    if (columnName === 'count' || columnName === '__count') {
+      return SqlFunction.simple('SUM', [SqlRef.column(columnName)]).as('Count');
+    }
   }
-  if (tableSchema === 'druid') {
-    onQueryStringChange(
-      `SELECT ${columns.join(', ')}
-FROM ${escapeSqlIdentifier(String(nodeData.label))}
-WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`,
-      true,
-    );
-  } else {
-    onQueryStringChange(
-      `SELECT ${columns.join(', ')}
-FROM ${tableSchema}.${nodeData.label}`,
-      true,
-    );
-  }
+  return COUNT_STAR;
 }
 
-function handleColumnClick(
-  columnSchema: string,
-  columnTable: string,
-  nodeData: ITreeNode,
-  onQueryStringChange: (queryString: string, run: boolean) => void,
-): void {
-  if (columnSchema === 'druid') {
-    if (nodeData.icon === IconNames.TIME) {
-      onQueryStringChange(
-        `SELECT
-  TIME_FLOOR(${escapeSqlIdentifier(String(nodeData.label))}, 'PT1H') AS "Time",
-  COUNT(*) AS "Count"
-FROM ${escapeSqlIdentifier(columnTable)}
-WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
+const STRING_QUERY = SqlQuery.parse(`SELECT
+  ?
+FROM ?
 GROUP BY 1
-ORDER BY "Time" ASC`,
-        true,
-      );
-    } else {
-      onQueryStringChange(
-        `SELECT
-  "${nodeData.label}",
-  COUNT(*) AS "Count"
-FROM ${escapeSqlIdentifier(columnTable)}
-WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
+ORDER BY 2 DESC`);
+
+const TIME_QUERY = SqlQuery.parse(`SELECT
+  TIME_FLOOR(?, 'PT1H') AS "Time"
+FROM ?
 GROUP BY 1
-ORDER BY "Count" DESC`,
-        true,
-      );
-    }
+ORDER BY 1 ASC`);
+
+interface HandleColumnClickOptions {
+  columnSchema: string;
+  columnTable: string;
+  columnName: string;
+  columnType: string;
+  parsedQuery: SqlQuery | undefined;
+  defaultWhere: SqlExpression | undefined;
+  onQueryChange: (query: SqlQuery, run: boolean) => void;
+}
+
+function handleColumnShow(options: HandleColumnClickOptions): void {
+  const {
+    columnSchema,
+    columnTable,
+    columnName,
+    columnType,
+    parsedQuery,
+    defaultWhere,
+    onQueryChange,
+  } = options;
+
+  let from: SqlExpression;
+  let where: SqlExpression | undefined;
+  let aggregates: SqlExpression[] = [];
+  if (parsedQuery && parsedQuery.getFirstTableName() === columnTable) {
+    from = parsedQuery.getFirstFromExpression()!;
+    where = parsedQuery.getWhereExpression();
+    aggregates = parsedQuery.getAggregateSelectExpressions();
+  } else if (columnSchema === 'druid') {
+    from = SqlTableRef.create(columnTable);
+    where = defaultWhere;
   } else {
-    onQueryStringChange(
-      `SELECT
-  ${escapeSqlIdentifier(String(nodeData.label))},
-  COUNT(*) AS "Count"
-FROM ${columnSchema}.${columnTable}
-GROUP BY 1
-ORDER BY "Count" DESC`,
-      true,
-    );
+    from = SqlTableRef.create(columnTable, columnSchema);
   }
+
+  if (!aggregates.length) {
+    aggregates.push(COUNT_STAR);
+  }
+
+  const columnRef = SqlRef.column(columnName);
+  let query: SqlQuery;
+  if (columnSchema === 'druid' && columnType === 'TIMESTAMP') {
+    query = TIME_QUERY.fillPlaceholders([columnRef, from]) as SqlQuery;
+  } else {
+    query = STRING_QUERY.fillPlaceholders([columnRef, from]) as SqlQuery;
+  }
+
+  let newSelectExpressions = query.selectExpressions;
+  if (newSelectExpressions) {
+    for (const aggregate of aggregates) {
+      newSelectExpressions = newSelectExpressions.append(aggregate);
+    }
+  }
+
+  onQueryChange(
+    query.changeSelectExpressions(newSelectExpressions).changeWhereExpression(where),
+    true,
+  );
 }
 
 export interface ColumnTreeProps {
   columnMetadataLoading: boolean;
   columnMetadata?: readonly ColumnMetadata[];
   getParsedQuery: () => SqlQuery | undefined;
-  onQueryStringChange: (queryString: string | SqlQuery, run?: boolean) => void;
+  defaultWhere?: SqlExpression;
+  onQueryChange: (query: SqlQuery, run?: boolean) => void;
   defaultSchema?: string;
   defaultTable?: string;
+  highlightTable?: string;
 }
 
 export interface ColumnTreeState {
   prevColumnMetadata?: readonly ColumnMetadata[];
-  columnTree?: ITreeNode[];
-  currentSchemaSubtree?: ITreeNode[];
+  columnTree?: TreeNodeInfo[];
+  currentSchemaSubtree?: TreeNodeInfo[];
   selectedTreeIndex: number;
+}
+
+export function getJoinColumns(parsedQuery: SqlQuery, _table: string) {
+  let lookupColumn: string | undefined;
+  let originalTableColumn: string | undefined;
+  if (parsedQuery.fromClause && parsedQuery.fromClause.joinParts) {
+    const firstOnExpression = parsedQuery.fromClause.joinParts.first().onExpression;
+    if (firstOnExpression instanceof SqlComparison && firstOnExpression.op === '=') {
+      const { lhs, rhs } = firstOnExpression;
+      if (lhs instanceof SqlRef && lhs.getNamespace() === 'lookup') {
+        lookupColumn = lhs.getColumn();
+      }
+      if (rhs instanceof SqlRef) {
+        originalTableColumn = rhs.getColumn();
+      }
+    }
+  }
+
+  return {
+    lookupColumn: lookupColumn || 'k',
+    originalTableColumn: originalTableColumn || 'XXX',
+  };
 }
 
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
-    const { columnMetadata, defaultSchema, defaultTable } = props;
+    const {
+      columnMetadata,
+      defaultSchema,
+      defaultTable,
+      defaultWhere,
+      onQueryChange,
+      highlightTable,
+    } = props;
 
     if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
       const columnTree = groupBy(
         columnMetadata,
         r => r.TABLE_SCHEMA,
-        (metadata, schema): ITreeNode => ({
-          id: schema,
-          label: schema,
+        (metadata, schemaName): TreeNodeInfo => ({
+          id: schemaName,
+          label: schemaName,
           childNodes: groupBy(
             metadata,
             r => r.TABLE_NAME,
-            (metadata, table): ITreeNode => ({
-              id: table,
+            (metadata, tableName): TreeNodeInfo => ({
+              id: tableName,
               icon: IconNames.TH,
+              className: tableName === highlightTable ? 'highlight' : undefined,
               label: (
-                <Popover
-                  boundary={'window'}
+                <Popover2
                   position={Position.RIGHT}
                   content={
                     <Deferred
                       content={() => {
                         const parsedQuery = props.getParsedQuery();
+                        const tableRef = SqlTableRef.create(tableName);
+                        const prettyTableRef = prettyPrintSql(tableRef);
+                        const countExpression = getCountExpression(
+                          metadata.map(child => child.COLUMN_NAME),
+                        );
+
+                        const getQueryOnTable = () => {
+                          return SqlQuery.create(
+                            SqlTableRef.create(
+                              tableName,
+                              schemaName === 'druid' ? undefined : schemaName,
+                            ),
+                          );
+                        };
+
+                        const getWhere = (defaultToAllTime = false) => {
+                          if (parsedQuery && parsedQuery.getFirstTableName() === tableName) {
+                            return parsedQuery.getWhereExpression();
+                          } else if (schemaName === 'druid') {
+                            return defaultToAllTime ? undefined : defaultWhere;
+                          } else {
+                            return;
+                          }
+                        };
+
                         return (
                           <Menu>
                             <MenuItem
                               icon={IconNames.FULLSCREEN}
-                              text={`SELECT ... FROM ${table}`}
+                              text={`SELECT ...columns... FROM ${tableName}`}
                               onClick={() => {
-                                handleTableClick(
-                                  schema,
-                                  {
-                                    id: table,
-                                    icon: IconNames.TH,
-                                    label: table,
-                                    childNodes: metadata.map(columnData => ({
-                                      id: columnData.COLUMN_NAME,
-                                      icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
-                                      label: columnData.COLUMN_NAME,
-                                    })),
-                                  },
-                                  props.onQueryStringChange,
+                                onQueryChange(
+                                  getQueryOnTable()
+                                    .changeSelectExpressions(
+                                      metadata
+                                        .map(child => child.COLUMN_NAME)
+                                        .map(columnName => SqlRef.column(columnName)),
+                                    )
+                                    .changeWhereExpression(getWhere()),
+                                  true,
                                 );
                               }}
                             />
                             <MenuItem
-                              icon={IconNames.CLIPBOARD}
-                              text={`Copy: ${table}`}
+                              icon={IconNames.FULLSCREEN}
+                              text={`SELECT * FROM ${tableName}`}
                               onClick={() => {
-                                copyAndAlert(table, `${table} query copied to clipboard`);
+                                onQueryChange(
+                                  getQueryOnTable().changeWhereExpression(getWhere()),
+                                  true,
+                                );
                               }}
                             />
-                            {parsedQuery && (
+                            <MenuItem
+                              icon={IconNames.FULLSCREEN}
+                              text={`SELECT ${countExpression} FROM ${tableName}`}
+                              onClick={() => {
+                                onQueryChange(
+                                  getQueryOnTable()
+                                    .changeSelect(0, countExpression)
+                                    .changeGroupByExpressions([])
+                                    .changeWhereExpression(getWhere(true)),
+                                  true,
+                                );
+                              }}
+                            />
+                            {parsedQuery && parsedQuery.getFirstTableName() !== tableName && (
                               <MenuItem
                                 icon={IconNames.EXCHANGE}
-                                text={`Replace FROM with: ${table}`}
+                                text={`Replace FROM with: ${prettyTableRef}`}
                                 onClick={() => {
-                                  props.onQueryStringChange(
-                                    parsedQuery.replaceFrom(
-                                      refExpressionFactory(stringFactory(table, `"`)),
-                                    ),
+                                  onQueryChange(
+                                    parsedQuery.changeFromExpressions([tableRef]),
                                     true,
                                   );
                                 }}
                               />
                             )}
+                            {parsedQuery && schemaName === 'lookup' && (
+                              <MenuItem
+                                popoverProps={{ openOnTargetFocus: false }}
+                                icon={IconNames.JOIN_TABLE}
+                                text={parsedQuery.hasJoin() ? `Replace join` : `Join`}
+                              >
+                                <MenuItem
+                                  icon={IconNames.LEFT_JOIN}
+                                  text="Left join"
+                                  onClick={() => {
+                                    const { lookupColumn, originalTableColumn } = getJoinColumns(
+                                      parsedQuery,
+                                      tableName,
+                                    );
+                                    onQueryChange(
+                                      parsedQuery
+                                        .removeAllJoins()
+                                        .addJoin(
+                                          SqlJoinPart.create(
+                                            'LEFT',
+                                            SqlTableRef.create(tableName, schemaName),
+                                            SqlRef.column(lookupColumn, tableName, 'lookup').equal(
+                                              SqlRef.column(
+                                                originalTableColumn,
+                                                parsedQuery.getFirstTableName(),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      false,
+                                    );
+                                  }}
+                                />
+                                <MenuItem
+                                  icon={IconNames.INNER_JOIN}
+                                  text="Inner join"
+                                  onClick={() => {
+                                    const { lookupColumn, originalTableColumn } = getJoinColumns(
+                                      parsedQuery,
+                                      tableName,
+                                    );
+                                    onQueryChange(
+                                      parsedQuery.addJoin(
+                                        SqlJoinPart.create(
+                                          'INNER',
+                                          SqlTableRef.create(tableName, schemaName),
+                                          SqlRef.column(lookupColumn, tableName, 'lookup').equal(
+                                            SqlRef.column(
+                                              originalTableColumn,
+                                              parsedQuery.getFirstTableName(),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      false,
+                                    );
+                                  }}
+                                />
+                              </MenuItem>
+                            )}
+                            {parsedQuery &&
+                              parsedQuery.hasJoin() &&
+                              parsedQuery.getJoins()[0].table.toString() === tableName && (
+                                <MenuItem
+                                  icon={IconNames.EXCHANGE}
+                                  text="Remove join"
+                                  onClick={() => onQueryChange(parsedQuery.removeAllJoins())}
+                                />
+                              )}
+                            {parsedQuery &&
+                              parsedQuery.hasGroupBy() &&
+                              parsedQuery.getFirstTableName() === tableName && (
+                                <MenuItem
+                                  icon={IconNames.FUNCTION}
+                                  text="Aggregate COUNT(*)"
+                                  onClick={() =>
+                                    onQueryChange(parsedQuery.addSelect(COUNT_STAR), true)
+                                  }
+                                />
+                              )}
+                            <MenuItem
+                              icon={IconNames.CLIPBOARD}
+                              text={`Copy: ${prettyTableRef}`}
+                              onClick={() => {
+                                copyAndAlert(
+                                  tableRef.toString(),
+                                  `${prettyTableRef} query copied to clipboard`,
+                                );
+                              }}
+                            />
                           </Menu>
                         );
                       }}
                     />
                   }
                 >
-                  <div>{table}</div>
-                </Popover>
+                  {tableName}
+                </Popover2>
               ),
-              childNodes: metadata
-                .map(
-                  (columnData): ITreeNode => ({
-                    id: columnData.COLUMN_NAME,
-                    icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
-                    label: (
-                      <Popover
-                        boundary={'window'}
-                        position={Position.RIGHT}
-                        autoFocus={false}
-                        targetClassName={'bp3-popover-open'}
-                        content={
-                          <Deferred
-                            content={() => {
-                              const parsedQuery = props.getParsedQuery();
-                              return (
-                                <Menu>
-                                  <MenuItem
-                                    icon={IconNames.FULLSCREEN}
-                                    text={`Show: ${columnData.COLUMN_NAME}`}
-                                    onClick={() => {
-                                      handleColumnClick(
-                                        schema,
-                                        table,
-                                        {
-                                          id: columnData.COLUMN_NAME,
-                                          icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
-                                          label: columnData.COLUMN_NAME,
-                                        },
-                                        props.onQueryStringChange,
-                                      );
-                                    }}
-                                  />
-                                  {parsedQuery &&
-                                    (columnData.DATA_TYPE === 'BIGINT' ||
-                                      columnData.DATA_TYPE === 'FLOAT') && (
-                                      <NumberMenuItems
-                                        columnName={columnData.COLUMN_NAME}
-                                        parsedQuery={parsedQuery}
-                                        onQueryChange={props.onQueryStringChange}
-                                      />
-                                    )}
-                                  {parsedQuery && columnData.DATA_TYPE === 'VARCHAR' && (
-                                    <StringMenuItems
+              childNodes: metadata.map(
+                (columnData): TreeNodeInfo => ({
+                  id: columnData.COLUMN_NAME,
+                  icon: dataTypeToIcon(columnData.DATA_TYPE),
+                  label: (
+                    <Popover2
+                      position={Position.RIGHT}
+                      autoFocus={false}
+                      content={
+                        <Deferred
+                          content={() => {
+                            const parsedQuery = props.getParsedQuery();
+                            return (
+                              <Menu>
+                                <MenuItem
+                                  icon={IconNames.FULLSCREEN}
+                                  text={`Show: ${columnData.COLUMN_NAME}`}
+                                  onClick={() => {
+                                    handleColumnShow({
+                                      columnSchema: schemaName,
+                                      columnTable: tableName,
+                                      columnName: columnData.COLUMN_NAME,
+                                      columnType: columnData.DATA_TYPE,
+                                      parsedQuery,
+                                      defaultWhere,
+                                      onQueryChange: onQueryChange,
+                                    });
+                                  }}
+                                />
+                                {parsedQuery &&
+                                  oneOf(columnData.DATA_TYPE, 'BIGINT', 'FLOAT', 'DOUBLE') && (
+                                    <NumberMenuItems
+                                      table={tableName}
+                                      schema={schemaName}
                                       columnName={columnData.COLUMN_NAME}
                                       parsedQuery={parsedQuery}
-                                      onQueryChange={props.onQueryStringChange}
+                                      onQueryChange={onQueryChange}
                                     />
                                   )}
-                                  {parsedQuery && columnData.DATA_TYPE === 'TIMESTAMP' && (
-                                    <TimeMenuItems
-                                      columnName={columnData.COLUMN_NAME}
-                                      parsedQuery={parsedQuery}
-                                      onQueryChange={props.onQueryStringChange}
-                                    />
-                                  )}
-                                  <MenuItem
-                                    icon={IconNames.CLIPBOARD}
-                                    text={`Copy: ${columnData.COLUMN_NAME}`}
-                                    onClick={() => {
-                                      copyAndAlert(
-                                        columnData.COLUMN_NAME,
-                                        `${columnData.COLUMN_NAME} query copied to clipboard`,
-                                      );
-                                    }}
+                                {parsedQuery && columnData.DATA_TYPE === 'VARCHAR' && (
+                                  <StringMenuItems
+                                    table={tableName}
+                                    schema={schemaName}
+                                    columnName={columnData.COLUMN_NAME}
+                                    parsedQuery={parsedQuery}
+                                    onQueryChange={onQueryChange}
                                   />
-                                </Menu>
-                              );
-                            }}
-                          />
-                        }
-                      >
-                        <div>{columnData.COLUMN_NAME}</div>
-                      </Popover>
-                    ),
-                  }),
-                )
-                .sort((a, b) =>
-                  String(a.id)
-                    .toLowerCase()
-                    .localeCompare(String(b.id).toLowerCase()),
-                ),
+                                )}
+                                {parsedQuery && columnData.DATA_TYPE === 'TIMESTAMP' && (
+                                  <TimeMenuItems
+                                    table={tableName}
+                                    schema={schemaName}
+                                    columnName={columnData.COLUMN_NAME}
+                                    parsedQuery={parsedQuery}
+                                    onQueryChange={onQueryChange}
+                                  />
+                                )}
+                                <MenuItem
+                                  icon={IconNames.CLIPBOARD}
+                                  text={`Copy: ${columnData.COLUMN_NAME}`}
+                                  onClick={() => {
+                                    copyAndAlert(
+                                      columnData.COLUMN_NAME,
+                                      `${columnData.COLUMN_NAME} query copied to clipboard`,
+                                    );
+                                  }}
+                                />
+                              </Menu>
+                            );
+                          }}
+                        />
+                      }
+                    >
+                      {columnData.COLUMN_NAME}
+                    </Popover2>
+                  ),
+                }),
+              ),
             }),
           ),
         }),
@@ -327,20 +492,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     return null;
   }
 
-  static dataTypeToIcon(dataType: string): IconName {
-    switch (dataType) {
-      case 'TIMESTAMP':
-        return IconNames.TIME;
-      case 'VARCHAR':
-        return IconNames.FONT;
-      case 'BIGINT':
-      case 'FLOAT':
-        return IconNames.NUMERICAL;
-      default:
-        return IconNames.HELP;
-    }
-  }
-
   constructor(props: ColumnTreeProps, context: any) {
     super(props, context);
     this.state = {
@@ -348,7 +499,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     };
   }
 
-  renderSchemaSelector() {
+  private renderSchemaSelector() {
     const { columnTree, selectedTreeIndex } = this.state;
     if (!columnTree) return null;
 
@@ -370,12 +521,11 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     );
   }
 
-  private handleSchemaSelectorChange = (e: ChangeEvent<HTMLSelectElement>): void => {
+  private readonly handleSchemaSelectorChange = (e: ChangeEvent<HTMLSelectElement>): void => {
     const { columnTree } = this.state;
+    if (!columnTree) return;
 
     const selectedTreeIndex = Number(e.target.value);
-
-    if (!columnTree) return;
 
     const currentSchemaSubtree =
       columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
@@ -386,6 +536,16 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     });
   };
 
+  private readonly handleNodeCollapse = (nodeData: TreeNodeInfo) => {
+    nodeData.isExpanded = false;
+    this.forceUpdate();
+  };
+
+  private readonly handleNodeExpand = (nodeData: TreeNodeInfo) => {
+    nodeData.isExpanded = true;
+    this.forceUpdate();
+  };
+
   render(): JSX.Element | null {
     const { columnMetadataLoading } = this.props;
     const { currentSchemaSubtree } = this.state;
@@ -393,7 +553,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     if (columnMetadataLoading) {
       return (
         <div className="column-tree">
-          <Loader loading />
+          <Loader />
         </div>
       );
     }
@@ -412,23 +572,5 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         </div>
       </div>
     );
-  }
-
-  private handleNodeCollapse = (nodeData: ITreeNode) => {
-    nodeData.isExpanded = false;
-    this.bounceState();
-  };
-
-  private handleNodeExpand = (nodeData: ITreeNode) => {
-    nodeData.isExpanded = true;
-    this.bounceState();
-  };
-
-  bounceState() {
-    const { columnTree } = this.state;
-    if (!columnTree) return;
-    this.setState(prevState => ({
-      columnTree: prevState.columnTree ? prevState.columnTree.slice() : undefined,
-    }));
   }
 }

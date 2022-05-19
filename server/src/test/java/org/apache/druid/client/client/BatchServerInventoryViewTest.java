@@ -181,7 +181,8 @@ public class BatchServerInventoryViewTest
         },
         cf,
         jsonMapper,
-        Predicates.alwaysTrue()
+        Predicates.alwaysTrue(),
+        "test"
     );
 
     batchServerInventoryView.start();
@@ -204,7 +205,8 @@ public class BatchServerInventoryViewTest
           {
             return input.rhs.getInterval().getStart().isBefore(SEGMENT_INTERVAL_START.plusDays(INITIAL_SEGMENTS));
           }
-        }
+        },
+        "test"
     )
     {
       @Override
@@ -384,6 +386,7 @@ public class BatchServerInventoryViewTest
                           )
                       )
                       .version(DateTimes.nowUtc().toString())
+                      .size(0)
                       .build();
   }
 

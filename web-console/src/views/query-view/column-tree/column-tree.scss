@@ -16,8 +16,22 @@
  * limitations under the License.
  */
 
+@import '../../../variables';
+@import '../../../blueprint-overrides/common/colors';
+
+@keyframes druid-glow {
+  0% {
+    text-shadow: 0 0 0 $druid-brand2;
+  }
+  100% {
+    text-shadow: 0 0 2px $druid-brand2;
+  }
+}
+
 .column-tree {
-  background: #27313b;
+  .#{$bp-ns}-dark & {
+    background: $dark-gray3;
+  }
 
   .schema-selector {
     position: absolute;
@@ -36,12 +50,18 @@
     width: 100%;
     overflow: auto;
 
-    .bp3-tree-node-content-1 {
+    .#{$bp-ns}-tree-node-content-1 {
       padding-left: 0;
+    }
+
+    .highlight {
+      animation: druid-glow 1s infinite alternate;
     }
   }
 
-  .bp3-popover-target {
+  .#{$bp-ns}-popover2-target {
+    width: 188px;
+    display: inline-block;
     cursor: pointer;
   }
 }

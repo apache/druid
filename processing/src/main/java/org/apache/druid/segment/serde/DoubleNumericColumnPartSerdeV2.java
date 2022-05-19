@@ -152,13 +152,17 @@ public class DoubleNumericColumnPartSerdeV2 implements ColumnPartSerde
 
       buffer.position(initialPos + offset);
       final ImmutableBitmap bitmap;
+      final boolean hasNulls;
       if (buffer.hasRemaining()) {
         bitmap = bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(buffer);
+        hasNulls = !bitmap.isEmpty();
       } else {
         bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
+        hasNulls = false;
       }
       builder.setType(ValueType.DOUBLE)
              .setHasMultipleValues(false)
+             .setHasNulls(hasNulls)
              .setNumericColumnSupplier(new DoubleNumericColumnSupplier(column, bitmap));
     };
   }

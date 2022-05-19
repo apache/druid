@@ -102,7 +102,7 @@ public class WorkerTaskMonitor extends WorkerTaskManager
         registerRunListener();
         pathChildrenCache.start();
 
-        log.info("Started WorkerTaskMonitor.");
+        log.debug("Started WorkerTaskMonitor.");
         started = true;
       }
       catch (InterruptedException e) {
@@ -127,14 +127,18 @@ public class WorkerTaskMonitor extends WorkerTaskManager
           if (completedAnnouncement != null) {
             completionStatus = completedAnnouncement.getTaskStatus();
           } else if (!runningTasks.containsKey(announcement.getTaskStatus().getId())) {
-            completionStatus = TaskStatus.failure(announcement.getTaskStatus().getId());
+            completionStatus = TaskStatus.failure(
+                announcement.getTaskStatus().getId(),
+                "Canceled as unknown task. See middleManager or indexer logs for more details."
+            );
           }
 
           if (completionStatus != null) {
-            log.info("Cleaning up stale announcement for task [%s]. New status is [%s].",
-                     announcement.getTaskStatus().getId(),
-                     completionStatus.getStatusCode()
-                     );
+            log.info(
+                "Cleaning up stale announcement for task [%s]. New status is [%s].",
+                announcement.getTaskStatus().getId(),
+                completionStatus.getStatusCode()
+            );
             workerCuratorCoordinator.updateTaskStatusAnnouncement(
                 TaskAnnouncement.create(
                     announcement.getTaskStatus().getId(),
@@ -186,7 +190,7 @@ public class WorkerTaskMonitor extends WorkerTaskManager
         started = false;
         pathChildrenCache.close();
 
-        log.info("Stopped WorkerTaskMonitor.");
+        log.debug("Stopped WorkerTaskMonitor.");
       }
       catch (Exception e) {
         log.makeAlert(e, "Exception stopping WorkerTaskMonitor")

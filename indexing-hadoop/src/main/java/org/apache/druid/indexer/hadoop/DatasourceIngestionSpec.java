@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -252,7 +253,7 @@ public class DatasourceIngestionSpec
     return "DatasourceIngestionSpec{" +
            "dataSource='" + dataSource + '\'' +
            ", intervals=" + intervals +
-           ", segments=" + segments +
+           ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            ", filter=" + filter +
            ", dimensions=" + dimensions +
            ", metrics=" + metrics +

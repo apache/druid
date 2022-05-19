@@ -24,7 +24,7 @@ title: "Dropwizard metrics emitter"
 
 # Dropwizard Emitter
 
-To use this extension, make sure to [include](../../development/extensions.md#loading-extensions) `dropwizard-emitter` extension.
+To use this extension, make sure to [include](../../development/extensions.md#loading-extensions) `dropwizard-emitter` in the extensions load list.
 
 ## Introduction
 
@@ -32,6 +32,12 @@ This extension integrates [Dropwizard](http://metrics.dropwizard.io/3.1.0/gettin
 It accumulates druid metrics as dropwizard metrics, and emits them to various sinks via dropwizard supported reporters.
 Currently supported dropwizard metrics types counter, gauge, meter, timer and histogram. 
 These metrics can be emitted using either Console or JMX reporter. 
+
+To use this emitter, set
+
+```
+druid.emitter=dropwizard
+```
 
 ## Configuration
 
@@ -71,7 +77,7 @@ For most use-cases, the default mapping is sufficient.
 Used to report druid metrics via JMX.
 ```
 
-druid.emitter.dropwizard.reporters={"type":"jmx"}
+druid.emitter.dropwizard.reporters=[{"type":"jmx"}]
 
 ```
 
@@ -80,12 +86,12 @@ Used to print Druid Metrics to console logs.
 
 ```
 
-druid.emitter.dropwizard.reporters={"type":"console","emitIntervalInSecs":30}"}
+druid.emitter.dropwizard.reporters=[{"type":"console","emitIntervalInSecs":30}"}]
 
 ```
 
 ### Default Metrics Mapping
-Latest default metrics mapping can be found [here] (https://github.com/apache/incubator-druid/tree/master/extensions-contrib/dropwizard/src/main/resources/defaultMetricDimensions.json)
+Latest default metrics mapping can be found [here] (https://github.com/apache/druid/blob/master/extensions-contrib/dropwizard-emitter/src/main/resources/defaultMetricDimensions.json)
 ```json
 {
   "query/time": {
@@ -114,11 +120,6 @@ Latest default metrics mapping can be found [here] (https://github.com/apache/in
     "dimensions": [
       "server"
     ],
-    "type": "timer",
-    "timeUnit": "MILLISECONDS"
-  },
-  "query/intervalChunk/time": {
-    "dimensions": [],
     "type": "timer",
     "timeUnit": "MILLISECONDS"
   },
@@ -464,19 +465,19 @@ Latest default metrics mapping can be found [here] (https://github.com/apache/in
   },
   "jvm/bufferpool/counter": {
     "dimensions": [
-      "bufferPoolName"
+      "bufferpoolName"
     ],
     "type": "gauge"
   },
   "jvm/bufferpool/used": {
     "dimensions": [
-      "bufferPoolName"
+      "bufferpoolName"
     ],
     "type": "gauge"
   },
   "jvm/bufferpool/capacity": {
     "dimensions": [
-      "bufferPoolName"
+      "bufferpoolName"
     ],
     "type": "gauge"
   },
@@ -506,20 +507,23 @@ Latest default metrics mapping can be found [here] (https://github.com/apache/in
   },
   "jvm/gc/counter": {
     "dimensions": [
-      "gcName"
+      "gcName",
+      "gcGen"
     ],
     "type": "counter"
   },
   "jvm/gc/cpu": {
     "dimensions": [
-      "gcName"
+      "gcName",
+      "gcGen"
     ],
     "type": "timer",
     "timeUnit": "NANOSECONDS"
   },
   "ingest/events/buffered": {
     "dimensions": [
-      "serviceName, bufferCapacity"
+      "serviceName",
+      "bufferCapacity"
     ],
     "type": "gauge"
   },
@@ -624,6 +628,38 @@ Latest default metrics mapping can be found [here] (https://github.com/apache/in
       "tier",
       "priority"
     ],
+    "type": "gauge"
+  },
+  "jetty/numOpenConnections": {
+    "dimensions": [],
+    "type": "gauge"
+  },
+  "jetty/threadPool/total": {
+    "dimensions": [],
+    "type": "gauge"
+  },
+  "jetty/threadPool/idle": {
+    "dimensions": [],
+    "type": "gauge"
+  },
+  "jetty/threadPool/busy": {
+    "dimensions": [],
+    "type": "gauge"
+  },
+  "jetty/threadPool/isLowOnThreads": {
+    "dimensions": [],
+    "type": "gauge"
+  },
+  "jetty/threadPool/min": {
+    "dimensions": [],
+    "type": "gauge"
+  },
+  "jetty/threadPool/max": {
+    "dimensions": [],
+    "type": "gauge"
+  },
+  "jetty/threadPool/queueSize": {
+    "dimensions": [],
     "type": "gauge"
   }
 }

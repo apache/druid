@@ -1,6 +1,6 @@
 ---
 id: limitspec
-title: "Sort groupBy query results"
+title: "Sorting and limiting (groupBy)"
 ---
 
 <!--
@@ -22,6 +22,9 @@ title: "Sort groupBy query results"
   ~ under the License.
   -->
 
+> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+> This document describes the native
+> language. For information about sorting in SQL, refer to the [SQL documentation](sql.md#order-by).
 
 The limitSpec field provides the functionality to sort and limit the set of results from a groupBy query. If you group by a single dimension and are ordering by a single metric, we highly recommend using [TopN Queries](../querying/topnquery.md) instead. The performance will be substantially better. Available options are:
 
@@ -32,10 +35,23 @@ The default limit spec takes a limit and the list of columns to do an orderBy op
 ```json
 {
     "type"    : "default",
-    "limit"   : <integer_value>,
-    "columns" : [list of OrderByColumnSpec],
+    "limit"   : <optional integer>,
+    "offset"  : <optional integer>,
+    "columns" : [<optional list of OrderByColumnSpec>],
 }
 ```
+
+The "limit" parameter is the maximum number of rows to return.
+
+The "offset" parameter tells Druid to skip this many rows when returning results. If both "limit" and "offset" are
+provided, then "offset" will be applied first, followed by "limit". For example, a spec with limit 100 and offset 10
+will return 100 rows starting from row number 10. Internally, the query is executed by extending the limit by the offset
+and then discarding a number of rows equal to the offset. This means that raising the offset will increase resource
+usage by an amount similar to increasing the limit.
+
+Together, "limit" and "offset" can be used to implement pagination. However, note that if the underlying datasource is
+modified in between page fetches in ways that affect overall query results, then the different pages will not
+necessarily align with each other.
 
 #### OrderByColumnSpec
 

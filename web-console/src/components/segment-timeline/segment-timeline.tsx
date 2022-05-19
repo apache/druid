@@ -16,37 +16,62 @@
  * limitations under the License.
  */
 
-import { FormGroup, HTMLSelect, Radio, RadioGroup } from '@blueprintjs/core';
-import * as d3 from 'd3';
-import { AxisScale } from 'd3';
+import {
+  FormGroup,
+  HTMLSelect,
+  IResizeEntry,
+  Radio,
+  RadioGroup,
+  ResizeSensor,
+} from '@blueprintjs/core';
+import { AxisScale } from 'd3-axis';
+import { scaleLinear, scaleUtc } from 'd3-scale';
 import React from 'react';
 
-import { formatBytes, queryDruidSql, QueryManager } from '../../utils/index';
-import { StackedBarChart } from '../../visualization/stacked-bar-chart';
+import { Api } from '../../singletons';
+import {
+  Capabilities,
+  ceilToUtcDay,
+  formatBytes,
+  queryDruidSql,
+  QueryManager,
+  uniq,
+} from '../../utils';
+import { DateRangeSelector } from '../date-range-selector/date-range-selector';
 import { Loader } from '../loader/loader';
+
+import { BarUnitData, StackedBarChart } from './stacked-bar-chart';
 
 import './segment-timeline.scss';
 
 interface SegmentTimelineProps {
-  chartHeight: number;
-  chartWidth: number;
+  capabilities: Capabilities;
+
+  // For testing:
+  dataQueryManager?: QueryManager<
+    { capabilities: Capabilities; startDate: Date; endDate: Date },
+    any
+  >;
 }
 
+type ActiveDataType = 'sizeData' | 'countData';
+
 interface SegmentTimelineState {
+  chartHeight: number;
+  chartWidth: number;
   data?: Record<string, any>;
   datasources: string[];
   stackedData?: Record<string, BarUnitData[]>;
   singleDatasourceData?: Record<string, Record<string, BarUnitData[]>>;
   activeDatasource: string | null;
-  activeDataType: string; // "countData" || "sizeData"
+  activeDataType: ActiveDataType;
   dataToRender: BarUnitData[];
-  timeSpan: number; // by months
   loading: boolean;
-  error?: string;
+  error?: Error;
   xScale: AxisScale<Date> | null;
   yScale: AxisScale<number> | null;
-  dStart: Date;
-  dEnd: Date;
+  startDate: Date;
+  endDate: Date;
 }
 
 interface BarChartScales {
@@ -54,21 +79,15 @@ interface BarChartScales {
   yScale: AxisScale<number>;
 }
 
-export interface BarUnitData {
-  x: number;
-  y: number;
-  y0?: number;
-  width: number;
+interface IntervalRow {
+  start: string;
+  end: string;
   datasource: string;
-  color: string;
+  count: number;
+  size: number;
 }
 
-export interface BarChartMargin {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
-}
+const DEFAULT_TIME_SPAN_MONTHS = 3;
 
 export class SegmentTimeline extends React.PureComponent<
   SegmentTimelineProps,
@@ -97,121 +116,32 @@ export class SegmentTimeline extends React.PureComponent<
     return SegmentTimeline.COLORS[index % SegmentTimeline.COLORS.length];
   }
 
-  private dataQueryManager: QueryManager<null, any>;
-  private datasourceQueryManager: QueryManager<null, any>;
-  private chartMargin = { top: 20, right: 10, bottom: 20, left: 10 };
-
-  constructor(props: SegmentTimelineProps) {
-    super(props);
-    const dStart = new Date();
-    const dEnd = new Date();
-    dStart.setMonth(dStart.getMonth() - 3);
-    this.state = {
-      data: {},
-      datasources: [],
-      stackedData: {},
-      singleDatasourceData: {},
-      dataToRender: [],
-      activeDatasource: null,
-      activeDataType: 'countData',
-      timeSpan: 3,
-      loading: true,
-      xScale: null,
-      yScale: null,
-      dEnd: dEnd,
-      dStart: dStart,
-    };
-
-    this.dataQueryManager = new QueryManager({
-      processQuery: async () => {
-        const { timeSpan } = this.state;
-        const query = `SELECT "start", "end", "datasource", COUNT(*) AS "count", sum(size) as "total_size"
-              FROM sys.segments
-              WHERE "start" > time_format(TIMESTAMPADD(MONTH, -${timeSpan}, current_timestamp), 'yyyy-MM-dd''T''hh:mm:ss.SSS')
-              GROUP BY 1, 2, 3
-              ORDER BY "start" DESC`;
-        const resp: any[] = await queryDruidSql({ query });
-        const data = this.processRawData(resp);
-        const stackedData = this.calculateStackedData(data);
-        const singleDatasourceData = this.calculateSingleDatasourceData(data);
-        return { data, stackedData, singleDatasourceData };
-      },
-      onStateChange: ({ result, loading, error }) => {
-        this.setState({
-          data: result ? result.data : undefined,
-          stackedData: result ? result.stackedData : undefined,
-          singleDatasourceData: result ? result.singleDatasourceData : undefined,
-          loading,
-          error,
-        });
-      },
-    });
-
-    this.datasourceQueryManager = new QueryManager({
-      processQuery: async () => {
-        const query = `SELECT DISTINCT "datasource" FROM sys.segments`;
-        const resp: any[] = await queryDruidSql({ query });
-        const data = resp.map((r: any) => r.datasource);
-        return data;
-      },
-      onStateChange: ({ result }) => {
-        if (result == null) result = [];
-        this.setState({
-          datasources: result,
-        });
-      },
-    });
+  static getSqlQuery(startDate: Date, endDate: Date): string {
+    return `SELECT
+  "start", "end", "datasource",
+  COUNT(*) AS "count",
+  SUM("size") AS "size"
+FROM sys.segments
+WHERE
+  '${startDate.toISOString()}' <= "start" AND
+  "end" <= '${endDate.toISOString()}' AND
+  is_published = 1 AND
+  is_overshadowed = 0
+GROUP BY 1, 2, 3
+ORDER BY "start" DESC`;
   }
 
-  componentDidMount(): void {
-    this.dataQueryManager.runQuery(null);
-    this.datasourceQueryManager.runQuery(null);
-  }
-
-  componentWillUnmount(): void {
-    this.dataQueryManager.terminate();
-    this.datasourceQueryManager.terminate();
-  }
-
-  componentDidUpdate(prevProps: SegmentTimelineProps, prevState: SegmentTimelineState): void {
-    const { activeDatasource, activeDataType, singleDatasourceData, stackedData } = this.state;
-    if (
-      prevState.data !== this.state.data ||
-      prevState.activeDataType !== this.state.activeDataType ||
-      prevState.activeDatasource !== this.state.activeDatasource ||
-      prevProps.chartWidth !== this.props.chartWidth ||
-      prevProps.chartHeight !== this.props.chartHeight
-    ) {
-      const scales: BarChartScales | undefined = this.calculateScales();
-      let dataToRender: BarUnitData[] | undefined;
-      dataToRender = activeDatasource
-        ? singleDatasourceData
-          ? singleDatasourceData[activeDataType][activeDatasource]
-          : undefined
-        : stackedData
-        ? stackedData[activeDataType]
-        : undefined;
-
-      if (scales && dataToRender) {
-        this.setState({
-          dataToRender,
-          xScale: scales.xScale,
-          yScale: scales.yScale,
-        });
-      }
-    }
-  }
-
-  private processRawData(data: any) {
+  static processRawData(data: IntervalRow[]) {
     if (data === null) return [];
+
     const countData: Record<string, any> = {};
     const sizeData: Record<string, any> = {};
-    data.forEach((entry: any) => {
+    data.forEach(entry => {
       const start = entry.start;
       const day = start.split('T')[0];
       const datasource = entry.datasource;
       const count = entry.count;
-      const segmentSize = entry['total_size'];
+      const segmentSize = entry.size;
       if (countData[day] === undefined) {
         countData[day] = {
           day,
@@ -224,29 +154,34 @@ export class SegmentTimeline extends React.PureComponent<
           total: segmentSize,
         };
       } else {
-        const countDataEntry = countData[day][datasource];
+        const countDataEntry: number | undefined = countData[day][datasource];
         countData[day][datasource] = count + (countDataEntry === undefined ? 0 : countDataEntry);
-        const sizeDataEntry = sizeData[day][datasource];
+        const sizeDataEntry: number | undefined = sizeData[day][datasource];
         sizeData[day][datasource] = segmentSize + (sizeDataEntry === undefined ? 0 : sizeDataEntry);
         countData[day].total += count;
         sizeData[day].total += segmentSize;
       }
     });
+
     const countDataArray = Object.keys(countData)
       .reverse()
       .map((time: any) => {
         return countData[time];
       });
+
     const sizeDataArray = Object.keys(sizeData)
       .reverse()
       .map((time: any) => {
         return sizeData[time];
       });
+
     return { countData: countDataArray, sizeData: sizeDataArray };
   }
 
-  private calculateStackedData(data: Record<string, any>): Record<string, BarUnitData[]> {
-    const { datasources } = this.state;
+  static calculateStackedData(
+    data: Record<string, any>,
+    datasources: string[],
+  ): Record<string, BarUnitData[]> {
     const newStackedData: Record<string, BarUnitData[]> = {};
     Object.keys(data).forEach((type: any) => {
       const stackedData: any = data[type].map((d: any) => {
@@ -258,6 +193,7 @@ export class SegmentTimeline extends React.PureComponent<
             y0,
             datasource,
             color: SegmentTimeline.getColor(i),
+            dailySize: d.total,
           };
           y0 += d[datasource] === undefined ? 0 : d[datasource];
           return barUnitData;
@@ -265,13 +201,14 @@ export class SegmentTimeline extends React.PureComponent<
       });
       newStackedData[type] = stackedData.flat();
     });
+
     return newStackedData;
   }
 
-  private calculateSingleDatasourceData(
+  static calculateSingleDatasourceData(
     data: Record<string, any>,
+    datasources: string[],
   ): Record<string, Record<string, BarUnitData[]>> {
-    const { datasources } = this.state;
     const singleDatasourceData: Record<string, Record<string, BarUnitData[]>> = {};
     Object.keys(data).forEach(dataType => {
       singleDatasourceData[dataType] = {};
@@ -295,22 +232,162 @@ export class SegmentTimeline extends React.PureComponent<
         }
       });
     });
+
     return singleDatasourceData;
   }
 
+  private readonly dataQueryManager: QueryManager<
+    { capabilities: Capabilities; startDate: Date; endDate: Date },
+    any
+  >;
+
+  private readonly chartMargin = { top: 40, right: 15, bottom: 20, left: 60 };
+
+  constructor(props: SegmentTimelineProps) {
+    super(props);
+    const startDate = ceilToUtcDay(new Date());
+    const endDate = new Date(startDate.valueOf());
+    startDate.setUTCMonth(startDate.getUTCMonth() - DEFAULT_TIME_SPAN_MONTHS);
+
+    this.state = {
+      chartWidth: 1, // Dummy init values to be replaced
+      chartHeight: 1, // after first render
+      data: {},
+      datasources: [],
+      stackedData: {},
+      singleDatasourceData: {},
+      dataToRender: [],
+      activeDatasource: null,
+      activeDataType: 'sizeData',
+      loading: true,
+      xScale: null,
+      yScale: null,
+      startDate,
+      endDate,
+    };
+
+    this.dataQueryManager =
+      props.dataQueryManager ||
+      new QueryManager({
+        processQuery: async ({ capabilities, startDate, endDate }) => {
+          let intervals: IntervalRow[];
+          let datasources: string[];
+          if (capabilities.hasSql()) {
+            intervals = await queryDruidSql({
+              query: SegmentTimeline.getSqlQuery(startDate, endDate),
+            });
+            datasources = uniq(intervals.map(r => r.datasource));
+          } else if (capabilities.hasCoordinatorAccess()) {
+            const startIso = startDate.toISOString();
+
+            datasources = (await Api.instance.get(`/druid/coordinator/v1/datasources`)).data;
+            intervals = (
+              await Promise.all(
+                datasources.map(async datasource => {
+                  const intervalMap = (
+                    await Api.instance.get(
+                      `/druid/coordinator/v1/datasources/${Api.encodePath(
+                        datasource,
+                      )}/intervals?simple`,
+                    )
+                  ).data;
+
+                  return Object.keys(intervalMap)
+                    .map(interval => {
+                      const [start, end] = interval.split('/');
+                      const { count, size } = intervalMap[interval];
+                      return {
+                        start,
+                        end,
+                        datasource,
+                        count,
+                        size,
+                      };
+                    })
+                    .filter(a => startIso < a.start);
+                }),
+              )
+            )
+              .flat()
+              .sort((a, b) => b.start.localeCompare(a.start));
+          } else {
+            throw new Error(`must have SQL or coordinator access`);
+          }
+
+          const data = SegmentTimeline.processRawData(intervals);
+          const stackedData = SegmentTimeline.calculateStackedData(data, datasources);
+          const singleDatasourceData = SegmentTimeline.calculateSingleDatasourceData(
+            data,
+            datasources,
+          );
+          return { data, datasources, stackedData, singleDatasourceData };
+        },
+        onStateChange: ({ data, loading, error }) => {
+          this.setState({
+            data: data ? data.data : undefined,
+            datasources: data ? data.datasources : [],
+            stackedData: data ? data.stackedData : undefined,
+            singleDatasourceData: data ? data.singleDatasourceData : undefined,
+            loading,
+            error,
+          });
+        },
+      });
+  }
+
+  componentDidMount(): void {
+    const { capabilities } = this.props;
+    const { startDate, endDate } = this.state;
+
+    this.dataQueryManager.runQuery({ capabilities, startDate, endDate });
+  }
+
+  componentWillUnmount(): void {
+    this.dataQueryManager.terminate();
+  }
+
+  componentDidUpdate(_prevProps: SegmentTimelineProps, prevState: SegmentTimelineState): void {
+    const { activeDatasource, activeDataType, singleDatasourceData, stackedData } = this.state;
+    if (
+      prevState.data !== this.state.data ||
+      prevState.activeDataType !== this.state.activeDataType ||
+      prevState.activeDatasource !== this.state.activeDatasource ||
+      prevState.chartWidth !== this.state.chartWidth ||
+      prevState.chartHeight !== this.state.chartHeight
+    ) {
+      const scales: BarChartScales | undefined = this.calculateScales();
+      const dataToRender: BarUnitData[] | undefined = activeDatasource
+        ? singleDatasourceData
+          ? singleDatasourceData[activeDataType][activeDatasource]
+          : undefined
+        : stackedData
+        ? stackedData[activeDataType]
+        : undefined;
+
+      if (scales && dataToRender) {
+        this.setState({
+          dataToRender,
+          xScale: scales.xScale,
+          yScale: scales.yScale,
+        });
+      }
+    }
+  }
+
   private calculateScales(): BarChartScales | undefined {
-    const { chartWidth, chartHeight } = this.props;
     const {
+      chartWidth,
+      chartHeight,
       data,
       activeDataType,
       activeDatasource,
       singleDatasourceData,
-      dStart,
-      dEnd,
+      startDate,
+      endDate,
     } = this.state;
     if (!data || !Object.keys(data).length) return;
     const activeData = data[activeDataType];
-    const xDomain: Date[] = [dStart, dEnd];
+
     let yDomain: number[] = [
       0,
       activeData.length === 0
@@ -330,13 +407,11 @@ export class SegmentTimeline extends React.PureComponent<
       ];
     }
 
-    const xScale: AxisScale<Date> = d3
-      .scaleTime()
-      .domain(xDomain)
+    const xScale: AxisScale<Date> = scaleUtc()
+      .domain([startDate, endDate])
       .range([0, chartWidth - this.chartMargin.left - this.chartMargin.right]);
 
-    const yScale: AxisScale<number> = d3
-      .scaleLinear()
+    const yScale: AxisScale<number> = scaleLinear()
       .rangeRound([chartHeight - this.chartMargin.top - this.chartMargin.bottom, 0])
       .domain(yDomain);
 
@@ -346,20 +421,7 @@ export class SegmentTimeline extends React.PureComponent<
     };
   }
 
-  onTimeSpanChange = (e: any) => {
-    const dStart = new Date();
-    const dEnd = new Date();
-    dStart.setMonth(dStart.getMonth() - e);
-    this.setState({
-      timeSpan: e,
-      loading: true,
-      dStart,
-      dEnd,
-    });
-    this.dataQueryManager.rerunLastQuery();
-  };
-
-  formatTick = (n: number) => {
+  private readonly formatTick = (n: number) => {
     const { activeDataType } = this.state;
     if (activeDataType === 'countData') {
       return n.toString();
@@ -368,9 +430,18 @@ export class SegmentTimeline extends React.PureComponent<
     }
   };
 
+  private readonly handleResize = (entries: IResizeEntry[]) => {
+    const chartRect = entries[0].contentRect;
+    this.setState({
+      chartWidth: chartRect.width,
+      chartHeight: chartRect.height,
+    });
+  };
+
   renderStackedBarChart() {
-    const { chartWidth, chartHeight } = this.props;
     const {
+      chartWidth,
+      chartHeight,
       loading,
       dataToRender,
       activeDataType,
@@ -379,9 +450,10 @@ export class SegmentTimeline extends React.PureComponent<
       yScale,
       data,
       activeDatasource,
-      dStart,
-      dEnd,
+      startDate,
+      endDate,
     } = this.state;
+
     if (loading) {
       return (
         <div>
@@ -393,7 +465,7 @@ export class SegmentTimeline extends React.PureComponent<
     if (error) {
       return (
         <div>
-          <span className={'no-data-text'}>Error when loading data: {error}</span>
+          <span className="no-data-text">Error when loading data: {error.message}</span>
         </div>
       );
     }
@@ -401,7 +473,7 @@ export class SegmentTimeline extends React.PureComponent<
     if (xScale === null || yScale === null) {
       return (
         <div>
-          <span className={'no-data-text'}>Error when calculating scales</span>
+          <span className="no-data-text">Error when calculating scales</span>
         </div>
       );
     }
@@ -409,7 +481,7 @@ export class SegmentTimeline extends React.PureComponent<
     if (data![activeDataType].length === 0) {
       return (
         <div>
-          <span className={'no-data-text'}>No data available for the time span selected</span>
+          <span className="no-data-text">No data available for the time span selected</span>
         </div>
       );
     }
@@ -420,7 +492,7 @@ export class SegmentTimeline extends React.PureComponent<
     ) {
       return (
         <div>
-          <span className={'no-data-text'}>
+          <span className="no-data-text">
             No data available for <i>{activeDatasource}</i>
           </span>
         </div>
@@ -428,46 +500,52 @@ export class SegmentTimeline extends React.PureComponent<
     }
 
     const millisecondsPerDay = 24 * 60 * 60 * 1000;
-    const barCounts = (dEnd.getTime() - dStart.getTime()) / millisecondsPerDay;
-    const barWidth = (chartWidth - this.chartMargin.left - this.chartMargin.right) / barCounts;
+    const barCounts = (endDate.getTime() - startDate.getTime()) / millisecondsPerDay;
+    const barWidth = Math.max(
+      0,
+      (chartWidth - this.chartMargin.left - this.chartMargin.right) / barCounts,
+    );
     return (
-      <StackedBarChart
-        dataToRender={dataToRender}
-        svgHeight={chartHeight}
-        svgWidth={chartWidth}
-        margin={this.chartMargin}
-        changeActiveDatasource={(datasource: string) =>
-          this.setState(prevState => ({
-            activeDatasource: prevState.activeDatasource ? null : datasource,
-          }))
-        }
-        activeDataType={activeDataType}
-        formatTick={(n: number) => this.formatTick(n)}
-        xScale={xScale}
-        yScale={yScale}
-        barWidth={barWidth}
-      />
+      <ResizeSensor onResize={this.handleResize}>
+        <StackedBarChart
+          dataToRender={dataToRender}
+          svgHeight={chartHeight}
+          svgWidth={chartWidth}
+          margin={this.chartMargin}
+          changeActiveDatasource={(datasource: string | null) =>
+            this.setState(prevState => ({
+              activeDatasource: prevState.activeDatasource ? null : datasource,
+            }))
+          }
+          activeDataType={activeDataType}
+          formatTick={(n: number) => this.formatTick(n)}
+          xScale={xScale}
+          yScale={yScale}
+          barWidth={barWidth}
+        />
+      </ResizeSensor>
     );
   }
 
   render(): JSX.Element {
-    const { datasources, activeDataType, activeDatasource, timeSpan } = this.state;
+    const { capabilities } = this.props;
+    const { datasources, activeDataType, activeDatasource, startDate, endDate } = this.state;
 
     return (
-      <div className={'segment-timeline app-view'}>
+      <div className="segment-timeline app-view">
         {this.renderStackedBarChart()}
-        <div className={'side-control'}>
+        <div className="side-control">
           <FormGroup>
             <RadioGroup
               onChange={(e: any) => this.setState({ activeDataType: e.target.value })}
               selectedValue={activeDataType}
             >
-              <Radio label={'Segment count'} value={'countData'} />
-              <Radio label={'Total size'} value={'sizeData'} />
+              <Radio label="Total size" value="sizeData" />
+              <Radio label="Segment count" value="countData" />
             </RadioGroup>
           </FormGroup>
 
-          <FormGroup label={'Datasource:'}>
+          <FormGroup label="Datasource">
             <HTMLSelect
               onChange={(e: any) =>
                 this.setState({
@@ -477,7 +555,7 @@ export class SegmentTimeline extends React.PureComponent<
               value={activeDatasource == null ? 'all' : activeDatasource}
               fill
             >
-              <option value={'all'}>Show all</option>
+              <option value="all">Show all</option>
               {datasources.map(d => {
                 return (
                   <option key={d} value={d}>
@@ -488,18 +566,16 @@ export class SegmentTimeline extends React.PureComponent<
             </HTMLSelect>
           </FormGroup>
 
-          <FormGroup label={'Period:'}>
-            <HTMLSelect
-              onChange={(e: any) => this.onTimeSpanChange(e.target.value)}
-              value={timeSpan}
-              fill
-            >
-              <option value={1}> 1 months</option>
-              <option value={3}> 3 months</option>
-              <option value={6}> 6 months</option>
-              <option value={9}> 9 months</option>
-              <option value={12}> 1 year</option>
-            </HTMLSelect>
+          <FormGroup label="Interval">
+            <DateRangeSelector
+              startDate={startDate}
+              endDate={endDate}
+              onChange={(startDate, endDate) => {
+                this.setState({ startDate, endDate }, () => {
+                  this.dataQueryManager.runQuery({ capabilities, startDate, endDate });
+                });
+              }}
+            />
           </FormGroup>
         </div>
       </div>

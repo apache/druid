@@ -45,7 +45,7 @@ public class MonitorsConfig
    * Prior to 0.12.0, Druid used Monitor classes from the `com.metamx.metrics` package.
    * In 0.12.0, these Monitor classes were moved to the Druid repo under `org.apache.druid.java.util.metrics`.
    * In 0.13.0, they were moved again to `org.apache.druid.java.util.metrics`.
-   * See https://github.com/apache/incubator-druid/pull/5289 and https://github.com/apache/incubator-druid/pull/6266
+   * See https://github.com/apache/druid/pull/5289 and https://github.com/apache/druid/pull/6266
    * for details.
    *
    * We automatically adjust old package references to `org.apache.druid.java.util.metrics` for backwards

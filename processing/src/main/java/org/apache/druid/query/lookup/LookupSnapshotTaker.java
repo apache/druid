@@ -54,12 +54,6 @@ public class LookupSnapshotTaker
         "can not work without specifying persistDirectory"
     );
     this.persistDirectory = new File(persistDirectory);
-    if (!this.persistDirectory.exists()) {
-      Preconditions.checkArgument(this.persistDirectory.mkdirs(), "Oups was not able to create persist directory");
-    }
-    if (!this.persistDirectory.isDirectory()) {
-      throw new ISE("Can only persist to directories, [%s] wasn't a directory", persistDirectory);
-    }
   }
 
   public synchronized List<LookupBean> pullExistingSnapshot(final String tier)

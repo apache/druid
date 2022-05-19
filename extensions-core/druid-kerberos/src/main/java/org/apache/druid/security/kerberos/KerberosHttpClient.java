@@ -39,7 +39,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
 public class KerberosHttpClient extends AbstractHttpClient
 {
@@ -47,7 +47,7 @@ public class KerberosHttpClient extends AbstractHttpClient
 
   private final HttpClient delegate;
   private final CookieManager cookieManager;
-  private final Executor exec = Execs.singleThreaded("test-%s");
+  private final ExecutorService exec = Execs.singleThreaded("test-%s");
   private final String internalClientPrincipal;
   private final String internalClientKeytab;
 

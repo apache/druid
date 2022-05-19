@@ -115,6 +115,12 @@ public class WorkerHolderTest
 
     Assert.assertEquals(task0.getId(), updates.get(3).getTaskId());
     Assert.assertTrue(updates.get(3).getTaskStatus().isFailure());
+    Assert.assertNotNull(updates.get(3).getTaskStatus().getErrorMsg());
+    Assert.assertTrue(
+        updates.get(3).getTaskStatus().getErrorMsg().startsWith(
+            "This task disappeared on the worker where it was assigned"
+        )
+    );
 
     updates.clear();
 
@@ -138,6 +144,12 @@ public class WorkerHolderTest
 
     Assert.assertEquals(task2.getId(), updates.get(0).getTaskId());
     Assert.assertTrue(updates.get(0).getTaskStatus().isFailure());
+    Assert.assertNotNull(updates.get(0).getTaskStatus().getErrorMsg());
+    Assert.assertTrue(
+        updates.get(0).getTaskStatus().getErrorMsg().startsWith(
+            "This task disappeared on the worker where it was assigned"
+        )
+    );
 
     Assert.assertEquals(task3.getId(), updates.get(1).getTaskId());
     Assert.assertTrue(updates.get(1).getTaskStatus().isRunnable());

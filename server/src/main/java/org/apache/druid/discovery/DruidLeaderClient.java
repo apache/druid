@@ -21,10 +21,7 @@ package org.apache.druid.discovery;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.selector.Server;
 import org.apache.druid.concurrent.LifecycleLock;
-import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -68,12 +65,9 @@ public class DruidLeaderClient
 
   private final HttpClient httpClient;
   private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
-  private final NodeType nodeTypeToWatch;
+  private final NodeRole nodeRoleToWatch;
 
   private final String leaderRequestPath;
-
-  //Note: This is kept for back compatibility with pre 0.11.0 releases and should be removed in future.
-  private final ServerDiscoverySelector serverDiscoverySelector;
 
   private LifecycleLock lifecycleLock = new LifecycleLock();
   private DruidNodeDiscovery druidNodeDiscovery;
@@ -82,16 +76,14 @@ public class DruidLeaderClient
   public DruidLeaderClient(
       HttpClient httpClient,
       DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
-      NodeType nodeTypeToWatch,
-      String leaderRequestPath,
-      ServerDiscoverySelector serverDiscoverySelector
+      NodeRole nodeRoleToWatch,
+      String leaderRequestPath
   )
   {
     this.httpClient = httpClient;
     this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
-    this.nodeTypeToWatch = nodeTypeToWatch;
+    this.nodeRoleToWatch = nodeRoleToWatch;
     this.leaderRequestPath = leaderRequestPath;
-    this.serverDiscoverySelector = serverDiscoverySelector;
   }
 
   @LifecycleStart
@@ -102,9 +94,9 @@ public class DruidLeaderClient
     }
 
     try {
-      druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(nodeTypeToWatch);
+      druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeRole(nodeRoleToWatch);
       lifecycleLock.started();
-      log.info("Started.");
+      log.debug("Started.");
     }
     finally {
       lifecycleLock.exitStart();
@@ -118,18 +110,7 @@ public class DruidLeaderClient
       throw new ISE("can't stop.");
     }
 
-    log.info("Stopped.");
-  }
-
-  /**
-   * Make a Request object aimed at the leader. Throws IOException if the leader cannot be located.
-   *
-   * @param cached Uses cached leader if true, else uses the current leader
-   */
-  public Request makeRequest(HttpMethod httpMethod, String urlPath, boolean cached) throws IOException
-  {
-    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
-    return new Request(httpMethod, new URL(StringUtils.format("%s%s", getCurrentKnownLeader(cached), urlPath)));
+    log.debug("Stopped.");
   }
 
   /**
@@ -137,24 +118,13 @@ public class DruidLeaderClient
    */
   public Request makeRequest(HttpMethod httpMethod, String urlPath) throws IOException
   {
-    return makeRequest(httpMethod, urlPath, true);
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    return new Request(httpMethod, new URL(StringUtils.format("%s%s", getCurrentKnownLeader(true), urlPath)));
   }
 
   public StringFullResponseHolder go(Request request) throws IOException, InterruptedException
   {
     return go(request, new StringFullResponseHandler(StandardCharsets.UTF_8));
-  }
-
-  /**
-   * Executes the request object aimed at the leader and process the response with given handler
-   * Note: this method doesn't do retrying on errors or handle leader changes occurred during communication
-   */
-  public <Intermediate, Final> ListenableFuture<Final> goAsync(
-      final Request request,
-      final HttpResponseHandler<Intermediate, Final> handler
-  )
-  {
-    return httpClient.go(request, handler);
   }
 
   /**
@@ -303,16 +273,6 @@ public class DruidLeaderClient
   @Nullable
   private String pickOneHost()
   {
-    Server server = serverDiscoverySelector.pick();
-    if (server != null) {
-      return StringUtils.format(
-          "%s://%s:%s",
-          server.getScheme(),
-          server.getAddress(),
-          server.getPort()
-      );
-    }
-
     Iterator<DiscoveryDruidNode> iter = druidNodeDiscovery.getAllNodes().iterator();
     if (iter.hasNext()) {
       DiscoveryDruidNode node = iter.next();

@@ -20,12 +20,17 @@
 package org.apache.druid.query.aggregation.variance;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.aggregation.teststats.PvaluefromZscorePostAggregator;
+import org.apache.druid.query.aggregation.teststats.ZtestPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -38,6 +43,7 @@ import org.apache.druid.query.groupby.having.OrHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Period;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -52,20 +58,18 @@ import java.util.stream.Collectors;
  *
  */
 @RunWith(Parameterized.class)
-public class VarianceGroupByQueryTest
+public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
 {
   private final GroupByQueryConfig config;
   private final QueryRunner<Row> runner;
   private final GroupByQueryRunnerFactory factory;
   private final String testName;
+  private final GroupByQuery.Builder queryBuilder;
 
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
   {
-    // Use GroupByQueryRunnerTest's constructorFeeder, but remove vectorized tests, since this aggregator
-    // can't vectorize yet.
     return GroupByQueryRunnerTest.constructorFeeder().stream()
-                                 .filter(constructor -> !((boolean) constructor[4]) /* !vectorize */)
                                  .map(
                                      constructor ->
                                          new Object[]{
@@ -89,13 +93,14 @@ public class VarianceGroupByQueryTest
     this.config = config;
     this.factory = factory;
     this.runner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
+    this.queryBuilder = GroupByQuery.builder()
+                                    .setContext(ImmutableMap.of("vectorize", config.isVectorize()));
   }
 
   @Test
   public void testGroupByVarianceOnly()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = queryBuilder
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -136,8 +141,7 @@ public class VarianceGroupByQueryTest
   @Test
   public void testGroupBy()
   {
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = queryBuilder
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -186,8 +190,7 @@ public class VarianceGroupByQueryTest
         new String[]{"alias", "rows", "index", "index_var", "index_stddev"}
     );
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = queryBuilder
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
@@ -233,5 +236,88 @@ public class VarianceGroupByQueryTest
 
     results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "limitSpec");
+  }
+
+  @Test
+  public void testGroupByZtestPostAgg()
+  {
+    // test postaggs from 'teststats' package in here since we've already gone to the trouble of setting up the test
+    GroupByQuery query = queryBuilder
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            VarianceTestHelper.INDEX_VARIANCE_AGGR,
+            new LongSumAggregatorFactory("idx", "index")
+        )
+        .setPostAggregatorSpecs(
+            ImmutableList.of(
+                VarianceTestHelper.STD_DEV_OF_INDEX_POST_AGGR,
+                // these inputs are totally nonsensical, i just want the code path to be executed
+                new ZtestPostAggregator(
+                    "ztest",
+                    new FieldAccessPostAggregator("f1", "idx"),
+                    new ConstantPostAggregator("f2", 100000L),
+                    new FieldAccessPostAggregator("f3", "index_stddev"),
+                    new ConstantPostAggregator("f2", 100000L)
+                )
+            )
+        )
+        .setLimitSpec(new DefaultLimitSpec(OrderByColumnSpec.descending("ztest"), 1))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
+    VarianceTestHelper.RowBuilder builder =
+        new VarianceTestHelper.RowBuilder(new String[]{"alias", "rows", "idx", "index_stddev", "index_var", "ztest"});
+
+    List<ResultRow> expectedResults = builder
+        .add("2011-04-01", "premium", 3L, 2900.0, 726.632270328514, 527994.4562827706, 36.54266309285626)
+        .build(query);
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+  @Test
+  public void testGroupByTestPvalueZscorePostAgg()
+  {
+    // test postaggs from 'teststats' package in here since we've already gone to the trouble of setting up the test
+    GroupByQuery query = queryBuilder
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            VarianceTestHelper.INDEX_VARIANCE_AGGR,
+            new LongSumAggregatorFactory("idx", "index")
+        )
+        .setPostAggregatorSpecs(
+            ImmutableList.of(
+                VarianceTestHelper.STD_DEV_OF_INDEX_POST_AGGR,
+                // nonsensical inputs
+                new PvaluefromZscorePostAggregator("pvalueZscore", new FieldAccessPostAggregator("f1", "index_stddev"))
+            )
+        )
+        .setLimitSpec(new DefaultLimitSpec(OrderByColumnSpec.descending("pvalueZscore"), 1))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
+    VarianceTestHelper.RowBuilder builder =
+        new VarianceTestHelper.RowBuilder(new String[]{
+            "alias",
+            "rows",
+            "idx",
+            "index_stddev",
+            "index_var",
+            "pvalueZscore"
+        });
+
+    List<ResultRow> expectedResults = builder
+        .add("2011-04-01", "automotive", 1L, 135.0, 0.0, 0.0, 1.0)
+        .build(query);
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
 }

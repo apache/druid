@@ -19,12 +19,12 @@
 
 package org.apache.druid.cli;
 
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -80,7 +80,7 @@ public class ResetCluster extends GuiceRunnable
     return ImmutableList.of(
         // It's unknown if those modules are required in ResetCluster.
         // Maybe some of those modules could be removed.
-        // See https://github.com/apache/incubator-druid/pull/4429#discussion_r123603498
+        // See https://github.com/apache/druid/pull/4429#discussion_r123603498
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),

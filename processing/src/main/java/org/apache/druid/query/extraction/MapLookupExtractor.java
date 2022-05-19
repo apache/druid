@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @JsonTypeName("map")
@@ -120,6 +121,30 @@ public class MapLookupExtractor extends LookupExtractor
       // If ByteArrayOutputStream.write has problems, that is a very bad thing
       throw new RuntimeException(ex);
     }
+  }
+
+  @Override
+  public boolean canIterate()
+  {
+    return true;
+  }
+
+  @Override
+  public boolean canGetKeySet()
+  {
+    return true;
+  }
+
+  @Override
+  public Iterable<Map.Entry<String, String>> iterable()
+  {
+    return map.entrySet();
+  }
+
+  @Override
+  public Set<String> keySet()
+  {
+    return Collections.unmodifiableSet(map.keySet());
   }
 
   @Override

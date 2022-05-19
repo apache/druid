@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Suppliers;
@@ -35,13 +36,12 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.js.JavaScriptConfig;
-import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
@@ -55,22 +55,28 @@ import org.apache.druid.query.groupby.GroupByQueryEngine;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNQueryEngine;
 import org.apache.druid.query.topn.TopNResultValue;
+import org.apache.druid.segment.CloserRule;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.AllTrueBitmapColumnIndex;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.SelectorFilter;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -83,42 +89,26 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  */
 @RunWith(Parameterized.class)
-public class IncrementalIndexStorageAdapterTest
+public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingTest
 {
-  interface IndexCreator
+  public final IncrementalIndexCreator indexCreator;
+
+  @Rule
+  public final CloserRule closer = new CloserRule(false);
+
+  public IncrementalIndexStorageAdapterTest(String indexType) throws JsonProcessingException
   {
-    IncrementalIndex createIndex();
+    indexCreator = closer.closeLater(new IncrementalIndexCreator(indexType, (builder, args) -> builder
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
+        .setMaxRowCount(1_000)
+        .build()
+    ));
   }
 
-  private final IndexCreator indexCreator;
-
-  public IncrementalIndexStorageAdapterTest(
-      IndexCreator IndexCreator
-  )
-  {
-    this.indexCreator = IndexCreator;
-  }
-
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{index}: {0}")
   public static Collection<?> constructorFeeder()
   {
-    return Arrays.asList(
-        new Object[][]{
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex()
-                  {
-                    return new IncrementalIndex.Builder()
-                        .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
-                        .setMaxRowCount(1000)
-                        .buildOnheap();
-                  }
-                }
-            }
-        }
-    );
+    return IncrementalIndexCreator.getAppendableIndexTypes();
   }
 
   @Test
@@ -170,7 +160,8 @@ public class IncrementalIndexStorageAdapterTest
                       .addDimension("sally")
                       .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
                       .build(),
-          new IncrementalIndexStorageAdapter(index)
+          new IncrementalIndexStorageAdapter(index),
+          null
       );
 
       final List<Row> results = rows.toList();
@@ -248,7 +239,8 @@ public class IncrementalIndexStorageAdapterTest
                           )
                       )
                       .build(),
-          new IncrementalIndexStorageAdapter(index)
+          new IncrementalIndexStorageAdapter(index),
+          null
       );
 
       final List<Row> results = rows.toList();
@@ -418,7 +410,8 @@ public class IncrementalIndexStorageAdapterTest
                       .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
                       .setDimFilter(DimFilters.dimEquals("sally", (String) null))
                       .build(),
-          new IncrementalIndexStorageAdapter(index)
+          new IncrementalIndexStorageAdapter(index),
+          null
       );
 
       final List<Row> results = rows.toList();
@@ -495,7 +488,7 @@ public class IncrementalIndexStorageAdapterTest
   @Test
   public void testCursorDictionaryRaceConditionFix() throws Exception
   {
-    // Tests the dictionary ID race condition bug described at https://github.com/apache/incubator-druid/pull/6340
+    // Tests the dictionary ID race condition bug described at https://github.com/apache/druid/pull/6340
 
     final IncrementalIndex index = indexCreator.createIndex();
     final long timestamp = System.currentTimeMillis();
@@ -652,7 +645,7 @@ public class IncrementalIndexStorageAdapterTest
     Assert.assertEquals(1, assertCursorsNotEmpty.get());
   }
 
-  private class DictionaryRaceTestFilter implements Filter
+  private static class DictionaryRaceTestFilter implements Filter
   {
     private final IncrementalIndex index;
     private final long timestamp;
@@ -666,14 +659,15 @@ public class IncrementalIndexStorageAdapterTest
       this.timestamp = timestamp;
     }
 
+    @Nullable
     @Override
-    public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+    public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
     {
-      return bitmapResultFactory.wrapAllTrue(Filters.allTrue(selector));
+      return new AllTrueBitmapColumnIndex(selector);
     }
 
     @Override
-    public double estimateSelectivity(BitmapIndexSelector indexSelector)
+    public double estimateSelectivity(ColumnIndexSelector indexSelector)
     {
       return 1;
     }
@@ -689,19 +683,7 @@ public class IncrementalIndexStorageAdapterTest
     }
 
     @Override
-    public boolean supportsBitmapIndex(BitmapIndexSelector selector)
-    {
-      return true;
-    }
-
-    @Override
-    public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-    {
-      return true;
-    }
-
-    @Override
-    public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+    public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
     {
       return true;
     }
@@ -710,6 +692,13 @@ public class IncrementalIndexStorageAdapterTest
     public Set<String> getRequiredColumns()
     {
       return Collections.emptySet();
+    }
+
+    @Override
+    public int hashCode()
+    {
+      // Test code, hashcode and equals isn't important
+      return super.hashCode();
     }
 
     private class DictionaryRaceTestFilterDruidPredicateFactory implements DruidPredicateFactory

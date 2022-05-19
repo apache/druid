@@ -29,6 +29,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -92,6 +94,17 @@ public class QuantilesPostAggregator extends ApproximateHistogramPostAggregator
     throw new ISE("Unknown value type: " + val.getClass());
   }
 
+  /**
+   * actual type is {@link Quantiles}
+   * @param signature
+   */
+  @Override
+  public ColumnType getType(ColumnInspector signature)
+  {
+    // todo: ???
+    return ColumnType.UNKNOWN_COMPLEX;
+  }
+
   @Override
   public PostAggregator decorate(Map<String, AggregatorFactory> aggregators)
   {
@@ -121,5 +134,29 @@ public class QuantilesPostAggregator extends ApproximateHistogramPostAggregator
         .appendString(fieldName)
         .appendFloatArray(probabilities)
         .build();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    QuantilesPostAggregator that = (QuantilesPostAggregator) o;
+    return Arrays.equals(probabilities, that.probabilities);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = super.hashCode();
+    result = 31 * result + Arrays.hashCode(probabilities);
+    return result;
   }
 }

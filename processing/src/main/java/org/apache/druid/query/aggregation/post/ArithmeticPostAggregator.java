@@ -26,11 +26,13 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregator;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
-
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,14 +45,7 @@ import java.util.Set;
  */
 public class ArithmeticPostAggregator implements PostAggregator
 {
-  public static final Comparator DEFAULT_COMPARATOR = new Comparator()
-  {
-    @Override
-    public int compare(Object o, Object o1)
-    {
-      return ((Double) o).compareTo((Double) o1);
-    }
-  };
+  public static final Comparator DEFAULT_COMPARATOR = DoubleSumAggregator.COMPARATOR;
 
   private final String name;
   private final String fnName;
@@ -137,6 +132,12 @@ public class ArithmeticPostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  @Override
+  public ColumnType getType(ColumnInspector signature)
+  {
+    return ColumnType.DOUBLE;
   }
 
   @Override

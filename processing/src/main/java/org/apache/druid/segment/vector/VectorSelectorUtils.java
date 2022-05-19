@@ -19,9 +19,10 @@
 
 package org.apache.druid.segment.vector;
 
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 
 public class VectorSelectorUtils
 {
@@ -32,10 +33,10 @@ public class VectorSelectorUtils
   public static boolean[] populateNullVector(
       @Nullable final boolean[] nullVector,
       final ReadableVectorOffset offset,
-      final ImmutableBitmap nullValueBitmap
+      final PeekableIntIterator nullIterator
   )
   {
-    if (nullValueBitmap.isEmpty()) {
+    if (!nullIterator.hasNext()) {
       return null;
     }
 
@@ -47,14 +48,35 @@ public class VectorSelectorUtils
       retVal = new boolean[offset.getMaxVectorSize()];
     }
 
-    // Probably not super efficient to call "get" so much, but, no worse than the non-vectorized version.
     if (offset.isContiguous()) {
+      final int startOffset = offset.getStartOffset();
+      nullIterator.advanceIfNeeded(startOffset);
+      if (!nullIterator.hasNext()) {
+        return null;
+      }
       for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
-        retVal[i] = nullValueBitmap.get(i + offset.getStartOffset());
+        final int row = i + startOffset;
+        nullIterator.advanceIfNeeded(row);
+        if (!nullIterator.hasNext()) {
+          Arrays.fill(retVal, i, offset.getCurrentVectorSize(), false);
+          break;
+        }
+        retVal[i] = row == nullIterator.peekNext();
       }
     } else {
+      final int[] currentOffsets = offset.getOffsets();
+      nullIterator.advanceIfNeeded(currentOffsets[0]);
+      if (!nullIterator.hasNext()) {
+        return null;
+      }
       for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
-        retVal[i] = nullValueBitmap.get(offset.getOffsets()[i]);
+        final int row = currentOffsets[i];
+        nullIterator.advanceIfNeeded(row);
+        if (!nullIterator.hasNext()) {
+          Arrays.fill(retVal, i, offset.getCurrentVectorSize(), false);
+          break;
+        }
+        retVal[i] = row == nullIterator.peekNext();
       }
     }
 

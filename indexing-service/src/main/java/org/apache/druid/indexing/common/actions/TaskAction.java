@@ -34,11 +34,14 @@ import org.apache.druid.indexing.common.task.Task;
     @JsonSubTypes.Type(name = "lockRelease", value = LockReleaseAction.class),
     @JsonSubTypes.Type(name = "segmentInsertion", value = SegmentInsertAction.class),
     @JsonSubTypes.Type(name = "segmentTransactionalInsert", value = SegmentTransactionalInsertAction.class),
-    @JsonSubTypes.Type(name = "segmentListUsed", value = SegmentListUsedAction.class),
-    @JsonSubTypes.Type(name = "segmentListUnused", value = SegmentListUnusedAction.class),
+    // Type name doesn't correspond to the name of the class for backward compatibility.
+    @JsonSubTypes.Type(name = "segmentListUsed", value = RetrieveUsedSegmentsAction.class),
+    // Type name doesn't correspond to the name of the class for backward compatibility.
+    @JsonSubTypes.Type(name = "segmentListUnused", value = RetrieveUnusedSegmentsAction.class),
+    @JsonSubTypes.Type(name = "markSegmentsAsUnused", value = MarkSegmentsAsUnusedAction.class),
     @JsonSubTypes.Type(name = "segmentNuke", value = SegmentNukeAction.class),
     @JsonSubTypes.Type(name = "segmentMetadataUpdate", value = SegmentMetadataUpdateAction.class),
-    @JsonSubTypes.Type(name = "segmentAllocate", value = SegmentAllocateAction.class),
+    @JsonSubTypes.Type(name = SegmentAllocateAction.TYPE, value = SegmentAllocateAction.class),
     @JsonSubTypes.Type(name = "resetDataSourceMetadata", value = ResetDataSourceMetadataAction.class),
     @JsonSubTypes.Type(name = "checkPointDataSourceMetadata", value = CheckPointDataSourceMetadataAction.class),
     @JsonSubTypes.Type(name = "surrogateAction", value = SurrogateAction.class)

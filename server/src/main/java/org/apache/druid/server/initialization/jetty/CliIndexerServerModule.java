@@ -132,7 +132,7 @@ public class CliIndexerServerModule implements Module
         node,
         makeAdjustedServerConfig(config),
         TLSServerConfig,
-        injector.getExistingBinding(Key.get(SslContextFactory.class)),
+        injector.getExistingBinding(Key.get(SslContextFactory.Server.class)),
         injector.getInstance(TLSCertificateChecker.class)
     );
   }
@@ -152,12 +152,17 @@ public class CliIndexerServerModule implements Module
         oldConfig.getMaxIdleTime(),
         oldConfig.getDefaultQueryTimeout(),
         oldConfig.getMaxScatterGatherBytes(),
+        oldConfig.getMaxSubqueryRows(),
         oldConfig.getMaxQueryTimeout(),
         oldConfig.getMaxRequestHeaderSize(),
         oldConfig.getGracefulShutdownTimeout(),
         oldConfig.getUnannouncePropagationDelay(),
         oldConfig.getInflateBufferSize(),
-        oldConfig.getCompressionLevel()
+        oldConfig.getCompressionLevel(),
+        oldConfig.isEnableForwardedRequestCustomizer(),
+        oldConfig.getAllowedHttpMethods(),
+        oldConfig.isShowDetailedJettyErrors(),
+        oldConfig.getErrorResponseTransformStrategy()
     );
   }
 }

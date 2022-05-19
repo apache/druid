@@ -90,7 +90,7 @@ public class MapBasedRow implements Row
   @Override
   public Number getMetric(String metric)
   {
-    return Rows.objectToNumber(metric, event.get(metric));
+    return Rows.objectToNumber(metric, event.get(metric), true);
   }
 
   @Override

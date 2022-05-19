@@ -49,6 +49,7 @@ class JodaStuff
     module.addDeserializer(DateTime.class, new DateTimeDeserializer());
     module.addSerializer(DateTime.class, ToStringSerializer.instance);
     module.addDeserializer(Interval.class, new JodaStuff.IntervalDeserializer());
+    module.addKeyDeserializer(Interval.class, new JodaStuff.IntervalKeyDeserializer());
     module.addSerializer(Interval.class, ToStringSerializer.instance);
     JsonDeserializer<?> periodDeserializer = new PeriodDeserializer();
     module.addDeserializer(Period.class, (JsonDeserializer<Period>) periodDeserializer);
@@ -73,6 +74,15 @@ class JodaStuff
         throws IOException
     {
       return Intervals.of(jsonParser.getText());
+    }
+  }
+
+  private static class IntervalKeyDeserializer extends KeyDeserializer
+  {
+    @Override
+    public Object deserializeKey(String key, DeserializationContext ctxt)
+    {
+      return Intervals.of(key);
     }
   }
 

@@ -22,16 +22,13 @@ package org.apache.druid.java.util.common.parsers;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 
 public class DelimitedParser extends AbstractFlatTextFormatParser
 {
-  private final String delimiter;
   private final Splitter splitter;
 
   public DelimitedParser(
@@ -42,15 +39,15 @@ public class DelimitedParser extends AbstractFlatTextFormatParser
   )
   {
     super(listDelimiter, hasHeaderRow, maxSkipHeaderRows);
-    this.delimiter = delimiter != null ? delimiter : FlatTextFormat.DELIMITED.getDefaultDelimiter();
+    final String finalDelimiter = delimiter != null ? delimiter : FlatTextFormat.DELIMITED.getDefaultDelimiter();
 
     Preconditions.checkState(
-        !this.delimiter.equals(getListDelimiter()),
+        !finalDelimiter.equals(getListDelimiter()),
         "Cannot have same delimiter and list delimiter of [%s]",
-        this.delimiter
+        finalDelimiter
     );
 
-    this.splitter = Splitter.on(this.delimiter);
+    this.splitter = Splitter.on(finalDelimiter);
   }
 
   public DelimitedParser(
@@ -80,23 +77,9 @@ public class DelimitedParser extends AbstractFlatTextFormatParser
     return splitToList(input);
   }
 
-  /**
-   * Copied from Guava's {@link Splitter#splitToList(CharSequence)}.
-   * This is to avoid the error of the missing method signature when using an old Guava library.
-   * For example, it may happen when running Druid Hadoop indexing jobs, since we may inherit the version provided by
-   * the Hadoop cluster. See https://github.com/apache/incubator-druid/issues/6801.
-   */
+
   private List<String> splitToList(String input)
   {
-    Preconditions.checkNotNull(input);
-
-    Iterator<String> iterator = splitter.split(input).iterator();
-    List<String> result = new ArrayList<String>();
-
-    while (iterator.hasNext()) {
-      result.add(iterator.next());
-    }
-
-    return Collections.unmodifiableList(result);
+    return DelimitedInputFormat.splitToList(splitter, input);
   }
 }

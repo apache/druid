@@ -22,6 +22,7 @@ package org.apache.druid.emitter.opentsdb;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import java.util.Objects;
 
 public class OpentsdbEmitterConfig
 {
@@ -55,6 +56,9 @@ public class OpentsdbEmitterConfig
   @JsonProperty
   private final String metricMapPath;
 
+  @JsonProperty
+  private final String namespacePrefix;
+
   @JsonCreator
   public OpentsdbEmitterConfig(
       @JsonProperty("host") String host,
@@ -64,7 +68,8 @@ public class OpentsdbEmitterConfig
       @JsonProperty("flushThreshold") Integer flushThreshold,
       @JsonProperty("maxQueueSize") Integer maxQueueSize,
       @JsonProperty("consumeDelay") Long consumeDelay,
-      @JsonProperty("metricMapPath") String metricMapPath
+      @JsonProperty("metricMapPath") String metricMapPath,
+      @JsonProperty("namespacePrefix") String namespacePrefix
   )
   {
     this.host = Preconditions.checkNotNull(host, "host can not be null.");
@@ -78,6 +83,7 @@ public class OpentsdbEmitterConfig
     this.maxQueueSize = (maxQueueSize == null || maxQueueSize < 0) ? DEFAULT_MAX_QUEUE_SIZE : maxQueueSize;
     this.consumeDelay = (consumeDelay == null || consumeDelay < 0) ? DEFAULT_CONSUME_DELAY_MILLIS : consumeDelay;
     this.metricMapPath = metricMapPath;
+    this.namespacePrefix = "".equals(namespacePrefix) ? null : namespacePrefix;
   }
 
   @Override
@@ -113,6 +119,9 @@ public class OpentsdbEmitterConfig
     if (consumeDelay != that.consumeDelay) {
       return false;
     }
+    if (!Objects.equals(namespacePrefix, that.namespacePrefix)) {
+      return false;
+    }
     return metricMapPath != null ? metricMapPath.equals(that.metricMapPath)
                                  : that.metricMapPath == null;
   }
@@ -128,6 +137,7 @@ public class OpentsdbEmitterConfig
     result = 31 * result + maxQueueSize;
     result = 31 * result + (int) consumeDelay;
     result = 31 * result + (metricMapPath != null ? metricMapPath.hashCode() : 0);
+    result = 31 * result + (namespacePrefix != null ? namespacePrefix.hashCode() : 0);
     return result;
   }
 
@@ -170,4 +180,10 @@ public class OpentsdbEmitterConfig
   {
     return metricMapPath;
   }
+
+  public String getNamespacePrefix()
+  {
+    return namespacePrefix;
+  }
+
 }

@@ -49,7 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class OrcStructConverter
+class OrcStructConverter
 {
   @Nonnull
   private static List<Object> convertList(TypeDescription fieldDescription, OrcList orcList, boolean binaryAsString)
@@ -84,8 +84,16 @@ public class OrcStructConverter
     return converted;
   }
 
-  private static Object convertPrimitive(TypeDescription fieldDescription, WritableComparable field, boolean binaryAsString)
+  @Nullable
+  private static Object convertPrimitive(
+      TypeDescription fieldDescription,
+      @Nullable WritableComparable field,
+      boolean binaryAsString
+  )
   {
+    if (field == null) {
+      return null;
+    }
     /*
         ORC TYPE    WRITABLE TYPE
         binary      org.apache.hadoop.io.BytesWritable
@@ -140,7 +148,7 @@ public class OrcStructConverter
     }
   }
 
-  private boolean binaryAsString;
+  private final boolean binaryAsString;
   private Object2IntMap<String> fieldIndexCache;
 
   OrcStructConverter(boolean binaryAsString)

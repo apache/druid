@@ -26,7 +26,9 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.LogicalSegment;
 
 import javax.annotation.Nullable;
@@ -48,7 +50,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
     final TypeFactory typeFactory = TypeFactory.defaultInstance();
     TypeReference<ResultType> resultTypeReference = getResultTypeReference();
     // resultTypeReference is null in MaterializedViewQueryQueryToolChest.
-    // See https://github.com/apache/incubator-druid/issues/6977
+    // See https://github.com/apache/druid/issues/6977
     if (resultTypeReference != null) {
       baseResultType = typeFactory.constructType(resultTypeReference);
       bySegmentResultType = typeFactory.constructParametrizedType(
@@ -111,11 +113,17 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   /**
    * Creates a merge function that is used to merge intermediate aggregates from historicals in broker. This merge
    * function is used in the default {@link ResultMergeQueryRunner} provided by
-   * {@link QueryToolChest#mergeResults(QueryRunner)} and can be used in additional future merge implementations
+   * {@link QueryToolChest#mergeResults(QueryRunner)} and also used in
+   * {@link org.apache.druid.java.util.common.guava.ParallelMergeCombiningSequence} by 'CachingClusteredClient' if it
+   * does not return null.
+   *
+   * Returning null from this function means that a query does not support result merging, at
+   * least via the mechanisms that utilize this function.
    */
+  @Nullable
   public BinaryOperator<ResultType> createMergeFn(Query<ResultType> query)
   {
-    throw new UOE("%s doesn't provide a merge function", query.getClass().getName());
+    return null;
   }
 
   /**
@@ -132,7 +140,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * to allow for query-specific dimensions and metrics.  That is, the ToolChest is expected to set some
    * meaningful dimensions for metrics given this query type.  Examples might be the topN threshold for
    * a TopN query or the number of dimensions included for a groupBy query.
-   * 
+   *
    * <p>QueryToolChests for query types in core (druid-processing) and public extensions (belonging to the Druid source
    * tree) should use delegate this method to {@link GenericQueryMetricsFactory#makeMetrics(Query)} on an injected
    * instance of {@link GenericQueryMetricsFactory}, as long as they don't need to emit custom dimensions and/or
@@ -171,11 +179,10 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   );
 
   /**
-   * Generally speaking this is the exact same thing as makePreComputeManipulatorFn.  It is leveraged in
-   * order to compute PostAggregators on results after they have been completely merged together, which
-   * should actually be done in the mergeResults() call instead of here.
-   * <p>
-   * This should never actually be overridden and it should be removed as quickly as possible.
+   * Generally speaking this is the exact same thing as makePreComputeManipulatorFn.  It is leveraged in order to
+   * compute PostAggregators on results after they have been completely merged together. To minimize walks of segments,
+   * it is recommended to use mergeResults() call instead of this method if possible. However, this may not always be
+   * possible as we don’t always want to run PostAggregators and other stuff that happens there when you mergeResults.
    *
    * @param query The Query that is currently being processed
    * @param fn    The function that should be applied to all metrics in the results
@@ -262,5 +269,65 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   public <T extends LogicalSegment> List<T> filterSegments(QueryType query, List<T> segments)
   {
     return segments;
+  }
+
+  /**
+   * Returns whether this toolchest is able to handle the provided subquery.
+   *
+   * When this method returns true, the core query stack will pass subquery datasources over to the toolchest and will
+   * assume they are properly handled.
+   *
+   * When this method returns false, the core query stack will throw an error if subqueries are present. In the future,
+   * instead of throwing an error, the core query stack will handle the subqueries on its own.
+   */
+  public boolean canPerformSubquery(final Query<?> subquery)
+  {
+    return false;
+  }
+
+  /**
+   * Returns a {@link RowSignature} for the arrays returned by {@link #resultsAsArrays}. The returned signature will
+   * be the same length as each array returned by {@link #resultsAsArrays}.
+   *
+   * @param query same query passed to {@link #resultsAsArrays}
+   *
+   * @return row signature
+   *
+   * @throws UnsupportedOperationException if this query type does not support returning results as arrays
+   */
+  public RowSignature resultArraySignature(QueryType query)
+  {
+    throw new UOE("Query type '%s' does not support returning results as arrays", query.getType());
+  }
+
+  /**
+   * Converts a sequence of this query's ResultType into arrays. The array signature is given by
+   * {@link #resultArraySignature}. This functionality is useful because it allows higher-level processors to operate on
+   * the results of any query in a consistent way. This is useful for the SQL layer and for any algorithm that might
+   * operate on the results of an inner query.
+   *
+   * Not all query types support this method. They will throw {@link UnsupportedOperationException}, and they cannot
+   * be used by the SQL layer or by generic higher-level algorithms.
+   *
+   * Some query types return less information after translating their results into arrays, especially in situations
+   * where there is no clear way to translate fully rich results into flat arrays. For example, the scan query does not
+   * include the segmentId in its array-based results, because it could potentially conflict with a 'segmentId' field
+   * in the actual datasource being scanned.
+   *
+   * It is possible that there will be multiple arrays returned for a single result object. For example, in the topN
+   * query, each {@link org.apache.druid.query.topn.TopNResultValue} will generate a separate array for each of its
+   * {@code values}.
+   *
+   * By convention, the array form should include the __time column, if present,  as a long (milliseconds since epoch).
+   *
+   * @param resultSequence results of the form returned by {@link #mergeResults}
+   *
+   * @return results in array form
+   *
+   * @throws UnsupportedOperationException if this query type does not support returning results as arrays
+   */
+  public Sequence<Object[]> resultsAsArrays(QueryType query, Sequence<ResultType> resultSequence)
+  {
+    throw new UOE("Query type '%s' does not support returning results as arrays", query.getType());
   }
 }

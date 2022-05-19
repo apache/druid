@@ -22,48 +22,42 @@ package org.apache.druid.query;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.SegmentReference;
 
-/**
- */
 public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
 {
   private final QueryRunnerFactory<T, Query<T>> factory;
-  private final ReferenceCountingSegment adapter;
+  private final SegmentReference segment;
   private final SegmentDescriptor descriptor;
 
   public ReferenceCountingSegmentQueryRunner(
       QueryRunnerFactory<T, Query<T>> factory,
-      ReferenceCountingSegment adapter,
+      SegmentReference segment,
       SegmentDescriptor descriptor
   )
   {
     this.factory = factory;
-    this.adapter = adapter;
+    this.segment = segment;
     this.descriptor = descriptor;
   }
 
   @Override
   public Sequence<T> run(final QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
-    if (adapter.increment()) {
+    return segment.acquireReferences().map(closeable -> {
       try {
-        final Sequence<T> baseSequence = factory.createRunner(adapter).run(queryPlus, responseContext);
-
-        return Sequences.withBaggage(baseSequence, adapter.decrementOnceCloseable());
+        final Sequence<T> baseSequence = factory.createRunner(segment).run(queryPlus, responseContext);
+        return Sequences.withBaggage(baseSequence, closeable);
       }
       catch (Throwable t) {
         try {
-          adapter.decrement();
+          closeable.close();
         }
         catch (Exception e) {
           t.addSuppressed(e);
         }
         throw t;
       }
-    } else {
-      // Segment was closed before we had a chance to increment the reference count
-      return new ReportTimelineMissingSegmentQueryRunner<T>(descriptor).run(queryPlus, responseContext);
-    }
+    }).orElseGet(() -> new ReportTimelineMissingSegmentQueryRunner<T>(descriptor).run(queryPlus, responseContext));
   }
 }

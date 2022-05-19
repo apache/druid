@@ -25,7 +25,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -38,7 +37,7 @@ public class DelimitedParseSpecTest
   {
     DelimitedParseSpec spec = new DelimitedParseSpec(
         new TimestampSpec("abc", "iso", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.singletonList("abc")), null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.singletonList("abc"))),
         "\u0001",
         "\u0002",
         Collections.singletonList("abc"),
@@ -59,29 +58,6 @@ public class DelimitedParseSpecTest
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testColumnMissing()
-  {
-    @SuppressWarnings("unused") // expected exception
-    final ParseSpec spec = new DelimitedParseSpec(
-        new TimestampSpec(
-            "timestamp",
-            "auto",
-            null
-        ),
-        new DimensionsSpec(
-            DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "b")),
-            new ArrayList<>(),
-            new ArrayList<>()
-        ),
-        ",",
-        " ",
-        Collections.singletonList("a"),
-        false,
-        0
-    );
-  }
-
-  @Test(expected = IllegalArgumentException.class)
   public void testComma()
   {
     @SuppressWarnings("unused") // expected exception
@@ -91,14 +67,10 @@ public class DelimitedParseSpecTest
             "auto",
             null
         ),
-        new DimensionsSpec(
-            DimensionsSpec.getDefaultSchemas(Arrays.asList("a,", "b")),
-            new ArrayList<>(),
-            new ArrayList<>()
-        ),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("a,", "b"))),
         ",",
         null,
-        Collections.singletonList("a"),
+        Collections.singletonList("a,"),
         false,
         0
     );
@@ -114,11 +86,7 @@ public class DelimitedParseSpecTest
             "auto",
             null
         ),
-        new DimensionsSpec(
-            DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "b")),
-            new ArrayList<>(),
-            new ArrayList<>()
-        ),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "b"))),
         ",",
         null,
         null,

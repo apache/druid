@@ -23,17 +23,68 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import java.util.List;
+import java.util.Set;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME,
-              include = JsonTypeInfo.As.PROPERTY,
-              property = "type",
-              defaultImpl = LegacyDataSource.class)
+/**
+ * Represents a source... of data... for a query. Analogous to the "FROM" clause in SQL.
+ */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = TableDataSource.class)
 @JsonSubTypes({
-                  @JsonSubTypes.Type(value = TableDataSource.class, name = "table"),
-                  @JsonSubTypes.Type(value = QueryDataSource.class, name = "query"),
-                  @JsonSubTypes.Type(value = UnionDataSource.class, name = "union")
-              })
+    @JsonSubTypes.Type(value = TableDataSource.class, name = "table"),
+    @JsonSubTypes.Type(value = QueryDataSource.class, name = "query"),
+    @JsonSubTypes.Type(value = UnionDataSource.class, name = "union"),
+    @JsonSubTypes.Type(value = JoinDataSource.class, name = "join"),
+    @JsonSubTypes.Type(value = LookupDataSource.class, name = "lookup"),
+    @JsonSubTypes.Type(value = InlineDataSource.class, name = "inline"),
+    @JsonSubTypes.Type(value = GlobalTableDataSource.class, name = "globalTable")
+})
 public interface DataSource
 {
-  List<String> getNames();
+  /**
+   * Returns the names of all table datasources involved in this query. Does not include names for non-tables, like
+   * lookups or inline datasources.
+   */
+  Set<String> getTableNames();
+
+  /**
+   * Returns datasources that this datasource depends on. Will be empty for leaf datasources like 'table'.
+   */
+  List<DataSource> getChildren();
+
+  /**
+   * Return a new DataSource, identical to this one, with different children. The number of children must be equal
+   * to the number of children that this datasource already has.
+   */
+  DataSource withChildren(List<DataSource> children);
+
+  /**
+   * Returns true if queries on this dataSource are cacheable at both the result level and per-segment level.
+   * Currently, dataSources that do not actually reference segments (like 'inline'), are not cacheable since cache keys
+   * are always based on segment identifiers.
+   */
+  boolean isCacheable(boolean isBroker);
+
+  /**
+   * Returns true if all servers have a full copy of this datasource. True for things like inline, lookup, etc, or
+   * for queries of those.
+   *
+   * Currently this is coupled with joinability - if this returns true then the query engine expects there exists a
+   * {@link org.apache.druid.segment.join.JoinableFactory} which might build a
+   * {@link org.apache.druid.segment.join.Joinable} for this datasource directly. If a subquery 'inline' join is
+   * required to join this datasource on the right hand side, then this value must be false for now.
+   *
+   * In the future, instead of directly using this method, the query planner and engine should consider
+   * {@link org.apache.druid.segment.join.JoinableFactory#isDirectlyJoinable(DataSource)} when determining if the
+   * right hand side is directly joinable, which would allow decoupling this property from joins.
+   */
+  boolean isGlobal();
+
+  /**
+   * Returns true if this datasource represents concrete data that can be scanned via a
+   * {@link org.apache.druid.segment.Segment} adapter of some kind. True for e.g. 'table' but not for 'query' or 'join'.
+   *
+   * @see org.apache.druid.query.planning.DataSourceAnalysis#isConcreteBased() which uses this
+   * @see org.apache.druid.query.planning.DataSourceAnalysis#isConcreteTableBased() which uses this
+   */
+  boolean isConcrete();
 }

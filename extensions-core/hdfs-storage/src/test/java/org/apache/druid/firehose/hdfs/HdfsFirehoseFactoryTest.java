@@ -19,30 +19,48 @@
 
 package org.apache.druid.firehose.hdfs;
 
-import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.inputsource.hdfs.HdfsInputSourceConfig;
 import org.apache.druid.storage.hdfs.HdfsStorageDruidModule;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.Collections;
 
 public class HdfsFirehoseFactoryTest
 {
+  private static final HdfsInputSourceConfig DEFAULT_INPUT_SOURCE_CONFIG = new HdfsInputSourceConfig(null);
+  private static final Configuration DEFAULT_CONFIGURATION = new Configuration();
+
+  @BeforeClass
+  public static void setup()
+  {
+    DEFAULT_CONFIGURATION.set("fs.default.name", "hdfs://localhost:7020");
+  }
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Test
   public void testArrayPaths() throws IOException
   {
     final HdfsFirehoseFactory firehoseFactory = new HdfsFirehoseFactory(
-        null,
         Collections.singletonList("/foo/bar"),
         null,
         null,
         null,
         null,
-        null
+        null,
+        DEFAULT_CONFIGURATION,
+        DEFAULT_INPUT_SOURCE_CONFIG
     );
 
     final ObjectMapper mapper = createMapper();
@@ -59,7 +77,16 @@ public class HdfsFirehoseFactoryTest
   @Test
   public void testStringPaths() throws IOException
   {
-    final HdfsFirehoseFactory firehoseFactory = new HdfsFirehoseFactory(null, "/foo/bar", null, null, null, null, null);
+    final HdfsFirehoseFactory firehoseFactory = new HdfsFirehoseFactory(
+        "/foo/bar",
+        null,
+        null,
+        null,
+        null,
+        null,
+        DEFAULT_CONFIGURATION,
+        DEFAULT_INPUT_SOURCE_CONFIG
+    );
     final ObjectMapper mapper = createMapper();
 
     final HdfsFirehoseFactory firehoseFactory2 = (HdfsFirehoseFactory)
@@ -71,11 +98,121 @@ public class HdfsFirehoseFactoryTest
     );
   }
 
+  @Test
+  public void testConstructorAllowsOnlyDefaultProtocol()
+  {
+    new HdfsFirehoseFactory(
+        "hdfs://localhost:7020/foo/bar",
+        null,
+        null,
+        null,
+        null,
+        null,
+        DEFAULT_CONFIGURATION,
+        DEFAULT_INPUT_SOURCE_CONFIG
+    );
+
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Only [hdfs] protocols are allowed");
+    new HdfsFirehoseFactory(
+        "file:/foo/bar",
+        null,
+        null,
+        null,
+        null,
+        null,
+        DEFAULT_CONFIGURATION,
+        DEFAULT_INPUT_SOURCE_CONFIG
+    );
+  }
+
+  @Test
+  public void testConstructorAllowsOnlyCustomProtocol()
+  {
+    final Configuration conf = new Configuration();
+    conf.set("fs.ftp.impl", "org.apache.hadoop.fs.ftp.FTPFileSystem");
+    new HdfsFirehoseFactory(
+        "ftp://localhost:21/foo/bar",
+        null,
+        null,
+        null,
+        null,
+        null,
+        DEFAULT_CONFIGURATION,
+        new HdfsInputSourceConfig(ImmutableSet.of("ftp"))
+    );
+
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Only [druid] protocols are allowed");
+    new HdfsFirehoseFactory(
+        "hdfs://localhost:7020/foo/bar",
+        null,
+        null,
+        null,
+        null,
+        null,
+        DEFAULT_CONFIGURATION,
+        new HdfsInputSourceConfig(ImmutableSet.of("druid"))
+    );
+  }
+
+  @Test
+  public void testConstructorWithDefaultHdfs()
+  {
+    new HdfsFirehoseFactory(
+        "/foo/bar*",
+        null,
+        null,
+        null,
+        null,
+        null,
+        DEFAULT_CONFIGURATION,
+        DEFAULT_INPUT_SOURCE_CONFIG
+    );
+
+    new HdfsFirehoseFactory(
+        "foo/bar*",
+        null,
+        null,
+        null,
+        null,
+        null,
+        DEFAULT_CONFIGURATION,
+        DEFAULT_INPUT_SOURCE_CONFIG
+    );
+
+    new HdfsFirehoseFactory(
+        "hdfs:///foo/bar*",
+        null,
+        null,
+        null,
+        null,
+        null,
+        DEFAULT_CONFIGURATION,
+        DEFAULT_INPUT_SOURCE_CONFIG
+    );
+
+    new HdfsFirehoseFactory(
+        "hdfs://localhost:10020/foo/bar*", // different hdfs
+        null,
+        null,
+        null,
+        null,
+        null,
+        DEFAULT_CONFIGURATION,
+        DEFAULT_INPUT_SOURCE_CONFIG
+    );
+  }
+
   private static ObjectMapper createMapper()
   {
     final ObjectMapper mapper = new ObjectMapper();
     new HdfsStorageDruidModule().getJacksonModules().forEach(mapper::registerModule);
-    mapper.setInjectableValues(new InjectableValues.Std().addValue(Configuration.class, new Configuration()));
+    mapper.setInjectableValues(
+        new Std()
+            .addValue(Configuration.class, DEFAULT_CONFIGURATION)
+            .addValue(HdfsInputSourceConfig.class, DEFAULT_INPUT_SOURCE_CONFIG)
+    );
     return mapper;
   }
 }

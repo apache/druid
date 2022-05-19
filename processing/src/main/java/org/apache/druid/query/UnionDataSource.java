@@ -22,10 +22,13 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class UnionDataSource implements DataSource
@@ -36,20 +39,70 @@ public class UnionDataSource implements DataSource
   @JsonCreator
   public UnionDataSource(@JsonProperty("dataSources") List<TableDataSource> dataSources)
   {
-    Preconditions.checkNotNull(dataSources, "dataSources cannot be null for unionDataSource");
+    if (dataSources == null || dataSources.isEmpty()) {
+      throw new ISE("'dataSources' must be non-null and non-empty for 'union'");
+    }
+
     this.dataSources = dataSources;
   }
 
   @Override
-  public List<String> getNames()
+  public Set<String> getTableNames()
   {
-    return dataSources.stream().map(input -> Iterables.getOnlyElement(input.getNames())).collect(Collectors.toList());
+    return dataSources.stream()
+                      .map(input -> Iterables.getOnlyElement(input.getTableNames()))
+                      .collect(Collectors.toSet());
   }
 
   @JsonProperty
   public List<TableDataSource> getDataSources()
   {
     return dataSources;
+  }
+
+  @Override
+  public List<DataSource> getChildren()
+  {
+    return ImmutableList.copyOf(dataSources);
+  }
+
+  @Override
+  public DataSource withChildren(List<DataSource> children)
+  {
+    if (children.size() != dataSources.size()) {
+      throw new IAE("Expected [%d] children, got [%d]", dataSources.size(), children.size());
+    }
+
+    if (!children.stream().allMatch(dataSource -> dataSource instanceof TableDataSource)) {
+      throw new IAE("All children must be tables");
+    }
+
+    return new UnionDataSource(
+        children.stream().map(dataSource -> (TableDataSource) dataSource).collect(Collectors.toList())
+    );
+  }
+
+  @Override
+  public boolean isCacheable(boolean isBroker)
+  {
+    // Disables result-level caching for 'union' datasources, which doesn't work currently.
+    // See https://github.com/apache/druid/issues/8713 for reference.
+    //
+    // Note that per-segment caching is still effective, since at the time the per-segment cache evaluates a query
+    // for cacheability, it would have already been rewritten to a query on a single table.
+    return false;
+  }
+
+  @Override
+  public boolean isGlobal()
+  {
+    return dataSources.stream().allMatch(DataSource::isGlobal);
+  }
+
+  @Override
+  public boolean isConcrete()
+  {
+    return dataSources.stream().allMatch(DataSource::isConcrete);
   }
 
   @Override

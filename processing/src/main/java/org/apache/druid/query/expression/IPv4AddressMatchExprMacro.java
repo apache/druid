@@ -19,14 +19,17 @@
 
 package org.apache.druid.query.expression;
 
-import org.apache.commons.net.util.SubnetUtils;
+import inet.ipaddr.IPAddressString;
+import inet.ipaddr.ipv4.IPv4Address;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -52,13 +55,13 @@ import java.util.List;
  */
 public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
 {
-  public static final String NAME = "ipv4_match";
+  public static final String FN_NAME = "ipv4_match";
   private static final int ARG_SUBNET = 1;
 
   @Override
   public String name()
   {
-    return NAME;
+    return FN_NAME;
   }
 
   @Override
@@ -68,17 +71,17 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
       throw new IAE(ExprUtils.createErrMsg(name(), "must have 2 arguments"));
     }
 
-    SubnetUtils.SubnetInfo subnetInfo = getSubnetInfo(args);
+    IPAddressString subnetInfo = getSubnetInfo(args);
     Expr arg = args.get(0);
 
     class IPv4AddressMatchExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
-      private final SubnetUtils.SubnetInfo subnetInfo;
+      private final IPAddressString subnetString;
 
-      private IPv4AddressMatchExpr(Expr arg, SubnetUtils.SubnetInfo subnetInfo)
+      private IPv4AddressMatchExpr(Expr arg, IPAddressString subnetString)
       {
-        super(arg);
-        this.subnetInfo = subnetInfo;
+        super(FN_NAME, arg);
+        this.subnetString = subnetString;
       }
 
       @Nonnull
@@ -87,7 +90,7 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
       {
         ExprEval eval = arg.eval(bindings);
         boolean match;
-        switch (eval.type()) {
+        switch (eval.type().getType()) {
           case STRING:
             match = isStringMatch(eval.asString());
             break;
@@ -97,46 +100,53 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
           default:
             match = false;
         }
-        return ExprEval.of(match, ExprType.LONG);
+        return ExprEval.ofLongBoolean(match);
       }
 
       private boolean isStringMatch(String stringValue)
       {
-        return IPv4AddressExprUtils.isValidAddress(stringValue) && subnetInfo.isInRange(stringValue);
+        IPv4Address iPv4Address = IPv4AddressExprUtils.parse(stringValue);
+        return iPv4Address != null && subnetString.contains(iPv4Address.toAddressString());
       }
 
       private boolean isLongMatch(long longValue)
       {
-        return !IPv4AddressExprUtils.overflowsUnsignedInt(longValue) && subnetInfo.isInRange((int) longValue);
+        IPv4Address iPv4Address = IPv4AddressExprUtils.parse(longValue);
+        return iPv4Address != null && subnetString.contains(iPv4Address.toAddressString());
       }
 
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new IPv4AddressMatchExpr(newArg, subnetInfo));
+        return shuttle.visit(apply(shuttle.visitAll(args)));
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getOutputType(InputBindingInspector inspector)
+      {
+        return ExpressionType.LONG;
+      }
+
+      @Override
+      public String stringify()
+      {
+        return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), args.get(ARG_SUBNET).stringify());
       }
     }
 
     return new IPv4AddressMatchExpr(arg, subnetInfo);
   }
 
-  private SubnetUtils.SubnetInfo getSubnetInfo(List<Expr> args)
+  private IPAddressString getSubnetInfo(List<Expr> args)
   {
     String subnetArgName = "subnet";
     Expr arg = args.get(ARG_SUBNET);
     ExprUtils.checkLiteralArgument(name(), arg, subnetArgName);
     String subnet = (String) arg.getLiteralValue();
-
-    SubnetUtils subnetUtils;
-    try {
-      subnetUtils = new SubnetUtils(subnet);
+    if (!IPv4AddressExprUtils.isValidIPv4Subnet(subnet)) {
+      throw new IAE(ExprUtils.createErrMsg(name(), subnetArgName + " arg has an invalid format: " + subnet));
     }
-    catch (IllegalArgumentException e) {
-      throw new IAE(e, ExprUtils.createErrMsg(name(), subnetArgName + " arg has an invalid format: " + subnet));
-    }
-    subnetUtils.setInclusiveHostCount(true);  // make network and broadcast addresses match
-
-    return subnetUtils.getInfo();
+    return new IPAddressString(subnet);
   }
 }

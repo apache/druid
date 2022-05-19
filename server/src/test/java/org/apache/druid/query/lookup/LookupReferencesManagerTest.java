@@ -21,6 +21,7 @@ package org.apache.druid.query.lookup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -43,6 +44,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 public class LookupReferencesManagerTest
@@ -84,9 +86,10 @@ public class LookupReferencesManagerTest
     );
   }
 
-  private static HttpResponse newEmptyResponse()
+  private static HttpResponse newEmptyResponse(final HttpResponseStatus status)
   {
     final HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
+    EasyMock.expect(response.getStatus()).andReturn(status).anyTimes();
     EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
     EasyMock.replay(response);
     return response;
@@ -112,8 +115,7 @@ public class LookupReferencesManagerTest
     ))
             .andReturn(request);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        HttpResponseStatus.OK,
-        newEmptyResponse(),
+        newEmptyResponse(HttpResponseStatus.OK),
         StandardCharsets.UTF_8
     ).addChunk(strResult);
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
@@ -176,26 +178,25 @@ public class LookupReferencesManagerTest
     ))
             .andReturn(request);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        HttpResponseStatus.OK,
-        newEmptyResponse(),
+        newEmptyResponse(HttpResponseStatus.OK),
         StandardCharsets.UTF_8
     ).addChunk(strResult);
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
     EasyMock.replay(druidLeaderClient);
     lookupReferencesManager.start();
-    Assert.assertNull(lookupReferencesManager.get("test"));
+    Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
 
     LookupExtractorFactoryContainer testContainer = new LookupExtractorFactoryContainer("0", lookupExtractorFactory);
 
     lookupReferencesManager.add("test", testContainer);
     lookupReferencesManager.handlePendingNotices();
 
-    Assert.assertEquals(testContainer, lookupReferencesManager.get("test"));
+    Assert.assertEquals(Optional.of(testContainer), lookupReferencesManager.get("test"));
 
     lookupReferencesManager.remove("test");
     lookupReferencesManager.handlePendingNotices();
 
-    Assert.assertNull(lookupReferencesManager.get("test"));
+    Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
   }
 
   @Test
@@ -217,8 +218,7 @@ public class LookupReferencesManagerTest
     ))
             .andReturn(request);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        HttpResponseStatus.OK,
-        newEmptyResponse(),
+        newEmptyResponse(HttpResponseStatus.OK),
         StandardCharsets.UTF_8
     ).addChunk(strResult);
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
@@ -251,8 +251,7 @@ public class LookupReferencesManagerTest
     ))
             .andReturn(request);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        HttpResponseStatus.OK,
-        newEmptyResponse(),
+        newEmptyResponse(HttpResponseStatus.OK),
         StandardCharsets.UTF_8
     ).addChunk(strResult);
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
@@ -282,14 +281,13 @@ public class LookupReferencesManagerTest
     ))
             .andReturn(request);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        HttpResponseStatus.OK,
-        newEmptyResponse(),
+        newEmptyResponse(HttpResponseStatus.OK),
         StandardCharsets.UTF_8
     ).addChunk(strResult);
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
     EasyMock.replay(druidLeaderClient);
     lookupReferencesManager.start();
-    Assert.assertNull(lookupReferencesManager.get("notThere"));
+    Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("notThere"));
   }
 
   @Test
@@ -315,8 +313,7 @@ public class LookupReferencesManagerTest
     ))
             .andReturn(request);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        HttpResponseStatus.OK,
-        newEmptyResponse(),
+        newEmptyResponse(HttpResponseStatus.OK),
         StandardCharsets.UTF_8
     ).addChunk(strResult);
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
@@ -352,8 +349,7 @@ public class LookupReferencesManagerTest
     ))
             .andReturn(request);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        HttpResponseStatus.OK,
-        newEmptyResponse(),
+        newEmptyResponse(HttpResponseStatus.OK),
         StandardCharsets.UTF_8
     ).addChunk(strResult);
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
@@ -383,8 +379,7 @@ public class LookupReferencesManagerTest
     ))
             .andReturn(request);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        HttpResponseStatus.OK,
-        newEmptyResponse(),
+        newEmptyResponse(HttpResponseStatus.OK),
         StandardCharsets.UTF_8
     ).addChunk(strResult);
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
@@ -392,6 +387,45 @@ public class LookupReferencesManagerTest
     lookupReferencesManager.start();
     lookupReferencesManager.remove("test");
     lookupReferencesManager.handlePendingNotices();
+  }
+
+  @Test
+  public void testGetAllLookupNames() throws Exception
+  {
+    LookupExtractorFactoryContainer container1 = new LookupExtractorFactoryContainer(
+        "0",
+        new MapLookupExtractorFactory(ImmutableMap.of("key1", "value1"), true)
+    );
+
+    LookupExtractorFactoryContainer container2 = new LookupExtractorFactoryContainer(
+        "0",
+        new MapLookupExtractorFactory(ImmutableMap.of("key2", "value2"), true)
+    );
+    Map<String, Object> lookupMap = new HashMap<>();
+    String strResult = mapper.writeValueAsString(lookupMap);
+    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
+    EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
+    EasyMock.replay(config);
+    EasyMock.expect(
+        druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true")
+    ).andReturn(request);
+    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
+        newEmptyResponse(HttpResponseStatus.OK),
+        StandardCharsets.UTF_8
+    ).addChunk(strResult);
+    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
+    EasyMock.replay(druidLeaderClient);
+    lookupReferencesManager.start();
+    lookupReferencesManager.add("one", container1);
+    lookupReferencesManager.add("two", container2);
+    lookupReferencesManager.handlePendingNotices();
+
+    Assert.assertEquals(ImmutableSet.of("one", "two"), lookupReferencesManager.getAllLookupNames());
+
+    Assert.assertEquals(
+        ImmutableSet.of("one", "two"),
+        ((LookupExtractorFactoryContainerProvider) lookupReferencesManager).getAllLookupNames()
+    );
   }
 
   @Test
@@ -437,8 +471,7 @@ public class LookupReferencesManagerTest
     ))
             .andReturn(request);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        HttpResponseStatus.OK,
-        newEmptyResponse(),
+        newEmptyResponse(HttpResponseStatus.OK),
         StandardCharsets.UTF_8
     ).addChunk(strResult);
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
@@ -482,8 +515,7 @@ public class LookupReferencesManagerTest
     ))
             .andReturn(request);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        HttpResponseStatus.OK,
-        newEmptyResponse(),
+        newEmptyResponse(HttpResponseStatus.OK),
         StandardCharsets.UTF_8
     ).addChunk(strResult);
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
@@ -495,20 +527,30 @@ public class LookupReferencesManagerTest
     EasyMock.expect(lookupExtractorFactory.start()).andReturn(true).once();
     EasyMock.expect(lookupExtractorFactory.destroy()).andReturn(true).once();
     EasyMock.replay(lookupExtractorFactory);
-    Assert.assertNull(lookupReferencesManager.get("test"));
+    Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
 
     LookupExtractorFactoryContainer testContainer = new LookupExtractorFactoryContainer("0", lookupExtractorFactory);
     lookupReferencesManager.add("test", testContainer);
 
-    while (!testContainer.equals(lookupReferencesManager.get("test"))) {
+    while (!Optional.of(testContainer).equals(lookupReferencesManager.get("test"))) {
       Thread.sleep(100);
     }
+
+    Assert.assertEquals(
+        ImmutableSet.of("test", "testMockForRealModeWithMainThread"),
+        lookupReferencesManager.getAllLookupNames()
+    );
 
     lookupReferencesManager.remove("test");
 
-    while (lookupReferencesManager.get("test") != null) {
+    while (lookupReferencesManager.get("test").isPresent()) {
       Thread.sleep(100);
     }
+
+    Assert.assertEquals(
+        ImmutableSet.of("testMockForRealModeWithMainThread"),
+        lookupReferencesManager.getAllLookupNames()
+    );
 
     lookupReferencesManager.stop();
 
@@ -561,17 +603,16 @@ public class LookupReferencesManagerTest
     ))
             .andReturn(request);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        HttpResponseStatus.OK,
-        newEmptyResponse(),
+        newEmptyResponse(HttpResponseStatus.OK),
         StandardCharsets.UTF_8
     ).addChunk(strResult);
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
     EasyMock.replay(druidLeaderClient);
 
     lookupReferencesManager.start();
-    Assert.assertEquals(container1, lookupReferencesManager.get("testLookup1"));
-    Assert.assertEquals(container2, lookupReferencesManager.get("testLookup2"));
-    Assert.assertEquals(container3, lookupReferencesManager.get("testLookup3"));
+    Assert.assertEquals(Optional.of(container1), lookupReferencesManager.get("testLookup1"));
+    Assert.assertEquals(Optional.of(container2), lookupReferencesManager.get("testLookup2"));
+    Assert.assertEquals(Optional.of(container3), lookupReferencesManager.get("testLookup3"));
 
   }
 
@@ -638,7 +679,10 @@ public class LookupReferencesManagerTest
     EasyMock.expect(druidLeaderClient.go(request)).andThrow(new IllegalStateException()).anyTimes();
     EasyMock.replay(druidLeaderClient);
     lookupReferencesManager.start();
-    Assert.assertEquals(container, lookupReferencesManager.get("testMockForLoadLookupOnCoordinatorFailure"));
+    Assert.assertEquals(
+        Optional.of(container),
+        lookupReferencesManager.get("testMockForLoadLookupOnCoordinatorFailure")
+    );
   }
 
   @Test
@@ -670,13 +714,12 @@ public class LookupReferencesManagerTest
     ))
             .andReturn(request);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        HttpResponseStatus.OK,
-        newEmptyResponse(),
+        newEmptyResponse(HttpResponseStatus.OK),
         StandardCharsets.UTF_8
     ).addChunk(strResult);
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
 
     lookupReferencesManager.start();
-    Assert.assertNull(lookupReferencesManager.get("testMockForDisableLookupSync"));
+    Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("testMockForDisableLookupSync"));
   }
 }

@@ -22,8 +22,8 @@ package org.apache.druid.query.aggregation.datasketches.theta.oldapi;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
-import com.yahoo.sketches.theta.Sketches;
-import com.yahoo.sketches.theta.UpdateSketch;
+import org.apache.datasketches.theta.Sketches;
+import org.apache.datasketches.theta.UpdateSketch;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -40,6 +40,7 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GrouperTestUtil;
 import org.apache.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -50,7 +51,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -59,7 +60,7 @@ import java.util.List;
  *
  */
 @RunWith(Parameterized.class)
-public class OldApiSketchAggregationTest
+public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
 {
   private final AggregationTestHelper helper;
 
@@ -252,11 +253,11 @@ public class OldApiSketchAggregationTest
     );
   }
 
-  public static final String readFileFromClasspathAsString(String fileName) throws IOException
+  public static String readFileFromClasspathAsString(String fileName) throws IOException
   {
     return Files.asCharSource(
         new File(OldApiSketchAggregationTest.class.getClassLoader().getResource(fileName).getFile()),
-        Charset.forName("UTF-8")
+        StandardCharsets.UTF_8
     ).read();
   }
 }

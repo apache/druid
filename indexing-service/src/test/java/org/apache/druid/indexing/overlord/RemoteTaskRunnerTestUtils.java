@@ -47,6 +47,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.zookeeper.CreateMode;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -200,8 +201,16 @@ public class RemoteTaskRunnerTestUtils
 
   void mockWorkerCompleteFailedTask(final String workerId, final Task task) throws Exception
   {
-    TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(task, TaskStatus.failure(task.getId()), DUMMY_LOCATION);
-    cf.setData().forPath(JOINER.join(STATUS_PATH, workerId, task.getId()), jsonMapper.writeValueAsBytes(taskAnnouncement));
+    TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(
+        task,
+        TaskStatus.failure(
+            task.getId(),
+            "Dummy task status failure for testing"
+        ),
+        DUMMY_LOCATION
+    );
+    cf.setData()
+      .forPath(JOINER.join(STATUS_PATH, workerId, task.getId()), jsonMapper.writeValueAsBytes(taskAnnouncement));
   }
 
   boolean workerRunningTask(final String workerId, final String taskId)
@@ -262,7 +271,8 @@ public class RemoteTaskRunnerTestUtils
           pathChildrenCacheFactory,
           httpClient,
           workerConfigRef,
-          provisioningStrategy
+          provisioningStrategy,
+          new NoopServiceEmitter()
       );
     }
 

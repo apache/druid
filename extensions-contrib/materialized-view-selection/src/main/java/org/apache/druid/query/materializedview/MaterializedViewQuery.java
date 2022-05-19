@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.filter.DimFilter;
@@ -39,6 +40,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -145,6 +147,12 @@ public class MaterializedViewQuery<T> implements Query<T>
   }
 
   @Override
+  public QueryContext getQueryContext()
+  {
+    return query.getQueryContext();
+  }
+
+  @Override
   public <ContextType> ContextType getContextValue(String key)
   {
     return (ContextType) query.getContextValue(key);
@@ -196,6 +204,19 @@ public class MaterializedViewQuery<T> implements Query<T>
   public String getId()
   {
     return query.getId();
+  }
+
+  @Override
+  public Query<T> withSubQueryId(String subQueryId)
+  {
+    return new MaterializedViewQuery<>(query.withSubQueryId(subQueryId), optimizer);
+  }
+
+  @Nullable
+  @Override
+  public String getSubQueryId()
+  {
+    return query.getSubQueryId();
   }
 
   @Override

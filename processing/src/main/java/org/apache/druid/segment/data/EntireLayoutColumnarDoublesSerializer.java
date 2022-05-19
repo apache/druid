@@ -40,14 +40,16 @@ public class EntireLayoutColumnarDoublesSerializer implements ColumnarDoublesSer
       .writeInt(x -> 0)
       .writeByte(x -> CompressionStrategy.NONE.getId());
 
+  private final String columnName;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final ByteBuffer orderBuffer;
   private WriteOutBytes valuesOut;
 
   private int numInserted = 0;
 
-  public EntireLayoutColumnarDoublesSerializer(SegmentWriteOutMedium segmentWriteOutMedium, ByteOrder order)
+  public EntireLayoutColumnarDoublesSerializer(String columnName, SegmentWriteOutMedium segmentWriteOutMedium, ByteOrder order)
   {
+    this.columnName = columnName;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.orderBuffer = ByteBuffer.allocate(Double.BYTES);
     orderBuffer.order(order);
@@ -60,16 +62,25 @@ public class EntireLayoutColumnarDoublesSerializer implements ColumnarDoublesSer
   }
 
   @Override
+  public int size()
+  {
+    return numInserted;
+  }
+
+  @Override
   public void add(double value) throws IOException
   {
     orderBuffer.rewind();
     orderBuffer.putDouble(value);
     valuesOut.write(orderBuffer.array());
     ++numInserted;
+    if (numInserted < 0) {
+      throw new ColumnCapacityExceededException(columnName);
+    }
   }
 
   @Override
-  public long getSerializedSize() throws IOException
+  public long getSerializedSize()
   {
     return META_SERDE_HELPER.size(this) + valuesOut.size();
   }

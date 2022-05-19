@@ -19,6 +19,7 @@
 
 package org.apache.druid.collections.spatial.search;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -45,5 +46,13 @@ public class RectangularBoundTest
         new RectangularBound(new float[]{1F, 1F}, new float[]{2F, 2F}, 1).getCacheKey(),
         new RectangularBound(new float[]{1F, 1F}, new float[]{2F, 2F}, 2).getCacheKey()
     ));
+  }
+
+  @Test
+  public void testEqualsContract()
+  {
+    EqualsVerifier.forClass(RectangularBound.class)
+                  .usingGetClass()
+                  .verify();
   }
 }

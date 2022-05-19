@@ -151,7 +151,7 @@ Improving scalability
  https://github.com/code-review-checklists/java-concurrency#long-adder-for-hot-fields)
  - [Considered queues from JCTools instead of the standard concurrent queues?](
  https://github.com/code-review-checklists/java-concurrency#jctools)
- - [Caffeine cache is used instead of Guava?](https://github.com/apache/incubator-druid/issues/8399)
+ - [Caffeine cache is used instead of Guava?](https://github.com/apache/druid/issues/8399)
  - [Can apply speculation (optimistic concurrency) technique?](
  https://github.com/code-review-checklists/java-concurrency#speculation)
 

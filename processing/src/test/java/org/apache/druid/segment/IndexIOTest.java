@@ -26,11 +26,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -39,6 +39,8 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -61,7 +63,7 @@ import java.util.Objects;
  * This is mostly a test of the validator
  */
 @RunWith(Parameterized.class)
-public class IndexIOTest
+public class IndexIOTest extends InitializedNullHandlingTest
 {
   private static Interval DEFAULT_INTERVAL = Intervals.of("1970-01-01/2000-01-01");
   private static final IndexSpec INDEX_SPEC = IndexMergerTestBase.makeIndexSpec(
@@ -70,6 +72,10 @@ public class IndexIOTest
       CompressionStrategy.LZ4,
       CompressionFactory.LongEncodingStrategy.LONGS
   );
+
+  static {
+    NullHandling.initializeForTests();
+  }
 
   private static <T> List<T> filterByBitset(List<T> list, BitSet bitSet)
   {
@@ -85,7 +91,6 @@ public class IndexIOTest
   @Parameterized.Parameters(name = "{0}, {1}")
   public static Iterable<Object[]> constructionFeeder()
   {
-
     final Map<String, Object> map = ImmutableMap.of();
 
     final Map<String, Object> map00 = ImmutableMap.of(
@@ -248,39 +253,31 @@ public class IndexIOTest
     this.exception = exception;
   }
 
-  final IncrementalIndex<Aggregator> incrementalIndex1 = new IncrementalIndex.Builder()
+  final IncrementalIndex incrementalIndex1 = new OnheapIncrementalIndex.Builder()
       .setIndexSchema(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
               .withMetrics(new CountAggregatorFactory("count"))
               .withDimensionsSpec(
-                  new DimensionsSpec(
-                      DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")),
-                      null,
-                      null
-                  )
+                  new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")))
               )
               .build()
       )
       .setMaxRowCount(1000000)
-      .buildOnheap();
+      .build();
 
-  final IncrementalIndex<Aggregator> incrementalIndex2 = new IncrementalIndex.Builder()
+  final IncrementalIndex incrementalIndex2 = new OnheapIncrementalIndex.Builder()
       .setIndexSchema(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
               .withMetrics(new CountAggregatorFactory("count"))
               .withDimensionsSpec(
-                  new DimensionsSpec(
-                      DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")),
-                      null,
-                      null
-                  )
+                  new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")))
               )
               .build()
       )
       .setMaxRowCount(1000000)
-      .buildOnheap();
+      .build();
 
   IndexableAdapter adapter1;
   IndexableAdapter adapter2;

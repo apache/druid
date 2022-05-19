@@ -47,7 +47,8 @@ import java.util.Set;
     @JsonSubTypes.Type(name = "interval", value = IntervalDimFilter.class),
     @JsonSubTypes.Type(name = "like", value = LikeDimFilter.class),
     @JsonSubTypes.Type(name = "expression", value = ExpressionDimFilter.class),
-    @JsonSubTypes.Type(name = "true", value = TrueDimFilter.class)
+    @JsonSubTypes.Type(name = "true", value = TrueDimFilter.class),
+    @JsonSubTypes.Type(name = "false", value = FalseDimFilter.class)
 })
 public interface DimFilter extends Cacheable
 {
@@ -56,6 +57,18 @@ public interface DimFilter extends Cacheable
    * returning the same filter can be a straightforward default implementation.
    */
   DimFilter optimize();
+
+  /**
+   * @return Return a Filter that implements this DimFilter, after applying optimizations to this DimFilter.
+   * A typical implementation will return the result of `optimize().toFilter()`
+   * See abstract base class {@link AbstractOptimizableDimFilter} for a common implementation shared by
+   * current DimFilters.
+   *
+   * The Filter returned by this method across multiple calls must be the same object: parts of the query stack
+   * compare Filters, and returning the same object allows these checks to avoid deep comparisons.
+   * (see {@link org.apache.druid.segment.join.HashJoinSegmentStorageAdapter#makeCursors for an example}
+   */
+  Filter toOptimizedFilter();
 
   /**
    * Returns a Filter that implements this DimFilter. This does not generally involve optimizing the DimFilter,
@@ -78,6 +91,7 @@ public interface DimFilter extends Cacheable
    * @return a RangeSet that represent the possible range of the input dimension, or null if it is not possible to
    * determine for this DimFilter.
    */
+  @Nullable
   RangeSet<String> getDimensionRangeSet(String dimension);
 
   /**

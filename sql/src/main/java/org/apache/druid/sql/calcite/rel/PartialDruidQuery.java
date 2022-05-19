@@ -32,12 +32,14 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -103,7 +105,7 @@ public class PartialDruidQuery
   {
     final Supplier<RelBuilder> builderSupplier = () -> RelFactories.LOGICAL_BUILDER.create(
         scanRel.getCluster(),
-        scanRel.getTable().getRelOptSchema()
+        scanRel.getTable() != null ? scanRel.getTable().getRelOptSchema() : null
     );
     return new PartialDruidQuery(builderSupplier, scanRel, null, null, null, null, null, null, null);
   }
@@ -186,7 +188,8 @@ public class PartialDruidQuery
         relBuilder.push(selectProject.getInput());
         relBuilder.project(
             newProjectRexNodes,
-            newSelectProject.getRowType().getFieldNames()
+            newSelectProject.getRowType().getFieldNames(),
+            true
         );
         theProject = (Project) relBuilder.build();
       }
@@ -303,7 +306,35 @@ public class PartialDruidQuery
       final boolean finalizeAggregations
   )
   {
-    return new DruidQuery(this, dataSource, sourceRowSignature, plannerContext, rexBuilder, finalizeAggregations);
+    return DruidQuery.fromPartialQuery(
+        this,
+        dataSource,
+        sourceRowSignature,
+        plannerContext,
+        rexBuilder,
+        finalizeAggregations,
+        null
+    );
+  }
+
+  public DruidQuery build(
+      final DataSource dataSource,
+      final RowSignature sourceRowSignature,
+      final PlannerContext plannerContext,
+      final RexBuilder rexBuilder,
+      final boolean finalizeAggregations,
+      @Nullable VirtualColumnRegistry virtualColumnRegistry
+  )
+  {
+    return DruidQuery.fromPartialQuery(
+        this,
+        dataSource,
+        sourceRowSignature,
+        plannerContext,
+        rexBuilder,
+        finalizeAggregations,
+        virtualColumnRegistry
+    );
   }
 
   public boolean canAccept(final Stage stage)
@@ -385,8 +416,69 @@ public class PartialDruidQuery
       case SCAN:
         return scan;
       default:
-        throw new ISE("WTF?! Unknown stage: %s", currentStage);
+        throw new ISE("Unknown stage: %s", currentStage);
     }
+  }
+
+  /**
+   * Estimates the per-row cost of running this query.
+   */
+  public double estimateCost()
+  {
+    double cost = CostEstimates.COST_BASE;
+
+    // Account for the cost of post-scan expressions.
+    if (getSelectProject() != null) {
+      for (final RexNode rexNode : getSelectProject().getChildExps()) {
+        if (!rexNode.isA(SqlKind.INPUT_REF)) {
+          cost += CostEstimates.COST_EXPRESSION;
+        }
+      }
+    }
+
+    if (getWhereFilter() != null) {
+      // We assume filters are free and have a selectivity of CostEstimates.MULTIPLIER_FILTER. They aren't actually
+      // free, but we want to encourage filters, so let's go with it.
+      cost *= CostEstimates.MULTIPLIER_FILTER;
+    }
+
+    if (getAggregate() != null) {
+      cost += CostEstimates.COST_DIMENSION * getAggregate().getGroupSet().size();
+      cost += CostEstimates.COST_AGGREGATION * getAggregate().getAggCallList().size();
+    }
+
+    if (getSort() != null) {
+      if (!getSort().collation.getFieldCollations().isEmpty()) {
+        cost *= CostEstimates.MULTIPLIER_ORDER_BY;
+      }
+
+      if (getSort().fetch != null) {
+        cost *= CostEstimates.MULTIPLIER_LIMIT;
+      }
+    }
+
+    // Account for the cost of post-aggregation expressions.
+    if (getAggregateProject() != null) {
+      for (final RexNode rexNode : getAggregateProject().getChildExps()) {
+        if (!rexNode.isA(SqlKind.INPUT_REF)) {
+          cost += CostEstimates.COST_EXPRESSION;
+        }
+      }
+    }
+
+    // Account for the cost of post-sort expressions.
+    if (getSortProject() != null) {
+      for (final RexNode rexNode : getSortProject().getChildExps()) {
+        if (!rexNode.isA(SqlKind.INPUT_REF)) {
+          cost += CostEstimates.COST_EXPRESSION;
+        }
+      }
+    }
+
+    // Account for the cost of generating outputs.
+    cost += CostEstimates.COST_OUTPUT_COLUMN * getRowType().getFieldCount();
+
+    return cost;
   }
 
   private void validateStage(final Stage stage)

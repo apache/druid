@@ -21,8 +21,10 @@ package org.apache.druid.security.basic;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Predicate;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
@@ -66,33 +68,36 @@ public class BasicAuthUtils
   public static final int DEFAULT_CREDENTIAL_CACHE_SIZE = 100;
   public static final int KEY_LENGTH = 512;
   public static final String ALGORITHM = "PBKDF2WithHmacSHA512";
+  public static final int MAX_INIT_RETRIES = 2;
+  public static final Predicate<Throwable> SHOULD_RETRY_INIT =
+      (throwable) -> throwable instanceof BasicSecurityDBResourceException;
 
-  public static final TypeReference AUTHENTICATOR_USER_MAP_TYPE_REFERENCE =
+  public static final TypeReference<Map<String, BasicAuthenticatorUser>> AUTHENTICATOR_USER_MAP_TYPE_REFERENCE =
       new TypeReference<Map<String, BasicAuthenticatorUser>>()
       {
       };
 
-  public static final TypeReference AUTHORIZER_USER_MAP_TYPE_REFERENCE =
+  public static final TypeReference<Map<String, BasicAuthorizerUser>> AUTHORIZER_USER_MAP_TYPE_REFERENCE =
       new TypeReference<Map<String, BasicAuthorizerUser>>()
       {
       };
 
-  public static final TypeReference AUTHORIZER_GROUP_MAPPING_MAP_TYPE_REFERENCE =
+  public static final TypeReference<Map<String, BasicAuthorizerGroupMapping>> AUTHORIZER_GROUP_MAPPING_MAP_TYPE_REFERENCE =
       new TypeReference<Map<String, BasicAuthorizerGroupMapping>>()
       {
       };
 
-  public static final TypeReference AUTHORIZER_ROLE_MAP_TYPE_REFERENCE =
+  public static final TypeReference<Map<String, BasicAuthorizerRole>> AUTHORIZER_ROLE_MAP_TYPE_REFERENCE =
       new TypeReference<Map<String, BasicAuthorizerRole>>()
       {
       };
 
-  public static final TypeReference AUTHORIZER_USER_AND_ROLE_MAP_TYPE_REFERENCE =
+  public static final TypeReference<UserAndRoleMap> AUTHORIZER_USER_AND_ROLE_MAP_TYPE_REFERENCE =
       new TypeReference<UserAndRoleMap>()
       {
       };
 
-  public static final TypeReference AUTHORIZER_GROUP_MAPPING_AND_ROLE_MAP_TYPE_REFERENCE =
+  public static final TypeReference<GroupMappingAndRoleMap> AUTHORIZER_GROUP_MAPPING_AND_ROLE_MAP_TYPE_REFERENCE =
       new TypeReference<GroupMappingAndRoleMap>()
       {
       };
@@ -112,8 +117,8 @@ public class BasicAuthUtils
       return key.getEncoded();
     }
     catch (InvalidKeySpecException ikse) {
-      log.error("WTF? invalid keyspec");
-      throw new RuntimeException("WTF? invalid keyspec", ikse);
+      log.error("Invalid keyspec");
+      throw new RuntimeException("Invalid keyspec", ikse);
     }
     catch (NoSuchAlgorithmException nsae) {
       log.error("%s not supported on this system.", ALGORITHM);
@@ -123,7 +128,7 @@ public class BasicAuthUtils
 
   public static byte[] generateSalt()
   {
-    byte salt[] = new byte[SALT_LENGTH];
+    byte[] salt = new byte[SALT_LENGTH];
     SECURE_RANDOM.nextBytes(salt);
     return salt;
   }
@@ -275,6 +280,16 @@ public class BasicAuthUtils
     }
     catch (IOException ioe) {
       throw new ISE(ioe, "Couldn't serialize authorizer roleMap!");
+    }
+  }
+
+  public static void maybeInitialize(final RetryUtils.Task<?> task)
+  {
+    try {
+      RetryUtils.retry(task, SHOULD_RETRY_INIT, MAX_INIT_RETRIES);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
     }
   }
 }

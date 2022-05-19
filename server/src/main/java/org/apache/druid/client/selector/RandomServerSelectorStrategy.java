@@ -24,6 +24,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -31,6 +32,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class RandomServerSelectorStrategy implements ServerSelectorStrategy
 {
+  @Nullable
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
   {

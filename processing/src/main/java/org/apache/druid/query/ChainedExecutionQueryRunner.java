@@ -25,21 +25,19 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.MergeIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.context.ResponseContext;
 
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -60,28 +58,18 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
 {
   private static final Logger log = new Logger(ChainedExecutionQueryRunner.class);
 
+  private final QueryProcessingPool queryProcessingPool;
   private final Iterable<QueryRunner<T>> queryables;
-  private final ListeningExecutorService exec;
   private final QueryWatcher queryWatcher;
 
-  public ChainedExecutionQueryRunner(
-      ExecutorService exec,
-      QueryWatcher queryWatcher,
-      QueryRunner<T>... queryables
-  )
-  {
-    this(exec, queryWatcher, Arrays.asList(queryables));
-  }
 
   public ChainedExecutionQueryRunner(
-      ExecutorService exec,
+      QueryProcessingPool queryProcessingPool,
       QueryWatcher queryWatcher,
       Iterable<QueryRunner<T>> queryables
   )
   {
-    // listeningDecorator will leave PrioritizedExecutorService unchanged,
-    // since it already implements ListeningExecutorService
-    this.exec = MoreExecutors.listeningDecorator(exec);
+    this.queryProcessingPool = queryProcessingPool;
     this.queryables = Iterables.unmodifiableIterable(queryables);
     this.queryWatcher = queryWatcher;
   }
@@ -100,7 +88,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
           public Iterator<T> make()
           {
             // Make it a List<> to materialize all of the values (so that it will submit everything to the executor)
-            ListenableFuture<List<Iterable<T>>> futures = Futures.allAsList(
+            List<ListenableFuture<Iterable<T>>> futures =
                 Lists.newArrayList(
                     Iterables.transform(
                         queryables,
@@ -109,8 +97,8 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                             throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
                           }
 
-                          return exec.submit(
-                              new AbstractPrioritizedCallable<Iterable<T>>(priority)
+                          return queryProcessingPool.submitRunnerTask(
+                              new AbstractPrioritizedQueryRunnerCallable<Iterable<T>, T>(priority, input)
                               {
                                 @Override
                                 public Iterable<T> call()
@@ -123,7 +111,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
 
                                     List<T> retVal = result.toList();
                                     if (retVal == null) {
-                                      throw new ISE("Got a null list of results! WTF?!");
+                                      throw new ISE("Got a null list of results");
                                     }
 
                                     return retVal;
@@ -131,32 +119,35 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                   catch (QueryInterruptedException e) {
                                     throw new RuntimeException(e);
                                   }
+                                  catch (QueryTimeoutException e) {
+                                    throw e;
+                                  }
                                   catch (Exception e) {
-                                    log.error(e, "Exception with one of the sequences!");
+                                    log.noStackTrace().error(e, "Exception with one of the sequences!");
                                     Throwables.propagateIfPossible(e);
                                     throw new RuntimeException(e);
                                   }
                                 }
-                              }
-                          );
+                              });
                         }
                     )
-                )
-            );
+                );
 
-            queryWatcher.registerQuery(query, futures);
+            ListenableFuture<List<Iterable<T>>> future = Futures.allAsList(futures);
+            queryWatcher.registerQueryFuture(query, future);
 
             try {
               return new MergeIterable<>(
-                  ordering.nullsFirst(),
                   QueryContexts.hasTimeout(query) ?
-                      futures.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS) :
-                      futures.get()
+                      future.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS) :
+                      future.get(),
+                  ordering.nullsFirst()
               ).iterator();
             }
             catch (InterruptedException e) {
-              log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-              futures.cancel(true);
+              log.noStackTrace().warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
+              //Note: canceling combinedFuture first so that it can complete with INTERRUPTED as its final state. See ChainedExecutionQueryRunnerTest.testQueryTimeout()
+              GuavaUtils.cancelAll(true, future, futures);
               throw new QueryInterruptedException(e);
             }
             catch (CancellationException e) {
@@ -164,10 +155,11 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             }
             catch (TimeoutException e) {
               log.warn("Query timeout, cancelling pending results for query id [%s]", query.getId());
-              futures.cancel(true);
-              throw new QueryInterruptedException(e);
+              GuavaUtils.cancelAll(true, future, futures);
+              throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out", query.getId()));
             }
             catch (ExecutionException e) {
+              GuavaUtils.cancelAll(true, future, futures);
               Throwables.propagateIfPossible(e.getCause());
               throw new RuntimeException(e.getCause());
             }

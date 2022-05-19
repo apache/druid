@@ -21,13 +21,13 @@ package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.collections.spatial.search.RadiusBound;
 import org.apache.druid.collections.spatial.search.RectangularBound;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.SpatialDimensionSchema;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
@@ -47,7 +47,9 @@ import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -66,7 +68,7 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  */
 @RunWith(Parameterized.class)
-public class IndexMergerV9WithSpatialIndexTest
+public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTest
 {
 
   public static final int NUM_POINTS = 5000;
@@ -100,33 +102,31 @@ public class IndexMergerV9WithSpatialIndexTest
 
   private static IncrementalIndex makeIncrementalIndex() throws IOException
   {
-    IncrementalIndex theIndex = new IncrementalIndex.Builder()
+    IncrementalIndex theIndex = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(DATA_INTERVAL.getStartMillis())
                 .withQueryGranularity(Granularities.DAY)
                 .withMetrics(METRIC_AGGS)
                 .withDimensionsSpec(
-                    new DimensionsSpec(
-                        null,
-                        null,
-                        Arrays.asList(
-                            new SpatialDimensionSchema(
-                                "dim.geo",
-                                Arrays.asList("lat", "long")
-                            ),
-                            new SpatialDimensionSchema(
-                                "spatialIsRad",
-                                Arrays.asList("lat2", "long2")
-                            )
-
-                        )
-                    )
+                    DimensionsSpec.builder()
+                                  .setSpatialDimensions(
+                                      Arrays.asList(
+                                          new SpatialDimensionSchema(
+                                              "dim.geo",
+                                              Arrays.asList("lat", "long")
+                                          ),
+                                          new SpatialDimensionSchema(
+                                              "spatialIsRad",
+                                              Arrays.asList("lat2", "long2")
+                                          )
+                                      )
+                                  )
+                                  .build()
                 ).build()
         )
-        .setReportParseExceptions(false)
         .setMaxRowCount(NUM_POINTS)
-        .buildOnheap();
+        .build();
 
     theIndex.add(
         new MapBasedInputRow(
@@ -258,7 +258,7 @@ public class IndexMergerV9WithSpatialIndexTest
     IncrementalIndex theIndex = makeIncrementalIndex();
     File tmpFile = File.createTempFile("billy", "yay");
     tmpFile.delete();
-    tmpFile.mkdirs();
+    FileUtils.mkdirp(tmpFile);
 
     try {
       indexMergerV9.persist(theIndex, tmpFile, indexSpec, null);
@@ -276,89 +276,83 @@ public class IndexMergerV9WithSpatialIndexTest
   )
   {
     try {
-      IncrementalIndex first = new IncrementalIndex.Builder()
+      IncrementalIndex first = new OnheapIncrementalIndex.Builder()
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(DATA_INTERVAL.getStartMillis())
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Arrays.asList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  Arrays.asList("lat", "long")
-                              ),
-                              new SpatialDimensionSchema(
-                                  "spatialIsRad",
-                                  Arrays.asList("lat2", "long2")
+                      DimensionsSpec.builder()
+                          .setSpatialDimensions(
+                              Arrays.asList(
+                                  new SpatialDimensionSchema(
+                                      "dim.geo",
+                                      Arrays.asList("lat", "long")
+                                  ),
+                                  new SpatialDimensionSchema(
+                                      "spatialIsRad",
+                                      Arrays.asList("lat2", "long2")
+                                  )
                               )
-
                           )
-                      )
+                          .build()
                   ).build()
           )
-          .setReportParseExceptions(false)
           .setMaxRowCount(1000)
-          .buildOnheap();
+          .build();
 
-      IncrementalIndex second = new IncrementalIndex.Builder()
+      IncrementalIndex second = new OnheapIncrementalIndex.Builder()
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(DATA_INTERVAL.getStartMillis())
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Arrays.asList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  Arrays.asList("lat", "long")
-                              ),
-                              new SpatialDimensionSchema(
-                                  "spatialIsRad",
-                                  Arrays.asList("lat2", "long2")
-                              )
-
-                          )
-                      )
+                      DimensionsSpec.builder()
+                                    .setSpatialDimensions(
+                                        Arrays.asList(
+                                            new SpatialDimensionSchema(
+                                                "dim.geo",
+                                                Arrays.asList("lat", "long")
+                                            ),
+                                            new SpatialDimensionSchema(
+                                                "spatialIsRad",
+                                                Arrays.asList("lat2", "long2")
+                                            )
+                                        )
+                                    )
+                                    .build()
                   ).build()
           )
-          .setReportParseExceptions(false)
           .setMaxRowCount(1000)
-          .buildOnheap();
+          .build();
 
-      IncrementalIndex third = new IncrementalIndex.Builder()
+      IncrementalIndex third = new OnheapIncrementalIndex.Builder()
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(DATA_INTERVAL.getStartMillis())
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Arrays.asList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  Arrays.asList("lat", "long")
-                              ),
-                              new SpatialDimensionSchema(
-                                  "spatialIsRad",
-                                  Arrays.asList("lat2", "long2")
-                              )
-
-                          )
-                      )
+                      DimensionsSpec.builder()
+                                    .setSpatialDimensions(
+                                        Arrays.asList(
+                                            new SpatialDimensionSchema(
+                                                "dim.geo",
+                                                Arrays.asList("lat", "long")
+                                            ),
+                                            new SpatialDimensionSchema(
+                                                "spatialIsRad",
+                                                Arrays.asList("lat2", "long2")
+                                            )
+                                        )
+                                    )
+                                    .build()
                   ).build()
           )
-          .setReportParseExceptions(false)
           .setMaxRowCount(NUM_POINTS)
-          .buildOnheap();
+          .build();
 
       first.add(
           new MapBasedInputRow(
@@ -490,10 +484,10 @@ public class IndexMergerV9WithSpatialIndexTest
       File thirdFile = new File(tmpFile, "third");
       File mergedFile = new File(tmpFile, "merged");
 
-      firstFile.mkdirs();
-      secondFile.mkdirs();
-      thirdFile.mkdirs();
-      mergedFile.mkdirs();
+      FileUtils.mkdirp(firstFile);
+      FileUtils.mkdirp(secondFile);
+      FileUtils.mkdirp(thirdFile);
+      FileUtils.mkdirp(mergedFile);
 
       indexMergerV9.persist(first, DATA_INTERVAL, firstFile, indexSpec, null);
       indexMergerV9.persist(second, DATA_INTERVAL, secondFile, indexSpec, null);
@@ -511,7 +505,8 @@ public class IndexMergerV9WithSpatialIndexTest
                 METRIC_AGGS,
                 mergedFile,
                 indexSpec,
-                null
+                null,
+                -1
             )
         );
         return mergedRealtime;
@@ -571,9 +566,7 @@ public class IndexMergerV9WithSpatialIndexTest
     );
     try {
       TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
-          new TimeseriesQueryQueryToolChest(
-              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-          ),
+          new TimeseriesQueryQueryToolChest(),
           new TimeseriesQueryEngine(),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );
@@ -625,9 +618,7 @@ public class IndexMergerV9WithSpatialIndexTest
     );
     try {
       TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
-          new TimeseriesQueryQueryToolChest(
-              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-          ),
+          new TimeseriesQueryQueryToolChest(),
           new TimeseriesQueryEngine(),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );
@@ -714,9 +705,7 @@ public class IndexMergerV9WithSpatialIndexTest
     );
     try {
       TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
-          new TimeseriesQueryQueryToolChest(
-              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-          ),
+          new TimeseriesQueryQueryToolChest(),
           new TimeseriesQueryEngine(),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );

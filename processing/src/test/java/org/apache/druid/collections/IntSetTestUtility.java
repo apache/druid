@@ -43,7 +43,7 @@ public class IntSetTestUtility
     return Sets.newTreeSet(setBits);
   }
 
-  public static final BitSet createSimpleBitSet(Set<Integer> setBits)
+  public static BitSet createSimpleBitSet(Set<Integer> setBits)
   {
     BitSet retval = new BitSet();
     for (int i : setBits) {
@@ -52,7 +52,7 @@ public class IntSetTestUtility
     return retval;
   }
 
-  public static final void addAllToMutable(MutableBitmap mutableBitmap, Iterable<Integer> intSet)
+  public static void addAllToMutable(MutableBitmap mutableBitmap, Iterable<Integer> intSet)
   {
     for (Integer integer : intSet) {
       mutableBitmap.add(integer);

@@ -28,10 +28,12 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.assertj.core.api.Assertions;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -95,7 +97,7 @@ public class SegmentTransactionalInsertActionTest
   }
 
   @Test
-  public void testTransactional() throws Exception
+  public void testTransactionalUpdateDataSourceMetadata() throws Exception
   {
     final Task task = NoopTask.create();
     actionTestKit.getTaskLockbox().add(task);
@@ -121,22 +123,52 @@ public class SegmentTransactionalInsertActionTest
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT2)), result2);
 
-    Assert.assertEquals(
-        ImmutableSet.of(SEGMENT1, SEGMENT2),
-        ImmutableSet.copyOf(
-            actionTestKit.getMetadataStorageCoordinator()
-                         .getUsedSegmentsForInterval(DATA_SOURCE, INTERVAL)
-        )
-    );
+    Assertions.assertThat(
+        actionTestKit.getMetadataStorageCoordinator()
+                     .retrieveUsedSegmentsForInterval(DATA_SOURCE, INTERVAL, Segments.ONLY_VISIBLE)
+    ).containsExactlyInAnyOrder(SEGMENT1, SEGMENT2);
 
     Assert.assertEquals(
         new ObjectMetadata(ImmutableList.of(2)),
-        actionTestKit.getMetadataStorageCoordinator().getDataSourceMetadata(DATA_SOURCE)
+        actionTestKit.getMetadataStorageCoordinator().retrieveDataSourceMetadata(DATA_SOURCE)
     );
   }
 
   @Test
-  public void testFailTransactional() throws Exception
+  public void testTransactionalDropSegments() throws Exception
+  {
+    final Task task = NoopTask.create();
+    actionTestKit.getTaskLockbox().add(task);
+    acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
+
+    SegmentPublishResult result1 = SegmentTransactionalInsertAction.overwriteAction(
+        null,
+        null,
+        ImmutableSet.of(SEGMENT1)
+    ).perform(
+        task,
+        actionTestKit.getTaskActionToolbox()
+    );
+    Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT1)), result1);
+
+    SegmentPublishResult result2 = SegmentTransactionalInsertAction.overwriteAction(
+        null,
+        ImmutableSet.of(SEGMENT1),
+        ImmutableSet.of(SEGMENT2)
+    ).perform(
+        task,
+        actionTestKit.getTaskActionToolbox()
+    );
+    Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT2)), result2);
+
+    Assertions.assertThat(
+        actionTestKit.getMetadataStorageCoordinator()
+                     .retrieveUsedSegmentsForInterval(DATA_SOURCE, INTERVAL, Segments.ONLY_VISIBLE)
+    ).containsExactlyInAnyOrder(SEGMENT2);
+  }
+
+  @Test
+  public void testFailTransactionalUpdateDataSourceMetadata() throws Exception
   {
     final Task task = NoopTask.create();
     actionTestKit.getTaskLockbox().add(task);
@@ -155,10 +187,31 @@ public class SegmentTransactionalInsertActionTest
   }
 
   @Test
+  public void testFailTransactionalDropSegment() throws Exception
+  {
+    final Task task = NoopTask.create();
+    actionTestKit.getTaskLockbox().add(task);
+    acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
+
+    SegmentPublishResult result = SegmentTransactionalInsertAction.overwriteAction(
+        null,
+        // SEGMENT1 does not exist, hence will fail to drop
+        ImmutableSet.of(SEGMENT1),
+        ImmutableSet.of(SEGMENT2)
+    ).perform(
+        task,
+        actionTestKit.getTaskActionToolbox()
+    );
+
+    Assert.assertEquals(SegmentPublishResult.fail("org.apache.druid.metadata.RetryTransactionException: Aborting transaction!"), result);
+  }
+
+  @Test
   public void testFailBadVersion() throws Exception
   {
     final Task task = NoopTask.create();
     final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction.overwriteAction(
+        null,
         null,
         ImmutableSet.of(SEGMENT3)
     );

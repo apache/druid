@@ -29,24 +29,28 @@ import org.apache.druid.query.aggregation.TestLongColumnSelector;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 
-public class LongFirstAggregationTest
+public class LongFirstAggregationTest extends InitializedNullHandlingTest
 {
   private LongFirstAggregatorFactory longFirstAggFactory;
   private LongFirstAggregatorFactory combiningAggFactory;
   private ColumnSelectorFactory colSelectorFactory;
   private TestLongColumnSelector timeSelector;
+  private TestLongColumnSelector customTimeSelector;
   private TestLongColumnSelector valueSelector;
   private TestObjectColumnSelector objectSelector;
 
   private long[] longValues = {185, -216, -128751132, Long.MIN_VALUE};
   private long[] times = {1123126751, 1784247991, 1854329816, 1000000000};
+  private long[] customTimes = {2, 1, 3, 4};
   private SerializablePair[] pairs = {
       new SerializablePair<>(1L, 113267L),
       new SerializablePair<>(1L, 5437384L),
@@ -57,13 +61,15 @@ public class LongFirstAggregationTest
   @Before
   public void setup()
   {
-    longFirstAggFactory = new LongFirstAggregatorFactory("billy", "nilly");
+    longFirstAggFactory = new LongFirstAggregatorFactory("billy", "nilly", null);
     combiningAggFactory = (LongFirstAggregatorFactory) longFirstAggFactory.getCombiningFactory();
     timeSelector = new TestLongColumnSelector(times);
+    customTimeSelector = new TestLongColumnSelector(customTimes);
     valueSelector = new TestLongColumnSelector(longValues);
     objectSelector = new TestObjectColumnSelector<>(pairs);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME)).andReturn(timeSelector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("customTime")).andReturn(customTimeSelector);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("billy")).andReturn(objectSelector);
     EasyMock.replay(colSelectorFactory);
@@ -88,7 +94,46 @@ public class LongFirstAggregationTest
   }
 
   @Test
+  public void testLongFirstAggregatorWithTimeColumn()
+  {
+    Aggregator agg = new LongFirstAggregatorFactory("billy", "nilly", "customTime").factorize(colSelectorFactory);
+
+    aggregate(agg);
+    aggregate(agg);
+    aggregate(agg);
+    aggregate(agg);
+
+    Pair<Long, Long> result = (Pair<Long, Long>) agg.get();
+
+    Assert.assertEquals(customTimes[1], result.lhs.longValue());
+    Assert.assertEquals(longValues[1], result.rhs.longValue());
+    Assert.assertEquals(longValues[1], agg.getLong());
+    Assert.assertEquals(longValues[1], agg.getFloat(), 0.0001);
+  }
+
+  @Test
   public void testLongFirstBufferAggregator()
+  {
+    BufferAggregator agg = new LongFirstAggregatorFactory("billy", "nilly", "customTime").factorizeBuffered(colSelectorFactory);
+
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[longFirstAggFactory.getMaxIntermediateSizeWithNulls()]);
+    agg.init(buffer, 0);
+
+    aggregate(agg, buffer, 0);
+    aggregate(agg, buffer, 0);
+    aggregate(agg, buffer, 0);
+    aggregate(agg, buffer, 0);
+
+    Pair<Long, Long> result = (Pair<Long, Long>) agg.get(buffer, 0);
+
+    Assert.assertEquals(customTimes[1], result.lhs.longValue());
+    Assert.assertEquals(longValues[1], result.rhs.longValue());
+    Assert.assertEquals(longValues[1], agg.getLong(buffer, 0));
+    Assert.assertEquals(longValues[1], agg.getFloat(buffer, 0), 0.0001);
+  }
+
+  @Test
+  public void testLongFirstBufferAggregatorWithTimeColumn()
   {
     BufferAggregator agg = longFirstAggFactory.factorizeBuffered(
         colSelectorFactory);
@@ -115,6 +160,18 @@ public class LongFirstAggregationTest
     SerializablePair pair1 = new SerializablePair<>(1467225000L, 1263L);
     SerializablePair pair2 = new SerializablePair<>(1467240000L, 752713L);
     Assert.assertEquals(pair1, longFirstAggFactory.combine(pair1, pair2));
+  }
+
+  @Test
+  public void testComparatorWithNulls()
+  {
+    SerializablePair pair1 = new SerializablePair<>(1467225000L, 1263L);
+    SerializablePair pair2 = new SerializablePair<>(1467240000L, null);
+    Comparator comparator = longFirstAggFactory.getComparator();
+    Assert.assertEquals(1, comparator.compare(pair1, pair2));
+    Assert.assertEquals(0, comparator.compare(pair1, pair1));
+    Assert.assertEquals(0, comparator.compare(pair2, pair2));
+    Assert.assertEquals(-1, comparator.compare(pair2, pair1));
   }
 
   @Test
@@ -165,7 +222,9 @@ public class LongFirstAggregationTest
   {
     DefaultObjectMapper mapper = new DefaultObjectMapper();
     String longSpecJson = "{\"type\":\"longFirst\",\"name\":\"billy\",\"fieldName\":\"nilly\"}";
-    Assert.assertEquals(longFirstAggFactory, mapper.readValue(longSpecJson, AggregatorFactory.class));
+    AggregatorFactory deserialized = mapper.readValue(longSpecJson, AggregatorFactory.class);
+    Assert.assertEquals(longFirstAggFactory, deserialized);
+    Assert.assertArrayEquals(longFirstAggFactory.getCacheKey(), deserialized.getCacheKey());
   }
 
   private void aggregate(
@@ -174,6 +233,7 @@ public class LongFirstAggregationTest
   {
     agg.aggregate();
     timeSelector.increment();
+    customTimeSelector.increment();
     valueSelector.increment();
     objectSelector.increment();
   }
@@ -186,6 +246,7 @@ public class LongFirstAggregationTest
   {
     agg.aggregate(buff, position);
     timeSelector.increment();
+    customTimeSelector.increment();
     valueSelector.increment();
     objectSelector.increment();
   }

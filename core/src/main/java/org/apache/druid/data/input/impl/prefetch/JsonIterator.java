@@ -25,13 +25,12 @@ import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
-import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
@@ -39,11 +38,11 @@ import java.util.NoSuchElementException;
  *
  * @param <T> the type of object returned by this iterator
  */
-public class JsonIterator<T> implements Iterator<T>, Closeable
+public class JsonIterator<T> implements CloseableIterator<T>
 {
   private JsonParser jp;
   private ObjectCodec objectCodec;
-  private final TypeReference typeRef;
+  private final TypeReference<T> typeRef;
   private final InputStream inputStream;
   private final Closeable resourceCloser;
   private final ObjectMapper objectMapper;
@@ -55,7 +54,7 @@ public class JsonIterator<T> implements Iterator<T>, Closeable
    * @param objectMapper   object mapper, used for deserialization
    */
   public JsonIterator(
-      TypeReference typeRef,
+      TypeReference<T> typeRef,
       InputStream inputStream,
       Closeable resourceCloser,
       ObjectMapper objectMapper
@@ -80,7 +79,7 @@ public class JsonIterator<T> implements Iterator<T>, Closeable
       return false;
     }
     if (jp.getCurrentToken() == JsonToken.END_ARRAY) {
-      CloseQuietly.close(jp);
+      CloseableUtils.closeAndWrapExceptions(jp);
       return false;
     }
     return true;
@@ -131,11 +130,6 @@ public class JsonIterator<T> implements Iterator<T>, Closeable
   @Override
   public void close() throws IOException
   {
-    Closer closer = Closer.create();
-    if (jp != null) {
-      closer.register(jp);
-    }
-    closer.register(resourceCloser);
-    closer.close();
+    CloseableUtils.closeAll(jp, resourceCloser);
   }
 }

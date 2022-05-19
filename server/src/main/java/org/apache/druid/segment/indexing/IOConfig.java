@@ -30,4 +30,5 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 })
 public interface IOConfig
 {
+  boolean DEFAULT_DROP_EXISTING = false;
 }

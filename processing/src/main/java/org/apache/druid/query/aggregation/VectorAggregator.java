@@ -31,6 +31,9 @@ import java.nio.ByteBuffer;
  * {@link org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop} because vectorized query engines do not use
  * monomorphic-processing-style specialization.
  *
+ * Unlike {@link Aggregator}, VectorAggregators are never used by multiple threads at once. Implementations are not
+ * required to be thread safe.
+ *
  * @see BufferAggregator, the vectorized version.
  */
 public interface VectorAggregator
@@ -64,7 +67,7 @@ public interface VectorAggregator
    *                       null, the aggregator will aggregate rows from 0 (inclusive) to numRows (exclusive).
    * @param positionOffset an offset to apply to each value from "positions"
    */
-  void aggregate(ByteBuffer buf, int numRows, int positions[], @Nullable int[] rows, int positionOffset);
+  void aggregate(ByteBuffer buf, int numRows, int[] positions, @Nullable int[] rows, int positionOffset);
 
   /**
    * Same as {@link BufferAggregator#get}.

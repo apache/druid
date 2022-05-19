@@ -20,36 +20,40 @@
 package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.client.indexing.ClientCompactQueryTuningConfig;
-import org.apache.druid.data.input.SplitHintSpec;
-import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 
 public class DataSourceCompactionConfig
 {
-  public static final long DEFAULT_TARGET_COMPACTION_SIZE_BYTES = 400 * 1024 * 1024; // 400MB
-
-  // should be synchronized with Tasks.DEFAULT_MERGE_TASK_PRIORITY
-  private static final int DEFAULT_COMPACTION_TASK_PRIORITY = 25;
-  private static final long DEFAULT_INPUT_SEGMENT_SIZE_BYTES = 400 * 1024 * 1024;
+  /** Must be synced with Tasks.DEFAULT_MERGE_TASK_PRIORITY */
+  public static final int DEFAULT_COMPACTION_TASK_PRIORITY = 25;
+  // Approx. 100TB. Chosen instead of Long.MAX_VALUE to avoid overflow on web-console and other clients
+  private static final long DEFAULT_INPUT_SEGMENT_SIZE_BYTES = 100_000_000_000_000L;
   private static final Period DEFAULT_SKIP_OFFSET_FROM_LATEST = new Period("P1D");
 
   private final String dataSource;
   private final int taskPriority;
   private final long inputSegmentSizeBytes;
-  // The number of input segments is limited because the byte size of a serialized task spec is limited by
-  // RemoteTaskRunnerConfig.maxZnodeBytes.
+  /**
+   * The number of input segments is limited because the byte size of a serialized task spec is limited by
+   * org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig.maxZnodeBytes.
+   */
   @Nullable
   private final Integer maxRowsPerSegment;
   private final Period skipOffsetFromLatest;
-  private final UserCompactTuningConfig tuningConfig;
+  private final UserCompactionTaskQueryTuningConfig tuningConfig;
+  private final UserCompactionTaskGranularityConfig granularitySpec;
+  private final UserCompactionTaskDimensionsConfig dimensionsSpec;
+  private final AggregatorFactory[] metricsSpec;
+  private final UserCompactionTaskTransformConfig transformSpec;
+  private final UserCompactionTaskIOConfig ioConfig;
   private final Map<String, Object> taskContext;
 
   @JsonCreator
@@ -57,9 +61,14 @@ public class DataSourceCompactionConfig
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("taskPriority") @Nullable Integer taskPriority,
       @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
-      @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
+      @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
-      @JsonProperty("tuningConfig") @Nullable UserCompactTuningConfig tuningConfig,
+      @JsonProperty("tuningConfig") @Nullable UserCompactionTaskQueryTuningConfig tuningConfig,
+      @JsonProperty("granularitySpec") @Nullable UserCompactionTaskGranularityConfig granularitySpec,
+      @JsonProperty("dimensionsSpec") @Nullable UserCompactionTaskDimensionsConfig dimensionsSpec,
+      @JsonProperty("metricsSpec") @Nullable AggregatorFactory[] metricsSpec,
+      @JsonProperty("transformSpec") @Nullable UserCompactionTaskTransformConfig transformSpec,
+      @JsonProperty("ioConfig") @Nullable UserCompactionTaskIOConfig ioConfig,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
   {
@@ -73,6 +82,11 @@ public class DataSourceCompactionConfig
     this.maxRowsPerSegment = maxRowsPerSegment;
     this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
     this.tuningConfig = tuningConfig;
+    this.ioConfig = ioConfig;
+    this.granularitySpec = granularitySpec;
+    this.metricsSpec = metricsSpec;
+    this.dimensionsSpec = dimensionsSpec;
+    this.transformSpec = transformSpec;
     this.taskContext = taskContext;
   }
 
@@ -94,6 +108,7 @@ public class DataSourceCompactionConfig
     return inputSegmentSizeBytes;
   }
 
+  @Deprecated
   @JsonProperty
   @Nullable
   public Integer getMaxRowsPerSegment()
@@ -109,9 +124,44 @@ public class DataSourceCompactionConfig
 
   @JsonProperty
   @Nullable
-  public UserCompactTuningConfig getTuningConfig()
+  public UserCompactionTaskQueryTuningConfig getTuningConfig()
   {
     return tuningConfig;
+  }
+
+  @JsonProperty
+  @Nullable
+  public UserCompactionTaskIOConfig getIoConfig()
+  {
+    return ioConfig;
+  }
+
+  @JsonProperty
+  @Nullable
+  public UserCompactionTaskGranularityConfig getGranularitySpec()
+  {
+    return granularitySpec;
+  }
+
+  @JsonProperty
+  @Nullable
+  public UserCompactionTaskDimensionsConfig getDimensionsSpec()
+  {
+    return dimensionsSpec;
+  }
+
+  @JsonProperty
+  @Nullable
+  public UserCompactionTaskTransformConfig getTransformSpec()
+  {
+    return transformSpec;
+  }
+
+  @JsonProperty
+  @Nullable
+  public AggregatorFactory[] getMetricsSpec()
+  {
+    return metricsSpec;
   }
 
   @JsonProperty
@@ -134,57 +184,34 @@ public class DataSourceCompactionConfig
     return taskPriority == that.taskPriority &&
            inputSegmentSizeBytes == that.inputSegmentSizeBytes &&
            Objects.equals(dataSource, that.dataSource) &&
+           Objects.equals(maxRowsPerSegment, that.maxRowsPerSegment) &&
            Objects.equals(skipOffsetFromLatest, that.skipOffsetFromLatest) &&
            Objects.equals(tuningConfig, that.tuningConfig) &&
+           Objects.equals(granularitySpec, that.granularitySpec) &&
+           Objects.equals(dimensionsSpec, that.dimensionsSpec) &&
+           Arrays.equals(metricsSpec, that.metricsSpec) &&
+           Objects.equals(transformSpec, that.transformSpec) &&
+           Objects.equals(ioConfig, that.ioConfig) &&
            Objects.equals(taskContext, that.taskContext);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(
+    int result = Objects.hash(
         dataSource,
         taskPriority,
         inputSegmentSizeBytes,
+        maxRowsPerSegment,
         skipOffsetFromLatest,
         tuningConfig,
+        granularitySpec,
+        dimensionsSpec,
+        transformSpec,
+        ioConfig,
         taskContext
     );
-  }
-
-  public static class UserCompactTuningConfig extends ClientCompactQueryTuningConfig
-  {
-    @JsonCreator
-    public UserCompactTuningConfig(
-        @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
-        @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
-        @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
-        @JsonProperty("splitHintSpec") @Nullable SplitHintSpec splitHintSpec,
-        @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
-        @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
-        @JsonProperty("pushTimeout") @Nullable Long pushTimeout,
-        @JsonProperty("maxNumConcurrentSubTasks") @Nullable Integer maxNumConcurrentSubTasks
-    )
-    {
-      super(
-          null,
-          maxRowsInMemory,
-          maxBytesInMemory,
-          maxTotalRows,
-          splitHintSpec,
-          indexSpec,
-          maxPendingPersists,
-          pushTimeout,
-          maxNumConcurrentSubTasks
-      );
-    }
-
-    @Override
-    @Nullable
-    @JsonIgnore
-    public Integer getMaxRowsPerSegment()
-    {
-      throw new UnsupportedOperationException();
-    }
+    result = 31 * result + Arrays.hashCode(metricsSpec);
+    return result;
   }
 }

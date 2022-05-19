@@ -26,7 +26,7 @@ import org.joda.time.Interval;
 
 /**
  */
-public class IncrementalIndexSegment extends AbstractSegment
+public class IncrementalIndexSegment implements Segment
 {
   private final IncrementalIndex index;
   private final SegmentId segmentId;

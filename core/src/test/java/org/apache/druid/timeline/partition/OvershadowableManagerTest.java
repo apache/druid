@@ -20,6 +20,9 @@
 package org.apache.druid.timeline.partition;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.timeline.partition.OvershadowableManager.RootPartitionRange;
 import org.apache.druid.timeline.partition.OvershadowableManager.State;
 import org.junit.Assert;
@@ -60,6 +63,63 @@ public class OvershadowableManagerTest
     expectedVisibleChunks = new ArrayList<>();
     expectedOvershadowedChunks = new ArrayList<>();
     expectedStandbyChunks = new ArrayList<>();
+  }
+
+  @Test
+  public void testCopyVisible()
+  {
+    // chunks of partition id 0 and 1
+    manager.addChunk(newRootChunk());
+    manager.addChunk(newRootChunk());
+
+    // chunks to overshadow the partition id range [0, 2)
+    manager.addChunk(newNonRootChunk(0, 2, 1, 3));
+    manager.addChunk(newNonRootChunk(0, 2, 1, 3));
+    manager.addChunk(newNonRootChunk(0, 2, 1, 3));
+
+    // chunks of partition id 3 and 4
+    manager.addChunk(newRootChunk());
+    manager.addChunk(newRootChunk());
+
+    // standby chunk
+    manager.addChunk(newNonRootChunk(2, 4, 1, 3));
+
+    OvershadowableManager<OvershadowableInteger> copy = OvershadowableManager.copyVisible(manager);
+    Assert.assertTrue(copy.getOvershadowedChunks().isEmpty());
+    Assert.assertTrue(copy.getStandbyChunks().isEmpty());
+    Assert.assertEquals(
+        Lists.newArrayList(manager.visibleChunksIterator()),
+        Lists.newArrayList(copy.visibleChunksIterator())
+    );
+  }
+
+  @Test
+  public void testDeepCopy()
+  {
+    // chunks of partition id 0 and 1
+    manager.addChunk(newRootChunk());
+    manager.addChunk(newRootChunk());
+
+    // chunks to overshadow the partition id range [0, 2)
+    manager.addChunk(newNonRootChunk(0, 2, 1, 3));
+    manager.addChunk(newNonRootChunk(0, 2, 1, 3));
+    manager.addChunk(newNonRootChunk(0, 2, 1, 3));
+
+    // chunks of partition id 3 and 4
+    manager.addChunk(newRootChunk());
+    manager.addChunk(newRootChunk());
+
+    // standby chunk
+    manager.addChunk(newNonRootChunk(2, 4, 1, 3));
+
+    OvershadowableManager<OvershadowableInteger> copy = OvershadowableManager.deepCopy(manager);
+    Assert.assertEquals(manager, copy);
+  }
+
+  @Test
+  public void testEqualAndHashCodeContract()
+  {
+    EqualsVerifier.forClass(OvershadowableManager.class).usingGetClass().verify();
   }
 
   @Test
@@ -980,7 +1040,7 @@ public class OvershadowableManagerTest
     Assert.assertEquals(
         "Mismatched visible chunks",
         new HashSet<>(expectedVisibleChunks),
-        new HashSet<>(manager.getVisibleChunks())
+        Sets.newHashSet(manager.visibleChunksIterator())
     );
     Assert.assertEquals(
         "Mismatched overshadowed chunks",

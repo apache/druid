@@ -23,21 +23,27 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.server.lookup.cache.loading.LoadingCache;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
-public class LoadingLookupTest
+public class LoadingLookupTest extends InitializedNullHandlingTest
 {
   DataFetcher dataFetcher = EasyMock.createMock(DataFetcher.class);
   LoadingCache lookupCache = EasyMock.createStrictMock(LoadingCache.class);
   LoadingCache reverseLookupCache = EasyMock.createStrictMock(LoadingCache.class);
   LoadingLookup loadingLookup = new LoadingLookup(dataFetcher, lookupCache, reverseLookupCache);
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testApplyEmptyOrNull() throws ExecutionException
@@ -121,5 +127,18 @@ public class LoadingLookupTest
   public void testGetCacheKey()
   {
     Assert.assertFalse(Arrays.equals(loadingLookup.getCacheKey(), loadingLookup.getCacheKey()));
+  }
+
+  @Test
+  public void testCanGetKeySet()
+  {
+    Assert.assertFalse(loadingLookup.canGetKeySet());
+  }
+
+  @Test
+  public void testKeySet()
+  {
+    expectedException.expect(UnsupportedOperationException.class);
+    loadingLookup.keySet();
   }
 }

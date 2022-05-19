@@ -18,7 +18,7 @@
 
 import React from 'react';
 
-import { Capabilities } from '../../utils/capabilities';
+import { Capabilities } from '../../utils';
 
 import { DatasourcesCard } from './datasources-card/datasources-card';
 import { LookupsCard } from './lookups-card/lookups-card';
@@ -40,12 +40,20 @@ export const HomeView = React.memo(function HomeView(props: HomeViewProps) {
   return (
     <div className="home-view app-view">
       <StatusCard />
-      <DatasourcesCard capabilities={capabilities} />
-      <SegmentsCard capabilities={capabilities} />
-      <SupervisorsCard capabilities={capabilities} />
-      <TasksCard capabilities={capabilities} />
-      <ServicesCard capabilities={capabilities} />
-      <LookupsCard />
+      {capabilities.hasSqlOrCoordinatorAccess() && (
+        <>
+          <DatasourcesCard capabilities={capabilities} />
+          <SegmentsCard capabilities={capabilities} />
+        </>
+      )}
+      {capabilities.hasSqlOrOverlordAccess() && (
+        <>
+          <SupervisorsCard capabilities={capabilities} />
+          <TasksCard capabilities={capabilities} />
+        </>
+      )}
+      {capabilities.hasSqlOrCoordinatorAccess() && <ServicesCard capabilities={capabilities} />}
+      {capabilities.hasCoordinatorAccess() && <LookupsCard capabilities={capabilities} />}
     </div>
   );
 });

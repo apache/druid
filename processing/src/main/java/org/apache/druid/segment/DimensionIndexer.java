@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
@@ -106,35 +107,46 @@ import javax.annotation.Nullable;
  * @param <ActualType> class of a single actual value
  *
  */
-public interface DimensionIndexer
-    <EncodedType extends Comparable<EncodedType>, EncodedKeyComponentType, ActualType extends Comparable<ActualType>>
+public interface DimensionIndexer<
+    EncodedType extends Comparable<EncodedType>,
+    EncodedKeyComponentType,
+    ActualType extends Comparable<ActualType>>
 {
 
   /**
-   * Given a single row value or list of row values (for multi-valued dimensions), update any internal data structures
-   * with the ingested values and return the row values as an array to be used within a Row key.
+   * Encodes the given row value(s) of the dimension to be used within a row key.
+   * It also updates the internal state of the DimensionIndexer, e.g. the dimLookup.
+   * <p>
+   * For example, the dictionary-encoded String-type column will return an int[]
+   * containing dictionary IDs.
+   * <p>
    *
-   * For example, the dictionary-encoded String-type column will return an int[] containing a dictionary ID.
-   *
-   * The value within the returned array should be encoded if applicable, i.e. as instances of EncodedType.
-   *
-   * NOTE: This function can change the internal state of the DimensionIndexer.
-   *
-   * @param dimValues Single row val to process
-   *
-   * @param reportParseExceptions
-   * @return An array containing an encoded representation of the input row value.
+   * @param dimValues             Value(s) of the dimension in a row. This can
+   *                              either be a single value or a list of values
+   *                              (for multi-valued dimensions)
+   * @param reportParseExceptions true if parse exceptions should be reported,
+   *                              false otherwise
+   * @return Encoded dimension value(s) to be used as a component for the row key.
+   * Contains an object of the {@link EncodedKeyComponentType} and the effective
+   * size of the key component in bytes.
    */
-  EncodedKeyComponentType processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions);
+  EncodedKeyComponent<EncodedKeyComponentType> processRowValsToUnsortedEncodedKeyComponent(
+      @Nullable Object dimValues,
+      boolean reportParseExceptions
+  );
 
   /**
-   * Gives the estimated size in bytes for the given key
+   * This method will be called while building an {@link IncrementalIndex} whenever a known dimension column (either
+   * through an explicit schema on the ingestion spec, or auto-discovered while processing rows) is absent in any row
+   * that is processed, to allow an indexer to account for any missing rows if necessary. Useful so that a string
+   * {@link DimensionSelector} built on top of an {@link IncrementalIndex} may accurately report
+   * {@link DimensionSelector#nameLookupPossibleInAdvance()} by allowing it to track if it has any implicit null valued
+   * rows.
    *
-   * @param key dimension value array from a TimeAndDims key
-   *
-   * @return the estimated size in bytes of the key
+   * At index persist/merge time all missing columns for a row will be explicitly replaced with the value appropriate
+   * null or default value.
    */
-  long estimateEncodedKeyComponentSize(EncodedKeyComponentType key);
+  void setSparseIndexed();
 
   /**
    * Given an encoded value that was ordered by associated actual value, return the equivalent
@@ -223,6 +235,7 @@ public interface DimensionIndexer
       IncrementalIndex.DimensionDesc desc
   );
 
+  ColumnCapabilities getColumnCapabilities();
   /**
    * Compares the row values for this DimensionIndexer's dimension from a Row key.
    *
@@ -240,6 +253,10 @@ public interface DimensionIndexer
    * and comparing the actual values until a difference is found.
    *
    * Refer to StringDimensionIndexer.compareUnsortedEncodedKeyComponents() for a reference implementation.
+   *
+   * The comparison rules used by this method should match the rules used by
+   * {@link DimensionHandler#getEncodedValueSelectorComparator()}, otherwise incorrect ordering/merging of rows
+   * can occur during ingestion, causing issues such as imperfect rollup.
    *
    * @param lhs dimension value array from a Row key
    * @param rhs dimension value array from a Row key

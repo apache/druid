@@ -31,7 +31,7 @@ import org.apache.druid.metadata.PasswordProvider;
  * {@link org.apache.druid.guice.annotations.ExtensionPoint}, which would also have to be moved.
  *
  * It would be easier to resolve these issues and merge the TLS-related config with HttpEmitterConfig once
- * https://github.com/apache/incubator-druid/issues/4312 is resolved, so the TLS config is kept separate for now.
+ * https://github.com/apache/druid/issues/4312 is resolved, so the TLS config is kept separate for now.
  */
 public class HttpEmitterSSLClientConfig
 {

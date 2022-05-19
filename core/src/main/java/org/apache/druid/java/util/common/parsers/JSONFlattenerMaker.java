@@ -24,6 +24,7 @@ import com.google.common.collect.FluentIterable;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
+import com.jayway.jsonpath.spi.json.JsonProvider;
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
 import net.thisptr.jackson.jq.JsonQuery;
 import net.thisptr.jackson.jq.exception.JsonQueryException;
@@ -43,14 +44,23 @@ import java.util.function.Function;
 
 public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonNode>
 {
+  private static final JsonProvider JSON_PROVIDER = new FastJacksonJsonNodeJsonProvider();
+
   private static final Configuration JSONPATH_CONFIGURATION =
       Configuration.builder()
-                   .jsonProvider(new FastJacksonJsonNodeJsonProvider())
+                   .jsonProvider(JSON_PROVIDER)
                    .mappingProvider(new JacksonMappingProvider())
                    .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                    .build();
 
+  private final boolean keepNullValues;
+
   private final CharsetEncoder enc = StandardCharsets.UTF_8.newEncoder();
+
+  public JSONFlattenerMaker(boolean keepNullValues)
+  {
+    this.keepNullValues = keepNullValues;
+  }
 
   @Override
   public Iterable<String> discoverRootFields(final JsonNode obj)
@@ -59,7 +69,8 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
                          .filter(
                              entry -> {
                                final JsonNode val = entry.getValue();
-                               return !(val.isObject() || val.isNull() || (val.isArray() && !isFlatList(val)));
+                               // If the keepNullValues is set on the JSONParseSpec then null values should not be filtered out
+                               return !(val.isObject() || (!keepNullValues && val.isNull()) || (val.isArray() && !isFlatList(val)));
                              }
                          )
                          .transform(Map.Entry::getKey);
@@ -97,8 +108,24 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
     }
   }
 
+  @Override
+  public JsonProvider getJsonProvider()
+  {
+    return JSON_PROVIDER;
+  }
+
   @Nullable
-  private Object valueConversionFunction(JsonNode val)
+  private Object valueConversionFunction(Object val)
+  {
+    if (val instanceof JsonNode) {
+      return convertJsonNode((JsonNode) val);
+    } else {
+      return val;
+    }
+  }
+
+  @Nullable
+  private Object convertJsonNode(JsonNode val)
   {
     if (val == null || val.isNull()) {
       return null;

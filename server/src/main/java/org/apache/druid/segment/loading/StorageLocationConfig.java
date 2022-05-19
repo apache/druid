@@ -22,6 +22,7 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -38,12 +39,21 @@ public class StorageLocationConfig
   @JsonCreator
   public StorageLocationConfig(
       @JsonProperty("path") File path,
-      @JsonProperty("maxSize") @Nullable Long maxSize,
+      @JsonProperty("maxSize") @Nullable HumanReadableBytes maxSize,
       @JsonProperty("freeSpacePercent") @Nullable Double freeSpacePercent
   )
   {
+    this(path, maxSize == null ? Long.MAX_VALUE : maxSize.getBytes(), freeSpacePercent);
+  }
+
+  public StorageLocationConfig(
+      File path,
+      long maxSize,
+      Double freeSpacePercent
+  )
+  {
     this.path = Preconditions.checkNotNull(path, "path");
-    this.maxSize = maxSize == null ? Long.MAX_VALUE : maxSize;
+    this.maxSize = maxSize;
     this.freeSpacePercent = freeSpacePercent;
     Preconditions.checkArgument(this.maxSize > 0, "maxSize[%s] should be positive", this.maxSize);
     Preconditions.checkArgument(

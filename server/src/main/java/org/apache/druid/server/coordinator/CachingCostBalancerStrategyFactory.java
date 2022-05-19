@@ -61,7 +61,7 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
     this.config = config;
 
     // Adding to lifecycle dynamically because couldn't use @ManageLifecycle on the class,
-    // see https://github.com/apache/incubator-druid/issues/4980
+    // see https://github.com/apache/druid/issues/4980
     lifecycle.addMaybeStartManagedInstance(this);
 
     serverInventoryView.registerSegmentCallback(
@@ -71,7 +71,7 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
           @Override
           public ServerView.CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
           {
-            if (server.segmentReplicatable()) {
+            if (server.isSegmentReplicationTarget()) {
               clusterCostCacheBuilder.addSegment(server.getName(), segment);
             }
             return ServerView.CallbackAction.CONTINUE;
@@ -80,7 +80,7 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
           @Override
           public ServerView.CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
           {
-            if (server.segmentReplicatable()) {
+            if (server.isSegmentReplicationTarget()) {
               clusterCostCacheBuilder.removeSegment(server.getName(), segment);
             }
             return ServerView.CallbackAction.CONTINUE;
@@ -98,7 +98,7 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
     serverInventoryView.registerServerRemovedCallback(
         executor,
         server -> {
-          if (server.segmentReplicatable()) {
+          if (server.isSegmentReplicationTarget()) {
             clusterCostCacheBuilder.removeServer(server.getName());
           }
           return ServerView.CallbackAction.CONTINUE;

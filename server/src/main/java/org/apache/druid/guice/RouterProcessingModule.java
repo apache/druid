@@ -28,22 +28,23 @@ import org.apache.druid.collections.DummyNonBlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
-import org.apache.druid.guice.annotations.Processing;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ExecutorServiceConfig;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ExecutorServiceMonitor;
+import org.apache.druid.query.ForwardingQueryProcessingPool;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.server.metrics.MetricsModule;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.ExecutorService;
 
 /**
  * This module is used to fulfill dependency injection of query processing and caching resources: buffer pools and
  * thread pools on Router Druid node type. Router needs to inject those resources, because it depends on
- * {@link org.apache.druid.query.QueryToolChest}s, and they couple query type aspects not related to processing and caching,
- * which Router uses, and related to processing and caching, which Router doesn't use, but they inject the resources.
+ * {@link org.apache.druid.query.QueryToolChest}s, and they couple query type aspects not related to processing and
+ * caching, which Router uses, and related to processing and caching, which Router doesn't use, but they inject the
+ * resources.
  */
 public class RouterProcessingModule implements Module
 {
@@ -57,14 +58,13 @@ public class RouterProcessingModule implements Module
   }
 
   @Provides
-  @Processing
   @ManageLifecycle
-  public ExecutorService getProcessingExecutorService(DruidProcessingConfig config)
+  public QueryProcessingPool getProcessingExecutorPool(DruidProcessingConfig config)
   {
     if (config.getNumThreadsConfigured() != ExecutorServiceConfig.DEFAULT_NUM_THREADS) {
       log.error("numThreads[%d] configured, that is ignored on Router", config.getNumThreadsConfigured());
     }
-    return Execs.dummy();
+    return new ForwardingQueryProcessingPool(Execs.dummy());
   }
 
   @Provides

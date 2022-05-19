@@ -1,22 +1,16 @@
 {
-  "type" : "index",
+  "type" : "index_parallel",
   "spec" : {
     "dataSchema" : {
       "dataSource" : "updates-tutorial",
-      "parser" : {
-        "type" : "string",
-        "parseSpec" : {
-          "format" : "json",
-          "dimensionsSpec" : {
-            "dimensions" : [
-              "animal"
-            ]
-          },
-          "timestampSpec": {
-            "column": "timestamp",
-            "format": "iso"
-          }
-        }
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "iso"
+      },
+      "dimensionsSpec" : {
+        "dimensions" : [
+          "animal"
+        ]
       },
       "metricsSpec" : [
         { "type" : "count", "name" : "count" },
@@ -31,16 +25,19 @@
       }
     },
     "ioConfig" : {
-      "type" : "index",
-      "firehose" : {
+      "type" : "index_parallel",
+      "inputSource" : {
         "type" : "local",
         "baseDir" : "quickstart/tutorial",
         "filter" : "updates-data2.json"
       },
+      "inputFormat" : {
+        "type" : "json"
+      },
       "appendToExisting" : false
     },
     "tuningConfig" : {
-      "type" : "index",
+      "type" : "index_parallel",
       "maxRowsPerSegment" : 5000000,
       "maxRowsInMemory" : 25000
     }

@@ -24,12 +24,14 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
-import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -68,6 +70,9 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
   DateTime dtLast;             // timestamp of last event
   DateTime dtGroupBy;          // timestamp for expected response for groupBy query
 
+  static final int NUM_RETRIES = 60;
+  static final long DELAY_FOR_RETRIES_MS = 10000;
+
   @Inject
   ServerDiscoveryFactory factory;
   @Inject
@@ -85,19 +90,18 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
 
     LOG.info("Starting test: %s", this.getClass().getSimpleName());
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      // the task will run for 3 minutes and then shutdown itself
+      // the task will run for 5 minutes and then shutdown itself
       String task = setShutOffTime(
           getResourceAsString(getTaskResource()),
-          DateTimes.utc(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(3))
+          DateTimes.utc(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5))
       );
       task = StringUtils.replace(task, "%%DATASOURCE%%", fullDatasourceName);
 
       LOG.info("indexerSpec: [%s]\n", task);
       String taskID = indexer.submitTask(task);
 
-
       // sleep for a while to let peons finish starting up
-      TimeUnit.SECONDS.sleep(5);
+      TimeUnit.SECONDS.sleep(60);
 
       // this posts 22 events, one every 4 seconds
       // each event contains the current time as its timestamp except
@@ -105,8 +109,21 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       //   the timestamp for the 18th event is 2 seconds earlier than the 17th
       postEvents();
 
-      // sleep for a while to let the events be ingested
-      TimeUnit.SECONDS.sleep(5);
+      // wait for a while to let the events be ingested
+      ITRetryUtil.retryUntil(
+          () -> {
+            final int countRows = queryHelper.countRows(
+                fullDatasourceName,
+                Intervals.ETERNITY,
+                name -> new LongSumAggregatorFactory(name, "count")
+            );
+            return countRows == getNumExpectedRowsIngested();
+          },
+          true,
+          DELAY_FOR_RETRIES_MS,
+          NUM_RETRIES,
+          "Waiting all events are ingested"
+      );
 
       // put the timestamps into the query structure
       String query_response_template;
@@ -133,7 +150,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       // and some on historical.  Which it is depends on where in the minute we were
       // when we started posting events.
       try {
-        this.queryHelper.testQueriesFromString(getRouterURL(), queryStr, 2);
+        this.queryHelper.testQueriesFromString(getRouterURL(), queryStr);
       }
       catch (Exception e) {
         throw new RuntimeException(e);
@@ -143,16 +160,16 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       indexer.waitUntilTaskCompletes(taskID);
 
       // task should complete only after the segments are loaded by historical node
-      RetryUtil.retryUntil(
+      ITRetryUtil.retryUntil(
           () -> coordinator.areSegmentsLoaded(fullDatasourceName),
           true,
-          10000,
-          60,
+          DELAY_FOR_RETRIES_MS,
+          NUM_RETRIES,
           "Real-time generated segments loaded"
       );
 
       // queries should be answered by historical
-      this.queryHelper.testQueriesFromString(getRouterURL(), queryStr, 2);
+      this.queryHelper.testQueriesFromString(getRouterURL(), queryStr);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -176,4 +193,6 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
   abstract String getQueriesResource();
 
   abstract void postEvents() throws Exception;
+
+  abstract int getNumExpectedRowsIngested();
 }

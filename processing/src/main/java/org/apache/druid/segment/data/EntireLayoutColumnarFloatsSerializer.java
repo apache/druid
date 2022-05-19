@@ -39,16 +39,18 @@ public class EntireLayoutColumnarFloatsSerializer implements ColumnarFloatsSeria
       .writeInt(x -> 0)
       .writeByte(x -> CompressionStrategy.NONE.getId());
 
+  private final String columnName;
   private final boolean isLittleEndian;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private WriteOutBytes valuesOut;
 
   private int numInserted = 0;
 
-  EntireLayoutColumnarFloatsSerializer(SegmentWriteOutMedium segmentWriteOutMedium, ByteOrder order)
+  EntireLayoutColumnarFloatsSerializer(String columnName, SegmentWriteOutMedium segmentWriteOutMedium, ByteOrder order)
   {
+    this.columnName = columnName;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
-    isLittleEndian = order.equals(ByteOrder.LITTLE_ENDIAN);
+    this.isLittleEndian = order.equals(ByteOrder.LITTLE_ENDIAN);
   }
 
   @Override
@@ -73,10 +75,13 @@ public class EntireLayoutColumnarFloatsSerializer implements ColumnarFloatsSeria
     }
     valuesOut.writeInt(valueBits);
     ++numInserted;
+    if (numInserted < 0) {
+      throw new ColumnCapacityExceededException(columnName);
+    }
   }
 
   @Override
-  public long getSerializedSize() throws IOException
+  public long getSerializedSize()
   {
     return META_SERDE_HELPER.size(this) + valuesOut.size();
   }

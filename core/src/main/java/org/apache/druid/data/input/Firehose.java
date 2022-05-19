@@ -67,20 +67,22 @@ public interface Firehose extends Closeable
   InputRow nextRow() throws IOException;
 
   /**
-   * Returns an InputRowPlusRaw object containing the InputRow plus the raw, unparsed data corresponding to the next row
-   * available. Used in the sampler to provide the caller with information to assist in configuring a parse spec. If a
-   * ParseException is thrown by the parser, it should be caught and returned in the InputRowPlusRaw so we will be able
-   * to provide information on the raw row which failed to be parsed. Should only be called if hasMore returns true.
+   * Returns an {@link InputRowListPlusRawValues} object containing the InputRow plus the raw, unparsed data corresponding to
+   * the next row available. Used in the sampler to provide the caller with information to assist in configuring a parse
+   * spec. If a ParseException is thrown by the parser, it should be caught and returned in the InputRowListPlusRawValues so
+   * we will be able to provide information on the raw row which failed to be parsed. Should only be called if hasMore
+   * returns true.
    *
-   * @return an InputRowPlusRaw which may contain any of: an InputRow, the raw data, or a ParseException
+   * @return an InputRowListPlusRawValues which may contain any of: an InputRow, map of the raw data, or a ParseException
    */
-  default InputRowPlusRaw nextRowWithRaw() throws IOException
+  @Deprecated
+  default InputRowListPlusRawValues nextRowWithRaw() throws IOException
   {
     try {
-      return InputRowPlusRaw.of(nextRow(), null);
+      return InputRowListPlusRawValues.of(nextRow(), null);
     }
     catch (ParseException e) {
-      return InputRowPlusRaw.of(null, e);
+      return InputRowListPlusRawValues.of(null, e);
     }
   }
 

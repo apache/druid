@@ -20,6 +20,7 @@
 package org.apache.druid.query.materializedview;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -31,6 +32,9 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.context.ResponseContext;
+
+import java.util.Comparator;
+import java.util.function.BinaryOperator;
 
 public class MaterializedViewQueryQueryToolChest extends QueryToolChest 
 {
@@ -59,6 +63,20 @@ public class MaterializedViewQueryQueryToolChest extends QueryToolChest
   }
 
   @Override
+  public BinaryOperator createMergeFn(Query query)
+  {
+    final Query realQuery = getRealQuery(query);
+    return warehouse.getToolChest(realQuery).createMergeFn(realQuery);
+  }
+
+  @Override
+  public Comparator createResultComparator(Query query)
+  {
+    final Query realQuery = getRealQuery(query);
+    return warehouse.getToolChest(realQuery).createResultComparator(realQuery);
+  }
+
+  @Override
   public QueryMetrics makeMetrics(Query query) 
   {
     Query realQuery = getRealQuery(query);
@@ -77,6 +95,13 @@ public class MaterializedViewQueryQueryToolChest extends QueryToolChest
   {
     Query realQuery = getRealQuery(query);
     return warehouse.getToolChest(realQuery).makePostComputeManipulatorFn(realQuery, fn);
+  }
+
+  @Override
+  public ObjectMapper decorateObjectMapper(final ObjectMapper objectMapper, final Query query)
+  {
+    Query realQuery = getRealQuery(query);
+    return warehouse.getToolChest(realQuery).decorateObjectMapper(objectMapper, realQuery);
   }
 
   @Override

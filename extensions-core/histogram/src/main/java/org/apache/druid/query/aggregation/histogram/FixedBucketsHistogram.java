@@ -25,9 +25,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -92,7 +94,7 @@ public class FixedBucketsHistogram
   public static final byte SPARSE_ENCODING_MODE = 0x02;
 
   /**
-   * Determines how the the histogram handles outliers.
+   * Determines how the histogram handles outliers.
    *
    * Ignore:   do not track outliers at all
    * Overflow: track outlier counts in upperOutlierCount and lowerOutlierCount.
@@ -428,6 +430,34 @@ public class FixedBucketsHistogram
     }
     finally {
       readWriteLock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * Merge another datapoint into this one. The other datapoint could be
+   *  - base64 encoded string of {@code FixedBucketsHistogram}
+   *  - {@code FixedBucketsHistogram} object
+   *  - Numeric value
+   *
+   * @param val
+   */
+  @VisibleForTesting
+  public void combine(@Nullable Object val)
+  {
+    if (val == null) {
+      if (NullHandling.replaceWithDefault()) {
+        add(NullHandling.defaultDoubleValue());
+      } else {
+        incrementMissing();
+      }
+    } else if (val instanceof String) {
+      combineHistogram(fromBase64((String) val));
+    } else if (val instanceof FixedBucketsHistogram) {
+      combineHistogram((FixedBucketsHistogram) val);
+    } else if (val instanceof Number) {
+      add(((Number) val).doubleValue());
+    } else {
+      throw new ISE("Unknown class for object: " + val.getClass());
     }
   }
 
@@ -962,7 +992,7 @@ public class FixedBucketsHistogram
     double max = buf.getDouble();
     double min = buf.getDouble();
 
-    long histogram[] = new long[numBuckets];
+    long[] histogram = new long[numBuckets];
     buf.asLongBuffer().get(histogram);
     buf.position(buf.position() + Long.BYTES * histogram.length);
 
@@ -1004,7 +1034,7 @@ public class FixedBucketsHistogram
     double min = buf.getDouble();
 
     int nonEmptyBuckets = buf.getInt();
-    long histogram[] = new long[numBuckets];
+    long[] histogram = new long[numBuckets];
     for (int i = 0; i < nonEmptyBuckets; i++) {
       int bucket = buf.getInt();
       long bucketCount = buf.getLong();

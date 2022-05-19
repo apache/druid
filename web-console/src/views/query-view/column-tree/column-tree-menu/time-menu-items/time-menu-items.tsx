@@ -18,24 +18,39 @@
 
 import { MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { AdditiveExpression, SqlQuery, Timestamp, timestampFactory } from 'druid-query-toolkit';
-import {
-  aliasFactory,
-  intervalFactory,
-  refExpressionFactory,
-  stringFactory,
-} from 'druid-query-toolkit/build/ast/sql-query/helpers';
+import { SqlExpression, SqlFunction, SqlLiteral, SqlQuery, SqlRef } from 'druid-query-toolkit';
 import React from 'react';
 
-function dateToTimestamp(date: Date): Timestamp {
-  return timestampFactory(
-    date
-      .toISOString()
-      .split('.')[0]
-      .split('T')
-      .join(' '),
-  );
+import { prettyPrintSql } from '../../../../../utils';
+
+const LATEST_HOUR: SqlExpression = SqlExpression.parse(
+  `? >= CURRENT_TIMESTAMP - INTERVAL '1' HOUR`,
+);
+const LATEST_DAY: SqlExpression = SqlExpression.parse(`? >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
+const LATEST_WEEK: SqlExpression = SqlExpression.parse(
+  `? >= CURRENT_TIMESTAMP - INTERVAL '1' WEEK`,
+);
+const LATEST_MONTH: SqlExpression = SqlExpression.parse(
+  `? >= CURRENT_TIMESTAMP - INTERVAL '1' MONTH`,
+);
+const LATEST_YEAR: SqlExpression = SqlExpression.parse(
+  `? >= CURRENT_TIMESTAMP - INTERVAL '1' YEAR`,
+);
+
+const BETWEEN: SqlExpression = SqlExpression.parse(`(? <= ? AND ? < ?)`);
+
+// ------------------------------------
+
+function fillWithColumn(b: SqlExpression, columnName: string): SqlExpression {
+  return b.fillPlaceholders([SqlRef.column(columnName)]);
 }
+
+function fillWithColumnStartEnd(columnName: string, start: Date, end: Date): SqlExpression {
+  const ref = SqlRef.column(columnName);
+  return BETWEEN.fillPlaceholders([SqlLiteral.create(start), ref, ref, SqlLiteral.create(end)])!;
+}
+
+// ------------------------------------
 
 function floorHour(dt: Date): Date {
   dt = new Date(dt.valueOf());
@@ -88,160 +103,71 @@ function nextYear(dt: Date): Date {
 }
 
 export interface TimeMenuItemsProps {
+  table: string;
+  schema: string;
   columnName: string;
   parsedQuery: SqlQuery;
-  onQueryChange: (queryString: SqlQuery, run?: boolean) => void;
+  onQueryChange: (query: SqlQuery, run?: boolean) => void;
 }
 
 export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuItemsProps) {
   function renderFilterMenu(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    const now = new Date();
 
+    function filterMenuItem(label: string, clause: SqlExpression) {
+      return (
+        <MenuItem
+          text={label}
+          onClick={() => {
+            onQueryChange(parsedQuery.removeColumnFromWhere(columnName).addWhere(clause), true);
+          }}
+        />
+      );
+    }
+
+    const now = new Date();
+    const hourStart = floorHour(now);
+    const dayStart = floorDay(now);
+    const monthStart = floorMonth(now);
+    const yearStart = floorYear(now);
     return (
-      <MenuItem icon={IconNames.FILTER} text={`Filter`}>
-        <MenuItem
-          text={`Latest hour`}
-          onClick={() => {
-            const additiveExpression = new AdditiveExpression({
-              parens: [],
-              op: ['-'],
-              ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('HOUR', '1')],
-              spacing: [' ', ' '],
-            });
-            onQueryChange(
-              parsedQuery.removeFilter(columnName).filterRow(columnName, additiveExpression, '>='),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`Latest day`}
-          onClick={() => {
-            const additiveExpression = new AdditiveExpression({
-              parens: [],
-              op: ['-'],
-              ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('DAY', '1')],
-              spacing: [' ', ' '],
-            });
-            onQueryChange(
-              parsedQuery.removeFilter(columnName).filterRow(columnName, additiveExpression, '>='),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`Latest week`}
-          onClick={() => {
-            const additiveExpression = new AdditiveExpression({
-              parens: [],
-              op: ['-'],
-              ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('DAY', '7')],
-              spacing: [' ', ' '],
-            });
-            onQueryChange(
-              parsedQuery.removeFilter(columnName).filterRow(columnName, additiveExpression, '>='),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`Latest month`}
-          onClick={() => {
-            const additiveExpression = new AdditiveExpression({
-              parens: [],
-              op: ['-'],
-              ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('MONTH', '1')],
-              spacing: [' ', ' '],
-            });
-            onQueryChange(
-              parsedQuery.removeFilter(columnName).filterRow(columnName, additiveExpression, '>='),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`Latest year`}
-          onClick={() => {
-            const additiveExpression = new AdditiveExpression({
-              parens: [],
-              op: ['-'],
-              ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('YEAR', '1')],
-              spacing: [' ', ' '],
-            });
-            onQueryChange(
-              parsedQuery.removeFilter(columnName).filterRow(columnName, additiveExpression, '>='),
-              true,
-            );
-          }}
-        />
+      <MenuItem icon={IconNames.FILTER} text="Filter">
+        {filterMenuItem(`Latest hour`, fillWithColumn(LATEST_HOUR, columnName))}
+        {filterMenuItem(`Latest day`, fillWithColumn(LATEST_DAY, columnName))}
+        {filterMenuItem(`Latest week`, fillWithColumn(LATEST_WEEK, columnName))}
+        {filterMenuItem(`Latest month`, fillWithColumn(LATEST_MONTH, columnName))}
+        {filterMenuItem(`Latest year`, fillWithColumn(LATEST_YEAR, columnName))}
         <MenuDivider />
-        <MenuItem
-          text={`Current hour`}
-          onClick={() => {
-            const hourStart = floorHour(now);
-            onQueryChange(
-              parsedQuery
-                .removeFilter(columnName)
-                .filterRow(dateToTimestamp(hourStart), stringFactory(columnName, `"`), '<=')
-                .filterRow(columnName, dateToTimestamp(nextHour(hourStart)), '<'),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`Current day`}
-          onClick={() => {
-            const dayStart = floorDay(now);
-            onQueryChange(
-              parsedQuery
-                .removeFilter(columnName)
-                .filterRow(dateToTimestamp(dayStart), stringFactory(columnName, `"`), '<=')
-                .filterRow(columnName, dateToTimestamp(nextDay(dayStart)), '<'),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`Current month`}
-          onClick={() => {
-            const monthStart = floorMonth(now);
-            onQueryChange(
-              parsedQuery
-                .removeFilter(columnName)
-                .filterRow(dateToTimestamp(monthStart), stringFactory(columnName, `"`), '<=')
-                .filterRow(columnName, dateToTimestamp(nextMonth(monthStart)), '<'),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`Current year`}
-          onClick={() => {
-            const yearStart = floorYear(now);
-            onQueryChange(
-              parsedQuery
-                .removeFilter(columnName)
-                .filterRow(dateToTimestamp(yearStart), stringFactory(columnName, `"`), '<=')
-                .filterRow(columnName, dateToTimestamp(nextYear(yearStart)), '<'),
-              true,
-            );
-          }}
-        />
+        {filterMenuItem(
+          `Current hour`,
+          fillWithColumnStartEnd(columnName, hourStart, nextHour(hourStart)),
+        )}
+        {filterMenuItem(
+          `Current day`,
+          fillWithColumnStartEnd(columnName, dayStart, nextDay(dayStart)),
+        )}
+        {filterMenuItem(
+          `Current month`,
+          fillWithColumnStartEnd(columnName, monthStart, nextMonth(monthStart)),
+        )}
+        {filterMenuItem(
+          `Current year`,
+          fillWithColumnStartEnd(columnName, yearStart, nextYear(yearStart)),
+        )}
       </MenuItem>
     );
   }
 
   function renderRemoveFilter(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    if (!parsedQuery.hasFilterForColumn(columnName)) return;
+    if (!parsedQuery.getEffectiveWhereExpression().containsColumn(columnName)) return;
 
     return (
       <MenuItem
         icon={IconNames.FILTER_REMOVE}
-        text={`Remove filter`}
+        text="Remove filter"
         onClick={() => {
-          onQueryChange(parsedQuery.removeFilter(columnName), true);
+          onQueryChange(parsedQuery.removeColumnFromWhere(columnName), true);
         }}
       />
     );
@@ -249,13 +175,15 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
 
   function renderRemoveGroupBy(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    if (!parsedQuery.hasGroupByForColumn(columnName)) return;
+    const groupedSelectIndexes = parsedQuery.getGroupedSelectIndexesForColumn(columnName);
+    if (!groupedSelectIndexes.length) return;
+
     return (
       <MenuItem
         icon={IconNames.UNGROUP_OBJECTS}
-        text={'Remove group by'}
+        text="Remove group by"
         onClick={() => {
-          onQueryChange(parsedQuery.removeGroupBy(columnName), true);
+          onQueryChange(parsedQuery.removeSelectIndexes(groupedSelectIndexes), true);
         }}
       />
     );
@@ -264,51 +192,60 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
   function renderGroupByMenu(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.hasGroupBy()) return;
+    const ref = SqlRef.column(columnName);
+
+    function groupByMenuItem(ex: SqlExpression, alias: string) {
+      return (
+        <MenuItem
+          text={prettyPrintSql(ex)}
+          onClick={() => {
+            onQueryChange(
+              parsedQuery.addSelect(ex.as(alias), {
+                insertIndex: 'last-grouping',
+                addToGroupBy: 'end',
+              }),
+              true,
+            );
+          }}
+        />
+      );
+    }
 
     return (
-      <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by`}>
-        <MenuItem
-          text={`TIME_FLOOR("${columnName}", 'PT1H') AS "${columnName}_time_floor"`}
-          onClick={() => {
-            onQueryChange(
-              parsedQuery.addFunctionToGroupBy(
-                'TIME_FLOOR',
-                [' '],
-                [stringFactory(columnName, `"`), stringFactory('PT1H', `'`)],
-                aliasFactory(`${columnName}_time_floor`),
-              ),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`TIME_FLOOR("${columnName}", 'P1D') AS "${columnName}_time_floor"`}
-          onClick={() => {
-            onQueryChange(
-              parsedQuery.addFunctionToGroupBy(
-                'TIME_FLOOR',
-                [' '],
-                [stringFactory(columnName, `"`), stringFactory('P1D', `'`)],
-                aliasFactory(`${columnName}_time_floor`),
-              ),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`TIME_FLOOR("${columnName}", 'P7D') AS "${columnName}_time_floor"`}
-          onClick={() => {
-            onQueryChange(
-              parsedQuery.addFunctionToGroupBy(
-                'TIME_FLOOR',
-                [' '],
-                [stringFactory(columnName, `"`), stringFactory('P7D', `'`)],
-                aliasFactory(`${columnName}_time_floor`),
-              ),
-              true,
-            );
-          }}
-        />
+      <MenuItem icon={IconNames.GROUP_OBJECTS} text="Group by">
+        {groupByMenuItem(
+          SqlFunction.simple('TIME_FLOOR', [ref, SqlLiteral.create('PT1H')]),
+          `${columnName}_by_hour`,
+        )}
+        {groupByMenuItem(
+          SqlFunction.simple('TIME_FLOOR', [ref, SqlLiteral.create('P1D')]),
+          `${columnName}_by_day`,
+        )}
+        {groupByMenuItem(
+          SqlFunction.simple('TIME_FLOOR', [ref, SqlLiteral.create('P1M')]),
+          `${columnName}_by_month`,
+        )}
+        {groupByMenuItem(
+          SqlFunction.simple('TIME_FLOOR', [ref, SqlLiteral.create('P1Y')]),
+          `${columnName}_by_year`,
+        )}
+        <MenuDivider />
+        {groupByMenuItem(
+          SqlFunction.simple('TIME_EXTRACT', [ref, SqlLiteral.create('HOUR')]),
+          `hour_of_${columnName}`,
+        )}
+        {groupByMenuItem(
+          SqlFunction.simple('TIME_EXTRACT', [ref, SqlLiteral.create('DAY')]),
+          `day_of_${columnName}`,
+        )}
+        {groupByMenuItem(
+          SqlFunction.simple('TIME_EXTRACT', [ref, SqlLiteral.create('MONTH')]),
+          `month_of_${columnName}`,
+        )}
+        {groupByMenuItem(
+          SqlFunction.simple('TIME_EXTRACT', [ref, SqlLiteral.create('YEAR')]),
+          `year_of_${columnName}`,
+        )}
       </MenuItem>
     );
   }
@@ -316,27 +253,23 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
   function renderAggregateMenu(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.hasGroupBy()) return;
+    const ref = SqlRef.column(columnName);
+
+    function aggregateMenuItem(ex: SqlExpression, alias: string) {
+      return (
+        <MenuItem
+          text={prettyPrintSql(ex)}
+          onClick={() => {
+            onQueryChange(parsedQuery.addSelect(ex.as(alias)), true);
+          }}
+        />
+      );
+    }
 
     return (
-      <MenuItem icon={IconNames.FUNCTION} text={`Aggregate`}>
-        <MenuItem
-          text={`MAX("${columnName}") AS "max_${columnName}"`}
-          onClick={() => {
-            onQueryChange(
-              parsedQuery.addAggregateColumn(columnName, 'MAX', aliasFactory(`max_${columnName}`)),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`MIN("${columnName}") AS "min_${columnName}"`}
-          onClick={() => {
-            onQueryChange(
-              parsedQuery.addAggregateColumn(columnName, 'MIN', aliasFactory(`min_${columnName}`)),
-              true,
-            );
-          }}
-        />
+      <MenuItem icon={IconNames.FUNCTION} text="Aggregate">
+        {aggregateMenuItem(SqlFunction.simple('MAX', [ref]), `max_${columnName}`)}
+        {aggregateMenuItem(SqlFunction.simple('MIN', [ref]), `min_${columnName}`)}
       </MenuItem>
     );
   }

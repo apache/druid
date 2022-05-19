@@ -21,6 +21,8 @@ package org.apache.druid.client.selector;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.DataSegmentInterner;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryRunner;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -36,7 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
-public class ServerSelector implements DiscoverySelector<QueryableDruidServer>, Overshadowable<ServerSelector>
+public class ServerSelector implements Overshadowable<ServerSelector>
 {
 
   private final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> historicalServers;
@@ -160,14 +162,13 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>, 
   }
 
   @Nullable
-  @Override
-  public QueryableDruidServer pick()
+  public <T> QueryableDruidServer<? extends QueryRunner<T>> pick(@Nullable Query<T> query)
   {
     synchronized (this) {
       if (!historicalServers.isEmpty()) {
-        return strategy.pick(historicalServers, segment.get());
+        return strategy.pick(query, historicalServers, segment.get());
       }
-      return strategy.pick(realtimeServers, segment.get());
+      return strategy.pick(query, realtimeServers, segment.get());
     }
   }
 
@@ -208,4 +209,11 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>, 
   {
     return segment.get().getAtomicUpdateGroupSize();
   }
+
+  @Override
+  public boolean hasData()
+  {
+    return segment.get().hasData();
+  }
+
 }

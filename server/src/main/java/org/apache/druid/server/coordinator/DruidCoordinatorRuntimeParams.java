@@ -23,18 +23,18 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
@@ -43,6 +43,8 @@ import java.util.concurrent.TimeUnit;
 public class DruidCoordinatorRuntimeParams
 {
   /**
+   * Creates a Set to be assigned into {@link Builder#usedSegments} from the given {@link Iterable} of segments.
+   *
    * Creates a TreeSet sorted in {@link DruidCoordinator#SEGMENT_COMPARATOR_RECENT_FIRST} order and populates it with
    * the segments from the given iterable. The given iterable is iterated exactly once. No special action is taken if
    * duplicate segments are encountered in the iterable.
@@ -66,8 +68,8 @@ public class DruidCoordinatorRuntimeParams
   private final CoordinatorDynamicConfig coordinatorDynamicConfig;
   private final CoordinatorCompactionConfig coordinatorCompactionConfig;
   private final CoordinatorStats stats;
-  private final DateTime balancerReferenceTimestamp;
   private final BalancerStrategy balancerStrategy;
+  private final Set<String> broadcastDatasources;
 
   private DruidCoordinatorRuntimeParams(
       long startTimeNanos,
@@ -82,8 +84,8 @@ public class DruidCoordinatorRuntimeParams
       CoordinatorDynamicConfig coordinatorDynamicConfig,
       CoordinatorCompactionConfig coordinatorCompactionConfig,
       CoordinatorStats stats,
-      DateTime balancerReferenceTimestamp,
-      BalancerStrategy balancerStrategy
+      BalancerStrategy balancerStrategy,
+      Set<String> broadcastDatasources
   )
   {
     this.startTimeNanos = startTimeNanos;
@@ -98,8 +100,8 @@ public class DruidCoordinatorRuntimeParams
     this.coordinatorDynamicConfig = coordinatorDynamicConfig;
     this.coordinatorCompactionConfig = coordinatorCompactionConfig;
     this.stats = stats;
-    this.balancerReferenceTimestamp = balancerReferenceTimestamp;
     this.balancerStrategy = balancerStrategy;
+    this.broadcastDatasources = broadcastDatasources;
   }
 
   public long getStartTimeNanos()
@@ -168,14 +170,14 @@ public class DruidCoordinatorRuntimeParams
     return stats;
   }
 
-  public DateTime getBalancerReferenceTimestamp()
-  {
-    return balancerReferenceTimestamp;
-  }
-
   public BalancerStrategy getBalancerStrategy()
   {
     return balancerStrategy;
+  }
+
+  public Set<String> getBroadcastDatasources()
+  {
+    return broadcastDatasources;
   }
 
   public boolean coordinatorIsLeadingEnoughTimeToMarkAsUnusedOvershadowedSegements()
@@ -189,6 +191,7 @@ public class DruidCoordinatorRuntimeParams
 
   public DataSourcesSnapshot getDataSourcesSnapshot()
   {
+    Preconditions.checkState(dataSourcesSnapshot != null, "usedSegments or dataSourcesSnapshot must be set");
     return dataSourcesSnapshot;
   }
 
@@ -212,8 +215,8 @@ public class DruidCoordinatorRuntimeParams
         coordinatorDynamicConfig,
         coordinatorCompactionConfig,
         stats,
-        balancerReferenceTimestamp,
-        balancerStrategy
+        balancerStrategy,
+        broadcastDatasources
     );
   }
 
@@ -232,8 +235,8 @@ public class DruidCoordinatorRuntimeParams
         coordinatorDynamicConfig,
         coordinatorCompactionConfig,
         stats,
-        balancerReferenceTimestamp,
-        balancerStrategy
+        balancerStrategy,
+        broadcastDatasources
     );
   }
 
@@ -251,8 +254,8 @@ public class DruidCoordinatorRuntimeParams
     private CoordinatorDynamicConfig coordinatorDynamicConfig;
     private CoordinatorCompactionConfig coordinatorCompactionConfig;
     private CoordinatorStats stats;
-    private DateTime balancerReferenceTimestamp;
     private BalancerStrategy balancerStrategy;
+    private Set<String> broadcastDatasources;
 
     private Builder()
     {
@@ -268,7 +271,7 @@ public class DruidCoordinatorRuntimeParams
       this.stats = new CoordinatorStats();
       this.coordinatorDynamicConfig = CoordinatorDynamicConfig.builder().build();
       this.coordinatorCompactionConfig = CoordinatorCompactionConfig.empty();
-      this.balancerReferenceTimestamp = DateTimes.nowUtc();
+      this.broadcastDatasources = new HashSet<>();
     }
 
     Builder(
@@ -284,8 +287,8 @@ public class DruidCoordinatorRuntimeParams
         CoordinatorDynamicConfig coordinatorDynamicConfig,
         CoordinatorCompactionConfig coordinatorCompactionConfig,
         CoordinatorStats stats,
-        DateTime balancerReferenceTimestamp,
-        BalancerStrategy balancerStrategy
+        BalancerStrategy balancerStrategy,
+        Set<String> broadcastDatasources
     )
     {
       this.startTimeNanos = startTimeNanos;
@@ -300,8 +303,8 @@ public class DruidCoordinatorRuntimeParams
       this.coordinatorDynamicConfig = coordinatorDynamicConfig;
       this.coordinatorCompactionConfig = coordinatorCompactionConfig;
       this.stats = stats;
-      this.balancerReferenceTimestamp = balancerReferenceTimestamp;
       this.balancerStrategy = balancerStrategy;
+      this.broadcastDatasources = broadcastDatasources;
     }
 
     public DruidCoordinatorRuntimeParams build()
@@ -320,8 +323,8 @@ public class DruidCoordinatorRuntimeParams
           coordinatorDynamicConfig,
           coordinatorCompactionConfig,
           stats,
-          balancerReferenceTimestamp,
-          balancerStrategy
+          balancerStrategy,
+          broadcastDatasources
       );
     }
 
@@ -422,15 +425,15 @@ public class DruidCoordinatorRuntimeParams
       return this;
     }
 
-    public Builder withBalancerReferenceTimestamp(DateTime balancerReferenceTimestamp)
-    {
-      this.balancerReferenceTimestamp = balancerReferenceTimestamp;
-      return this;
-    }
-
     public Builder withBalancerStrategy(BalancerStrategy balancerStrategy)
     {
       this.balancerStrategy = balancerStrategy;
+      return this;
+    }
+
+    public Builder withBroadcastDatasources(Set<String> broadcastDatasources)
+    {
+      this.broadcastDatasources = broadcastDatasources;
       return this;
     }
   }

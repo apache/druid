@@ -21,6 +21,9 @@ package org.apache.druid.cli.validate;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -30,8 +33,6 @@ import com.google.common.io.LineProcessor;
 import com.google.common.io.Resources;
 import com.google.inject.Injector;
 import com.google.inject.name.Names;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
 import io.netty.util.SuppressForbidden;
 import org.apache.commons.io.output.NullWriter;
 import org.apache.druid.cli.GuiceRunnable;
@@ -41,6 +42,7 @@ import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
+import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
@@ -75,16 +77,18 @@ public class DruidJsonValidator extends GuiceRunnable
   private static final Logger LOG = new Logger(DruidJsonValidator.class);
   private Writer logWriter = new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8));
 
-  @Option(name = "-f", title = "file", description = "file to validate", required = true)
+  @Option(name = "-f", title = "file", description = "file to validate")
+  @Required
   public String jsonFile;
 
-  @Option(name = "-t", title = "type", description = "the type of schema to validate", required = true)
+  @Option(name = "-t", title = "type", description = "the type of schema to validate")
+  @Required
   public String type;
 
-  @Option(name = "-r", title = "resource", description = "optional resources required for validation", required = false)
+  @Option(name = "-r", title = "resource", description = "optional resources required for validation")
   public String resource;
 
-  @Option(name = "--log", title = "toLogger", description = "redirects any outputs to logger", required = false)
+  @Option(name = "--log", title = "toLogger", description = "redirects any outputs to logger")
   public boolean toLogger;
 
   public DruidJsonValidator()
@@ -98,7 +102,7 @@ public class DruidJsonValidator extends GuiceRunnable
     return ImmutableList.of(
         // It's unknown if those modules are required in DruidJsonValidator.
         // Maybe some of those modules could be removed.
-        // See https://github.com/apache/incubator-druid/pull/4429#discussion_r123603498
+        // See https://github.com/apache/druid/pull/4429#discussion_r123603498
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
@@ -129,6 +133,7 @@ public class DruidJsonValidator extends GuiceRunnable
                 new FirehoseModule(),
                 new IndexingHadoopModule(),
                 new IndexingServiceFirehoseModule(),
+                new IndexingServiceInputSourceModule(),
                 new LocalDataStorageDruidModule()
             )
         )

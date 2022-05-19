@@ -23,8 +23,12 @@ sidebar_label: "GroupBy"
   ~ under the License.
   -->
 
+> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+> This document describes a query
+> type in the native language. For information about when Druid SQL will use this query type, refer to the
+> [SQL documentation](sql-translation.md#query-types).
 
-These types of Apache Druid (incubating) queries take a groupBy query object and return an array of JSON objects where each object represents a
+These types of Apache Druid queries take a groupBy query object and return an array of JSON objects where each object represents a
 grouping asked for by the query.
 
 > Note: If you are doing aggregations with time as your only grouping, or an ordered groupBy over a single dimension,
@@ -89,7 +93,7 @@ Following are main parts to a groupBy query:
 |aggregations|See [Aggregations](../querying/aggregations.md)|no|
 |postAggregations|See [Post Aggregations](../querying/post-aggregations.md)|no|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
-|subtotalsSpec| A JSON array of arrays to return additional result sets for groupings of subsets of top level `dimensions`. It is [described later](groupbyquery.html#more-on-subtotalsspec) in more detail.|no|
+|subtotalsSpec| A JSON array of arrays to return additional result sets for groupings of subsets of top level `dimensions`. It is [described later](groupbyquery.md#more-on-subtotalsspec) in more detail.|no|
 |context|An additional JSON Object which can be used to specify certain flags.|no|
 
 To pull it all together, the above query would return *n\*m* data points, up to a maximum of 5000 points, where n is the cardinality of the `country` dimension, m is the cardinality of the `device` dimension, each day between 2012-01-01 and 2012-01-03, from the `sample_datasource` table. Each data point contains the (long) sum of `total_usage` if the value of the data point is greater than 100, the (double) sum of `data_transfer` and the (double) result of `total_usage` divided by `data_transfer` for the filter set for a particular grouping of `country` and `device`. The output looks like this:
@@ -128,13 +132,16 @@ groupBy queries can group on multi-value dimensions. When grouping on a multi-va
 from matching rows will be used to generate one group per value. It's possible for a query to return more groups than
 there are rows. For example, a groupBy on the dimension `tags` with filter `"t1" AND "t3"` would match only row1, and
 generate a result with three groups: `t1`, `t2`, and `t3`. If you only need to include values that match
-your filter, you can use a [filtered dimensionSpec](dimensionspecs.html#filtered-dimensionspecs). This can also
+your filter, you can use a [filtered dimensionSpec](dimensionspecs.md#filtered-dimensionspecs). This can also
 improve performance.
 
-See [Multi-value dimensions](multi-value-dimensions.html) for more details.
+See [Multi-value dimensions](multi-value-dimensions.md) for more details.
 
 ## More on subtotalsSpec
-The subtotals feature allows computation of multiple sub-groupings in a single query. To use this feature, add a "subtotalsSpec" to your query, which should be a list of subgroup dimension sets. It should contain the "outputName" from dimensions in your "dimensions" attribute, in the same order as they appear in the "dimensions" attribute (although, of course, you may skip some). For example, consider a groupBy query like this one:
+
+The subtotals feature allows computation of multiple sub-groupings in a single query. To use this feature, add a "subtotalsSpec" to your query as a list of subgroup dimension sets. It should contain the `outputName` from dimensions in your `dimensions` attribute, in the same order as they appear in the `dimensions` attribute (although, of course, you may skip some). 
+
+For example, consider a groupBy query like this one:
 
 ```json
 {
@@ -168,8 +175,8 @@ The subtotals feature allows computation of multiple sub-groupings in a single q
 }
 ```
 
-Response returned would be equivalent to concatenating result of 3 groupBy queries with "dimensions" field being ["D1", "D2", D3"], ["D1", "D3"] and ["D3"] with appropriate `DimensionSpec` json blob as used in above query.
-Response for above query would look something like below...
+The result of the subtotalsSpec would be equivalent to concatenating the result of three groupBy queries, with the "dimensions" field being `["D1", "D2", D3"]`, `["D1", "D3"]` and `["D3"]`, given the `DimensionSpec` shown above.
+The response for the query above would look something like: 
 
 ```json
 [
@@ -191,13 +198,13 @@ Response for above query would look something like below...
    {
     "version" : "v1",
     "timestamp" : "t1",
-    "event" : { "D1": "..", "D3": ".." }
+    "event" : { "D1": "..", "D2": null, "D3": ".." }
     }
   },
     {
     "version" : "v1",
     "timestamp" : "t2",
-    "event" : { "D1": "..", "D3": ".." }
+    "event" : { "D1": "..", "D2": null, "D3": ".." }
     }
   },
   ...
@@ -206,18 +213,23 @@ Response for above query would look something like below...
   {
     "version" : "v1",
     "timestamp" : "t1",
-    "event" : { "D3": ".." }
+    "event" : { "D1": null, "D2": null, "D3": ".." }
     }
   },
     {
     "version" : "v1",
     "timestamp" : "t2",
-    "event" : { "D3": ".." }
+    "event" : { "D1": null, "D2": null, "D3": ".." }
     }
   },
 ...
 ]
 ```
+
+> Notice that dimensions that are not included in an individual subtotalsSpec grouping are returned with a `null` value. This response format represents a behavior change as of Apache Druid 0.18.0. 
+> In release 0.17.0 and earlier, such dimensions were entirely excluded from the result. If you were relying on this old behavior to determine whether a particular dimension was not part of
+> a subtotal grouping, you can now use [Grouping aggregator](aggregations.md#grouping-aggregator) instead.  
+
 
 ## Implementation details
 
@@ -257,21 +269,24 @@ by using a finite-sized merge buffer pool. By default, the number of merge buffe
 threads. You can adjust this as necessary to balance concurrency and memory usage.
 - groupBy v1 supports caching on either the Broker or Historical processes, whereas groupBy v2 only supports caching on
 Historical processes.
-- groupBy v1 supports using [chunkPeriod](query-context.html) to parallelize merging on the Broker, whereas groupBy v2
-ignores chunkPeriod.
 - groupBy v2 supports both array-based aggregation and hash-based aggregation. The array-based aggregation is used only
 when the grouping key is a single indexed string column. In array-based aggregation, the dictionary-encoded value is used
 as the index, so the aggregated values in the array can be accessed directly without finding buckets based on hashing.
 
 ### Memory tuning and resource limits
 
-When using groupBy v2, three parameters control resource usage and limits:
+When using groupBy v2, four parameters control resource usage and limits:
 
 - `druid.processing.buffer.sizeBytes`: size of the off-heap hash table used for aggregation, per query, in bytes. At
 most `druid.processing.numMergeBuffers` of these will be created at once, which also serves as an upper limit on the
 number of concurrently running groupBy queries.
-- `druid.query.groupBy.maxMergingDictionarySize`: size of the on-heap dictionary used when grouping on strings, per query,
-in bytes. Note that this is based on a rough estimate of the dictionary size, not the actual size.
+- `druid.query.groupBy.maxSelectorDictionarySize`: size of the on-heap segment-level dictionary used when grouping on
+string or array-valued expressions that do not have pre-existing dictionaries. There is at most one dictionary per
+processing thread; therefore there are up to `druid.processing.numThreads` of these. Note that the size is based on a
+rough estimate of the dictionary footprint.
+- `druid.query.groupBy.maxMergingDictionarySize`: size of the on-heap query-level dictionary used when grouping on
+any string expression. There is at most one dictionary per concurrently-running query; therefore there are up to
+`druid.server.http.numThreads` of these. Note that the size is based on a rough estimate of the dictionary footprint.
 - `druid.query.groupBy.maxOnDiskStorage`: amount of space on disk used for aggregation, per query, in bytes. By default,
 this is 0, which means aggregation will not use disk.
 
@@ -289,9 +304,9 @@ will not exceed available memory for the maximum possible concurrent query load 
 `druid.processing.numMergeBuffers`). See the [basic cluster tuning guide](../operations/basic-cluster-tuning.md) 
 for more details about direct memory usage, organized by Druid process type.
 
-Brokers do not need merge buffers for basic groupBy queries. Queries with subqueries (using a `query` dataSource) require one merge buffer if there is a single subquery, or two merge buffers if there is more than one layer of nested subqueries. Queries with [subtotals](groupbyquery.html#more-on-subtotalsspec) need one merge buffer. These can stack on top of each other: a groupBy query with multiple layers of nested subqueries, and that also uses subtotals, will need three merge buffers.
+Brokers do not need merge buffers for basic groupBy queries. Queries with subqueries (using a `query` dataSource) require one merge buffer if there is a single subquery, or two merge buffers if there is more than one layer of nested subqueries. Queries with [subtotals](groupbyquery.md#more-on-subtotalsspec) need one merge buffer. These can stack on top of each other: a groupBy query with multiple layers of nested subqueries, and that also uses subtotals, will need three merge buffers.
 
-Historicals and ingestion tasks need one merge buffer for each groupBy query, unless [parallel combination](groupbyquery.html#parallel-combine) is enabled, in which case they need two merge buffers per query.
+Historicals and ingestion tasks need one merge buffer for each groupBy query, unless [parallel combination](groupbyquery.md#parallel-combine) is enabled, in which case they need two merge buffers per query.
 
 When using groupBy v1, all aggregation is done on-heap, and resource limits are done through the parameter
 `druid.query.groupBy.maxResults`. This is a cap on the maximum number of results in a result set. Queries that exceed
@@ -345,11 +360,11 @@ computing intermediate aggregates from each segment and another for combining in
 
 There are some situations where other query types may be a better choice than groupBy.
 
-- For queries with no "dimensions" (i.e. grouping by time only) the [Timeseries query](timeseriesquery.html) will
+- For queries with no "dimensions" (i.e. grouping by time only) the [Timeseries query](timeseriesquery.md) will
 generally be faster than groupBy. The major differences are that it is implemented in a fully streaming manner (taking
 advantage of the fact that segments are already sorted on time) and does not need to use a hash table for merging.
 
-- For queries with a single "dimensions" element (i.e. grouping by one string dimension), the [TopN query](topnquery.html)
+- For queries with a single "dimensions" element (i.e. grouping by one string dimension), the [TopN query](topnquery.md)
 will sometimes be faster than groupBy. This is especially true if you are ordering by a metric and find approximate
 results acceptable.
 
@@ -363,7 +378,7 @@ strategy perform the outer query on the Broker in a single-threaded fashion.
 
 ### Configurations
 
-This section describes the configurations for groupBy queries. You can set the runtime properties in the `runtime.properties` file on Broker, Historical, and MiddleManager processes. You can set the query context parameters through the [query context](query-context.html).
+This section describes the configurations for groupBy queries. You can set the runtime properties in the `runtime.properties` file on Broker, Historical, and MiddleManager processes. You can set the query context parameters through the [query context](query-context.md).
 
 #### Configurations for groupBy v2
 
@@ -371,13 +386,15 @@ Supported runtime properties:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.groupBy.maxMergingDictionarySize`|Maximum amount of heap space (approximately) to use for the string dictionary during merging. When the dictionary exceeds this size, a spill to disk will be triggered.|100000000|
+|`druid.query.groupBy.maxSelectorDictionarySize`|Maximum amount of heap space (approximately) to use for per-segment string dictionaries. See [Memory tuning and resource limits](#memory-tuning-and-resource-limits) for details.|100000000|
+|`druid.query.groupBy.maxMergingDictionarySize`|Maximum amount of heap space (approximately) to use for per-query string dictionaries. When the dictionary exceeds this size, a spill to disk will be triggered. See [Memory tuning and resource limits](#memory-tuning-and-resource-limits) for details.|100000000|
 |`druid.query.groupBy.maxOnDiskStorage`|Maximum amount of disk space to use, per-query, for spilling result sets to disk when either the merging buffer or the dictionary fills up. Queries that exceed this limit will fail. Set to zero to disable disk spilling.|0 (disabled)|
 
 Supported query contexts:
 
 |Key|Description|
 |---|-----------|
+|`maxSelectorDictionarySize`|Can be used to lower the value of `druid.query.groupBy.maxMergingDictionarySize` for this query.|
 |`maxMergingDictionarySize`|Can be used to lower the value of `druid.query.groupBy.maxMergingDictionarySize` for this query.|
 |`maxOnDiskStorage`|Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.|
 
@@ -392,6 +409,7 @@ Supported runtime properties:
 |--------|-----------|-------|
 |`druid.query.groupBy.defaultStrategy`|Default groupBy query strategy.|v2|
 |`druid.query.groupBy.singleThreaded`|Merge results using a single thread.|false|
+|`druid.query.groupBy.intermediateResultAsMapCompat`|Whether Brokers are able to understand map-based result rows. Setting this to `true` adds some overhead to all groupBy queries. It is required for compatibility with data servers running versions older than 0.16.0, which introduced [array-based result rows](#array-based-result-rows).|false|
 
 Supported query contexts:
 
@@ -412,7 +430,7 @@ Supported runtime properties:
 |`druid.query.groupBy.forceHashAggregation`|Force to use hash-based aggregation.|false|
 |`druid.query.groupBy.intermediateCombineDegree`|Number of intermediate nodes combined together in the combining tree. Higher degrees will need less threads which might be helpful to improve the query performance by reducing the overhead of too many threads if the server has sufficiently powerful cpu cores.|8|
 |`druid.query.groupBy.numParallelCombineThreads`|Hint for the number of parallel combining threads. This should be larger than 1 to turn on the parallel combining feature. The actual number of threads used for parallel combining is min(`druid.query.groupBy.numParallelCombineThreads`, `druid.processing.numThreads`).|1 (disabled)|
-|`druid.query.groupBy.applyLimitPushDownToSegment`|If Broker pushes limit down to queryable nodes (historicals, peons) then limit results during segment scan.|true (enabled)|
+|`druid.query.groupBy.applyLimitPushDownToSegment`|If Broker pushes limit down to queryable data server (historicals, peons) then limit results during segment scan. If typically there are a large number of segments taking part in a query on a data server, this setting may counterintuitively reduce performance if enabled.|false (disabled)|
 
 Supported query contexts:
 
@@ -426,6 +444,7 @@ Supported query contexts:
 |`sortByDimsFirst`|Sort the results first by dimension values and then by timestamp.|false|
 |`forceLimitPushDown`|When all fields in the orderby are part of the grouping key, the Broker will push limit application down to the Historical processes. When the sorting order uses fields that are not in the grouping key, applying this optimization can result in approximate results with unknown accuracy, so this optimization is disabled by default in that case. Enabling this context flag turns on limit push down for limit/orderbys that contain non-grouping key columns.|false|
 |`applyLimitPushDownToSegment`|If Broker pushes limit down to queryable nodes (historicals, peons) then limit results during segment scan. This context value can be used to override `druid.query.groupBy.applyLimitPushDownToSegment`.|true|
+|`groupByEnableMultiValueUnnesting`|Safety flag to enable/disable the implicit unnesting on multi value column's as part of the grouping key. 'true' indicates multi-value grouping keys are unnested. 'false' returns an error if a multi value column is found as part of the grouping key.|true|
 
 
 #### GroupBy v1 configurations
@@ -441,9 +460,9 @@ Supported query contexts:
 
 |Key|Description|Default|
 |---|-----------|-------|
-|`maxIntermediateRows`|Can be used to lower the value of `druid.query.groupBy.maxIntermediateRows` for this query.|None|
-|`maxResults`|Can be used to lower the value of `druid.query.groupBy.maxResults` for this query.|None|
-|`useOffheap`|Set to true to store aggregations off-heap when merging results.|false|
+|`maxIntermediateRows`|Ignored by groupBy v2. Can be used to lower the value of `druid.query.groupBy.maxIntermediateRows` for a groupBy v1 query.|None|
+|`maxResults`|Ignored by groupBy v2. Can be used to lower the value of `druid.query.groupBy.maxResults` for a groupBy v1 query.|None|
+|`useOffheap`|Ignored by groupBy v2, and no longer supported for groupBy v1. Enabling this option with groupBy v1 will result in an error. For off-heap aggregation, switch to groupBy v2, which always operates off-heap.|false|
 
 #### Array based result rows
 

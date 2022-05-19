@@ -78,7 +78,7 @@ public class CompressedLongsAutoEncodingSerdeTest
     double numValuesPerByte = 8.0 / (double) numBits;
 
     int numRows = (int) (blockSize * numValuesPerByte) * 2 + ThreadLocalRandom.current().nextInt(1, 101);
-    long chunk[] = new long[numRows];
+    long[] chunk = new long[numRows];
     for (int i = 0; i < numRows; i++) {
       chunk[i] = ThreadLocalRandom.current().nextLong(bound);
     }
@@ -95,6 +95,7 @@ public class CompressedLongsAutoEncodingSerdeTest
   public void testValues(long[] values) throws Exception
   {
     ColumnarLongsSerializer serializer = CompressionFactory.getLongSerializer(
+        "test",
         new OffHeapMemorySegmentWriteOutMedium(),
         "test",
         order,

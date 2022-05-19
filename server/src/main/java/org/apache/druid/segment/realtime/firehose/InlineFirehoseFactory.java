@@ -21,6 +21,7 @@ package org.apache.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;
@@ -30,7 +31,6 @@ import org.apache.druid.data.input.impl.StringInputRowParser;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -41,8 +41,9 @@ public class InlineFirehoseFactory implements FiniteFirehoseFactory<StringInputR
 {
   private final String data;
 
+  @VisibleForTesting
   @JsonCreator
-  InlineFirehoseFactory(@JsonProperty("data") String data)
+  public InlineFirehoseFactory(@JsonProperty("data") String data)
   {
     this.data = Preconditions.checkNotNull(data, "data");
   }
@@ -54,7 +55,7 @@ public class InlineFirehoseFactory implements FiniteFirehoseFactory<StringInputR
   }
 
   @Override
-  public Firehose connect(StringInputRowParser parser, @Nullable File temporaryDirectory) throws IOException
+  public Firehose connect(StringInputRowParser parser, @Nullable File temporaryDirectory)
   {
     return new InlineFirehose(data, parser);
   }

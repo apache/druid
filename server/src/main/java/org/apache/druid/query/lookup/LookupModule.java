@@ -25,14 +25,12 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
-import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
-import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.dimension.LookupDimensionSpec;
 import org.apache.druid.query.expression.LookupExprMacro;
@@ -47,11 +45,6 @@ public class LookupModule implements DruidModule
   static final String PROPERTY_BASE = "druid.lookup";
   public static final String FAILED_UPDATES_KEY = "failedUpdates";
   public static final int LOOKUP_LISTENER_QOS_MAX_REQUESTS = 2;
-
-  public static String getTierListenerPath(String tier)
-  {
-    return ZKPaths.makePath(LookupCoordinatorManager.LOOKUP_LISTEN_ANNOUNCE_KEY, tier);
-  }
 
   @Override
   public List<? extends Module> getJacksonModules()
@@ -75,9 +68,6 @@ public class LookupModule implements DruidModule
     Jerseys.addResource(binder, LookupListeningResource.class);
     Jerseys.addResource(binder, LookupIntrospectionResource.class);
     ExpressionModule.addExprMacro(binder, LookupExprMacro.class);
-    LifecycleModule.register(binder, LookupResourceListenerAnnouncer.class);
-    // Nothing else starts this, so we bind it to get it to start
-    binder.bind(LookupResourceListenerAnnouncer.class).in(ManageLifecycle.class);
     JettyBindings.addQosFilter(
         binder,
         ListenerResource.BASE_PATH + "/" + LookupCoordinatorManager.LOOKUP_LISTEN_ANNOUNCE_KEY,

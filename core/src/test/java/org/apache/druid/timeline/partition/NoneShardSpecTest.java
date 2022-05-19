@@ -48,6 +48,7 @@ public class NoneShardSpecTest
     // Serde should return same object instead of creating new one every time.
     Assert.assertTrue(serde1 == serde2);
     Assert.assertTrue(one == serde1);
+    Assert.assertEquals(ShardSpec.Type.NONE, serde1.getType());
   }
 
   @Test
@@ -56,6 +57,6 @@ public class NoneShardSpecTest
     final String jsonStr = "{\"type\": \"none\",\"partitionNum\": 2}";
     ObjectMapper mapper = new TestObjectMapper();
     final ShardSpec noneShardSpec = mapper.readValue(jsonStr, ShardSpec.class);
-    noneShardSpec.equals(NoneShardSpec.instance());
+    Assert.assertEquals(NoneShardSpec.instance(), noneShardSpec);
   }
 }

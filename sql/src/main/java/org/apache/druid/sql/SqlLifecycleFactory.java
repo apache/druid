@@ -22,7 +22,9 @@ package org.apache.druid.sql;
 import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.log.RequestLogger;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 
 @LazySingleton
@@ -31,17 +33,23 @@ public class SqlLifecycleFactory
   private final PlannerFactory plannerFactory;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
+  private final QueryScheduler queryScheduler;
+  private final AuthConfig authConfig;
 
   @Inject
   public SqlLifecycleFactory(
       PlannerFactory plannerFactory,
       ServiceEmitter emitter,
-      RequestLogger requestLogger
+      RequestLogger requestLogger,
+      QueryScheduler queryScheduler,
+      AuthConfig authConfig
   )
   {
     this.plannerFactory = plannerFactory;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
+    this.queryScheduler = queryScheduler;
+    this.authConfig = authConfig;
   }
 
   public SqlLifecycle factorize()
@@ -50,6 +58,8 @@ public class SqlLifecycleFactory
         plannerFactory,
         emitter,
         requestLogger,
+        queryScheduler,
+        authConfig,
         System.currentTimeMillis(),
         System.nanoTime()
     );

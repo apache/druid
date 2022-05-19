@@ -23,14 +23,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
-import com.yahoo.memory.Memory;
-import com.yahoo.sketches.Family;
-import com.yahoo.sketches.theta.AnotB;
-import com.yahoo.sketches.theta.Intersection;
-import com.yahoo.sketches.theta.SetOperation;
-import com.yahoo.sketches.theta.Sketch;
-import com.yahoo.sketches.theta.Sketches;
-import com.yahoo.sketches.theta.Union;
+import org.apache.datasketches.Family;
+import org.apache.datasketches.memory.Memory;
+import org.apache.datasketches.theta.AnotB;
+import org.apache.datasketches.theta.Intersection;
+import org.apache.datasketches.theta.SetOperation;
+import org.apache.datasketches.theta.Sketch;
+import org.apache.datasketches.theta.Sketches;
+import org.apache.datasketches.theta.Union;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -132,9 +132,9 @@ public class SketchHolder
   public void updateUnion(Union union)
   {
     if (obj instanceof Memory) {
-      union.update((Memory) obj);
+      union.union((Memory) obj);
     } else {
-      union.update(getSketch());
+      union.union(getSketch());
     }
   }
 
@@ -267,12 +267,12 @@ public class SketchHolder
       case INTERSECT:
         Intersection intersection = (Intersection) SetOperation.builder().setNominalEntries(sketchSize).build(Family.INTERSECTION);
         for (Object o : holders) {
-          intersection.update(((SketchHolder) o).getSketch());
+          intersection.intersect(((SketchHolder) o).getSketch());
         }
         return SketchHolder.of(intersection.getResult(false, null));
       case NOT:
         if (holders.length < 1) {
-          throw new IllegalArgumentException("A-Not-B requires atleast 1 sketch");
+          throw new IllegalArgumentException("A-Not-B requires at least 1 sketch");
         }
 
         if (holders.length == 1) {
@@ -282,8 +282,7 @@ public class SketchHolder
         Sketch result = ((SketchHolder) holders[0]).getSketch();
         for (int i = 1; i < holders.length; i++) {
           AnotB anotb = (AnotB) SetOperation.builder().setNominalEntries(sketchSize).build(Family.A_NOT_B);
-          anotb.update(result, ((SketchHolder) holders[i]).getSketch());
-          result = anotb.getResult(false, null);
+          result = anotb.aNotB(result, ((SketchHolder) holders[i]).getSketch());
         }
         return SketchHolder.of(result);
       default:

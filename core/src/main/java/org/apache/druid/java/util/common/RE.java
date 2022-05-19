@@ -32,4 +32,9 @@ public class RE extends RuntimeException
   {
     super(StringUtils.nonStrictFormat(formatText, arguments), cause);
   }
+
+  public RE(Throwable cause)
+  {
+    super(cause == null ? null : cause.getMessage(), cause);
+  }
 }

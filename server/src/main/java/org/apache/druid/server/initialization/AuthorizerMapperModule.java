@@ -33,9 +33,9 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.AllowAllAuthorizer;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthValidator;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 
@@ -50,7 +50,6 @@ import java.util.Set;
 public class AuthorizerMapperModule implements DruidModule
 {
   private static final String AUTHORIZER_PROPERTIES_FORMAT_STRING = "druid.auth.authorizer.%s";
-  private static Logger log = new Logger(AuthorizerMapperModule.class);
 
   @Override
   public void configure(Binder binder)
@@ -58,15 +57,15 @@ public class AuthorizerMapperModule implements DruidModule
     binder.bind(AuthorizerMapper.class)
           .toProvider(new AuthorizerMapperProvider())
           .in(LazySingleton.class);
-
+    binder.bind(AuthValidator.class)
+          .in(LazySingleton.class);
     LifecycleModule.register(binder, AuthorizerMapper.class);
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Collections.EMPTY_LIST;
+    return Collections.emptyList();
   }
 
   private static class AuthorizerMapperProvider implements Provider<AuthorizerMapper>
@@ -98,7 +97,8 @@ public class AuthorizerMapperModule implements DruidModule
         AllowAllAuthorizer allowAllAuthorizer = new AllowAllAuthorizer();
         authorizerMap.put(AuthConfig.ALLOW_ALL_NAME, allowAllAuthorizer);
 
-        return new AuthorizerMapper(null) {
+        return new AuthorizerMapper(null)
+        {
           @Override
           public Authorizer getAuthorizer(String name)
           {

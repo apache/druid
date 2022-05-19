@@ -35,7 +35,7 @@
 # - DRUID_NEWSIZE -- set Java new size
 # - DRUID_MAXDIRECTMEMORYSIZE -- set Java max direct memory size
 #
-# - DRUID_CONFIG -- full path to a file for druid 'common' properties
+# - DRUID_CONFIG_COMMON -- full path to a file for druid 'common' properties
 # - DRUID_CONFIG_${service} -- full path to a file for druid 'service' properties
 
 set -e
@@ -46,6 +46,7 @@ echo "$(date -Is) startup service $SERVICE"
 # We put all the config in /tmp/conf to allow for a
 # read-only root filesystem
 mkdir -p /tmp/conf/
+test -d /tmp/conf/druid && rm -r /tmp/conf/druid
 cp -r /opt/druid/conf/druid /tmp/conf/druid
 
 getConfPath() {
@@ -54,9 +55,11 @@ getConfPath() {
     _common) echo $cluster_conf_base/_common ;;
     historical) echo $cluster_conf_base/data/historical ;;
     middleManager) echo $cluster_conf_base/data/middleManager ;;
+    indexer) echo $cluster_conf_base/data/indexer ;;
     coordinator | overlord) echo $cluster_conf_base/master/coordinator-overlord ;;
     broker) echo $cluster_conf_base/query/broker ;;
     router) echo $cluster_conf_base/query/router ;;
+    *) echo $cluster_conf_base/misc/$1 ;;
     esac
 }
 COMMON_CONF_DIR=$(getConfPath _common)
@@ -71,8 +74,8 @@ setKey() {
     # Delete from all
     sed -ri "/$key=/d" $COMMON_CONF_DIR/common.runtime.properties
     [ -f $service_conf ] && sed -ri "/$key=/d" $service_conf
-    [ -f $service_conf ] && echo "$key=$value" >>$service_conf
-    [ -f $service_conf ] || echo "$key=$value" >>$COMMON_CONF_DIR/common.runtime.properties
+    [ -f $service_conf ] && echo -e "\n$key=$value" >>$service_conf
+    [ -f $service_conf ] || echo -e "\n$key=$value" >>$COMMON_CONF_DIR/common.runtime.properties
 
     echo "Setting $key=$value in $service_conf"
 }
@@ -85,29 +88,6 @@ setJavaKey() {
     sed -ri "/$key/d" $file
     echo $value >> $file
 }
-
-## Setup host names
-if [ -n "${ZOOKEEPER}" ];
-then
-    setKey _common druid.zk.service.host "${ZOOKEEPER}"
-fi
-
-setKey $SERVICE druid.host $(ip r get 1 | awk '{print $7;exit}')
-
-env | grep ^druid_ | while read evar;
-do
-    # Can't use IFS='=' to parse since var might have = in it (e.g. password)
-    val=$(echo "$evar" | sed -e 's?[^=]*=??')
-    var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?_?.?g')
-    setKey $SERVICE "$var" "$val"
-done
-
-env |grep ^s3service | while read evar
-do
-    val=$(echo "$evar" | sed -e 's?[^=]*=??')
-    var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?_?.?' -e 's?_?-?g')
-    echo "$var=$val" >>$COMMON_CONF_DIR/jets3t.properties
-done
 
 # This is to allow configuration via a Kubernetes configMap without
 # e.g. using subPath (you can also mount the configMap on /tmp/conf/druid)
@@ -124,15 +104,45 @@ then
     cp -f "${SCONFIG}" $SERVICE_CONF_DIR/runtime.properties
 fi
 
+## Setup host names
+if [ -n "${ZOOKEEPER}" ];
+then
+    setKey _common druid.zk.service.host "${ZOOKEEPER}"
+fi
+
+DRUID_SET_HOST=${DRUID_SET_HOST:-1}
+if [ "${DRUID_SET_HOST}" = "1" ]
+then
+    setKey $SERVICE druid.host $(ip r get 1 | awk '{print $7;exit}')
+fi
+
+env | grep ^druid_ | while read evar;
+do
+    # Can't use IFS='=' to parse since var might have = in it (e.g. password)
+    val=$(echo "$evar" | sed -e 's?[^=]*=??')
+    var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?_?.?g')
+    setKey $SERVICE "$var" "$val"
+done
+
+env |grep ^s3service | while read evar
+do
+    val=$(echo "$evar" | sed -e 's?[^=]*=??')
+    var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?_?.?' -e 's?_?-?g')
+    echo "$var=$val" >>$COMMON_CONF_DIR/jets3t.properties
+done
+
 # Now do the java options
 
 if [ -n "$DRUID_XMX" ]; then setJavaKey ${SERVICE} -Xmx -Xmx${DRUID_XMX}; fi
 if [ -n "$DRUID_XMS" ]; then setJavaKey ${SERVICE} -Xms -Xms${DRUID_XMS}; fi
 if [ -n "$DRUID_MAXNEWSIZE" ]; then setJavaKey ${SERVICE} -XX:MaxNewSize -XX:MaxNewSize=${DRUID_MAXNEWSIZE}; fi
-if [ -n "$DRUID_NEWSIZE" ]; then setJavaKey ${SERVICE} -XX:NewSize -XX:MaxNewSize=${DRUID_NEWSIZE}; fi
+if [ -n "$DRUID_NEWSIZE" ]; then setJavaKey ${SERVICE} -XX:NewSize -XX:NewSize=${DRUID_NEWSIZE}; fi
 if [ -n "$DRUID_MAXDIRECTMEMORYSIZE" ]; then setJavaKey ${SERVICE} -XX:MaxDirectMemorySize -XX:MaxDirectMemorySize=${DRUID_MAXDIRECTMEMORYSIZE}; fi
 
-JAVA_OPTS="$JAVA_OPTS $(cat $SERVICE_CONF_DIR/jvm.config | xargs)"
+# Combine options from jvm.config and those given as JAVA_OPTS
+# If a value is specified in both then JAVA_OPTS will take precedence when using OpenJDK
+# However this behavior is not part of the spec and is thus implementation specific
+JAVA_OPTS="$(cat $SERVICE_CONF_DIR/jvm.config | xargs) $JAVA_OPTS"
 
 if [ -n "$DRUID_LOG_LEVEL" ]
 then
@@ -144,5 +154,10 @@ then
     echo "$DRUID_LOG4J" >$COMMON_CONF_DIR/log4j2.xml
 fi
 
-mkdir -p var/tmp var/druid/segments var/druid/indexing-logs var/druid/task var/druid/hadoop-tmp var/druid/segment-cache
+DRUID_DIRS_TO_CREATE=${DRUID_DIRS_TO_CREATE-'var/tmp var/druid/segments var/druid/indexing-logs var/druid/task var/druid/hadoop-tmp var/druid/segment-cache'}
+if [ -n "${DRUID_DIRS_TO_CREATE}" ]
+then
+    mkdir -p ${DRUID_DIRS_TO_CREATE}
+fi
+
 exec java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*: org.apache.druid.cli.Main server $@

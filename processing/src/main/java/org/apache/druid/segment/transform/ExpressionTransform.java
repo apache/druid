@@ -23,19 +23,29 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.virtual.ExpressionSelectors;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.function.Supplier;
 
 public class ExpressionTransform implements Transform
 {
   private final String name;
   private final String expression;
   private final ExprMacroTable macroTable;
+  private final Supplier<Expr> parsedExpression;
 
   @JsonCreator
   public ExpressionTransform(
@@ -47,6 +57,9 @@ public class ExpressionTransform implements Transform
     this.name = Preconditions.checkNotNull(name, "name");
     this.expression = Preconditions.checkNotNull(expression, "expression");
     this.macroTable = macroTable;
+    this.parsedExpression = Suppliers.memoize(
+        () -> Parser.parse(expression, Preconditions.checkNotNull(this.macroTable, "macroTable"))
+    )::get;
   }
 
   @JsonProperty
@@ -65,8 +78,13 @@ public class ExpressionTransform implements Transform
   @Override
   public RowFunction getRowFunction()
   {
-    final Expr expr = Parser.parse(expression, Preconditions.checkNotNull(this.macroTable, "macroTable"));
-    return new ExpressionRowFunction(expr);
+    return new ExpressionRowFunction(parsedExpression.get());
+  }
+
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return parsedExpression.get().analyzeInputs().getRequiredBindings();
   }
 
   static class ExpressionRowFunction implements RowFunction
@@ -81,7 +99,9 @@ public class ExpressionTransform implements Transform
     @Override
     public Object eval(final Row row)
     {
-      return expr.eval(name -> getValueFromRow(row, name)).value();
+      return ExpressionSelectors.coerceEvalToSelectorObject(
+          expr.eval(InputBindings.forFunction(name -> getValueFromRow(row, name)))
+      );
     }
   }
 
@@ -90,7 +110,15 @@ public class ExpressionTransform implements Transform
     if (column.equals(ColumnHolder.TIME_COLUMN_NAME)) {
       return row.getTimestampFromEpoch();
     } else {
-      return row.getRaw(column);
+      Object raw = row.getRaw(column);
+      if (raw instanceof List) {
+        NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) raw, true);
+        if (coerced == null) {
+          return null;
+        }
+        return coerced.rhs;
+      }
+      return raw;
     }
   }
 

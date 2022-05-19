@@ -45,17 +45,20 @@ import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUserFull;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUserFullSimplifiedPermissions;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthValidator;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
-import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
@@ -68,6 +71,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+@RunWith(MockitoJUnitRunner.class)
 public class CoordinatorBasicAuthorizerResourceTest
 {
   private static final String AUTHORIZER_NAME = "test";
@@ -79,18 +83,19 @@ public class CoordinatorBasicAuthorizerResourceTest
 
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  @Mock
+  private AuthValidator authValidator;
+  @Mock
+  private HttpServletRequest req;
 
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
   private BasicAuthorizerResource resource;
   private CoordinatorBasicAuthorizerMetadataStorageUpdater storageUpdater;
-  private HttpServletRequest req;
 
   @Before
   public void setUp()
   {
-    req = EasyMock.createStrictMock(HttpServletRequest.class);
-
     connector = derbyConnectorRule.getConnector();
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createConfigTable();
@@ -148,7 +153,8 @@ public class CoordinatorBasicAuthorizerResourceTest
             storageUpdater,
             authorizerMapper,
             new ObjectMapper(new SmileFactory())
-        )
+        ),
+        authValidator
     );
 
     storageUpdater.start();

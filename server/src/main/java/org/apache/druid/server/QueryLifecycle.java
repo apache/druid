@@ -19,8 +19,8 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.java.util.common.DateTimes;
@@ -31,24 +31,36 @@ import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.server.QueryResource.ResourceIOReaderWriter;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -77,13 +89,17 @@ public class QueryLifecycle
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final AuthorizerMapper authorizerMapper;
+  private final DefaultQueryConfig defaultQueryConfig;
+  private final AuthConfig authConfig;
   private final long startMs;
   private final long startNs;
 
   private State state = State.NEW;
   private AuthenticationResult authenticationResult;
   private QueryToolChest toolChest;
-  private Query baseQuery;
+
+  @MonotonicNonNull
+  private Query<?> baseQuery;
 
   public QueryLifecycle(
       final QueryToolChestWarehouse warehouse,
@@ -92,6 +108,8 @@ public class QueryLifecycle
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
       final AuthorizerMapper authorizerMapper,
+      final DefaultQueryConfig defaultQueryConfig,
+      final AuthConfig authConfig,
       final long startMs,
       final long startNs
   )
@@ -102,18 +120,21 @@ public class QueryLifecycle
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
+    this.defaultQueryConfig = defaultQueryConfig;
+    this.authConfig = authConfig;
     this.startMs = startMs;
     this.startNs = startNs;
   }
 
+
   /**
-   * For callers where simplicity is desired over flexibility. This method does it all in one call. If the request
-   * is unauthorized, an IllegalStateException will be thrown. Logs and metrics are emitted when the Sequence is
-   * either fully iterated or throws an exception.
+   * For callers who have already authorized their query, and where simplicity is desired over flexibility. This method
+   * does it all in one call. Logs and metrics are emitted when the Sequence is either fully iterated or throws an
+   * exception.
    *
-   * @param query                the query
-   * @param authenticationResult authentication result indicating identity of the requester
-   * @param remoteAddress        remote address, for logging; or null if unknown
+   * @param query                 the query
+   * @param authenticationResult  authentication result indicating identity of the requester
+   * @param authorizationResult   authorization result of requester
    *
    * @return results
    */
@@ -121,7 +142,7 @@ public class QueryLifecycle
   public <T> Sequence<T> runSimple(
       final Query<T> query,
       final AuthenticationResult authenticationResult,
-      @Nullable final String remoteAddress
+      final Access authorizationResult
   )
   {
     initialize(query);
@@ -129,8 +150,8 @@ public class QueryLifecycle
     final Sequence<T> results;
 
     try {
-      final Access access = authorize(authenticationResult);
-      if (!access.isAllowed()) {
+      preAuthorized(authenticationResult, authorizationResult);
+      if (!authorizationResult.isAllowed()) {
         throw new ISE("Unauthorized");
       }
 
@@ -138,7 +159,7 @@ public class QueryLifecycle
       results = queryResponse.getResults();
     }
     catch (Throwable e) {
-      emitLogsAndMetrics(e, remoteAddress, -1);
+      emitLogsAndMetrics(e, null, -1);
       throw e;
     }
 
@@ -149,7 +170,7 @@ public class QueryLifecycle
           @Override
           public void after(final boolean isDone, final Throwable thrown)
           {
-            emitLogsAndMetrics(thrown, remoteAddress, -1);
+            emitLogsAndMetrics(thrown, null, -1);
           }
         }
     );
@@ -165,36 +186,11 @@ public class QueryLifecycle
   {
     transition(State.NEW, State.INITIALIZED);
 
-    String queryId = baseQuery.getId();
-    if (Strings.isNullOrEmpty(queryId)) {
-      queryId = UUID.randomUUID().toString();
-    }
+    baseQuery.getQueryContext().addDefaultParam(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
+    baseQuery.getQueryContext().addDefaultParams(defaultQueryConfig.getContext());
 
-    this.baseQuery = baseQuery.withId(queryId);
+    this.baseQuery = baseQuery;
     this.toolChest = warehouse.getToolChest(baseQuery);
-  }
-
-  /**
-   * Authorize the query. Will return an Access object denoting whether the query is authorized or not.
-   *
-   * @param authenticationResult authentication result indicating the identity of the requester
-   *
-   * @return authorization result
-   */
-  public Access authorize(final AuthenticationResult authenticationResult)
-  {
-    transition(State.INITIALIZED, State.AUTHORIZING);
-    return doAuthorize(
-        authenticationResult,
-        AuthorizationUtils.authorizeAllResourceActions(
-            authenticationResult,
-            Iterables.transform(
-                baseQuery.getDataSource().getNames(),
-                AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
-            ),
-            authorizerMapper
-        )
-    );
   }
 
   /**
@@ -208,17 +204,33 @@ public class QueryLifecycle
   public Access authorize(HttpServletRequest req)
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
+    final Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
+        Iterables.transform(
+            baseQuery.getDataSource().getTableNames(),
+            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
+        ),
+        authConfig.authorizeQueryContextParams()
+        ? Iterables.transform(
+            baseQuery.getQueryContext().getUserParams().keySet(),
+            contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
+        )
+        : Collections.emptyList()
+    );
     return doAuthorize(
         AuthorizationUtils.authenticationResultFromRequest(req),
         AuthorizationUtils.authorizeAllResourceActions(
             req,
-            Iterables.transform(
-                baseQuery.getDataSource().getNames(),
-                AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
-            ),
+            resourcesToAuthorize,
             authorizerMapper
         )
     );
+  }
+
+  private void preAuthorized(final AuthenticationResult authenticationResult, final Access access)
+  {
+    // gotta transition those states, even if we are already authorized
+    transition(State.INITIALIZED, State.AUTHORIZING);
+    doAuthorize(authenticationResult, access);
   }
 
   private Access doAuthorize(final AuthenticationResult authenticationResult, final Access authorizationResult)
@@ -318,14 +330,18 @@ public class QueryLifecycle
 
       if (e != null) {
         statsMap.put("exception", e.toString());
-
-        if (e instanceof QueryInterruptedException) {
-          // Mimic behavior from QueryResource, where this code was originally taken from.
+        if (QueryContexts.isDebug(baseQuery)) {
           log.warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
+        } else {
+          log.noStackTrace().warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
+        }
+        if (e instanceof QueryInterruptedException || e instanceof QueryTimeoutException) {
+          // Mimic behavior from QueryResource, where this code was originally taken from.
           statsMap.put("interrupted", true);
           statsMap.put("reason", e.toString());
         }
       }
+
       requestLogger.logNativeQuery(
           RequestLogLine.forNative(
               baseQuery,
@@ -340,9 +356,42 @@ public class QueryLifecycle
     }
   }
 
-  public Query getQuery()
+  @Nullable
+  public Query<?> getQuery()
   {
     return baseQuery;
+  }
+
+  public String getQueryId()
+  {
+    return baseQuery.getId();
+  }
+
+  public String threadName(String currThreadName)
+  {
+    return StringUtils.format(
+        "%s[%s_%s_%s]",
+        currThreadName,
+        baseQuery.getType(),
+        baseQuery.getDataSource().getTableNames(),
+        getQueryId()
+    );
+  }
+
+  private boolean isSerializeDateTimeAsLong()
+  {
+    final boolean shouldFinalize = QueryContexts.isFinalize(baseQuery, true);
+    return QueryContexts.isSerializeDateTimeAsLong(baseQuery, false)
+           || (!shouldFinalize && QueryContexts.isSerializeDateTimeAsLongInner(baseQuery, false));
+  }
+
+  public ObjectWriter newOutputWriter(ResourceIOReaderWriter ioReaderWriter)
+  {
+    return ioReaderWriter.getResponseWriter().newOutputWriter(
+        getToolChest(),
+        baseQuery,
+        isSerializeDateTimeAsLong()
+    );
   }
 
   public QueryToolChest getToolChest()
@@ -351,6 +400,7 @@ public class QueryLifecycle
       throw new ISE("Not yet initialized");
     }
 
+    //noinspection unchecked
     return toolChest;
   }
 

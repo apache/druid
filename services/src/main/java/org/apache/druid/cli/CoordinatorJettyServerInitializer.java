@@ -20,7 +20,7 @@
 package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -43,7 +43,6 @@ import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.util.resource.Resource;
 
 import java.util.List;
 import java.util.Properties;
@@ -52,12 +51,7 @@ import java.util.Properties;
  */
 class CoordinatorJettyServerInitializer implements JettyServerInitializer
 {
-  private static List<String> UNSECURED_PATHS = Lists.newArrayList(
-      "/favicon.png",
-      "/pages/*",
-      "/coordinator-console/*",
-      "/index.html",
-      "/old-console/*",
+  private static List<String> UNSECURED_PATHS = ImmutableList.of(
       "/coordinator/false",
       "/overlord/false",
       "/status/health",
@@ -81,19 +75,10 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
   {
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
-    root.setInitParameter("org.eclipse.jetty.servlet.Default.redirectWelcome", "true");
-    // index.html is the welcome file for old-console
-    root.setWelcomeFiles(new String[]{"index.html"});
 
     ServletHolder holderPwd = new ServletHolder("default", DefaultServlet.class);
 
     root.addServlet(holderPwd, "/");
-    if (config.getConsoleStatic() == null) {
-      root.setBaseResource(Resource.newClassPathResource("org/apache/druid/console"));
-    } else {
-      // used for console development
-      root.setResourceBase(config.getConsoleStatic());
-    }
 
     final AuthConfig authConfig = injector.getInstance(AuthConfig.class);
     final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
@@ -103,6 +88,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
 
     // perform no-op authorization/authentication for these resources
     AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, UNSECURED_PATHS);
+    WebConsoleJettyServerInitializer.intializeServerForWebConsoleRoot(root);
     AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
     if (beOverlord) {
@@ -113,6 +99,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
     AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());
+    JettyServerInitUtils.addAllowHttpMethodsFilter(root, serverConfig.getAllowedHttpMethods());
 
     JettyServerInitUtils.addExtensionFilters(root, injector);
 
@@ -149,6 +136,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     HandlerList handlerList = new HandlerList();
     handlerList.setHandlers(
         new Handler[]{
+            WebConsoleJettyServerInitializer.createWebConsoleRewriteHandler(),
             JettyServerInitUtils.getJettyRequestLogHandler(),
             JettyServerInitUtils.wrapWithDefaultGzipHandler(
                 root,

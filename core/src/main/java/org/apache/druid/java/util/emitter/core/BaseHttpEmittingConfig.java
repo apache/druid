@@ -25,6 +25,7 @@ import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.validation.constraints.Min;
+import java.util.concurrent.TimeUnit;
 
 public class BaseHttpEmittingConfig
 {
@@ -34,6 +35,8 @@ public class BaseHttpEmittingConfig
   /** ensure the event buffers don't use more than 10% of memory by default */
   public static final int DEFAULT_MAX_BATCH_SIZE;
   public static final int DEFAULT_BATCH_QUEUE_SIZE_LIMIT;
+
+  public static final long TEST_FLUSH_TIMEOUT_MILLIS = TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS);
 
   static {
     Pair<Integer, Integer> batchConfigPair =

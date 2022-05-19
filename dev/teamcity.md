@@ -19,7 +19,7 @@
   
 ### Overview
 TeamCity is a continuous integration and deployment server responsible for 
-static analysis of Druid source code. Each Github PR request for 
+static analysis of Druid source code. Each GitHub PR request for 
 [Druid](https://teamcity.jetbrains.com/project.html?projectId=OpenSourceProjects_Druid) 
 is checked by TeamCity automatically.
 
@@ -29,12 +29,12 @@ One can log in to TeamCity either via credentials or as a guest to check static 
 ### Becoming a Project Administrator
 Druid committers shall obtain a status of a [Druid project](
 https://teamcity.jetbrains.com/project.html?projectId=OpenSourceProjects_Druid)
-administrator. First, the Druid committer needs to log in teamcity.jetbrains.com using their Github account.
+administrator. First, the Druid committer needs to log in teamcity.jetbrains.com using their GitHub account.
 Then, somebody who is already a project administrator needs to do the following:
 
  1. Follow the "Administration" link in the top-right corner of the page
  2. Follow the "Users" link in the "User Management" section in the menu on the left
- 3. Type the committer's Github handle in the "Find users" text input, press "Filter"
+ 3. Type the committer's GitHub handle in the "Find users" text input, press "Filter"
  4. Select the committer
  5. Press the "Assign roles" button in the bottom of the page
  6. Select "Role: Project administrator" and "Scope: Open-source project -> Druid" in the inputs, press "Assign"
@@ -84,7 +84,7 @@ active:
 
 8. Press the `Apply` button, then `OK` to exit the inspection preferences.
 
-9. If you did everything right, file `.idea/inspectionProfiles/Druid.xml` should be updated with a new
+9. If you did everything right, file [`.idea/inspectionProfiles/Druid.xml`](/.idea/inspectionProfiles/Druid.xml) should be updated with a new
 `searchConfiguration` entry, in this example case, the following:
 ```xml
       <searchConfiguration name="Use Map.putIfAbsent() instead of containsKey() + put()" text="if (!$m$.containsKey($k$)) {&#10;  $m$.put($k$, $v$);&#10;}" recursive="true" caseInsensitive="true" type="JAVA">

@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`segments-view matches snapshot 1`] = `
+exports[`SegmentsView matches snapshot 1`] = `
 <Fragment>
   <div
     className="segments-view app-view"
@@ -15,57 +15,39 @@ exports[`segments-view matches snapshot 1`] = `
       <Component>
         Group by
       </Component>
-      <Blueprint3.ButtonGroup>
-        <Blueprint3.Button
+      <Blueprint4.ButtonGroup>
+        <Blueprint4.Button
           active={true}
           onClick={[Function]}
         >
           None
-        </Blueprint3.Button>
-        <Blueprint3.Button
+        </Blueprint4.Button>
+        <Blueprint4.Button
           active={false}
           onClick={[Function]}
         >
           Interval
-        </Blueprint3.Button>
-      </Blueprint3.ButtonGroup>
-      <Blueprint3.Popover
-        boundary="scrollParent"
-        captureDismiss={false}
-        content={
-          <Blueprint3.Menu>
-            <Blueprint3.MenuItem
-              disabled={true}
-              icon="application"
-              multiline={false}
-              onClick={[Function]}
-              popoverProps={Object {}}
-              shouldDismissPopover={true}
-              text="View SQL query for table"
-            />
-          </Blueprint3.Menu>
-        }
-        defaultIsOpen={false}
-        disabled={false}
-        fill={false}
-        hasBackdrop={false}
-        hoverCloseDelay={300}
-        hoverOpenDelay={150}
-        inheritDarkTheme={true}
-        interactionKind="click"
-        minimal={false}
-        modifiers={Object {}}
-        openOnTargetFocus={true}
-        position="bottom-left"
-        targetTagName="span"
-        transitionDuration={300}
-        usePortal={true}
-        wrapperTagName="span"
-      >
-        <Blueprint3.Button
-          icon="more"
+        </Blueprint4.Button>
+      </Blueprint4.ButtonGroup>
+      <Memo(MoreButton)>
+        <Blueprint4.MenuItem
+          active={false}
+          disabled={true}
+          icon="application"
+          multiline={false}
+          onClick={[Function]}
+          popoverProps={Object {}}
+          selected={false}
+          shouldDismissPopover={true}
+          text="View SQL query for table"
         />
-      </Blueprint3.Popover>
+      </Memo(MoreButton)>
+      <Blueprint4.Switch
+        checked={false}
+        disabled={false}
+        label="Show segment timeline"
+        onChange={[Function]}
+      />
       <Memo(TableColumnSelector)
         columns={
           Array [
@@ -74,9 +56,13 @@ exports[`segments-view matches snapshot 1`] = `
             "Start",
             "End",
             "Version",
+            "Time span",
+            "Shard type",
+            "Shard spec",
             "Partition",
             "Size",
             "Num rows",
+            "Avg. row size",
             "Replicas",
             "Is published",
             "Is realtime",
@@ -86,7 +72,12 @@ exports[`segments-view matches snapshot 1`] = `
           ]
         }
         onChange={[Function]}
-        tableColumnsHidden={Array []}
+        onClose={[Function]}
+        tableColumnsHidden={
+          Array [
+            "Time span",
+          ]
+        }
       />
     </Memo(ViewControlBar)>
     <ReactTable
@@ -147,23 +138,29 @@ exports[`segments-view matches snapshot 1`] = `
       columns={
         Array [
           Object {
+            "Cell": [Function],
             "Header": "Segment ID",
             "accessor": "segment_id",
+            "filterable": true,
             "show": true,
-            "width": 300,
+            "sortable": true,
+            "width": 280,
           },
           Object {
             "Cell": [Function],
             "Header": "Datasource",
             "accessor": "datasource",
             "show": true,
+            "width": 140,
           },
           Object {
             "Cell": [Function],
             "Header": "Interval",
             "accessor": "interval",
             "defaultSortDesc": true,
+            "filterable": true,
             "show": false,
+            "sortable": true,
             "width": 120,
           },
           Object {
@@ -171,50 +168,107 @@ exports[`segments-view matches snapshot 1`] = `
             "Header": "Start",
             "accessor": "start",
             "defaultSortDesc": true,
+            "filterable": true,
             "show": true,
-            "width": 120,
+            "sortable": true,
+            "width": 160,
           },
           Object {
             "Cell": [Function],
             "Header": "End",
             "accessor": "end",
             "defaultSortDesc": true,
+            "filterable": true,
             "show": true,
-            "width": 120,
+            "sortable": true,
+            "width": 160,
           },
           Object {
+            "Cell": [Function],
             "Header": "Version",
             "accessor": "version",
             "defaultSortDesc": true,
+            "filterable": true,
             "show": true,
-            "width": 120,
+            "sortable": true,
+            "width": 160,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": "Time span",
+            "accessor": "time_span",
+            "filterable": true,
+            "show": false,
+            "sortable": true,
+            "width": 100,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": "Shard type",
+            "accessor": [Function],
+            "headerClassName": "disable-comparisons",
+            "id": "shard_type",
+            "show": true,
+            "sortable": false,
+            "width": 100,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": "Shard spec",
+            "accessor": "shard_spec",
+            "filterable": false,
+            "id": "shard_spec",
+            "show": true,
+            "sortable": false,
+            "width": 400,
           },
           Object {
             "Header": "Partition",
             "accessor": "partition_num",
+            "className": "padded",
             "filterable": false,
             "show": true,
+            "sortable": true,
             "width": 60,
           },
           Object {
             "Cell": [Function],
             "Header": "Size",
             "accessor": "size",
+            "className": "padded",
             "defaultSortDesc": true,
             "filterable": false,
             "show": true,
+            "sortable": true,
+            "width": 120,
           },
           Object {
             "Cell": [Function],
             "Header": "Num rows",
             "accessor": "num_rows",
+            "className": "padded",
             "defaultSortDesc": true,
             "filterable": false,
             "show": true,
+            "width": 120,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": <React.Fragment>
+              Avg. row size
+              <br />
+              (bytes)
+            </React.Fragment>,
+            "accessor": "avg_row_size",
+            "className": "padded",
+            "filterable": false,
+            "show": true,
+            "width": 100,
           },
           Object {
             "Header": "Replicas",
             "accessor": "num_replicas",
+            "className": "padded",
             "defaultSortDesc": true,
             "filterable": false,
             "show": true,
@@ -224,29 +278,37 @@ exports[`segments-view matches snapshot 1`] = `
             "Filter": [Function],
             "Header": "Is published",
             "accessor": [Function],
+            "className": "padded",
             "id": "is_published",
             "show": true,
+            "width": 100,
           },
           Object {
             "Filter": [Function],
             "Header": "Is realtime",
             "accessor": [Function],
+            "className": "padded",
             "id": "is_realtime",
             "show": true,
+            "width": 100,
           },
           Object {
             "Filter": [Function],
             "Header": "Is available",
             "accessor": [Function],
+            "className": "padded",
             "id": "is_available",
             "show": true,
+            "width": 100,
           },
           Object {
             "Filter": [Function],
             "Header": "Is overshadowed",
             "accessor": [Function],
+            "className": "padded",
             "id": "is_overshadowed",
             "show": true,
+            "width": 100,
           },
           Object {
             "Aggregated": [Function],
@@ -265,7 +327,7 @@ exports[`segments-view matches snapshot 1`] = `
       defaultFilterMethod={[Function]}
       defaultFiltered={Array []}
       defaultPage={0}
-      defaultPageSize={25}
+      defaultPageSize={50}
       defaultResized={Array []}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
@@ -319,7 +381,7 @@ exports[`segments-view matches snapshot 1`] = `
       getTrProps={[Function]}
       groupedByPivotKey="_groupedByPivot"
       indexKey="_index"
-      loading={true}
+      loading={false}
       loadingText="Loading..."
       manual={true}
       multiSort={true}
@@ -333,12 +395,9 @@ exports[`segments-view matches snapshot 1`] = `
       pageJumpText="jump to page"
       pageSizeOptions={
         Array [
-          5,
-          10,
-          20,
-          25,
           50,
           100,
+          200,
         ]
       }
       pageText="Page"

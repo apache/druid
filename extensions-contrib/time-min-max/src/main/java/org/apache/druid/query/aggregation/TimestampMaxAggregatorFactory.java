@@ -22,28 +22,46 @@ package org.apache.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
+
+import javax.annotation.Nullable;
+import java.util.List;
 
 public class TimestampMaxAggregatorFactory extends TimestampAggregatorFactory
 {
   @JsonCreator
   public TimestampMaxAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") String fieldName,
-      @JsonProperty("timeFormat") String timeFormat
+      @JsonProperty("fieldName") @Nullable String fieldName,
+      @JsonProperty("timeFormat") @Nullable String timeFormat
   )
   {
     super(name, fieldName, timeFormat, Ordering.natural(), Long.MIN_VALUE);
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
-    Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
+  }
+
+  @Override
+  public AggregatorFactory getCombiningFactory()
+  {
+    return new TimestampMaxAggregatorFactory(name, name, timeFormat);
+  }
+
+  @Override
+  public List<AggregatorFactory> getRequiredColumns()
+  {
+    return ImmutableList.of(
+        new TimestampMaxAggregatorFactory(name, fieldName, timeFormat)
+    );
   }
 
   @Override
   public String toString()
   {
     return "TimestampMaxAggregatorFactory{" +
-        "fieldName='" + fieldName + '\'' +
-        ", name='" + name + '\'' +
-        '}';
+           "name='" + name + '\'' +
+           ", fieldName='" + fieldName + '\'' +
+           ", timeFormat='" + timeFormat + '\'' +
+           '}';
   }
 }

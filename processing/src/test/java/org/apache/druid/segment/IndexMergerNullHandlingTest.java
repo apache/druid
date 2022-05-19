@@ -28,11 +28,14 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.IncrementalIndexTest;
+import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.junit.Assert;
@@ -55,6 +58,10 @@ import java.util.stream.IntStream;
 
 public class IndexMergerNullHandlingTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private IndexMerger indexMerger;
   private IndexIO indexIO;
   private IndexSpec indexSpec;
@@ -175,7 +182,12 @@ public class IndexMergerNullHandlingTest
             );
 
             // Verify that the bitmap index for null is correct.
-            final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
+            final DictionaryEncodedStringValueIndex valueIndex = columnHolder.getIndexSupplier().as(
+                DictionaryEncodedStringValueIndex.class
+            );
+            final StringValueSetIndex valueSetIndex = columnHolder.getIndexSupplier().as(
+                StringValueSetIndex.class
+            );
 
             // Read through the column to find all the rows that should match null.
             final List<Integer> expectedNullRows = new ArrayList<>();
@@ -186,12 +198,18 @@ public class IndexMergerNullHandlingTest
               }
             }
 
-            Assert.assertEquals(subsetList.toString(), expectedNullRows.size() > 0, bitmapIndex.hasNulls());
+            Assert.assertEquals(subsetList.toString(), expectedNullRows.size() > 0, valueIndex.hasNulls());
 
             if (expectedNullRows.size() > 0) {
-              Assert.assertEquals(subsetList.toString(), 0, bitmapIndex.getIndex(null));
+              Assert.assertEquals(subsetList.toString(), 0, valueIndex.getIndex(null));
 
-              final ImmutableBitmap nullBitmap = bitmapIndex.getBitmap(bitmapIndex.getIndex(null));
+              final ImmutableBitmap nullBitmap = valueSetIndex.forValue(null)
+                                                              .computeBitmapResult(
+                                                                  new DefaultBitmapResultFactory(
+                                                                      indexSpec.getBitmapSerdeFactory()
+                                                                               .getBitmapFactory()
+                                                                  )
+                                                              );
               final List<Integer> actualNullRows = new ArrayList<>();
               final IntIterator iterator = nullBitmap.iterator();
               while (iterator.hasNext()) {
@@ -200,7 +218,7 @@ public class IndexMergerNullHandlingTest
 
               Assert.assertEquals(subsetList.toString(), expectedNullRows, actualNullRows);
             } else {
-              Assert.assertEquals(-1, bitmapIndex.getIndex(null));
+              Assert.assertEquals(-1, valueIndex.getIndex(null));
             }
           }
         }
@@ -221,8 +239,9 @@ public class IndexMergerNullHandlingTest
       retVal.add(NullHandling.emptyToNullIfNeeded(((String) value)));
     } else if (value instanceof List) {
       final List<String> list = (List<String>) value;
-      if (list.isEmpty() && !hasMultipleValues) {
+      if (list.isEmpty()) {
         // empty lists become nulls in single valued columns
+        // they sometimes also become nulls in multi-valued columns (see comments in getRow())
         retVal.add(NullHandling.emptyToNullIfNeeded(null));
       } else {
         retVal.addAll(list.stream().map(NullHandling::emptyToNullIfNeeded).collect(Collectors.toList()));
@@ -242,7 +261,25 @@ public class IndexMergerNullHandlingTest
     final List<String> retVal = new ArrayList<>();
 
     if (column.hasMultipleValues()) {
-      column.getMultiValueRow(rowNumber).forEach(i -> retVal.add(column.lookupName(i)));
+      IndexedInts rowVals = column.getMultiValueRow(rowNumber);
+      if (rowVals.size() == 0) {
+        // This is a sort of test hack:
+        // - If we ingest the subset [{d=[]}, {d=[a, b]}], we get an IndexedInts with 0 size for the nully row,
+        //   representing the empty list
+        // - If we ingest the subset [{}, {d=[]}, {d=[a, b]}], we instead get an IndexedInts with 1 size,
+        //   representing a row with a single null value
+        // This occurs because the dimension value comparator used during ingestion considers null and the empty list
+        // to be the same.
+        // - In the first subset, we only see the empty list and a non-empty list, so the key used in the
+        //   incremental index fact table for the nully row is the empty list.
+        // - In the second subset, the fact table initially gets an entry for d=null. When the row with the
+        //   empty list value is added, it is treated as identical to the first d=null row, so it gets rolled up.
+        //   The resulting persisted segment will have [null] instead of [] because of this rollup.
+        // To simplify this test class, we always normalize the empty list into null here.
+        retVal.add(null);
+      } else {
+        rowVals.forEach(i -> retVal.add(column.lookupName(i)));
+      }
     } else {
       retVal.add(column.lookupName(column.getSingleValueRow(rowNumber)));
     }

@@ -23,13 +23,12 @@ title: "Bloom Filter"
   -->
 
 
-This Apache Druid (incubating) extension adds the ability to both construct bloom filters from query results, and filter query results by testing
-against a bloom filter. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-bloom-filter` as an
-extension.
+To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `druid-bloom-filter` in the extensions load list.
 
-A Bloom filter is a probabilistic data structure for performing a set membership check. A bloom filter is a good candidate
-to use with Druid for cases where an explicit filter is impossible, e.g. filtering a query against a set of millions of
- values.
+This extension adds the ability to both construct bloom filters from query results, and filter query results by testing
+against a bloom filter. A Bloom filter is a probabilistic data structure for performing a set membership check. A bloom
+filter is a good candidate to use with Druid for cases where an explicit filter is impossible, e.g. filtering a query
+against a set of millions of values.
 
 Following are some characteristics of Bloom filters:
 
@@ -76,7 +75,7 @@ This string can then be used in the native or SQL Druid query.
 |`type`                   |Filter Type. Should always be `bloom`|yes|
 |`dimension`              |The dimension to filter over. | yes |
 |`bloomKFilter`           |Base64 encoded Binary representation of `org.apache.hive.common.util.BloomKFilter`| yes |
-|`extractionFn`|[Extraction function](../../querying/dimensionspecs.html#extraction-functions) to apply to the dimension values |no|
+|`extractionFn`|[Extraction function](../../querying/dimensionspecs.md#extraction-functions) to apply to the dimension values |no|
 
 
 ### Serialized Format for BloomKFilter
@@ -175,5 +174,5 @@ Bloom filters can be computed in SQL expressions with the `bloom_filter` aggrega
 SELECT BLOOM_FILTER(<expression>, <max number of entries>) FROM druid.foo WHERE dim2 = 'abc'
 ```
 
-but requires the setting `druid.sql.planner.serializeComplexValues` to be set to `true`. Bloom filter results in an SQL
+but requires the setting `druid.sql.planner.serializeComplexValues` to be set to `true`. Bloom filter results in a SQL
  response are serialized into a base64 string, which can then be used in subsequent queries as a filter.

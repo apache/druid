@@ -23,15 +23,15 @@ title: "Authentication and Authorization"
   -->
 
 
-This document describes non-extension specific Apache Druid (incubating) authentication and authorization configurations.
+This document describes non-extension specific Apache Druid authentication and authorization configurations.
 
 |Property|Type|Description|Default|Required|
 |--------|-----------|--------|--------|--------|
 |`druid.auth.authenticatorChain`|JSON List of Strings|List of Authenticator type names|["allowAll"]|no|
-|`druid.escalator.type`|String|Type of the Escalator that should be used for internal Druid communications. This Escalator must use an authentication scheme that is supported by an Authenticator in `druid.auth.authenticationChain`.|"noop"|no|
+|`druid.escalator.type`|String|Type of the Escalator that should be used for internal Druid communications. This Escalator must use an authentication scheme that is supported by an Authenticator in `druid.auth.authenticatorChain`.|"noop"|no|
 |`druid.auth.authorizers`|JSON List of Strings|List of Authorizer type names |["allowAll"]|no|
 |`druid.auth.unsecuredPaths`| List of Strings|List of paths for which security checks will not be performed. All requests to these paths will be allowed.|[]|no|
-|`druid.auth.allowUnauthenticatedHttpOptions`|Boolean|If true, skip authentication checks for HTTP OPTIONS requests. This is needed for certain use cases, such as supporting CORS preflight requests. Note that disabling authentication checks for OPTIONS requests will allow unauthenticated users to determine what Druid endpoints are valid (by checking if the OPTIONS request returns a 200 instead of 404), so enabling this option may reveal information about server configuration, including information about what extensions are loaded (if those extensions add endpoints).|false|no|
+|`druid.auth.allowUnauthenticatedHttpOptions`|Boolean|If true, allow HTTP OPTIONS requests by unauthenticated users. This is primarily useful for supporting CORS preflight requests, which Druid does not support directly, but which can be enabled using third-party extensions.<br /><br />Note that you must add "OPTIONS" to `druid.server.http.allowedHttpMethods`.<br /><br />Also note that disabling authentication checks for OPTIONS requests will allow unauthenticated users to determine what Druid endpoints are valid (by checking if the OPTIONS request returns a 200 instead of 404). Enabling this option will reveal information about server configuration, including information about what extensions are loaded, to unauthenticated users.|false|no|
 
 ## Enabling Authentication/AuthorizationLoadingLookupTest
 
@@ -40,7 +40,7 @@ Authentication decisions are handled by a chain of Authenticator instances. A re
 
 Authenticator implementations are provided by extensions.
 
-For example, the following authentication chain definition enables the Kerberos and HTTP Basic authenticators, from the `druid-kerberos` and `druid-basic-security` core extensions, respectively:
+For example, the following authenticator chain definition enables the Kerberos and HTTP Basic authenticators, from the `druid-kerberos` and `druid-basic-security` core extensions, respectively:
 
 ```
 druid.auth.authenticatorChain=["kerberos", "basic"]
@@ -59,7 +59,7 @@ This built-in Authenticator authenticates all requests, and always directs them 
 ### Anonymous authenticator
 
 This built-in Authenticator authenticates all requests, and directs them to an Authorizer specified in the configuration by the user. It is intended to be used for adding a default level of access so
-the Anonymous Authenticator should be added to the end of the authentication chain. A request that reaches the Anonymous Authenticator at the end of the chain will succeed or fail depending on how the Authorizer linked to the Anonymous Authenticator is configured.
+the Anonymous Authenticator should be added to the end of the authenticator chain. A request that reaches the Anonymous Authenticator at the end of the chain will succeed or fail depending on how the Authorizer linked to the Anonymous Authenticator is configured.
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|
@@ -111,7 +111,7 @@ druid.auth.authenticator.trustedDomain.name=myTrustedAutenticator
 ## Escalator
 The `druid.escalator.type` property determines what authentication scheme should be used for internal Druid cluster communications (such as when a Broker process communicates with Historical processes for query processing).
 
-The Escalator chosen for this property must use an authentication scheme that is supported by an Authenticator in `druid.auth.authenticationChain`. Authenticator extension implementers must also provide a corresponding Escalator implementation if they intend to use a particular authentication scheme for internal Druid communications.
+The Escalator chosen for this property must use an authentication scheme that is supported by an Authenticator in `druid.auth.authenticatorChain`. Authenticator extension implementers must also provide a corresponding Escalator implementation if they intend to use a particular authentication scheme for internal Druid communications.
 
 ### Noop escalator
 
@@ -139,7 +139,7 @@ The Authorizer with type name "allowAll" accepts all requests.
 
 ## Default Unsecured Configuration
 
-When `druid.auth.authenticationChain` is left empty or unspecified, Druid will create an authentication chain with a single AllowAll Authenticator named "allowAll".
+When `druid.auth.authenticatorChain` is left empty or unspecified, Druid will create an authenticator chain with a single AllowAll Authenticator named "allowAll".
 
 When `druid.auth.authorizers` is left empty or unspecified, Druid will create a single AllowAll Authorizer named "allowAll".
 

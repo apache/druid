@@ -50,7 +50,7 @@ public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFireho
 
   @JsonCreator
   public StaticCloudFilesFirehoseFactory(
-      @JacksonInject("objectApi") CloudFilesApi cloudFilesApi,
+      @JacksonInject CloudFilesApi cloudFilesApi,
       @JsonProperty("blobs") List<CloudFilesBlob> blobs,
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
       @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,

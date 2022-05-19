@@ -27,6 +27,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -56,7 +57,7 @@ public class JSONPathParserTest
   public void testSimple()
   {
     List<JSONPathFieldSpec> fields = new ArrayList<>();
-    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null, false);
     final Map<String, Object> jsonMap = jsonParser.parseToMap(JSON);
     Assert.assertEquals(
         "jsonMap",
@@ -69,7 +70,7 @@ public class JSONPathParserTest
   public void testWithNumbers()
   {
     List<JSONPathFieldSpec> fields = new ArrayList<>();
-    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null, false);
     final Map<String, Object> jsonMap = jsonParser.parseToMap(NUMBERS_JSON);
     Assert.assertEquals(
         "jsonMap",
@@ -82,7 +83,7 @@ public class JSONPathParserTest
   public void testWithWhackyCharacters()
   {
     List<JSONPathFieldSpec> fields = new ArrayList<>();
-    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null, false);
     final Map<String, Object> jsonMap = jsonParser.parseToMap(WHACKY_CHARACTER_JSON);
     Assert.assertEquals(
         "jsonMap",
@@ -112,7 +113,7 @@ public class JSONPathParserTest
     fields.add(new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq-met-array", ".met.a"));
 
 
-    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null, false);
     final Map<String, Object> jsonMap = jsonParser.parseToMap(NESTED_JSON);
 
     // Root fields
@@ -173,7 +174,7 @@ public class JSONPathParserTest
     fields.add(new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq-heybarx0", ".hey[0].barx"));
     fields.add(new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq-met-array", ".met.a"));
 
-    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null, false);
     final Map<String, Object> jsonMap = jsonParser.parseToMap(NESTED_JSON);
 
     // Root fields
@@ -210,7 +211,7 @@ public class JSONPathParserTest
     thrown.expect(IllegalArgumentException.class);
     thrown.expectMessage("Cannot have duplicate field definition: met-array");
 
-    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null, false);
     jsonParser.parseToMap(NESTED_JSON);
   }
 
@@ -224,7 +225,7 @@ public class JSONPathParserTest
     thrown.expect(IllegalArgumentException.class);
     thrown.expectMessage("Cannot have duplicate field definition: met-array");
 
-    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null, false);
     jsonParser.parseToMap(NESTED_JSON);
   }
 
@@ -236,7 +237,39 @@ public class JSONPathParserTest
     thrown.expect(ParseException.class);
     thrown.expectMessage("Unable to parse row [" + NOT_JSON + "]");
 
-    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null, false);
     jsonParser.parseToMap(NOT_JSON);
   }
+
+  @Test
+  public void testJSONPathFunctions()
+  {
+    List<JSONPathFieldSpec> fields = Arrays.asList(
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "met-array-length", "$.met.a.length()"),
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "met-array-min", "$.met.a.min()"),
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "met-array-max", "$.met.a.max()"),
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "met-array-avg", "$.met.a.avg()"),
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "met-array-sum", "$.met.a.sum()"),
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "met-array-stddev", "$.met.a.stddev()"),
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "met-array-append", "$.met.a.append(10)"),
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "concat", "$.concat($.foo.bar1, $.foo.bar2)")
+    );
+
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null, false);
+    final Map<String, Object> jsonMap = jsonParser.parseToMap(NESTED_JSON);
+
+    // values of met.a array are: 7,8,9
+    Assert.assertEquals(3, jsonMap.get("met-array-length"));
+    Assert.assertEquals(7.0, jsonMap.get("met-array-min"));
+    Assert.assertEquals(9.0, jsonMap.get("met-array-max"));
+    Assert.assertEquals(8.0, jsonMap.get("met-array-avg"));
+    Assert.assertEquals(24.0, jsonMap.get("met-array-sum"));
+
+    //deviation of [7,8,9] is 1/3, stddev is sqrt(1/3), approximately 0.8165
+    Assert.assertEquals(0.8165, (double) jsonMap.get("met-array-stddev"), 0.00001);
+
+    Assert.assertEquals(ImmutableList.of(7L, 8L, 9L, 10L), jsonMap.get("met-array-append"));
+    Assert.assertEquals("aaabbb", jsonMap.get("concat"));
+  }
+
 }

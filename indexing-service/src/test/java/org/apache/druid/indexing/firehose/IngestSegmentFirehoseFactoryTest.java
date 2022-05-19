@@ -26,7 +26,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.io.Files;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import org.apache.druid.client.coordinator.CoordinatorClient;
@@ -42,17 +41,19 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.indexing.common.ReingestionTimelineUtils;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
-import org.apache.druid.java.util.common.IOE;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -62,18 +63,20 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.realtime.firehose.CombiningFirehoseFactory;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -141,19 +144,17 @@ public class IngestSegmentFirehoseFactoryTest
       private final Set<DataSegment> published = new HashSet<>();
 
       @Override
-      public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
+      public List<DataSegment> retrieveUsedSegmentsForIntervals(
+          String dataSource,
+          List<Interval> interval,
+          Segments visibility
+      )
       {
         return ImmutableList.copyOf(SEGMENT_SET);
       }
 
       @Override
-      public List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> interval)
-      {
-        return ImmutableList.copyOf(SEGMENT_SET);
-      }
-
-      @Override
-      public List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval)
+      public List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval)
       {
         return ImmutableList.of();
       }
@@ -195,33 +196,34 @@ public class IngestSegmentFirehoseFactoryTest
             new DoubleSumAggregatorFactory(METRIC_FLOAT_NAME, DIM_FLOAT_NAME)
         )
         .build();
-    final IncrementalIndex index = new IncrementalIndex.Builder()
+    final IncrementalIndex index = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(schema)
         .setMaxRowCount(MAX_ROWS * MAX_SHARD_NUMBER)
-        .buildOnheap();
+        .build();
 
     for (Integer i = 0; i < MAX_ROWS; ++i) {
       index.add(ROW_PARSER.parseBatch(buildRow(i.longValue())).get(0));
     }
 
-    if (!PERSIST_DIR.mkdirs() && !PERSIST_DIR.exists()) {
-      throw new IOE("Could not create directory at [%s]", PERSIST_DIR.getAbsolutePath());
-    }
+    FileUtils.mkdirp(PERSIST_DIR);
     INDEX_MERGER_V9.persist(index, PERSIST_DIR, indexSpec, null);
 
     final CoordinatorClient cc = new CoordinatorClient(null, null)
     {
       @Override
-      public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+      public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(
+          String dataSource,
+          List<Interval> intervals
+      )
       {
-        return ImmutableList.copyOf(SEGMENT_SET);
+        return ImmutableSet.copyOf(SEGMENT_SET);
       }
     };
 
     SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
     EasyMock.replay(notifierFactory);
 
-    final SegmentLoaderFactory slf = new SegmentLoaderFactory(null, MAPPER);
+    final SegmentCacheManagerFactory slf = new SegmentCacheManagerFactory(MAPPER);
     final RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory(new RetryPolicyConfig());
 
     Collection<Object[]> values = new ArrayList<>();
@@ -230,11 +232,10 @@ public class IngestSegmentFirehoseFactoryTest
         new MapInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec(TIME_COLUMN, "auto", null),
-                new DimensionsSpec(
-                    DimensionsSpec.getDefaultSchemas(ImmutableList.of()),
-                    ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
-                    ImmutableList.of()
-                ),
+                DimensionsSpec.builder()
+                              .setDimensionExclusions(ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME))
+                              .build(),
+                null,
                 null,
                 null
             )
@@ -309,6 +310,7 @@ public class IngestSegmentFirehoseFactoryTest
                       public void configure(Binder binder)
                       {
                         binder.bind(LocalDataSegmentPuller.class);
+                        binder.bind(ExprMacroTable.class).toInstance(TestExprMacroTable.INSTANCE);
                       }
                     }
                 )
@@ -345,7 +347,7 @@ public class IngestSegmentFirehoseFactoryTest
   private static final String TIME_COLUMN = "ts";
   private static final Integer MAX_SHARD_NUMBER = 10;
   private static final Integer MAX_ROWS = 10;
-  private static final File TMP_DIR = Files.createTempDir();
+  private static final File TMP_DIR = FileUtils.createTempDir();
   private static final File PERSIST_DIR = Paths.get(TMP_DIR.getAbsolutePath(), "indexTestMerger").toFile();
   private static final List<DataSegment> SEGMENT_SET = new ArrayList<>(MAX_SHARD_NUMBER);
 
@@ -356,11 +358,10 @@ public class IngestSegmentFirehoseFactoryTest
   private static final InputRowParser<Map<String, Object>> ROW_PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
           new TimestampSpec(TIME_COLUMN, "auto", null),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)),
-              ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
-              ImmutableList.of()
-          )
+          DimensionsSpec.builder()
+                        .setDimensions(DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)))
+                        .setDimensionExclusions(ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME))
+                        .build()
       )
   );
 
@@ -599,11 +600,11 @@ public class IngestSegmentFirehoseFactoryTest
     };
     Assert.assertEquals(
         Arrays.asList(expectedDims),
-        IngestSegmentFirehoseFactory.getUniqueDimensions(timelineSegments, null)
+        ReingestionTimelineUtils.getUniqueDimensions(timelineSegments, null)
     );
     Assert.assertEquals(
         Arrays.asList(expectedMetrics),
-        IngestSegmentFirehoseFactory.getUniqueMetrics(timelineSegments)
+        ReingestionTimelineUtils.getUniqueMetrics(timelineSegments)
     );
   }
 

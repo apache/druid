@@ -45,6 +45,7 @@ import java.nio.channels.WritableByteChannel;
 public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
 {
   public static LongColumnSerializerV2 create(
+      String columnName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       CompressionStrategy compression,
@@ -53,6 +54,7 @@ public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
   )
   {
     return new LongColumnSerializerV2(
+        columnName,
         segmentWriteOutMedium,
         filenameBase,
         IndexIO.BYTE_ORDER,
@@ -62,6 +64,7 @@ public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
     );
   }
 
+  private final String columnName;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final String filenameBase;
   private final ByteOrder byteOrder;
@@ -75,6 +78,7 @@ public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
   private int rowCount = 0;
 
   private LongColumnSerializerV2(
+      String columnName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder byteOrder,
@@ -83,6 +87,7 @@ public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
       BitmapSerdeFactory bitmapSerdeFactory
   )
   {
+    this.columnName = columnName;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.filenameBase = filenameBase;
     this.byteOrder = byteOrder;
@@ -95,6 +100,7 @@ public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
   public void open() throws IOException
   {
     writer = CompressionFactory.getLongSerializer(
+        columnName,
         segmentWriteOutMedium,
         StringUtils.format("%s.long_column", filenameBase),
         byteOrder,

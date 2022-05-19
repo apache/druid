@@ -44,6 +44,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.LongColumnSelector;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -55,7 +56,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 
-public class BloomFilterAggregatorTest
+public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
 {
   private static final String NULLISH = NullHandling.replaceWithDefault() ? "" : null;
   private static final List<String[]> VALUES1 = dimensionValues(

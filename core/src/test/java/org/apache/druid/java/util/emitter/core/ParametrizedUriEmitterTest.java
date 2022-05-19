@@ -66,6 +66,10 @@ public class ParametrizedUriEmitterTest
     final Properties props = new Properties();
     props.setProperty("org.apache.druid.java.util.emitter.type", "parametrized");
     props.setProperty("org.apache.druid.java.util.emitter.recipientBaseUrlPattern", uriPattern);
+    props.setProperty(
+        "org.apache.druid.java.util.emitter.httpEmitting.flushTimeOut",
+        String.valueOf(BaseHttpEmittingConfig.TEST_FLUSH_TIMEOUT_MILLIS)
+    );
     lifecycle = new Lifecycle();
     Emitter emitter = Emitters.create(props, httpClient, lifecycle);
     Assert.assertEquals(ParametrizedUriEmitter.class, emitter.getClass());

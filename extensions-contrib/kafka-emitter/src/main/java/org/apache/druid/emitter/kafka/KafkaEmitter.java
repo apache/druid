@@ -21,16 +21,17 @@ package org.apache.druid.emitter.kafka;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.emitter.kafka.MemoryBoundLinkedBlockingQueue.ObjectContainer;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.server.log.RequestLogEvent;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
@@ -49,53 +50,54 @@ public class KafkaEmitter implements Emitter
 {
   private static Logger log = new Logger(KafkaEmitter.class);
 
+  private static final int DEFAULT_SEND_INTERVAL_SECONDS = 10;
+  private static final int DEFAULT_SEND_LOST_INTERVAL_MINUTES = 5;
   private static final int DEFAULT_RETRIES = 3;
   private final AtomicLong metricLost;
   private final AtomicLong alertLost;
+  private final AtomicLong requestLost;
   private final AtomicLong invalidLost;
 
   private final KafkaEmitterConfig config;
   private final Producer<String, String> producer;
-  private final Callback producerCallback;
   private final ObjectMapper jsonMapper;
   private final MemoryBoundLinkedBlockingQueue<String> metricQueue;
   private final MemoryBoundLinkedBlockingQueue<String> alertQueue;
+  private final MemoryBoundLinkedBlockingQueue<String> requestQueue;
   private final ScheduledExecutorService scheduler;
+
+  protected int sendInterval = DEFAULT_SEND_INTERVAL_SECONDS;
 
   public KafkaEmitter(KafkaEmitterConfig config, ObjectMapper jsonMapper)
   {
     this.config = config;
     this.jsonMapper = jsonMapper;
     this.producer = setKafkaProducer();
-    this.producerCallback = setProducerCallback();
     // same with kafka producer's buffer.memory
     long queueMemoryBound = Long.parseLong(this.config.getKafkaProducerConfig()
                                                       .getOrDefault(ProducerConfig.BUFFER_MEMORY_CONFIG, "33554432"));
     this.metricQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
     this.alertQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
-    this.scheduler = Executors.newScheduledThreadPool(3);
+    this.requestQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
+    this.scheduler = Executors.newScheduledThreadPool(4);
     this.metricLost = new AtomicLong(0L);
     this.alertLost = new AtomicLong(0L);
+    this.requestLost = new AtomicLong(0L);
     this.invalidLost = new AtomicLong(0L);
   }
 
-  private Callback setProducerCallback()
+  private Callback setProducerCallback(AtomicLong lostCouter)
   {
     return (recordMetadata, e) -> {
       if (e != null) {
         log.debug("Event send failed [%s]", e.getMessage());
-        if (recordMetadata.topic().equals(config.getMetricTopic())) {
-          metricLost.incrementAndGet();
-        } else if (recordMetadata.topic().equals(config.getAlertTopic())) {
-          alertLost.incrementAndGet();
-        } else {
-          invalidLost.incrementAndGet();
-        }
+        lostCouter.incrementAndGet();
       }
     };
   }
 
-  private Producer<String, String> setKafkaProducer()
+  @VisibleForTesting
+  protected Producer<String, String> setKafkaProducer()
   {
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
@@ -116,39 +118,47 @@ public class KafkaEmitter implements Emitter
   }
 
   @Override
-  @LifecycleStart
   public void start()
   {
-    scheduler.scheduleWithFixedDelay(this::sendMetricToKafka, 10, 10, TimeUnit.SECONDS);
-    scheduler.scheduleWithFixedDelay(this::sendAlertToKafka, 10, 10, TimeUnit.SECONDS);
+    scheduler.schedule(this::sendMetricToKafka, sendInterval, TimeUnit.SECONDS);
+    scheduler.schedule(this::sendAlertToKafka, sendInterval, TimeUnit.SECONDS);
+    if (config.getRequestTopic() != null) {
+      scheduler.schedule(this::sendRequestToKafka, sendInterval, TimeUnit.SECONDS);
+    }
     scheduler.scheduleWithFixedDelay(() -> {
-      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], invalidLost=[%d]",
-               metricLost.get(), alertLost.get(), invalidLost.get());
-    }, 5, 5, TimeUnit.MINUTES);
+      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], invalidLost=[%d]",
+          metricLost.get(), alertLost.get(), requestLost.get(), invalidLost.get()
+      );
+    }, DEFAULT_SEND_LOST_INTERVAL_MINUTES, DEFAULT_SEND_LOST_INTERVAL_MINUTES, TimeUnit.MINUTES);
     log.info("Starting Kafka Emitter.");
   }
 
   private void sendMetricToKafka()
   {
-    sendToKafka(config.getMetricTopic(), metricQueue);
+    sendToKafka(config.getMetricTopic(), metricQueue, setProducerCallback(metricLost));
   }
 
   private void sendAlertToKafka()
   {
-    sendToKafka(config.getAlertTopic(), alertQueue);
+    sendToKafka(config.getAlertTopic(), alertQueue, setProducerCallback(alertLost));
   }
 
-  private void sendToKafka(final String topic, MemoryBoundLinkedBlockingQueue<String> recordQueue)
+  private void sendRequestToKafka()
+  {
+    sendToKafka(config.getRequestTopic(), requestQueue, setProducerCallback(requestLost));
+  }
+
+  private void sendToKafka(final String topic, MemoryBoundLinkedBlockingQueue<String> recordQueue, Callback callback)
   {
     ObjectContainer<String> objectToSend;
     try {
       while (true) {
         objectToSend = recordQueue.take();
-        producer.send(new ProducerRecord<>(topic, objectToSend.getData()), producerCallback);
+        producer.send(new ProducerRecord<>(topic, objectToSend.getData()), callback);
       }
     }
-    catch (InterruptedException e) {
-      log.warn(e, "Failed to take record from queue!");
+    catch (Throwable e) {
+      log.warn(e, "Exception while getting record from queue or producer send, Events would not be emitted anymore.");
     }
   }
 
@@ -176,6 +186,10 @@ public class KafkaEmitter implements Emitter
           if (!alertQueue.offer(objectContainer)) {
             alertLost.incrementAndGet();
           }
+        } else if (event instanceof RequestLogEvent) {
+          if (config.getRequestTopic() == null || !requestQueue.offer(objectContainer)) {
+            requestLost.incrementAndGet();
+          }
         } else {
           invalidLost.incrementAndGet();
         }
@@ -198,5 +212,25 @@ public class KafkaEmitter implements Emitter
   {
     scheduler.shutdownNow();
     producer.close();
+  }
+
+  public long getMetricLostCount()
+  {
+    return metricLost.get();
+  }
+
+  public long getAlertLostCount()
+  {
+    return alertLost.get();
+  }
+
+  public long getRequestLostCount()
+  {
+    return requestLost.get();
+  }
+
+  public long getInvalidLostCount()
+  {
+    return invalidLost.get();
   }
 }

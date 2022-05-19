@@ -22,17 +22,23 @@ package org.apache.druid.query.expression;
 import com.google.inject.Inject;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.Exprs;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class LookupExprMacro implements ExprMacroTable.ExprMacro
 {
+  private static final String FN_NAME = "lookup";
   private final LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider;
 
   @Inject
@@ -44,7 +50,7 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public String name()
   {
-    return "lookup";
+    return FN_NAME;
   }
 
   @Override
@@ -75,7 +81,7 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
     {
       private LookupExpr(Expr arg)
       {
-        super(arg);
+        super(FN_NAME, arg);
       }
 
       @Nonnull
@@ -88,8 +94,28 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new LookupExpr(newArg));
+        return shuttle.visit(apply(shuttle.visitAll(args)));
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getOutputType(InputBindingInspector inspector)
+      {
+        return ExpressionType.STRING;
+      }
+
+      @Override
+      public String stringify()
+      {
+        return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), lookupExpr.stringify());
+      }
+
+      @Override
+      public byte[] getCacheKey()
+      {
+        return new CacheKeyBuilder(Exprs.LOOKUP_EXPR_CACHE_KEY).appendString(stringify())
+                                                               .appendCacheable(extractionFn)
+                                                               .build();
       }
     }
 

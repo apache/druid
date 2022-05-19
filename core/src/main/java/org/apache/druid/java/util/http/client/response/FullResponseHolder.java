@@ -29,18 +29,16 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
  */
 public abstract class FullResponseHolder<T>
 {
-  private final HttpResponseStatus status;
   private final HttpResponse response;
 
-  public FullResponseHolder(HttpResponseStatus status, HttpResponse response)
+  public FullResponseHolder(HttpResponse response)
   {
-    this.status = status;
     this.response = response;
   }
 
   public HttpResponseStatus getStatus()
   {
-    return status;
+    return response.getStatus();
   }
 
   public HttpResponse getResponse()
@@ -49,12 +47,7 @@ public abstract class FullResponseHolder<T>
   }
 
   /**
-   * Append a new chunk of data.
-   */
-  public abstract FullResponseHolder addChunk(T chunk);
-
-  /**
-   * Get the accumulated data via {@link #addChunk}.
+   * Get the data.
    */
   public abstract T getContent();
 }

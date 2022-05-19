@@ -42,7 +42,7 @@ import java.util.Map;
 
 public class GoogleDataSegmentPusher implements DataSegmentPusher
 {
-  private static final Logger LOG = new Logger(GoogleDataSegmentPusher.class);
+  private static final Logger log = new Logger(GoogleDataSegmentPusher.class);
 
   private final GoogleStorage storage;
   private final GoogleAccountConfig config;
@@ -55,8 +55,6 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
   {
     this.storage = storage;
     this.config = config;
-
-    LOG.info("Configured Google as deep storage");
   }
 
   @Deprecated
@@ -81,7 +79,7 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
   public void insert(final File file, final String contentType, final String path)
       throws IOException
   {
-    LOG.info("Inserting [%s] to [%s]", file, path);
+    log.debug("Inserting [%s] to [%s]", file, path);
     try {
       RetryUtils.retry(
           (RetryUtils.Task<Void>) () -> {
@@ -105,16 +103,21 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
   public DataSegment push(final File indexFilesDir, final DataSegment segment, final boolean useUniquePath)
       throws IOException
   {
-    LOG.info("Uploading [%s] to Google.", indexFilesDir);
+    log.debug("Uploading [%s] to Google.", indexFilesDir);
+    final String storageDir = this.getStorageDir(segment, useUniquePath);
+    return pushToPath(indexFilesDir, segment, storageDir);
+  }
 
+  @Override
+  public DataSegment pushToPath(File indexFilesDir, DataSegment segment, String storageDirSuffix) throws IOException
+  {
     final int version = SegmentUtils.getVersionFromDir(indexFilesDir);
     File indexFile = null;
 
     try {
       indexFile = File.createTempFile("index", ".zip");
       final long indexSize = CompressionUtils.zip(indexFilesDir, indexFile);
-      final String storageDir = this.getStorageDir(segment, useUniquePath);
-      final String indexPath = buildPath(storageDir + "/" + "index.zip");
+      final String indexPath = buildPath(storageDirSuffix + "/" + "index.zip");
 
       final DataSegment outSegment = segment
           .withSize(indexSize)
@@ -130,7 +133,7 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
     }
     finally {
       if (indexFile != null) {
-        LOG.info("Deleting file [%s]", indexFile);
+        log.debug("Deleting file [%s]", indexFile);
         indexFile.delete();
       }
     }

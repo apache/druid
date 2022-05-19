@@ -24,21 +24,21 @@ title: "Router Process"
 
 
 > The Router is an optional and [experimental](../development/experimental.md) feature due to the fact that its recommended place in the Druid cluster architecture is still evolving.
-> However, it has been battle-tested in production, and it hosts the powerful [Druid Console](../operations/management-uis.html#druid-console), so you should feel safe deploying it.
+> However, it has been battle-tested in production, and it hosts the powerful [Druid Console](../operations/druid-console.md), so you should feel safe deploying it.
 
-The Apache Druid (incubating) Router process can be used to route queries to different Broker processes. By default, the broker routes queries based on how [Rules](../operations/rule-configuration.md) are set up. For example, if 1 month of recent data is loaded into a `hot` cluster, queries that fall within the recent month can be routed to a dedicated set of brokers. Queries outside this range are routed to another set of brokers. This set up provides query isolation such that queries for more important data are not impacted by queries for less important data.
+The Apache Druid Router process can be used to route queries to different Broker processes. By default, the broker routes queries based on how [Rules](../operations/rule-configuration.md) are set up. For example, if 1 month of recent data is loaded into a `hot` cluster, queries that fall within the recent month can be routed to a dedicated set of brokers. Queries outside this range are routed to another set of brokers. This set up provides query isolation such that queries for more important data are not impacted by queries for less important data.
 
 For query routing purposes, you should only ever need the Router process if you have a Druid cluster well into the terabyte range.
 
-In addition to query routing, the Router also runs the [Druid Console](../operations/management-uis.html#druid-console), a management UI for datasources, segments, tasks, data processes (Historicals and MiddleManagers), and coordinator dynamic configuration. The user can also run SQL and native Druid queries within the console.
+In addition to query routing, the Router also runs the [Druid Console](../operations/druid-console.md), a management UI for datasources, segments, tasks, data processes (Historicals and MiddleManagers), and coordinator dynamic configuration. The user can also run SQL and native Druid queries within the console.
 
 ### Configuration
 
-For Apache Druid (incubating) Router Process Configuration, see [Router Configuration](../configuration/index.html#router).
+For Apache Druid Router Process Configuration, see [Router Configuration](../configuration/index.md#router).
 
 ### HTTP endpoints
 
-For a list of API endpoints supported by the Router, see [Router API](../operations/api-reference.html#router).
+For a list of API endpoints supported by the Router, see [Router API](../operations/api-reference.md#router).
 
 ### Running
 
@@ -109,6 +109,20 @@ Including this strategy means all timeBoundary queries are always routed to the 
 
 Queries with a priority set to less than minPriority are routed to the lowest priority Broker. Queries with priority set to greater than maxPriority are routed to the highest priority Broker. By default, minPriority is 0 and maxPriority is 1. Using these default values, if a query with priority 0 (the default query priority is 0) is sent, the query skips the priority selection logic.
 
+#### manual
+
+This strategy reads the parameter `brokerService` from the query context and routes the query to that broker service. If no valid `brokerService` is specified in the query context, the field `defaultManualBrokerService` is used to determine target broker service given the value is valid and non-null. A value is considered valid if it is present in `druid.router.tierToBrokerMap`
+This strategy can route both Native and SQL queries (when enabled).
+
+*Example*: A strategy that routes queries to the Broker "druid:broker-hot" if no valid `brokerService` is found in the query context.
+
+```json
+{
+  "type": "manual",
+  "defaultManualBrokerService": "druid:broker-hot"
+}
+```
+
 #### JavaScript
 
 Allows defining arbitrary routing rules using a JavaScript function. The function is passed the configuration and the query to be executed, and returns the tier it should be routed to, or null for the default tier.
@@ -124,6 +138,18 @@ Allows defining arbitrary routing rules using a JavaScript function. The functio
 
 > JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 
+### Routing of SQL queries using strategies
+
+To enable routing of SQL queries using strategies, set `druid.router.sql.enable` to `true`. The broker service for a
+given SQL query is resolved using only the provided Router strategies. If not resolved using any of the strategies, the
+Router uses the `defaultBrokerServiceName`. This behavior is slightly different from native queries where the Router
+first tries to resolve the broker service using strategies, then load rules and finally using the `defaultBrokerServiceName`
+if still not resolved. When `druid.router.sql.enable` is set to `false` (default value), the Router uses the
+`defaultBrokerServiceName`.
+
+Setting `druid.router.sql.enable` does not affect either Avatica JDBC requests or native queries.
+Druid always routes native queries using the strategies and load rules as documented.
+Druid always routes Avatica JDBC requests based on connection ID.
 
 ### Avatica query balancing
 
@@ -203,4 +229,3 @@ druid.router.http.numMaxThreads=100
 
 druid.server.http.numThreads=100
 ```
-

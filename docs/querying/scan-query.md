@@ -23,8 +23,12 @@ sidebar_label: "Scan"
   ~ under the License.
   -->
 
+> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+> This document describes a query
+> type in the native language. For information about when Druid SQL will use this query type, refer to the
+> [SQL documentation](sql-translation.md#query-types).
 
-The Scan query returns raw Apache Druid (incubating) rows in streaming mode.  
+The Scan query returns raw Apache Druid rows in streaming mode.  
 
 In addition to straightforward usage where a Scan query is issued to the Broker, the Scan query can also be issued
 directly to Historical processes or streaming ingestion tasks. This can be useful if you want to retrieve large
@@ -58,6 +62,7 @@ The following are the main parameters for Scan queries:
 |columns|A String array of dimensions and metrics to scan. If left empty, all dimensions and metrics are returned.|no|
 |batchSize|The maximum number of rows buffered before being returned to the client. Default is `20480`|no|
 |limit|How many rows to return. If not specified, all rows will be returned.|no|
+|offset|Skip this many rows when returning results. Skipped rows will still need to be generated internally and then discarded, meaning that raising offsets to high values can cause queries to use additional resources.<br /><br />Together, "limit" and "offset" can be used to implement pagination. However, note that if the underlying datasource is modified in between page fetches in ways that affect overall query results, then the different pages will not necessarily align with each other.|no|
 |order|The ordering of returned rows based on timestamp.  "ascending", "descending", and "none" (default) are supported.  Currently, "ascending" and "descending" are only supported for queries where the `__time` column is included in the `columns` field and the requirements outlined in the [time ordering](#time-ordering) section are met.|none|
 |legacy|Return results consistent with the legacy "scan-query" contrib extension. Defaults to the value set by `druid.query.scan.legacy`, which in turn defaults to false. See [Legacy mode](#legacy-mode) for details.|no|
 |context|An additional JSON Object which can be used to specify certain flags (see the `query context properties` section below).|no|

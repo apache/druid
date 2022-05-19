@@ -20,26 +20,25 @@
 package org.apache.druid.server.lookup.namespace;
 
 import com.google.common.base.Strings;
+import org.apache.druid.data.input.MapPopulator;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.namespace.CacheGenerator;
 import org.apache.druid.query.lookup.namespace.JdbcExtractionNamespace;
+import org.apache.druid.server.lookup.namespace.cache.CacheHandler;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
+import org.apache.druid.utils.JvmUtils;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.StatementContext;
-import org.skife.jdbi.v2.tweak.HandleCallback;
-import org.skife.jdbi.v2.tweak.ResultSetMapper;
+import org.skife.jdbi.v2.ResultIterator;
+import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 import org.skife.jdbi.v2.util.TimestampMapper;
 
 import javax.annotation.Nullable;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -49,75 +48,81 @@ import java.util.concurrent.ConcurrentMap;
 public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNamespace>
 {
   private static final Logger LOG = new Logger(JdbcCacheGenerator.class);
+  private static final String NO_SUITABLE_DRIVER_FOUND_ERROR = "No suitable driver found";
+  private static final String JDBC_DRIVER_JAR_FILES_MISSING_ERROR =
+      "JDBC driver JAR files missing from extensions/druid-lookups-cached-global directory";
+  private static final long MAX_MEMORY = JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes();
   private final ConcurrentMap<CacheScheduler.EntryImpl<JdbcExtractionNamespace>, DBI> dbiCache =
       new ConcurrentHashMap<>();
 
   @Override
   @Nullable
-  public CacheScheduler.VersionedCache generateCache(
+  public String generateCache(
       final JdbcExtractionNamespace namespace,
       final CacheScheduler.EntryImpl<JdbcExtractionNamespace> entryId,
       final String lastVersion,
-      final CacheScheduler scheduler
+      final CacheHandler cache
   )
   {
     final long lastCheck = lastVersion == null ? JodaUtils.MIN_INSTANT : Long.parseLong(lastVersion);
-    final Long lastDBUpdate = lastUpdates(entryId, namespace);
-    if (lastDBUpdate != null && lastDBUpdate <= lastCheck) {
-      return null;
+    final Long lastDBUpdate;
+    final long dbQueryStart;
+
+    try {
+      lastDBUpdate = lastUpdates(entryId, namespace);
+      if (lastDBUpdate != null && lastDBUpdate <= lastCheck) {
+        return null;
+      }
     }
-    final long dbQueryStart = System.currentTimeMillis();
-    final DBI dbi = ensureDBI(entryId, namespace);
-    final String table = namespace.getTable();
-    final String filter = namespace.getFilter();
-    final String valueColumn = namespace.getValueColumn();
-    final String keyColumn = namespace.getKeyColumn();
+    catch (UnableToObtainConnectionException e) {
+      if (e.getMessage().contains(NO_SUITABLE_DRIVER_FOUND_ERROR)) {
+        throw new ISE(e, JDBC_DRIVER_JAR_FILES_MISSING_ERROR);
+      } else {
+        throw e;
+      }
+    }
+    dbQueryStart = System.currentTimeMillis();
 
     LOG.debug("Updating %s", entryId);
-    final List<Pair<String, String>> pairs = dbi.withHandle(
-        new HandleCallback<List<Pair<String, String>>>()
-        {
-          @Override
-          public List<Pair<String, String>> withHandle(Handle handle)
-          {
-            return handle
-                .createQuery(
-                    buildLookupQuery(table, filter, keyColumn, valueColumn)
-                ).map(
-                    new ResultSetMapper<Pair<String, String>>()
-                    {
-                      @Override
-                      public Pair<String, String> map(
-                          final int index,
-                          final ResultSet r,
-                          final StatementContext ctx
-                      ) throws SQLException
-                      {
-                        return new Pair<>(r.getString(keyColumn), r.getString(valueColumn));
-                      }
-                    }
-                ).list();
-          }
-        }
-    );
+
     final String newVersion;
     if (lastDBUpdate != null) {
       newVersion = lastDBUpdate.toString();
     } else {
       newVersion = StringUtils.format("%d", dbQueryStart);
     }
-    final CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(entryId, newVersion);
-    try {
-      final Map<String, String> cache = versionedCache.getCache();
-      for (Pair<String, String> pair : pairs) {
-        cache.put(pair.lhs, pair.rhs);
+
+    final long startNs = System.nanoTime();
+    try (
+        Handle handle = getHandle(entryId, namespace);
+        ResultIterator<Pair<String, String>> pairs = getLookupPairs(handle, namespace)
+    ) {
+      final MapPopulator.PopulateResult populateResult = MapPopulator.populateAndWarnAtByteLimit(
+          pairs,
+          cache.getCache(),
+          (long) (MAX_MEMORY * namespace.getMaxHeapPercentage() / 100.0),
+          null == entryId ? null : entryId.toString()
+      );
+      final long duration = System.nanoTime() - startNs;
+      LOG.info(
+          "Finished loading %,d values (%d bytes) for [%s] in %,d ns",
+          populateResult.getEntries(),
+          populateResult.getBytes(),
+          entryId,
+          duration
+      );
+      return newVersion;
+    }
+    catch (UnableToObtainConnectionException e) {
+      if (e.getMessage().contains(NO_SUITABLE_DRIVER_FOUND_ERROR)) {
+        throw new ISE(e, JDBC_DRIVER_JAR_FILES_MISSING_ERROR);
+      } else {
+        throw e;
       }
-      LOG.info("Finished loading %d values for %s", cache.size(), entryId);
-      return versionedCache;
     }
     catch (Throwable t) {
       try {
-        versionedCache.close();
+        cache.close();
       }
       catch (Exception e) {
         t.addSuppressed(e);
@@ -126,7 +131,31 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     }
   }
 
-  private String buildLookupQuery(String table, String filter, String keyColumn, String valueColumn)
+  private Handle getHandle(
+      final CacheScheduler.EntryImpl<JdbcExtractionNamespace> key,
+      final JdbcExtractionNamespace namespace
+  )
+  {
+    final DBI dbi = ensureDBI(key, namespace);
+    return dbi.open();
+  }
+
+  private ResultIterator<Pair<String, String>> getLookupPairs(
+      final Handle handle,
+      final JdbcExtractionNamespace namespace
+  )
+  {
+    final String table = namespace.getTable();
+    final String filter = namespace.getFilter();
+    final String valueColumn = namespace.getValueColumn();
+    final String keyColumn = namespace.getKeyColumn();
+
+    return handle.createQuery(buildLookupQuery(table, filter, keyColumn, valueColumn))
+            .map((index1, r1, ctx1) -> new Pair<>(r1.getString(keyColumn), r1.getString(valueColumn)))
+            .iterator();
+  }
+
+  private static String buildLookupQuery(String table, String filter, String keyColumn, String valueColumn)
   {
     if (Strings.isNullOrEmpty(filter)) {
       return StringUtils.format(
@@ -148,9 +177,8 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     );
   }
 
-  private DBI ensureDBI(CacheScheduler.EntryImpl<JdbcExtractionNamespace> id, JdbcExtractionNamespace namespace)
+  private DBI ensureDBI(CacheScheduler.EntryImpl<JdbcExtractionNamespace> key, JdbcExtractionNamespace namespace)
   {
-    final CacheScheduler.EntryImpl<JdbcExtractionNamespace> key = id;
     DBI dbi = null;
     if (dbiCache.containsKey(key)) {
       dbi = dbiCache.get(key);
@@ -167,33 +195,27 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     return dbi;
   }
 
-  private Long lastUpdates(CacheScheduler.EntryImpl<JdbcExtractionNamespace> id, JdbcExtractionNamespace namespace)
+  @Nullable
+  private Long lastUpdates(CacheScheduler.EntryImpl<JdbcExtractionNamespace> key, JdbcExtractionNamespace namespace)
   {
-    final DBI dbi = ensureDBI(id, namespace);
+    final DBI dbi = ensureDBI(key, namespace);
     final String table = namespace.getTable();
     final String tsColumn = namespace.getTsColumn();
     if (tsColumn == null) {
       return null;
     }
     final Timestamp update = dbi.withHandle(
-        new HandleCallback<Timestamp>()
-        {
-
-          @Override
-          public Timestamp withHandle(Handle handle)
-          {
-            final String query = StringUtils.format(
-                "SELECT MAX(%s) FROM %s",
-                tsColumn, table
-            );
-            return handle
-                .createQuery(query)
-                .map(TimestampMapper.FIRST)
-                .first();
-          }
+        handle -> {
+          final String query = StringUtils.format(
+              "SELECT MAX(%s) FROM %s",
+              tsColumn, table
+          );
+          return handle
+              .createQuery(query)
+              .map(TimestampMapper.FIRST)
+              .first();
         }
     );
     return update.getTime();
-
   }
 }

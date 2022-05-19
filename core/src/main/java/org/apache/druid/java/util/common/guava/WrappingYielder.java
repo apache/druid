@@ -26,7 +26,7 @@ import java.io.IOException;
 
 final class WrappingYielder<OutType> implements Yielder<OutType>
 {
-  private final Yielder<OutType> baseYielder;
+  private Yielder<OutType> baseYielder;
   private final SequenceWrapper wrapper;
 
   WrappingYielder(Yielder<OutType> baseYielder, SequenceWrapper wrapper)
@@ -50,7 +50,8 @@ final class WrappingYielder<OutType> implements Yielder<OutType>
         @Override
         public Yielder<OutType> get()
         {
-          return new WrappingYielder<>(baseYielder.next(initValue), wrapper);
+          baseYielder = baseYielder.next(initValue);
+          return WrappingYielder.this;
         }
       });
     }
@@ -62,6 +63,7 @@ final class WrappingYielder<OutType> implements Yielder<OutType>
       catch (Exception e) {
         t.addSuppressed(e);
       }
+      Throwables.propagateIfPossible(t);
       throw new RuntimeException(t);
     }
   }
@@ -89,6 +91,7 @@ final class WrappingYielder<OutType> implements Yielder<OutType>
         t.addSuppressed(e);
       }
       Throwables.propagateIfInstanceOf(t, IOException.class);
+      Throwables.propagateIfPossible(t);
       throw new RuntimeException(t);
     }
     // "Normal" close
@@ -97,6 +100,7 @@ final class WrappingYielder<OutType> implements Yielder<OutType>
     }
     catch (Exception e) {
       Throwables.propagateIfInstanceOf(e, IOException.class);
+      Throwables.propagateIfPossible(e);
       throw new RuntimeException(e);
     }
   }

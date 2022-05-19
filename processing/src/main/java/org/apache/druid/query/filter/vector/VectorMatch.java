@@ -140,6 +140,8 @@ public class VectorMatch implements ReadableVectorMatch
   /**
    * Removes all rows from this object that occur in "other", in place, and returns a reference to this object. Does
    * not modify "other".
+   *
+   * "other" cannot be the same instance as this object.
    */
   public VectorMatch removeAll(final ReadableVectorMatch other)
   {
@@ -169,6 +171,8 @@ public class VectorMatch implements ReadableVectorMatch
   /**
    * Adds all rows from "other" to this object, using "scratch" as scratch space if needed. Does not modify "other".
    * Returns a reference to this object.
+   *
+   * "other" and "scratch" cannot be the same instance as each other, or as this object.
    */
   public VectorMatch addAll(final ReadableVectorMatch other, final VectorMatch scratch)
   {
@@ -176,6 +180,8 @@ public class VectorMatch implements ReadableVectorMatch
     Preconditions.checkState(this != scratch, "'scratch' must be a different instance from 'this'");
     //noinspection ObjectEquality
     Preconditions.checkState(other != scratch, "'scratch' must be a different instance from 'other'");
+    //noinspection ObjectEquality
+    Preconditions.checkState(this != other, "'other' must be a different instance from 'this'");
 
     final int[] scratchSelection = scratch.getSelection();
     final int[] otherSelection = other.getSelection();
@@ -208,19 +214,24 @@ public class VectorMatch implements ReadableVectorMatch
 
   /**
    * Copies "other" into this object, and returns a reference to this object. Does not modify "other".
+   *
+   * "other" cannot be the same instance as this object.
    */
-  public VectorMatch copyFrom(final ReadableVectorMatch other)
+  public void copyFrom(final ReadableVectorMatch other)
   {
+    //noinspection ObjectEquality
+    Preconditions.checkState(this != other, "'other' must be a different instance from 'this'");
+
     Preconditions.checkState(
         selection.length >= other.getSelectionSize(),
         "Capacity[%s] cannot fit other match's selectionSize[%s]",
         selection.length,
         other.getSelectionSize()
     );
+
     System.arraycopy(other.getSelection(), 0, selection, 0, other.getSelectionSize());
     selectionSize = other.getSelectionSize();
     assert isValid(null);
-    return this;
   }
 
   @Override

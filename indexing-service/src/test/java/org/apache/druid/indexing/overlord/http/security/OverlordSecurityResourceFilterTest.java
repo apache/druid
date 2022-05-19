@@ -32,6 +32,8 @@ import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorResource;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.NoopTaskAutoScaler;
 import org.apache.druid.indexing.worker.http.WorkerResource;
 import org.apache.druid.server.http.security.ResourceFilterTestHelper;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -124,6 +126,12 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
         public Supervisor createSupervisor()
         {
           return null;
+        }
+
+        @Override
+        public SupervisorTaskAutoScaler createAutoscaler(Supervisor supervisor)
+        {
+          return new NoopTaskAutoScaler();
         }
 
         @Override

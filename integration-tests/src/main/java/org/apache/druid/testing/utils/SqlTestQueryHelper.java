@@ -22,11 +22,14 @@ package org.apache.druid.testing.utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.SqlResourceTestClient;
 
 public class SqlTestQueryHelper extends AbstractTestQueryHelper<SqlQueryWithResults>
 {
+  private static final Logger LOG = new Logger(SqlTestQueryHelper.class);
 
   @Inject
   public SqlTestQueryHelper(
@@ -39,17 +42,31 @@ public class SqlTestQueryHelper extends AbstractTestQueryHelper<SqlQueryWithResu
   }
 
   @Override
-  public void testQueriesFromFile(String filePath, int timesToRun) throws Exception
-  {
-    testQueriesFromFile(getQueryURL(broker), filePath, timesToRun);
-    testQueriesFromFile(getQueryURL(brokerTLS), filePath, timesToRun);
-    testQueriesFromFile(getQueryURL(router), filePath, timesToRun);
-    testQueriesFromFile(getQueryURL(routerTLS), filePath, timesToRun);
-  }
-
-  @Override
-  protected String getQueryURL(String schemeAndHost)
+  public String getQueryURL(String schemeAndHost)
   {
     return StringUtils.format("%s/druid/v2/sql", schemeAndHost);
+  }
+
+  public boolean isDatasourceLoadedInSQL(String datasource)
+  {
+    final SqlQuery query = new SqlQuery(
+        "SELECT 1 FROM \"" + datasource + "\" LIMIT 1",
+        null,
+        false,
+        false,
+        false,
+        null,
+        null
+    );
+
+    try {
+      //noinspection unchecked
+      queryClient.query(getQueryURL(broker), query);
+      return true;
+    }
+    catch (Exception e) {
+      LOG.debug(e, "Check query failed");
+      return false;
+    }
   }
 }

@@ -66,7 +66,7 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
  *   }
  * }
  */
-public final class LifecycleLock
+public class LifecycleLock
 {
   private static class Sync extends AbstractQueuedSynchronizer
   {
@@ -257,7 +257,7 @@ public final class LifecycleLock
   }
 
   /**
-   * Finalizes stopping the the LifecycleLock. This method must be called before exit from stop() on this object,
+   * Finalizes stopping the LifecycleLock. This method must be called before exit from stop() on this object,
    * usually in a finally block. If you're using a restartable object, use {@link #exitStopAndReset()} instead.
    *
    * @throws IllegalMonitorStateException if {@link #canStop()} is not yet called on this LifecycleLock

@@ -24,73 +24,89 @@ sidebar_label: "Native batch"
   -->
 
 
-Apache Druid (incubating) currently has two types of native batch indexing tasks, `index_parallel` which can run
-multiple tasks in parallel, and `index` which will run a single indexing task. Please refer to our
-[Hadoop-based vs. native batch comparison table](index.md#batch) for comparisons between Hadoop-based, native batch
-(simple), and native batch (parallel) ingestion.
+Apache Druid supports the following types of native batch indexing tasks:
+- Parallel task indexing (`index_parallel`) that can run multiple indexing tasks concurrently. Parallel task works well for production ingestion tasks.
+- Simple task indexing (`index`) that run a single indexing task at a time. Simple task indexing is suitable for development and test environments.
 
-To run either kind of native batch indexing task, write an ingestion spec as specified below. Then POST it to the
-[`/druid/indexer/v1/task`](../operations/api-reference.md#tasks) endpoint on the Overlord, or use the
-`bin/post-index-task` script included with Druid.
+This topic covers the configuration for `index_parallel` ingestion specs.
 
-## Tutorial
+For related information on batch indexing, see:
+- [Simple task indexing](./native-batch-simple-task.md) for `index` task configuration.
+- [Native batch input sources](./native-batch-input-source.md) for a reference for `inputSource` configuration.
+- [Hadoop-based vs. native batch comparison table](./index.md#batch) for a comparison of batch ingestion methods.
+- [Loading a file](../tutorials/tutorial-batch.md) for a tutorial on native batch ingestion.
 
-This page contains reference documentation for native batch ingestion.
-For a walk-through instead, check out the [Loading a file](../tutorials/tutorial-batch.md) tutorial, which
-demonstrates the "simple" (single-task) mode.
+## Submit an indexing task
 
-## Parallel task
+To run either kind of native batch indexing task you can:
+- Use the **Load Data** UI in the Druid console to define and submit an ingestion spec.
+- Define an ingestion spec in JSON based upon the [examples](#parallel-indexing-example) and reference topics for batch indexing. Then POST the ingestion spec to the [Indexer API endpoint](../operations/api-reference.md#tasks), 
+`/druid/indexer/v1/task`, the Overlord service. Alternatively you can use the indexing script included with Druid at `bin/post-index-task`.
 
-The Parallel task (type `index_parallel`) is a task for parallel batch indexing. This task only uses Druid's resource and
-doesn't depend on other external systems like Hadoop. `index_parallel` task is a supervisor task which basically generates
-multiple worker tasks and submits them to the Overlord. Each worker task reads input data and creates segments. Once they
-successfully generate segments for all input data, they report the generated segment list to the supervisor task. 
-The supervisor task periodically checks the status of worker tasks. If one of them fails, it retries the failed task
-until the number of retries reaches the configured limit. If all worker tasks succeed, then it publishes the reported segments at once.
+## Parallel task indexing
 
-The parallel Index Task can run in two different modes depending on `forceGuaranteedRollup` in `tuningConfig`.
-If `forceGuaranteedRollup` = false, it's executed in a single phase. In this mode,
-each sub task creates segments individually and reports them to the supervisor task.
+The parallel task type `index_parallel` is a task for multi-threaded batch indexing. Parallel task indexing only relies on Druid resources. It does not depend on other external systems like Hadoop.
 
-If `forceGuaranteedRollup` = true, it's executed in two phases with data shuffle which is similar to [MapReduce](https://en.wikipedia.org/wiki/MapReduce).
-In the first phase, each sub task partitions input data based on `segmentGranularity` (primary partition key) in `granularitySpec`
-and `partitionDimensions` (secondary partition key) in `partitionsSpec`. The partitioned data is served by
-the [middleManager](../design/middlemanager.md) or the [indexer](../design/indexer.md)
-where the first phase tasks ran. In the second phase, each sub task fetches
-partitioned data from MiddleManagers or indexers and merges them to create the final segments.
-As in the single phase execution, the created segments are reported to the supervisor task to publish at once.
+The `index_parallel` task is a supervisor task that orchestrates
+the whole indexing process. The supervisor task splits the input data and creates worker tasks to process the individual portions of data.
 
-To use this task, the `firehose` in `ioConfig` should be _splittable_ and `maxNumConcurrentSubTasks` should be set something larger than 1 in `tuningConfig`.
-Otherwise, this task runs sequentially. Here is the list of currently splittable firehoses.
+Druid issues the worker tasks to the Overlord. The overlord schedules and runs the workers on MiddleManagers or Indexers. After a worker task successfully processes the assigned input portion, it reports the resulting segment list to the supervisor task.
 
-- [`local`](#local-firehose)
-- [`ingestSegment`](#segment-firehose)
-- [`http`](#http-firehose)
-- [`s3`](../development/extensions-core/s3.md#firehose)
-- [`hdfs`](../development/extensions-core/hdfs.md#firehose)
-- [`static-azure-blobstore`](../development/extensions-contrib/azure.md#firehose)
-- [`static-google-blobstore`](../development/extensions-core/google.md#firehose)
-- [`static-cloudfiles`](../development/extensions-contrib/cloudfiles.md#firehose)
+The supervisor task periodically checks the status of worker tasks. If a task fails, the supervisor retries the task until the number of retries reaches the configured limit. If all worker tasks succeed, it publishes the reported segments at once and finalizes ingestion.
 
-The splittable firehose is responsible for generating _splits_. The supervisor task generates _worker task specs_ containing a split
-and submits worker tasks using those specs. As a result, the number of worker tasks depends on
-the implementation of splittable firehoses. Please note that multiple tasks can be created for the same worker task spec
-if one of them fails.
+The detailed behavior of the parallel task is different depending on the `partitionsSpec`. See [`partitionsSpec`](#partitionsspec) for more details.
 
-You may want to consider the below things:
+Parallel tasks require:
+- a splittable [`inputSource`](#splittable-input-sources) in the `ioConfig`. For a list of supported splittable input formats, see [Splittable input sources](#splittable-input-sources).
+- the `maxNumConcurrentSubTasks` greater than 1 in the `tuningConfig`. Otherwise tasks run sequentially. The `index_parallel` task reads each input file one by one and creates segments by itself.
 
-- The number of concurrent tasks run in parallel ingestion is determined by `maxNumConcurrentSubTasks` in the `tuningConfig`.
-  The supervisor task checks the number of current running sub tasks and creates more if it's smaller than `maxNumConcurrentSubTasks` no matter how many task slots are currently available.
-  This may affect to other ingestion performance. See the below [Capacity Planning](#capacity-planning) section for more details.
-- By default, batch ingestion replaces all data (in your `granularitySpec`'s intervals) in any segment that it writes to.
-  If you'd like to add to the segment instead, set the `appendToExisting` flag in `ioConfig`. Note that it only replaces
-  data in segments where it actively adds data: if there are segments in your `granularitySpec`'s intervals that have
-  no data written by this task, they will be left alone. If any existing segments partially overlap with the
-  `granularitySpec`'s intervals, the portion of those segments outside the new segments' intervals will still be visible.
+### Supported compression formats
+Native batch ingestion supports the following compression formats: 
+- `bz2`
+- `gz`
+- `xz`
+- `zip`
+- `sz` (Snappy)
+- `zst` (ZSTD).
 
-### Task syntax
+### Implementation considerations
+This section covers implementation details to consider when you implement parallel task ingestion.
+#### Volume control for worker tasks
+You can control the amount of input data each worker task processes using different configurations depending on the phase in parallel ingestion.
+- See [`partitionsSpec`](#partitionsspec) for details about how partitioning affects data volume for tasks.
+- For the tasks that read data from the `inputSource`, you can set the [Split hint spec](#split-hint-spec) in the `tuningConfig`.
+- For the task that merge shuffled segments, you can set the `totalNumMergeTasks` in the `tuningConfig`.
+#### Number of running tasks
+The `maxNumConcurrentSubTasks` in the `tuningConfig` determines the number of concurrent worker tasks that run in parallel. The supervisor task checks the number of current running worker tasks and creates more if it's smaller than `maxNumConcurrentSubTasks` regardless of the number of available task slots. This may affect to other ingestion performance. See [Capacity planning](#capacity-planning) section for more details.
+#### Replacing or appending data
+By default, batch ingestion replaces all data in the intervals in your `granularitySpec`' for any segment that it writes to. If you want to add to the segment instead, set the `appendToExisting` flag in the `ioConfig`. Batch ingestion only replaces data in segments where it actively adds data. If there are segments in the intervals for your `granularitySpec` that have do not have data from a task, they remain unchanged. If any existing segments partially overlap with the intervals in the `granularitySpec`, the portion of those segments outside the interval for the new spec remain visible.
 
-A sample task is shown below:
+#### Fully replacing existing segments using tombstones
+You can set `dropExisting` flag in the `ioConfig` to true if you want the ingestion task to replace all existing segments that start and end within the intervals for your `granularitySpec`. This applies whether or not the new data covers all existing segments. `dropExisting` only applies when `appendToExisting` is false and the  `granularitySpec` contains an `interval`. WARNING: this functionality is still in beta.
+
+The following examples demonstrate when to set the `dropExisting` property to true in the `ioConfig`:
+
+Consider an existing segment with an interval of 2020-01-01 to 2021-01-01 and `YEAR` `segmentGranularity`. You want to overwrite the whole interval of 2020-01-01 to 2021-01-01 with new data using the finer segmentGranularity of `MONTH`. If the replacement data does not have a record within every months from 2020-01-01 to 2021-01-01 Druid cannot drop the original `YEAR` segment even if it does include all the replacement data. Set `dropExisting` to true in this case to replace the original segment at `YEAR` `segmentGranularity` since you no longer need it.<br><br>
+Imagine you want to re-ingest or overwrite a datasource and the new data does not contain some time intervals that exist in the datasource. For example, a datasource contains the following data at `MONTH` segmentGranularity:  
+- **January**: 1 record  
+- **February**: 10 records  
+- **March**: 10 records  
+
+You want to re-ingest and overwrite with new data as follows: 
+- **January**: 0 records  
+- **February**: 10 records  
+- **March**: 9 records  
+
+Unless you set `dropExisting` to true, the result after ingestion with overwrite using the same MONTH segmentGranularity would be:  
+* **January**: 1 record  
+* **February**: 10 records  
+* **March**: 9 records
+
+This may not be what it is expected since the new data has 0 records for January. Set `dropExisting` to true to replace the unneeded January segment with a tombstone.
+   
+## Parallel indexing example
+
+The following example illustrates the configuration for a parallel indexing task:
 
 ```json
 {
@@ -98,101 +114,106 @@ A sample task is shown below:
   "spec": {
     "dataSchema": {
       "dataSource": "wikipedia_parallel_index_test",
+      "timestampSpec": {
+        "column": "timestamp"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          "country",
+          "page",
+          "language",
+          "user",
+          "unpatrolled",
+          "newPage",
+          "robot",
+          "anonymous",
+          "namespace",
+          "continent",
+          "region",
+          "city"
+        ]
+      },
       "metricsSpec": [
         {
           "type": "count",
-              "name": "count"
-            },
-            {
-              "type": "doubleSum",
-              "name": "added",
-              "fieldName": "added"
-            },
-            {
-              "type": "doubleSum",
-              "name": "deleted",
-              "fieldName": "deleted"
-            },
-            {
-              "type": "doubleSum",
-              "name": "delta",
-              "fieldName": "delta"
-            }
-        ],
-        "granularitySpec": {
-          "segmentGranularity": "DAY",
-          "queryGranularity": "second",
-          "intervals" : [ "2013-08-31/2013-09-02" ]
+          "name": "count"
         },
-        "parser": {
-          "parseSpec": {
-            "format" : "json",
-            "timestampSpec": {
-              "column": "timestamp"
-            },
-            "dimensionsSpec": {
-              "dimensions": [
-                "page",
-                "language",
-                "user",
-                "unpatrolled",
-                "newPage",
-                "robot",
-                "anonymous",
-                "namespace",
-                "continent",
-                "country",
-                "region",
-                "city"
-              ]
-            }
-          }
+        {
+          "type": "doubleSum",
+          "name": "added",
+          "fieldName": "added"
+        },
+        {
+          "type": "doubleSum",
+          "name": "deleted",
+          "fieldName": "deleted"
+        },
+        {
+          "type": "doubleSum",
+          "name": "delta",
+          "fieldName": "delta"
         }
+      ],
+      "granularitySpec": {
+        "segmentGranularity": "DAY",
+        "queryGranularity": "second",
+        "intervals": [
+          "2013-08-31/2013-09-02"
+        ]
+      }
     },
     "ioConfig": {
-        "type": "index_parallel",
-        "firehose": {
-          "type": "local",
-          "baseDir": "examples/indexing/",
-          "filter": "wikipedia_index_data*"
-        }
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "local",
+        "baseDir": "examples/indexing/",
+        "filter": "wikipedia_index_data*"
+      },
+      "inputFormat": {
+        "type": "json"
+      }
     },
-    "tuningconfig": {
-        "type": "index_parallel",
-        "maxNumConcurrentSubTasks": 2
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "single_dim",
+        "partitionDimension": "country",
+        "targetRowsPerSegment": 5000000
+      },
+      "maxNumConcurrentSubTasks": 2
     }
   }
 }
 ```
 
+## Parallel indexing configuration
+
+The following table defines the primary sections of the input spec:
 |property|description|required?|
 |--------|-----------|---------|
-|type|The task type, this should always be `index_parallel`.|yes|
-|id|The task ID. If this is not explicitly specified, Druid generates the task ID using task type, data source name, interval, and date-time stamp. |no|
-|spec|The ingestion spec including the data schema, IOConfig, and TuningConfig. See below for more details. |yes|
-|context|Context containing various task configuration parameters. See below for more details.|no|
+|type|The task type. For parallel task indexing, set the value to `index_parallel`.|yes|
+|id|The task ID. If omitted, Druid generates the task ID using the task type, data source name, interval, and date-time stamp. |no|
+|spec|The ingestion spec that defines the [data schema](#dataschema), [IO config](#ioconfig), and [tuning config](#tuningconfig).|yes|
+|context|Context to specify various task configuration parameters. See [Task context parameters](tasks.md#context-parameters) for more details.|no|
 
 ### `dataSchema`
 
-This field is required.
+This field is required. In general, it defines the way that Druid will store your data: the primary timestamp column, the dimensions, metrics, and any transformations. For an overview, see [Ingestion Spec DataSchema](../ingestion/ingestion-spec.md#dataschema).
 
-See [Ingestion Spec DataSchema](../ingestion/index.md#dataschema)
+When defining the `granularitySpec` for index parallel, consider the defining `intervals` explicitly if you know the time range of the data. This way locking failure happens faster and Druid won't accidentally replace data outside the interval range some rows contain unexpected timestamps. The reasoning is as follows:
 
-If you specify `intervals` explicitly in your dataSchema's granularitySpec, batch ingestion will lock the full intervals
-specified when it starts up, and you will learn quickly if the specified interval overlaps with locks held by other
-tasks (e.g., Kafka ingestion). Otherwise, batch ingestion will lock each interval as it is discovered, so you may only
-learn that the task overlaps with a higher-priority task later in ingestion.  If you specify `intervals` explicitly, any
-rows outside the specified intervals will be thrown away. We recommend setting `intervals` explicitly if you know the
-time range of the data so that locking failure happens faster, and so that you don't accidentally replace data outside
-that range if there's some stray data with unexpected timestamps.
+- If you explicitly define `intervals`, batch ingestion locks all intervals specified when it starts up. Problems with locking become evident quickly when multiple ingestion or indexing tasks try to obtain a lock on the same interval. For example, if a Kafka ingestion task tries to obtain a lock on a locked interval causing the ingestion task fail. Furthermore, if there are rows outside the specified intervals, Druid drops them, avoiding conflict with unexpected intervals.
+- If you do not define `intervals`, batch ingestion locks each interval when the interval is discovered. In this case if the task overlaps with a higher-priority task, issues with conflicting locks occur later in the ingestion process. Also if the source data includes rows with unexpected timestamps, they may caused unexpected locking of intervals.
+
 
 ### `ioConfig`
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
-|type|The task type, this should always be `index_parallel`.|none|yes|
-|firehose|Specify a [Firehose](#firehoses) here.|none|yes|
-|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This will only work if the existing segment set has extendable-type shardSpecs.|false|no|
+|type|The task type. Set to the value to `index_parallel`.|none|yes|
+|inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
+|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This means that you can append new segments to any datasource regardless of its original partitioning scheme. You must use the `dynamic` partitioning type for the appended segments. If you specify a different partitioning type, the task fails with an error.|false|no|
+|dropExisting|If `true` and `appendToExisting` is `false` and the `granularitySpec` contains an`interval`, then the ingestion task replaces all existing segments fully contained by the specified `interval` when the task publishes new segments. If ingestion fails, Druid does not change any existing segment. In the case of misconfiguration where either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec`, Druid does not replace any segments even if `dropExisting` is `true`. WARNING: this functionality is still in beta.|false|no|
 
 ### `tuningConfig`
 
@@ -200,67 +221,232 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
-|type|The task type, this should always be `index_parallel`.|none|yes|
+|type|The task type. Set the value to`index_parallel`.|none|yes|
 |maxRowsPerSegment|Deprecated. Use `partitionsSpec` instead. Used in sharding. Determines how many rows are in each segment.|5000000|no|
-|maxRowsInMemory|Used in determining when intermediate persists to disk should occur. Normally user does not need to set this, but depending on the nature of data, if rows are short in terms of bytes, user may not want to store a million rows in memory and this value should be set.|1000000|no|
-|maxBytesInMemory|Used in determining when intermediate persists to disk should occur. Normally this is computed internally and user does not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists)|1/6 of max JVM memory|no|
-|maxTotalRows|Deprecated. Use `partitionsSpec` instead. Total number of rows in segments waiting for being pushed. Used in determining when intermediate pushing should occur.|20000000|no|
-|numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
-|splitHintSpec|Used to give a hint to control the amount of data that each first phase task reads. This hint could be ignored depending on the implementation of firehose. See [SplitHintSpec](#splithintspec) for more details.|null|no|
-|partitionsSpec|Defines how to partition data in each timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic` if `forceGuaranteedRollup` = false, `hashed` if `forceGuaranteedRollup` = true|no|
-|indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](index.md#indexspec)|null|no|
-|indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](index.md#indexspec) for possible values.|same as indexSpec|no|
-|maxPendingPersists|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|0 (meaning one persist can be running concurrently with ingestion, and none can be queued up)|no|
-|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](../ingestion/index.md#rollup). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. If this is set to true, `numShards` in `tuningConfig` and `intervals` in `granularitySpec` must be set. Note that the result segments would be hash-partitioned. This flag cannot be used with `appendToExisting` of IOConfig. For more details, see the below __Segment pushing modes__ section.|false|no|
-|reportParseExceptions|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|false|no|
-|pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
-|segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](#segmentwriteoutmediumfactory).|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used|no|
-|maxNumConcurrentSubTasks|Maximum number of sub tasks which can be run in parallel at the same time. The supervisor task would spawn worker tasks up to `maxNumConcurrentSubTasks` regardless of the current available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion. Check [Capacity Planning](#capacity-planning) for more details.|1|no|
+|maxRowsInMemory|Determines when Druid should perform intermediate persists to disk. Normally you do not need to set this. Depending on the nature of your data, if rows are short in terms of bytes. For example, you may not want to store a million rows in memory. In this case, set this value.|1000000|no|
+|maxBytesInMemory|Use to determine when Druid should perform intermediate persists to disk. Normally Druid computes this internally and you do not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists). Note that `maxBytesInMemory` also includes heap usage of artifacts created from intermediary persists. This means that after every persist, the amount of `maxBytesInMemory` until next persist will decrease. Tasks fail when the sum of bytes of all intermediary persisted artifacts exceeds `maxBytesInMemory`.|1/6 of max JVM memory|no|
+|maxColumnsToMerge|Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.|-1 (unlimited)|no|
+|maxTotalRows|Deprecated. Use `partitionsSpec` instead. Total number of rows in segments waiting to be pushed. Used to determine when intermediate pushing should occur.|20000000|no|
+|numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create when using a `hashed` `partitionsSpec`. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
+|splitHintSpec|Hint to control the amount of data that each first phase task reads. Druid may ignore the hint depending on the implementation of the input source. See [Split hint spec](#split-hint-spec) for more details.|size-based split hint spec|no|
+|partitionsSpec|Defines how to partition data in each timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic` if `forceGuaranteedRollup` = false, `hashed` or `single_dim` if `forceGuaranteedRollup` = true|no|
+|indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](ingestion-spec.md#indexspec)|null|no|
+|indexSpecForIntermediatePersists|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments. You can use this configuration to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. However, if you disable compression on intermediate segments, page cache use my increase while intermediate segments are used before Druid merges them to the final published segment published. See [IndexSpec](./ingestion-spec.md#indexspec) for possible values.|same as indexSpec|no|
+|maxPendingPersists|Maximum number of pending persists that remain not started. If a new intermediate persist exceeds this limit, ingestion blocks until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|0 (meaning one persist can be running concurrently with ingestion, and none can be queued up)|no|
+|forceGuaranteedRollup|Forces [perfect rollup](rollup.md). The perfect rollup optimizes the total size of generated segments and querying time but increases indexing time. If true, specify `intervals` in the `granularitySpec` and use either `hashed` or `single_dim` for the `partitionsSpec`. You cannot use this flag in conjunction with `appendToExisting` of IOConfig. For more details, see [Segment pushing modes](#segment-pushing-modes).|false|no|
+|reportParseExceptions|If true, Druid throws exceptions encountered during parsing and halts ingestion. If false, Druid skips unparseable rows and fields.|false|no|
+|pushTimeout|Milliseconds to wait to push segments. Must be >= 0, where 0 means to wait forever.|0|no|
+|segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](./native-batch-simple-task.md#segmentwriteoutmediumfactory).|If not specified, uses the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` |no|
+|maxNumConcurrentSubTasks|Maximum number of worker tasks that can be run in parallel at the same time. The supervisor task spawns worker tasks up to `maxNumConcurrentSubTasks` regardless of the current available task slots. If this value is 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, the supervisor may create too many worker tasks that block other ingestion tasks. See [Capacity planning](#capacity-planning) for more details.|1|no|
 |maxRetry|Maximum number of retries on task failures.|3|no|
-|maxNumSegmentsToMerge|Max limit for the number of segments that a single task can merge at the same time in the second phase. Used only `forceGuaranteedRollup` is set.|100|no|
-|totalNumMergeTasks|Total number of tasks to merge segments in the second phase when `forceGuaranteedRollup` is set.|10|no|
+|maxNumSegmentsToMerge|Max limit for the number of segments that a single task can merge at the same time in the second phase. Used only when `forceGuaranteedRollup` is true.|100|no|
+|totalNumMergeTasks|Total number of tasks that merge segments in the merge phase when `partitionsSpec` is set to `hashed` or `single_dim`.|10|no|
 |taskStatusCheckPeriodMs|Polling period in milliseconds to check running task statuses.|1000|no|
 |chatHandlerTimeout|Timeout for reporting the pushed segments in worker tasks.|PT10S|no|
 |chatHandlerNumRetries|Retries for reporting the pushed segments in worker tasks.|5|no|
+|awaitSegmentAvailabilityTimeoutMillis|Long|Milliseconds to wait for the newly indexed segments to become available for query after ingestion completes. If `<= 0`, no wait occurs. If `> 0`, the task waits for the Coordinator to indicate that the new segments are available for querying. If the timeout expires, the task exits as successful, but the segments are not confirmed as available for query.|no (default = 0)| 
 
-### `splitHintSpec`
+### Split Hint Spec
 
-`SplitHintSpec` is used to give a hint when the supervisor task creates input splits.
-Note that each sub task processes a single input split. You can control the amount of data each sub task will read during the first phase.
+The split hint spec is used to help the supervisor task divide input sources. Each worker task processes a single input division. You can control the amount of data each worker task reads during the first phase.
 
-Currently only one splitHintSpec, i.e., `segments`, is available.
+#### Size-based Split Hint Spec
 
-#### `SegmentsSplitHintSpec`
-
-`SegmentsSplitHintSpec` is used only for `IngestSegmentFirehose`.
+The size-based split hint spec affects all splittable input sources except for the HTTP input source and SQL input source.
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
-|type|This should always be `segments`.|none|yes|
-|maxInputSegmentBytesPerTask|Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).|150MB|no|
+|type|Set the value to `maxSize`.|none|yes|
+|maxSplitSize|Maximum number of bytes of input files to process in a single subtask. If a single file is larger than the limit, Druid processes the file alone in a single subtask. Druid does not split files across tasks. One subtask will not process more files than `maxNumFiles` even when their total size is smaller than `maxSplitSize`. [Human-readable format](../configuration/human-readable-byte.md) is supported.|1GiB|no|
+|maxNumFiles|Maximum number of input files to process in a single subtask. This limit avoids task failures when the ingestion spec is too long. There are two known limits on the max size of serialized ingestion spec: the max ZNode size in ZooKeeper (`jute.maxbuffer`) and the max packet size in MySQL (`max_allowed_packet`). These limits can cause ingestion tasks fail if the serialized ingestion spec size hits one of them. One subtask will not process more data than `maxSplitSize` even when the total number of files is smaller than `maxNumFiles`.|1000|no|
+
+#### Segments Split Hint Spec
+
+The segments split hint spec is used only for [`DruidInputSource`](./native-batch-input-source.md) and legacy `IngestSegmentFirehose`.
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|Set the value to `segments`.|none|yes|
+|maxInputSegmentBytesPerTask|Maximum number of bytes of input segments to process in a single subtask. If a single segment is larger than this number, Druid processes the segment alone in a single subtask. Druid never splits input segments across tasks. A single subtask will not process more segments than `maxNumSegments` even when their total size is smaller than `maxInputSegmentBytesPerTask`. [Human-readable format](../configuration/human-readable-byte.md) is supported.|1GiB|no|
+|maxNumSegments|Maximum number of input segments to process in a single subtask. This limit avoids failures due to the the ingestion spec being too long. There are two known limits on the max size of serialized ingestion spec: the max ZNode size in ZooKeeper (`jute.maxbuffer`) and the max packet size in MySQL (`max_allowed_packet`). These limits can make ingestion tasks fail when the serialized ingestion spec size hits one of them. A single subtask will not process more data than `maxInputSegmentBytesPerTask` even when the total number of segments is smaller than `maxNumSegments`.|1000|no|
 
 ### `partitionsSpec`
 
-PartitionsSpec is to describe the secondary partitioning method.
-You should use different partitionsSpec depending on the [rollup mode](../ingestion/index.md#rollup) you want.
-For perfect rollup, you should use `hashed`.
+The primary partition for Druid is time. You can define a secondary partitioning method in the partitions spec. Use the `partitionsSpec` type that applies for your [rollup](rollup.md) method. For perfect rollup, you can use:
+- `hashed` partitioning based on the hash value of specified dimensions for each row
+- `single_dim` based on ranges of values for a single dimension
+- `range` based on ranges of values of multiple dimensions.
+
+For best-effort rollup, use `dynamic`.
+
+For an overview, see [Partitioning](./partitioning.md).
+
+The `partitionsSpec` types have different characteristics.
+
+| PartitionsSpec | Ingestion speed | Partitioning method | Supported rollup mode | Secondary partition pruning at query time |
+|----------------|-----------------|---------------------|-----------------------|-------------------------------|
+| `dynamic` | Fastest  | [Dynamic partitioning](#dynamic-partitioning) based on the number of rows in a segment. | Best-effort rollup | N/A |
+| `hashed`  | Moderate | Multiple dimension [hash-based partitioning](#hash-based-partitioning) may reduce both your datasource size and query latency by improving data locality. See [Partitioning](./partitioning.md) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries. Since the broker knows how to hash `partitionDimensions` values to locate a segment, given a query including a filter on all the `partitionDimensions`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimensions` for query processing.<br/><br/>Note that `partitionDimensions` must be set at ingestion time to enable secondary partition pruning at query time.|
+| `single_dim` | Slower | Single dimension [range partitioning](#single-dimension-range-partitioning) may reduce your datasource size and query latency by improving data locality. See [Partitioning](./partitioning.md) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries. Since the broker knows the range of `partitionDimension` values in each segment, given a query including a filter on the `partitionDimension`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimension` for query processing. |
+| `range` | Slowest | Multiple dimension [range partitioning](#multi-dimension-range-partitioning) may reduce your datasource size and query latency by improving data locality. See [Partitioning](./partitioning.md) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries. Since the broker knows the range of `partitionDimensions` values within each segment, given a query including a filter on the first of the `partitionDimensions`, the broker can pick up only the segments holding the rows satisfying the filter on the first partition dimension for query processing. |
+
+#### Dynamic partitioning
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
-|type|This should always be `hashed`|none|yes|
-|targetRowsPerSegment|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|5000000 (if `numShards` is not set)|either this or `numShards`|
-|numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `targetRowsPerSegment` is set.|null|no|
-|partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions. Only used with `numShards`, will be ignored when `targetRowsPerSegment` is set.|null|no|
-
-For best-effort rollup, you should use `dynamic`.
-
-|property|description|default|required?|
-|--------|-----------|-------|---------|
-|type|This should always be `dynamic`|none|yes|
+|type|Set the value to `dynamic`.|none|yes|
 |maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
-|maxTotalRows|Total number of rows in segments waiting for being pushed. Used in determining when intermediate segment push should occur.|20000000|no|
+|maxTotalRows|Total number of rows across all segments waiting for being pushed. Used in determining when intermediate segment push should occur.|20000000|no|
 
-### HTTP status endpoints
+With the Dynamic partitioning, the parallel index task runs in a single phase:
+it spawns multiple worker tasks (type `single_phase_sub_task`), each of which creates segments.
+How the worker task creates segments:
+
+- Whenever the number of rows in the current segment exceeds
+  `maxRowsPerSegment`.
+- When the total number of rows in all segments across all time chunks reaches to `maxTotalRows`. At this point the task pushes all segments created so far to the deep storage and creates new ones.
+
+#### Hash-based partitioning
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|Set the value to `hashed`.|none|yes|
+|numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. This property and `targetRowsPerSegment` cannot both be set.|none|no|
+|targetRowsPerSegment|A target row count for each partition. If `numShards` is left unspecified, the Parallel task will determine a partition count automatically such that each partition has a row count close to the target, assuming evenly distributed keys in the input data. A target per-segment row count of 5 million is used if both `numShards` and `targetRowsPerSegment` are null. |null (or 5,000,000 if both `numShards` and `targetRowsPerSegment` are null)|no|
+|partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions.|null|no|
+|partitionFunction|A function to compute hash of partition dimensions. See [Hash partition function](#hash-partition-function)|`murmur3_32_abs`|no|
+
+The Parallel task with hash-based partitioning is similar to [MapReduce](https://en.wikipedia.org/wiki/MapReduce).
+The task runs in up to 3 phases: `partial dimension cardinality`, `partial segment generation` and `partial segment merge`.
+- The `partial dimension cardinality` phase is an optional phase that only runs if `numShards` is not specified.
+The Parallel task splits the input data and assigns them to worker tasks based on the split hint spec.
+Each worker task (type `partial_dimension_cardinality`) gathers estimates of partitioning dimensions cardinality for
+each time chunk. The Parallel task will aggregate these estimates from the worker tasks and determine the highest
+cardinality across all of the time chunks in the input data, dividing this cardinality by `targetRowsPerSegment` to
+automatically determine `numShards`.
+- In the `partial segment generation` phase, just like the Map phase in MapReduce,
+the Parallel task splits the input data based on the split hint spec
+and assigns each split to a worker task. Each worker task (type `partial_index_generate`) reads the assigned split, and partitions rows by the time chunk from `segmentGranularity` (primary partition key) in the `granularitySpec`
+and then by the hash value of `partitionDimensions` (secondary partition key) in the `partitionsSpec`.
+The partitioned data is stored in local storage of 
+the [middleManager](../design/middlemanager.md) or the [indexer](../design/indexer.md).
+- The `partial segment merge` phase is similar to the Reduce phase in MapReduce.
+The Parallel task spawns a new set of worker tasks (type `partial_index_generic_merge`) to merge the partitioned data created in the previous phase. Here, the partitioned data is shuffled based on
+the time chunk and the hash value of `partitionDimensions` to be merged; each worker task reads the data falling in the same time chunk and the same hash value from multiple MiddleManager/Indexer processes and merges them to create the final segments. Finally, they push the final segments to the deep storage at once.
+
+##### Hash partition function
+
+In hash partitioning, the partition function is used to compute hash of partition dimensions. The partition dimension values are first serialized into a byte array as a whole, and then the partition function is applied to compute hash of the byte array. Druid currently supports only one partition function.
+
+|name|description|
+|----|-----------|
+|`murmur3_32_abs`|Applies an absolute value function to the result of [`murmur3_32`](https://guava.dev/releases/16.0/api/docs/com/google/common/hash/Hashing.html#murmur3_32()).|
+
+#### Single-dimension range partitioning
+
+> Single dimension range partitioning is not supported in the sequential mode of the `index_parallel` task type.
+
+Range partitioning has [several benefits](#benefits-of-range-partitioning) related to storage footprint and query
+performance.
+
+The Parallel task will use one subtask when you set `maxNumConcurrentSubTasks` to 1.
+
+When you use this technique to partition your data, segment sizes may be unequally distributed if the data in your `partitionDimension` is also unequally distributed.  Therefore, to avoid imbalance in data layout, review the distribution of values in your source data before deciding on a partitioning strategy.
+
+Range partitioning is not possible on multi-value dimensions. If the provided
+`partitionDimension` is multi-value, your ingestion job will report an error.
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|Set the value to `single_dim`.|none|yes|
+|partitionDimension|The dimension to partition on. Only rows with a single dimension value are allowed.|none|yes|
+|targetRowsPerSegment|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|none|either this or `maxRowsPerSegment`|
+|maxRowsPerSegment|Soft max for the number of rows to include in a partition.|none|either this or `targetRowsPerSegment`|
+|assumeGrouped|Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.|false|no|
+
+With `single-dim` partitioning, the Parallel task runs in 3 phases,
+i.e., `partial dimension distribution`, `partial segment generation`, and `partial segment merge`.
+The first phase is to collect some statistics to find
+the best partitioning and the other 2 phases are to create partial segments
+and to merge them, respectively, as in hash-based partitioning.
+- In the `partial dimension distribution` phase, the Parallel task splits the input data and
+assigns them to worker tasks based on the split hint spec. Each worker task (type `partial_dimension_distribution`) reads
+the assigned split and builds a histogram for `partitionDimension`.
+The Parallel task collects those histograms from worker tasks and finds
+the best range partitioning based on `partitionDimension` to evenly
+distribute rows across partitions. Note that either `targetRowsPerSegment`
+or `maxRowsPerSegment` will be used to find the best partitioning.
+- In the `partial segment generation` phase, the Parallel task spawns new worker tasks (type `partial_range_index_generate`)
+to create partitioned data. Each worker task reads a split created as in the previous phase,
+partitions rows by the time chunk from the `segmentGranularity` (primary partition key) in the `granularitySpec`
+and then by the range partitioning found in the previous phase.
+The partitioned data is stored in local storage of
+the [middleManager](../design/middlemanager.md) or the [indexer](../design/indexer.md).
+- In the `partial segment merge` phase, the parallel index task spawns a new set of worker tasks (type `partial_index_generic_merge`) to merge the partitioned
+data created in the previous phase. Here, the partitioned data is shuffled based on
+the time chunk and the value of `partitionDimension`; each worker task reads the segments
+falling in the same partition of the same range from multiple MiddleManager/Indexer processes and merges
+them to create the final segments. Finally, they push the final segments to the deep storage.
+
+> Because the task with single-dimension range partitioning makes two passes over the input
+> in `partial dimension distribution` and `partial segment generation` phases,
+> the task may fail if the input changes in between the two passes.
+
+#### Multi-dimension range partitioning
+
+> Multiple dimension (multi-dimension) range partitioning is an experimental feature.
+> Multi-dimension range partitioning is not supported in the sequential mode of the
+> `index_parallel` task type.
+
+Range partitioning has [several benefits](#benefits-of-range-partitioning) related to storage footprint and query
+performance. Multi-dimension range partitioning improves over single-dimension range partitioning by allowing
+Druid to distribute segment sizes more evenly, and to prune on more dimensions.
+
+Range partitioning is not possible on multi-value dimensions. If one of the provided
+`partitionDimensions` is multi-value, your ingestion job will report an error.
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|Set the value to `range`.|none|yes|
+|partitionDimensions|An array of dimensions to partition on. Order the dimensions from most frequently queried to least frequently queried. For best results, limit your number of dimensions to between three and five dimensions.|none|yes|
+|targetRowsPerSegment|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|none|either this or `maxRowsPerSegment`|
+|maxRowsPerSegment|Soft max for the number of rows to include in a partition.|none|either this or `targetRowsPerSegment`|
+|assumeGrouped|Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.|false|no|
+
+#### Benefits of range partitioning
+
+Range partitioning, either `single_dim` or `range`, has several benefits:
+
+1. Lower storage footprint due to combining similar data into the same segments, which improves compressibility.
+2. Better query performance due to Broker-level segment pruning, which removes segments from
+   consideration when they cannot possibly contain data matching the query filter.
+
+For Broker-level segment pruning to be effective, you must include partition dimensions in the `WHERE` clause. Each
+partition dimension can participate in pruning if the prior partition dimensions (those to its left) are also
+participating, and if the query uses filters that support pruning.
+
+Filters that support pruning include:
+
+- Equality on string literals, like `x = 'foo'` and `x IN ('foo', 'bar')` where `x` is a string.
+- Comparison between string columns and string literals, like `x < 'foo'` or other comparisons
+  involving `<`, `>`, `<=`, or `>=`.
+
+For example, if you configure the following `range` partitioning during ingestion:
+
+```json
+"partitionsSpec": {
+  "type": "range",
+  "partitionDimensions": ["coutryName", "cityName"],
+  "targetRowsPerSegment": 5000
+}
+```
+
+Then, filters like `WHERE countryName = 'United States'` or `WHERE countryName = 'United States' AND cityName = 'New York'`
+can make use of pruning. However, `WHERE cityName = 'New York'` cannot make use of pruning, because countryName is not
+involved. The clause `WHERE cityName LIKE 'New%'` cannot make use of pruning either, because LIKE filters do not
+support pruning.
+
+## HTTP status endpoints
 
 The supervisor task provides some HTTP endpoints to get running status.
 
@@ -274,7 +460,7 @@ Returns the name of the current phase if the task running in the parallel mode.
 
 * `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/progress`
 
-Returns the current progress if the supervisor task is running in the parallel mode.
+Returns the estimated progress of the current phase if the supervisor task is running in the parallel mode.
 
 An example of the result is
 
@@ -285,7 +471,7 @@ An example of the result is
   "failed":0,
   "complete":0,
   "total":10,
-  "expectedSucceeded":10
+  "estimatedExpectedSucceeded":10
 }
 ```
 
@@ -329,50 +515,25 @@ An example of the result is
     "ingestionSpec": {
       "dataSchema": {
         "dataSource": "lineitem",
-        "parser": {
-          "type": "hadoopyString",
-          "parseSpec": {
-            "format": "tsv",
-            "delimiter": "|",
-            "timestampSpec": {
-              "column": "l_shipdate",
-              "format": "yyyy-MM-dd"
-            },
-            "dimensionsSpec": {
-              "dimensions": [
-                "l_orderkey",
-                "l_partkey",
-                "l_suppkey",
-                "l_linenumber",
-                "l_returnflag",
-                "l_linestatus",
-                "l_shipdate",
-                "l_commitdate",
-                "l_receiptdate",
-                "l_shipinstruct",
-                "l_shipmode",
-                "l_comment"
-              ]
-            },
-            "columns": [
-              "l_orderkey",
-              "l_partkey",
-              "l_suppkey",
-              "l_linenumber",
-              "l_quantity",
-              "l_extendedprice",
-              "l_discount",
-              "l_tax",
-              "l_returnflag",
-              "l_linestatus",
-              "l_shipdate",
-              "l_commitdate",
-              "l_receiptdate",
-              "l_shipinstruct",
-              "l_shipmode",
-              "l_comment"
-            ]
-          }
+        "timestampSpec": {
+          "column": "l_shipdate",
+          "format": "yyyy-MM-dd"
+        },
+        "dimensionsSpec": {
+          "dimensions": [
+            "l_orderkey",
+            "l_partkey",
+            "l_suppkey",
+            "l_linenumber",
+            "l_returnflag",
+            "l_linestatus",
+            "l_shipdate",
+            "l_commitdate",
+            "l_receiptdate",
+            "l_shipinstruct",
+            "l_shipmode",
+            "l_comment"
+          ]
         },
         "metricsSpec": [
           {
@@ -422,13 +583,35 @@ An example of the result is
       },
       "ioConfig": {
         "type": "index_parallel",
-        "firehose": {
+        "inputSource": {
           "type": "local",
           "baseDir": "/path/to/data/",
-          "filter": "lineitem.tbl.5",
-          "parser": null
+          "filter": "lineitem.tbl.5"
         },
-        "appendToExisting": false
+        "inputFormat": {
+          "format": "tsv",
+          "delimiter": "|",
+          "columns": [
+            "l_orderkey",
+            "l_partkey",
+            "l_suppkey",
+            "l_linenumber",
+            "l_quantity",
+            "l_extendedprice",
+            "l_discount",
+            "l_tax",
+            "l_returnflag",
+            "l_linestatus",
+            "l_shipdate",
+            "l_commitdate",
+            "l_receiptdate",
+            "l_shipinstruct",
+            "l_shipmode",
+            "l_comment"
+          ]
+        },
+        "appendToExisting": false,
+        "dropExisting": false
       },
       "tuningConfig": {
         "type": "index_parallel",
@@ -438,7 +621,7 @@ An example of the result is
         "numShards": null,
         "indexSpec": {
           "bitmap": {
-            "type": "concise"
+            "type": "roaring"
           },
           "dimensionCompression": "lz4",
           "metricCompression": "lz4",
@@ -446,7 +629,7 @@ An example of the result is
         },
         "indexSpecForIntermediatePersists": {
           "bitmap": {
-            "type": "concise"
+            "type": "roaring"
           },
           "dimensionCompression": "lz4",
           "metricCompression": "lz4",
@@ -464,8 +647,7 @@ An example of the result is
         "logParseExceptions": false,
         "maxParseExceptions": 2147483647,
         "maxSavedParseExceptions": 0,
-        "forceGuaranteedRollup": false,
-        "buildV9Directly": true
+        "forceGuaranteedRollup": false
       }
     }
   },
@@ -492,7 +674,15 @@ An example of the result is
 
 Returns the task attempt history of the worker task spec of the given id, or HTTP 404 Not Found error if the supervisor task is running in the sequential mode.
 
-### Capacity planning
+## Segment pushing modes
+While ingesting data using the parallel task indexing, Druid creates segments from the input data and pushes them. For segment pushing,
+the parallel task index supports the following segment pushing modes based upon your type of [rollup](./rollup.md):
+
+- Bulk pushing mode: Used for perfect rollup. Druid pushes every segment at the very end of the index task. Until then, Druid stores created segments in memory and local storage of the service running the index task. This mode can cause problems if you have limited storage capacity, and is not recommended to use in production.
+To enable bulk pushing mode, set `forceGuaranteedRollup` in your TuningConfig. You cannot use bulk pushing with `appendToExisting` in your IOConfig.
+- Incremental pushing mode: Used for best-effort rollup. Druid pushes segments are incrementally during the course of the indexing task. The index task collects data and stores created segments in the memory and disks of the services running the task until the total number of collected rows exceeds `maxTotalRows`. At that point the index task immediately pushes all segments created up until that moment, cleans up pushed segments, and continues to ingest the remaining data.
+
+## Capacity planning
 
 The supervisor task can create up to `maxNumConcurrentSubTasks` worker tasks no matter how many task slots are currently available.
 As a result, total number of tasks which can be run at the same time is `(maxNumConcurrentSubTasks + 1)` (including the supervisor task).
@@ -513,380 +703,20 @@ If you have some tasks of a higher priority than others, you may set their
 This may help the higher priority tasks to finish earlier than lower priority tasks
 by assigning more task slots to them.
 
-## Simple task
+## Splittable input sources
+Use the `inputSource` object to define the location where your index can read data. Only the native parallel task and simple task support the input source.
+
+For details on available input sources see:
+- [S3 input source](./native-batch-input-source.md#s3-input-source) (`s3`) reads data from AWS S3 storage.
+- [Google Cloud Storage input source](./native-batch-input-source.md#google-cloud-storage-input-source) (`gs`) reads data from Google Cloud Storage.
+- [Azure input source](./native-batch-input-source.md#azure-input-source) (`azure`) reads data from Azure Blob Storage and Azure Data Lake.
+- [HDFS input source](./native-batch-input-source.md#hdfs-input-source) (`hdfs`) reads data from HDFS storage.
+- [HTTP input Source](./native-batch-input-source.md#http-input-source) (`http`) reads data from HTTP servers.
+- [Inline input Source](./native-batch-input-source.md#inline-input-source) reads data you paste into the Druid console.
+- [Local input Source](./native-batch-input-source.md#local-input-source) (`local`) reads data from local storage.
+- [Druid input Source](./native-batch-input-source.md#druid-input-source) (`druid`) reads data from a Druid datasource.
+- [SQL input Source](./native-batch-input-source.md#sql-input-source) (`sql`) reads data from a RDBMS source.
+
+For information on how to combine input sources, see [Combining input sources](./native-batch-input-source.md#combining-input-sources).
 
-The simple task (type `index`) is designed to be used for smaller data sets. The task executes within the indexing service.
 
-### Task syntax
-
-A sample task is shown below:
-
-```json
-{
-  "type" : "index",
-  "spec" : {
-    "dataSchema" : {
-      "dataSource" : "wikipedia",
-      "parser" : {
-        "type" : "string",
-        "parseSpec" : {
-          "format" : "json",
-          "timestampSpec" : {
-            "column" : "timestamp",
-            "format" : "auto"
-          },
-          "dimensionsSpec" : {
-            "dimensions": ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
-            "dimensionExclusions" : [],
-            "spatialDimensions" : []
-          }
-        }
-      },
-      "metricsSpec" : [
-        {
-          "type" : "count",
-          "name" : "count"
-        },
-        {
-          "type" : "doubleSum",
-          "name" : "added",
-          "fieldName" : "added"
-        },
-        {
-          "type" : "doubleSum",
-          "name" : "deleted",
-          "fieldName" : "deleted"
-        },
-        {
-          "type" : "doubleSum",
-          "name" : "delta",
-          "fieldName" : "delta"
-        }
-      ],
-      "granularitySpec" : {
-        "type" : "uniform",
-        "segmentGranularity" : "DAY",
-        "queryGranularity" : "NONE",
-        "intervals" : [ "2013-08-31/2013-09-01" ]
-      }
-    },
-    "ioConfig" : {
-      "type" : "index",
-      "firehose" : {
-        "type" : "local",
-        "baseDir" : "examples/indexing/",
-        "filter" : "wikipedia_data.json"
-       }
-    },
-    "tuningConfig" : {
-      "type" : "index",
-      "maxRowsPerSegment" : 5000000,
-      "maxRowsInMemory" : 1000000
-    }
-  }
-}
-```
-
-|property|description|required?|
-|--------|-----------|---------|
-|type|The task type, this should always be `index`.|yes|
-|id|The task ID. If this is not explicitly specified, Druid generates the task ID using task type, data source name, interval, and date-time stamp. |no|
-|spec|The ingestion spec including the data schema, IOConfig, and TuningConfig. See below for more details. |yes|
-|context|Context containing various task configuration parameters. See below for more details.|no|
-
-### `dataSchema`
-
-This field is required.
-
-See the [`dataSchema`](../ingestion/index.md#dataschema) section of the ingestion docs for details.
-
-If you do not specify `intervals` explicitly in your dataSchema's granularitySpec, the Local Index Task will do an extra
-pass over the data to determine the range to lock when it starts up.  If you specify `intervals` explicitly, any rows
-outside the specified intervals will be thrown away. We recommend setting `intervals` explicitly if you know the time
-range of the data because it allows the task to skip the extra pass, and so that you don't accidentally replace data outside
-that range if there's some stray data with unexpected timestamps.
-
-### `ioConfig`
-
-|property|description|default|required?|
-|--------|-----------|-------|---------|
-|type|The task type, this should always be "index".|none|yes|
-|firehose|Specify a [Firehose](#firehoses) here.|none|yes|
-|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This will only work if the existing segment set has extendable-type shardSpecs.|false|no|
-
-### `tuningConfig`
-
-The tuningConfig is optional and default parameters will be used if no tuningConfig is specified. See below for more details.
-
-|property|description|default|required?|
-|--------|-----------|-------|---------|
-|type|The task type, this should always be "index".|none|yes|
-|maxRowsPerSegment|Deprecated. Use `partitionsSpec` instead. Used in sharding. Determines how many rows are in each segment.|5000000|no|
-|maxRowsInMemory|Used in determining when intermediate persists to disk should occur. Normally user does not need to set this, but depending on the nature of data, if rows are short in terms of bytes, user may not want to store a million rows in memory and this value should be set.|1000000|no|
-|maxBytesInMemory|Used in determining when intermediate persists to disk should occur. Normally this is computed internally and user does not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists)|1/6 of max JVM memory|no|
-|maxTotalRows|Deprecated. Use `partitionsSpec` instead. Total number of rows in segments waiting for being pushed. Used in determining when intermediate pushing should occur.|20000000|no|
-|numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
-|partitionDimensions|Deprecated. Use `partitionsSpec` instead. The dimensions to partition on. Leave blank to select all dimensions. Only used with `forceGuaranteedRollup` = true, will be ignored otherwise.|null|no|
-|partitionsSpec|Defines how to partition data in each timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic` if `forceGuaranteedRollup` = false, `hashed` if `forceGuaranteedRollup` = true|no|
-|indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](index.md#indexspec)|null|no|
-|indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](index.md#indexspec) for possible values.|same as indexSpec|no|
-|maxPendingPersists|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|0 (meaning one persist can be running concurrently with ingestion, and none can be queued up)|no|
-|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](../ingestion/index.md#rollup). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. If this is set to true, the index task will read the entire input data twice: one for finding the optimal number of partitions per time chunk and one for generating segments. Note that the result segments would be hash-partitioned. This flag cannot be used with `appendToExisting` of IOConfig. For more details, see the below __Segment pushing modes__ section.|false|no|
-|reportParseExceptions|DEPRECATED. If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped. Setting `reportParseExceptions` to true will override existing configurations for `maxParseExceptions` and `maxSavedParseExceptions`, setting `maxParseExceptions` to 0 and limiting `maxSavedParseExceptions` to no more than 1.|false|no|
-|pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
-|segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](#segmentwriteoutmediumfactory).|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used|no|
-|logParseExceptions|If true, log an error message when a parsing exception occurs, containing information about the row where the error occurred.|false|no|
-|maxParseExceptions|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overridden if `reportParseExceptions` is set.|unlimited|no|
-|maxSavedParseExceptions|When a parse exception occurs, Druid can keep track of the most recent parse exceptions. "maxSavedParseExceptions" limits how many exception instances will be saved. These saved exceptions will be made available after the task finishes in the [task completion report](tasks.md#task-reports). Overridden if `reportParseExceptions` is set.|0|no|
-
-### `partitionsSpec`
-
-PartitionsSpec is to describe the secondary partitioning method.
-You should use different partitionsSpec depending on the [rollup mode](../ingestion/index.md#rollup) you want.
-For perfect rollup, you should use `hashed`.
-
-|property|description|default|required?|
-|--------|-----------|-------|---------|
-|type|This should always be `hashed`|none|yes|
-|maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
-|numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
-|partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions.|null|no|
-
-For best-effort rollup, you should use `dynamic`.
-
-|property|description|default|required?|
-|--------|-----------|-------|---------|
-|type|This should always be `dynamic`|none|yes|
-|maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
-|maxTotalRows|Total number of rows in segments waiting for being pushed. Used in determining when intermediate segment push should occur.|20000000|no|
-
-### `segmentWriteOutMediumFactory`
-
-|Field|Type|Description|Required|
-|-----|----|-----------|--------|
-|type|String|See [Additional Peon Configuration: SegmentWriteOutMediumFactory](../configuration/index.md#segmentwriteoutmediumfactory) for explanation and available options.|yes|
-
-### Segment pushing modes
-
-While ingesting data using the Index task, it creates segments from the input data and pushes them. For segment pushing,
-the Index task supports two segment pushing modes, i.e., _bulk pushing mode_ and _incremental pushing mode_ for
-[perfect rollup and best-effort rollup](../ingestion/index.md#rollup), respectively.
-
-In the bulk pushing mode, every segment is pushed at the very end of the index task. Until then, created segments
-are stored in the memory and local storage of the process running the index task. As a result, this mode might cause a
-problem due to limited storage capacity, and is not recommended to use in production.
-
-On the contrary, in the incremental pushing mode, segments are incrementally pushed, that is they can be pushed
-in the middle of the index task. More precisely, the index task collects data and stores created segments in the memory
-and disks of the process running that task until the total number of collected rows exceeds `maxTotalRows`. Once it exceeds,
-the index task immediately pushes all segments created until that moment, cleans all pushed segments up, and
-continues to ingest remaining data.
-
-To enable bulk pushing mode, `forceGuaranteedRollup` should be set in the TuningConfig. Note that this option cannot
-be used with `appendToExisting` of IOConfig.
-
-Firehoses are pluggable and thus the configuration schema can and will vary based on the `type` of the firehose.
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| type | String | Specifies the type of firehose. Each value will have its own configuration schema, firehoses packaged with Druid are described below. | yes |
-
-## Firehoses
-
-There are several firehoses readily available in Druid, some are meant for examples, others can be used directly in a production environment.
-
-For additional firehoses, please see our [extensions list](../development/extensions.md).
-
-<a name="local-firehose"></a>
-
-### LocalFirehose
-
-This Firehose can be used to read the data from files on local disk, and is mainly intended for proof-of-concept testing, and works with `string` typed parsers.
-This Firehose is _splittable_ and can be used by [native parallel index tasks](native-batch.md#parallel-task).
-Since each split represents a file in this Firehose, each worker task of `index_parallel` will read a file.
-A sample local Firehose spec is shown below:
-
-```json
-{
-    "type": "local",
-    "filter" : "*.csv",
-    "baseDir": "/data/directory"
-}
-```
-
-|property|description|required?|
-|--------|-----------|---------|
-|type|This should be "local".|yes|
-|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) for more information.|yes|
-|baseDir|directory to search recursively for files to be ingested. |yes|
-
-<a name="http-firehose"></a>
-
-### HttpFirehose
-
-This Firehose can be used to read the data from remote sites via HTTP, and works with `string` typed parsers.
-This Firehose is _splittable_ and can be used by [native parallel index tasks](native-batch.md#parallel-task).
-Since each split represents a file in this Firehose, each worker task of `index_parallel` will read a file.
-A sample HTTP Firehose spec is shown below:
-
-```json
-{
-    "type": "http",
-    "uris": ["http://example.com/uri1", "http://example2.com/uri2"]
-}
-```
-
-The below configurations can be optionally used if the URIs specified in the spec require a Basic Authentication Header.
-Omitting these fields from your spec will result in HTTP requests with no Basic Authentication Header.
-
-|property|description|default|
-|--------|-----------|-------|
-|httpAuthenticationUsername|Username to use for authentication with specified URIs|None|
-|httpAuthenticationPassword|PasswordProvider to use with specified URIs|None|
-
-Example with authentication fields using the DefaultPassword provider (this requires the password to be in the ingestion spec):
-
-```json
-{
-    "type": "http",
-    "uris": ["http://example.com/uri1", "http://example2.com/uri2"],
-    "httpAuthenticationUsername": "username",
-    "httpAuthenticationPassword": "password123"
-}
-```
-
-You can also use the other existing Druid PasswordProviders. Here is an example using the EnvironmentVariablePasswordProvider:
-
-```json
-{
-    "type": "http",
-    "uris": ["http://example.com/uri1", "http://example2.com/uri2"],
-    "httpAuthenticationUsername": "username",
-    "httpAuthenticationPassword": {
-        "type": "environment",
-        "variable": "HTTP_FIREHOSE_PW"
-    }
-}
-```
-
-The below configurations can optionally be used for tuning the Firehose performance.
-
-|property|description|default|
-|--------|-----------|-------|
-|maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache. Cached files are not removed until the ingestion task completes.|1073741824|
-|maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch. Prefetched files are removed immediately once they are read.|1073741824|
-|prefetchTriggerBytes|Threshold to trigger prefetching HTTP objects.|maxFetchCapacityBytes / 2|
-|fetchTimeout|Timeout for fetching an HTTP object.|60000|
-|maxFetchRetry|Maximum retries for fetching an HTTP object.|3|
-
-<a name="segment-firehose"></a>
-
-### IngestSegmentFirehose
-
-This Firehose can be used to read the data from existing druid segments, potentially using a new schema and changing the name, dimensions, metrics, rollup, etc. of the segment.
-This Firehose is _splittable_ and can be used by [native parallel index tasks](native-batch.md#parallel-task).
-This firehose will accept any type of parser, but will only utilize the list of dimensions and the timestamp specification.
- A sample ingest Firehose spec is shown below:
-
-```json
-{
-    "type": "ingestSegment",
-    "dataSource": "wikipedia",
-    "interval": "2013-01-01/2013-01-02"
-}
-```
-
-|property|description|required?|
-|--------|-----------|---------|
-|type|This should be "ingestSegment".|yes|
-|dataSource|A String defining the data source to fetch rows from, very similar to a table in a relational database|yes|
-|interval|A String representing the ISO-8601 interval. This defines the time range to fetch the data over.|yes|
-|dimensions|The list of dimensions to select. If left empty, no dimensions are returned. If left null or not defined, all dimensions are returned. |no|
-|metrics|The list of metrics to select. If left empty, no metrics are returned. If left null or not defined, all metrics are selected.|no|
-|filter| See [Filters](../querying/filters.md)|no|
-|maxInputSegmentBytesPerTask|Deprecated. Use [SegmentsSplitHintSpec](#segmentssplithintspec) instead. When used with the native parallel index task, the maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks). Defaults to 150MB.|no|
-
-<a name="sql-firehose"></a>
-
-### SqlFirehose
-
-This Firehose can be used to ingest events residing in an RDBMS. The database connection information is provided as part of the ingestion spec.
-For each query, the results are fetched locally and indexed.
-If there are multiple queries from which data needs to be indexed, queries are prefetched in the background, up to `maxFetchCapacityBytes` bytes.
-This firehose will accept any type of parser, but will only utilize the list of dimensions and the timestamp specification. See the extension documentation for more detailed ingestion examples.
-
-Requires one of the following extensions:
- * [MySQL Metadata Store](../development/extensions-core/mysql.md).
- * [PostgreSQL Metadata Store](../development/extensions-core/postgresql.md).
-
-
-```json
-{
-    "type": "sql",
-    "database": {
-        "type": "mysql",
-        "connectorConfig": {
-            "connectURI": "jdbc:mysql://host:port/schema",
-            "user": "user",
-            "password": "password"
-        }
-     },
-    "sqls": ["SELECT * FROM table1", "SELECT * FROM table2"]
-}
-```
-
-|property|description|default|required?|
-|--------|-----------|-------|---------|
-|type|This should be "sql".||Yes|
-|database|Specifies the database connection details.||Yes|
-|maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache. Cached files are not removed until the ingestion task completes.|1073741824|No|
-|maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch. Prefetched files are removed immediately once they are read.|1073741824|No|
-|prefetchTriggerBytes|Threshold to trigger prefetching SQL result objects.|maxFetchCapacityBytes / 2|No|
-|fetchTimeout|Timeout for fetching the result set.|60000|No|
-|foldCase|Toggle case folding of database column names. This may be enabled in cases where the database returns case insensitive column names in query results.|false|No|
-|sqls|List of SQL queries where each SQL query would retrieve the data to be indexed.||Yes|
-
-#### Database
-
-|property|description|default|required?|
-|--------|-----------|-------|---------|
-|type|The type of database to query. Valid values are `mysql` and `postgresql`_||Yes|
-|connectorConfig|Specify the database connection properties via `connectURI`, `user` and `password`||Yes|
-
-<a name="inline-firehose"></a>
-
-### InlineFirehose
-
-This Firehose can be used to read the data inlined in its own spec.
-It can be used for demos or for quickly testing out parsing and schema, and works with `string` typed parsers.
-A sample inline Firehose spec is shown below:
-
-```json
-{
-    "type": "inline",
-    "data": "0,values,formatted\n1,as,CSV"
-}
-```
-
-|property|description|required?|
-|--------|-----------|---------|
-|type|This should be "inline".|yes|
-|data|Inlined data to ingest.|yes|
-
-<a name="combining-firehose"></a>
-
-### CombiningFirehose
-
-This Firehose can be used to combine and merge data from a list of different Firehoses.
-
-```json
-{
-    "type": "combining",
-    "delegates": [ { firehose1 }, { firehose2 }, ... ]
-}
-```
-
-|property|description|required?|
-|--------|-----------|---------|
-|type|This should be "combining"|yes|
-|delegates|List of Firehoses to combine data from|yes|

@@ -27,12 +27,18 @@ import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.metadata.TaskLookup;
+import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
+import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
+import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -41,11 +47,13 @@ import java.util.Set;
 public class TaskStorageQueryAdapter
 {
   private final TaskStorage storage;
+  private final TaskLockbox taskLockbox;
 
   @Inject
-  public TaskStorageQueryAdapter(TaskStorage storage)
+  public TaskStorageQueryAdapter(TaskStorage storage, TaskLockbox taskLockbox)
   {
     this.storage = storage;
+    this.taskLockbox = taskLockbox;
   }
 
   public List<Task> getActiveTasks()
@@ -53,9 +61,28 @@ public class TaskStorageQueryAdapter
     return storage.getActiveTasks();
   }
 
+  /**
+   * Gets a List of Intervals locked by higher priority tasks for each datasource.
+   *
+   * @param minTaskPriority Minimum task priority for each datasource. Only the
+   *                        Intervals that are locked by Tasks with equal or
+   *                        higher priority than this are returned. Locked intervals
+   *                        for datasources that are not present in this Map are
+   *                        not returned.
+   * @return Map from Datasource to List of Intervals locked by Tasks that have
+   * priority greater than or equal to the {@code minTaskPriority} for that datasource.
+   */
+  public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
+  {
+    return taskLockbox.getLockedIntervals(minTaskPriority);
+  }
+
   public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
   {
-    return storage.getActiveTaskInfo(dataSource);
+    return storage.getTaskInfos(
+        ActiveTaskLookup.getInstance(),
+        dataSource
+    );
   }
 
   public List<TaskInfo<Task, TaskStatus>> getCompletedTaskInfoByCreatedTimeDuration(
@@ -64,7 +91,15 @@ public class TaskStorageQueryAdapter
       @Nullable String dataSource
   )
   {
-    return storage.getRecentlyCreatedAlreadyFinishedTaskInfo(maxTaskStatuses, duration, dataSource);
+    return storage.getTaskInfos(CompleteTaskLookup.of(maxTaskStatuses, duration), dataSource);
+  }
+
+  public List<TaskInfo<Task, TaskStatus>> getTaskInfos(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String dataSource
+  )
+  {
+    return storage.getTaskInfos(taskLookups, dataSource);
   }
 
   public Optional<Task> getTask(final String taskid)

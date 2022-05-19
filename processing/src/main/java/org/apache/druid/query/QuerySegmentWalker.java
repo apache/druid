@@ -22,6 +22,7 @@ package org.apache.druid.query;
 import org.joda.time.Interval;
 
 /**
+ * An interface for query-handling entry points.
  */
 public interface QuerySegmentWalker
 {
@@ -29,19 +30,27 @@ public interface QuerySegmentWalker
    * Gets the Queryable for a given interval, the Queryable returned can be any version(s) or partitionNumber(s)
    * such that it represents the interval.
    *
-   * @param <T> query result type
-   * @param query the query to find a Queryable for
+   * @param <T>       query result type
+   * @param query     the query to find a Queryable for
    * @param intervals the intervals to find a Queryable for
+   *
    * @return a Queryable object that represents the interval
    */
   <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals);
 
   /**
-   * Gets the Queryable for a given list of SegmentSpecs.
+   * Gets the Queryable for a given list of SegmentDescriptors.
    *
-   * @param <T> the query result type
+   * The descriptors are expected to apply to the base datasource involved in the query, i.e. the one returned by:
+   *
+   * <pre>
+   *   DataSourceAnalysis.forDataSource(query.getDataSource()).getBaseDataSource()
+   * </pre>
+   *
+   * @param <T>   the query result type
    * @param query the query to return a Queryable for
    * @param specs the list of SegmentSpecs to find a Queryable for
+   *
    * @return the Queryable object with the given SegmentSpecs
    */
   <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs);

@@ -19,6 +19,7 @@
 
 package org.apache.druid.metadata;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -36,7 +37,11 @@ public interface MetadataStorageConnector
       byte[] value
   );
 
-  byte[] lookup(
+  /**
+   * Returns the value of the valueColumn when there is only one row matched to the given key.
+   * This method returns null if there is no such row and throws an error if there are more than one rows.
+   */
+  @Nullable byte[] lookup(
       String tableName,
       String keyColumn,
       String valueColumn,

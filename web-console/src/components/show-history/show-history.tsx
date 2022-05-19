@@ -17,95 +17,75 @@
  */
 
 import { Tab, Tabs } from '@blueprintjs/core';
-import axios from 'axios';
-import React from 'react';
+import * as JSONBig from 'json-bigint-native';
+import React, { useState } from 'react';
 
-import { QueryManager } from '../../utils';
+import { DiffDialog } from '../../dialogs';
+import { cleanSpec, IngestionSpec } from '../../druid-models';
+import { useQueryManager } from '../../hooks';
+import { Api } from '../../singletons';
+import { deepSet } from '../../utils';
 import { Loader } from '../loader/loader';
 import { ShowValue } from '../show-value/show-value';
 
 import './show-history.scss';
 
-export interface PastSupervisor {
+export interface VersionSpec {
   version: string;
-  spec: any;
+  spec: IngestionSpec;
 }
+
 export interface ShowHistoryProps {
   endpoint: string;
-  downloadFilename?: string;
+  downloadFilenamePrefix?: string;
 }
 
-export interface ShowHistoryState {
-  data?: PastSupervisor[];
-  loading: boolean;
-  error?: string;
-}
+export const ShowHistory = React.memo(function ShowHistory(props: ShowHistoryProps) {
+  const { downloadFilenamePrefix, endpoint } = props;
 
-export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHistoryState> {
-  private showHistoryQueryManager: QueryManager<string, PastSupervisor[]>;
-  constructor(props: ShowHistoryProps, context: any) {
-    super(props, context);
-    this.state = {
-      data: [],
-      loading: true,
-    };
+  const [historyState] = useQueryManager<string, VersionSpec[]>({
+    processQuery: async (endpoint: string) => {
+      const resp = await Api.instance.get(endpoint);
+      return resp.data.map((vs: VersionSpec) => deepSet(vs, 'spec', cleanSpec(vs.spec, true)));
+    },
+    initQuery: endpoint,
+  });
+  const [diffIndex, setDiffIndex] = useState(-1);
 
-    this.showHistoryQueryManager = new QueryManager({
-      processQuery: async (endpoint: string) => {
-        const resp = await axios.get(endpoint);
-        return resp.data;
-      },
-      onStateChange: ({ result, loading, error }) => {
-        this.setState({
-          loading,
-          data: result,
-          error,
-        });
-      },
-    });
-  }
+  if (historyState.loading) return <Loader />;
 
-  componentDidMount(): void {
-    this.showHistoryQueryManager.runQuery(this.props.endpoint);
-  }
+  const historyData = historyState.data;
+  if (!historyData) return null;
 
-  render(): JSX.Element | null {
-    const { downloadFilename, endpoint } = this.props;
-    const { data, loading, error } = this.state;
-    if (loading) return <Loader />;
-    if (!data) return null;
-
-    const versions = data.map((pastSupervisor: PastSupervisor, index: number) => (
-      <Tab
-        id={index}
-        key={index}
-        title={pastSupervisor.version}
-        panel={
-          <ShowValue
-            jsonValue={
-              pastSupervisor.spec ? JSON.stringify(pastSupervisor.spec, undefined, 2) : error
+  return (
+    <div className="show-history">
+      <Tabs animate renderActiveTabPanelOnly vertical defaultSelectedTabId={0}>
+        {historyData.map((pastSupervisor, i) => (
+          <Tab
+            id={i}
+            key={i}
+            title={pastSupervisor.version}
+            panel={
+              <ShowValue
+                jsonValue={JSONBig.stringify(pastSupervisor.spec, undefined, 2)}
+                onDiffWithPrevious={i < historyData.length - 1 ? () => setDiffIndex(i) : undefined}
+                downloadFilename={`${downloadFilenamePrefix}-version-${pastSupervisor.version}.json`}
+              />
             }
-            downloadFilename={`version-${pastSupervisor.version}-${downloadFilename}`}
-            endpoint={endpoint}
+            panelClassName="panel"
           />
-        }
-        panelClassName={'panel'}
-      />
-    ));
-
-    return (
-      <div className="show-history">
-        <Tabs
-          animate
-          renderActiveTabPanelOnly
-          vertical
-          className={'tab-area'}
-          defaultSelectedTabId={0}
-        >
-          {versions}
-          <Tabs.Expander />
-        </Tabs>
-      </div>
-    );
-  }
-}
+        ))}
+        <Tabs.Expander />
+      </Tabs>
+      {diffIndex !== -1 && (
+        <DiffDialog
+          title="Supervisor spec diff"
+          versions={historyData.map(s => ({ label: s.version, value: s.spec }))}
+          initLeftIndex={diffIndex + 1}
+          initRightIndex={diffIndex}
+          onClose={() => setDiffIndex(-1)}
+        />
+      )}
+    </div>
+  );
+});

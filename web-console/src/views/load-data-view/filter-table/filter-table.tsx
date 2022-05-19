@@ -21,15 +21,20 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
+import { DruidFilter, getFilterDimension } from '../../../druid-models';
+import {
+  DEFAULT_TABLE_CLASS_NAME,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+} from '../../../react-table';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
-import { DruidFilter } from '../../../utils/ingestion-spec';
-import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
+import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './filter-table.scss';
 
 export function filterTableSelectedColumnName(
-  sampleData: HeaderAndRows,
-  selectedFilter: DruidFilter | undefined,
+  sampleData: SampleHeaderAndRows,
+  selectedFilter: Partial<DruidFilter> | undefined,
 ): string | undefined {
   if (!selectedFilter) return;
   const selectedFilterName = selectedFilter.dimension;
@@ -38,32 +43,28 @@ export function filterTableSelectedColumnName(
 }
 
 export interface FilterTableProps {
-  sampleData: HeaderAndRows;
+  sampleData: SampleHeaderAndRows;
   columnFilter: string;
   dimensionFilters: DruidFilter[];
   selectedFilterName: string | undefined;
-  onShowGlobalFilter: () => void;
   onFilterSelect: (filter: DruidFilter, index: number) => void;
 }
 
 export const FilterTable = React.memo(function FilterTable(props: FilterTableProps) {
-  const {
-    sampleData,
-    columnFilter,
-    dimensionFilters,
-    selectedFilterName,
-    onShowGlobalFilter,
-    onFilterSelect,
-  } = props;
+  const { sampleData, columnFilter, dimensionFilters, selectedFilterName, onFilterSelect } = props;
 
   return (
     <ReactTable
-      className="filter-table -striped -highlight"
+      className={classNames('filter-table', DEFAULT_TABLE_CLASS_NAME)}
       data={sampleData.rows}
+      sortable={false}
+      defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+      pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+      showPagination={sampleData.rows.length > STANDARD_TABLE_PAGE_SIZE}
       columns={filterMap(sampleData.header, (columnName, i) => {
         if (!caseInsensitiveContains(columnName, columnFilter)) return;
         const timestamp = columnName === '__time';
-        const filterIndex = dimensionFilters.findIndex(f => f.dimension === columnName);
+        const filterIndex = dimensionFilters.findIndex(f => getFilterDimension(f) === columnName);
         const filter = dimensionFilters[filterIndex];
 
         const columnClassName = classNames({
@@ -73,14 +74,17 @@ export const FilterTable = React.memo(function FilterTable(props: FilterTablePro
         return {
           Header: (
             <div
-              className={classNames('clickable')}
+              className="clickable"
               onClick={() => {
-                if (timestamp) {
-                  onShowGlobalFilter();
-                } else if (filter) {
+                if (filter) {
                   onFilterSelect(filter, filterIndex);
                 } else {
-                  onFilterSelect({ type: 'selector', dimension: columnName, value: '' }, -1);
+                  onFilterSelect(
+                    timestamp
+                      ? { type: 'interval', dimension: columnName, intervals: [] }
+                      : { type: 'selector', dimension: columnName, value: '' },
+                    -1,
+                  );
                 }
               }}
             >
@@ -92,12 +96,12 @@ export const FilterTable = React.memo(function FilterTable(props: FilterTablePro
           className: columnClassName,
           id: String(i),
           accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-          Cell: row => <TableCell value={timestamp ? new Date(row.value) : row.value} />,
+          width: 140,
+          Cell: function FilterTableCell(row) {
+            return <TableCell value={timestamp ? new Date(row.value) : row.value} />;
+          },
         };
       })}
-      defaultPageSize={50}
-      showPagination={false}
-      sortable={false}
     />
   );
 });

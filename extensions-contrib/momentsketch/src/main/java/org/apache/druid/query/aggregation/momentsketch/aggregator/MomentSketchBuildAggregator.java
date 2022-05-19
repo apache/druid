@@ -47,6 +47,9 @@ public class MomentSketchBuildAggregator implements Aggregator
   @Override
   public void aggregate()
   {
+    if (valueSelector.isNull()) {
+      return;
+    }
     momentsSketch.add(valueSelector.getDouble());
   }
 

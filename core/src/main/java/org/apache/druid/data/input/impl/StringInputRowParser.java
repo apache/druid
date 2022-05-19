@@ -99,7 +99,7 @@ public class StringInputRowParser implements ByteBufferInputRowParser
     return new StringInputRowParser(parseSpec, getEncoding());
   }
 
-  private Map<String, Object> buildStringKeyMap(ByteBuffer input)
+  public Map<String, Object> buildStringKeyMap(ByteBuffer input)
   {
     int payloadSize = input.remaining();
 
@@ -122,7 +122,7 @@ public class StringInputRowParser implements ByteBufferInputRowParser
         chars.clear();
       }
     } else {
-      throw new ParseException("Failed with CoderResult[%s]", coderResult);
+      throw new ParseException(chars.toString(), "Failed with CoderResult[%s]", coderResult);
     }
     return theMap;
   }
@@ -149,7 +149,7 @@ public class StringInputRowParser implements ByteBufferInputRowParser
   }
 
   @Nullable
-  private Map<String, Object> parseString(@Nullable String inputString)
+  public Map<String, Object> parseString(@Nullable String inputString)
   {
     initializeParser();
     return parser.parseToMap(inputString);

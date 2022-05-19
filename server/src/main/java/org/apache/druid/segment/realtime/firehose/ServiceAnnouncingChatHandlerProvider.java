@@ -26,7 +26,6 @@ import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.initialization.ServerConfig;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -43,20 +42,17 @@ public class ServiceAnnouncingChatHandlerProvider implements ChatHandlerProvider
 
   private final DruidNode node;
   private final ServiceAnnouncer serviceAnnouncer;
-  private final ServerConfig serverConfig;
   private final ConcurrentMap<String, ChatHandler> handlers;
   private final ConcurrentSkipListSet<String> announcements;
 
   @Inject
   public ServiceAnnouncingChatHandlerProvider(
       @RemoteChatHandler DruidNode node,
-      ServiceAnnouncer serviceAnnouncer,
-      ServerConfig serverConfig
+      ServiceAnnouncer serviceAnnouncer
   )
   {
     this.node = node;
     this.serviceAnnouncer = serviceAnnouncer;
-    this.serverConfig = serverConfig;
     this.handlers = new ConcurrentHashMap<>();
     this.announcements = new ConcurrentSkipListSet<>();
   }
@@ -70,7 +66,7 @@ public class ServiceAnnouncingChatHandlerProvider implements ChatHandlerProvider
   @Override
   public void register(final String service, ChatHandler handler, boolean announce)
   {
-    log.info("Registering Eventhandler[%s]", service);
+    log.debug("Registering Eventhandler[%s]", service);
 
     if (handlers.putIfAbsent(service, handler) != null) {
       throw new ISE("handler already registered for service[%s]", service);
@@ -93,7 +89,7 @@ public class ServiceAnnouncingChatHandlerProvider implements ChatHandlerProvider
   @Override
   public void unregister(final String service)
   {
-    log.info("Unregistering chat handler[%s]", service);
+    log.debug("Unregistering chat handler[%s]", service);
 
     final ChatHandler handler = handlers.get(service);
     if (handler == null) {
@@ -123,6 +119,14 @@ public class ServiceAnnouncingChatHandlerProvider implements ChatHandlerProvider
 
   private DruidNode makeDruidNode(String key)
   {
-    return new DruidNode(key, node.getHost(), node.isBindOnHost(), node.getPlaintextPort(), node.getTlsPort(), node.isEnablePlaintextPort(), node.isEnableTlsPort());
+    return new DruidNode(
+        key,
+        node.getHost(),
+        node.isBindOnHost(),
+        node.getPlaintextPort(),
+        node.getTlsPort(),
+        node.isEnablePlaintextPort(),
+        node.isEnableTlsPort()
+    );
   }
 }

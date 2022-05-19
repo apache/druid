@@ -19,8 +19,14 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -28,6 +34,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 /**
  */
@@ -56,5 +63,52 @@ public class SegmentUtilsTest
   public void testException() throws Exception
   {
     SegmentUtils.getVersionFromDir(tempFolder.newFolder());
+  }
+
+  @Test
+  public void testGroupSegmentsByInterval()
+  {
+    final List<DataSegment> segments = ImmutableList.of(
+        newSegment(Intervals.of("2020-01-01/P1D"), 0),
+        newSegment(Intervals.of("2020-01-02/P1D"), 0),
+        newSegment(Intervals.of("2020-01-01/P1D"), 1),
+        newSegment(Intervals.of("2020-01-03/P1D"), 0),
+        newSegment(Intervals.of("2020-01-02/P1D"), 1),
+        newSegment(Intervals.of("2020-01-02/P1D"), 2)
+    );
+    Assert.assertEquals(
+        ImmutableMap.of(
+            Intervals.of("2020-01-01/P1D"),
+            ImmutableList.of(
+                newSegment(Intervals.of("2020-01-01/P1D"), 0),
+                newSegment(Intervals.of("2020-01-01/P1D"), 1)
+            ),
+            Intervals.of("2020-01-02/P1D"),
+            ImmutableList.of(
+                newSegment(Intervals.of("2020-01-02/P1D"), 0),
+                newSegment(Intervals.of("2020-01-02/P1D"), 1),
+                newSegment(Intervals.of("2020-01-02/P1D"), 2)
+            ),
+            Intervals.of("2020-01-03/P1D"),
+            ImmutableList.of(newSegment(Intervals.of("2020-01-03/P1D"), 0))
+        ),
+        SegmentUtils.groupSegmentsByInterval(segments)
+    );
+  }
+
+  private static DataSegment newSegment(Interval interval, int partitionId)
+  {
+    return new DataSegment(
+        "datasource",
+        interval,
+        "version",
+        null,
+        ImmutableList.of("dim"),
+        ImmutableList.of("met"),
+        new NumberedShardSpec(partitionId, 0),
+        null,
+        9,
+        10L
+    );
   }
 }

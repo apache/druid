@@ -33,14 +33,16 @@ import java.nio.channels.WritableByteChannel;
 public class DoubleColumnSerializer implements GenericColumnSerializer<Object>
 {
   public static DoubleColumnSerializer create(
+      String columnName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       CompressionStrategy compression
   )
   {
-    return new DoubleColumnSerializer(segmentWriteOutMedium, filenameBase, IndexIO.BYTE_ORDER, compression);
+    return new DoubleColumnSerializer(columnName, segmentWriteOutMedium, filenameBase, IndexIO.BYTE_ORDER, compression);
   }
 
+  private final String columnName;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final String filenameBase;
   private final ByteOrder byteOrder;
@@ -48,12 +50,14 @@ public class DoubleColumnSerializer implements GenericColumnSerializer<Object>
   private ColumnarDoublesSerializer writer;
 
   private DoubleColumnSerializer(
+      String columnName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder byteOrder,
       CompressionStrategy compression
   )
   {
+    this.columnName = columnName;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.filenameBase = filenameBase;
     this.byteOrder = byteOrder;
@@ -64,6 +68,7 @@ public class DoubleColumnSerializer implements GenericColumnSerializer<Object>
   public void open() throws IOException
   {
     writer = CompressionFactory.getDoubleSerializer(
+        columnName,
         segmentWriteOutMedium,
         StringUtils.format("%s.double_column", filenameBase),
         byteOrder,

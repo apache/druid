@@ -22,16 +22,16 @@ package org.apache.druid.indexing.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Joiner;
-import com.google.common.io.Files;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
+import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.curator.PotentiallyGzippedCompressionProvider;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.IndexingServiceCondition;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestRealtimeTask;
 import org.apache.druid.indexing.common.TestTasks;
@@ -41,18 +41,23 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.SingleTaskBackgroundRunner;
 import org.apache.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import org.apache.druid.segment.IndexMergerV9Factory;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
+import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.security.AuthTestUtils;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.After;
@@ -81,15 +86,16 @@ public class WorkerTaskMonitorTest
   private Task task;
 
   private Worker worker;
+  private final TestUtils testUtils;
   private ObjectMapper jsonMapper;
-  private IndexMergerV9 indexMergerV9;
+  private IndexMergerV9Factory indexMergerV9Factory;
   private IndexIO indexIO;
 
   public WorkerTaskMonitorTest()
   {
-    TestUtils testUtils = new TestUtils();
+    testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
-    indexMergerV9 = testUtils.getTestIndexMergerV9();
+    indexMergerV9Factory = testUtils.getIndexMergerV9Factory();
     indexIO = testUtils.getTestIndexIO();
   }
 
@@ -148,7 +154,7 @@ public class WorkerTaskMonitorTest
   private WorkerTaskMonitor createTaskMonitor()
   {
     final TaskConfig taskConfig = new TaskConfig(
-        Files.createTempDir().toString(),
+        FileUtils.createTempDir().toString(),
         null,
         null,
         0,
@@ -156,6 +162,10 @@ public class WorkerTaskMonitorTest
         false,
         null,
         null,
+        null,
+        false,
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null
     );
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
@@ -170,19 +180,38 @@ public class WorkerTaskMonitorTest
                 taskConfig,
                 null,
                 taskActionClientFactory,
-                null, null, null, null, null, null, null, notifierFactory, null, null, null,
-                new SegmentLoaderFactory(null, jsonMapper),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                notifierFactory,
+                null,
+                null,
+                NoopJoinableFactory.INSTANCE,
+                null,
+                new SegmentCacheManagerFactory(jsonMapper),
                 jsonMapper,
                 indexIO,
                 null,
                 null,
                 null,
-                indexMergerV9,
+                indexMergerV9Factory,
                 null,
                 null,
                 null,
                 null,
                 new NoopTestTaskReportFileWriter(),
+                null,
+                AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+                new NoopChatHandlerProvider(),
+                testUtils.getRowIngestionMetersFactory(),
+                new TestAppenderatorsManager(),
+                new NoopIndexingServiceClient(),
+                null,
+                null,
                 null
             ),
             taskConfig,
@@ -334,6 +363,10 @@ public class WorkerTaskMonitorTest
     Assert.assertEquals(1, announcements.size());
     Assert.assertEquals(task.getId(), announcements.get(0).getTaskStatus().getId());
     Assert.assertEquals(TaskState.FAILED, announcements.get(0).getTaskStatus().getStatusCode());
+    Assert.assertEquals(
+        "Canceled as unknown task. See middleManager or indexer logs for more details.",
+        announcements.get(0).getTaskStatus().getErrorMsg()
+    );
   }
 
   @Test(timeout = 60_000L)

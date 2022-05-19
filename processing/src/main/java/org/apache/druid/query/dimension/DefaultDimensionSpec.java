@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
+ *
  */
 public class DefaultDimensionSpec implements DimensionSpec
 {
@@ -43,17 +44,17 @@ public class DefaultDimensionSpec implements DimensionSpec
   private static final byte CACHE_TYPE_ID = 0x0;
   private final String dimension;
   private final String outputName;
-  private final ValueType outputType;
+  private final ColumnType outputType;
 
   @JsonCreator
   public DefaultDimensionSpec(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("outputName") @Nullable String outputName,
-      @JsonProperty("outputType") @Nullable ValueType outputType
+      @JsonProperty("outputType") @Nullable ColumnType outputType
   )
   {
     this.dimension = dimension;
-    this.outputType = outputType == null ? ValueType.STRING : outputType;
+    this.outputType = outputType == null ? ColumnType.STRING : outputType;
 
     // Do null check for legacy backwards compatibility, callers should be setting the value.
     this.outputName = outputName == null ? dimension : outputName;
@@ -61,7 +62,7 @@ public class DefaultDimensionSpec implements DimensionSpec
 
   public DefaultDimensionSpec(String dimension, String outputName)
   {
-    this(dimension, outputName, ValueType.STRING);
+    this(dimension, outputName, ColumnType.STRING);
   }
 
   @Override
@@ -80,7 +81,7 @@ public class DefaultDimensionSpec implements DimensionSpec
 
   @Override
   @JsonProperty
-  public ValueType getOutputType()
+  public ColumnType getOutputType()
   {
     return outputType;
   }
@@ -134,6 +135,12 @@ public class DefaultDimensionSpec implements DimensionSpec
   public boolean preservesOrdering()
   {
     return true;
+  }
+
+  @Override
+  public DimensionSpec withDimension(String newDimension)
+  {
+    return new DefaultDimensionSpec(newDimension, this.outputName, this.outputType);
   }
 
   @Override

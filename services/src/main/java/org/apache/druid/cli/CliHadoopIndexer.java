@@ -19,11 +19,12 @@
 
 package org.apache.druid.cli;
 
+import com.github.rvesse.airline.annotations.Arguments;
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.base.Joiner;
 import com.google.inject.Inject;
-import io.airlift.airline.Arguments;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.initialization.Initialization;
@@ -50,16 +51,17 @@ public class CliHadoopIndexer implements Runnable
 
   private static final Logger log = new Logger(CliHadoopIndexer.class);
 
-  @Arguments(description = "A JSON object or the path to a file that contains a JSON object", required = true)
+  @Arguments(description = "A JSON object or the path to a file that contains a JSON object")
+  @Required
   private String argumentSpec;
 
   @Option(name = {"-c", "--coordinate", "hadoopDependencies"},
           description = "extra dependencies to pull down (e.g. non-default hadoop coordinates or extra hadoop jars)")
+  @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
   private List<String> coordinates;
 
   @Option(name = "--no-default-hadoop",
-          description = "don't pull down the default hadoop version",
-          required = false)
+          description = "don't pull down the default hadoop version")
   public boolean noDefaultHadoop;
 
   @Inject
@@ -80,19 +82,19 @@ public class CliHadoopIndexer implements Runnable
 
       final List<URL> extensionURLs = new ArrayList<>();
       for (final File extension : Initialization.getExtensionFilesToLoad(extensionsConfig)) {
-        final ClassLoader extensionLoader = Initialization.getClassLoaderForExtension(extension, false);
-        extensionURLs.addAll(Arrays.asList(((URLClassLoader) extensionLoader).getURLs()));
+        final URLClassLoader extensionLoader = Initialization.getClassLoaderForExtension(extension, false);
+        extensionURLs.addAll(Arrays.asList(extensionLoader.getURLs()));
       }
 
-      final List<URL> nonHadoopURLs = new ArrayList<>();
-      nonHadoopURLs.addAll(Arrays.asList(((URLClassLoader) CliHadoopIndexer.class.getClassLoader()).getURLs()));
+      final List<URL> nonHadoopURLs = Arrays.asList(
+          ((URLClassLoader) CliHadoopIndexer.class.getClassLoader()).getURLs()
+      );
 
-      final List<URL> driverURLs = new ArrayList<>();
-      driverURLs.addAll(nonHadoopURLs);
+      final List<URL> driverURLs = new ArrayList<>(nonHadoopURLs);
       // put hadoop dependencies last to avoid jets3t & apache.httpcore version conflicts
       for (File hadoopDependency : Initialization.getHadoopDependencyFilesToLoad(allCoordinates, extensionsConfig)) {
-        final ClassLoader hadoopLoader = Initialization.getClassLoaderForExtension(hadoopDependency, false);
-        driverURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
+        final URLClassLoader hadoopLoader = Initialization.getClassLoaderForExtension(hadoopDependency, false);
+        driverURLs.addAll(Arrays.asList(hadoopLoader.getURLs()));
       }
 
       final URLClassLoader loader = new URLClassLoader(driverURLs.toArray(new URL[0]), null);

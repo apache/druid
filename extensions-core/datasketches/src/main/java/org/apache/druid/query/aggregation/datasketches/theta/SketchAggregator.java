@@ -19,19 +19,20 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta;
 
-import com.yahoo.sketches.Family;
-import com.yahoo.sketches.theta.SetOperation;
-import com.yahoo.sketches.theta.Union;
+import org.apache.datasketches.Family;
+import org.apache.datasketches.theta.SetOperation;
+import org.apache.datasketches.theta.Union;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 
 public class SketchAggregator implements Aggregator
 {
+
   private final BaseObjectColumnValueSelector selector;
   private final int size;
 
@@ -61,6 +62,33 @@ public class SketchAggregator implements Aggregator
         initUnion();
       }
       updateUnion(union, update);
+    }
+  }
+
+  @Override
+  public long aggregateWithSize()
+  {
+    Object update = selector.getObject();
+    if (update == null) {
+      return 0;
+    }
+    synchronized (this) {
+      long unionSizeDelta = 0;
+      long initialSketchSize = 0;
+      if (union == null) {
+        initUnion();
+
+        // Size of UnionImpl = 16B (object header) + 8B (sketch ref) + 2B (short)
+        // + 8B (long) + 1B (boolean) + 5B (padding) = 40B
+        unionSizeDelta = 40L;
+      } else {
+        initialSketchSize = union.getCurrentBytes();
+      }
+
+      updateUnion(union, update);
+
+      long sketchSizeDelta = union.getCurrentBytes() - initialSketchSize;
+      return sketchSizeDelta + unionSizeDelta;
     }
   }
 
@@ -113,7 +141,7 @@ public class SketchAggregator implements Aggregator
     } else if (update instanceof byte[]) {
       union.update((byte[]) update);
     } else if (update instanceof Double) {
-      union.update(((Double) update));
+      union.update((Double) update);
     } else if (update instanceof Integer || update instanceof Long) {
       union.update(((Number) update).longValue());
     } else if (update instanceof int[]) {
@@ -122,10 +150,27 @@ public class SketchAggregator implements Aggregator
       union.update((long[]) update);
     } else if (update instanceof List) {
       for (Object entry : (List) update) {
-        union.update(entry.toString());
+        if (entry != null) {
+          final String asString = entry.toString();
+          if (!NullHandling.isNullOrEquivalent(asString)) {
+            union.update(asString);
+          }
+        }
       }
     } else {
       throw new ISE("Illegal type received while theta sketch merging [%s]", update.getClass());
     }
   }
+
+  /**
+   * Gets the initial size of this aggregator in bytes.
+   */
+  public long getInitialSizeBytes()
+  {
+    // Size = 16B (object header) + 24B (3 refs) + 4B (int size) = 44B
+    // Due to 8-byte alignment, size = 48B
+    // (see https://www.baeldung.com/java-memory-layout)
+    return 48L;
+  }
+
 }

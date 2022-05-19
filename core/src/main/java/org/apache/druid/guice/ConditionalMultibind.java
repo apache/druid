@@ -25,6 +25,7 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.guice.annotations.PublicApi;
 
+import javax.annotation.Nullable;
 import java.lang.annotation.Annotation;
 import java.util.Properties;
 
@@ -184,7 +185,17 @@ public class ConditionalMultibind<T>
       Class<? extends T> target
   )
   {
-    if (matchCondition(property, condition)) {
+    return addConditionBinding(property, null, condition, target);
+  }
+
+  public ConditionalMultibind<T> addConditionBinding(
+      String property,
+      String defaultValue,
+      Predicate<String> condition,
+      Class<? extends T> target
+  )
+  {
+    if (matchCondition(property, defaultValue, condition)) {
       multibinder.addBinding().to(target);
     }
     return this;
@@ -235,7 +246,12 @@ public class ConditionalMultibind<T>
 
   public boolean matchCondition(String property, Predicate<String> condition)
   {
-    final String value = properties.getProperty(property);
+    return matchCondition(property, null, condition);
+  }
+
+  public boolean matchCondition(String property, @Nullable String defaultValue, Predicate<String> condition)
+  {
+    final String value = properties.getProperty(property, defaultValue);
     if (value == null) {
       return false;
     }

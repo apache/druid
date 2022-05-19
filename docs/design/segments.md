@@ -23,16 +23,16 @@ title: "Segments"
   -->
 
 
-Apache Druid (incubating) stores its index in *segment files*, which are partitioned by
+Apache Druid stores its index in *segment files*, which are partitioned by
 time. In a basic setup, one segment file is created for each time
 interval, where the time interval is configurable in the
 `segmentGranularity` parameter of the
-[`granularitySpec`](../ingestion/index.md#granularityspec).  For Druid to
+[`granularitySpec`](../ingestion/ingestion-spec.md#granularityspec).  For Druid to
 operate well under heavy query load, it is important for the segment
 file size to be within the recommended range of 300MB-700MB. If your
 segment files are larger than this range, then consider either
 changing the granularity of the time interval or partitioning your
-data and tweaking the `targetPartitionSize` in your `partitionsSpec`
+data and tweaking the `targetRowsPerSegment` in your `partitionsSpec`
 (a good starting point for this parameter is 5 million rows).  See the
 sharding section below and the 'Partitioning specification' section of
 the [Batch ingestion](../ingestion/hadoop.md#partitionsspec) documentation
@@ -143,6 +143,11 @@ the 'column data' is an array of values. Additionally, a row with *n*
 values in 'column data' will have *n* non-zero valued entries in
 bitmaps.
 
+## SQL Compatible Null Handling
+By default, Druid string dimension columns use the values `''` and `null` interchangeably and numeric and metric columns can not represent `null` at all, instead coercing nulls to `0`. However, Druid also provides a SQL compatible null handling mode, which must be enabled at the system level, through `druid.generic.useDefaultValueForNull`. This setting, when set to `false`, will allow Druid to _at ingestion time_ create segments whose string columns can distinguish `''` from `null`, and numeric columns which can represent `null` valued rows instead of `0`.
+
+String dimension columns contain no additional column structures in this mode, instead just reserving an additional dictionary entry for the `null` value. Numeric columns however will be stored in the segment with an additional bitmap whose set bits indicate `null` valued rows. In addition to slightly increased segment sizes, SQL compatible null handling can incur a performance cost at query time as well, due to the need to check the null bitmap. This performance cost only occurs for columns that actually contain nulls.
+
 ## Naming Convention
 
 Identifiers for segments are typically constructed using the segment datasource, interval start time (in ISO 8601 format), interval end time (in ISO 8601 format), and a version. If data is additionally sharded beyond a time range, the segment identifier will also contain a partition number.
@@ -180,6 +185,9 @@ Each column is stored as two parts:
 2.  The rest of the binary for the column
 
 A ColumnDescriptor is essentially an object that allows us to use Jackson's polymorphic deserialization to add new and interesting methods of serialization with minimal impact to the code. It consists of some metadata about the column (what type is it, is it multi-value, etc.) and then a list of serialization/deserialization logic that can deserialize the rest of the binary.
+
+### Compression
+Druid compresses blocks of values for string, long, float, and double columns, using [LZ4](https://github.com/lz4/lz4-java) by default, and bitmaps for string columns and numeric null values are compressed using [Roaring](https://github.com/RoaringBitmap/RoaringBitmap). We recommend sticking with these defaults unless experimental verification with your own data and query patterns suggest that non-default options will perform better in your specific case. For example, for bitmap in string columns, the differences between using Roaring and CONCISE are most pronounced for high cardinality columns. In this case, Roaring is substantially faster on filters that match a lot of values, but in some cases CONCISE can have a lower footprint due to the overhead of the Roaring format (but is still slower when lots of values are matched). Currently, compression is configured on at the segment level rather than individual columns, see [IndexSpec](../ingestion/ingestion-spec.md#indexspec) for more details.
 
 ## Sharding Data to Create Segments
 

@@ -15,3 +15,4 @@
 
 org.apache.druid.storage.s3.S3StorageDruidModule
 org.apache.druid.firehose.s3.S3FirehoseDruidModule
+org.apache.druid.data.input.s3.S3InputSourceDruidModule

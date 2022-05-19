@@ -20,10 +20,7 @@
 package org.apache.druid.query.groupby;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import org.apache.druid.collections.NonBlockingPool;
-import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
@@ -32,7 +29,6 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Accumulator;
@@ -42,17 +38,15 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.incremental.AppendableIndexBuilder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
-import org.joda.time.DateTime;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -63,16 +57,15 @@ public class GroupByQueryHelper
   public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
       final GroupByQuery query,
       @Nullable final GroupByQuery subquery,
-      final GroupByQueryConfig config,
-      NonBlockingPool<ByteBuffer> bufferPool
+      final GroupByQueryConfig config
   )
   {
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
     final Granularity gran = query.getGranularity();
-    final DateTime timeStart = query.getIntervals().get(0).getStart();
+    final long timeStart = query.getIntervals().get(0).getStartMillis();
     final boolean combine = subquery == null;
 
-    DateTime granTimeStart = timeStart;
+    long granTimeStart = timeStart;
     if (!(Granularities.ALL.equals(gran))) {
       granTimeStart = gran.bucketStart(timeStart);
     }
@@ -116,29 +109,32 @@ public class GroupByQueryHelper
     }
 
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
-        .withDimensionsSpec(new DimensionsSpec(dimensionSchemas, null, null))
+        .withDimensionsSpec(new DimensionsSpec(dimensionSchemas))
         .withMetrics(aggs.toArray(new AggregatorFactory[0]))
         .withQueryGranularity(gran)
-        .withMinTimestamp(granTimeStart.getMillis())
+        .withMinTimestamp(granTimeStart)
         .build();
 
+
+    final AppendableIndexBuilder indexBuilder;
+
     if (query.getContextValue("useOffheap", false)) {
-      index = new IncrementalIndex.Builder()
-          .setIndexSchema(indexSchema)
-          .setDeserializeComplexMetrics(false)
-          .setConcurrentEventAdd(true)
-          .setSortFacts(sortResults)
-          .setMaxRowCount(querySpecificConfig.getMaxResults())
-          .buildOffheap(bufferPool);
+      throw new UnsupportedOperationException(
+          "The 'useOffheap' option is no longer available for groupBy v1. Please move to the newer groupBy engine, "
+          + "which always operates off-heap, by removing any custom 'druid.query.groupBy.defaultStrategy' runtime "
+          + "properties and 'groupByStrategy' query context parameters that you have set."
+      );
     } else {
-      index = new IncrementalIndex.Builder()
-          .setIndexSchema(indexSchema)
-          .setDeserializeComplexMetrics(false)
-          .setConcurrentEventAdd(true)
-          .setSortFacts(sortResults)
-          .setMaxRowCount(querySpecificConfig.getMaxResults())
-          .buildOnheap();
+      indexBuilder = new OnheapIncrementalIndex.Builder();
     }
+
+    index = indexBuilder
+        .setIndexSchema(indexSchema)
+        .setDeserializeComplexMetrics(false)
+        .setConcurrentEventAdd(true)
+        .setSortFacts(sortResults)
+        .setMaxRowCount(querySpecificConfig.getMaxResults())
+        .build();
 
     Accumulator<IncrementalIndex, T> accumulator = new Accumulator<IncrementalIndex, T>()
     {
@@ -199,18 +195,17 @@ public class GroupByQueryHelper
       GroupByQuery query,
       @Nullable GroupByQuery subquery,
       GroupByQueryConfig config,
-      NonBlockingPool<ByteBuffer> bufferPool,
       Sequence<ResultRow> rows
   )
   {
     final Pair<IncrementalIndex, Accumulator<IncrementalIndex, ResultRow>> indexAccumulatorPair =
-        GroupByQueryHelper.createIndexAccumulatorPair(query, subquery, config, bufferPool);
+        GroupByQueryHelper.createIndexAccumulatorPair(query, subquery, config);
 
     return rows.accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
   }
 
   // Used by GroupByStrategyV1
-  public static Sequence<ResultRow> postAggregate(final GroupByQuery query, IncrementalIndex<?> index)
+  public static Sequence<ResultRow> postAggregate(final GroupByQuery query, IncrementalIndex index)
   {
     return Sequences.map(
         Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs(), query.isDescending())),
@@ -224,39 +219,6 @@ public class GroupByQueryHelper
           return resultRow;
         }
     );
-  }
-
-  /**
-   * Returns types for fields that will appear in the Rows output from "query". Useful for feeding them into
-   * {@link RowBasedColumnSelectorFactory}.
-   *
-   * @param query groupBy query
-   *
-   * @return row types
-   */
-  public static Map<String, ValueType> rowSignatureFor(final GroupByQuery query)
-  {
-    final ImmutableMap.Builder<String, ValueType> types = ImmutableMap.builder();
-
-    for (DimensionSpec dimensionSpec : query.getDimensions()) {
-      types.put(dimensionSpec.getOutputName(), dimensionSpec.getOutputType());
-    }
-
-    for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
-      final String typeName = aggregatorFactory.getTypeName();
-      final ValueType valueType;
-      if (typeName != null) {
-        valueType = GuavaUtils.getEnumIfPresent(ValueType.class, StringUtils.toUpperCase(typeName));
-      } else {
-        valueType = null;
-      }
-      if (valueType != null) {
-        types.put(aggregatorFactory.getName(), valueType);
-      }
-    }
-
-    // Don't include post-aggregators since we don't know what types they are.
-    return types.build();
   }
 
   public static ResultRow toResultRow(final GroupByQuery query, final Row row)

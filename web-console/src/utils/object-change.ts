@@ -17,7 +17,7 @@
  */
 
 export function shallowCopy(v: any): any {
-  return Array.isArray(v) ? v.slice() : Object.assign({}, v);
+  return Array.isArray(v) ? v.slice() : { ...v };
 }
 
 export function isEmpty(v: any): boolean {
@@ -32,14 +32,14 @@ export function parsePath(path: string): string[] {
   const parts: string[] = [];
   let rest = path;
   while (rest) {
-    const escapedMatch = rest.match(/^\{([^{}]*)\}(?:\.(.*))?$/);
+    const escapedMatch = /^\{([^{}]*)\}(?:\.(.*))?$/.exec(rest);
     if (escapedMatch) {
       parts.push(escapedMatch[1]);
       rest = escapedMatch[2];
       continue;
     }
 
-    const normalMatch = rest.match(/^([^.]*)(?:\.(.*))?$/);
+    const normalMatch = /^([^.]*)(?:\.(.*))?$/.exec(rest);
     if (normalMatch) {
       parts.push(normalMatch[1]);
       rest = normalMatch[2];
@@ -70,7 +70,7 @@ export function deepGet<T extends Record<string, any>>(value: T, path: string): 
 
 export function deepSet<T extends Record<string, any>>(value: T, path: string, x: any): T {
   const parts = parsePath(path);
-  let myKey = parts.shift() as string; // Must be defined
+  let myKey = parts.shift()!; // Must be defined
   const valueCopy = shallowCopy(value);
   if (Array.isArray(valueCopy) && isAppend(myKey)) myKey = String(valueCopy.length);
   if (parts.length) {
@@ -83,10 +83,26 @@ export function deepSet<T extends Record<string, any>>(value: T, path: string, x
   return valueCopy;
 }
 
+export function deepSetIfUnset<T extends Record<string, any>>(value: T, path: string, x: any): T {
+  if (typeof deepGet(value, path) !== 'undefined') return value;
+  return deepSet(value, path, x);
+}
+
+export function deepSetMulti<T extends Record<string, any>>(
+  value: T,
+  changes: Record<string, any>,
+): T {
+  let newValue = value;
+  for (const k in changes) {
+    newValue = deepSet(newValue, k, changes[k]);
+  }
+  return newValue;
+}
+
 export function deepDelete<T extends Record<string, any>>(value: T, path: string): T {
   const valueCopy = shallowCopy(value);
   const parts = parsePath(path);
-  const firstKey = parts.shift() as string; // Must be defined
+  const firstKey = parts.shift()!; // Must be defined
   if (parts.length) {
     const firstKeyValue = value[firstKey];
     if (firstKeyValue) {
@@ -111,6 +127,16 @@ export function deepDelete<T extends Record<string, any>>(value: T, path: string
   return valueCopy;
 }
 
+export function deepMove<T extends Record<string, any>>(
+  value: T,
+  fromPath: string,
+  toPath: string,
+): T {
+  value = deepSet(value, toPath, deepGet(value, fromPath));
+  value = deepDelete(value, fromPath);
+  return value;
+}
+
 export function deepExtend<T extends Record<string, any>>(target: T, diff: Record<string, any>): T {
   if (typeof target !== 'object') throw new TypeError(`Invalid target`);
   if (typeof diff !== 'object') throw new TypeError(`Invalid diff`);
@@ -133,12 +159,20 @@ export function deepExtend<T extends Record<string, any>>(target: T, diff: Recor
   return newValue;
 }
 
-export function whitelistKeys(obj: Record<string, any>, whitelist: string[]): Record<string, any> {
+export function allowKeys(obj: Record<string, any>, keys: string[]): Record<string, any> {
   const newObj: Record<string, any> = {};
-  for (const w of whitelist) {
-    if (Object.prototype.hasOwnProperty.call(obj, w)) {
-      newObj[w] = obj[w];
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      newObj[key] = obj[key];
     }
+  }
+  return newObj;
+}
+
+export function deleteKeys(obj: Record<string, any>, keys: string[]): Record<string, any> {
+  const newObj: Record<string, any> = { ...obj };
+  for (const key of keys) {
+    delete newObj[key];
   }
   return newObj;
 }

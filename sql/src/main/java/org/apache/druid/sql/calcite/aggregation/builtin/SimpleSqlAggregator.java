@@ -24,19 +24,24 @@ import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * Abstraction for single column, single argument simple aggregators like sum, avg, min, max
+ * Abstraction for single column, single argument simple aggregators like sum, avg, min, max that:
+ *
+ * 1) Can take direct field accesses or expressions as inputs.
+ * 2) Cannot implicitly cast strings to numbers when using a direct field access.
+ *
+ * @see Aggregations#getArgumentsForSimpleAggregator for details on these requirements
  */
 public abstract class SimpleSqlAggregator implements SqlAggregator
 {
@@ -73,24 +78,21 @@ public abstract class SimpleSqlAggregator implements SqlAggregator
     final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
 
     final String fieldName;
-    final String expression;
 
     if (arg.isDirectColumnAccess()) {
       fieldName = arg.getDirectColumn();
-      expression = null;
     } else {
-      fieldName = null;
-      expression = arg.getExpression();
+      // sharing is caring, make a virtual column to maximize re-use
+      fieldName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, aggregateCall.getType());
     }
 
-    return getAggregation(name, aggregateCall, macroTable, fieldName, expression);
+    return getAggregation(name, aggregateCall, macroTable, fieldName);
   }
 
   abstract Aggregation getAggregation(
       String name,
       AggregateCall aggregateCall,
       ExprMacroTable macroTable,
-      String fieldName,
-      String expression
+      String fieldName
   );
 }

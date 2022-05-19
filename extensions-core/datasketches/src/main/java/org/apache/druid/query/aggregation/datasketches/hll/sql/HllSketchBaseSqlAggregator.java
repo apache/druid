@@ -21,11 +21,11 @@ package org.apache.druid.query.aggregation.datasketches.hll.sql;
 
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchAggregatorFactory;
@@ -33,7 +33,8 @@ import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggrega
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchMergeAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -42,10 +43,8 @@ import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 
 public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
@@ -115,12 +114,11 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
       tgtHllType = HllSketchAggregatorFactory.DEFAULT_TGT_HLL_TYPE.name();
     }
 
-    final List<VirtualColumn> virtualColumns = new ArrayList<>();
     final AggregatorFactory aggregatorFactory;
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
     if (columnArg.isDirectColumnAccess()
-        && rowSignature.getColumnType(columnArg.getDirectColumn()) == ValueType.COMPLEX) {
+        && rowSignature.getColumnType(columnArg.getDirectColumn()).map(type -> type.is(ValueType.COMPLEX)).orElse(false)) {
       aggregatorFactory = new HllSketchMergeAggregatorFactory(
           aggregatorName,
           columnArg.getDirectColumn(),
@@ -129,10 +127,14 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
           ROUND
       );
     } else {
-      final SqlTypeName sqlTypeName = columnRexNode.getType().getSqlTypeName();
-      final ValueType inputType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
+      final RelDataType dataType = columnRexNode.getType();
+      final ColumnType inputType = Calcites.getColumnTypeForRelDataType(dataType);
       if (inputType == null) {
-        throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, aggregatorName);
+        throw new ISE(
+            "Cannot translate sqlTypeName[%s] to Druid type for field[%s]",
+            dataType.getSqlTypeName(),
+            aggregatorName
+        );
       }
 
       final DimensionSpec dimensionSpec;
@@ -140,13 +142,11 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
       if (columnArg.isDirectColumnAccess()) {
         dimensionSpec = columnArg.getSimpleExtraction().toDimensionSpec(null, inputType);
       } else {
-        VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-            plannerContext,
+        String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             columnArg,
-            sqlTypeName
+            dataType
         );
-        dimensionSpec = new DefaultDimensionSpec(virtualColumn.getOutputName(), null, inputType);
-        virtualColumns.add(virtualColumn);
+        dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
       }
 
       aggregatorFactory = new HllSketchBuildAggregatorFactory(
@@ -161,7 +161,6 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
     return toAggregation(
         name,
         finalizeAggregations,
-        virtualColumns,
         aggregatorFactory
     );
   }
@@ -169,7 +168,6 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
   protected abstract Aggregation toAggregation(
       String name,
       boolean finalizeAggregations,
-      List<VirtualColumn> virtualColumns,
       AggregatorFactory aggregatorFactory
   );
 }

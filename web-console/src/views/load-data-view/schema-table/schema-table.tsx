@@ -21,63 +21,67 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
-import { caseInsensitiveContains, filterMap, sortWithPrefixSuffix } from '../../../utils';
 import {
   DimensionSpec,
-  DimensionsSpec,
   getDimensionSpecName,
   getDimensionSpecType,
   getMetricSpecName,
   inflateDimensionSpec,
   MetricSpec,
-} from '../../../utils/ingestion-spec';
-import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
+} from '../../../druid-models';
+import {
+  DEFAULT_TABLE_CLASS_NAME,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+} from '../../../react-table';
+import { caseInsensitiveContains, filterMap } from '../../../utils';
+import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './schema-table.scss';
 
 export interface SchemaTableProps {
   sampleBundle: {
-    headerAndRows: HeaderAndRows;
-    dimensionsSpec: DimensionsSpec;
-    metricsSpec: MetricSpec[];
+    headerAndRows: SampleHeaderAndRows;
+    dimensions: (string | DimensionSpec)[] | undefined;
+    metricsSpec: MetricSpec[] | undefined;
   };
   columnFilter: string;
+  selectedAutoDimension: string | undefined;
   selectedDimensionSpecIndex: number;
   selectedMetricSpecIndex: number;
-  onDimensionOrMetricSelect: (
-    selectedDimensionSpec: DimensionSpec | undefined,
-    selectedDimensionSpecIndex: number,
-    selectedMetricSpec: MetricSpec | undefined,
-    selectedMetricSpecIndex: number,
-  ) => void;
+  onAutoDimensionSelect: (dimensionName: string) => void;
+  onDimensionSelect: (dimensionSpec: DimensionSpec, index: number) => void;
+  onMetricSelect: (metricSpec: MetricSpec, index: number) => void;
 }
 
 export const SchemaTable = React.memo(function SchemaTable(props: SchemaTableProps) {
   const {
     sampleBundle,
     columnFilter,
+    selectedAutoDimension,
     selectedDimensionSpecIndex,
     selectedMetricSpecIndex,
-    onDimensionOrMetricSelect,
+    onAutoDimensionSelect,
+    onDimensionSelect,
+    onMetricSelect,
   } = props;
-  const { headerAndRows, dimensionsSpec, metricsSpec } = sampleBundle;
-
-  const dimensionMetricSortedHeader = sortWithPrefixSuffix(
-    headerAndRows.header,
-    ['__time'],
-    metricsSpec.map(getMetricSpecName),
-    null,
-  );
+  const { headerAndRows, dimensions, metricsSpec } = sampleBundle;
 
   return (
     <ReactTable
-      className="schema-table -striped -highlight"
+      className={classNames('schema-table', DEFAULT_TABLE_CLASS_NAME)}
       data={headerAndRows.rows}
-      columns={filterMap(dimensionMetricSortedHeader, (columnName, i) => {
+      sortable={false}
+      defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+      pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+      showPagination={headerAndRows.rows.length > STANDARD_TABLE_PAGE_SIZE}
+      columns={filterMap(headerAndRows.header, (columnName, i) => {
         if (!caseInsensitiveContains(columnName, columnFilter)) return;
 
-        const metricSpecIndex = metricsSpec.findIndex(m => getMetricSpecName(m) === columnName);
-        const metricSpec = metricsSpec[metricSpecIndex];
+        const metricSpecIndex = metricsSpec
+          ? metricsSpec.findIndex(m => getMetricSpecName(m) === columnName)
+          : -1;
+        const metricSpec = metricsSpec ? metricsSpec[metricSpecIndex] : undefined;
 
         if (metricSpec) {
           const columnClassName = classNames('metric', {
@@ -87,9 +91,7 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
             Header: (
               <div
                 className="clickable"
-                onClick={() =>
-                  onDimensionOrMetricSelect(undefined, -1, metricSpec, metricSpecIndex)
-                }
+                onClick={() => onMetricSelect(metricSpec, metricSpecIndex)}
               >
                 <div className="column-name">{columnName}</div>
                 <div className="column-detail">{metricSpec.type}&nbsp;</div>
@@ -99,23 +101,26 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
             className: columnClassName,
             id: String(i),
             accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-            Cell: row => <TableCell value={row.value} />,
+            width: 120,
+            Cell: function SchemaTableCell({ value }) {
+              return <TableCell value={value} />;
+            },
           };
         } else {
-          const timestamp = columnName === '__time';
-          const dimensionSpecIndex = dimensionsSpec.dimensions
-            ? dimensionsSpec.dimensions.findIndex(d => getDimensionSpecName(d) === columnName)
+          const isTimestamp = columnName === '__time';
+          const dimensionSpecIndex = dimensions
+            ? dimensions.findIndex(d => getDimensionSpecName(d) === columnName)
             : -1;
-          const dimensionSpec = dimensionsSpec.dimensions
-            ? dimensionsSpec.dimensions[dimensionSpecIndex]
-            : null;
-          const dimensionSpecType = dimensionSpec ? getDimensionSpecType(dimensionSpec) : null;
+          const dimensionSpec = dimensions ? dimensions[dimensionSpecIndex] : undefined;
+          const dimensionSpecType = dimensionSpec ? getDimensionSpecType(dimensionSpec) : undefined;
 
           const columnClassName = classNames(
-            timestamp ? 'timestamp' : 'dimension',
+            isTimestamp ? 'timestamp' : 'dimension',
             dimensionSpecType || 'string',
             {
-              selected: dimensionSpec && dimensionSpecIndex === selectedDimensionSpecIndex,
+              selected:
+                (dimensionSpec && dimensionSpecIndex === selectedDimensionSpecIndex) ||
+                selectedAutoDimension === columnName,
             },
           );
           return {
@@ -123,37 +128,32 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
               <div
                 className="clickable"
                 onClick={() => {
-                  if (timestamp) {
-                    onDimensionOrMetricSelect(undefined, -1, undefined, -1);
-                    return;
-                  }
+                  if (isTimestamp) return;
 
-                  if (!dimensionSpec) return;
-                  onDimensionOrMetricSelect(
-                    inflateDimensionSpec(dimensionSpec),
-                    dimensionSpecIndex,
-                    undefined,
-                    -1,
-                  );
+                  if (dimensionSpec) {
+                    onDimensionSelect(inflateDimensionSpec(dimensionSpec), dimensionSpecIndex);
+                  } else {
+                    onAutoDimensionSelect(columnName);
+                  }
                 }}
               >
                 <div className="column-name">{columnName}</div>
                 <div className="column-detail">
-                  {timestamp ? 'long (time column)' : dimensionSpecType || 'string (auto)'}&nbsp;
+                  {isTimestamp ? 'long (time column)' : dimensionSpecType || 'string (auto)'}&nbsp;
                 </div>
               </div>
             ),
             headerClassName: columnClassName,
             className: columnClassName,
             id: String(i),
+            width: isTimestamp ? 200 : 140,
             accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-            Cell: row => <TableCell value={timestamp ? new Date(row.value) : row.value} />,
+            Cell: function SchemaTableCell(row) {
+              return <TableCell value={isTimestamp ? new Date(row.value) : row.value} />;
+            },
           };
         }
       })}
-      defaultPageSize={50}
-      showPagination={false}
-      sortable={false}
     />
   );
 });

@@ -35,13 +35,6 @@ import javax.annotation.Nullable;
 
 public class ExprUtils
 {
-  private static final Expr.ObjectBinding NIL_BINDINGS = name -> null;
-
-  public static Expr.ObjectBinding nilBindings()
-  {
-    return NIL_BINDINGS;
-  }
-
   static DateTimeZone toTimeZone(final Expr timeZoneArg)
   {
     if (!timeZoneArg.isLiteral()) {
@@ -88,7 +81,7 @@ public class ExprUtils
     return new PeriodGranularity(period, origin, timeZone);
   }
 
-  static String createErrMsg(String functionName, String msg)
+  public static String createErrMsg(String functionName, String msg)
   {
     String prefix = "Function[" + functionName + "] ";
     return prefix + msg;
@@ -97,5 +90,19 @@ public class ExprUtils
   static void checkLiteralArgument(String functionName, Expr arg, String argName)
   {
     Preconditions.checkArgument(arg.isLiteral(), createErrMsg(functionName, argName + " arg must be a literal"));
+  }
+
+  /**
+   * True if Expr is a string literal.
+   *
+   * In non-SQL-compliant null handling mode, this method will return true for null literals as well (because they are
+   * treated equivalently to empty strings, and we cannot tell the difference.)
+   *
+   * In SQL-compliant null handling mode, this method will return true for actual strings only, not nulls.
+   */
+  static boolean isStringLiteral(final Expr expr)
+  {
+    return (expr.isLiteral() && expr.getLiteralValue() instanceof String)
+           || (NullHandling.replaceWithDefault() && expr.isNullLiteral());
   }
 }

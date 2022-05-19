@@ -47,7 +47,20 @@ public class CustomTierSelectorStrategy extends AbstractTierSelectorStrategy
       pos++;
     }
 
-    this.comparator = Comparator.comparingInt(lookup::get);
+    // Tiers with priorities explicitly specified in the custom priority list config always have higher priority than
+    // those not and those not specified fall back to use highest priority strategy among themselves
+    this.comparator = (p1, p2) -> {
+      if (lookup.containsKey(p1) && lookup.containsKey(p2)) {
+        return Integer.compare(lookup.get(p1), lookup.get(p2));
+      } else if (lookup.containsKey(p1)) {
+        return -1;
+      } else if (lookup.containsKey(p2)) {
+        return 1;
+      } else {
+        // Fall back to use highest priority strategy
+        return Integer.compare(p2, p1);
+      }
+    };
   }
 
   @Override

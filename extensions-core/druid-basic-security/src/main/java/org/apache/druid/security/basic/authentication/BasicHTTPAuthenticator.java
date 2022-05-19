@@ -48,7 +48,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.Locale;
 import java.util.Map;
 
 @JsonTypeName("basic")
@@ -218,9 +217,7 @@ public class BasicHTTPAuthenticator implements Authenticator
       }
       catch (BasicSecurityAuthenticationException ex) {
         LOG.info("Exception authenticating user %s - %s", user, ex.getMessage());
-        httpResp.sendError(HttpServletResponse.SC_UNAUTHORIZED,
-                           String.format(Locale.getDefault(),
-                                         "User authentication failed username[%s].", user));
+        httpResp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User authentication failed.");
       }
     }
 

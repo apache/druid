@@ -21,7 +21,6 @@ package org.apache.druid.firehose.s3;
 
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.annotation.JacksonInject;
@@ -29,15 +28,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.collect.Lists;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
@@ -68,7 +64,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
 
   @JsonCreator
   public StaticS3FirehoseFactory(
-      @JacksonInject("s3Client") ServerSideEncryptingAmazonS3 s3Client,
+      @JacksonInject ServerSideEncryptingAmazonS3 s3Client,
       @JsonProperty("uris") List<URI> uris,
       @JsonProperty("prefixes") List<URI> prefixes,
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
@@ -113,58 +109,22 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   }
 
   @Override
-  protected Collection<URI> initObjects() throws IOException
+  protected Collection<URI> initObjects()
   {
-    // Here, the returned s3 objects contain minimal information without data.
-    // Getting data is deferred until openObjectStream() is called for each object.
     if (!uris.isEmpty()) {
       return uris;
     } else {
       final List<S3ObjectSummary> objects = new ArrayList<>();
-      for (URI uri : prefixes) {
-        final String bucket = uri.getAuthority();
-        final String prefix = S3Utils.extractS3Key(uri);
+      for (final URI prefix : prefixes) {
+        final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.objectSummaryIterator(
+            s3Client,
+            Collections.singletonList(prefix),
+            MAX_LISTING_LENGTH
+        );
 
-        try {
-          final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.objectSummaryIterator(
-              s3Client,
-              bucket,
-              prefix,
-              MAX_LISTING_LENGTH
-          );
-          objects.addAll(Lists.newArrayList(objectSummaryIterator));
-        }
-        catch (AmazonS3Exception outerException) {
-          log.error(outerException, "Exception while listing on %s", uri);
-
-          if (outerException.getStatusCode() == 403) {
-            // The "Access Denied" means users might not have a proper permission for listing on the given uri.
-            // Usually this is not a problem, but the uris might be the full paths to input objects instead of prefixes.
-            // In this case, users should be able to get objects if they have a proper permission for GetObject.
-
-            log.warn("Access denied for %s. Try to get the object from the uri without listing", uri);
-            try {
-              final ObjectMetadata objectMetadata = s3Client.getObjectMetadata(bucket, prefix);
-
-              if (!S3Utils.isDirectoryPlaceholder(prefix, objectMetadata)) {
-                objects.add(S3Utils.getSingleObjectSummary(s3Client, bucket, prefix));
-              } else {
-                throw new IOE(
-                    "[%s] is a directory placeholder, "
-                    + "but failed to get the object list under the directory due to permission",
-                    uri
-                );
-              }
-            }
-            catch (AmazonS3Exception innerException) {
-              throw new IOException(innerException);
-            }
-          } else {
-            throw new IOException(outerException);
-          }
-        }
+        objectSummaryIterator.forEachRemaining(objects::add);
       }
-      return objects.stream().map(StaticS3FirehoseFactory::toUri).collect(Collectors.toList());
+      return objects.stream().map(S3Utils::summaryToUri).collect(Collectors.toList());
     }
   }
 
@@ -272,24 +232,5 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
         getFetchTimeout(),
         getMaxFetchRetry()
     );
-  }
-
-  /**
-   * Create an {@link URI} from the given {@link S3ObjectSummary}. The result URI is composed as below.
-   *
-   * <pre>
-   * {@code s3://{BUCKET_NAME}/{OBJECT_KEY}}
-   * </pre>
-   */
-  private static URI toUri(S3ObjectSummary object)
-  {
-    final String originalAuthority = object.getBucketName();
-    final String originalPath = object.getKey();
-    final String authority = originalAuthority.endsWith("/") ?
-                             originalAuthority.substring(0, originalAuthority.length() - 1) :
-                             originalAuthority;
-    final String path = originalPath.startsWith("/") ? originalPath.substring(1) : originalPath;
-
-    return URI.create(StringUtils.format("s3://%s/%s", authority, path));
   }
 }

@@ -269,6 +269,7 @@ public class KinesisIOConfigTest
         true,
         DateTimes.nowUtc(),
         DateTimes.nowUtc(),
+        null,
         "endpoint",
         1000,
         2000,

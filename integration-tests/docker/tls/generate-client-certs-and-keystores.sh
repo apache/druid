@@ -32,5 +32,3 @@ cd client_tls
 ../docker/tls/generate-to-be-revoked-client-cert.sh
 ../docker/tls/generate-untrusted-root-client-cert.sh
 ../docker/tls/generate-valid-intermediate-client-cert.sh
-
-

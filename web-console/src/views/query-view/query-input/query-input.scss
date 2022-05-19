@@ -16,39 +16,12 @@
  * limitations under the License.
  */
 
-@import '../../../variables';
-
 .query-input {
+  position: relative;
+
   .ace-container {
     position: absolute;
     width: 100%;
     height: 100%;
-
-    .ace_scroller {
-      background-color: #232c35;
-    }
-
-    .ace_gutter-layer {
-      background-color: #27313c;
-      width: 50px;
-    }
-  }
-}
-
-.ace_tooltip {
-  padding: 10px;
-  background-color: #333d47;
-  color: #c1ccd5;
-  width: 500px;
-  display: block;
-  height: auto;
-  white-space: initial;
-
-  hr {
-    margin: 10px 0;
-  }
-
-  .function-doc-name {
-    font-size: 18px;
   }
 }

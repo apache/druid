@@ -21,7 +21,7 @@ package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.yahoo.sketches.quantiles.DoublesSketch;
+import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.junit.Assert;
@@ -42,7 +42,33 @@ public class DoublesSketchComplexMetricSerdeTest
   }
 
   @Test
-  public void testExtractorOnNumber()
+  public void testExtractorOnPositiveNumber()
+  {
+    final DoublesSketchComplexMetricSerde serde = new DoublesSketchComplexMetricSerde();
+    final ComplexMetricExtractor extractor = serde.getExtractor();
+    final DoublesSketch sketch = (DoublesSketch) extractor.extractValue(
+        new MapBasedInputRow(0L, ImmutableList.of(), ImmutableMap.of("foo", "777")),
+        "foo"
+    );
+    Assert.assertEquals(1, sketch.getRetainedItems());
+    Assert.assertEquals(777d, sketch.getMaxValue(), 0.01d);
+  }
+
+  @Test
+  public void testExtractorOnNegativeNumber()
+  {
+    final DoublesSketchComplexMetricSerde serde = new DoublesSketchComplexMetricSerde();
+    final ComplexMetricExtractor extractor = serde.getExtractor();
+    final DoublesSketch sketch = (DoublesSketch) extractor.extractValue(
+        new MapBasedInputRow(0L, ImmutableList.of(), ImmutableMap.of("foo", "-133")),
+        "foo"
+    );
+    Assert.assertEquals(1, sketch.getRetainedItems());
+    Assert.assertEquals(-133d, sketch.getMaxValue(), 0.01d);
+  }
+
+  @Test
+  public void testExtractorOnDecimalNumber()
   {
     final DoublesSketchComplexMetricSerde serde = new DoublesSketchComplexMetricSerde();
     final ComplexMetricExtractor extractor = serde.getExtractor();
@@ -52,5 +78,18 @@ public class DoublesSketchComplexMetricSerdeTest
     );
     Assert.assertEquals(1, sketch.getRetainedItems());
     Assert.assertEquals(3.1d, sketch.getMaxValue(), 0.01d);
+  }
+
+  @Test
+  public void testExtractorOnLeadingDecimalNumber()
+  {
+    final DoublesSketchComplexMetricSerde serde = new DoublesSketchComplexMetricSerde();
+    final ComplexMetricExtractor extractor = serde.getExtractor();
+    final DoublesSketch sketch = (DoublesSketch) extractor.extractValue(
+        new MapBasedInputRow(0L, ImmutableList.of(), ImmutableMap.of("foo", ".1")),
+        "foo"
+    );
+    Assert.assertEquals(1, sketch.getRetainedItems());
+    Assert.assertEquals(0.1d, sketch.getMaxValue(), 0.01d);
   }
 }

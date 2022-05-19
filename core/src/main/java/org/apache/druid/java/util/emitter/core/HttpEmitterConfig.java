@@ -81,6 +81,12 @@ public class HttpEmitterConfig extends BaseHttpEmittingConfig
       return this;
     }
 
+    public Builder setFlushTimeout(long flushTimeout)
+    {
+      this.flushTimeOut = flushTimeout;
+      return this;
+    }
+
     public Builder setFlushCount(int flushCount)
     {
       this.flushCount = flushCount;

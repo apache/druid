@@ -140,7 +140,7 @@ public class ChecksTest
     );
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage(
-        "At most one of [Property{name='p1', value=null}, Property{name='p2', value=null}, "
+        "At least one of [Property{name='p1', value=null}, Property{name='p2', value=null}, "
         + "Property{name='p3', value=null}, Property{name='p4', value=null}] must be present"
     );
     Checks.checkOneNotNullOrEmpty(properties);

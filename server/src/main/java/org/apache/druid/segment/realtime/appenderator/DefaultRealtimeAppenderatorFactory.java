@@ -24,29 +24,34 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
-import org.apache.druid.guice.annotations.Processing;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
+import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.partition.ShardSpec;
 
 import java.io.File;
-import java.util.concurrent.ExecutorService;
 
 public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
 {
   private final ServiceEmitter emitter;
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final DataSegmentAnnouncer segmentAnnouncer;
-  private final ExecutorService queryExecutorService;
+  private final QueryProcessingPool queryProcessingPool;
+  private final JoinableFactory joinableFactory;
   private final DataSegmentPusher dataSegmentPusher;
-  private final ObjectMapper objectMapper;
+  private final ObjectMapper jsonMapper;
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
   private final Cache cache;
@@ -57,9 +62,10 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
       @JacksonInject ServiceEmitter emitter,
       @JacksonInject QueryRunnerFactoryConglomerate conglomerate,
       @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
-      @JacksonInject @Processing ExecutorService queryExecutorService,
+      @JacksonInject QueryProcessingPool queryProcessingPool,
+      @JacksonInject JoinableFactory joinableFactory,
       @JacksonInject DataSegmentPusher dataSegmentPusher,
-      @JacksonInject ObjectMapper objectMapper,
+      @JacksonInject @Json ObjectMapper jsonMapper,
       @JacksonInject IndexIO indexIO,
       @JacksonInject IndexMerger indexMerger,
       @JacksonInject Cache cache,
@@ -70,9 +76,10 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
     this.emitter = emitter;
     this.conglomerate = conglomerate;
     this.segmentAnnouncer = segmentAnnouncer;
-    this.queryExecutorService = queryExecutorService;
+    this.queryProcessingPool = queryProcessingPool;
+    this.joinableFactory = joinableFactory;
     this.dataSegmentPusher = dataSegmentPusher;
-    this.objectMapper = objectMapper;
+    this.jsonMapper = jsonMapper;
     this.indexIO = indexIO;
     this.indexMerger = indexMerger;
     this.cache = cache;
@@ -87,7 +94,9 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
       final FireDepartmentMetrics metrics
   )
   {
+    final RowIngestionMeters rowIngestionMeters = new NoopRowIngestionMeters();
     return Appenderators.createRealtime(
+        schema.getDataSource(),
         schema,
         config.withBasePersistDirectory(
             makeBasePersistSubdirectory(
@@ -98,16 +107,25 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
         ),
         metrics,
         dataSegmentPusher,
-        objectMapper,
+        jsonMapper,
         indexIO,
         indexMerger,
         conglomerate,
         segmentAnnouncer,
         emitter,
-        queryExecutorService,
+        queryProcessingPool,
+        joinableFactory,
         cache,
         cacheConfig,
-        cachePopulatorStats
+        cachePopulatorStats,
+        rowIngestionMeters,
+        new ParseExceptionHandler(
+            rowIngestionMeters,
+            false,
+            config.isReportParseExceptions() ? 0 : Integer.MAX_VALUE,
+            0
+        ),
+        true
     );
   }
 

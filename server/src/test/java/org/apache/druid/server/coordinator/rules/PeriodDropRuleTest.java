@@ -32,10 +32,12 @@ import org.junit.Test;
  */
 public class PeriodDropRuleTest
 {
-  private static final DataSegment.Builder BUILDER = DataSegment.builder()
-                                                          .dataSource("test")
-                                                          .version(DateTimes.of("2012-12-31T01:00:00").toString())
-                                                          .shardSpec(NoneShardSpec.instance());
+  private static final DataSegment.Builder BUILDER = DataSegment
+      .builder()
+      .dataSource("test")
+      .version(DateTimes.of("2012-12-31T01:00:00").toString())
+      .shardSpec(NoneShardSpec.instance())
+      .size(0);
 
   @Test
   public void testAppliesToAll()

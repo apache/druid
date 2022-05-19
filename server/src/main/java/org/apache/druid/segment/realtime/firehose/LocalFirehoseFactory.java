@@ -29,22 +29,22 @@ import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.AbstractTextFilesFirehoseFactory;
 import org.apache.druid.data.input.impl.StringInputRowParser;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * Firehose that reads data from files on local disk
  */
 public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
 {
-  private static final EmittingLogger log = new EmittingLogger(LocalFirehoseFactory.class);
-
   private final File baseDir;
   private final String filter;
   @Nullable
@@ -86,12 +86,15 @@ public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
   protected Collection<File> initObjects()
   {
     final Collection<File> files = FileUtils.listFiles(
-        Preconditions.checkNotNull(baseDir).getAbsoluteFile(),
+        Preconditions.checkNotNull(this.baseDir, "baseDir").getAbsoluteFile(),
         new WildcardFileFilter(filter),
         TrueFileFilter.INSTANCE
     );
-    log.info("Initialized with " + files + " files");
-    return files;
+
+    // Sort files for consistent ordering from run to run.
+    final List<File> fileList = files instanceof List ? (List<File>) files : new ArrayList<>(files);
+    fileList.sort(Comparator.naturalOrder());
+    return fileList;
   }
 
   @Override

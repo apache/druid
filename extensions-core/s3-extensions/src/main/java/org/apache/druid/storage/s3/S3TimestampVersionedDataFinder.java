@@ -22,11 +22,12 @@ package org.apache.druid.storage.s3;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.inject.Inject;
 import org.apache.druid.data.SearchableVersionedDataFinder;
-import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.net.URI;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.regex.Pattern;
 
@@ -57,39 +58,31 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
   public URI getLatestVersion(final URI uri, final @Nullable Pattern pattern)
   {
     try {
-      return RetryUtils.retry(
-          () -> {
-            final S3Coords coords = new S3Coords(checkURI(uri));
-            long mostRecent = Long.MIN_VALUE;
-            URI latest = null;
-            final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.objectSummaryIterator(
-                s3Client,
-                coords.bucket,
-                coords.path,
-                MAX_LISTING_KEYS
-            );
-            while (objectSummaryIterator.hasNext()) {
-              final S3ObjectSummary objectSummary = objectSummaryIterator.next();
-              String keyString = objectSummary.getKey().substring(coords.path.length());
-              if (keyString.startsWith("/")) {
-                keyString = keyString.substring(1);
-              }
-              if (pattern != null && !pattern.matcher(keyString).matches()) {
-                continue;
-              }
-              final long latestModified = objectSummary.getLastModified().getTime();
-              if (latestModified >= mostRecent) {
-                mostRecent = latestModified;
-                latest = new URI(
-                    StringUtils.format("s3://%s/%s", objectSummary.getBucketName(), objectSummary.getKey())
-                );
-              }
-            }
-            return latest;
-          },
-          shouldRetryPredicate(),
-          DEFAULT_RETRY_COUNT
+      final CloudObjectLocation coords = new CloudObjectLocation(S3Utils.checkURI(uri));
+      long mostRecent = Long.MIN_VALUE;
+      URI latest = null;
+      final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.objectSummaryIterator(
+          s3Client,
+          Collections.singletonList(uri),
+          MAX_LISTING_KEYS
       );
+      while (objectSummaryIterator.hasNext()) {
+        final S3ObjectSummary objectSummary = objectSummaryIterator.next();
+        final CloudObjectLocation objectLocation = S3Utils.summaryToCloudObjectLocation(objectSummary);
+        // remove coords path prefix from object path
+        String keyString = StringUtils.maybeRemoveLeadingSlash(
+            objectLocation.getPath().substring(coords.getPath().length())
+        );
+        if (pattern != null && !pattern.matcher(keyString).matches()) {
+          continue;
+        }
+        final long latestModified = objectSummary.getLastModified().getTime();
+        if (latestModified >= mostRecent) {
+          mostRecent = latestModified;
+          latest = objectLocation.toUri(S3StorageDruidModule.SCHEME);
+        }
+      }
+      return latest;
     }
     catch (Exception e) {
       throw new RuntimeException(e);

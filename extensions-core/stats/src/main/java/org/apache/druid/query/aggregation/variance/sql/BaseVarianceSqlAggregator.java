@@ -22,11 +22,11 @@ package org.apache.druid.query.aggregation.variance.sql;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -35,19 +35,18 @@ import org.apache.druid.query.aggregation.variance.StandardDeviationPostAggregat
 import org.apache.druid.query.aggregation.variance.VarianceAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
+import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 
 public abstract class BaseVarianceSqlAggregator implements SqlAggregator
@@ -71,7 +70,7 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
         project,
         aggregateCall.getArgList().get(0)
     );
-    final DruidExpression input = Expressions.toDruidExpression(
+    final DruidExpression input = Aggregations.toDruidExpressionForNumericAggregator(
         plannerContext,
         rowSignature,
         inputOperand
@@ -81,9 +80,8 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
     }
 
     final AggregatorFactory aggregatorFactory;
-    final SqlTypeName sqlTypeName = inputOperand.getType().getSqlTypeName();
-    final ValueType inputType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
-    final List<VirtualColumn> virtualColumns = new ArrayList<>();
+    final RelDataType dataType = inputOperand.getType();
+    final ColumnType inputType = Calcites.getColumnTypeForRelDataType(dataType);
     final DimensionSpec dimensionSpec;
     final String aggName = StringUtils.format("%s:agg", name);
     final SqlAggFunction func = calciteFunction();
@@ -94,19 +92,21 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
     if (input.isSimpleExtraction()) {
       dimensionSpec = input.getSimpleExtraction().toDimensionSpec(null, inputType);
     } else {
-      VirtualColumn virtualColumn =
-          virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, input, sqlTypeName);
-      dimensionSpec = new DefaultDimensionSpec(virtualColumn.getOutputName(), null, inputType);
-      virtualColumns.add(virtualColumn);
+      String virtualColumnName =
+          virtualColumnRegistry.getOrCreateVirtualColumnForExpression(input, dataType);
+      dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
     }
 
-    if (inputType == ValueType.LONG) {
-      inputTypeName = "long";
-    } else if (inputType == ValueType.FLOAT || inputType == ValueType.DOUBLE) {
-      inputTypeName = "float";
-    } else {
-      throw new IAE("VarianceSqlAggregator[%s] has invalid inputType[%s]", func, inputType);
+    if (inputType == null) {
+      throw new IAE("VarianceSqlAggregator[%s] has invalid inputType", func);
     }
+
+    if (inputType.isNumeric()) {
+      inputTypeName = StringUtils.toLowerCase(inputType.getType().name());
+    } else {
+      throw new IAE("VarianceSqlAggregator[%s] has invalid inputType[%s]", func, inputType.asTypeString());
+    }
+
 
     if (func == SqlStdOperatorTable.VAR_POP || func == SqlStdOperatorTable.STDDEV_POP) {
       estimator = "population";
@@ -121,7 +121,7 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
         inputTypeName
     );
 
-    if (func == SqlStdOperatorTable.STDDEV_POP 
+    if (func == SqlStdOperatorTable.STDDEV_POP
         || func == SqlStdOperatorTable.STDDEV_SAMP
         || func == SqlStdOperatorTable.STDDEV) {
       postAggregator = new StandardDeviationPostAggregator(
@@ -131,7 +131,6 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
     }
 
     return Aggregation.create(
-        virtualColumns,
         ImmutableList.of(aggregatorFactory),
         postAggregator
     );

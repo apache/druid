@@ -20,22 +20,23 @@
 package org.apache.druid.query.groupby.orderby;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
-import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.TopNSequence;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -43,15 +44,24 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.ComparableList;
+import org.apache.druid.segment.data.ComparableStringArray;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -63,7 +73,13 @@ public class DefaultLimitSpec implements LimitSpec
   private static final byte CACHE_KEY = 0x1;
 
   private final List<OrderByColumnSpec> columns;
+  private final int offset;
   private final int limit;
+
+  public static Builder builder()
+  {
+    return new Builder();
+  }
 
   /**
    * Check if a limitSpec has columns in the sorting order that are not part of the grouping fields represented
@@ -98,13 +114,28 @@ public class DefaultLimitSpec implements LimitSpec
   @JsonCreator
   public DefaultLimitSpec(
       @JsonProperty("columns") List<OrderByColumnSpec> columns,
+      @JsonProperty("offset") Integer offset,
       @JsonProperty("limit") Integer limit
   )
   {
     this.columns = (columns == null) ? ImmutableList.of() : columns;
+    this.offset = (offset == null) ? 0 : offset;
     this.limit = (limit == null) ? Integer.MAX_VALUE : limit;
 
-    Preconditions.checkArgument(this.limit > 0, "limit[%s] must be >0", limit);
+    Preconditions.checkArgument(this.offset >= 0, "offset[%s] must be >= 0", this.offset);
+    Preconditions.checkArgument(this.limit > 0, "limit[%s] must be > 0", this.limit);
+  }
+
+  /**
+   * Constructor that does not accept "offset". Useful for tests that only want to provide "columns" and "limit".
+   */
+  @VisibleForTesting
+  public DefaultLimitSpec(
+      final List<OrderByColumnSpec> columns,
+      final Integer limit
+  )
+  {
+    this(columns, 0, limit);
   }
 
   @JsonProperty
@@ -113,10 +144,30 @@ public class DefaultLimitSpec implements LimitSpec
     return columns;
   }
 
+  /**
+   * Offset for this query; behaves like SQL "OFFSET". Zero means no offset. Negative values are invalid.
+   */
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public int getOffset()
+  {
+    return offset;
+  }
+
+  /**
+   * Limit for this query; behaves like SQL "LIMIT". Will always be positive. {@link Integer#MAX_VALUE} is used in
+   * situations where the user wants an effectively unlimited resultset.
+   */
+  @JsonProperty
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = LimitJsonIncludeFilter.class)
   public int getLimit()
   {
     return limit;
+  }
+
+  public boolean isOffset()
+  {
+    return offset > 0;
   }
 
   public boolean isLimited()
@@ -149,12 +200,18 @@ public class DefaultLimitSpec implements LimitSpec
           break;
         }
 
-        final ValueType columnType = getOrderByType(columnSpec, dimensions);
+        final ColumnType columnType = getOrderByType(columnSpec, dimensions);
         final StringComparator naturalComparator;
-        if (columnType == ValueType.STRING) {
+        if (columnType.is(ValueType.STRING)) {
           naturalComparator = StringComparators.LEXICOGRAPHIC;
-        } else if (ValueType.isNumeric(columnType)) {
+        } else if (columnType.isNumeric()) {
           naturalComparator = StringComparators.NUMERIC;
+        } else if (columnType.isArray()) {
+          if (columnType.getElementType().isNumeric()) {
+            naturalComparator = StringComparators.NUMERIC;
+          } else {
+            naturalComparator = StringComparators.LEXICOGRAPHIC;
+          }
         } else {
           sortingNeeded = true;
           break;
@@ -175,23 +232,48 @@ public class DefaultLimitSpec implements LimitSpec
     }
 
     if (!sortingNeeded) {
-      return isLimited() ? new LimitingFn(limit) : Functions.identity();
+      String timestampField = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
+      if (timestampField != null && !timestampField.isEmpty()) {
+        int timestampResultFieldIndex = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
+        sortingNeeded = query.getContextSortByDimsFirst()
+                        ? timestampResultFieldIndex != query.getDimensions().size() - 1
+                        : timestampResultFieldIndex != 0;
+      }
     }
 
-    // Materialize the Comparator first for fast-fail error checking.
-    final Ordering<ResultRow> ordering = makeComparator(
-        query.getResultRowPositionLookup(),
-        query.getResultRowHasTimestamp(),
-        query.getDimensions(),
-        query.getAggregatorSpecs(),
-        query.getPostAggregatorSpecs(),
-        query.getContextSortByDimsFirst()
-    );
+    final Function<Sequence<ResultRow>, Sequence<ResultRow>> sortAndLimitFn;
 
-    if (isLimited()) {
-      return new TopNFunction(ordering, limit);
+    if (sortingNeeded) {
+      // Materialize the Comparator first for fast-fail error checking.
+      final Ordering<ResultRow> ordering = makeComparator(
+          query.getResultRowSignature(),
+          query.getResultRowHasTimestamp(),
+          query.getDimensions(),
+          query.getAggregatorSpecs(),
+          query.getPostAggregatorSpecs(),
+          query.getContextSortByDimsFirst()
+      );
+
+      // Both branches use a stable sort; important so consistent results are returned from query to query if the
+      // underlying data isn't changing. (Useful for query reproducibility and offset-based pagination.)
+      if (isLimited()) {
+        sortAndLimitFn = results -> new TopNSequence<>(results, ordering, limit + offset);
+      } else {
+        sortAndLimitFn = results -> Sequences.sort(results, ordering).limit(limit + offset);
+      }
     } else {
-      return new SortingFn(ordering);
+      if (isLimited()) {
+        sortAndLimitFn = results -> results.limit(limit + offset);
+      } else {
+        sortAndLimitFn = Functions.identity();
+      }
+    }
+
+    // Finally, apply offset after sorting and limiting.
+    if (isOffset()) {
+      return results -> sortAndLimitFn.apply(results).skip(offset);
+    } else {
+      return sortAndLimitFn;
     }
   }
 
@@ -201,7 +283,7 @@ public class DefaultLimitSpec implements LimitSpec
     return this;
   }
 
-  private ValueType getOrderByType(final OrderByColumnSpec columnSpec, final List<DimensionSpec> dimensions)
+  private ColumnType getOrderByType(final OrderByColumnSpec columnSpec, final List<DimensionSpec> dimensions)
   {
     for (DimensionSpec dimSpec : dimensions) {
       if (columnSpec.getDimension().equals(dimSpec.getOutputName())) {
@@ -217,12 +299,40 @@ public class DefaultLimitSpec implements LimitSpec
   {
     return new DefaultLimitSpec(
         columns.stream().filter(c -> names.contains(c.getDimension())).collect(Collectors.toList()),
+        offset,
         limit
     );
   }
 
+  /**
+   * Returns a new DefaultLimitSpec identical to this one except for one difference: an offset parameter, if any, will
+   * be removed and added to the limit. This is designed for passing down queries to lower levels of the stack. Only
+   * the highest level should apply the offset parameter, and any pushed-down limits must be increased to accommodate
+   * the offset.
+   */
+  public DefaultLimitSpec withOffsetToLimit()
+  {
+    if (isOffset()) {
+      final int newLimit;
+
+      if (limit == Integer.MAX_VALUE) {
+        // Unlimited stays unlimited.
+        newLimit = Integer.MAX_VALUE;
+      } else if (limit > Integer.MAX_VALUE - offset) {
+        // Handle overflow as best we can.
+        throw new ISE("Cannot apply limit[%d] with offset[%d] due to overflow", limit, offset);
+      } else {
+        newLimit = limit + offset;
+      }
+
+      return new DefaultLimitSpec(columns, 0, newLimit);
+    } else {
+      return this;
+    }
+  }
+
   private Ordering<ResultRow> makeComparator(
-      Object2IntMap<String> rowOrderLookup,
+      RowSignature rowSignature,
       boolean hasTimestamp,
       List<DimensionSpec> dimensions,
       List<AggregatorFactory> aggs,
@@ -265,7 +375,7 @@ public class DefaultLimitSpec implements LimitSpec
       String columnName = columnSpec.getDimension();
       Ordering<ResultRow> nextOrdering = null;
 
-      final int columnIndex = rowOrderLookup.applyAsInt(columnName);
+      final int columnIndex = rowSignature.indexOf(columnName);
 
       if (columnIndex >= 0) {
         if (postAggregatorsMap.containsKey(columnName)) {
@@ -275,7 +385,17 @@ public class DefaultLimitSpec implements LimitSpec
           //noinspection unchecked
           nextOrdering = metricOrdering(columnIndex, aggregatorsMap.get(columnName).getComparator());
         } else if (dimensionsMap.containsKey(columnName)) {
-          nextOrdering = dimensionOrdering(columnIndex, columnSpec.getDimensionComparator());
+          Optional<DimensionSpec> dimensionSpec = dimensions.stream()
+                                                            .filter(ds -> ds.getOutputName().equals(columnName))
+                                                            .findFirst();
+          if (!dimensionSpec.isPresent()) {
+            throw new ISE("Could not find the dimension spec for ordering column %s", columnName);
+          }
+          nextOrdering = dimensionOrdering(
+              columnIndex,
+              dimensionSpec.get().getOutputType(),
+              columnSpec.getDimensionComparator()
+          );
         }
       }
 
@@ -312,10 +432,41 @@ public class DefaultLimitSpec implements LimitSpec
     return Ordering.from(Comparator.comparing(row -> (T) row.get(column), nullFriendlyComparator));
   }
 
-  private Ordering<ResultRow> dimensionOrdering(final int column, final StringComparator comparator)
+  private Ordering<ResultRow> dimensionOrdering(
+      final int column,
+      final ColumnType columnType,
+      final StringComparator comparator
+  )
   {
+    Comparator arrayComparator = null;
+    if (columnType.isArray()) {
+      if (columnType.getElementType().isNumeric()) {
+        arrayComparator = (Comparator<Object>) (o1, o2) -> ComparableList.compareWithComparator(
+            comparator,
+            DimensionHandlerUtils.convertToList(o1),
+            DimensionHandlerUtils.convertToList(o2)
+        );
+      } else if (columnType.getElementType().equals(ColumnType.STRING)) {
+        arrayComparator = (Comparator<Object>) (o1, o2) -> ComparableStringArray.compareWithComparator(
+            comparator,
+            DimensionHandlerUtils.convertToComparableStringArray(o1),
+            DimensionHandlerUtils.convertToComparableStringArray(o2)
+        );
+      } else {
+        throw new ISE("Cannot create comparator for array type %s.", columnType.toString());
+      }
+    }
     return Ordering.from(
-        Comparator.comparing((ResultRow row) -> getDimensionValue(row, column), Comparator.nullsFirst(comparator))
+        Comparator.comparing(
+            (ResultRow row) -> {
+              if (columnType.isArray()) {
+                return row.get(column);
+              } else {
+                return getDimensionValue(row, column);
+              }
+            },
+            Comparator.nullsFirst(arrayComparator == null ? comparator : arrayComparator)
+        )
     );
   }
 
@@ -331,58 +482,9 @@ public class DefaultLimitSpec implements LimitSpec
   {
     return "DefaultLimitSpec{" +
            "columns='" + columns + '\'' +
+           ", offset=" + offset +
            ", limit=" + limit +
            '}';
-  }
-
-  private static class LimitingFn implements Function<Sequence<ResultRow>, Sequence<ResultRow>>
-  {
-    private final int limit;
-
-    public LimitingFn(int limit)
-    {
-      this.limit = limit;
-    }
-
-    @Override
-    public Sequence<ResultRow> apply(Sequence<ResultRow> input)
-    {
-      return input.limit(limit);
-    }
-  }
-
-  private static class SortingFn implements Function<Sequence<ResultRow>, Sequence<ResultRow>>
-  {
-    private final Ordering<ResultRow> ordering;
-
-    public SortingFn(Ordering<ResultRow> ordering)
-    {
-      this.ordering = ordering;
-    }
-
-    @Override
-    public Sequence<ResultRow> apply(@Nullable Sequence<ResultRow> input)
-    {
-      return Sequences.sort(input, ordering);
-    }
-  }
-
-  private static class TopNFunction implements Function<Sequence<ResultRow>, Sequence<ResultRow>>
-  {
-    private final Ordering<ResultRow> ordering;
-    private final int limit;
-
-    public TopNFunction(Ordering<ResultRow> ordering, int limit)
-    {
-      this.ordering = ordering;
-      this.limit = limit;
-    }
-
-    @Override
-    public Sequence<ResultRow> apply(final Sequence<ResultRow> input)
-    {
-      return new TopNSequence<>(input, ordering, limit);
-    }
   }
 
   @Override
@@ -394,25 +496,16 @@ public class DefaultLimitSpec implements LimitSpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     DefaultLimitSpec that = (DefaultLimitSpec) o;
-
-    if (limit != that.limit) {
-      return false;
-    }
-    if (columns != null ? !columns.equals(that.columns) : that.columns != null) {
-      return false;
-    }
-
-    return true;
+    return offset == that.offset &&
+           limit == that.limit &&
+           Objects.equals(columns, that.columns);
   }
 
   @Override
   public int hashCode()
   {
-    int result = columns != null ? columns.hashCode() : 0;
-    result = 31 * result + limit;
-    return result;
+    return Objects.hash(columns, offset, limit);
   }
 
   @Override
@@ -427,12 +520,83 @@ public class DefaultLimitSpec implements LimitSpec
       ++index;
     }
 
-    ByteBuffer buffer = ByteBuffer.allocate(1 + columnsBytesSize + 4)
+    ByteBuffer buffer = ByteBuffer.allocate(1 + columnsBytesSize + 2 * Integer.BYTES)
                                   .put(CACHE_KEY);
     for (byte[] columnByte : columnBytes) {
       buffer.put(columnByte);
     }
-    buffer.put(Ints.toByteArray(limit));
+
+    buffer.putInt(limit);
+    buffer.putInt(offset);
+
     return buffer.array();
+  }
+
+  public static class Builder
+  {
+    private List<OrderByColumnSpec> columns = Collections.emptyList();
+    private Integer offset = null;
+    private Integer limit = null;
+
+    private Builder()
+    {
+    }
+
+    public Builder orderBy(final String... columns)
+    {
+      return orderBy(
+          Arrays.stream(columns)
+                .map(s -> new OrderByColumnSpec(s, OrderByColumnSpec.Direction.ASCENDING))
+                .toArray(OrderByColumnSpec[]::new)
+      );
+    }
+
+
+    public Builder orderBy(final OrderByColumnSpec... columns)
+    {
+      this.columns = ImmutableList.copyOf(Arrays.asList(columns));
+      return this;
+    }
+
+    public Builder offset(final int offset)
+    {
+      this.offset = offset;
+      return this;
+    }
+
+    public Builder limit(final int limit)
+    {
+      this.limit = limit;
+      return this;
+    }
+
+    public DefaultLimitSpec build()
+    {
+      return new DefaultLimitSpec(columns, offset, limit);
+    }
+  }
+
+  /**
+   * {@link JsonInclude} filter for {@link #getLimit()}.
+   *
+   * This API works by "creative" use of equals. It requires warnings to be suppressed and also requires spotbugs
+   * exclusions (see spotbugs-exclude.xml).
+   */
+  @SuppressWarnings({"EqualsAndHashcode", "EqualsHashCode"})
+  static class LimitJsonIncludeFilter // lgtm [java/inconsistent-equals-and-hashcode]
+  {
+    @Override
+    public boolean equals(Object obj)
+    {
+      if (obj == null) {
+        return false;
+      }
+
+      if (obj.getClass() == this.getClass()) {
+        return true;
+      }
+
+      return obj instanceof Long && (long) obj == Long.MAX_VALUE;
+    }
   }
 }

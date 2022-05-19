@@ -20,9 +20,10 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import org.apache.druid.collections.StableLimitingSorter;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
@@ -30,13 +31,15 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.YieldingAccumulator;
+import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.SinkQueryRunners;
 import org.apache.druid.query.context.ResponseContext;
@@ -46,15 +49,12 @@ import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.Segment;
 import org.joda.time.Interval;
 
-import java.util.ArrayDeque;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.PriorityQueue;
-import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValue, ScanQuery>
@@ -83,20 +83,21 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
 
   @Override
   public QueryRunner<ScanResultValue> mergeRunners(
-      ExecutorService queryExecutor,
+      final QueryProcessingPool queryProcessingPool,
       final Iterable<QueryRunner<ScanResultValue>> queryRunners
   )
   {
-    // in single thread and in jetty thread instead of processing thread
+    // in single thread and in Jetty thread instead of processing thread
     return (queryPlus, responseContext) -> {
       ScanQuery query = (ScanQuery) queryPlus.getQuery();
+      ScanQuery.verifyOrderByForNativeExecution(query);
 
       // Note: this variable is effective only when queryContext has a timeout.
       // See the comment of ResponseContext.Key.TIMEOUT_AT.
       final long timeoutAt = System.currentTimeMillis() + QueryContexts.getTimeout(queryPlus.getQuery());
-      responseContext.put(ResponseContext.Key.TIMEOUT_AT, timeoutAt);
+      responseContext.putTimeoutTime(timeoutAt);
 
-      if (query.getOrder().equals(ScanQuery.Order.NONE)) {
+      if (query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
         // Use normal strategy
         Sequence<ScanResultValue> returnedRows = Sequences.concat(
             Sequences.map(
@@ -113,7 +114,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         List<Interval> intervalsOrdered = getIntervalsFromSpecificQuerySpec(query.getQuerySegmentSpec());
         List<QueryRunner<ScanResultValue>> queryRunnersOrdered = Lists.newArrayList(queryRunners);
 
-        if (query.getOrder().equals(ScanQuery.Order.DESCENDING)) {
+        if (ScanQuery.Order.DESCENDING.equals(query.getTimeOrder())) {
           intervalsOrdered = Lists.reverse(intervalsOrdered);
           queryRunnersOrdered = Lists.reverse(queryRunnersOrdered);
         }
@@ -122,14 +123,19 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                                         : query.getMaxRowsQueuedForOrdering());
         if (query.getScanRowsLimit() <= maxRowsQueuedForOrdering) {
           // Use priority queue strategy
-          return priorityQueueSortAndLimit(
-              Sequences.concat(Sequences.map(
-                  Sequences.simple(queryRunnersOrdered),
-                  input -> input.run(queryPlus, responseContext)
-              )),
-              query,
-              intervalsOrdered
-          );
+          try {
+            return stableLimitingSort(
+                Sequences.concat(Sequences.map(
+                    Sequences.simple(queryRunnersOrdered),
+                    input -> input.run(queryPlus, responseContext)
+                )),
+                query,
+                intervalsOrdered
+            );
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
         } else {
           // Use n-way merge strategy
           List<Pair<Interval, QueryRunner<ScanResultValue>>> intervalsAndRunnersOrdered = new ArrayList<>();
@@ -149,11 +155,11 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
           // query runners for that segment
           LinkedHashMap<Interval, List<Pair<Interval, QueryRunner<ScanResultValue>>>> partitionsGroupedByInterval =
               intervalsAndRunnersOrdered.stream()
-                                          .collect(Collectors.groupingBy(
-                                              x -> x.lhs,
-                                              LinkedHashMap::new,
-                                              Collectors.toList()
-                                          ));
+                                        .collect(Collectors.groupingBy(
+                                            x -> x.lhs,
+                                            LinkedHashMap::new,
+                                            Collectors.toList()
+                                        ));
 
           // Find the segment with the largest numbers of partitions.  This will be used to compare with the
           // maxSegmentPartitionsOrderedInMemory limit to determine if the query is at risk of consuming too much memory.
@@ -164,10 +170,10 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                                          .max(Comparator.comparing(Integer::valueOf))
                                          .get();
 
-          int segmentPartitionLimit = query.getMaxSegmentPartitionsOrderedInMemory() == null
+          int maxSegmentPartitionsOrderedInMemory = query.getMaxSegmentPartitionsOrderedInMemory() == null
                                       ? scanQueryConfig.getMaxSegmentPartitionsOrderedInMemory()
                                       : query.getMaxSegmentPartitionsOrderedInMemory();
-          if (maxNumPartitionsInSegment <= segmentPartitionLimit) {
+          if (maxNumPartitionsInSegment <= maxSegmentPartitionsOrderedInMemory) {
             // Use n-way merge strategy
 
             // Create a list of grouped runner lists (i.e. each sublist/"runner group" corresponds to an interval) ->
@@ -184,28 +190,33 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
 
             return nWayMergeAndLimit(groupedRunners, queryPlus, responseContext);
           }
-          throw new UOE(
-              "Time ordering for queries of %,d partitions per segment and a row limit of %,d is not supported."
-              + "  Try reducing the scope of the query to scan fewer partitions than the configurable limit of"
-              + " %,d partitions or lower the row limit below %,d.",
+          throw ResourceLimitExceededException.withMessage(
+              "Time ordering is not supported for a Scan query with %,d segments per time chunk and a row limit of %,d. "
+              + "Try reducing your query limit below maxRowsQueuedForOrdering (currently %,d), or using compaction to "
+              + "reduce the number of segments per time chunk, or raising maxSegmentPartitionsOrderedInMemory "
+              + "(currently %,d) above the number of segments you have per time chunk.",
               maxNumPartitionsInSegment,
               query.getScanRowsLimit(),
-              scanQueryConfig.getMaxSegmentPartitionsOrderedInMemory(),
-              scanQueryConfig.getMaxRowsQueuedForOrdering()
+              maxRowsQueuedForOrdering,
+              maxSegmentPartitionsOrderedInMemory
           );
         }
       }
     };
   }
 
+  /**
+   * Returns a sorted and limited copy of the provided {@param inputSequence}. Materializes the full sequence
+   * in memory before returning it. The amount of memory use is limited by the limit of the {@param scanQuery}.
+   */
   @VisibleForTesting
-  Sequence<ScanResultValue> priorityQueueSortAndLimit(
+  Sequence<ScanResultValue> stableLimitingSort(
       Sequence<ScanResultValue> inputSequence,
       ScanQuery scanQuery,
       List<Interval> intervalsOrdered
-  )
+  ) throws IOException
   {
-    Comparator<ScanResultValue> priorityQComparator = new ScanResultValueTimestampComparator(scanQuery);
+    Comparator<ScanResultValue> comparator = scanQuery.getResultOrdering();
 
     if (scanQuery.getScanRowsLimit() > Integer.MAX_VALUE) {
       throw new UOE(
@@ -218,62 +229,50 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     // only runs if limit < MAX_LIMIT_FOR_IN_MEMORY_TIME_ORDERING (which should be < Integer.MAX_VALUE)
     int limit = Math.toIntExact(scanQuery.getScanRowsLimit());
 
-    PriorityQueue<ScanResultValue> q = new PriorityQueue<>(limit, priorityQComparator);
+    final StableLimitingSorter<ScanResultValue> sorter = new StableLimitingSorter<>(comparator, limit);
 
-    Yielder<ScanResultValue> yielder = inputSequence.toYielder(
-        null,
-        new YieldingAccumulator<ScanResultValue, ScanResultValue>()
-        {
-          @Override
-          public ScanResultValue accumulate(ScanResultValue accumulated, ScanResultValue in)
-          {
-            yield();
-            return in;
-          }
-        }
-    );
-    boolean doneScanning = yielder.isDone();
-    // We need to scan limit elements and anything else in the last segment
-    int numRowsScanned = 0;
-    Interval finalInterval = null;
-    while (!doneScanning) {
-      ScanResultValue next = yielder.get();
-      List<ScanResultValue> singleEventScanResultValues = next.toSingleEventScanResultValues();
-      for (ScanResultValue srv : singleEventScanResultValues) {
-        numRowsScanned++;
-        // Using an intermediate unbatched ScanResultValue is not that great memory-wise, but the column list
-        // needs to be preserved for queries using the compactedList result format
-        q.offer(srv);
-        if (q.size() > limit) {
-          q.poll();
-        }
+    Yielder<ScanResultValue> yielder = Yielders.each(inputSequence);
 
-        // Finish scanning the interval containing the limit row
-        if (numRowsScanned > limit && finalInterval == null) {
-          long timestampOfLimitRow = srv.getFirstEventTimestamp(scanQuery.getResultFormat());
-          for (Interval interval : intervalsOrdered) {
-            if (interval.contains(timestampOfLimitRow)) {
-              finalInterval = interval;
+    try {
+      boolean doneScanning = yielder.isDone();
+      // We need to scan limit elements and anything else in the last segment
+      int numRowsScanned = 0;
+      Interval finalInterval = null;
+      while (!doneScanning) {
+        ScanResultValue next = yielder.get();
+        List<ScanResultValue> singleEventScanResultValues = next.toSingleEventScanResultValues();
+        for (ScanResultValue srv : singleEventScanResultValues) {
+          numRowsScanned++;
+          // Using an intermediate unbatched ScanResultValue is not that great memory-wise, but the column list
+          // needs to be preserved for queries using the compactedList result format
+          sorter.add(srv);
+
+          // Finish scanning the interval containing the limit row
+          if (numRowsScanned > limit && finalInterval == null) {
+            long timestampOfLimitRow = srv.getFirstEventTimestamp(scanQuery.getResultFormat());
+            for (Interval interval : intervalsOrdered) {
+              if (interval.contains(timestampOfLimitRow)) {
+                finalInterval = interval;
+              }
+            }
+            if (finalInterval == null) {
+              throw new ISE("Row came from an unscanned interval");
             }
           }
-          if (finalInterval == null) {
-            throw new ISE("WTH???  Row came from an unscanned interval?");
-          }
         }
+        yielder = yielder.next(null);
+        doneScanning = yielder.isDone() ||
+                       (finalInterval != null &&
+                        !finalInterval.contains(next.getFirstEventTimestamp(scanQuery.getResultFormat())));
       }
-      yielder = yielder.next(null);
-      doneScanning = yielder.isDone() ||
-                     (finalInterval != null &&
-                      !finalInterval.contains(next.getFirstEventTimestamp(scanQuery.getResultFormat())));
+
+      final List<ScanResultValue> sortedElements = new ArrayList<>(sorter.size());
+      Iterators.addAll(sortedElements, sorter.drain());
+      return Sequences.simple(sortedElements);
     }
-    // Need to convert to a Deque because Priority Queue's iterator doesn't guarantee that the sorted order
-    // will be maintained.  Deque was chosen over list because its addFirst is O(1).
-    final Deque<ScanResultValue> sortedElements = new ArrayDeque<>(q.size());
-    while (q.size() != 0) {
-      // addFirst is used since PriorityQueue#poll() dequeues the low-priority (timestamp-wise) events first.
-      sortedElements.addFirst(q.poll());
+    finally {
+      yielder.close();
     }
-    return Sequences.simple(sortedElements);
   }
 
   @VisibleForTesting
@@ -331,9 +330,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                         )
                     ).flatMerge(
                         seq -> seq,
-                        Ordering.from(new ScanResultValueTimestampComparator(
-                            (ScanQuery) queryPlus.getQuery()
-                        )).reverse()
+                        queryPlus.getQuery().getResultOrdering()
                     )
             )
         );
@@ -369,12 +366,14 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         throw new ISE("Got a [%s] which isn't a %s", query.getClass(), ScanQuery.class);
       }
 
+      ScanQuery.verifyOrderByForNativeExecution((ScanQuery) query);
+
       // it happens in unit tests
-      final Number timeoutAt = (Number) responseContext.get(ResponseContext.Key.TIMEOUT_AT);
-      if (timeoutAt == null || timeoutAt.longValue() == 0L) {
-        responseContext.put(ResponseContext.Key.TIMEOUT_AT, JodaUtils.MAX_INSTANT);
+      final Long timeoutAt = responseContext.getTimeoutTime();
+      if (timeoutAt == null || timeoutAt == 0L) {
+        responseContext.putTimeoutTime(JodaUtils.MAX_INSTANT);
       }
-      return engine.process((ScanQuery) query, segment, responseContext);
+      return engine.process((ScanQuery) query, segment, responseContext, queryPlus.getQueryMetrics());
     }
   }
 }

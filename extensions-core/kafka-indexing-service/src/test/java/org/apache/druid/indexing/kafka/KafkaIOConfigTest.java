@@ -316,7 +316,8 @@ public class KafkaIOConfigTest
         100L,
         true,
         DateTimes.nowUtc(),
-        DateTimes.nowUtc()
+        DateTimes.nowUtc(),
+        null
     );
     final byte[] json = mapper.writeValueAsBytes(currentConfig);
 

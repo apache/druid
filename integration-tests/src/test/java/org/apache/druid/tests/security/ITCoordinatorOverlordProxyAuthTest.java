@@ -39,6 +39,6 @@ public class ITCoordinatorOverlordProxyAuthTest
   public void testProxyAuth()
   {
     HttpResponseStatus responseStatus = coordinatorClient.getProxiedOverlordScalingResponseStatus();
-    Assert.assertEquals(HttpResponseStatus.OK, responseStatus);
+    Assert.assertEquals(responseStatus, HttpResponseStatus.OK);
   }
 }

@@ -22,14 +22,17 @@ package org.apache.druid.sql.calcite.rel;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -37,7 +40,7 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.PostAggregatorVisitor;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -45,7 +48,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
 
 /**
  * Used to represent projections (Calcite "Project"). These are embedded in {@link Sorting} and {@link Grouping} to
@@ -62,13 +64,13 @@ public class Projection
   private final List<PostAggregator> postAggregators;
 
   @Nullable
-  private final List<VirtualColumn> virtualColumns;
+  private final List<String> virtualColumns;
 
   private final RowSignature outputRowSignature;
 
   private Projection(
       @Nullable final List<PostAggregator> postAggregators,
-      @Nullable final List<VirtualColumn> virtualColumns,
+      @Nullable final List<String> virtualColumns,
       final RowSignature outputRowSignature
   )
   {
@@ -197,10 +199,7 @@ public class Projection
   )
   {
     final List<String> rowOrder = new ArrayList<>();
-    final String outputNamePrefix = Calcites.findUnusedPrefix(
-        basePrefix,
-        new TreeSet<>(inputRowSignature.getRowOrder())
-    );
+    final String outputNamePrefix = Calcites.findUnusedPrefixForDigits(basePrefix, inputRowSignature.getColumnNames());
     final PostAggregatorVisitor postAggVisitor = new PostAggregatorVisitor(outputNamePrefix);
 
     for (final RexNode postAggregatorRexNode : project.getChildExps()) {
@@ -225,7 +224,11 @@ public class Projection
       }
     }
 
-    return new Projection(postAggVisitor.getPostAggs(), null, RowSignature.from(rowOrder, project.getRowType()));
+    return new Projection(
+        postAggVisitor.getPostAggs(),
+        null,
+        RowSignatures.fromRelDataType(rowOrder, project.getRowType())
+    );
   }
 
   public static Projection preAggregation(
@@ -251,28 +254,35 @@ public class Projection
       }
     }
 
-    final Set<VirtualColumn> virtualColumns = new HashSet<>();
+    final Set<String> virtualColumns = new HashSet<>();
     final List<String> rowOrder = new ArrayList<>();
 
     for (int i = 0; i < expressions.size(); i++) {
       final DruidExpression expression = expressions.get(i);
-      if (expression.isDirectColumnAccess()) {
+
+      final RelDataType dataType = project.getRowType().getFieldList().get(i).getType();
+      if (expression.isDirectColumnAccess() &&
+          Objects.equals(
+              inputRowSignature.getColumnType(expression.getDirectColumn()).orElse(null),
+              Calcites.getColumnTypeForRelDataType(dataType)
+          )
+      ) {
+        // Refer to column directly when it's a direct access with matching type.
         rowOrder.add(expression.getDirectColumn());
       } else {
-        final VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-            plannerContext,
+        String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             expression,
-            project.getChildExps().get(i).getType().getSqlTypeName()
+            project.getChildExps().get(i).getType()
         );
-        virtualColumns.add(virtualColumn);
-        rowOrder.add(virtualColumn.getOutputName());
+        virtualColumns.add(virtualColumnName);
+        rowOrder.add(virtualColumnName);
       }
     }
 
     return new Projection(
         null,
         ImmutableList.copyOf(virtualColumns),
-        RowSignature.from(rowOrder, project.getRowType())
+        RowSignatures.fromRelDataType(rowOrder, project.getRowType())
     );
   }
 
@@ -297,15 +307,20 @@ public class Projection
     }
 
     // We don't really have a way to cast complex type. So might as well not do anything and return.
-    final ValueType columnValueType = aggregateRowSignature.getColumnType(expression.getDirectColumn());
-    if (columnValueType == ValueType.COMPLEX) {
+    final ColumnType columnValueType =
+        aggregateRowSignature.getColumnType(expression.getDirectColumn())
+                             .orElseThrow(
+                                 () -> new ISE("Encountered null type for column[%s]", expression.getDirectColumn())
+                             );
+
+    if (columnValueType.is(ValueType.COMPLEX)) {
       return true;
     }
 
     // Check if a cast is necessary.
-    final ExprType toExprType = Expressions.exprTypeForValueType(columnValueType);
-    final ExprType fromExprType = Expressions.exprTypeForValueType(
-        Calcites.getValueTypeForSqlTypeName(rexNode.getType().getSqlTypeName())
+    final ExpressionType toExprType = ExpressionType.fromColumnTypeStrict(columnValueType);
+    final ExpressionType fromExprType = ExpressionType.fromColumnTypeStrict(
+        Calcites.getColumnTypeForRelDataType(rexNode.getType())
     );
 
     return toExprType.equals(fromExprType);
@@ -332,10 +347,15 @@ public class Projection
     }
 
     // Check if a cast is necessary.
-    final ValueType toValueType = aggregateRowSignature.getColumnType(expression.getDirectColumn());
-    final ValueType fromValueType = Calcites.getValueTypeForSqlTypeName(rexNode.getType().getSqlTypeName());
+    final ColumnType toValueType =
+        aggregateRowSignature.getColumnType(expression.getDirectColumn())
+                             .orElseThrow(
+                                 () -> new ISE("Encountered null type for column[%s]", expression.getDirectColumn())
+                             );
 
-    return toValueType == ValueType.COMPLEX && fromValueType == ValueType.COMPLEX;
+    final ColumnType fromValueType = Calcites.getColumnTypeForRelDataType(rexNode.getType());
+
+    return toValueType.is(ValueType.COMPLEX) && toValueType.equals(fromValueType);
   }
 
   public List<PostAggregator> getPostAggregators()
@@ -345,7 +365,7 @@ public class Projection
     return Preconditions.checkNotNull(postAggregators, "postAggregators");
   }
 
-  public List<VirtualColumn> getVirtualColumns()
+  public List<String> getVirtualColumns()
   {
     // If you ever see this error, it probably means a Projection was created in post-aggregation mode, but then
     // used in a pre-aggregation context. This is likely a bug somewhere in DruidQuery. See class-level Javadocs.

@@ -201,9 +201,9 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 
-   APACHE DRUID (INCUBATING) SUBCOMPONENTS:
+   APACHE DRUID SUBCOMPONENTS:
 
-   Apache Druid (incubating) includes a number of subcomponents with
+   Apache Druid includes a number of subcomponents with
    separate copyright notices and license terms. Your use of the source
    code for these subcomponents is subject to the terms and
    conditions of the following licenses.
@@ -215,7 +215,7 @@ Apache License version 2.0
 SOURCE/JAVA-CORE
     This product contains conjunctive normal form conversion code, a variance aggregator algorithm, and Bloom filter
      adapted from Apache Hive.
-      * processing/src/main/java/org/apache/druid/segment/filter/Filters.java
+      * processing/src/main/java/org/apache/druid/segment/filter/cnf/HiveCnfHelper.java
       * extensions-core/stats/src/main/java/io/druid/query/aggregation/variance/VarianceAggregatorCollector.java
       * extensions-core/druid-bloom-filter/src/main/java/org/apache/druid/query/filter/BloomKFilter.java
 
@@ -224,6 +224,7 @@ SOURCE/JAVA-CORE
 
     This product contains SQL query planning code adapted from Apache Calcite.
       * sql/src/main/java/org/apache/druid/sql/calcite/
+      * processing/src/main/java/org/apache/druid/segment/filter/cnf/CalciteCnfHelper.java
 
     This product contains Kerberos authentication code adapted from Apache Hadoop.
       * extensions-core/druid-kerberos/src/main/java/org/apache/druid/security/kerberos/
@@ -273,6 +274,7 @@ SOURCE/JAVA-CORE
 
     This product contains s3 directory place holder check code adapted from JetS3t (https://bitbucket.org/jmurty/jets3t/wiki/Home).
       * extensions-core/s3-extensions/src/main/java/org/apache/druid/storage/s3/S3Utils.java
+      * extensions-contrib/aliyun-oss-extensions/src/main/java/org/apache/druid/storage/aliyun/OssObjectSummaryIterator.java
 
     This product contains lpad and rpad methods adapted from Apache Flink.
       * core/src/main/java/org/apache/druid/java/util/common/StringUtils.java
@@ -307,6 +309,13 @@ SOURCE/JAVA-CORE
      which is available under a BSD-3-Clause License. For details, see licenses/src/porter-stemmer.BSD3.
       * processing/src/test/java/org/apache/druid/query/extraction/JavaScriptExtractionFnTest.java
 
+SOURCE/EXTENSIONS/druid-basic-security
+    This product contains an LDAP string encoding function from OWASP ESAPI, copyright The OWASP Foundation
+     (https://github.com/ESAPI/esapi-java-legacy) which is available under the BSD-3-Clause License. For details, see
+     licenses/src/esapi.BSD3.
+      * extensions-core/druid-basic-security/src/main/java/org/apache/druid/security/basic/authentication/validator/LDAPCredentialsValidator.java
+
+
 Public Domain
 ================================
 
@@ -314,3 +323,14 @@ SOURCE/JAVA-CORE
     This product uses a smear function adapted from MurmurHash3, written by Austin Appleby who has placed
      MurmurHash3 in the public domain (https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp).
       * processing/src/main/java/org/apache/druid/query/groupby/epinephelinae/Groupers.java
+
+
+Creative Commons Attribution-ShareAlike 3.0 Unported License
+================================
+
+SOURCE/JAVA-CORE:
+    This product contains example data collected from the Wikipedia edit stream API (this content is NOT part of the source
+     code and is only used for example and tutorial purposes), copyright Wikipedia editors and contributors for the text
+     content which is available under Creative Commons Attribution-ShareAlike 3.0 Unported License. For details, see
+     licenses/src/CC-BY-SA.txt.
+      * examples/quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz

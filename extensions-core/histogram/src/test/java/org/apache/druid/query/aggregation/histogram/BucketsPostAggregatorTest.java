@@ -19,7 +19,9 @@
 
 package org.apache.druid.query.aggregation.histogram;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.query.aggregation.PostAggregator;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -28,18 +30,40 @@ public class BucketsPostAggregatorTest
   @Test
   public void testSerde() throws Exception
   {
-    BucketsPostAggregator aggregator1 =
+    BucketsPostAggregator there =
         new BucketsPostAggregator("buckets_post_aggregator", "test_field", 2f, 4f);
 
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    BucketsPostAggregator aggregator2 = mapper.readValue(
-        mapper.writeValueAsString(aggregator1),
+    BucketsPostAggregator andBackAgain = mapper.readValue(
+        mapper.writeValueAsString(there),
         BucketsPostAggregator.class
     );
 
-    Assert.assertEquals(aggregator1.getBucketSize(), aggregator2.getBucketSize(), 0.0001);
-    Assert.assertEquals(aggregator1.getOffset(), aggregator2.getOffset(), 0.0001);
-    Assert.assertArrayEquals(aggregator1.getCacheKey(), aggregator2.getCacheKey());
-    Assert.assertEquals(aggregator1.getDependentFields(), aggregator2.getDependentFields());
+    Assert.assertEquals(there, andBackAgain);
+    Assert.assertEquals(there.getBucketSize(), andBackAgain.getBucketSize(), 0.0001);
+    Assert.assertEquals(there.getOffset(), andBackAgain.getOffset(), 0.0001);
+    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assert.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
+  }
+
+  @Test
+  public void testToString()
+  {
+    PostAggregator postAgg =
+        new BucketsPostAggregator("buckets_post_aggregator", "test_field", 2f, 4f);
+
+    Assert.assertEquals(
+        "BucketsPostAggregator{name='buckets_post_aggregator', fieldName='test_field', bucketSize=2.0, offset=4.0}",
+        postAgg.toString()
+    );
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(BucketsPostAggregator.class)
+                  .withNonnullFields("name", "fieldName")
+                  .usingGetClass()
+                  .verify();
   }
 }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexer;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Objects;
 
@@ -28,9 +29,10 @@ import java.util.Objects;
 public class Property<T>
 {
   private final String name;
+  @Nullable
   private final T value;
 
-  public Property(String name, T value)
+  public Property(String name, @Nullable T value)
   {
     this.name = name;
     this.value = value;
@@ -41,6 +43,7 @@ public class Property<T>
     return name;
   }
 
+  @Nullable
   public T getValue()
   {
     return value;

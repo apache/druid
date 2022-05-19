@@ -16,15 +16,21 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .table-column-selector {
   position: absolute;
   right: 0;
   margin: 0;
+
+  .counter {
+    opacity: 0.5;
+  }
 }
 
 // This will be mounted in a portal
 .table-column-selector-menu {
-  .bp3-form-group {
+  .#{$bp-ns}-form-group {
     margin-bottom: 0;
   }
 }

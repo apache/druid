@@ -17,82 +17,46 @@
  */
 
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import { sum } from 'd3-array';
 import React from 'react';
 
-import { pluralIfNeeded, QueryManager } from '../../../utils';
+import { useQueryManager } from '../../../hooks';
+import { Api } from '../../../singletons';
+import { Capabilities, isLookupsUninitialized, pluralIfNeeded } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
-export interface LookupsCardProps {}
-
-export interface LookupsCardState {
-  lookupsCountLoading: boolean;
-  lookupsCount: number;
-  lookupsUninitialized: boolean;
-  lookupsCountError?: string;
+export interface LookupsCardProps {
+  capabilities: Capabilities;
 }
 
-export class LookupsCard extends React.PureComponent<LookupsCardProps, LookupsCardState> {
-  private lookupsQueryManager: QueryManager<null, any>;
-
-  constructor(props: LookupsCardProps, context: any) {
-    super(props, context);
-    this.state = {
-      lookupsCountLoading: false,
-      lookupsCount: 0,
-      lookupsUninitialized: false,
-    };
-
-    this.lookupsQueryManager = new QueryManager({
-      processQuery: async () => {
-        const resp = await axios.get('/druid/coordinator/v1/lookups/status');
+export const LookupsCard = React.memo(function LookupsCard(props: LookupsCardProps) {
+  const [lookupsCountState] = useQueryManager<Capabilities, number>({
+    processQuery: async capabilities => {
+      if (capabilities.hasCoordinatorAccess()) {
+        const resp = await Api.instance.get('/druid/coordinator/v1/lookups/status');
         const data = resp.data;
-        const lookupsCount = sum(Object.keys(data).map(k => Object.keys(data[k]).length));
-        return {
-          lookupsCount,
-        };
-      },
-      onStateChange: ({ result, loading, error }) => {
-        this.setState({
-          lookupsCount: result ? result.lookupsCount : 0,
-          lookupsUninitialized: error === 'Request failed with status code 404',
-          lookupsCountLoading: loading,
-          lookupsCountError: error,
-        });
-      },
-    });
-  }
+        return sum(Object.keys(data).map(k => Object.keys(data[k]).length));
+      } else {
+        throw new Error(`must have coordinator access`);
+      }
+    },
+    initQuery: props.capabilities,
+  });
 
-  componentDidMount(): void {
-    this.lookupsQueryManager.runQuery(null);
-  }
-
-  componentWillUnmount(): void {
-    this.lookupsQueryManager.terminate();
-  }
-
-  render(): JSX.Element {
-    const {
-      lookupsCountLoading,
-      lookupsCount,
-      lookupsUninitialized,
-      lookupsCountError,
-    } = this.state;
-
-    return (
-      <HomeViewCard
-        className="lookups-card"
-        href={'#lookups'}
-        icon={IconNames.PROPERTIES}
-        title={'Lookups'}
-        loading={lookupsCountLoading}
-        error={!lookupsUninitialized ? lookupsCountError : undefined}
-      >
-        <p>
-          {!lookupsUninitialized ? pluralIfNeeded(lookupsCount, 'lookup') : 'Lookups uninitialized'}
-        </p>
-      </HomeViewCard>
-    );
-  }
-}
+  return (
+    <HomeViewCard
+      className="lookups-card"
+      href="#lookups"
+      icon={IconNames.PROPERTIES}
+      title="Lookups"
+      loading={lookupsCountState.loading}
+      error={!isLookupsUninitialized(lookupsCountState.error) ? lookupsCountState.error : undefined}
+    >
+      <p>
+        {!isLookupsUninitialized(lookupsCountState.error)
+          ? pluralIfNeeded(lookupsCountState.data || 0, 'lookup')
+          : 'Lookups uninitialized'}
+      </p>
+    </HomeViewCard>
+  );
+});

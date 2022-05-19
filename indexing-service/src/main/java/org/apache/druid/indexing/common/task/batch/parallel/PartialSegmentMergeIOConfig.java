@@ -27,13 +27,13 @@ import org.apache.druid.segment.indexing.IOConfig;
 
 import java.util.List;
 
-@JsonTypeName(PartialSegmentMergeTask.TYPE)
+@JsonTypeName(PartialGenericSegmentMergeTask.TYPE)
 public class PartialSegmentMergeIOConfig implements IOConfig
 {
   private final List<PartitionLocation> partitionLocations;
 
   @JsonCreator
-  public PartialSegmentMergeIOConfig(@JsonProperty("partitionLocations") List<PartitionLocation> partitionLocations)
+  PartialSegmentMergeIOConfig(@JsonProperty("partitionLocations") List<PartitionLocation> partitionLocations)
   {
     Preconditions.checkState(
         partitionLocations != null && !partitionLocations.isEmpty(),

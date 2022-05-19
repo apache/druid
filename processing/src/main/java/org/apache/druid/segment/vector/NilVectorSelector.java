@@ -37,7 +37,7 @@ public class NilVectorSelector
 
   static {
     for (int i = 0; i < DEFAULT_NULLS_VECTOR.length; i++) {
-      DEFAULT_NULLS_VECTOR[i] = true;
+      DEFAULT_NULLS_VECTOR[i] = NullHandling.sqlCompatible();
     }
   }
 
@@ -142,7 +142,7 @@ public class NilVectorSelector
   @Override
   public boolean nameLookupPossibleInAdvance()
   {
-    return false;
+    return true;
   }
 
   @Nullable

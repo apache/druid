@@ -19,56 +19,51 @@
 
 package org.apache.druid.segment.filter;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import it.unimi.dsi.fastutil.ints.IntIterable;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntList;
+import com.google.common.collect.Iterables;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.java.util.common.guava.FunctionalIterable;
-import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.query.ColumnSelectorPlus;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.filter.BitmapIndexSelector;
-import org.apache.druid.query.filter.BooleanFilter;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.query.filter.ValueMatcherColumnSelectorStrategy;
-import org.apache.druid.query.filter.ValueMatcherColumnSelectorStrategyFactory;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.IntIteratorUtils;
-import org.apache.druid.segment.column.BitmapIndex;
-import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.AllFalseBitmapColumnIndex;
+import org.apache.druid.segment.column.AllTrueBitmapColumnIndex;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.data.CloseableIndexed;
-import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.column.DruidPredicateIndex;
+import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
+import org.apache.druid.segment.filter.cnf.CalciteCnfHelper;
+import org.apache.druid.segment.filter.cnf.HiveCnfHelper;
+import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
+ *
  */
 public class Filters
 {
-  private static final String CTX_KEY_USE_FILTER_CNF = "useFilterCNF";
+  private static final ColumnSelectorFactory ALL_NULL_COLUMN_SELECTOR_FACTORY = new AllNullColumnSelectorFactory();
 
   /**
    * Convert a list of DimFilters to a list of Filters.
@@ -79,20 +74,7 @@ public class Filters
    */
   public static List<Filter> toFilters(List<DimFilter> dimFilters)
   {
-    return ImmutableList.copyOf(
-        FunctionalIterable
-            .create(dimFilters)
-            .transform(
-                new Function<DimFilter, Filter>()
-                {
-                  @Override
-                  public Filter apply(DimFilter input)
-                  {
-                    return input.toFilter();
-                  }
-                }
-            )
-    );
+    return dimFilters.stream().map(Filters::toFilter).collect(Collectors.toList());
   }
 
   /**
@@ -105,7 +87,7 @@ public class Filters
   @Nullable
   public static Filter toFilter(@Nullable DimFilter dimFilter)
   {
-    return dimFilter == null ? null : dimFilter.toFilter();
+    return dimFilter == null ? null : dimFilter.toOptimizedFilter();
   }
 
   /**
@@ -125,14 +107,11 @@ public class Filters
       final String value
   )
   {
-    final ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy> selector =
-        DimensionHandlerUtils.createColumnSelectorPlus(
-            ValueMatcherColumnSelectorStrategyFactory.instance(),
-            DefaultDimensionSpec.of(columnName),
-            columnSelectorFactory
-        );
-
-    return selector.getColumnSelectorStrategy().makeValueMatcher(selector.getSelector(), value);
+    return ColumnProcessors.makeProcessor(
+        columnName,
+        new ConstantValueMatcherFactory(value),
+        columnSelectorFactory
+    );
   }
 
   /**
@@ -156,210 +135,66 @@ public class Filters
       final DruidPredicateFactory predicateFactory
   )
   {
-    final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(columnName);
-
-    // This should be folded into the ValueMatcherColumnSelectorStrategy once that can handle LONG typed columns.
-    if (capabilities != null && capabilities.getType() == ValueType.LONG) {
-      return getLongPredicateMatcher(
-          columnSelectorFactory.makeColumnValueSelector(columnName),
-          predicateFactory.makeLongPredicate()
-      );
-    }
-
-    final ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy> selector =
-        DimensionHandlerUtils.createColumnSelectorPlus(
-            ValueMatcherColumnSelectorStrategyFactory.instance(),
-            DefaultDimensionSpec.of(columnName),
-            columnSelectorFactory
-        );
-
-    return selector.getColumnSelectorStrategy().makeValueMatcher(selector.getSelector(), predicateFactory);
+    return ColumnProcessors.makeProcessor(
+        columnName,
+        new PredicateValueMatcherFactory(predicateFactory),
+        columnSelectorFactory
+    );
   }
 
-  public static ImmutableBitmap allFalse(final BitmapIndexSelector selector)
-  {
-    return selector.getBitmapFactory().makeEmptyImmutableBitmap();
-  }
-
-  public static ImmutableBitmap allTrue(final BitmapIndexSelector selector)
-  {
-    return selector.getBitmapFactory()
-                   .complement(selector.getBitmapFactory().makeEmptyImmutableBitmap(), selector.getNumRows());
-  }
-
-  /**
-   * Transform an iterable of indexes of bitmaps to an iterable of bitmaps
-   *
-   * @param indexes     indexes of bitmaps
-   * @param bitmapIndex an object to retrieve bitmaps using indexes
-   *
-   * @return an iterable of bitmaps
-   */
-  static Iterable<ImmutableBitmap> bitmapsFromIndexes(final IntIterable indexes, final BitmapIndex bitmapIndex)
-  {
-    // Do not use Iterables.transform() to avoid boxing/unboxing integers.
-    return new Iterable<ImmutableBitmap>()
-    {
-      @Override
-      public Iterator<ImmutableBitmap> iterator()
-      {
-        final IntIterator iterator = indexes.iterator();
-
-        return new Iterator<ImmutableBitmap>()
-        {
-          @Override
-          public boolean hasNext()
-          {
-            return iterator.hasNext();
-          }
-
-          @Override
-          public ImmutableBitmap next()
-          {
-            return bitmapIndex.getBitmap(iterator.nextInt());
-          }
-
-          @Override
-          public void remove()
-          {
-            throw new UnsupportedOperationException();
-          }
-        };
-      }
-    };
-  }
-
-  /**
-   * Return the union of bitmaps for all values matching a particular predicate.
-   *
-   * @param dimension dimension to look at
-   * @param selector  bitmap selector
-   * @param bitmapResultFactory
-   * @param predicate predicate to use
-   * @return bitmap of matching rows
-   *
-   * @see #estimateSelectivity(String, BitmapIndexSelector, Predicate)
-   */
-  public static <T> T matchPredicate(
-      final String dimension,
-      final BitmapIndexSelector selector,
-      BitmapResultFactory<T> bitmapResultFactory,
-      final Predicate<String> predicate
+  @Nullable
+  public static BitmapColumnIndex makePredicateIndex(
+      final String column,
+      final ColumnIndexSelector selector,
+      final DruidPredicateFactory predicateFactory
   )
   {
-    return bitmapResultFactory.unionDimensionValueBitmaps(matchPredicateNoUnion(dimension, selector, predicate));
-  }
-
-  /**
-   * Return an iterable of bitmaps for all values matching a particular predicate. Unioning these bitmaps
-   * yields the same result that {@link #matchPredicate(String, BitmapIndexSelector, BitmapResultFactory, Predicate)}
-   * would have returned.
-   *
-   * @param dimension dimension to look at
-   * @param selector  bitmap selector
-   * @param predicate predicate to use
-   *
-   * @return iterable of bitmaps of matching rows
-   */
-  public static Iterable<ImmutableBitmap> matchPredicateNoUnion(
-      final String dimension,
-      final BitmapIndexSelector selector,
-      final Predicate<String> predicate
-  )
-  {
-    Preconditions.checkNotNull(dimension, "dimension");
+    Preconditions.checkNotNull(column, "column");
     Preconditions.checkNotNull(selector, "selector");
-    Preconditions.checkNotNull(predicate, "predicate");
-
-    // Missing dimension -> match all rows if the predicate matches null; match no rows otherwise
-    try (final CloseableIndexed<String> dimValues = selector.getDimensionValues(dimension)) {
-      if (dimValues == null || dimValues.size() == 0) {
-        return ImmutableList.of(predicate.apply(null) ? allTrue(selector) : allFalse(selector));
+    Preconditions.checkNotNull(predicateFactory, "predicateFactory");
+    final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(column);
+    if (indexSupplier != null) {
+      final DruidPredicateIndex predicateIndex = indexSupplier.as(DruidPredicateIndex.class);
+      if (predicateIndex != null) {
+        return predicateIndex.forPredicate(predicateFactory);
       }
-
-      // Apply predicate to all dimension values and union the matching bitmaps
-      final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
-      return makePredicateQualifyingBitmapIterable(bitmapIndex, predicate, dimValues);
+      // index doesn't exist
+      return null;
     }
-    catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
+    // missing column -> match all rows if the predicate matches null; match no rows otherwise
+    return predicateFactory.makeStringPredicate().apply(null)
+           ? new AllTrueBitmapColumnIndex(selector)
+           : new AllFalseBitmapColumnIndex(selector);
   }
 
-  /**
-   * Return an estimated selectivity for bitmaps of all values matching the given predicate.
-   *
-   * @param dimension     dimension to look at
-   * @param indexSelector bitmap selector
-   * @param predicate     predicate to use
-   *
-   * @return estimated selectivity
-   *
-   * @see #matchPredicate(String, BitmapIndexSelector, BitmapResultFactory, Predicate)
-   */
-  public static double estimateSelectivity(
-      final String dimension,
-      final BitmapIndexSelector indexSelector,
-      final Predicate<String> predicate
+  public static BitmapColumnIndex makeNullIndex(boolean matchesNull, final ColumnIndexSelector selector)
+  {
+    return matchesNull ? new AllTrueBitmapColumnIndex(selector) : new AllFalseBitmapColumnIndex(selector);
+  }
+
+  public static ImmutableBitmap computeDefaultBitmapResults(Filter filter, ColumnIndexSelector selector)
+  {
+    return filter.getBitmapColumnIndex(selector).computeBitmapResult(
+        new DefaultBitmapResultFactory(selector.getBitmapFactory())
+    );
+  }
+
+  public static boolean supportsSelectivityEstimation(
+      Filter filter,
+      String dimension,
+      ColumnSelector columnSelector,
+      ColumnIndexSelector indexSelector
   )
   {
-    Preconditions.checkNotNull(dimension, "dimension");
-    Preconditions.checkNotNull(indexSelector, "selector");
-    Preconditions.checkNotNull(predicate, "predicate");
-
-    // Missing dimension -> match all rows if the predicate matches null; match no rows otherwise
-    try (final CloseableIndexed<String> dimValues = indexSelector.getDimensionValues(dimension)) {
-      if (dimValues == null || dimValues.size() == 0) {
-        return predicate.apply(null) ? 1. : 0.;
+    if (filter.getBitmapColumnIndex(indexSelector) != null) {
+      final ColumnHolder columnHolder = columnSelector.getColumnHolder(dimension);
+      if (columnHolder != null) {
+        return columnHolder.getCapabilities().hasMultipleValues().isFalse();
       }
-
-      // Apply predicate to all dimension values and union the matching bitmaps
-      final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(dimension);
-      return estimateSelectivity(
-          bitmapIndex,
-          IntIteratorUtils.toIntList(
-              makePredicateQualifyingIndexIterable(bitmapIndex, predicate, dimValues).iterator()
-          ),
-          indexSelector.getNumRows()
-      );
     }
-    catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
+    return false;
   }
 
-  /**
-   * Return an estimated selectivity for bitmaps for the dimension values given by dimValueIndexes.
-   *
-   * @param bitmapIndex  bitmap index
-   * @param bitmaps      bitmaps to extract, by index
-   * @param totalNumRows number of rows in the column associated with this bitmap index
-   *
-   * @return estimated selectivity
-   */
-  public static double estimateSelectivity(
-      final BitmapIndex bitmapIndex,
-      final IntList bitmaps,
-      final long totalNumRows
-  )
-  {
-    long numMatchedRows = 0;
-    for (int i = 0; i < bitmaps.size(); i++) {
-      final ImmutableBitmap bitmap = bitmapIndex.getBitmap(bitmaps.getInt(i));
-      numMatchedRows += bitmap.size();
-    }
-
-    return Math.min(1., (double) numMatchedRows / totalNumRows);
-  }
-
-  /**
-   * Return an estimated selectivity for bitmaps given by an iterator.
-   *
-   * @param bitmaps      iterator of bitmaps
-   * @param totalNumRows number of rows in the column associated with this bitmap index
-   *
-   * @return estimated selectivity
-   */
   public static double estimateSelectivity(
       final Iterator<ImmutableBitmap> bitmaps,
       final long totalNumRows
@@ -371,109 +206,7 @@ public class Filters
       numMatchedRows += bitmap.size();
     }
 
-    return Math.min(1., (double) numMatchedRows / totalNumRows);
-  }
-
-  private static Iterable<ImmutableBitmap> makePredicateQualifyingBitmapIterable(
-      final BitmapIndex bitmapIndex,
-      final Predicate<String> predicate,
-      final Indexed<String> dimValues
-  )
-  {
-    return bitmapsFromIndexes(makePredicateQualifyingIndexIterable(bitmapIndex, predicate, dimValues), bitmapIndex);
-  }
-
-  private static IntIterable makePredicateQualifyingIndexIterable(
-      final BitmapIndex bitmapIndex,
-      final Predicate<String> predicate,
-      final Indexed<String> dimValues
-  )
-  {
-    return new IntIterable()
-    {
-      @Override
-      public IntIterator iterator()
-      {
-        return new IntIterator()
-        {
-          private final int bitmapIndexCardinality = bitmapIndex.getCardinality();
-          private int nextIndex = 0;
-          private int found;
-
-          {
-            found = findNextIndex();
-          }
-
-          private int findNextIndex()
-          {
-            while (nextIndex < bitmapIndexCardinality && !predicate.apply(dimValues.get(nextIndex))) {
-              nextIndex++;
-            }
-
-            if (nextIndex < bitmapIndexCardinality) {
-              return nextIndex++;
-            } else {
-              return -1;
-            }
-          }
-
-          @Override
-          public boolean hasNext()
-          {
-            return found != -1;
-          }
-
-          @Override
-          public int nextInt()
-          {
-            int foundIndex = this.found;
-            if (foundIndex == -1) {
-              throw new NoSuchElementException();
-            }
-            this.found = findNextIndex();
-            return foundIndex;
-          }
-        };
-      }
-    };
-  }
-
-  static boolean supportsSelectivityEstimation(
-      Filter filter,
-      String dimension,
-      ColumnSelector columnSelector,
-      BitmapIndexSelector indexSelector
-  )
-  {
-    if (filter.supportsBitmapIndex(indexSelector)) {
-      final ColumnHolder columnHolder = columnSelector.getColumnHolder(dimension);
-      if (columnHolder != null) {
-        return !columnHolder.getCapabilities().hasMultipleValues();
-      }
-    }
-    return false;
-  }
-
-  public static ValueMatcher getLongPredicateMatcher(
-      final BaseLongColumnValueSelector longSelector,
-      final DruidLongPredicate predicate
-  )
-  {
-    return new ValueMatcher()
-    {
-      @Override
-      public boolean matches()
-      {
-        return predicate.applyLong(longSelector.getLong());
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("longSelector", longSelector);
-        inspector.visit("predicate", predicate);
-      }
-    };
+    return Math.min(1, (double) numMatchedRows / totalNumRows);
   }
 
   @Nullable
@@ -482,203 +215,234 @@ public class Filters
     if (filter == null) {
       return null;
     }
-    boolean useCNF = query.getContextBoolean(CTX_KEY_USE_FILTER_CNF, false);
-    return useCNF ? convertToCNF(filter) : filter;
+    boolean useCNF = query.getContextBoolean(QueryContexts.USE_FILTER_CNF_KEY, QueryContexts.DEFAULT_USE_FILTER_CNF);
+    try {
+      return useCNF ? Filters.toCnf(filter) : filter;
+    }
+    catch (CNFFilterExplosionException cnfFilterExplosionException) {
+      return filter; // cannot convert to CNF, return the filter as is
+    }
   }
 
-  public static Filter convertToCNF(Filter current)
+  public static Filter toCnf(Filter current) throws CNFFilterExplosionException
   {
-    current = pushDownNot(current);
-    current = flatten(current);
-    current = convertToCNFInternal(current);
-    current = flatten(current);
+    // Push down NOT filters to leaves if possible to remove NOT on NOT filters and reduce hierarchy.
+    // ex) ~(a OR ~b) => ~a AND b
+    current = HiveCnfHelper.pushDownNot(current);
+    // Flatten nested AND and OR filters if possible.
+    // ex) a AND (b AND c) => a AND b AND c
+    current = HiveCnfHelper.flatten(current);
+    // Pull up AND filters first to convert the filter into a conjunctive form.
+    // It is important to pull before CNF conversion to not create a huge CNF.
+    // ex) (a AND b) OR (a AND c AND d) => a AND (b OR (c AND d))
+    current = CalciteCnfHelper.pull(current);
+    // Convert filter to CNF.
+    // a AND (b OR (c AND d)) => a AND (b OR c) AND (b OR d)
+    current = HiveCnfHelper.convertToCnf(current);
+    // Flatten again to remove any flattenable nested AND or OR filters created during CNF conversion.
+    current = HiveCnfHelper.flatten(current);
     return current;
   }
 
-  // CNF conversion functions were adapted from Apache Hive, see:
-  // https://github.com/apache/hive/blob/branch-2.0/storage-api/src/java/org/apache/hadoop/hive/ql/io/sarg/SearchArgumentImpl.java
-  private static Filter pushDownNot(Filter current)
-  {
-    if (current instanceof NotFilter) {
-      Filter child = ((NotFilter) current).getBaseFilter();
-      if (child instanceof NotFilter) {
-        return pushDownNot(((NotFilter) child).getBaseFilter());
-      }
-      if (child instanceof AndFilter) {
-        List<Filter> children = new ArrayList<>();
-        for (Filter grandChild : ((AndFilter) child).getFilters()) {
-          children.add(pushDownNot(new NotFilter(grandChild)));
-        }
-        return new OrFilter(children);
-      }
-      if (child instanceof OrFilter) {
-        List<Filter> children = new ArrayList<>();
-        for (Filter grandChild : ((OrFilter) child).getFilters()) {
-          children.add(pushDownNot(new NotFilter(grandChild)));
-        }
-        return new AndFilter(children);
-      }
-    }
 
-
-    if (current instanceof AndFilter) {
-      List<Filter> children = new ArrayList<>();
-      for (Filter child : ((AndFilter) current).getFilters()) {
-        children.add(pushDownNot(child));
-      }
-      return new AndFilter(children);
-    }
-
-
-    if (current instanceof OrFilter) {
-      List<Filter> children = new ArrayList<>();
-      for (Filter child : ((OrFilter) current).getFilters()) {
-        children.add(pushDownNot(child));
-      }
-      return new OrFilter(children);
-    }
-    return current;
-  }
-
-  // CNF conversion functions were adapted from Apache Hive, see:
-  // https://github.com/apache/hive/blob/branch-2.0/storage-api/src/java/org/apache/hadoop/hive/ql/io/sarg/SearchArgumentImpl.java
-  private static Filter convertToCNFInternal(Filter current)
-  {
-    if (current instanceof NotFilter) {
-      return new NotFilter(convertToCNFInternal(((NotFilter) current).getBaseFilter()));
-    }
-    if (current instanceof AndFilter) {
-      List<Filter> children = new ArrayList<>();
-      for (Filter child : ((AndFilter) current).getFilters()) {
-        children.add(convertToCNFInternal(child));
-      }
-      return new AndFilter(children);
-    }
-    if (current instanceof OrFilter) {
-      // a list of leaves that weren't under AND expressions
-      List<Filter> nonAndList = new ArrayList<Filter>();
-      // a list of AND expressions that we need to distribute
-      List<Filter> andList = new ArrayList<Filter>();
-      for (Filter child : ((OrFilter) current).getFilters()) {
-        if (child instanceof AndFilter) {
-          andList.add(child);
-        } else if (child instanceof OrFilter) {
-          // pull apart the kids of the OR expression
-          for (Filter grandChild : ((OrFilter) child).getFilters()) {
-            nonAndList.add(grandChild);
-          }
-        } else {
-          nonAndList.add(child);
-        }
-      }
-      if (!andList.isEmpty()) {
-        List<Filter> result = new ArrayList<>();
-        generateAllCombinations(result, andList, nonAndList);
-        return new AndFilter(result);
-      }
-    }
-    return current;
-  }
-
-  // CNF conversion functions were adapted from Apache Hive, see:
-  // https://github.com/apache/hive/blob/branch-2.0/storage-api/src/java/org/apache/hadoop/hive/ql/io/sarg/SearchArgumentImpl.java
-  private static Filter flatten(Filter root)
-  {
-    if (root instanceof BooleanFilter) {
-      List<Filter> children = new ArrayList<>();
-      children.addAll(((BooleanFilter) root).getFilters());
-      // iterate through the index, so that if we add more children,
-      // they don't get re-visited
-      for (int i = 0; i < children.size(); ++i) {
-        Filter child = flatten(children.get(i));
-        // do we need to flatten?
-        if (child.getClass() == root.getClass() && !(child instanceof NotFilter)) {
-          boolean first = true;
-          List<Filter> grandKids = ((BooleanFilter) child).getFilters();
-          for (Filter grandkid : grandKids) {
-            // for the first grandkid replace the original parent
-            if (first) {
-              first = false;
-              children.set(i, grandkid);
-            } else {
-              children.add(++i, grandkid);
-            }
-          }
-        } else {
-          children.set(i, child);
-        }
-      }
-      // if we have a singleton AND or OR, just return the child
-      if (children.size() == 1 && (root instanceof AndFilter || root instanceof OrFilter)) {
-        return children.get(0);
-      }
-
-      if (root instanceof AndFilter) {
-        return new AndFilter(children);
-      } else if (root instanceof OrFilter) {
-        return new OrFilter(children);
-      }
-    }
-    return root;
-  }
-
-  // CNF conversion functions were adapted from Apache Hive, see:
-  // https://github.com/apache/hive/blob/branch-2.0/storage-api/src/java/org/apache/hadoop/hive/ql/io/sarg/SearchArgumentImpl.java
-  private static void generateAllCombinations(
-      List<Filter> result,
-      List<Filter> andList,
-      List<Filter> nonAndList
+  public static boolean checkFilterTuningUseIndex(
+      String columnName,
+      ColumnIndexSelector indexSelector,
+      @Nullable FilterTuning filterTuning
   )
   {
-    List<Filter> children = ((AndFilter) andList.get(0)).getFilters();
-    if (result.isEmpty()) {
-      for (Filter child : children) {
-        List<Filter> a = Lists.newArrayList(nonAndList);
-        a.add(child);
-        result.add(new OrFilter(a));
+    if (filterTuning != null) {
+      if (!filterTuning.getUseBitmapIndex()) {
+        return false;
       }
-    } else {
-      List<Filter> work = new ArrayList<>(result);
-      result.clear();
-      for (Filter child : children) {
-        for (Filter or : work) {
-          List<Filter> a = Lists.newArrayList((((OrFilter) or).getFilters()));
-          a.add(child);
-          result.add(new OrFilter(a));
+      if (filterTuning.hasValueCardinalityThreshold()) {
+        final ColumnIndexSupplier indexSupplier = indexSelector.getIndexSupplier(columnName);
+        if (indexSupplier != null) {
+          final DictionaryEncodedStringValueIndex valueIndex =
+              indexSupplier.as(DictionaryEncodedStringValueIndex.class);
+          if (valueIndex != null) {
+            final int cardinality = valueIndex.getCardinality();
+            Integer min = filterTuning.getMinCardinalityToUseBitmapIndex();
+            Integer max = filterTuning.getMaxCardinalityToUseBitmapIndex();
+            if (min != null && cardinality < min) {
+              return false;
+            }
+            if (max != null && cardinality > max) {
+              return false;
+            }
+          }
         }
       }
     }
-    if (andList.size() > 1) {
-      generateAllCombinations(result, andList.subList(1, andList.size()), nonAndList);
+    return true;
+  }
+
+
+
+  /**
+   * Create a filter representing an AND relationship across a list of filters. Deduplicates filters, flattens stacks,
+   * and removes null filters and literal "false" filters.
+   *
+   * @param filters List of filters
+   *
+   * @return If "filters" has more than one filter remaining after processing, returns {@link AndFilter}.
+   * If "filters" has a single element remaining after processing, return that filter alone.
+   *
+   * @throws IllegalArgumentException if "filters" is empty or only contains nulls
+   */
+  public static Filter and(final List<Filter> filters)
+  {
+    return maybeAnd(filters).orElseThrow(() -> new IAE("Expected nonempty filters list"));
+  }
+
+  /**
+   * Like {@link #and}, but returns an empty Optional instead of throwing an exception if "filters" is empty
+   * or only contains nulls.
+   */
+  public static Optional<Filter> maybeAnd(List<Filter> filters)
+  {
+    final List<Filter> nonNullFilters = nonNull(filters);
+
+    if (nonNullFilters.isEmpty()) {
+      return Optional.empty();
+    }
+
+    final LinkedHashSet<Filter> filtersToUse = flattenAndChildren(nonNullFilters);
+
+    if (filtersToUse.isEmpty()) {
+      assert !filters.isEmpty();
+      // Original "filters" list must have been 100% literally-true filters.
+      return Optional.of(TrueFilter.instance());
+    } else if (filtersToUse.stream().anyMatch(filter -> filter instanceof FalseFilter)) {
+      // AND of FALSE with anything is FALSE.
+      return Optional.of(FalseFilter.instance());
+    } else if (filtersToUse.size() == 1) {
+      return Optional.of(Iterables.getOnlyElement(filtersToUse));
+    } else {
+      return Optional.of(new AndFilter(filtersToUse));
     }
   }
 
   /**
-   * This method provides a "standard" implementation of {@link Filter#shouldUseBitmapIndex(BitmapIndexSelector)} which takes
-   * a {@link Filter}, a {@link BitmapIndexSelector}, and {@link FilterTuning} to determine if:
-   *  a) the filter supports bitmap indexes for all required columns
-   *  b) the filter tuning specifies that it should use the index
-   *  c) the cardinality of the column is above the minimum threshold and below the maximum threshold to use the index
+   * Create a filter representing an OR relationship across a list of filters. Deduplicates filters, flattens stacks,
+   * and removes null filters and literal "false" filters.
    *
-   * If all these things are true, {@link org.apache.druid.segment.QueryableIndexStorageAdapter} will utilize the
-   * indexes.
+   * @param filters List of filters
+   *
+   * @return If "filters" has more than one filter remaining after processing, returns {@link OrFilter}.
+   * If "filters" has a single element remaining after processing, return that filter alone.
+   *
+   * @throws IllegalArgumentException if "filters" is empty
    */
-  public static boolean shouldUseBitmapIndex(
-      Filter filter,
-      BitmapIndexSelector indexSelector,
-      @Nullable FilterTuning filterTuning
-  )
+  public static Filter or(final List<Filter> filters)
   {
-    final FilterTuning tuning = filterTuning != null ? filterTuning : FilterTuning.createDefault(filter, indexSelector);
-    if (filter.supportsBitmapIndex(indexSelector) && tuning.getUseBitmapIndex()) {
-      return filter.getRequiredColumns().stream().allMatch(column -> {
-        final BitmapIndex index = indexSelector.getBitmapIndex(column);
-        Preconditions.checkNotNull(index, "Column does not have a bitmap index");
-        final int cardinality = index.getCardinality();
-        return cardinality >= tuning.getMinCardinalityToUseBitmapIndex()
-               && cardinality <= tuning.getMaxCardinalityToUseBitmapIndex();
-      });
+    return maybeOr(filters).orElseThrow(() -> new IAE("Expected nonempty filters list"));
+  }
+
+  /**
+   * Like {@link #or}, but returns an empty Optional instead of throwing an exception if "filters" is empty
+   * or only contains nulls.
+   */
+  public static Optional<Filter> maybeOr(final List<Filter> filters)
+  {
+    final List<Filter> nonNullFilters = nonNull(filters);
+
+    if (nonNullFilters.isEmpty()) {
+      return Optional.empty();
     }
-    return false;
+
+    final LinkedHashSet<Filter> filtersToUse = flattenOrChildren(nonNullFilters);
+
+    if (filtersToUse.isEmpty()) {
+      assert !nonNullFilters.isEmpty();
+      // Original "filters" list must have been 100% literally-false filters.
+      return Optional.of(FalseFilter.instance());
+    } else if (filtersToUse.stream().anyMatch(filter -> filter instanceof TrueFilter)) {
+      // OR of TRUE with anything is TRUE.
+      return Optional.of(TrueFilter.instance());
+    } else if (filtersToUse.size() == 1) {
+      return Optional.of(Iterables.getOnlyElement(filtersToUse));
+    } else {
+      return Optional.of(new OrFilter(filtersToUse));
+    }
+  }
+
+  /**
+   * @param filter the filter.
+   *
+   * @return The normalized or clauses for the provided filter.
+   */
+  public static List<Filter> toNormalizedOrClauses(Filter filter) throws CNFFilterExplosionException
+  {
+    Filter normalizedFilter = Filters.toCnf(filter);
+
+    // List of candidates for pushdown
+    // CNF normalization will generate either
+    // - an AND filter with multiple subfilters
+    // - or a single non-AND subfilter which cannot be split further
+    List<Filter> normalizedOrClauses;
+    if (normalizedFilter instanceof AndFilter) {
+      normalizedOrClauses = new ArrayList<>(((AndFilter) normalizedFilter).getFilters());
+    } else {
+      normalizedOrClauses = Collections.singletonList(normalizedFilter);
+    }
+    return normalizedOrClauses;
+  }
+
+
+  public static boolean filterMatchesNull(Filter filter)
+  {
+    ValueMatcher valueMatcher = filter.makeMatcher(ALL_NULL_COLUMN_SELECTOR_FACTORY);
+    return valueMatcher.matches();
+  }
+
+
+  /**
+   * Returns a list equivalent to the input list, but with nulls removed. If the original list has no nulls,
+   * it is returned directly.
+   */
+  private static List<Filter> nonNull(final List<Filter> filters)
+  {
+    if (filters.stream().anyMatch(Objects::isNull)) {
+      return filters.stream().filter(Objects::nonNull).collect(Collectors.toList());
+    } else {
+      return filters;
+    }
+  }
+
+  /**
+   * Flattens children of an AND, removes duplicates, and removes literally-true filters.
+   */
+  private static LinkedHashSet<Filter> flattenAndChildren(final Collection<Filter> filters)
+  {
+    final LinkedHashSet<Filter> retVal = new LinkedHashSet<>();
+
+    for (Filter child : filters) {
+      if (child instanceof AndFilter) {
+        retVal.addAll(flattenAndChildren(((AndFilter) child).getFilters()));
+      } else if (!(child instanceof TrueFilter)) {
+        retVal.add(child);
+      }
+    }
+
+    return retVal;
+  }
+
+  /**
+   * Flattens children of an OR, removes duplicates, and removes literally-false filters.
+   */
+  private static LinkedHashSet<Filter> flattenOrChildren(final Collection<Filter> filters)
+  {
+    final LinkedHashSet<Filter> retVal = new LinkedHashSet<>();
+
+    for (Filter child : filters) {
+      if (child instanceof OrFilter) {
+        retVal.addAll(flattenOrChildren(((OrFilter) child).getFilters()));
+      } else if (!(child instanceof FalseFilter)) {
+        retVal.add(child);
+      }
+    }
+
+    return retVal;
   }
 }

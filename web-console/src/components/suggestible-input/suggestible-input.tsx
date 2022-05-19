@@ -16,117 +16,61 @@
  * limitations under the License.
  */
 
-import {
-  Button,
-  HTMLInputProps,
-  InputGroup,
-  Intent,
-  Menu,
-  MenuItem,
-  Popover,
-  Position,
-} from '@blueprintjs/core';
+import { Button, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
-import React from 'react';
+import React, { useRef } from 'react';
 
-export interface SuggestionGroup {
-  group: string;
-  suggestions: string[];
-}
+import { JSON_STRING_FORMATTER } from '../../utils';
+import { FormattedInput, FormattedInputProps } from '../formatted-input/formatted-input';
+import { Suggestion, SuggestionMenu } from '../suggestion-menu/suggestion-menu';
 
-export interface SuggestibleInputProps extends HTMLInputProps {
-  onValueChange: (newValue: string) => void;
+export interface SuggestibleInputProps extends Omit<FormattedInputProps, 'formatter'> {
   onFinalize?: () => void;
-  suggestions?: (string | SuggestionGroup)[];
-  large?: boolean;
-  intent?: Intent;
+  suggestions?: Suggestion[];
 }
 
-export class SuggestibleInput extends React.PureComponent<SuggestibleInputProps> {
-  private lastFocusValue?: string;
+export const SuggestibleInput = React.memo(function SuggestibleInput(props: SuggestibleInputProps) {
+  const { className, value, onValueChange, onFinalize, onBlur, onFocus, suggestions, ...rest } =
+    props;
 
-  constructor(props: SuggestibleInputProps, context: any) {
-    super(props, context);
-    // this.state = {};
-  }
+  const lastFocusValue = useRef<string>();
 
-  public handleSuggestionSelect(suggestion: string) {
-    const { onValueChange, onFinalize } = this.props;
+  function handleSuggestionSelect(suggestion: undefined | string) {
     onValueChange(suggestion);
     if (onFinalize) onFinalize();
   }
 
-  renderSuggestionsMenu() {
-    const { suggestions } = this.props;
-    if (!suggestions) return;
-
-    return (
-      <Menu>
-        {suggestions.map(suggestion => {
-          if (typeof suggestion === 'string') {
-            return (
-              <MenuItem
-                key={suggestion}
-                text={suggestion}
-                onClick={() => this.handleSuggestionSelect(suggestion)}
-              />
-            );
-          } else {
-            return (
-              <MenuItem key={suggestion.group} text={suggestion.group}>
-                {suggestion.suggestions.map(suggestion => (
-                  <MenuItem
-                    key={suggestion}
-                    text={suggestion}
-                    onClick={() => this.handleSuggestionSelect(suggestion)}
-                  />
-                ))}
-              </MenuItem>
-            );
-          }
-        })}
-      </Menu>
-    );
-  }
-
-  render(): JSX.Element {
-    const {
-      className,
-      value,
-      defaultValue,
-      onValueChange,
-      onFinalize,
-      onBlur,
-      ...rest
-    } = this.props;
-
-    const suggestionsMenu = this.renderSuggestionsMenu();
-    return (
-      <InputGroup
-        className={classNames('suggestible-input', className)}
-        value={value as string}
-        defaultValue={defaultValue as string}
-        onChange={(e: any) => {
-          onValueChange(e.target.value);
-        }}
-        onFocus={(e: any) => {
-          this.lastFocusValue = e.target.value;
-        }}
-        onBlur={(e: any) => {
-          if (onBlur) onBlur(e);
-          if (this.lastFocusValue === e.target.value) return;
-          if (onFinalize) onFinalize();
-        }}
-        rightElement={
-          suggestionsMenu && (
-            <Popover content={suggestionsMenu} position={Position.BOTTOM_RIGHT} autoFocus={false}>
-              <Button icon={IconNames.CARET_DOWN} minimal />
-            </Popover>
-          )
-        }
-        {...rest}
-      />
-    );
-  }
-}
+  return (
+    <FormattedInput
+      className={classNames('suggestible-input', className)}
+      formatter={JSON_STRING_FORMATTER}
+      value={value}
+      onValueChange={onValueChange}
+      onFocus={e => {
+        lastFocusValue.current = e.target.value;
+        onFocus?.(e);
+      }}
+      onBlur={e => {
+        onBlur?.(e);
+        if (lastFocusValue.current === e.target.value) return;
+        onFinalize?.();
+      }}
+      rightElement={
+        suggestions && (
+          <Popover2
+            content={
+              <SuggestionMenu suggestions={suggestions} onSuggest={handleSuggestionSelect} />
+            }
+            position={Position.BOTTOM_RIGHT}
+            autoFocus={false}
+          >
+            <Button icon={IconNames.CARET_DOWN} minimal />
+          </Popover2>
+        )
+      }
+      {...rest}
+    />
+  );
+});

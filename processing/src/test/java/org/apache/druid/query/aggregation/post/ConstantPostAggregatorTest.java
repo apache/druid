@@ -20,6 +20,13 @@
 package org.apache.druid.query.aggregation.post;
 
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -63,5 +70,35 @@ public class ConstantPostAggregatorTest
         ConstantPostAggregator.class
     );
     Assert.assertEquals(aggregator, aggregator1);
+  }
+
+  @Test
+  public void testResultArraySignature()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .granularity(Granularities.HOUR)
+              .aggregators(
+                  new CountAggregatorFactory("count")
+              )
+              .postAggregators(
+                  new ConstantPostAggregator("a", 3L),
+                  new ConstantPostAggregator("b", 1.0f),
+                  new ConstantPostAggregator("c", 5.0)
+              )
+              .build();
+
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("count", ColumnType.LONG)
+                    .add("a", ColumnType.LONG)
+                    .add("b", ColumnType.DOUBLE)
+                    .add("c", ColumnType.DOUBLE)
+                    .build(),
+        new TimeseriesQueryQueryToolChest().resultArraySignature(query)
+    );
   }
 }

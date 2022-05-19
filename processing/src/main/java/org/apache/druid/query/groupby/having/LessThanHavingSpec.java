@@ -64,7 +64,7 @@ public class LessThanHavingSpec implements HavingSpec
   @Override
   public void setQuery(GroupByQuery query)
   {
-    columnNumber = query.getResultRowPositionLookup().getInt(aggregationName);
+    columnNumber = query.getResultRowSignature().indexOf(aggregationName);
     aggregators = HavingSpecUtil.computeAggregatorsMap(query.getAggregatorSpecs());
   }
 
@@ -119,12 +119,10 @@ public class LessThanHavingSpec implements HavingSpec
   @Override
   public String toString()
   {
-    final StringBuilder sb = new StringBuilder();
-    sb.append("LessThanHavingSpec");
-    sb.append("{aggregationName='").append(aggregationName).append('\'');
-    sb.append(", value=").append(value);
-    sb.append('}');
-    return sb.toString();
+    return "LessThanHavingSpec{" +
+           "aggregationName='" + aggregationName + '\'' +
+           ", value=" + value +
+           '}';
   }
 
   @Override

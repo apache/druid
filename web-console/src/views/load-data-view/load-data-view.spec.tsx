@@ -21,9 +21,9 @@ import React from 'react';
 
 import { LoadDataView } from './load-data-view';
 
-describe('load data view', () => {
+describe('LoadDataView', () => {
   it('matches snapshot', () => {
-    const loadDataView = shallow(<LoadDataView goToTask={() => {}} />);
+    const loadDataView = shallow(<LoadDataView goToIngestion={() => {}} />);
     expect(loadDataView).toMatchSnapshot();
   });
 });

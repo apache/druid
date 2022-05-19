@@ -82,7 +82,7 @@ public class ScanResultValueTimestampComparatorTest
         events2
     );
 
-    Assert.assertEquals(-1, comparator.compare(s1, s2));
+    Assert.assertEquals(1, comparator.compare(s1, s2));
   }
 
   @Test
@@ -119,7 +119,7 @@ public class ScanResultValueTimestampComparatorTest
         events2
     );
 
-    Assert.assertEquals(1, comparator.compare(s1, s2));
+    Assert.assertEquals(-1, comparator.compare(s1, s2));
   }
 
   @Test
@@ -154,7 +154,7 @@ public class ScanResultValueTimestampComparatorTest
         events2
     );
 
-    Assert.assertEquals(-1, comparator.compare(s1, s2));
+    Assert.assertEquals(1, comparator.compare(s1, s2));
   }
 
   @Test
@@ -189,6 +189,6 @@ public class ScanResultValueTimestampComparatorTest
         events2
     );
 
-    Assert.assertEquals(1, comparator.compare(s1, s2));
+    Assert.assertEquals(-1, comparator.compare(s1, s2));
   }
 }

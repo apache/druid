@@ -28,14 +28,11 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
-import com.google.inject.Inject;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.guice.annotations.EscalatedGlobal;
-import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -58,7 +55,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -105,19 +101,20 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   // For each queryable server, a name -> DruidServerHolder entry is kept
   private final ConcurrentHashMap<String, DruidServerHolder> servers = new ConcurrentHashMap<>();
 
+  private final String execNamePrefix;
   private volatile ScheduledExecutorService executor;
 
   private final HttpClient httpClient;
   private final ObjectMapper smileMapper;
   private final HttpServerInventoryViewConfig config;
 
-  @Inject
   public HttpServerInventoryView(
-      final @Smile ObjectMapper smileMapper,
-      final @EscalatedGlobal HttpClient httpClient,
+      final ObjectMapper smileMapper,
+      final HttpClient httpClient,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter,
-      final HttpServerInventoryViewConfig config
+      final HttpServerInventoryViewConfig config,
+      final String execNamePrefix
   )
   {
     this.httpClient = httpClient;
@@ -126,6 +123,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     this.defaultFilter = defaultFilter;
     this.finalPredicate = defaultFilter;
     this.config = config;
+    this.execNamePrefix = execNamePrefix;
   }
 
 
@@ -137,12 +135,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         throw new ISE("can't start.");
       }
 
-      log.info("Starting HttpServerInventoryView.");
+      log.info("Starting %s.", execNamePrefix);
 
       try {
         executor = ScheduledExecutors.fixed(
             config.getNumThreads(),
-            "HttpServerInventoryView-%s"
+            execNamePrefix + "-%s"
         );
 
         DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForService(DataNodeService.DISCOVERY_SERVICE_KEY);
@@ -179,7 +177,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                     node.getDruidNode().getHostAndPort(),
                     node.getDruidNode().getHostAndTlsPort(),
                     ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getMaxSize(),
-                    ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getType(),
+                    ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getServerType(),
                     ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getTier(),
                     ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getPriority()
                 );
@@ -195,7 +193,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         lifecycleLock.exitStart();
       }
 
-      log.info("Started HttpServerInventoryView.");
+      log.info("Started %s.", execNamePrefix);
     }
   }
 
@@ -207,13 +205,13 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         throw new ISE("can't stop.");
       }
 
-      log.info("Stopping HttpServerInventoryView.");
+      log.info("Stopping %s.", execNamePrefix);
 
       if (executor != null) {
         executor.shutdownNow();
       }
 
-      log.info("Stopped HttpServerInventoryView.");
+      log.info("Stopped %s.", execNamePrefix);
     }
   }
 
@@ -228,7 +226,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       throw new ISE("Lifecycle has already started.");
     }
 
-    SegmentCallback filteringSegmentCallback = new SingleServerInventoryView.FilteringSegmentCallback(callback, filter);
+    SegmentCallback filteringSegmentCallback = new FilteringSegmentCallback(callback, filter);
     segmentCallbacks.put(filteringSegmentCallback, exec);
     segmentPredicates.put(filteringSegmentCallback, filter);
 
@@ -414,7 +412,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   {
     Preconditions.checkArgument(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
 
-    Map<String, Object> result = new HashMap<>(servers.size());
+    Map<String, Object> result = Maps.newHashMapWithExpectedSize(servers.size());
     for (Map.Entry<String, DruidServerHolder> e : servers.entrySet()) {
       DruidServerHolder serverHolder = e.getValue();
       result.put(
@@ -552,7 +550,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
             if (request instanceof SegmentChangeRequestLoad) {
               DataSegment segment = ((SegmentChangeRequestLoad) request).getSegment();
               toRemove.remove(segment.getId());
-              addSegment(segment);
+              addSegment(segment, true);
             } else {
               log.error(
                   "Server[%s] gave a non-load dataSegmentChangeRequest[%s]., Ignored.",
@@ -563,7 +561,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
           }
 
           for (DataSegment segmentToRemove : toRemove.values()) {
-            removeSegment(segmentToRemove);
+            removeSegment(segmentToRemove, true);
           }
         }
 
@@ -572,9 +570,9 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         {
           for (DataSegmentChangeRequest request : changes) {
             if (request instanceof SegmentChangeRequestLoad) {
-              addSegment(((SegmentChangeRequestLoad) request).getSegment());
+              addSegment(((SegmentChangeRequestLoad) request).getSegment(), false);
             } else if (request instanceof SegmentChangeRequestDrop) {
-              removeSegment(((SegmentChangeRequestDrop) request).getSegment());
+              removeSegment(((SegmentChangeRequestDrop) request).getSegment(), false);
             } else {
               log.error(
                   "Server[%s] gave a non load/drop dataSegmentChangeRequest[%s], Ignored.",
@@ -587,22 +585,24 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       };
     }
 
-    private void addSegment(final DataSegment segment)
+    private void addSegment(DataSegment segment, boolean fullSync)
     {
       if (finalPredicate.apply(Pair.of(druidServer.getMetadata(), segment))) {
         if (druidServer.getSegment(segment.getId()) == null) {
-          druidServer.addDataSegment(segment);
+          DataSegment theSegment = DataSegmentInterner.intern(segment);
+          druidServer.addDataSegment(theSegment);
           runSegmentCallbacks(
               new Function<SegmentCallback, CallbackAction>()
               {
                 @Override
                 public CallbackAction apply(SegmentCallback input)
                 {
-                  return input.segmentAdded(druidServer.getMetadata(), segment);
+                  return input.segmentAdded(druidServer.getMetadata(), theSegment);
                 }
               }
           );
-        } else {
+        } else if (!fullSync) {
+          // duplicates can happen when doing a full sync from a 'reset', so only warn for dupes on delta changes
           log.warn(
               "Not adding or running callbacks for existing segment[%s] on server[%s]",
               segment.getId(),
@@ -612,7 +612,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       }
     }
 
-    private void removeSegment(final DataSegment segment)
+    private void removeSegment(final DataSegment segment, boolean fullSync)
     {
       if (druidServer.removeDataSegment(segment.getId()) != null) {
         runSegmentCallbacks(
@@ -625,7 +625,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               }
             }
         );
-      } else {
+      } else if (!fullSync) {
+        // duplicates can happen when doing a full sync from a 'reset', so only warn for dupes on delta changes
         log.warn(
             "Not running cleanup or callbacks for non-existing segment[%s] on server[%s]",
             segment.getId(),

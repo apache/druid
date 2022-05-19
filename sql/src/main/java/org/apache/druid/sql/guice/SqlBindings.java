@@ -20,10 +20,17 @@
 package org.apache.druid.sql.guice;
 
 import com.google.inject.Binder;
+import com.google.inject.Key;
+import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
+import org.apache.druid.guice.PolyBind;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.schema.NamedSchema;
 
+/**
+ * Utility class that provides bindings to extendable components in the SqlModule
+ */
 public class SqlBindings
 {
   public static void addAggregator(
@@ -34,11 +41,41 @@ public class SqlBindings
     Multibinder.newSetBinder(binder, SqlAggregator.class).addBinding().to(aggregatorClass);
   }
 
+  /**
+   * Add a choice for {@code APPROX_COUNT_DISTINCT} implementation.
+   *
+   * The SqlAggregator's {@link SqlAggregator#calciteFunction()} method will be ignored and replaced by the
+   * version from {@link org.apache.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator}. For sane results,
+   * the provided aggregator class must be compatible with that function signature.
+   */
+  public static void addApproxCountDistinctChoice(
+      final Binder binder,
+      final String name,
+      final Class<? extends SqlAggregator> clazz
+  )
+  {
+    PolyBind.optionBinder(binder, Key.get(SqlAggregator.class, ApproxCountDistinct.class))
+            .addBinding(name)
+            .to(clazz);
+  }
+
   public static void addOperatorConversion(
       final Binder binder,
       final Class<? extends SqlOperatorConversion> clazz
   )
   {
     Multibinder.newSetBinder(binder, SqlOperatorConversion.class).addBinding().to(clazz);
+  }
+
+  /**
+   * Returns a multiBinder that can modules can use to bind {@link NamedSchema} to be used by the SqlModule
+   */
+  public static void addSchema(
+      final Binder binder,
+      final Class<? extends NamedSchema> clazz
+  )
+  {
+    binder.bind(clazz).in(Scopes.SINGLETON);
+    Multibinder.newSetBinder(binder, NamedSchema.class).addBinding().to(clazz);
   }
 }

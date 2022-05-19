@@ -19,7 +19,7 @@
 const replace = require('replace-in-file');
 
 if (process.argv.length !== 4) {
-  console.log('Usage: node fix-path.js latest 0.16.0-incubating');
+  console.log('Usage: node fix-path.js latest 0.17.0');
   process.exit(1);
 }
 
@@ -48,6 +48,23 @@ try {
     to: (match, fullText, b, filename) => {
       const path = filename.replace('./build/ApacheDruid/docs/', '');
       return `<link rel="canonical" href="https://druid.apache.org/docs/${urlVersion}/${path}"/><meta name="generator" content="Docusaurus"/>`;
+    },
+  });
+
+  // Add docusearch version meta
+  // ref: https://community.algolia.com/docsearch/required-configuration.html#introduces-global-information-as-meta-tags
+  replace.sync({
+    files: './build/ApacheDruid/docs/**/*.html',
+    from: /<meta name="docsearch:language"[^>]+\/>/g,
+    to: (match, fullText) => {
+      return match + `<meta name="docsearch:version" content="${druidVersion}" />`;
+    },
+  });
+  replace.sync({
+    files: './build/ApacheDruid/docs/**/*.html',
+    from: /"version:druidVersion"/g,
+    to: (match, fullText) => {
+      return `"version:${druidVersion}"`;
     },
   });
 

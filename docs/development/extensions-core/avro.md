@@ -22,208 +22,43 @@ title: "Apache Avro"
   ~ under the License.
   -->
 
-This Apache Druid (incubating) extension enables Druid to ingest and understand the Apache Avro data format. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-avro-extensions` as an extension.
+This Apache Druid extension enables Druid to ingest and parse the Apache Avro data format as follows:
+- [Avro stream input format](../../ingestion/data-formats.md#avro-stream) for Kafka and Kinesis.
+- [Avro OCF input format](../../ingestion/data-formats.md#avro-ocf) for native batch ingestion.
+- [Avro Hadoop Parser](../../ingestion/data-formats.md#avro-hadoop-parser).
 
-### Avro Stream Parser
+The [Avro Stream Parser](../../ingestion/data-formats.md#avro-stream-parser) is deprecated.
 
-This is for streaming/realtime ingestion.
+## Load the Avro extension
 
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| type | String | This should say `avro_stream`. | no |
-| avroBytesDecoder | JSON Object | Specifies how to decode bytes to Avro record. | yes |
-| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be an "avro" parseSpec. | yes |
+To use the Avro extension, add the `druid-avro-extensions` to the list of loaded extensions. See [Loading extensions](../../development/extensions.md#loading-extensions) for more information.
 
-An Avro parseSpec can contain a [`flattenSpec`](../../ingestion/index.md#flattenspec) using either the "root" or "path"
-field types, which can be used to read nested Avro records. The "jq" field type is not currently supported for Avro.
+## Avro types
 
-For example, using Avro stream parser with schema repo Avro bytes decoder:
+Druid supports most Avro types natively. This section describes some  exceptions.
 
-```json
-"parser" : {
-  "type" : "avro_stream",
-  "avroBytesDecoder" : {
-    "type" : "schema_repo",
-    "subjectAndIdConverter" : {
-      "type" : "avro_1124",
-      "topic" : "${YOUR_TOPIC}"
-    },
-    "schemaRepository" : {
-      "type" : "avro_1124_rest_client",
-      "url" : "${YOUR_SCHEMA_REPO_END_POINT}",
-    }
-  },
-  "parseSpec" : {
-    "format": "avro",
-    "timestampSpec": <standard timestampSpec>,
-    "dimensionsSpec": <standard dimensionsSpec>,
-    "flattenSpec": <optional>
-  }
-}
-```
+### Unions
+Druid has two modes for supporting `union` types.
 
-#### Avro Bytes Decoder
+The default mode treats unions as a single value regardless of the type of data populating the union.
 
-If `type` is not included, the avroBytesDecoder defaults to `schema_repo`.
+If you want to operate on individual members of a union, set `extractUnionsByType` on the Avro parser. This configuration expands union values into nested objects according to the following rules:
+- Primitive types and unnamed complex types are keyed by their type name, such as `int` and `string`.
+- Complex named types are keyed by their names, this includes `record`, `fixed`, and `enum`.
+- The Avro null type is elided as its value can only ever be null.
 
-##### Inline Schema Based Avro Bytes Decoder
+This is safe because an Avro union can only contain a single member of each unnamed type and duplicates of the same named type are not allowed. For example, only a single array is allowed, multiple records (or other named types) are allowed as long as each has a unique name.
 
-> The "schema_inline" decoder reads Avro records using a fixed schema and does not support schema migration. If you
-> may need to migrate schemas in the future, consider one of the other decoders, all of which use a message header that
-> allows the parser to identify the proper Avro schema for reading records.
+You can then access the members of the union with a [flattenSpec](../../ingestion/data-formats.md#flattenspec) like you would for other nested types.
 
-This decoder can be used if all the input events can be read using the same schema. In that case schema can be specified in the input task JSON itself as described below.
+### Binary types
+The extension returns `bytes` and `fixed` Avro types as base64 encoded strings by default. To decode these types as UTF-8 strings, enable the `binaryAsString` option on the Avro parser.
 
-```
-...
-"avroBytesDecoder": {
-  "type": "schema_inline",
-  "schema": {
-    //your schema goes here, for example
-    "namespace": "org.apache.druid.data",
-    "name": "User",
-    "type": "record",
-    "fields": [
-      { "name": "FullName", "type": "string" },
-      { "name": "Country", "type": "string" }
-    ]
-  }
-}
-...
-```
+### Enums
+The extension returns `enum` types as `string` of the enum symbol.
 
-##### Multiple Inline Schemas Based Avro Bytes Decoder
+### Complex types
+You can ingest `record` and `map` types representing nested data with a [flattenSpec](../../ingestion/data-formats.md#flattenspec) on the parser.
 
-This decoder can be used if different input events can have different read schema. In that case schema can be specified in the input task JSON itself as described below.
-
-```
-...
-"avroBytesDecoder": {
-  "type": "multiple_schemas_inline",
-  "schemas": {
-    //your id -> schema map goes here, for example
-    "1": {
-      "namespace": "org.apache.druid.data",
-      "name": "User",
-      "type": "record",
-      "fields": [
-        { "name": "FullName", "type": "string" },
-        { "name": "Country", "type": "string" }
-      ]
-    },
-    "2": {
-      "namespace": "org.apache.druid.otherdata",
-      "name": "UserIdentity",
-      "type": "record",
-      "fields": [
-        { "name": "Name", "type": "string" },
-        { "name": "Location", "type": "string" }
-      ]
-    },
-    ...
-    ...
-  }
-}
-...
-```
-
-Note that it is essentially a map of integer schema ID to avro schema object. This parser assumes that record has following format.
-  first 1 byte is version and must always be 1.
-  next 4 bytes are integer schema ID serialized using big-endian byte order.
-  remaining bytes contain serialized avro message.
-
-##### SchemaRepo Based Avro Bytes Decoder
-
-This Avro bytes decoder first extract `subject` and `id` from input message bytes, then use them to lookup the Avro schema with which to decode Avro record from bytes. Details can be found in [schema repo](https://github.com/schema-repo/schema-repo) and [AVRO-1124](https://issues.apache.org/jira/browse/AVRO-1124). You will need an http service like schema repo to hold the avro schema. Towards schema registration on the message producer side, you can refer to `org.apache.druid.data.input.AvroStreamInputRowParserTest#testParse()`.
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| type | String | This should say `schema_repo`. | no |
-| subjectAndIdConverter | JSON Object | Specifies the how to extract subject and id from message bytes. | yes |
-| schemaRepository | JSON Object | Specifies the how to lookup Avro schema from subject and id. | yes |
-
-###### Avro-1124 Subject And Id Converter
-
-This section describes the format of the `subjectAndIdConverter` object for the `schema_repo` Avro bytes decoder.
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| type | String | This should say `avro_1124`. | no |
-| topic | String | Specifies the topic of your Kafka stream. | yes |
-
-
-###### Avro-1124 Schema Repository
-
-This section describes the format of the `schemaRepository` object for the `schema_repo` Avro bytes decoder.
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| type | String | This should say `avro_1124_rest_client`. | no |
-| url | String | Specifies the endpoint url of your Avro-1124 schema repository. | yes |
-
-##### Confluent Schema Registry-based Avro Bytes Decoder
-
-This Avro bytes decoder first extract unique `id` from input message bytes, then use them it lookup in the Schema Registry for the related schema, with which to decode Avro record from bytes.
-Details can be found in Schema Registry [documentation](http://docs.confluent.io/current/schema-registry/docs/) and [repository](https://github.com/confluentinc/schema-registry).
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| type | String | This should say `schema_registry`. | no |
-| url | String | Specifies the url endpoint of the Schema Registry. | yes |
-| capacity | Integer | Specifies the max size of the cache (default == Integer.MAX_VALUE). | no |
-
-```json
-...
-"avroBytesDecoder" : {
-   "type" : "schema_registry",
-   "url" : <schema-registry-url>
-}
-...
-```
-
-### Avro Hadoop Parser
-
-This is for batch ingestion using the `HadoopDruidIndexer`. The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"org.apache.druid.data.input.avro.AvroValueInputFormat"`. You may want to set Avro reader's schema in `jobProperties` in `tuningConfig`, e.g.: `"avro.schema.input.value.path": "/path/to/your/schema.avsc"` or `"avro.schema.input.value": "your_schema_JSON_object"`, if reader's schema is not set, the schema in Avro object container file will be used, see [Avro specification](http://avro.apache.org/docs/1.7.7/spec.html#Schema+Resolution). Make sure to include "org.apache.druid.extensions:druid-avro-extensions" as an extension.
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| type | String | This should say `avro_hadoop`. | no |
-| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be an "avro" parseSpec. | yes |
-
-An Avro parseSpec can contain a [`flattenSpec`](../../ingestion/index.md#flattenspec) using either the "root" or "path"
-field types, which can be used to read nested Avro records. The "jq" field type is not currently supported for Avro.
-
-For example, using Avro Hadoop parser with custom reader's schema file:
-
-```json
-{
-  "type" : "index_hadoop",
-  "spec" : {
-    "dataSchema" : {
-      "dataSource" : "",
-      "parser" : {
-        "type" : "avro_hadoop",
-        "parseSpec" : {
-          "format": "avro",
-          "timestampSpec": <standard timestampSpec>,
-          "dimensionsSpec": <standard dimensionsSpec>,
-          "flattenSpec": <optional>
-        }
-      }
-    },
-    "ioConfig" : {
-      "type" : "hadoop",
-      "inputSpec" : {
-        "type" : "static",
-        "inputFormat": "org.apache.druid.data.input.avro.AvroValueInputFormat",
-        "paths" : ""
-      }
-    },
-    "tuningConfig" : {
-       "jobProperties" : {
-          "avro.schema.input.value.path" : "/path/to/my/schema.avsc"
-      }
-    }
-  }
-}
-```
+### Logical types
+Druid does not currently support Avro logical types. It ignores them and handles fields according to the underlying primitive type.

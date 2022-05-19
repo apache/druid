@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.StringUtils;
  */
 public class BasicSecurityAuthenticationException extends IllegalArgumentException
 {
+
   public BasicSecurityAuthenticationException(String formatText, Object... arguments)
   {
     super(StringUtils.nonStrictFormat(formatText, arguments));

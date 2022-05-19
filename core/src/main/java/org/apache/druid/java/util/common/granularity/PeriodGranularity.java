@@ -60,7 +60,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   )
   {
     this.period = Preconditions.checkNotNull(period, "period can't be null!");
-    Preconditions.checkArgument(!Period.ZERO.equals(period), "zero period is not acceptable in QueryGranularity!");
+    Preconditions.checkArgument(!Period.ZERO.equals(period), "zero period is not acceptable in PeriodGranularity!");
     this.chronology = tz == null ? ISOChronology.getInstanceUTC() : ISOChronology.getInstance(tz);
     if (origin == null) {
       // default to origin in given time zone when aligning multi-period granularities
@@ -107,6 +107,18 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
       default:
         throw new IAE("There is no format for type %s", type);
     }
+  }
+
+  @Override
+  public long bucketStart(long time)
+  {
+    return truncate(time);
+  }
+
+  @Override
+  public long increment(long t)
+  {
+    return chronology.add(period, t, 1);
   }
 
   @Override
@@ -217,11 +229,6 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
       }
     }
     return false;
-  }
-
-  private long increment(long t)
-  {
-    return chronology.add(period, t, 1);
   }
 
   private long truncate(long t)

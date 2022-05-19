@@ -16,28 +16,18 @@
  * limitations under the License.
  */
 
-.lookup-edit-dialog {
-  &.bp3-dialog {
-    top: 10vh;
+@import '../../variables';
 
+.lookup-edit-dialog {
+  &.#{$bp-ns}-dialog {
+    height: 80vh;
     width: 600px;
   }
 
-  .ace_editor {
-    margin: 0px 20px 10px;
-  }
-
-  .lookup-label {
-    padding: 0 20px;
-    margin-top: 5px;
-    margin-bottom: 5px;
-  }
-
-  .ace_scroller {
-    background-color: #232c35;
-  }
-
-  .ace_gutter-layer {
-    background-color: #27313c;
+  .content {
+    margin: 0 15px 10px 0;
+    padding: 15px 5px 5px 15px;
+    flex: 1;
+    overflow: auto;
   }
 }

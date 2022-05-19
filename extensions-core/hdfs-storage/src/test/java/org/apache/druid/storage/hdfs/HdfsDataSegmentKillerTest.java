@@ -23,21 +23,25 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.UUID;
 
-/**
- */
 public class HdfsDataSegmentKillerTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Test
   public void testKill() throws Exception
   {
@@ -193,7 +197,73 @@ public class HdfsDataSegmentKillerTest
           }
         }
     );
+
+    // Should do nothing.
     killer.kill(getSegmentWithPath(new Path("/xxx/", "index.zip").toString()));
+  }
+
+  @Test
+  public void testKillNonZipSegment() throws Exception
+  {
+    Configuration config = new Configuration();
+    HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return "/tmp";
+          }
+        }
+    );
+
+    expectedException.expect(SegmentLoadingException.class);
+    expectedException.expectMessage("Unknown file type");
+    killer.kill(getSegmentWithPath(new Path("/xxx/", "index.beep").toString()));
+  }
+
+  @Test
+  public void testNoStorageDirectory() throws Exception
+  {
+    Configuration config = new Configuration();
+    HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return "";
+          }
+        }
+    );
+
+    FileSystem fs = FileSystem.get(config);
+    Path dataSourceDir = new Path("/tmp/dataSourceNew");
+
+    Path interval1Dir = new Path(dataSourceDir, "intervalNew");
+    Path version11Dir = new Path(interval1Dir, "v1");
+
+    Assert.assertTrue(fs.mkdirs(version11Dir));
+    fs.createNewFile(new Path(version11Dir, StringUtils.format("%s_index.zip", 3)));
+
+    // 'kill' should work even if storageDirectory is not set.
+    killer.kill(getSegmentWithPath(new Path(version11Dir, "3_index.zip").toString()));
+
+    // Verify the segment no longer exists, but that its datasource directory does.
+    // Then delete its datasource directory.
+    Assert.assertFalse(fs.exists(version11Dir));
+    Assert.assertFalse(fs.exists(interval1Dir));
+    Assert.assertTrue(fs.exists(dataSourceDir));
+    Assert.assertTrue(fs.exists(new Path("/tmp")));
+    Assert.assertTrue(fs.exists(dataSourceDir));
+    Assert.assertTrue(fs.delete(dataSourceDir, false));
+
+    // killAll should *not* work when storageDirectory is not set.
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("Cannot delete all segment files since druid.storage.storageDirectory is not set");
+    killer.killAll();
   }
 
   private void makePartitionDirWithIndex(FileSystem fs, Path path) throws IOException

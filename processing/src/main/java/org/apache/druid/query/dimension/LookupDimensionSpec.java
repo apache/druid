@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DimFilterUtils;
@@ -32,7 +33,7 @@ import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -113,10 +114,10 @@ public class LookupDimensionSpec implements DimensionSpec
   }
 
   @Override
-  public ValueType getOutputType()
+  public ColumnType getOutputType()
   {
     // Extraction functions always output String
-    return ValueType.STRING;
+    return ColumnType.STRING;
   }
 
   @JsonProperty
@@ -136,13 +137,17 @@ public class LookupDimensionSpec implements DimensionSpec
   @Override
   public ExtractionFn getExtractionFn()
   {
-    final LookupExtractor lookupExtractor = Strings.isNullOrEmpty(name)
-                                            ? this.lookup
-                                            : Preconditions.checkNotNull(
-                                                lookupExtractorFactoryContainerProvider.get(name),
-                                                "Lookup [%s] not found",
-                                                name
-                                            ).getLookupExtractorFactory().get();
+    final LookupExtractor lookupExtractor;
+
+    if (Strings.isNullOrEmpty(name)) {
+      lookupExtractor = this.lookup;
+    } else {
+      lookupExtractor = lookupExtractorFactoryContainerProvider
+          .get(name)
+          .orElseThrow(() -> new ISE("Lookup [%s] not found", name))
+          .getLookupExtractorFactory()
+          .get();
+    }
 
     return new LookupExtractionFn(
         lookupExtractor,
@@ -198,6 +203,21 @@ public class LookupDimensionSpec implements DimensionSpec
   public boolean preservesOrdering()
   {
     return getExtractionFn().preservesOrdering();
+  }
+
+  @Override
+  public DimensionSpec withDimension(String newDimension)
+  {
+    return new LookupDimensionSpec(
+        newDimension,
+        outputName,
+        lookup,
+        retainMissingValue,
+        replaceMissingValueWith,
+        name,
+        optimize,
+        lookupExtractorFactoryContainerProvider
+    );
   }
 
   @Override

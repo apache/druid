@@ -26,6 +26,8 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Comparator;
 import java.util.HashSet;
@@ -72,6 +74,12 @@ public class ConstantPostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  @Override
+  public ColumnType getType(ColumnInspector signature)
+  {
+    return constantValue instanceof Long ? ColumnType.LONG : ColumnType.DOUBLE;
   }
 
   @Override

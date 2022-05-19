@@ -33,7 +33,6 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.joda.time.Interval;
 
-import java.util.Arrays;
 import java.util.List;
 
 public class CursorOnlyStrategy extends SearchStrategy
@@ -107,12 +106,10 @@ public class CursorOnlyStrategy extends SearchStrategy
               return map;
             }
 
-            final List<ColumnSelectorPlus<SearchColumnSelectorStrategy>> selectorPlusList = Arrays.asList(
-                DimensionHandlerUtils.createColumnSelectorPluses(
-                    SearchQueryRunner.SEARCH_COLUMN_SELECTOR_STRATEGY_FACTORY,
-                    dimsToSearch,
-                    cursor.getColumnSelectorFactory()
-                )
+            final ColumnSelectorPlus<SearchColumnSelectorStrategy>[] selectorPlusList = DimensionHandlerUtils.createColumnSelectorPluses(
+                SearchQueryRunner.SEARCH_COLUMN_SELECTOR_STRATEGY_FACTORY,
+                dimsToSearch,
+                cursor.getColumnSelectorFactory()
             );
 
             while (!cursor.isDone()) {

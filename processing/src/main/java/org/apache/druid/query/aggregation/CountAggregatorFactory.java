@@ -23,7 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -72,7 +74,7 @@ public class CountAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public boolean canVectorize()
+  public boolean canVectorize(ColumnInspector columnInspector)
   {
     return true;
   }
@@ -134,9 +136,15 @@ public class CountAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public ColumnType getIntermediateType()
   {
-    return "long";
+    return ColumnType.LONG;
+  }
+
+  @Override
+  public ColumnType getResultType()
+  {
+    return ColumnType.LONG;
   }
 
   @Override

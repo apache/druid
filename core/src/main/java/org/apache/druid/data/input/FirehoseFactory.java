@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
@@ -85,6 +86,7 @@ public interface FirehoseFactory<T extends InputRowParser>
     return connect(parser, temporaryDirectory);
   }
 
+  @JsonIgnore
   default boolean isSplittable()
   {
     return false;

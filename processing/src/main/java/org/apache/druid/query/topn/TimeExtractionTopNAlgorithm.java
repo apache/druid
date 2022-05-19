@@ -25,12 +25,13 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<Comparable, Aggregator[]>, TopNParams>
+public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<Comparable<?>, Aggregator[]>, TopNParams>
 {
   private static final int[] EMPTY_INTS = new int[]{};
 
@@ -45,7 +46,7 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<Co
     // This strategy is used for ExtractionFns on the __time column. They always return STRING, so we need to convert
     // from STRING to the desired output type.
     this.dimensionValueConverter = DimensionHandlerUtils.converterFromTypeToType(
-        ValueType.STRING,
+        ColumnType.STRING,
         query.getDimensionSpec().getOutputType()
     );
   }
@@ -74,35 +75,29 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<Co
   }
 
   @Override
-  @SuppressWarnings("unchecked")
-  protected Map<Comparable, Aggregator[]> makeDimValAggregateStore(TopNParams params)
+  protected Map<Comparable<?>, Aggregator[]> makeDimValAggregateStore(TopNParams params)
   {
-    return params.getSelectorPlus().getColumnSelectorStrategy().makeDimExtractionAggregateStore();
+    return new HashMap<>();
   }
 
   @Override
   protected long scanAndAggregate(
       TopNParams params,
       int[] dimValSelector,
-      Map<Comparable, Aggregator[]> aggregatesStore
+      Map<Comparable<?>, Aggregator[]> aggregatesStore
   )
   {
-    if (params.getCardinality() < 0) {
-      throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
-    }
-
     final Cursor cursor = params.getCursor();
     final DimensionSelector dimSelector = params.getDimSelector();
 
     long processedRows = 0;
     while (!cursor.isDone()) {
-      final Comparable key = dimensionValueConverter.apply(dimSelector.lookupName(dimSelector.getRow().get(0)));
+      final Comparable<?> key = dimensionValueConverter.apply(dimSelector.lookupName(dimSelector.getRow().get(0)));
 
-      Aggregator[] theAggregators = aggregatesStore.get(key);
-      if (theAggregators == null) {
-        theAggregators = makeAggregators(cursor, query.getAggregatorSpecs());
-        aggregatesStore.put(key, theAggregators);
-      }
+      Aggregator[] theAggregators = aggregatesStore.computeIfAbsent(
+          key,
+          k -> makeAggregators(cursor, query.getAggregatorSpecs())
+      );
 
       for (Aggregator aggregator : theAggregators) {
         aggregator.aggregate();
@@ -118,11 +113,11 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<Co
   protected void updateResults(
       TopNParams params,
       int[] dimValSelector,
-      Map<Comparable, Aggregator[]> aggregatesStore,
+      Map<Comparable<?>, Aggregator[]> aggregatesStore,
       TopNResultBuilder resultBuilder
   )
   {
-    for (Map.Entry<Comparable, Aggregator[]> entry : aggregatesStore.entrySet()) {
+    for (Map.Entry<Comparable<?>, Aggregator[]> entry : aggregatesStore.entrySet()) {
       Aggregator[] aggs = entry.getValue();
       if (aggs != null) {
         Object[] vals = new Object[aggs.length];
@@ -140,7 +135,7 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<Co
   }
 
   @Override
-  protected void closeAggregators(Map<Comparable, Aggregator[]> stringMap)
+  protected void closeAggregators(Map<Comparable<?>, Aggregator[]> stringMap)
   {
     for (Aggregator[] aggregators : stringMap.values()) {
       for (Aggregator agg : aggregators) {

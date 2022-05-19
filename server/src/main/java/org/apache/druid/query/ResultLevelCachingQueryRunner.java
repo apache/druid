@@ -22,10 +22,11 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.ResultLevelCacheUtil;
+import org.apache.druid.client.CacheUtil;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.java.util.common.RE;
@@ -33,6 +34,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryResource;
@@ -71,8 +73,13 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     this.cacheConfig = cacheConfig;
     this.query = query;
     this.strategy = queryToolChest.getCacheStrategy(query);
-    this.populateResultCache = ResultLevelCacheUtil.populateResultLevelCacheOnBrokers(query, strategy, cacheConfig);
-    this.useResultCache = ResultLevelCacheUtil.useResultLevelCacheOnBrokers(query, strategy, cacheConfig);
+    this.populateResultCache = CacheUtil.isPopulateResultCache(
+        query,
+        strategy,
+        cacheConfig,
+        CacheUtil.ServerType.BROKER
+    );
+    this.useResultCache = CacheUtil.isUseResultCache(query, strategy, cacheConfig, CacheUtil.ServerType.BROKER);
   }
 
   @Override
@@ -92,7 +99,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
           QueryPlus.wrap(query),
           responseContext
       );
-      String newResultSetId = (String) responseContext.get(ResponseContext.Key.ETAG);
+      String newResultSetId = responseContext.getEntityTag();
 
       if (useResultCache && newResultSetId != null && newResultSetId.equals(existingResultSetId)) {
         log.debug("Return cached result set as there is no change in identifiers for query %s ", query.getId());
@@ -157,12 +164,13 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     }
   }
 
+  @Nullable
   private byte[] fetchResultsFromResultLevelCache(
       final String queryCacheKey
   )
   {
     if (useResultCache && queryCacheKey != null) {
-      return cache.get(ResultLevelCacheUtil.computeResultLevelCacheKey(queryCacheKey));
+      return cache.get(CacheUtil.computeResultLevelCacheKey(queryCacheKey));
     }
     return null;
   }
@@ -185,7 +193,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       log.error("Cached result set is null");
     }
     final Function<Object, T> pullFromCacheFunction = strategy.pullFromCache(true);
-    final TypeReference<Object> cacheObjectClazz = strategy.getCacheObjectClazz();
+    final TypeReference<T> cacheObjectClazz = strategy.getCacheObjectClazz();
     //Skip the resultsetID and its length bytes
     Sequence<T> cachedSequence = Sequences.simple(() -> {
       try {
@@ -216,7 +224,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       ResultLevelCachePopulator resultLevelCachePopulator = new ResultLevelCachePopulator(
           cache,
           objectMapper,
-          ResultLevelCacheUtil.computeResultLevelCacheKey(cacheKeyStr),
+          CacheUtil.computeResultLevelCacheKey(cacheKeyStr),
           cacheConfig,
           true
       );
@@ -241,6 +249,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   {
     private final Cache cache;
     private final ObjectMapper mapper;
+    private final SerializerProvider serialiers;
     private final Cache.NamedKey key;
     private final CacheConfig cacheConfig;
     @Nullable
@@ -256,6 +265,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     {
       this.cache = cache;
       this.mapper = mapper;
+      this.serialiers = mapper.getSerializerProviderInstance();
       this.key = key;
       this.cacheConfig = cacheConfig;
       this.cacheObjectStream = shouldPopulate ? new ByteArrayOutputStream() : null;
@@ -279,7 +289,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       Preconditions.checkNotNull(cacheObjectStream, "cacheObjectStream");
       int cacheLimit = cacheConfig.getResultLevelCacheLimit();
       try (JsonGenerator gen = mapper.getFactory().createGenerator(cacheObjectStream)) {
-        gen.writeObject(cacheFn.apply(resultEntry));
+        JacksonUtils.writeObjectUsingSerializerProvider(gen, serialiers, cacheFn.apply(resultEntry));
         if (cacheLimit > 0 && cacheObjectStream.size() > cacheLimit) {
           stopPopulating();
         }
@@ -292,7 +302,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
 
     public void populateResults()
     {
-      ResultLevelCacheUtil.populate(
+      CacheUtil.populateResultCache(
           cache,
           key,
           Preconditions.checkNotNull(cacheObjectStream, "cacheObjectStream").toByteArray()

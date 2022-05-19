@@ -19,6 +19,7 @@
 
 package org.apache.druid.query;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.common.guava.CombiningSequence;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -43,6 +44,8 @@ public class ResultMergeQueryRunner<T> extends BySegmentSkippingQueryRunner<T>
   )
   {
     super(baseRunner);
+    Preconditions.checkNotNull(comparatorGenerator);
+    Preconditions.checkNotNull(mergeFnGenerator);
     this.comparatorGenerator = comparatorGenerator;
     this.mergeFnGenerator = mergeFnGenerator;
   }

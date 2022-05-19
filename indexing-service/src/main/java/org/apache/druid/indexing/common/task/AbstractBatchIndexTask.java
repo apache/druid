@@ -19,82 +19,118 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
-import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
+import org.apache.druid.indexing.common.actions.LockListAction;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
+import org.apache.druid.indexing.input.InputRowSchemas;
+import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
+import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
+import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.IngestionSpec;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.TimelineObjectHolder;
+import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.HashBasedNumberedShardSpecFactory;
-import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.ShardSpecFactory;
+import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 /**
  * Abstract class for batch tasks like {@link IndexTask}.
  * Provides some methods such as {@link #determineSegmentGranularity}, {@link #findInputSegments},
- * and {@link #determineLockGranularityandTryLock} for easily acquiring task locks.
+ * and {@link #determineLockGranularityAndTryLock} for easily acquiring task locks.
  */
 public abstract class AbstractBatchIndexTask extends AbstractTask
 {
   private static final Logger log = new Logger(AbstractBatchIndexTask.class);
 
-  private final SegmentLockHelper segmentLockHelper;
+  protected boolean segmentAvailabilityConfirmationCompleted = false;
+  protected long segmentAvailabilityWaitTimeMs = 0L;
 
   @GuardedBy("this")
   private final TaskResourceCleaner resourceCloserOnAbnormalExit = new TaskResourceCleaner();
 
-  /**
-   * State to indicate that this task will use segmentLock or timeChunkLock.
-   * This is automatically set when {@link #determineLockGranularityandTryLock} is called.
-   */
-  private boolean useSegmentLock;
-
   @GuardedBy("this")
   private boolean stopped = false;
+
+  private TaskLockHelper taskLockHelper;
+
+  private final int maxAllowedLockCount;
+
+  // Store lock versions
+  Map<Interval, String> intervalToVersion = new HashMap<>();
 
   protected AbstractBatchIndexTask(String id, String dataSource, Map<String, Object> context)
   {
     super(id, dataSource, context);
-    segmentLockHelper = new SegmentLockHelper();
+    maxAllowedLockCount = -1;
   }
 
   protected AbstractBatchIndexTask(
@@ -102,11 +138,12 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       @Nullable String groupId,
       @Nullable TaskResource taskResource,
       String dataSource,
-      @Nullable Map<String, Object> context
+      @Nullable Map<String, Object> context,
+      int maxAllowedLockCount
   )
   {
     super(id, groupId, taskResource, dataSource, context);
-    segmentLockHelper = new SegmentLockHelper();
+    this.maxAllowedLockCount = maxAllowedLockCount;
   }
 
   /**
@@ -119,9 +156,21 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
+    if (taskLockHelper == null) {
+      // Subclasses generally use "isReady" to initialize the taskLockHelper. It's not guaranteed to be called before
+      // "run", and so we call it here to ensure it happens.
+      //
+      // We're only really calling it for its side effects, and we expect it to return "true". If it doesn't, something
+      // strange is going on, so bail out.
+      if (!isReady(toolbox.getTaskActionClient())) {
+        throw new ISE("Cannot start; not ready!");
+      }
+    }
+
     synchronized (this) {
       if (stopped) {
-        return TaskStatus.failure(getId());
+        String errMsg = "Attempting to run a task that has been stopped. See overlord & task logs for more details.";
+        return TaskStatus.failure(getId(), errMsg);
       } else {
         // Register the cleaner to interrupt the current thread first.
         // Since the resource closer cleans up the registered resources in LIFO order,
@@ -144,6 +193,48 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       stopped = true;
       resourceCloserOnAbnormalExit.clean(taskConfig);
     }
+  }
+
+  /**
+   * Returns an {@link InputRow} iterator which iterates over an input source.
+   * The returned iterator filters out rows which don't satisfy the given filter or cannot be parsed properly.
+   * The returned iterator can throw {@link org.apache.druid.java.util.common.parsers.ParseException}s in
+   * {@link Iterator#hasNext()} when it hits {@link ParseExceptionHandler#maxAllowedParseExceptions}.
+   */
+  public static FilteringCloseableInputRowIterator inputSourceReader(
+      File tmpDir,
+      DataSchema dataSchema,
+      InputSource inputSource,
+      @Nullable InputFormat inputFormat,
+      Predicate<InputRow> rowFilter,
+      RowIngestionMeters ingestionMeters,
+      ParseExceptionHandler parseExceptionHandler
+  ) throws IOException
+  {
+    final InputSourceReader inputSourceReader = dataSchema.getTransformSpec().decorate(
+        inputSource.reader(
+            InputRowSchemas.fromDataSchema(dataSchema),
+            inputFormat,
+            tmpDir
+        )
+    );
+    return new FilteringCloseableInputRowIterator(
+        inputSourceReader.read(),
+        rowFilter,
+        ingestionMeters,
+        parseExceptionHandler
+    );
+  }
+
+  protected static Predicate<InputRow> defaultRowFilter(GranularitySpec granularitySpec)
+  {
+    return inputRow -> {
+      if (inputRow == null) {
+        return false;
+      }
+      final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
+      return optInterval.isPresent();
+    };
   }
 
   /**
@@ -187,42 +278,41 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   @Nullable
   public abstract Granularity getSegmentGranularity();
 
-  public boolean isUseSegmentLock()
+  @Override
+  public int getPriority()
   {
-    return useSegmentLock;
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
   }
 
-  public SegmentLockHelper getSegmentLockHelper()
+  public TaskLockHelper getTaskLockHelper()
   {
-    return segmentLockHelper;
+    return Preconditions.checkNotNull(taskLockHelper, "taskLockHelper is not initialized yet");
   }
 
   /**
-   * Determine lockGranularity to use and try to acquire necessary locks.
-   * This method respects the value of 'forceTimeChunkLock' in task context.
-   * If it's set to false or missing, this method checks if this task can use segmentLock.
+   * Attempts to acquire a lock that covers certain intervals.
+   * <p>
+   * Will look at {@link Tasks#FORCE_TIME_CHUNK_LOCK_KEY} to decide whether to acquire a time chunk or segment lock.
+   * <p>
+   * If {@link Tasks#FORCE_TIME_CHUNK_LOCK_KEY} is set, or if {@param intervals} is nonempty, then this method
+   * will initialize {@link #taskLockHelper} as a side effect.
+   *
+   * @return whether the lock was acquired
    */
-  protected boolean determineLockGranularityAndTryLock(
-      TaskActionClient client,
-      GranularitySpec granularitySpec
-  ) throws IOException
-  {
-    final List<Interval> intervals = granularitySpec.bucketIntervals().isPresent()
-                                     ? new ArrayList<>(granularitySpec.bucketIntervals().get())
-                                     : Collections.emptyList();
-    return determineLockGranularityandTryLock(client, intervals);
-  }
-
-  boolean determineLockGranularityandTryLock(TaskActionClient client, List<Interval> intervals) throws IOException
+  public boolean determineLockGranularityAndTryLock(TaskActionClient client, List<Interval> intervals, IndexIOConfig ioConfig)
+      throws IOException
   {
     final boolean forceTimeChunkLock = getContextValue(
         Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
         Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
     );
+    final boolean useSharedLock = ioConfig.isAppendToExisting() && getContextValue(Tasks.USE_SHARED_LOCK, false);
     // Respect task context value most.
-    if (forceTimeChunkLock) {
-      log.info("[%s] is set to true in task context. Use timeChunk lock", Tasks.FORCE_TIME_CHUNK_LOCK_KEY);
-      useSegmentLock = false;
+    if (forceTimeChunkLock || ioConfig.isDropExisting()) {
+      log.info("forceTimeChunkLock[%s] or isDropExisting[%s] is set to true. Use timeChunk lock",
+               forceTimeChunkLock, ioConfig.isDropExisting()
+      );
+      taskLockHelper = new TaskLockHelper(false, useSharedLock);
       if (!intervals.isEmpty()) {
         return tryTimeChunkLock(client, intervals);
       } else {
@@ -231,31 +321,48 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     } else {
       if (!intervals.isEmpty()) {
         final LockGranularityDetermineResult result = determineSegmentGranularity(client, intervals);
-        useSegmentLock = result.lockGranularity == LockGranularity.SEGMENT;
+        taskLockHelper = new TaskLockHelper(result.lockGranularity == LockGranularity.SEGMENT, useSharedLock);
         return tryLockWithDetermineResult(client, result);
       } else {
+        // This branch is the only one that will not initialize taskLockHelper.
         return true;
       }
     }
   }
 
-  boolean determineLockGranularityandTryLockWithSegments(TaskActionClient client, List<DataSegment> segments)
-      throws IOException
+  /**
+   * Attempts to acquire a lock that covers certain segments.
+   * <p>
+   * Will look at {@link Tasks#FORCE_TIME_CHUNK_LOCK_KEY} to decide whether to acquire a time chunk or segment lock.
+   * <p>
+   * This method will initialize {@link #taskLockHelper} as a side effect.
+   *
+   * @return whether the lock was acquired
+   */
+  boolean determineLockGranularityAndTryLockWithSegments(
+      TaskActionClient client,
+      List<DataSegment> segments,
+      BiConsumer<LockGranularity, List<DataSegment>> segmentCheckFunction
+  ) throws IOException
   {
     final boolean forceTimeChunkLock = getContextValue(
         Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
         Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
     );
+    final boolean useSharedLock = getContextValue(Tasks.USE_SHARED_LOCK, false);
+
     if (forceTimeChunkLock) {
       log.info("[%s] is set to true in task context. Use timeChunk lock", Tasks.FORCE_TIME_CHUNK_LOCK_KEY);
-      useSegmentLock = false;
+      taskLockHelper = new TaskLockHelper(false, useSharedLock);
+      segmentCheckFunction.accept(LockGranularity.TIME_CHUNK, segments);
       return tryTimeChunkLock(
           client,
           new ArrayList<>(segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()))
       );
     } else {
       final LockGranularityDetermineResult result = determineSegmentGranularity(segments);
-      useSegmentLock = result.lockGranularity == LockGranularity.SEGMENT;
+      taskLockHelper = new TaskLockHelper(result.lockGranularity == LockGranularity.SEGMENT, useSharedLock);
+      segmentCheckFunction.accept(result.lockGranularity, segments);
       return tryLockWithDetermineResult(client, result);
     }
   }
@@ -291,31 +398,54 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     if (result.lockGranularity == LockGranularity.TIME_CHUNK) {
       return tryTimeChunkLock(client, Preconditions.checkNotNull(result.intervals, "intervals"));
     } else {
-      return segmentLockHelper.verifyAndLockExistingSegments(
+      return taskLockHelper.verifyAndLockExistingSegments(
           client,
           Preconditions.checkNotNull(result.segments, "segments")
       );
     }
   }
 
+
   protected boolean tryTimeChunkLock(TaskActionClient client, List<Interval> intervals) throws IOException
   {
-    // In this case, the intervals to lock must be aligned with segmentGranularity if it's defined
-    final Set<Interval> uniqueIntervals = new HashSet<>();
-    for (Interval interval : JodaUtils.condenseIntervals(intervals)) {
-      final Granularity segmentGranularity = getSegmentGranularity();
-      if (segmentGranularity == null) {
-        uniqueIntervals.add(interval);
-      } else {
-        Iterables.addAll(uniqueIntervals, segmentGranularity.getIterable(interval));
-      }
+    // The given intervals are first converted to align with segment granularity. This is because,
+    // when an overwriting task finds a version for a given input row, it expects the interval
+    // associated to each version to be equal or larger than the time bucket where the input row falls in.
+    // See ParallelIndexSupervisorTask.findVersion().
+    final Iterator<Interval> intervalIterator;
+    final Granularity segmentGranularity = getSegmentGranularity();
+    if (segmentGranularity == null) {
+      intervalIterator = JodaUtils.condenseIntervals(intervals).iterator();
+    } else {
+      IntervalsByGranularity intervalsByGranularity = new IntervalsByGranularity(intervals, segmentGranularity);
+      // the following is calling a condense that does not materialize the intervals:
+      intervalIterator = JodaUtils.condensedIntervalsIterator(intervalsByGranularity.granularityIntervalsIterator());
     }
 
-    for (Interval interval : uniqueIntervals) {
-      final TaskLock lock = client.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval));
+    // Intervals are already condensed to avoid creating too many locks.
+    // Intervals are also sorted and thus it's safe to compare only the previous interval and current one for dedup.
+    Interval prev = null;
+    int locksAcquired = 0;
+    while (intervalIterator.hasNext()) {
+      final Interval cur = intervalIterator.next();
+      if (prev != null && cur.equals(prev)) {
+        continue;
+      }
+
+      if (maxAllowedLockCount >= 0 && locksAcquired >= maxAllowedLockCount) {
+        throw new MaxAllowedLocksExceededException(maxAllowedLockCount);
+      }
+
+      prev = cur;
+      final TaskLock lock = client.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, cur));
       if (lock == null) {
         return false;
       }
+      if (lock.isRevoked()) {
+        throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", cur));
+      }
+      locksAcquired++;
+      intervalToVersion.put(cur, lock.getVersion());
     }
     return true;
   }
@@ -338,7 +468,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       if (granularityFromSegments == null
           || segmentGranularityFromSpec != null
              && (!granularityFromSegments.equals(segmentGranularityFromSpec)
-                 || segments.stream().anyMatch(segment -> !segmentGranularityFromSpec.isAligned(segment.getInterval())))) {
+                 || segments.stream()
+                            .anyMatch(segment -> !segmentGranularityFromSpec.isAligned(segment.getInterval())))) {
         // This case is one of the followings:
         // 1) Segments have different granularities.
         // 2) Segment granularity in ingestion spec is different from the one of existig segments.
@@ -352,15 +483,12 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
             segments
         );
 
-        final List<DataSegment> segmentsToLock = timeline
-            .lookup(JodaUtils.umbrellaInterval(intervals))
-            .stream()
-            .map(TimelineObjectHolder::getObject)
-            .flatMap(partitionHolder -> StreamSupport.stream(partitionHolder.spliterator(), false))
-            .map(PartitionChunk::getObject)
-            .collect(Collectors.toList());
+        Set<DataSegment> segmentsToLock = timeline.findNonOvershadowedObjectsInInterval(
+            JodaUtils.umbrellaInterval(intervals),
+            Partitions.ONLY_COMPLETE
+        );
         log.info("No segmentGranularity change detected and it's not perfect rollup. Using segment lock");
-        return new LockGranularityDetermineResult(LockGranularity.SEGMENT, null, segmentsToLock);
+        return new LockGranularityDetermineResult(LockGranularity.SEGMENT, null, new ArrayList<>(segmentsToLock));
       }
     } else {
       // Set useSegmentLock even though we don't get any locks.
@@ -373,25 +501,77 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   /**
    * We currently don't support appending perfectly rolled up segments. This might be supported in the future if there
    * is a good use case. If we want to support appending perfectly rolled up segments, we need to fix some other places
-   * first. For example, {@link org.apache.druid.timeline.partition.HashBasedNumberedShardSpec#getLookup} assumes that
+   * first. For example, {@link HashBasedNumberedShardSpec#getLookup} assumes that
    * the start partition ID of the set of perfectly rolled up segments is 0. Instead it might need to store an ordinal
    * in addition to the partition ID which represents the ordinal in the perfectly rolled up segment set.
    */
   public static boolean isGuaranteedRollup(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
   {
-    Preconditions.checkState(
+    Preconditions.checkArgument(
         !tuningConfig.isForceGuaranteedRollup() || !ioConfig.isAppendToExisting(),
         "Perfect rollup cannot be guaranteed when appending to existing dataSources"
     );
     return tuningConfig.isForceGuaranteedRollup();
   }
 
-  static Pair<ShardSpecFactory, Integer> createShardSpecFactoryForGuaranteedRollup(
-      int numShards,
-      @Nullable List<String> partitionDimensions
+  public static Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction(
+      boolean storeCompactionState,
+      TaskToolbox toolbox,
+      IngestionSpec ingestionSpec
   )
   {
-    return Pair.of(new HashBasedNumberedShardSpecFactory(partitionDimensions, numShards), numShards);
+    if (storeCompactionState) {
+      TuningConfig tuningConfig = ingestionSpec.getTuningConfig();
+      GranularitySpec granularitySpec = ingestionSpec.getDataSchema().getGranularitySpec();
+      // We do not need to store dimensionExclusions and spatialDimensions since auto compaction does not support them
+      DimensionsSpec dimensionsSpec = ingestionSpec.getDataSchema().getDimensionsSpec() == null
+                                      ? null
+                                      : new DimensionsSpec(ingestionSpec.getDataSchema().getDimensionsSpec().getDimensions());
+      // We only need to store filter since that is the only field auto compaction support
+      Map<String, Object> transformSpec = ingestionSpec.getDataSchema().getTransformSpec() == null || TransformSpec.NONE.equals(ingestionSpec.getDataSchema().getTransformSpec())
+                                          ? null
+                                          : new ClientCompactionTaskTransformSpec(ingestionSpec.getDataSchema().getTransformSpec().getFilter()).asMap(toolbox.getJsonMapper());
+      List<Object> metricsSpec = ingestionSpec.getDataSchema().getAggregators() == null
+                                 ? null
+                                 : toolbox.getJsonMapper().convertValue(ingestionSpec.getDataSchema().getAggregators(), new TypeReference<List<Object>>() {});
+
+      final CompactionState compactionState = new CompactionState(
+          tuningConfig.getPartitionsSpec(),
+          dimensionsSpec,
+          metricsSpec,
+          transformSpec,
+          tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper()),
+          granularitySpec.asMap(toolbox.getJsonMapper())
+      );
+      return segments -> segments
+          .stream()
+          .map(s -> s.withLastCompactionState(compactionState))
+          .collect(Collectors.toSet());
+    } else {
+      return Function.identity();
+    }
+  }
+
+  public static Set<DataSegment> getUsedSegmentsWithinInterval(
+      TaskToolbox toolbox,
+      String dataSource,
+      List<Interval> intervals
+  ) throws IOException
+  {
+    Set<DataSegment> segmentsFoundForDrop = new HashSet<>();
+    List<Interval> condensedIntervals = JodaUtils.condenseIntervals(intervals);
+    if (!intervals.isEmpty()) {
+      Collection<DataSegment> usedSegment = toolbox.getTaskActionClient().submit(new RetrieveUsedSegmentsAction(dataSource, null, condensedIntervals, Segments.ONLY_VISIBLE));
+      for (DataSegment segment : usedSegment) {
+        for (Interval interval : condensedIntervals) {
+          if (interval.contains(segment.getInterval())) {
+            segmentsFoundForDrop.add(segment);
+            break;
+          }
+        }
+      }
+    }
+    return segmentsFoundForDrop;
   }
 
   @Nullable
@@ -412,52 +592,16 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   }
 
   /**
-   * Creates shard specs based on the given configurations. The return value is a map between intervals created
-   * based on the segment granularity and the shard specs to be created.
-   * Note that the shard specs to be created is a pair of {@link ShardSpecFactory} and number of segments per interval
-   * and filled only when {@link #isGuaranteedRollup} = true. Otherwise, the return value contains only the set of
-   * intervals generated based on the segment granularity.
-   */
-  protected static Map<Interval, Pair<ShardSpecFactory, Integer>> createShardSpecWithoutInputScan(
-      GranularitySpec granularitySpec,
-      IndexIOConfig ioConfig,
-      IndexTuningConfig tuningConfig,
-      @Nonnull PartitionsSpec nonNullPartitionsSpec
-  )
-  {
-    final Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec = new HashMap<>();
-    final SortedSet<Interval> intervals = granularitySpec.bucketIntervals().get();
-
-    if (isGuaranteedRollup(ioConfig, tuningConfig)) {
-      // SingleDimensionPartitionsSpec or more partitionsSpec types will be supported in the future.
-      assert nonNullPartitionsSpec instanceof HashedPartitionsSpec;
-      // Overwrite mode, guaranteed rollup: shardSpecs must be known in advance.
-      final HashedPartitionsSpec partitionsSpec = (HashedPartitionsSpec) nonNullPartitionsSpec;
-      final int numShards = partitionsSpec.getNumShards() == null ? 1 : partitionsSpec.getNumShards();
-
-      for (Interval interval : intervals) {
-        allocateSpec.put(
-            interval,
-            createShardSpecFactoryForGuaranteedRollup(numShards, partitionsSpec.getPartitionDimensions())
-        );
-      }
-    } else {
-      for (Interval interval : intervals) {
-        allocateSpec.put(interval, null);
-      }
-    }
-
-    return allocateSpec;
-  }
-
-  /**
    * If the given firehoseFactory is {@link IngestSegmentFirehoseFactory}, then it finds the segments to lock
    * from the firehoseFactory. This is because those segments will be read by this task no matter what segments would be
    * filtered by intervalsToRead, so they need to be locked.
-   *
+   * <p>
    * However, firehoseFactory is not IngestSegmentFirehoseFactory, it means this task will overwrite some segments
    * with data read from some input source outside of Druid. As a result, only the segments falling in intervalsToRead
    * should be locked.
+   * <p>
+   * The order of segments within the returned list is unspecified, but each segment is guaranteed to appear in the list
+   * only once.
    */
   protected static List<DataSegment> findInputSegments(
       String dataSource,
@@ -475,20 +619,22 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
             "input interval"
         );
 
-        return actionClient.submit(
-            new SegmentListUsedAction(dataSource, null, Collections.singletonList(inputInterval))
+        return ImmutableList.copyOf(
+            actionClient.submit(
+                new RetrieveUsedSegmentsAction(dataSource, inputInterval, null, Segments.ONLY_VISIBLE)
+            )
         );
       } else {
-        final List<String> inputSegmentIds = inputSegments.stream()
-                                                          .map(WindowedSegmentId::getSegmentId)
-                                                          .collect(Collectors.toList());
-        final List<DataSegment> dataSegmentsInIntervals = actionClient.submit(
-            new SegmentListUsedAction(
+        final List<String> inputSegmentIds =
+            inputSegments.stream().map(WindowedSegmentId::getSegmentId).collect(Collectors.toList());
+        final Collection<DataSegment> dataSegmentsInIntervals = actionClient.submit(
+            new RetrieveUsedSegmentsAction(
                 dataSource,
                 null,
                 inputSegments.stream()
                              .flatMap(windowedSegmentId -> windowedSegmentId.getIntervals().stream())
-                             .collect(Collectors.toSet())
+                             .collect(Collectors.toSet()),
+                Segments.ONLY_VISIBLE
             )
         );
         return dataSegmentsInIntervals.stream()
@@ -496,8 +642,165 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                                       .collect(Collectors.toList());
       }
     } else {
-      return actionClient.submit(new SegmentListUsedAction(dataSource, null, intervalsToRead));
+      return ImmutableList.copyOf(
+          actionClient.submit(
+              new RetrieveUsedSegmentsAction(dataSource, null, intervalsToRead, Segments.ONLY_VISIBLE)
+          )
+      );
     }
+  }
+
+  /**
+   * Wait for segments to become available on the cluster. If waitTimeout is reached, giveup on waiting. This is a
+   * QoS method that can be used to make Batch Ingest tasks wait to finish until their ingested data is available on
+   * the cluster. Doing so gives an end user assurance that a Successful task status means their data is available
+   * for querying.
+   *
+   * @param toolbox {@link TaskToolbox} object with for assisting with task work.
+   * @param segmentsToWaitFor {@link List} of segments to wait for availability.
+   * @param waitTimeout Millis to wait before giving up
+   * @return True if all segments became available, otherwise False.
+   */
+  protected boolean waitForSegmentAvailability(
+      TaskToolbox toolbox,
+      List<DataSegment> segmentsToWaitFor,
+      long waitTimeout
+  )
+  {
+    if (segmentsToWaitFor.isEmpty()) {
+      log.info("Asked to wait for segments to be available, but I wasn't provided with any segments.");
+      return true;
+    } else if (waitTimeout < 0) {
+      log.warn("Asked to wait for availability for < 0 seconds?! Requested waitTimeout: [%s]", waitTimeout);
+      return false;
+    }
+    log.info("Waiting for [%d] segments to be loaded by the cluster...", segmentsToWaitFor.size());
+    final long start = System.nanoTime();
+
+    try (
+        SegmentHandoffNotifier notifier = toolbox.getSegmentHandoffNotifierFactory()
+                                                 .createSegmentHandoffNotifier(segmentsToWaitFor.get(0).getDataSource())
+    ) {
+
+      ExecutorService exec = Execs.directExecutor();
+      CountDownLatch doneSignal = new CountDownLatch(segmentsToWaitFor.size());
+
+      notifier.start();
+      for (DataSegment s : segmentsToWaitFor) {
+        notifier.registerSegmentHandoffCallback(
+            new SegmentDescriptor(s.getInterval(), s.getVersion(), s.getShardSpec().getPartitionNum()),
+            exec,
+            () -> {
+              log.debug(
+                  "Confirmed availability for [%s]. Removing from list of segments to wait for",
+                  s.getId()
+              );
+              doneSignal.countDown();
+            }
+        );
+      }
+      segmentAvailabilityConfirmationCompleted = doneSignal.await(waitTimeout, TimeUnit.MILLISECONDS);
+      return segmentAvailabilityConfirmationCompleted;
+    }
+    catch (InterruptedException e) {
+      log.warn("Interrupted while waiting for segment availablity; Unable to confirm availability!");
+      Thread.currentThread().interrupt();
+      return false;
+    }
+    finally {
+      segmentAvailabilityWaitTimeMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+      toolbox.getEmitter().emit(
+          new ServiceMetricEvent.Builder()
+              .setDimension("dataSource", getDataSource())
+              .setDimension("taskType", getType())
+              .setDimension("taskId", getId())
+              .setDimension("segmentAvailabilityConfirmed", segmentAvailabilityConfirmationCompleted)
+              .build("task/segmentAvailability/wait/time", segmentAvailabilityWaitTimeMs)
+      );
+    }
+  }
+  
+  @Nullable
+  public static String findVersion(Map<Interval, String> versions, Interval interval)
+  {
+    return versions.entrySet().stream()
+                   .filter(entry -> entry.getKey().contains(interval))
+                   .map(Map.Entry::getValue)
+                   .findFirst()
+                   .orElse(null);
+  }
+
+  public static NonnullPair<Interval, String> findIntervalAndVersion(
+      TaskToolbox toolbox,
+      IngestionSpec<?, ?> ingestionSpec,
+      DateTime timestamp
+  ) throws IOException
+  {
+    // This method is called whenever subtasks need to allocate a new segment via the supervisor task.
+    // As a result, this code is never called in the Overlord. For now using the materialized intervals
+    // here is ok for performance reasons
+    GranularitySpec granularitySpec = ingestionSpec.getDataSchema().getGranularitySpec();
+    final Set<Interval> materializedBucketIntervals = granularitySpec.materializedBucketIntervals();
+
+    // List locks whenever allocating a new segment because locks might be revoked and no longer valid.
+    final List<TaskLock> locks = toolbox
+        .getTaskActionClient()
+        .submit(new LockListAction());
+    final TaskLock revokedLock = locks.stream().filter(TaskLock::isRevoked).findAny().orElse(null);
+    if (revokedLock != null) {
+      throw new ISE("Lock revoked: [%s]", revokedLock);
+    }
+    final Map<Interval, String> versions = locks
+        .stream()
+        .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
+
+    Interval interval;
+    String version;
+    if (!materializedBucketIntervals.isEmpty()) {
+      // If granularity spec has explicit intervals, we just need to find the version associated to the interval.
+      // This is because we should have gotten all required locks up front when the task starts up.
+      final Optional<Interval> maybeInterval = granularitySpec.bucketInterval(timestamp);
+      if (!maybeInterval.isPresent()) {
+        throw new IAE("Could not find interval for timestamp [%s]", timestamp);
+      }
+
+      interval = maybeInterval.get();
+      if (!materializedBucketIntervals.contains(interval)) {
+        throw new ISE("Unspecified interval[%s] in granularitySpec[%s]", interval, granularitySpec);
+      }
+
+      version = AbstractBatchIndexTask.findVersion(versions, interval);
+      if (version == null) {
+        throw new ISE("Cannot find a version for interval[%s]", interval);
+      }
+    } else {
+      // We don't have explicit intervals. We can use the segment granularity to figure out what
+      // interval we need, but we might not have already locked it.
+      interval = granularitySpec.getSegmentGranularity().bucket(timestamp);
+      version = AbstractBatchIndexTask.findVersion(versions, interval);
+      if (version == null) {
+        if (ingestionSpec.getTuningConfig() instanceof ParallelIndexTuningConfig) {
+          final int maxAllowedLockCount = ((ParallelIndexTuningConfig) ingestionSpec.getTuningConfig())
+              .getMaxAllowedLockCount();
+          if (maxAllowedLockCount >= 0 && locks.size() >= maxAllowedLockCount) {
+            throw new MaxAllowedLocksExceededException(maxAllowedLockCount);
+          }
+        }
+        // We don't have a lock for this interval, so we should lock it now.
+        final TaskLock lock = Preconditions.checkNotNull(
+            toolbox.getTaskActionClient().submit(
+                new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)
+            ),
+            "Cannot acquire a lock for interval[%s]",
+            interval
+        );
+        if (lock.isRevoked()) {
+          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
+        }
+        version = lock.getVersion();
+      }
+    }
+    return new NonnullPair<>(interval, version);
   }
 
   private static class LockGranularityDetermineResult
@@ -519,4 +822,42 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       this.segments = segments;
     }
   }
+
+  /**
+   * Get the version from the locks for a given timestamp. This will work if the locks were acquired upfront
+   * @param timestamp
+   * @return The interval andversion if n interval that contains an interval was found or null otherwise
+   */
+  @Nullable
+  Pair<Interval, String> lookupVersion(DateTime timestamp)
+  {
+    java.util.Optional<Map.Entry<Interval, String>> intervalAndVersion = intervalToVersion.entrySet()
+                                                                                          .stream()
+                                                                                          .filter(e -> e.getKey()
+                                                                                                        .contains(
+                                                                                                            timestamp))
+                                                                                          .findFirst();
+    if (!intervalAndVersion.isPresent()) {
+      return null;
+    }
+    return new Pair(intervalAndVersion.get().getKey(), intervalAndVersion.get().getValue());
+  }
+
+  protected SegmentIdWithShardSpec allocateNewSegmentForTombstone(
+      IngestionSpec ingestionSchema,
+      DateTime timestamp,
+      TaskToolbox toolbox
+  )
+  {
+    // Since tombstones are derived from inputIntervals, inputIntervals cannot be empty for replace, and locks are
+    // all acquired upfront then the following stream query should always find the version
+    Pair<Interval, String> intervalAndVersion = lookupVersion(timestamp);
+    return new SegmentIdWithShardSpec(
+        ingestionSchema.getDataSchema().getDataSource(),
+        intervalAndVersion.lhs,
+        intervalAndVersion.rhs,
+        new TombstoneShardSpec()
+    );
+  }
+
 }

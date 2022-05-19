@@ -24,6 +24,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.movingaverage.averagers.AveragerFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -160,13 +161,16 @@ public class AveragerFactoryWrapper<T, R> extends AggregatorFactory
     throw new UnsupportedOperationException("Invalid operation for AveragerFactoryWrapper.");
   }
 
-  /**
-   * Not implemented. Throws UnsupportedOperationException.
-   */
   @Override
-  public String getTypeName()
+  public ColumnType getIntermediateType()
   {
-    throw new UnsupportedOperationException("Invalid operation for AveragerFactoryWrapper.");
+    return ColumnType.UNKNOWN_COMPLEX;
+  }
+
+  @Override
+  public ColumnType getResultType()
+  {
+    return getIntermediateType();
   }
 
   /**
@@ -177,5 +181,4 @@ public class AveragerFactoryWrapper<T, R> extends AggregatorFactory
   {
     throw new UnsupportedOperationException("Invalid operation for AveragerFactoryWrapper.");
   }
-
 }

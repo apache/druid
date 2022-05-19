@@ -23,7 +23,7 @@ title: "Stats aggregator"
   -->
 
 
-This Apache Druid (incubating) extension includes stat-related aggregators, including variance and standard deviations, etc. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-stats` as an extension.
+This Apache Druid extension includes stat-related aggregators, including variance and standard deviations, etc. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-stats` in the extensions load list.
 
 ## Variance aggregator
 
@@ -35,14 +35,24 @@ The American Statistician, 37 (1983) pp. 242--247.
 
 variance = variance1 + variance2 + n/(m*(m+n)) * pow(((m/n)*t1 - t2),2)
 
-where: - variance is sum(x-avg^2) (this is actually n times the variance)
-and is updated at every step. - n is the count of elements in chunk1 - m is
-the count of elements in chunk2 - t1 = sum of elements in chunk1, t2 =
-sum of elements in chunk2.
+where: 
+ - variance is sum(x-avg^2) (this is actually n times the variance)
+and is updated at every step. 
+ - n is the count of elements in chunk1 
+ - m is the count of elements in chunk2 
+ - t1 is the sum of elements in chunk1
+ - t2 is the sum of elements in chunk2
 
 This algorithm was proven to be numerically stable by J.L. Barlow in
 "Error analysis of a pairwise summation algorithm to compute sample variance"
 Numer. Math, 58 (1991) pp. 583--590
+
+> As with all [aggregators](../../querying/sql-aggregations.md), the order of operations across segments is
+> non-deterministic. This means that if this aggregator operates with an input type of "float" or "double", the result
+> of the aggregation may not be precisely the same across multiple runs of the query.
+>
+> To produce consistent results, round the variance to a fixed number of decimal places so that the results are 
+> precisely the same across query runs.
 
 ### Pre-aggregating variance at ingestion time
 
@@ -50,7 +60,7 @@ To use this feature, an "variance" aggregator must be included at indexing time.
 The ingestion aggregator can only apply to numeric values. If you use "variance"
 then any input rows missing the value will be considered to have a value of 0.
 
-User can specify expected input type as one of "float", "long", "variance" for ingestion, which is by default "float".
+User can specify expected input type as one of "float", "double", "long", "variance" for ingestion, which is by default "float".
 
 ```json
 {

@@ -39,7 +39,7 @@ public class ParquetGroupJsonProvider implements JsonProvider
 {
   private final ParquetGroupConverter converter;
 
-  ParquetGroupJsonProvider(ParquetGroupConverter converter)
+  public ParquetGroupJsonProvider(ParquetGroupConverter converter)
   {
     this.converter = converter;
   }
@@ -191,7 +191,7 @@ public class ParquetGroupJsonProvider implements JsonProvider
   @Override
   public Object unwrap(final Object o)
   {
-    throw new UnsupportedOperationException("Unused");
+    return o;
   }
 }
 

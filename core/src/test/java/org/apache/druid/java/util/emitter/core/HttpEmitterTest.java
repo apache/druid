@@ -24,8 +24,8 @@ import com.google.common.primitives.Ints;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.Request;
 import org.asynchttpclient.Response;
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -70,6 +70,7 @@ public class HttpEmitterTest
     final HttpEmitterConfig config = new HttpEmitterConfig.Builder("http://foo.bar")
         .setBatchingStrategy(BatchingStrategy.ONLY_EVENTS)
         .setHttpTimeoutAllowanceFactor(timeoutAllowanceFactor)
+        .setFlushTimeout(BaseHttpEmittingConfig.TEST_FLUSH_TIMEOUT_MILLIS)
         .build();
     final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, OBJECT_MAPPER);
 
@@ -78,7 +79,7 @@ public class HttpEmitterTest
     emitter.emitAndReturnBatch(new IntEvent());
     emitter.flush();
     long fillTimeMs = System.currentTimeMillis() - startMs;
-    Assert.assertThat((double) timeoutUsed.get(), Matchers.lessThan(fillTimeMs * (timeoutAllowanceFactor + 0.5)));
+    MatcherAssert.assertThat((double) timeoutUsed.get(), Matchers.lessThan(fillTimeMs * (timeoutAllowanceFactor + 0.5)));
 
     startMs = System.currentTimeMillis();
     final Batch batch = emitter.emitAndReturnBatch(new IntEvent());
@@ -86,6 +87,6 @@ public class HttpEmitterTest
     batch.seal();
     emitter.flush();
     fillTimeMs = System.currentTimeMillis() - startMs;
-    Assert.assertThat((double) timeoutUsed.get(), Matchers.lessThan(fillTimeMs * (timeoutAllowanceFactor + 0.5)));
+    MatcherAssert.assertThat((double) timeoutUsed.get(), Matchers.lessThan(fillTimeMs * (timeoutAllowanceFactor + 0.5)));
   }
 }

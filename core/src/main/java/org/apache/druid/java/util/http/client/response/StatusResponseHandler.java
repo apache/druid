@@ -24,8 +24,6 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 
 import java.nio.charset.StandardCharsets;
 
-/**
- */
 public class StatusResponseHandler implements HttpResponseHandler<StatusResponseHolder, StatusResponseHolder>
 {
 

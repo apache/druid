@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
@@ -34,6 +35,7 @@ import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -50,8 +52,10 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.LogicalSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -71,7 +75,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @RunWith(Parameterized.class)
-public class SegmentMetadataQueryTest
+public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
 {
   private static final SegmentMetadataQueryRunnerFactory FACTORY = new SegmentMetadataQueryRunnerFactory(
       new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()),
@@ -187,13 +191,13 @@ public class SegmentMetadataQueryTest
 
     int preferedSize1 = 0;
     int placementSize2 = 0;
-    int overallSize1 = 119691;
-    int overallSize2 = 119691;
+    int overallSize1 = 153543;
+    int overallSize2 = 153543;
     if (bitmaps) {
       preferedSize1 = mmap1 ? 10881 : 10764;
       placementSize2 = mmap2 ? 10881 : 0;
-      overallSize1 = mmap1 ? 167493 : 168188;
-      overallSize2 = mmap2 ? 167493 : 168188;
+      overallSize1 = mmap1 ? 201345 : 200831;
+      overallSize2 = mmap2 ? 201345 : 200831;
     }
     expectedSegmentAnalysis1 = new SegmentAnalysis(
         id1.toString(),
@@ -201,7 +205,9 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "__time",
             new ColumnAnalysis(
+                ColumnType.LONG,
                 ValueType.LONG.toString(),
+                false,
                 false,
                 12090,
                 null,
@@ -209,27 +215,32 @@ public class SegmentMetadataQueryTest
                 null,
                 null
             ),
-            "placement",
-            new ColumnAnalysis(
-                ValueType.STRING.toString(),
-                !mmap1,
-                preferedSize1,
-                1,
-                "preferred",
-                "preferred",
-                null
-            ),
             "index",
             new ColumnAnalysis(
+                ColumnType.DOUBLE,
                 ValueType.DOUBLE.toString(),
+                false,
                 false,
                 9672,
                 null,
                 null,
                 null,
                 null
+            ),
+            "placement",
+            new ColumnAnalysis(
+                ColumnType.STRING,
+                ValueType.STRING.toString(),
+                false,
+                false,
+                preferedSize1,
+                1,
+                "preferred",
+                "preferred",
+                null
             )
-        ), overallSize1,
+        ),
+        overallSize1,
         1209,
         null,
         null,
@@ -242,7 +253,9 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "__time",
             new ColumnAnalysis(
+                ColumnType.LONG,
                 ValueType.LONG.toString(),
+                false,
                 false,
                 12090,
                 null,
@@ -250,28 +263,33 @@ public class SegmentMetadataQueryTest
                 null,
                 null
             ),
-            "placement",
-            new ColumnAnalysis(
-                ValueType.STRING.toString(),
-                !mmap2,
-                placementSize2,
-                1,
-                null,
-                null,
-                null
-            ),
             "index",
             new ColumnAnalysis(
+                ColumnType.DOUBLE,
                 ValueType.DOUBLE.toString(),
+                false,
                 false,
                 9672,
                 null,
                 null,
                 null,
                 null
+            ),
+            "placement",
+            new ColumnAnalysis(
+                ColumnType.STRING,
+                ValueType.STRING.toString(),
+                false,
+                false,
+                placementSize2,
+                1,
+                null,
+                null,
+                null
             )
-            // null_column will be included only for incremental index, which makes a little bigger result than expected
-        ), overallSize2,
+        ),
+        // null_column will be included only for incremental index, which makes a little bigger result than expected
+        overallSize2,
         1209,
         null,
         null,
@@ -298,22 +316,26 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
-                !mmap1 || !mmap2,
+                false,
+                false,
                 0,
                 0,
-                null,
-                null,
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
                 null
             ),
             "placementish",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
                 true,
+                false,
                 0,
                 0,
-                null,
-                null,
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
                 null
             )
         ),
@@ -366,22 +388,26 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
-                !mmap1 || !mmap2,
+                false,
+                false,
                 0,
                 1,
-                null,
-                null,
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
                 null
             ),
             "placementish",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
                 true,
+                false,
                 0,
                 9,
-                null,
-                null,
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
                 null
             )
         ),
@@ -434,18 +460,22 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
-                !mmap1 || !mmap2,
+                false,
+                false,
                 0,
                 1,
-                null,
-                null,
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
                 null
             ),
             "quality_uniques",
             new ColumnAnalysis(
+                ColumnType.ofComplex("hyperUnique"),
                 "hyperUnique",
                 false,
+                true,
                 0,
                 null,
                 null,
@@ -503,8 +533,10 @@ public class SegmentMetadataQueryTest
       size2 = mmap2 ? 10881 : 10764;
     }
     ColumnAnalysis analysis = new ColumnAnalysis(
+        ColumnType.STRING,
         ValueType.STRING.toString(),
-        !mmap1 || !mmap2,
+        false,
+        false,
         size1 + size2,
         1,
         "preferred",
@@ -524,8 +556,10 @@ public class SegmentMetadataQueryTest
       size2 = mmap2 ? 6882 : 6808;
     }
     ColumnAnalysis analysis = new ColumnAnalysis(
+        ColumnType.STRING,
         ValueType.STRING.toString(),
-        !mmap1 || !mmap2,
+        false,
+        false,
         size1 + size2,
         3,
         "spot",
@@ -545,8 +579,10 @@ public class SegmentMetadataQueryTest
       size2 = mmap2 ? 9765 : 9660;
     }
     ColumnAnalysis analysis = new ColumnAnalysis(
+        ColumnType.STRING,
         ValueType.STRING.toString(),
-        !mmap1 || !mmap2,
+        false,
+        false,
         size1 + size2,
         9,
         "automotive",
@@ -567,7 +603,9 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "__time",
             new ColumnAnalysis(
+                ColumnType.LONG,
                 ValueType.LONG.toString(),
+                false,
                 false,
                 12090 * 2,
                 null,
@@ -577,7 +615,9 @@ public class SegmentMetadataQueryTest
             ),
             "index",
             new ColumnAnalysis(
+                ColumnType.DOUBLE,
                 ValueType.DOUBLE.toString(),
+                false,
                 false,
                 9672 * 2,
                 null,
@@ -631,12 +671,14 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
-                !mmap1 || !mmap2,
+                false,
+                false,
                 0,
                 0,
-                null,
-                null,
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
                 null
             )
         ),
@@ -693,12 +735,14 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
-                !mmap1 || !mmap2,
+                false,
+                false,
                 0,
                 0,
-                null,
-                null,
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
                 null
             )
         ),
@@ -751,12 +795,14 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
-                !mmap1 || !mmap2,
+                false,
+                false,
                 0,
                 0,
-                null,
-                null,
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
                 null
             )
         ),
@@ -809,12 +855,14 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
-                !mmap1 || !mmap2,
+                false,
+                false,
                 0,
                 0,
-                null,
-                null,
+                NullHandling.defaultStringValue(),
+                NullHandling.defaultStringValue(),
                 null
             )
         ),
@@ -879,7 +927,7 @@ public class SegmentMetadataQueryTest
             FACTORY.mergeRunners(
                 Execs.directExecutor(),
                 //Note: It is essential to have atleast 2 query runners merged to reproduce the regression bug described in
-                //https://github.com/apache/incubator-druid/pull/1172
+                //https://github.com/apache/druid/pull/1172
                 //the bug surfaces only when ordering is used which happens only when you have 2 things to compare
                 Lists.newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
             )
@@ -889,7 +937,7 @@ public class SegmentMetadataQueryTest
 
     TestHelper.assertExpectedObjects(
         ImmutableList.of(bySegmentResult, bySegmentResult),
-        myRunner.run(QueryPlus.wrap(testQuery.withOverriddenContext(ImmutableMap.of("bySegment", true)))),
+        myRunner.run(QueryPlus.wrap(testQuery.withOverriddenContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true)))),
         "failed SegmentMetadata bySegment query"
     );
     exec.shutdownNow();
@@ -912,7 +960,7 @@ public class SegmentMetadataQueryTest
 
     Query query = MAPPER.readValue(queryStr, Query.class);
     Assert.assertTrue(query instanceof SegmentMetadataQuery);
-    Assert.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getNames()));
+    Assert.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getTableNames()));
     Assert.assertEquals(
         Intervals.of("2013-12-04T00:00:00.000Z/2013-12-05T00:00:00.000Z"),
         query.getIntervals().get(0)
@@ -932,7 +980,7 @@ public class SegmentMetadataQueryTest
                       + "}";
     Query query = MAPPER.readValue(queryStr, Query.class);
     Assert.assertTrue(query instanceof SegmentMetadataQuery);
-    Assert.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getNames()));
+    Assert.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getTableNames()));
     Assert.assertEquals(Intervals.ETERNITY, query.getIntervals().get(0));
     Assert.assertTrue(((SegmentMetadataQuery) query).isUsingDefaultInterval());
 
@@ -1268,4 +1316,72 @@ public class SegmentMetadataQueryTest
     Assert.assertEquals(analysisWCfg2, expectedAnalysisWCfg2);
   }
 
+  @Test
+  public void testLongNullableColumn()
+  {
+    ColumnAnalysis analysis = new ColumnAnalysis(
+        ColumnType.LONG,
+        ValueType.LONG.toString(),
+        false,
+        NullHandling.replaceWithDefault() ? false : true,
+        19344,
+        null,
+        null,
+        null,
+        null
+    );
+    testSegmentMetadataQueryWithDefaultAnalysisMerge("longNumericNull", analysis);
+  }
+
+  @Test
+  public void testDoubleNullableColumn()
+  {
+    ColumnAnalysis analysis = new ColumnAnalysis(
+        ColumnType.DOUBLE,
+        ValueType.DOUBLE.toString(),
+        false,
+        NullHandling.replaceWithDefault() ? false : true,
+        19344,
+        null,
+        null,
+        null,
+        null
+    );
+    testSegmentMetadataQueryWithDefaultAnalysisMerge("doubleNumericNull", analysis);
+  }
+
+
+  @Test
+  public void testFloatNullableColumn()
+  {
+    ColumnAnalysis analysis = new ColumnAnalysis(
+        ColumnType.FLOAT,
+        ValueType.FLOAT.toString(),
+        false,
+        NullHandling.replaceWithDefault() ? false : true,
+        19344,
+        null,
+        null,
+        null,
+        null
+    );
+    testSegmentMetadataQueryWithDefaultAnalysisMerge("floatNumericNull", analysis);
+  }
+
+  @Test
+  public void testStringNullOnlyColumn()
+  {
+    ColumnAnalysis analysis = new ColumnAnalysis(
+        ColumnType.STRING,
+        ValueType.STRING.toString(),
+        false,
+        true,
+        0,
+        1,
+        NullHandling.defaultStringValue(),
+        NullHandling.defaultStringValue(),
+        null
+    );
+    testSegmentMetadataQueryWithDefaultAnalysisMerge("null_column", analysis);
+  }
 }

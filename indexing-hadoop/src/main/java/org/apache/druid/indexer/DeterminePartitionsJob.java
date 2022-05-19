@@ -135,7 +135,7 @@ public class DeterminePartitionsJob implements Jobby
             StringUtils.format("%s-determine_partitions_groupby-%s", config.getDataSource(), config.getIntervals())
         );
 
-        JobHelper.injectSystemProperties(groupByJob);
+        JobHelper.injectSystemProperties(groupByJob.getConfiguration(), config);
         config.addJobProperties(groupByJob);
 
         groupByJob.setMapperClass(DeterminePartitionsGroupByMapper.class);
@@ -191,7 +191,7 @@ public class DeterminePartitionsJob implements Jobby
 
       dimSelectionJob.getConfiguration().set("io.sort.record.percent", "0.19");
 
-      JobHelper.injectSystemProperties(dimSelectionJob);
+      JobHelper.injectSystemProperties(dimSelectionJob.getConfiguration(), config);
       config.addJobProperties(dimSelectionJob);
 
       if (!partitionsSpec.isAssumeGrouped()) {
@@ -212,7 +212,7 @@ public class DeterminePartitionsJob implements Jobby
       dimSelectionJob.setOutputKeyClass(BytesWritable.class);
       dimSelectionJob.setOutputValueClass(Text.class);
       dimSelectionJob.setOutputFormatClass(DeterminePartitionsDimSelectionOutputFormat.class);
-      dimSelectionJob.setNumReduceTasks(config.getGranularitySpec().bucketIntervals().get().size());
+      dimSelectionJob.setNumReduceTasks(Iterators.size(config.getGranularitySpec().sortedBucketIntervals().iterator()));
       JobHelper.setupClasspath(
           JobHelper.distributedClassPath(config.getWorkingPath()),
           JobHelper.distributedClassPath(config.makeIntermediatePath()),
@@ -256,7 +256,7 @@ public class DeterminePartitionsJob implements Jobby
       FileSystem fileSystem = null;
       Map<Long, List<HadoopyShardSpec>> shardSpecs = new TreeMap<>();
       int shardCount = 0;
-      for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
+      for (Interval segmentGranularity : config.getSegmentGranularIntervals()) {
         final Path partitionInfoPath = config.makeSegmentPartitionInfoPath(segmentGranularity);
         if (fileSystem == null) {
           fileSystem = partitionInfoPath.getFileSystem(dimSelectionJob.getConfiguration());
@@ -447,7 +447,7 @@ public class DeterminePartitionsJob implements Jobby
 
       final ImmutableMap.Builder<Long, Integer> timeIndexBuilder = ImmutableMap.builder();
       int idx = 0;
-      for (final Interval bucketInterval : config.getGranularitySpec().bucketIntervals().get()) {
+      for (final Interval bucketInterval : config.getGranularitySpec().sortedBucketIntervals()) {
         timeIndexBuilder.put(bucketInterval.getStartMillis(), idx);
         idx++;
       }
@@ -464,7 +464,7 @@ public class DeterminePartitionsJob implements Jobby
       final Optional<Interval> maybeInterval = config.getGranularitySpec().bucketInterval(timestamp);
 
       if (!maybeInterval.isPresent()) {
-        throw new ISE("WTF?! No bucket found for timestamp: %s", timestamp);
+        throw new ISE("No bucket found for timestamp: %s", timestamp);
       }
 
       final Interval interval = maybeInterval.get();
@@ -627,7 +627,7 @@ public class DeterminePartitionsJob implements Jobby
       final long totalRows = firstDvc.numRows;
 
       if (!"".equals(firstDvc.dim) || !"".equals(firstDvc.value)) {
-        throw new IllegalStateException("WTF?! Expected total row indicator on first k/v pair!");
+        throw new IllegalStateException("Expected total row indicator on first k/v pair");
       }
 
       // "iterator" will now take us over many candidate dimensions
@@ -666,7 +666,10 @@ public class DeterminePartitionsJob implements Jobby
               currentDimPartitions.dim,
               currentDimPartitionStart,
               dvc.value,
-              currentDimPartitions.partitions.size()
+              currentDimPartitions.partitions.size(),
+              // Set unknown core partitions size so that the legacy way is used for checking partitionHolder
+              // completeness. See SingleDimensionShardSpec.createChunk().
+              SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS
           );
 
           log.info(
@@ -706,7 +709,10 @@ public class DeterminePartitionsJob implements Jobby
                   currentDimPartitions.dim,
                   previousShardSpec.getStart(),
                   null,
-                  previousShardSpec.getPartitionNum()
+                  previousShardSpec.getPartitionNum(),
+                  // Set unknown core partitions size so that the legacy way is used for checking partitionHolder
+                  // completeness. See SingleDimensionShardSpec.createChunk().
+                  SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS
               );
 
               log.info("Removing possible shard: %s", previousShardSpec);
@@ -719,7 +725,10 @@ public class DeterminePartitionsJob implements Jobby
                   currentDimPartitions.dim,
                   currentDimPartitionStart,
                   null,
-                  currentDimPartitions.partitions.size()
+                  currentDimPartitions.partitions.size(),
+                  // Set unknown core partitions size so that the legacy way is used for checking partitionHolder
+                  // completeness. See SingleDimensionShardSpec.createChunk().
+                  SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS
               );
             }
 

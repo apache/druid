@@ -449,7 +449,7 @@ public class HdfsDataSegmentPusherTest
             null,
             new NumberedShardSpec(bucket.partitionNum, 5000),
             -1,
-            -1
+            0
         ),
         JobHelper.INDEX_ZIP,
         hdfsDataSegmentPusher
@@ -472,7 +472,7 @@ public class HdfsDataSegmentPusherTest
             null,
             new NumberedShardSpec(bucket.partitionNum, 5000),
             -1,
-            -1
+            0
         ),
         new TaskAttemptID("abc", 123, TaskType.REDUCE, 1, 0),
         hdfsDataSegmentPusher
@@ -536,7 +536,7 @@ public class HdfsDataSegmentPusherTest
             null,
             new NumberedShardSpec(bucket.partitionNum, 5000),
             -1,
-            -1
+            0
         ),
         JobHelper.INDEX_ZIP,
         new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig())
@@ -559,7 +559,7 @@ public class HdfsDataSegmentPusherTest
             null,
             new NumberedShardSpec(bucket.partitionNum, 5000),
             -1,
-            -1
+            0
         ),
         new TaskAttemptID("abc", 123, TaskType.REDUCE, 1, 0),
         new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig())

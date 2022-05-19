@@ -42,9 +42,9 @@ public class LookupsState<T>
       @JsonProperty("toDrop") Set<String> toDrop
   )
   {
-    this.current = current == null ? Collections.EMPTY_MAP : current;
-    this.toLoad = toLoad == null ? Collections.EMPTY_MAP : toLoad;
-    this.toDrop = toDrop == null ? Collections.EMPTY_SET : toDrop;
+    this.current = current == null ? Collections.emptyMap() : current;
+    this.toLoad = toLoad == null ? Collections.emptyMap() : toLoad;
+    this.toDrop = toDrop == null ? Collections.emptySet() : toDrop;
   }
 
   @JsonProperty

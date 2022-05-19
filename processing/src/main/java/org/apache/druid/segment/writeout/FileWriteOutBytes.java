@@ -36,6 +36,7 @@ final class FileWriteOutBytes extends WriteOutBytes
 {
   private final File file;
   private final FileChannel ch;
+  private long writeOutBytes;
 
   /** Purposely big-endian, for {@link #writeInt(int)} implementation */
   private final ByteBuffer buffer = ByteBuffer.allocate(4096); // 4K page sized buffer
@@ -44,6 +45,7 @@ final class FileWriteOutBytes extends WriteOutBytes
   {
     this.file = file;
     this.ch = ch;
+    this.writeOutBytes = 0L;
   }
   
   private void flushIfNeeded(int bytesNeeded) throws IOException
@@ -66,13 +68,15 @@ final class FileWriteOutBytes extends WriteOutBytes
   {
     flushIfNeeded(1);
     buffer.put((byte) b);
+    writeOutBytes++;
   }
 
   @Override
   public void writeInt(int v) throws IOException
   {
-    flushIfNeeded(Integer.SIZE);
+    flushIfNeeded(Integer.BYTES);
     buffer.putInt(v);
+    writeOutBytes += Integer.BYTES;
   }
 
   @Override
@@ -85,6 +89,7 @@ final class FileWriteOutBytes extends WriteOutBytes
       try {
         src.limit(src.position() + buffer.capacity());
         buffer.put(src);
+        writeOutBytes += buffer.capacity();
         flush();
       }
       finally {
@@ -92,7 +97,9 @@ final class FileWriteOutBytes extends WriteOutBytes
         src.limit(srcLimit);
       }
     }
+    int remaining = src.remaining();
     buffer.put(src);
+    writeOutBytes += remaining;
     return len;
   }
 
@@ -103,10 +110,9 @@ final class FileWriteOutBytes extends WriteOutBytes
   }
 
   @Override
-  public long size() throws IOException
+  public long size()
   {
-    flush();
-    return ch.size();
+    return writeOutBytes;
   }
 
   @Override
@@ -125,10 +131,10 @@ final class FileWriteOutBytes extends WriteOutBytes
   @Override
   public void readFully(long pos, ByteBuffer buffer) throws IOException
   {
-    flush();
-    if (pos < 0 || pos > ch.size()) {
-      throw new IAE("pos %d out of range [%d, %d]", pos, 0, ch.size());
+    if (pos < 0 || pos > writeOutBytes) {
+      throw new IAE("pos %d out of range [%d, %d]", pos, 0, writeOutBytes);
     }
+    flush();
     ch.read(buffer, pos);
     if (buffer.remaining() > 0) {
       throw new BufferUnderflowException();

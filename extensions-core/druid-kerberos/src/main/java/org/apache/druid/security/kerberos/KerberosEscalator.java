@@ -58,7 +58,7 @@ public class KerberosEscalator implements Escalator
   public AuthenticationResult createEscalatedAuthenticationResult()
   {
     // if you found your self asking why the authenticatedBy field is set to null please read this:
-    // https://github.com/apache/incubator-druid/pull/5706#discussion_r185940889
+    // https://github.com/apache/druid/pull/5706#discussion_r185940889
     return new AuthenticationResult(internalClientPrincipal, authorizerName, null, null);
   }
 

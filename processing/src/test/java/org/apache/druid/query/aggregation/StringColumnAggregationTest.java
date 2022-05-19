@@ -28,7 +28,6 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.NoopInputRowParser;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Result;
@@ -41,6 +40,7 @@ import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
@@ -96,12 +96,12 @@ public class StringColumnAggregationTest
     }
 
     aggregationTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        Collections.EMPTY_LIST,
+        Collections.emptyList(),
         new GroupByQueryConfig(),
         tempFolder
     );
 
-    IncrementalIndex index = aggregationTestHelper.createIncrementalIndex(
+    IncrementalIndex index = AggregationTestHelper.createIncrementalIndex(
         inputRows.iterator(),
         new NoopInputRowParser(null),
         new AggregatorFactory[]{new CountAggregatorFactory("count")},
@@ -129,11 +129,11 @@ public class StringColumnAggregationTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     if (segments != null) {
       for (Segment seg : segments) {
-        CloseQuietly.close(seg);
+        CloseableUtils.closeAndWrapExceptions(seg);
       }
     }
   }
@@ -231,7 +231,7 @@ public class StringColumnAggregationTest
                                   )
                                   .build();
 
-    Sequence seq = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(Collections.EMPTY_LIST, tempFolder)
+    Sequence seq = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(Collections.emptyList(), tempFolder)
                                         .runQueryOnSegmentsObjs(segments, query);
     TimeseriesResultValue result = ((Result<TimeseriesResultValue>) Iterables.getOnlyElement(seq.toList())).getValue();
 

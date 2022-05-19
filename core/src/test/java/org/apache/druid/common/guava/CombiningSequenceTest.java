@@ -20,17 +20,22 @@
 package org.apache.druid.common.guava;
 
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.guava.ExplodingSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -39,6 +44,7 @@ import java.io.Closeable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -194,6 +200,40 @@ public class CombiningSequenceTest
     testCombining(Collections.emptyList(), Collections.emptyList());
   }
 
+  @Test
+  public void testExplodingSequence()
+  {
+    final ExplodingSequence<Integer> bomb =
+        new ExplodingSequence<>(Sequences.simple(ImmutableList.of(1, 2, 2)), false, true);
+
+    final CombiningSequence<Integer> combiningSequence =
+        CombiningSequence.create(bomb, Comparator.naturalOrder(), (a, b) -> a);
+
+    try {
+      combiningSequence.toYielder(
+          null,
+          new YieldingAccumulator<Integer, Integer>()
+          {
+            @Override
+            public Integer accumulate(Integer accumulated, Integer in)
+            {
+              if (in > 1) {
+                throw new RuntimeException("boom");
+              }
+
+              return in;
+            }
+          }
+      );
+      Assert.fail("Expected exception");
+    }
+    catch (Exception e) {
+      Assert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("boom")));
+    }
+
+    Assert.assertEquals("Closes resources", 1, bomb.getCloseCount());
+  }
+
   private void testCombining(List<Pair<Integer, Integer>> pairs, List<Pair<Integer, Integer>> expected)
       throws Exception
   {
@@ -215,6 +255,8 @@ public class CombiningSequenceTest
       int limit
   ) throws Exception
   {
+    final String prefix = StringUtils.format("yieldEvery[%d], limit[%d]", yieldEvery, limit);
+
     // Test that closing works too
     final CountDownLatch closed = new CountDownLatch(1);
     final Closeable closeable = closed::countDown;
@@ -237,7 +279,7 @@ public class CombiningSequenceTest
 
     List<Pair<Integer, Integer>> merged = seq.toList();
 
-    Assert.assertEquals(expected, merged);
+    Assert.assertEquals(prefix, expected, merged);
 
     Yielder<Pair<Integer, Integer>> yielder = seq.toYielder(
         null,
@@ -279,16 +321,17 @@ public class CombiningSequenceTest
         }
     );
 
+    int i = 0;
     if (expectedVals.hasNext()) {
       while (!yielder.isDone()) {
         final Pair<Integer, Integer> expectedVal = expectedVals.next();
         final Pair<Integer, Integer> actual = yielder.get();
-        Assert.assertEquals(expectedVal, actual);
+        Assert.assertEquals(StringUtils.format("%s, i[%s]", prefix, i++), expectedVal, actual);
         yielder = yielder.next(actual);
       }
     }
-    Assert.assertTrue(yielder.isDone());
-    Assert.assertFalse(expectedVals.hasNext());
+    Assert.assertTrue(prefix, yielder.isDone());
+    Assert.assertFalse(prefix, expectedVals.hasNext());
     yielder.close();
 
     Assert.assertTrue("resource closed", closed.await(10000, TimeUnit.MILLISECONDS));

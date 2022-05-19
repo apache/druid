@@ -95,11 +95,9 @@ public class AndHavingSpec implements HavingSpec
   @Override
   public String toString()
   {
-    final StringBuilder sb = new StringBuilder();
-    sb.append("AndHavingSpec");
-    sb.append("{havingSpecs=").append(havingSpecs);
-    sb.append('}');
-    return sb.toString();
+    return "AndHavingSpec{" +
+           "havingSpecs=" + havingSpecs +
+           '}';
   }
 
   @Override

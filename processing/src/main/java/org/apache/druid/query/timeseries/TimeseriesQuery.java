@@ -38,18 +38,26 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  */
 @JsonTypeName("timeseries")
 public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 {
-  static final String CTX_GRAND_TOTAL = "grandTotal";
+  public static final String CTX_GRAND_TOTAL = "grandTotal";
   public static final String SKIP_EMPTY_BUCKETS = "skipEmptyBuckets";
+  // "timestampResultField" is an undocumented parameter used internally by the SQL layer.
+  // It is necessary because when the SQL layer generates a Timeseries query for a group-by-time-floor SQL query,
+  // it expects the result of the time-floor to have a specific name. That name is provided using this parameter.
+  // TODO: We can remove this once https://github.com/apache/druid/issues/9974 is done.
+  public static final String CTX_TIMESTAMP_RESULT_FIELD = "timestampResultField";
 
   private final VirtualColumns virtualColumns;
   private final DimFilter dimFilter;
@@ -73,11 +81,14 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   {
     super(dataSource, querySegmentSpec, descending, context, granularity);
 
+    // The below should be executed after context is initialized.
+    final String timestampField = getTimestampResultField();
+
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimFilter = dimFilter;
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.of() : aggregatorSpecs;
     this.postAggregatorSpecs = Queries.prepareAggregations(
-        ImmutableList.of(),
+        timestampField == null ? ImmutableList.of() : ImmutableList.of(timestampField),
         this.aggregatorSpecs,
         postAggregatorSpecs == null ? ImmutableList.of() : postAggregatorSpecs
     );
@@ -104,6 +115,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   }
 
   @JsonProperty
+  @Override
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;
@@ -138,9 +150,27 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return getContextBoolean(CTX_GRAND_TOTAL, false);
   }
 
+  public String getTimestampResultField()
+  {
+    return getContextValue(CTX_TIMESTAMP_RESULT_FIELD);
+  }
+
   public boolean isSkipEmptyBuckets()
   {
     return getContextBoolean(SKIP_EMPTY_BUCKETS, false);
+  }
+
+  @Nullable
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return Queries.computeRequiredColumns(
+        virtualColumns,
+        dimFilter,
+        Collections.emptyList(),
+        aggregatorSpecs,
+        Collections.emptyList()
+    );
   }
 
   @Override

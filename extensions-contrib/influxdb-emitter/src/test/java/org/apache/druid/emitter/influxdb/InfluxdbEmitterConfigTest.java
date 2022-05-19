@@ -22,12 +22,13 @@ package org.apache.druid.emitter.influxdb;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
+import java.security.KeyStore;
 import java.util.Arrays;
 
 public class InfluxdbEmitterConfigTest
@@ -46,6 +47,10 @@ public class InfluxdbEmitterConfigTest
     influxdbEmitterConfig = new InfluxdbEmitterConfig(
         "localhost",
         8086,
+        null,
+        null,
+        null,
+        null,
         "dbname",
         10000,
         15000,
@@ -57,11 +62,15 @@ public class InfluxdbEmitterConfigTest
   }
 
   @Test
-  public void testInfluxdbEmitterConfigObjectsAreDifferent() throws IOException
+  public void testInfluxdbEmitterConfigObjectsAreDifferent()
   {
     InfluxdbEmitterConfig influxdbEmitterConfigComparison = new InfluxdbEmitterConfig(
         "localhost",
         8080,
+        null,
+        null,
+        null,
+        null,
         "dbname",
         10000,
         15000,
@@ -74,11 +83,15 @@ public class InfluxdbEmitterConfigTest
   }
 
   @Test(expected = NullPointerException.class)
-  public void testConfigWithNullHostname() throws IOException
+  public void testConfigWithNullHostname()
   {
     InfluxdbEmitterConfig influxdbEmitterConfigWithNullHostname = new InfluxdbEmitterConfig(
         null,
         8080,
+        null,
+        null,
+        null,
+        null,
         "dbname",
         10000,
         15000,
@@ -90,10 +103,14 @@ public class InfluxdbEmitterConfigTest
   }
 
   @Test
-  public void testConfigWithNullPort() throws IOException
+  public void testConfigWithNullPort()
   {
     InfluxdbEmitterConfig influxdbEmitterConfigWithNullPort = new InfluxdbEmitterConfig(
         "localhost",
+        null,
+        null,
+        null,
+        null,
         null,
         "dbname",
         10000,
@@ -113,6 +130,10 @@ public class InfluxdbEmitterConfigTest
     InfluxdbEmitterConfig influxdbEmitterConfigComparison = new InfluxdbEmitterConfig(
         "localhost",
         8086,
+        null,
+        null,
+        null,
+        null,
         "dbname",
         10000,
         15000,
@@ -130,6 +151,10 @@ public class InfluxdbEmitterConfigTest
     InfluxdbEmitterConfig influxdbEmitterConfigComparison = new InfluxdbEmitterConfig(
         "localhost",
         8086,
+        "https",
+        "/path",
+        "jks",
+        "password",
         "dbname",
         10000,
         15000,
@@ -142,11 +167,15 @@ public class InfluxdbEmitterConfigTest
   }
 
   @Test(expected = NullPointerException.class)
-  public void testConfigWithNullInfluxdbUserName() throws IOException
+  public void testConfigWithNullInfluxdbUserName()
   {
     InfluxdbEmitterConfig influxdbEmitterConfigWithNullHostname = new InfluxdbEmitterConfig(
         "localhost",
         8086,
+        null,
+        null,
+        null,
+        null,
         "dbname",
         10000,
         15000,
@@ -158,11 +187,15 @@ public class InfluxdbEmitterConfigTest
   }
 
   @Test(expected = NullPointerException.class)
-  public void testConfigWithNullInfluxdbPassword() throws IOException
+  public void testConfigWithNullInfluxdbPassword()
   {
     InfluxdbEmitterConfig influxdbEmitterConfigWithNullHostname = new InfluxdbEmitterConfig(
         "localhost",
         8086,
+        null,
+        null,
+        null,
+        null,
         "dbname",
         10000,
         15000,
@@ -179,6 +212,10 @@ public class InfluxdbEmitterConfigTest
     InfluxdbEmitterConfig influxdbEmitterConfig = new InfluxdbEmitterConfig(
         "localhost",
         8086,
+        null,
+        null,
+        null,
+        null,
         "dbname",
         10000,
         15000,
@@ -197,6 +234,10 @@ public class InfluxdbEmitterConfigTest
     InfluxdbEmitterConfig influxdbEmitterConfig = new InfluxdbEmitterConfig(
         "localhost",
         8086,
+        null,
+        null,
+        null,
+        null,
         "dbname",
         10000,
         15000,
@@ -207,6 +248,60 @@ public class InfluxdbEmitterConfigTest
     );
     ImmutableSet<String> expected = ImmutableSet.copyOf(Arrays.asList("dataSource", "taskType"));
     Assert.assertEquals(expected, influxdbEmitterConfig.getDimensionWhitelist());
+  }
+
+  @Test
+  public void testConfigWithNullProtocol()
+  {
+    InfluxdbEmitterConfig influxdbEmitterConfigWithNullProtocol = new InfluxdbEmitterConfig(
+        "localhost",
+        8086,
+        null,
+        "path",
+        "jks",
+        "pass",
+        "dbname",
+        10000,
+        15000,
+        30000,
+        "adam",
+        "password",
+        null
+    );
+    String expectedProtocol = "http";
+    Assert.assertEquals(expectedProtocol, influxdbEmitterConfigWithNullProtocol.getProtocol());
+  }
+
+  @Test
+  public void testConfigEquals()
+  {
+    EqualsVerifier.forClass(InfluxdbEmitterConfig.class).withNonnullFields(
+        "hostname", "port", "protocol", "trustStoreType", "databaseName",
+        "maxQueueSize", "flushPeriod", "flushDelay", "influxdbUserName",
+        "influxdbPassword", "dimensionWhitelist"
+    ).usingGetClass().verify();
+  }
+
+  @Test
+  public void testConfigWithNullTrustStoreType()
+  {
+    InfluxdbEmitterConfig influxdbEmitterConfigWithNullTrustStoreType = new InfluxdbEmitterConfig(
+        "localhost",
+        8086,
+        null,
+        "path",
+        null,
+        "pass",
+        "dbname",
+        10000,
+        15000,
+        30000,
+        "adam",
+        "password",
+        null
+    );
+    String expectedTrustStoreType = KeyStore.getDefaultType();
+    Assert.assertEquals(expectedTrustStoreType, influxdbEmitterConfigWithNullTrustStoreType.getTrustStoreType());
   }
 
 }

@@ -23,7 +23,7 @@ title: "T-Digest Quantiles Sketch module"
   -->
 
 
-This module provides Apache Druid (incubating) approximate sketch aggregators based on T-Digest.
+This module provides Apache Druid approximate sketch aggregators based on T-Digest.
 T-Digest (https://github.com/tdunning/t-digest) is a popular data structure for accurate on-line accumulation of
 rank-based statistics such as quantiles and trimmed means.
 The data structure is also designed for parallel programming use cases like distributed aggregations or map reduce jobs by making combining two intermediate t-digests easy and efficient.

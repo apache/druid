@@ -21,8 +21,6 @@ package org.apache.druid.server.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.QueryInterruptedException;
-import org.apache.druid.server.DruidNode;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -41,19 +39,12 @@ public class SecuritySanityCheckFilter implements Filter
 
   private final String unauthorizedMessage;
 
-  public SecuritySanityCheckFilter(
-      ObjectMapper jsonMapper
-  )
+  public SecuritySanityCheckFilter(ObjectMapper jsonMapper)
   {
     try {
-      QueryInterruptedException unauthorizedError = new QueryInterruptedException(
-          QueryInterruptedException.UNAUTHORIZED,
-          null,
-          null,
-          DruidNode.getDefaultHost()
-      );
-      unauthorizedError.setStackTrace(new StackTraceElement[0]);
-      this.unauthorizedMessage = jsonMapper.writeValueAsString(unauthorizedError);
+      ForbiddenException forbiddenException = new ForbiddenException();
+      forbiddenException.setStackTrace(new StackTraceElement[0]);
+      this.unauthorizedMessage = jsonMapper.writeValueAsString(forbiddenException);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -101,7 +92,7 @@ public class SecuritySanityCheckFilter implements Filter
       outputStream.write(errorJson.getBytes(StandardCharsets.UTF_8));
     }
     catch (IOException ioe) {
-      log.error("WTF? Can't get writer from HTTP response.");
+      log.error("Can't get writer from HTTP response.");
     }
   }
 }

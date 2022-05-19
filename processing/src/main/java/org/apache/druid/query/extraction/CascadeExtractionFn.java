@@ -21,20 +21,22 @@ package org.apache.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Bytes;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Objects;
 
 public class CascadeExtractionFn implements ExtractionFn
 {
-  private final ExtractionFn extractionFns[];
-  private final ChainedExtractionFn chainedExtractionFn;
-  private final ChainedExtractionFn DEFAULT_CHAINED_EXTRACTION_FN = new ChainedExtractionFn(
+  @VisibleForTesting
+  static final ChainedExtractionFn DEFAULT_CHAINED_EXTRACTION_FN = new ChainedExtractionFn(
       new ExtractionFn()
       {
+        private static final String NAME = "nullExtractionFn{}";
         @Override
         public byte[] getCacheKey()
         {
@@ -76,11 +78,27 @@ public class CascadeExtractionFn implements ExtractionFn
         @Override
         public String toString()
         {
-          return "nullExtractionFn{}";
+          return NAME;
+        }
+
+        @Override
+        public int hashCode()
+        {
+          return NAME.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object obj)
+        {
+          return obj != null
+                 && getClass().equals(obj.getClass());
         }
       },
       null
   );
+
+  private final ExtractionFn[] extractionFns;
+  private final ChainedExtractionFn chainedExtractionFn;
 
   @JsonCreator
   public CascadeExtractionFn(
@@ -172,7 +190,9 @@ public class CascadeExtractionFn implements ExtractionFn
   @Override
   public int hashCode()
   {
-    return chainedExtractionFn.hashCode();
+    int result = Objects.hash(chainedExtractionFn);
+    result = 31 * result + Arrays.hashCode(extractionFns);
+    return result;
   }
 
   @Override
@@ -181,7 +201,8 @@ public class CascadeExtractionFn implements ExtractionFn
     return "CascadeExtractionFn{extractionFns=[" + chainedExtractionFn + "]}";
   }
 
-  private static class ChainedExtractionFn
+  @VisibleForTesting
+  static class ChainedExtractionFn
   {
     private final ExtractionFn fn;
     private final ChainedExtractionFn child;
@@ -240,27 +261,15 @@ public class CascadeExtractionFn implements ExtractionFn
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-
       ChainedExtractionFn that = (ChainedExtractionFn) o;
-
-      if (!fn.equals(that.fn)) {
-        return false;
-      }
-      if (child != null && !child.equals(that.child)) {
-        return false;
-      }
-
-      return true;
+      return Objects.equals(fn, that.fn) &&
+             Objects.equals(child, that.child);
     }
 
     @Override
     public int hashCode()
     {
-      int result = fn.hashCode();
-      if (child != null) {
-        result = 31 * result + child.hashCode();
-      }
-      return result;
+      return Objects.hash(fn, child);
     }
 
     @Override

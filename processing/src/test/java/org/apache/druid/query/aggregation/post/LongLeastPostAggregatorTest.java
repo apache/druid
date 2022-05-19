@@ -19,9 +19,17 @@
 
 package org.apache.druid.query.aggregation.post;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregator;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -92,5 +100,38 @@ public class LongLeastPostAggregatorTest
     Assert.assertEquals(0, comp.compare(before, before));
     Assert.assertEquals(0, comp.compare(after, after));
     Assert.assertEquals(1, comp.compare(after, before));
+  }
+
+  @Test
+  public void testResultArraySignature()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .granularity(Granularities.HOUR)
+              .aggregators(
+                  new CountAggregatorFactory("count")
+              )
+              .postAggregators(
+                  new LongLeastPostAggregator(
+                      "a",
+                      ImmutableList.of(
+                          new ConstantPostAggregator("_a", 3L),
+                          new ConstantPostAggregator("_b", 1.0f),
+                          new ConstantPostAggregator("_c", 5.0)
+                      )
+                  )
+              )
+              .build();
+
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("count", ColumnType.LONG)
+                    .add("a", ColumnType.LONG)
+                    .build(),
+        new TimeseriesQueryQueryToolChest().resultArraySignature(query)
+    );
   }
 }

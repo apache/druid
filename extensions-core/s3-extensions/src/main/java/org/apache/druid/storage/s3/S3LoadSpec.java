@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 
@@ -32,7 +33,7 @@ import java.io.File;
 /**
  *
  */
-@JsonTypeName(S3StorageDruidModule.SCHEME)
+@JsonTypeName(S3StorageDruidModule.SCHEME_S3_ZIP)
 public class S3LoadSpec implements LoadSpec
 {
   private final String bucket;
@@ -57,7 +58,7 @@ public class S3LoadSpec implements LoadSpec
   @Override
   public LoadSpecResult loadSegment(File outDir) throws SegmentLoadingException
   {
-    return new LoadSpecResult(puller.getSegmentFiles(new S3DataSegmentPuller.S3Coords(bucket, key), outDir).size());
+    return new LoadSpecResult(puller.getSegmentFiles(new CloudObjectLocation(bucket, key), outDir).size());
   }
 
   @JsonProperty(S3DataSegmentPuller.BUCKET)

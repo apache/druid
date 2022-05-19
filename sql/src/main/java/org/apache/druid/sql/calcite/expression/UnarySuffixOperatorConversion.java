@@ -23,8 +23,8 @@ import com.google.common.collect.Iterables;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 public class UnarySuffixOperatorConversion implements SqlOperatorConversion
 {
@@ -50,16 +50,14 @@ public class UnarySuffixOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    return OperatorConversions.convertCall(
+    return OperatorConversions.convertCallBuilder(
         plannerContext,
         rowSignature,
         rexNode,
-        operands -> DruidExpression.fromExpression(
-            StringUtils.format(
-                "(%s %s)",
-                Iterables.getOnlyElement(operands).getExpression(),
-                druidOperator
-            )
+        operands -> StringUtils.format(
+            "(%s %s)",
+            Iterables.getOnlyElement(operands).getExpression(),
+            druidOperator
         )
     );
   }

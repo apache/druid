@@ -41,6 +41,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Test;
@@ -50,7 +51,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class DummyStringVirtualColumnTest
+public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
 {
   private static final String VSTRING_DIM = "vstring";
   private static final String COUNT = "count";
@@ -78,12 +79,12 @@ public class DummyStringVirtualColumnTest
     mixedSegments = Lists.newArrayList(incrementalIndexSegment, queryableIndexSegment);
 
     topNTestHelper = AggregationTestHelper.createTopNQueryAggregationTestHelper(
-        Collections.EMPTY_LIST,
+        Collections.emptyList(),
         null
     );
 
     groupByTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        Collections.EMPTY_LIST,
+        Collections.emptyList(),
         new GroupByQueryConfig(),
         null
     );

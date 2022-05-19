@@ -23,7 +23,6 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.BaseNullableColumnValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -44,10 +43,10 @@ import java.nio.ByteBuffer;
  * {@link org.apache.druid.query.aggregation.AggregatorFactory#factorize} and
  * {@link org.apache.druid.query.aggregation.AggregatorFactory#factorizeBuffered}
  *
- * @param <TSelector> type of {@link BaseNullableColumnValueSelector} that feeds this aggregator, likely either values
- *                  to add to a bloom filter, or other bloom filters to merge into this bloom filter.
+ * @param <TSelector> type of selector that feeds this aggregator, likely either values to add to a bloom filter,
+ *                    or other bloom filters to merge into this bloom filter.
  */
-public abstract class BaseBloomFilterAggregator<TSelector extends BaseNullableColumnValueSelector>
+public abstract class BaseBloomFilterAggregator<TSelector>
     implements BufferAggregator, Aggregator
 {
   @Nullable

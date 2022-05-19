@@ -47,21 +47,21 @@ import java.util.Map;
 
 class BaseParquetInputTest
 {
-  private static Map<String, String> parseSpecType = ImmutableMap.of(
+  private static final Map<String, String> PARSE_SPEC_TYPES = ImmutableMap.of(
       ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE,
       ParquetExtensionsModule.PARQUET_AVRO_PARSE_SPEC_TYPE,
       ParquetExtensionsModule.PARQUET_SIMPLE_INPUT_PARSER_TYPE,
       ParquetExtensionsModule.PARQUET_SIMPLE_PARSE_SPEC_TYPE
   );
 
-  private static Map<String, String> inputFormatType = ImmutableMap.of(
+  private static final Map<String, String> INPUT_FORMAT_TYPES = ImmutableMap.of(
       ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE,
       "org.apache.druid.data.input.parquet.DruidParquetAvroInputFormat",
       ParquetExtensionsModule.PARQUET_SIMPLE_INPUT_PARSER_TYPE,
       "org.apache.druid.data.input.parquet.DruidParquetInputFormat"
   );
 
-  private static Map<String, Class<? extends InputFormat>> inputFormatClass = ImmutableMap.of(
+  private static final Map<String, Class<? extends InputFormat>> INPUT_FORMAT_CLASSES = ImmutableMap.of(
       ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE,
       DruidParquetAvroInputFormat.class,
       ParquetExtensionsModule.PARQUET_SIMPLE_INPUT_PARSER_TYPE,
@@ -78,9 +78,9 @@ class BaseParquetInputTest
     String template = Strings.utf8ToString(Files.readAllBytes(Paths.get(templateFile)));
     String transformed;
     if (withParseType) {
-      transformed = StringUtils.format(template, inputFormatType.get(type), type, parseSpecType.get(type));
+      transformed = StringUtils.format(template, INPUT_FORMAT_TYPES.get(type), type, PARSE_SPEC_TYPES.get(type));
     } else {
-      transformed = StringUtils.format(template, inputFormatType.get(type), type);
+      transformed = StringUtils.format(template, INPUT_FORMAT_TYPES.get(type), type);
     }
     return HadoopDruidIndexerConfig.fromString(transformed);
   }
@@ -93,7 +93,7 @@ class BaseParquetInputTest
     FileSplit split = new FileSplit(path, 0, testFile.length(), null);
 
     InputFormat inputFormat = ReflectionUtils.newInstance(
-        inputFormatClass.get(parserType),
+        INPUT_FORMAT_CLASSES.get(parserType),
         job.getConfiguration()
     );
     TaskAttemptContext context = new TaskAttemptContextImpl(job.getConfiguration(), new TaskAttemptID());
@@ -117,7 +117,7 @@ class BaseParquetInputTest
     FileSplit split = new FileSplit(path, 0, testFile.length(), null);
 
     InputFormat inputFormat = ReflectionUtils.newInstance(
-        inputFormatClass.get(parserType),
+        INPUT_FORMAT_CLASSES.get(parserType),
         job.getConfiguration()
     );
     TaskAttemptContext context = new TaskAttemptContextImpl(job.getConfiguration(), new TaskAttemptID());

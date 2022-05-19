@@ -21,7 +21,7 @@ package org.apache.druid.segment.loading;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.SegmentUtils;
@@ -46,8 +46,6 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   public LocalDataSegmentPusher(LocalDataSegmentPusherConfig config)
   {
     this.config = config;
-
-    log.info("Configured local filesystem as deep storage");
   }
 
   @Override
@@ -67,10 +65,16 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   public DataSegment push(final File dataSegmentFile, final DataSegment segment, final boolean useUniquePath)
       throws IOException
   {
-    final File baseStorageDir = config.getStorageDirectory();
-    final File outDir = new File(baseStorageDir, this.getStorageDir(segment, useUniquePath));
+    return pushToPath(dataSegmentFile, segment, this.getStorageDir(segment, useUniquePath));
+  }
 
-    log.info("Copying segment[%s] to local filesystem at location[%s]", segment.getId(), outDir.toString());
+  @Override
+  public DataSegment pushToPath(File dataSegmentFile, DataSegment segment, String storageDirSuffix) throws IOException
+  {
+    final File baseStorageDir = config.getStorageDirectory();
+    final File outDir = new File(baseStorageDir, storageDirSuffix);
+
+    log.debug("Copying segment[%s] to local filesystem at location[%s]", segment.getId(), outDir.toString());
 
     if (dataSegmentFile.equals(outDir)) {
       long size = 0;
@@ -83,19 +87,19 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
                     .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile));
     }
 
-    final File tmpOutDir = new File(baseStorageDir, makeIntermediateDir());
-    log.info("Creating intermediate directory[%s] for segment[%s]", tmpOutDir.toString(), segment.getId());
-    FileUtils.forceMkdir(tmpOutDir);
+    final File tmpOutDir = new File(config.getStorageDirectory(), makeIntermediateDir());
+    log.debug("Creating intermediate directory[%s] for segment[%s].", tmpOutDir.toString(), segment.getId());
+    FileUtils.mkdirp(tmpOutDir);
 
     try {
       final File tmpIndexFile = new File(tmpOutDir, INDEX_FILENAME);
       final long size = compressSegment(dataSegmentFile, tmpIndexFile);
 
       final DataSegment dataSegment = segment.withLoadSpec(makeLoadSpec(new File(outDir, INDEX_FILENAME).toURI()))
-                                       .withSize(size)
-                                       .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile));
+                                             .withSize(size)
+                                             .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile));
 
-      FileUtils.forceMkdir(outDir);
+      FileUtils.mkdirp(outDir);
       final File indexFileTarget = new File(outDir, tmpIndexFile.getName());
 
       if (!tmpIndexFile.renameTo(indexFileTarget)) {
@@ -122,7 +126,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
 
   private long compressSegment(File dataSegmentFile, File dest) throws IOException
   {
-    log.info("Compressing files from[%s] to [%s]", dataSegmentFile, dest);
+    log.debug("Compressing files from[%s] to [%s]", dataSegmentFile, dest);
     return CompressionUtils.zip(dataSegmentFile, dest, true);
   }
 }

@@ -55,7 +55,7 @@ class Footer extends React.Component {
               <span className="fas fa-feather" />
             </a>
             &ensp;·&ensp;
-            <a title="GitHub" href="https://github.com/apache/incubator-druid" target="_blank">
+            <a title="GitHub" href="https://github.com/apache/druid" target="_blank">
               <span className="fab fa-github" />
             </a>
           </div>

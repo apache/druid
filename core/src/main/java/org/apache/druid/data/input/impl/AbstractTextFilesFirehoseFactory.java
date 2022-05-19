@@ -78,11 +78,7 @@ public abstract class AbstractTextFilesFirehoseFactory<T>
               return IOUtils.lineIterator(wrapObjectStream(object, openObjectStream(object)), StandardCharsets.UTF_8);
             }
             catch (Exception e) {
-              LOG.error(
-                  e,
-                  "Exception reading object[%s]",
-                  object
-              );
+              LOG.error(e, "Exception reading object[%s]", object);
               throw new RuntimeException(e);
             }
           }

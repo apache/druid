@@ -26,9 +26,11 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.historical.HistoricalColumnSelector;
 import org.apache.druid.segment.vector.BaseDoubleVectorValueSelector;
+import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorSelectorUtils;
 import org.apache.druid.segment.vector.VectorValueSelector;
+import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -94,15 +96,33 @@ public interface ColumnarDoubles extends Closeable
     } else {
       class HistoricalDoubleColumnSelectorWithNulls implements DoubleColumnSelector, HistoricalColumnSelector<Double>
       {
+        private PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
+        private int nullMark = -1;
+        private int offsetMark = -1;
+
         @Override
         public boolean isNull()
         {
-          return nullValueBitmap.get(offset.getOffset());
+          final int i = offset.getOffset();
+          if (i < offsetMark) {
+            // offset was reset, reset iterator state
+            nullMark = -1;
+            nullIterator = nullValueBitmap.peekableIterator();
+          }
+          offsetMark = i;
+          if (nullMark < i) {
+            nullIterator.advanceIfNeeded(offsetMark);
+            if (nullIterator.hasNext()) {
+              nullMark = nullIterator.next();
+            }
+          }
+          return nullMark == offsetMark;
         }
 
         @Override
         public double getDouble()
         {
+          //noinspection AssertWithSideEffects (ignore null handling test initialization check side effect)
           assert NullHandling.replaceWithDefault() || !isNull();
           return ColumnarDoubles.this.get(offset.getOffset());
         }
@@ -135,7 +155,10 @@ public interface ColumnarDoubles extends Closeable
     {
       private final double[] doubleVector;
 
-      private int id = ReadableVectorOffset.NULL_ID;
+      private int id = ReadableVectorInspector.NULL_ID;
+
+      private PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
+      private int offsetMark = -1;
 
       @Nullable
       private boolean[] nullVector = null;
@@ -168,12 +191,21 @@ public interface ColumnarDoubles extends Closeable
         }
 
         if (offset.isContiguous()) {
+          if (offset.getStartOffset() < offsetMark) {
+            nullIterator = nullValueBitmap.peekableIterator();
+          }
+          offsetMark = offset.getStartOffset() + offset.getCurrentVectorSize();
           ColumnarDoubles.this.get(doubleVector, offset.getStartOffset(), offset.getCurrentVectorSize());
         } else {
-          ColumnarDoubles.this.get(doubleVector, offset.getOffsets(), offset.getCurrentVectorSize());
+          final int[] offsets = offset.getOffsets();
+          if (offsets[offsets.length - 1] < offsetMark) {
+            nullIterator = nullValueBitmap.peekableIterator();
+          }
+          offsetMark = offsets[offsets.length - 1];
+          ColumnarDoubles.this.get(doubleVector, offsets, offset.getCurrentVectorSize());
         }
 
-        nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullValueBitmap);
+        nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullIterator);
 
         id = offset.getId();
       }

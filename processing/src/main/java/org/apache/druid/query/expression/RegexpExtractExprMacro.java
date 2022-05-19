@@ -21,21 +21,26 @@ package org.apache.druid.query.expression;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
 {
+  private static final String FN_NAME = "regexp_extract";
+
   @Override
   public String name()
   {
-    return "regexp_extract";
+    return FN_NAME;
   }
 
   @Override
@@ -49,12 +54,18 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
     final Expr patternExpr = args.get(1);
     final Expr indexExpr = args.size() > 2 ? args.get(2) : null;
 
-    if (!patternExpr.isLiteral() || (indexExpr != null && !indexExpr.isLiteral())) {
-      throw new IAE("Function[%s] pattern and index must be literals", name());
+    if (!ExprUtils.isStringLiteral(patternExpr)) {
+      throw new IAE("Function[%s] pattern must be a string literal", name());
+    }
+
+    if (indexExpr != null && (!indexExpr.isLiteral() || !(indexExpr.getLiteralValue() instanceof Number))) {
+      throw new IAE("Function[%s] index must be a numeric literal", name());
     }
 
     // Precompile the pattern.
-    final Pattern pattern = Pattern.compile(String.valueOf(patternExpr.getLiteralValue()));
+    final Pattern pattern = Pattern.compile(
+        StringUtils.nullToEmptyNonDruidDataString((String) patternExpr.getLiteralValue())
+    );
 
     final int index = indexExpr == null ? 0 : ((Number) indexExpr.getLiteralValue()).intValue();
 
@@ -62,24 +73,51 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
     {
       private RegexpExtractExpr(Expr arg)
       {
-        super(arg);
+        super(FN_NAME, arg);
       }
 
       @Nonnull
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
-        String s = arg.eval(bindings).asString();
-        final Matcher matcher = pattern.matcher(NullHandling.nullToEmptyIfNeeded(s));
-        final String retVal = matcher.find() ? matcher.group(index) : null;
-        return ExprEval.of(NullHandling.emptyToNullIfNeeded(retVal));
+        final String s = NullHandling.nullToEmptyIfNeeded(arg.eval(bindings).asString());
+
+        if (s == null) {
+          // True nulls do not match anything. Note: this branch only executes in SQL-compatible null handling mode.
+          return ExprEval.of(null);
+        } else {
+          final Matcher matcher = pattern.matcher(NullHandling.nullToEmptyIfNeeded(s));
+          final String retVal = matcher.find() ? matcher.group(index) : null;
+          return ExprEval.of(retVal);
+        }
       }
 
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new RegexpExtractExpr(newArg));
+        return shuttle.visit(apply(shuttle.visitAll(args)));
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getOutputType(InputBindingInspector inspector)
+      {
+        return ExpressionType.STRING;
+      }
+
+      @Override
+      public String stringify()
+      {
+        if (indexExpr != null) {
+          return StringUtils.format(
+              "%s(%s, %s, %s)",
+              FN_NAME,
+              arg.stringify(),
+              patternExpr.stringify(),
+              indexExpr.stringify()
+          );
+        }
+        return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), patternExpr.stringify());
       }
     }
     return new RegexpExtractExpr(arg);

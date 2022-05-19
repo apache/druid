@@ -93,7 +93,7 @@ class ParquetGroupConverter
         return convertLogicalList(g.getGroup(fieldIndex, 0), binaryAsString);
       }
 
-      // not a list, but not a primtive, return the nested group type
+      // not a list, but not a primitive, return the nested group type
       return g.getGroup(fieldIndex, 0);
     }
   }
@@ -467,7 +467,7 @@ class ParquetGroupConverter
     return false;
   }
 
-  private boolean binaryAsString;
+  private final boolean binaryAsString;
 
   ParquetGroupConverter(boolean binaryAsString)
   {

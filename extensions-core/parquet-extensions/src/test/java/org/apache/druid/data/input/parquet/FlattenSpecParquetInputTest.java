@@ -36,7 +36,7 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class FlattenSpecParquetInputTest extends BaseParquetInputTest
 {
-  private static final String TS1 = "2018-09-18T00:18:00.023Z";
+  static final String TS1 = "2018-09-18T00:18:00.023Z";
 
   @Parameterized.Parameters(name = "type = {0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -116,6 +116,7 @@ public class FlattenSpecParquetInputTest extends BaseParquetInputTest
     Assert.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
     Assert.assertEquals("listDim1v1", rows.get(0).getDimension("list").get(0));
     Assert.assertEquals("listDim1v2", rows.get(0).getDimension("list").get(1));
+    Assert.assertEquals("2", rows.get(0).getDimension("listLength").get(0));
     Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
   }
 

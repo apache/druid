@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexer.partitions;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
@@ -31,6 +32,7 @@ import javax.annotation.Nullable;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = SingleDimensionPartitionsSpec.NAME, value = SingleDimensionPartitionsSpec.class),
     @JsonSubTypes.Type(name = SingleDimensionPartitionsSpec.OLD_NAME, value = SingleDimensionPartitionsSpec.class),  // for backward compatibility
+    @JsonSubTypes.Type(name = DimensionRangePartitionsSpec.NAME, value = DimensionRangePartitionsSpec.class),
     @JsonSubTypes.Type(name = HashedPartitionsSpec.NAME, value = HashedPartitionsSpec.class),
     @JsonSubTypes.Type(name = DynamicPartitionsSpec.NAME, value = DynamicPartitionsSpec.class)
 })
@@ -39,6 +41,9 @@ public interface PartitionsSpec
   int DEFAULT_MAX_ROWS_PER_SEGMENT = 5_000_000;
   String MAX_ROWS_PER_SEGMENT = "maxRowsPerSegment";
   int HISTORICAL_NULL = -1;
+
+  @JsonIgnore
+  SecondaryPartitionType getType();
 
   /**
    * Returns the max number of rows per segment.
@@ -53,6 +58,31 @@ public interface PartitionsSpec
    * It should usually return true if perfect rollup is enforced but number of partitions is not specified.
    */
   boolean needsDeterminePartitions(boolean useForHadoopTask);
+
+  /**
+   * @return True if this partitionSpec's type is compatible with forceGuaranteedRollup=true.
+   */
+  @JsonIgnore
+  default boolean isForceGuaranteedRollupCompatibleType()
+  {
+    return !(this instanceof DynamicPartitionsSpec);
+  }
+
+  /**
+   * @return True if this partitionSpec's property values are compatible with forceGuaranteedRollup=true.
+   */
+  @JsonIgnore
+  default boolean isForceGuaranteedRollupCompatible()
+  {
+    return getForceGuaranteedRollupIncompatiblityReason().isEmpty();
+  }
+
+  /**
+   * @return Message describing why this partitionSpec is incompatible with forceGuaranteedRollup=true. Empty string if
+   * the partitionSpec is compatible.
+   */
+  @JsonIgnore
+  String getForceGuaranteedRollupIncompatiblityReason();
 
   /**
    * '-1' regarded as null for some historical reason.

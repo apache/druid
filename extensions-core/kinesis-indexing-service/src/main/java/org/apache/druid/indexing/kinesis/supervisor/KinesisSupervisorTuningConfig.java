@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -39,10 +40,56 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   private final Duration httpTimeout;
   private final Duration shutdownTimeout;
   private final Duration repartitionTransitionDuration;
+  private final Duration offsetFetchPeriod;
+  private final boolean useListShards;
+  private final boolean skipIgnorableShards;
+
+  public static KinesisSupervisorTuningConfig defaultConfig()
+  {
+    return new KinesisSupervisorTuningConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+  }
 
   public KinesisSupervisorTuningConfig(
+      @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
+      @JsonProperty("skipBytesInMemoryOverheadCheck") @Nullable Boolean skipBytesInMemoryOverheadCheck,
       @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
       @JsonProperty("maxTotalRows") Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
@@ -50,7 +97,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
-      @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
       @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,
@@ -71,12 +117,17 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
       @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod,
-      @JsonProperty("repartitionTransitionDuration") Period repartitionTransitionDuration
+      @JsonProperty("repartitionTransitionDuration") Period repartitionTransitionDuration,
+      @JsonProperty("offsetFetchPeriod") Period offsetFetchPeriod,
+      @JsonProperty("useListShards") Boolean useListShards,
+      @JsonProperty("skipIgnorableShards") Boolean skipIgnorableShards
   )
   {
     super(
+        appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
+        skipBytesInMemoryOverheadCheck,
         maxRowsPerSegment,
         maxTotalRows,
         intermediatePersistPeriod,
@@ -84,7 +135,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         maxPendingPersists,
         indexSpec,
         indexSpecForIntermediatePersists,
-        buildV9Directly,
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
@@ -114,6 +164,12 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         repartitionTransitionDuration,
         DEFAULT_REPARTITION_TRANSITION_DURATION
     );
+    this.offsetFetchPeriod = SeekableStreamSupervisorTuningConfig.defaultDuration(
+        offsetFetchPeriod,
+        DEFAULT_OFFSET_FETCH_PERIOD
+    );
+    this.useListShards = (useListShards != null ? useListShards : false);
+    this.skipIgnorableShards = (skipIgnorableShards != null ? skipIgnorableShards : false);
   }
 
   @Override
@@ -158,11 +214,31 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   }
 
   @Override
+  @JsonProperty
+  public Duration getOffsetFetchPeriod()
+  {
+    return offsetFetchPeriod;
+  }
+
+  @JsonProperty
+  public boolean isUseListShards()
+  {
+    return useListShards;
+  }
+
+  @JsonProperty
+  public boolean isSkipIgnorableShards()
+  {
+    return skipIgnorableShards;
+  }
+
+  @Override
   public String toString()
   {
     return "KinesisSupervisorTuningConfig{" +
            "maxRowsInMemory=" + getMaxRowsInMemory() +
            ", maxBytesInMemory=" + getMaxBytesInMemory() +
+           ", skipBytesInMemoryOverheadCheck=" + isSkipBytesInMemoryOverheadCheck() +
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
            ", maxTotalRows=" + getMaxTotalRows() +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
@@ -190,6 +266,8 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
            ", maxRecordsPerPoll=" + getMaxRecordsPerPoll() +
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            ", repartitionTransitionDuration=" + getRepartitionTransitionDuration() +
+           ", useListShards=" + isUseListShards() +
+           ", skipIgnorableShards=" + isSkipIgnorableShards() +
            '}';
   }
 
@@ -197,8 +275,10 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   public KinesisIndexTaskTuningConfig convertToTaskTuningConfig()
   {
     return new KinesisIndexTaskTuningConfig(
+        getAppendableIndexSpec(),
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
+        isSkipBytesInMemoryOverheadCheck(),
         getMaxRowsPerSegment(),
         getMaxTotalRows(),
         getIntermediatePersistPeriod(),
@@ -206,7 +286,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         getMaxPendingPersists(),
         getIndexSpec(),
         getIndexSpecForIntermediatePersists(),
-        true,
         isReportParseExceptions(),
         getHandoffConditionTimeout(),
         isResetOffsetAutomatically(),
@@ -224,5 +303,4 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         getIntermediateHandoffPeriod()
     );
   }
-
 }

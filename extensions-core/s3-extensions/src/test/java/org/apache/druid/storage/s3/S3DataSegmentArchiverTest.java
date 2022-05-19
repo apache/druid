@@ -25,6 +25,8 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -71,11 +73,13 @@ public class S3DataSegmentArchiverTest
     }
   };
   private static final S3DataSegmentPusherConfig PUSHER_CONFIG = new S3DataSegmentPusherConfig();
-  private static final ServerSideEncryptingAmazonS3 S3_SERVICE = new ServerSideEncryptingAmazonS3(
-      EasyMock.createStrictMock(AmazonS3Client.class),
-      new NoopServerSideEncryption()
+  private static final Supplier<ServerSideEncryptingAmazonS3> S3_SERVICE = Suppliers.ofInstance(
+      new ServerSideEncryptingAmazonS3(
+          EasyMock.createStrictMock(AmazonS3Client.class),
+          new NoopServerSideEncryption()
+      )
   );
-  private static final S3DataSegmentPuller PULLER = new S3DataSegmentPuller(S3_SERVICE);
+  private static final S3DataSegmentPuller PULLER = new S3DataSegmentPuller(S3_SERVICE.get());
   private static final DataSegment SOURCE_SEGMENT = DataSegment
       .builder()
       .binaryVersion(1)
@@ -85,12 +89,13 @@ public class S3DataSegmentArchiverTest
       .version("version")
       .loadSpec(ImmutableMap.of(
           "type",
-          S3StorageDruidModule.SCHEME,
+          S3StorageDruidModule.SCHEME_S3_ZIP,
           S3DataSegmentPuller.BUCKET,
           "source_bucket",
           S3DataSegmentPuller.KEY,
           "source_key"
       ))
+      .size(0)
       .build();
 
   @BeforeClass
@@ -106,7 +111,7 @@ public class S3DataSegmentArchiverTest
     final DataSegment archivedSegment = SOURCE_SEGMENT
         .withLoadSpec(ImmutableMap.of(
             "type",
-            S3StorageDruidModule.SCHEME,
+            S3StorageDruidModule.SCHEME_S3_ZIP,
             S3DataSegmentPuller.BUCKET,
             ARCHIVER_CONFIG.getArchiveBucket(),
             S3DataSegmentPuller.KEY,
@@ -143,7 +148,7 @@ public class S3DataSegmentArchiverTest
     final DataSegment archivedSegment = SOURCE_SEGMENT
         .withLoadSpec(ImmutableMap.of(
             "type",
-            S3StorageDruidModule.SCHEME,
+            S3StorageDruidModule.SCHEME_S3_ZIP,
             S3DataSegmentPuller.BUCKET,
             ARCHIVER_CONFIG.getArchiveBucket(),
             S3DataSegmentPuller.KEY,

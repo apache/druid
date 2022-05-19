@@ -23,12 +23,20 @@ import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
 import java.util.HashSet;
-import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 public interface BooleanFilter extends Filter
 {
-  List<Filter> getFilters();
+  ValueMatcher[] EMPTY_VALUE_MATCHER_ARRAY = new ValueMatcher[0];
+
+  /**
+   * Returns the child filters for this filter.
+   *
+   * This is a LinkedHashSet because we don't want duplicates, but the order is also important in some cases (such
+   * as when filters are provided in an order that encourages short-circuiting.)
+   */
+  LinkedHashSet<Filter> getFilters();
 
   /**
    * Get a ValueMatcher that applies this filter to row values.
@@ -37,7 +45,7 @@ public interface BooleanFilter extends Filter
    *
    * An implementation should either:
    * - return a ValueMatcher that checks row values, using the provided ValueMatcherFactory
-   * - or, if possible, get a bitmap index for this filter using the BitmapIndexSelector, and
+   * - or, if possible, get a bitmap index for this filter using the ColumnIndexSelector, and
    * return a ValueMatcher that checks the current row offset, created using the bitmap index.
    *
    * @param selector                Object used to retrieve bitmap indexes
@@ -47,7 +55,7 @@ public interface BooleanFilter extends Filter
    * @return ValueMatcher that applies this filter
    */
   ValueMatcher makeMatcher(
-      BitmapIndexSelector selector,
+      ColumnIndexSelector selector,
       ColumnSelectorFactory columnSelectorFactory,
       RowOffsetMatcherFactory rowOffsetMatcherFactory
   );
@@ -63,29 +71,7 @@ public interface BooleanFilter extends Filter
   }
 
   @Override
-  default boolean supportsBitmapIndex(BitmapIndexSelector selector)
-  {
-    for (Filter filter : getFilters()) {
-      if (!filter.supportsBitmapIndex(selector)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  @Override
-  default boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-  {
-    for (Filter f : getFilters()) {
-      if (!f.shouldUseBitmapIndex(selector)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  @Override
-  default boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  default boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
   {
     for (Filter filter : getFilters()) {
       if (!filter.supportsSelectivityEstimation(columnSelector, indexSelector)) {

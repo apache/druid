@@ -26,22 +26,22 @@ sidebar_label: "Load from Apache Kafka"
 
 ## Getting started
 
-This tutorial demonstrates how to load data into Apache Druid (incubating) from a Kafka stream, using Druid's Kafka indexing service.
+This tutorial demonstrates how to load data into Apache Druid from a Kafka stream, using Druid's Kafka indexing service.
 
 For this tutorial, we'll assume you've already downloaded Druid as described in
-the [quickstart](index.html) using the `micro-quickstart` single-machine configuration and have it
+the [quickstart](index.md) using the `micro-quickstart` single-machine configuration and have it
 running on your local machine. You don't need to have loaded any data yet.
 
 ## Download and start Kafka
 
 [Apache Kafka](http://kafka.apache.org/) is a high throughput message bus that works well with
-Druid.  For this tutorial, we will use Kafka 2.1.0. To download Kafka, issue the following
+Druid.  For this tutorial, we will use Kafka 2.7.0. To download Kafka, issue the following
 commands in your terminal:
 
 ```bash
-curl -O https://archive.apache.org/dist/kafka/2.1.0/kafka_2.12-2.1.0.tgz
-tar -xzf kafka_2.12-2.1.0.tgz
-cd kafka_2.12-2.1.0
+curl -O https://archive.apache.org/dist/kafka/2.7.0/kafka_2.13-2.7.0.tgz
+tar -xzf kafka_2.13-2.7.0.tgz
+cd kafka_2.13-2.7.0
 ```
 
 Start a Kafka broker by running the following command in a new terminal:
@@ -53,7 +53,7 @@ Start a Kafka broker by running the following command in a new terminal:
 Run this command to create a Kafka topic called *wikipedia*, to which we'll send data:
 
 ```bash
-./bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic wikipedia
+./bin/kafka-topics.sh --create --topic wikipedia --bootstrap-server localhost:9092
 ```     
 
 ## Load data into Kafka
@@ -89,7 +89,7 @@ Select `Apache Kafka` and click `Connect data`.
 
 Enter `localhost:9092` as the bootstrap server and `wikipedia` as the topic.
 
-Click `Preview` and make sure that the data you are seeing is correct.
+Click `Apply` and make sure that the data you are seeing is correct.
 
 Once the data is located, you can click "Next: Parse data" to go to the next step.
 
@@ -112,9 +112,9 @@ You do not need to enter anything in these steps as applying ingestion time tran
 
 ![Data loader schema](../assets/tutorial-kafka-data-loader-05.png "Data loader schema")
 
-In the `Configure schema` step, you can configure which [dimensions](../ingestion/index.md#dimensions) and [metrics](../ingestion/index.md#metrics) will be ingested into Druid.
+In the `Configure schema` step, you can configure which [dimensions](../ingestion/data-model.md#dimensions) and [metrics](../ingestion/data-model.md#metrics) will be ingested into Druid.
 This is exactly what the data will appear like in Druid once it is ingested.
-Since our dataset is very small, go ahead and turn off [`Rollup`](../ingestion/index.md#rollup) by clicking on the switch and confirming the change.
+Since our dataset is very small, go ahead and turn off [`Rollup`](../ingestion/rollup.md) by clicking on the switch and confirming the change.
 
 Once you are satisfied with the schema, click `Next` to go to the `Partition` step where you can fine tune how the data will be partitioned into segments.
 
@@ -128,7 +128,7 @@ Click `Next: Tune` to go to the tuning step.
 ![Data loader tune](../assets/tutorial-kafka-data-loader-07.png "Data loader tune")
 
 In the `Tune` step is it *very important* to set `Use earliest offset` to `True` since we want to consume the data from the start of the stream.
-There are no other changes that need to be made hear, so click `Next: Publish` to go to the `Publish` step.
+There are no other changes that need to be made here, so click `Next: Publish` to go to the `Publish` step.
 
 ![Data loader publish](../assets/tutorial-kafka-data-loader-08.png "Data loader publish")
 
@@ -180,60 +180,59 @@ Paste in this spec and click `Submit`.
 ```json
 {
   "type": "kafka",
-  "dataSchema": {
-    "dataSource": "wikipedia",
-    "parser": {
-      "type": "string",
-      "parseSpec": {
-        "format": "json",
-        "timestampSpec": {
-          "column": "time",
-          "format": "auto"
-        },
-        "dimensionsSpec": {
-          "dimensions": [
-            "channel",
-            "cityName",
-            "comment",
-            "countryIsoCode",
-            "countryName",
-            "isAnonymous",
-            "isMinor",
-            "isNew",
-            "isRobot",
-            "isUnpatrolled",
-            "metroCode",
-            "namespace",
-            "page",
-            "regionIsoCode",
-            "regionName",
-            "user",
-            { "name": "added", "type": "long" },
-            { "name": "deleted", "type": "long" },
-            { "name": "delta", "type": "long" }
-          ]
-        }
+  "spec" : {
+    "dataSchema": {
+      "dataSource": "wikipedia",
+      "timestampSpec": {
+        "column": "time",
+        "format": "auto"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          "channel",
+          "cityName",
+          "comment",
+          "countryIsoCode",
+          "countryName",
+          "isAnonymous",
+          "isMinor",
+          "isNew",
+          "isRobot",
+          "isUnpatrolled",
+          "metroCode",
+          "namespace",
+          "page",
+          "regionIsoCode",
+          "regionName",
+          "user",
+          { "name": "added", "type": "long" },
+          { "name": "deleted", "type": "long" },
+          { "name": "delta", "type": "long" }
+        ]
+      },
+      "metricsSpec" : [],
+      "granularitySpec": {
+        "type": "uniform",
+        "segmentGranularity": "DAY",
+        "queryGranularity": "NONE",
+        "rollup": false
       }
     },
-    "metricsSpec" : [],
-    "granularitySpec": {
-      "type": "uniform",
-      "segmentGranularity": "DAY",
-      "queryGranularity": "NONE",
-      "rollup": false
-    }
-  },
-  "tuningConfig": {
-    "type": "kafka",
-    "reportParseExceptions": false
-  },
-  "ioConfig": {
-    "topic": "wikipedia",
-    "replicas": 2,
-    "taskDuration": "PT10M",
-    "completionTimeout": "PT20M",
-    "consumerProperties": {
-      "bootstrap.servers": "localhost:9092"
+    "tuningConfig": {
+      "type": "kafka",
+      "reportParseExceptions": false
+    },
+    "ioConfig": {
+      "topic": "wikipedia",
+      "inputFormat": {
+        "type": "json"
+      },
+      "replicas": 2,
+      "taskDuration": "PT10M",
+      "completionTimeout": "PT20M",
+      "consumerProperties": {
+        "bootstrap.servers": "localhost:9092"
+      }
     }
   }
 }
@@ -255,7 +254,7 @@ If the supervisor was successfully created, you will get a response containing t
 For more details about what's going on here, check out the
 [Druid Kafka indexing service documentation](../development/extensions-core/kafka-ingestion.md).
 
-You can view the current supervisors and tasks in the Druid Console: [http://localhost:8888/unified-console.html#tasks](http://localhost:8888/unified-console.html#tasks).
+You can view the current supervisors and tasks in the Druid Console: [http://localhost:8888/unified-console.md#tasks](http://localhost:8888/unified-console.html#tasks).
 
 ## Querying your data
 
@@ -265,7 +264,14 @@ Please follow the [query tutorial](../tutorials/tutorial-query.md) to run some e
 
 ## Cleanup
 
-If you wish to go through any of the other ingestion tutorials, you will need to shut down the cluster and reset the cluster state by removing the contents of the `var` directory under the druid package, as the other tutorials will write to the same "wikipedia" datasource.
+To go through any of the other ingestion tutorials, you will need to shut down the cluster and reset the cluster state by removing the contents of the `var` directory in the Druid home, as the other tutorials will write to the same "wikipedia" datasource.
+
+You should additionally clear out any Kafka state. Do so by shutting down the Kafka broker with CTRL-C before stopping ZooKeeper and the Druid services, and then deleting the Kafka log directory at `/tmp/kafka-logs`:
+
+```bash
+rm -rf /tmp/kafka-logs
+```
+
 
 ## Further reading
 

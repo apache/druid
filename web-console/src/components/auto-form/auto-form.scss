@@ -16,26 +16,16 @@
  * limitations under the License.
  */
 
-.auto-form {
-  .ace_scroller {
-    background-color: #212c36;
-  }
+@import '../../variables';
 
+.auto-form {
   // Popover in info label
-  label.bp3-label {
+  label.#{$bp-ns}-label {
     position: relative;
 
-    .bp3-text-muted {
+    .#{$bp-ns}-text-muted {
       position: absolute;
       right: 0;
-
-      .bp3-popover-wrapper {
-        display: inline;
-
-        .bp3-popover-target {
-          display: inline;
-        }
-      }
     }
   }
 }

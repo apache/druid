@@ -19,8 +19,9 @@
 
 package org.apache.druid.segment.realtime.firehose;
 
+import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowPlusRaw;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
@@ -32,8 +33,9 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 @SuppressWarnings("ConstantConditions")
@@ -51,11 +53,7 @@ public class InlineFirehoseTest
               "auto",
               null
           ),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(DIMENSIONS),
-              Collections.emptyList(),
-              Collections.emptyList()
-          ),
+          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(DIMENSIONS)),
           DELIMITER,
           DIMENSIONS,
           false,
@@ -116,13 +114,16 @@ public class InlineFirehoseTest
   {
     final String data = PARSEABLE;
     InlineFirehose target = create(data);
-    InputRowPlusRaw rowPlusRaw = target.nextRowWithRaw();
+    InputRowListPlusRawValues rowPlusRaw = target.nextRowWithRaw();
 
-    InputRow row = rowPlusRaw.getInputRow();
+    InputRow row = Iterables.getOnlyElement(rowPlusRaw.getInputRows());
     assertRowValue(VALUE_0, row);
 
-    byte[] raw = rowPlusRaw.getRaw();
-    assertRawValue(data, raw);
+    Map<String, Object> raw = rowPlusRaw.getRawValues();
+    Map<String, Object> expected = new HashMap<>();
+    expected.put("timestamp", TIMESTAMP_0);
+    expected.put("value", VALUE_0);
+    Assert.assertEquals(expected, raw);
 
     Assert.assertNull(rowPlusRaw.getParseException());
   }
@@ -132,13 +133,16 @@ public class InlineFirehoseTest
   {
     final String data = NOT_PARSEABLE;
     InlineFirehose target = create(data);
-    InputRowPlusRaw rowPlusRaw = target.nextRowWithRaw();
+    InputRowListPlusRawValues rowPlusRaw = target.nextRowWithRaw();
 
-    InputRow row = rowPlusRaw.getInputRow();
-    Assert.assertNull(row);
+    Assert.assertNull(rowPlusRaw.getInputRows());
 
-    byte[] raw = rowPlusRaw.getRaw();
-    assertRawValue(data, raw);
+    Map<String, Object> raw = rowPlusRaw.getRawValues();
+    Map<String, Object> expected = new HashMap<>();
+    expected.put("timestamp", VALUE_0);
+    expected.put("value", TIMESTAMP_0);
+    Assert.assertEquals(expected, raw);
+
 
     Assert.assertNotNull(rowPlusRaw.getParseException());
   }
@@ -185,9 +189,13 @@ public class InlineFirehoseTest
     assertRowValue(VALUE_0, row0);
 
     // Second line
-    InputRowPlusRaw rowPlusRaw = target.nextRowWithRaw();
-    assertRowValue(VALUE_1, rowPlusRaw.getInputRow());
-    assertRawValue(LINE_1, rowPlusRaw.getRaw());
+    InputRowListPlusRawValues rowPlusRaw = target.nextRowWithRaw();
+    assertRowValue(VALUE_1, Iterables.getOnlyElement(rowPlusRaw.getInputRows()));
+    Map<String, Object> raw = rowPlusRaw.getRawValues();
+    Map<String, Object> expected = new HashMap<>();
+    expected.put("timestamp", TIMESTAMP_1);
+    expected.put("value", VALUE_1);
+    Assert.assertEquals(expected, raw);
     Assert.assertNull(rowPlusRaw.getParseException());
 
     Assert.assertFalse(target.hasMore());
@@ -195,12 +203,7 @@ public class InlineFirehoseTest
 
   private static InlineFirehose create(String data)
   {
-    try {
-      return new InlineFirehose(data, PARSER);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    return new InlineFirehose(data, PARSER);
   }
 
   private static void assertRowValue(String expected, InputRow row)
@@ -211,12 +214,5 @@ public class InlineFirehoseTest
     Assert.assertEquals(1, values.size());
     Assert.assertEquals(expected, values.get(0));
   }
-
-  private static void assertRawValue(String expected, byte[] raw)
-  {
-    Assert.assertNotNull(raw);
-    Assert.assertEquals(expected, new String(raw, CHARSET));
-  }
-
 }
 

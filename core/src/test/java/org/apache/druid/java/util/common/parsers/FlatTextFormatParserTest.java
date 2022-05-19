@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.AbstractFlatTextFormatParser.FlatTextFormat;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -38,7 +39,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
-public class FlatTextFormatParserTest
+public class FlatTextFormatParserTest extends InitializedNullHandlingTest
 {
   @Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
@@ -213,6 +214,20 @@ public class FlatTextFormatParserTest
         concat(format, "hello", "world", "foo")
     };
     parser.parseToMap(body[0]);
+  }
+
+  @Test
+  public void testWithNullValues()
+  {
+    final Parser<String, Object> parser = PARSER_FACTORY.get(format, true, 0);
+    parser.startFileFromBeginning();
+    final String[] body = new String[]{
+        concat(format, "time", "value1", "value2"),
+        concat(format, "hello", "world", "")
+    };
+    Assert.assertNull(parser.parseToMap(body[0]));
+    final Map<String, Object> jsonMap = parser.parseToMap(body[1]);
+    Assert.assertNull(jsonMap.get("value2"));
   }
 
   private static class FlatTextFormatParserFactory

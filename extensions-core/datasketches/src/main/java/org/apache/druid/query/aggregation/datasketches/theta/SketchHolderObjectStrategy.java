@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta;
 
-import com.yahoo.memory.Memory;
-import com.yahoo.sketches.theta.Sketch;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
+import org.apache.datasketches.memory.Memory;
+import org.apache.datasketches.theta.Sketch;
 import org.apache.druid.segment.data.ObjectStrategy;
 
 import javax.annotation.Nullable;

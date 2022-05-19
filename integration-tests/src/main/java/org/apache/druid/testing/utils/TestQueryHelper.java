@@ -25,6 +25,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.QueryResourceTestClient;
 
+import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
+
 public class TestQueryHelper extends AbstractTestQueryHelper<QueryWithResults>
 {
 
@@ -38,28 +41,46 @@ public class TestQueryHelper extends AbstractTestQueryHelper<QueryWithResults>
     super(jsonMapper, queryClient, config);
   }
 
-  @Override
-  public void testQueriesFromFile(String filePath, int timesToRun) throws Exception
+  private TestQueryHelper(
+      ObjectMapper jsonMapper,
+      QueryResourceTestClient queryResourceTestClient,
+      String broker,
+      String brokerTLS,
+      String router,
+      String routerTLS
+  )
   {
-    testQueriesFromFile(getQueryURL(broker), filePath, timesToRun);
-    testQueriesFromFile(getQueryURL(brokerTLS), filePath, timesToRun);
-    testQueriesFromFile(getQueryURL(router), filePath, timesToRun);
-    testQueriesFromFile(getQueryURL(routerTLS), filePath, timesToRun);
+    super(
+        jsonMapper,
+        queryResourceTestClient,
+        broker,
+        brokerTLS,
+        router,
+        routerTLS
+    );
   }
 
-  public void testQueriesFromString(String str, int timesToRun) throws Exception
-  {
-    testQueriesFromString(getQueryURL(broker), str, timesToRun);
-    testQueriesFromString(getQueryURL(brokerTLS), str, timesToRun);
-    testQueriesFromString(getQueryURL(router), str, timesToRun);
-    testQueriesFromString(getQueryURL(routerTLS), str, timesToRun);
-  }
-
-
   @Override
-  protected String getQueryURL(String schemeAndHost)
+  public String getQueryURL(String schemeAndHost)
   {
     return StringUtils.format("%s/druid/v2?pretty", schemeAndHost);
   }
 
+  /**
+   * clone a new instance of current object with given encoding
+   *
+   * @param contentType Content-Type header of request. Cannot be NULL. Both application/json and application/x-jackson-smile are allowed
+   * @param accept      Accept header of request. Both application/json and application/x-jackson-smile are allowed
+   */
+  public TestQueryHelper withEncoding(@NotNull String contentType, @Nullable String accept)
+  {
+    return new TestQueryHelper(
+        this.jsonMapper,
+        ((QueryResourceTestClient) this.queryClient).withEncoding(contentType, accept),
+        this.broker,
+        this.brokerTLS,
+        this.router,
+        this.routerTLS
+    );
+  }
 }

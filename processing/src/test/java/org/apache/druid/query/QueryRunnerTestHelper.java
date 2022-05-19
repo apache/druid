@@ -26,20 +26,23 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.emitter.core.NoopEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.FloatMaxAggregatorFactory;
+import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
+import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
+import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
@@ -92,7 +95,9 @@ public class QueryRunnerTestHelper
   public static final Interval FULL_ON_INTERVAL = Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z");
   public static final SegmentId SEGMENT_ID = SegmentId.of(DATA_SOURCE, FULL_ON_INTERVAL, "dummy_version", 0);
   public static final UnionDataSource UNION_DATA_SOURCE = new UnionDataSource(
-      Stream.of(DATA_SOURCE, DATA_SOURCE, DATA_SOURCE, DATA_SOURCE).map(TableDataSource::new).collect(Collectors.toList())
+      Stream.of(DATA_SOURCE, DATA_SOURCE, DATA_SOURCE, DATA_SOURCE)
+            .map(TableDataSource::new)
+            .collect(Collectors.toList())
   );
 
   public static final Granularity DAY_GRAN = Granularities.DAY;
@@ -114,11 +119,26 @@ public class QueryRunnerTestHelper
   public static final String INDEX_METRIC = "index";
   public static final String UNIQUE_METRIC = "uniques";
   public static final String ADD_ROWS_INDEX_CONSTANT_METRIC = "addRowsIndexConstant";
+  public static final String LONG_MIN_INDEX_METRIC = "longMinIndex";
+  public static final String LONG_MAX_INDEX_METRIC = "longMaxIndex";
+  public static final String DOUBLE_MIN_INDEX_METRIC = "doubleMinIndex";
+  public static final String DOUBLE_MAX_INDEX_METRIC = "doubleMaxIndex";
+  public static final String FLOAT_MIN_INDEX_METRIC = "floatMinIndex";
+  public static final String FLOAT_MAX_INDEX_METRIC = "floatMaxIndex";
   public static String dependentPostAggMetric = "dependentPostAgg";
   public static final CountAggregatorFactory ROWS_COUNT = new CountAggregatorFactory("rows");
   public static final LongSumAggregatorFactory INDEX_LONG_SUM = new LongSumAggregatorFactory("index", INDEX_METRIC);
   public static final LongSumAggregatorFactory TIME_LONG_SUM = new LongSumAggregatorFactory("sumtime", TIME_DIMENSION);
-  public static final DoubleSumAggregatorFactory INDEX_DOUBLE_SUM = new DoubleSumAggregatorFactory("index", INDEX_METRIC);
+  public static final DoubleSumAggregatorFactory INDEX_DOUBLE_SUM = new DoubleSumAggregatorFactory(
+      "index",
+      INDEX_METRIC
+  );
+  public static final LongMinAggregatorFactory INDEX_LONG_MIN = new LongMinAggregatorFactory(LONG_MIN_INDEX_METRIC, INDEX_METRIC);
+  public static final LongMaxAggregatorFactory INDEX_LONG_MAX = new LongMaxAggregatorFactory(LONG_MAX_INDEX_METRIC, INDEX_METRIC);
+  public static final DoubleMinAggregatorFactory INDEX_DOUBLE_MIN = new DoubleMinAggregatorFactory(DOUBLE_MIN_INDEX_METRIC, INDEX_METRIC);
+  public static final DoubleMaxAggregatorFactory INDEX_DOUBLE_MAX = new DoubleMaxAggregatorFactory(DOUBLE_MAX_INDEX_METRIC, INDEX_METRIC);
+  public static final FloatMinAggregatorFactory INDEX_FLOAT_MIN = new FloatMinAggregatorFactory(FLOAT_MIN_INDEX_METRIC, INDEX_METRIC);
+  public static final FloatMaxAggregatorFactory INDEX_FLOAT_MAX = new FloatMaxAggregatorFactory(FLOAT_MAX_INDEX_METRIC, INDEX_METRIC);
   public static final String JS_COMBINE_A_PLUS_B = "function combine(a, b) { return a + b; }";
   public static final String JS_RESET_0 = "function reset() { return 0; }";
   public static final JavaScriptAggregatorFactory JS_INDEX_SUM_IF_PLACEMENTISH_A = new JavaScriptAggregatorFactory(
@@ -166,7 +186,7 @@ public class QueryRunnerTestHelper
   public static final FieldAccessPostAggregator ROWS_POST_AGG = new FieldAccessPostAggregator("rows", "rows");
   public static final FieldAccessPostAggregator INDEX_POST_AGG = new FieldAccessPostAggregator("index", "index");
   public static final ArithmeticPostAggregator ADD_ROWS_INDEX_CONSTANT = new ArithmeticPostAggregator(
-       ADD_ROWS_INDEX_CONSTANT_METRIC,
+      ADD_ROWS_INDEX_CONSTANT_METRIC,
       "+",
       Lists.newArrayList(CONSTANT, ROWS_POST_AGG, INDEX_POST_AGG)
   );
@@ -464,14 +484,19 @@ public class QueryRunnerTestHelper
                   segments.addAll(timeline.lookup(interval));
                 }
                 List<Sequence<T>> sequences = new ArrayList<>();
-                for (TimelineObjectHolder<String, ReferenceCountingSegment> holder : toolChest.filterSegments(query, segments)) {
+                for (TimelineObjectHolder<String, ReferenceCountingSegment> holder : toolChest.filterSegments(
+                    query,
+                    segments
+                )) {
                   Segment segment = holder.getObject().getChunk(0).getObject();
-                  QueryPlus queryPlusRunning = queryPlus.withQuerySegmentSpec(
-                      new SpecificSegmentSpec(
-                          new SegmentDescriptor(
-                              holder.getInterval(),
-                              holder.getVersion(),
-                              0
+                  QueryPlus queryPlusRunning = queryPlus.withQuery(
+                      queryPlus.getQuery().withQuerySegmentSpec(
+                          new SpecificSegmentSpec(
+                              new SegmentDescriptor(
+                                  holder.getInterval(),
+                                  holder.getVersion(),
+                                  0
+                              )
                           )
                       )
                   );
@@ -486,37 +511,6 @@ public class QueryRunnerTestHelper
         .applyPostMergeDecoration();
   }
 
-  public static IntervalChunkingQueryRunnerDecorator noopIntervalChunkingQueryRunnerDecorator()
-  {
-    return new IntervalChunkingQueryRunnerDecorator(null, null, null)
-    {
-      @Override
-      public <T> QueryRunner<T> decorate(
-          final QueryRunner<T> delegate,
-          QueryToolChest<T, ? extends Query<T>> toolChest
-      )
-      {
-        return new QueryRunner<T>()
-        {
-          @Override
-          public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
-          {
-            return delegate.run(queryPlus, responseContext);
-          }
-        };
-      }
-    };
-  }
-
-  public static IntervalChunkingQueryRunnerDecorator sameThreadIntervalChunkingQueryRunnerDecorator()
-  {
-    return new IntervalChunkingQueryRunnerDecorator(
-        Execs.directExecutor(),
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-        new ServiceEmitter("dummy", "dummy", new NoopEmitter())
-    );
-  }
-
   public static Map<String, Object> of(Object... keyvalues)
   {
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
@@ -529,7 +523,7 @@ public class QueryRunnerTestHelper
   public static TimeseriesQueryRunnerFactory newTimeseriesQueryRunnerFactory()
   {
     return new TimeseriesQueryRunnerFactory(
-        new TimeseriesQueryQueryToolChest(noopIntervalChunkingQueryRunnerDecorator()),
+        new TimeseriesQueryQueryToolChest(),
         new TimeseriesQueryEngine(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );

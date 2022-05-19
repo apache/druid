@@ -21,6 +21,11 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
+import org.apache.druid.indexer.Checks;
+import org.apache.druid.indexer.Property;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
 
@@ -39,9 +44,28 @@ public class ParallelIndexIngestionSpec extends IngestionSpec<ParallelIndexIOCon
   {
     super(dataSchema, ioConfig, tuningConfig);
 
+    if (dataSchema.getParserMap() != null && ioConfig.getInputSource() != null) {
+      if (!(ioConfig.getInputSource() instanceof FirehoseFactoryToInputSourceAdaptor)) {
+        throw new IAE("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
+      }
+    }
+    if (ioConfig.getInputSource() != null && ioConfig.getInputSource().needsFormat()) {
+      Checks.checkOneNotNullOrEmpty(
+          ImmutableList.of(
+              new Property<>("parser", dataSchema.getParserMap()),
+              new Property<>("inputFormat", ioConfig.getInputFormat())
+          )
+      );
+    }
+
     this.dataSchema = dataSchema;
     this.ioConfig = ioConfig;
     this.tuningConfig = tuningConfig == null ? ParallelIndexTuningConfig.defaultConfig() : tuningConfig;
+  }
+
+  public ParallelIndexIngestionSpec withDataSchema(DataSchema dataSchema)
+  {
+    return new ParallelIndexIngestionSpec(dataSchema, ioConfig, tuningConfig);
   }
 
   @Override

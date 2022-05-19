@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.s3;
 
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.S3Object;
@@ -28,6 +29,8 @@ import com.google.common.base.Strings;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
+import org.apache.druid.common.aws.AWSClientUtil;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
@@ -55,13 +58,9 @@ import java.net.URI;
  */
 public class S3DataSegmentPuller implements URIDataPuller
 {
-  public static final int DEFAULT_RETRY_COUNT = 3;
-
-  public static final String SCHEME = S3StorageDruidModule.SCHEME;
-
   private static final Logger log = new Logger(S3DataSegmentPuller.class);
 
-  protected static final String BUCKET = "bucket";
+  static final String BUCKET = "bucket";
   protected static final String KEY = "key";
 
   protected final ServerSideEncryptingAmazonS3 s3Client;
@@ -72,7 +71,8 @@ public class S3DataSegmentPuller implements URIDataPuller
     this.s3Client = s3Client;
   }
 
-  FileUtils.FileCopyResult getSegmentFiles(final S3Coords s3Coords, final File outDir) throws SegmentLoadingException
+  FileUtils.FileCopyResult getSegmentFiles(final CloudObjectLocation s3Coords, final File outDir)
+      throws SegmentLoadingException
   {
 
     log.info("Pulling index at path[%s] to outDir[%s]", s3Coords, outDir);
@@ -82,9 +82,9 @@ public class S3DataSegmentPuller implements URIDataPuller
     }
 
     try {
-      org.apache.commons.io.FileUtils.forceMkdir(outDir);
+      FileUtils.mkdirp(outDir);
 
-      final URI uri = URI.create(StringUtils.format("s3://%s/%s", s3Coords.bucket, s3Coords.path));
+      final URI uri = s3Coords.toUri(S3StorageDruidModule.SCHEME);
       final ByteSource byteSource = new ByteSource()
       {
         @Override
@@ -103,7 +103,7 @@ public class S3DataSegmentPuller implements URIDataPuller
           }
         }
       };
-      if (CompressionUtils.isZip(s3Coords.path)) {
+      if (CompressionUtils.isZip(s3Coords.getPath())) {
         final FileUtils.FileCopyResult result = CompressionUtils.unzip(
             byteSource,
             outDir,
@@ -113,7 +113,7 @@ public class S3DataSegmentPuller implements URIDataPuller
         log.info("Loaded %d bytes from [%s] to [%s]", result.size(), s3Coords.toString(), outDir.getAbsolutePath());
         return result;
       }
-      if (CompressionUtils.isGz(s3Coords.path)) {
+      if (CompressionUtils.isGz(s3Coords.getPath())) {
         final String fname = Files.getNameWithoutExtension(uri.getPath());
         final File outFile = new File(outDir, fname);
 
@@ -125,7 +125,7 @@ public class S3DataSegmentPuller implements URIDataPuller
     }
     catch (Exception e) {
       try {
-        org.apache.commons.io.FileUtils.deleteDirectory(outDir);
+        FileUtils.deleteDirectory(outDir);
       }
       catch (IOException ioe) {
         log.warn(
@@ -139,16 +139,6 @@ public class S3DataSegmentPuller implements URIDataPuller
     }
   }
 
-  public static URI checkURI(URI uri)
-  {
-    if (uri.getScheme().equalsIgnoreCase(SCHEME)) {
-      uri = URI.create("s3" + uri.toString().substring(SCHEME.length()));
-    } else if (!"s3".equalsIgnoreCase(uri.getScheme())) {
-      throw new IAE("Don't know how to load scheme for URI [%s]", uri.toString());
-    }
-    return uri;
-  }
-
   @Override
   public InputStream getInputStream(URI uri) throws IOException
   {
@@ -160,15 +150,15 @@ public class S3DataSegmentPuller implements URIDataPuller
     }
   }
 
-  private FileObject buildFileObject(final URI uri) throws AmazonServiceException
+  public FileObject buildFileObject(final URI uri) throws AmazonServiceException
   {
-    final S3Coords coords = new S3Coords(checkURI(uri));
-    final S3ObjectSummary objectSummary = S3Utils.getSingleObjectSummary(s3Client, coords.bucket, coords.path);
+    final CloudObjectLocation coords = new CloudObjectLocation(S3Utils.checkURI(uri));
     final String path = uri.getPath();
 
     return new FileObject()
     {
       S3Object s3Object = null;
+      S3ObjectSummary objectSummary = null;
 
       @Override
       public URI toUri()
@@ -192,7 +182,7 @@ public class S3DataSegmentPuller implements URIDataPuller
         try {
           if (s3Object == null) {
             // lazily promote to full GET
-            s3Object = s3Client.getObject(objectSummary.getBucketName(), objectSummary.getKey());
+            s3Object = s3Client.getObject(coords.getBucket(), coords.getPath());
           }
 
           final InputStream in = s3Object.getObjectContent();
@@ -241,6 +231,13 @@ public class S3DataSegmentPuller implements URIDataPuller
       @Override
       public long getLastModified()
       {
+        if (s3Object != null) {
+          return s3Object.getObjectMetadata().getLastModified().getTime();
+        }
+        if (objectSummary == null) {
+          objectSummary =
+              S3Utils.getSingleObjectSummary(s3Client, coords.getBucket(), coords.getPath());
+        }
         return objectSummary.getLastModified().getTime();
       }
 
@@ -255,46 +252,27 @@ public class S3DataSegmentPuller implements URIDataPuller
   @Override
   public Predicate<Throwable> shouldRetryPredicate()
   {
-    // Yay! smart retries!
-    return new Predicate<Throwable>()
-    {
-      @Override
-      public boolean apply(Throwable e)
-      {
-        if (e == null) {
-          return false;
-        }
-        if (e instanceof AmazonServiceException) {
-          return S3Utils.isServiceExceptionRecoverable((AmazonServiceException) e);
-        }
-        if (S3Utils.S3RETRY.apply(e)) {
-          return true;
-        }
-        // Look all the way down the cause chain, just in case something wraps it deep.
-        return apply(e.getCause());
-      }
-    };
+    return S3Utils.S3RETRY;
   }
 
   /**
    * Returns the "version" (aka last modified timestamp) of the URI
    *
    * @param uri The URI to check the last timestamp
-   *
    * @return The time in ms of the last modification of the URI in String format
-   *
    * @throws IOException
    */
   @Override
   public String getVersion(URI uri) throws IOException
   {
     try {
-      final S3Coords coords = new S3Coords(checkURI(uri));
-      final S3ObjectSummary objectSummary = S3Utils.getSingleObjectSummary(s3Client, coords.bucket, coords.path);
+      final CloudObjectLocation coords = new CloudObjectLocation(S3Utils.checkURI(uri));
+      final S3ObjectSummary objectSummary =
+          S3Utils.getSingleObjectSummary(s3Client, coords.getBucket(), coords.getPath());
       return StringUtils.format("%d", objectSummary.getLastModified().getTime());
     }
-    catch (AmazonServiceException e) {
-      if (S3Utils.isServiceExceptionRecoverable(e)) {
+    catch (AmazonClientException e) {
+      if (AWSClientUtil.isClientExceptionRecoverable(e)) {
         // The recoverable logic is always true for IOException, so we want to only pass IOException if it is recoverable
         throw new IOE(e, "Could not fetch last modified timestamp from URI [%s]", uri);
       } else {
@@ -303,11 +281,11 @@ public class S3DataSegmentPuller implements URIDataPuller
     }
   }
 
-  private boolean isObjectInBucket(final S3Coords coords) throws SegmentLoadingException
+  private boolean isObjectInBucket(final CloudObjectLocation coords) throws SegmentLoadingException
   {
     try {
       return S3Utils.retryS3Operation(
-          () -> S3Utils.isObjectInBucketIgnoringPermission(s3Client, coords.bucket, coords.path)
+          () -> S3Utils.isObjectInBucketIgnoringPermission(s3Client, coords.getBucket(), coords.getPath())
       );
     }
     catch (AmazonS3Exception | IOException e) {
@@ -315,37 +293,6 @@ public class S3DataSegmentPuller implements URIDataPuller
     }
     catch (Exception e) {
       throw new RuntimeException(e);
-    }
-  }
-
-  protected static class S3Coords
-  {
-    String bucket;
-    String path;
-
-    public S3Coords(URI uri)
-    {
-      if (!"s3".equalsIgnoreCase(uri.getScheme())) {
-        throw new IAE("Unsupported scheme: [%s]", uri.getScheme());
-      }
-      bucket = uri.getHost();
-      String path = uri.getPath();
-      if (path.startsWith("/")) {
-        path = path.substring(1);
-      }
-      this.path = path;
-    }
-
-    public S3Coords(String bucket, String key)
-    {
-      this.bucket = bucket;
-      this.path = key;
-    }
-
-    @Override
-    public String toString()
-    {
-      return StringUtils.format("s3://%s/%s", bucket, path);
     }
   }
 }

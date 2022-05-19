@@ -43,6 +43,7 @@ public class BlockLayoutColumnarFloatsSerializer implements ColumnarFloatsSerial
       .writeInt(x -> CompressedPools.BUFFER_SIZE / Float.BYTES)
       .writeByte(x -> x.compression.getId());
 
+  private final String columnName;
   private final GenericIndexedWriter<ByteBuffer> flattener;
   private final CompressionStrategy compression;
 
@@ -51,12 +52,14 @@ public class BlockLayoutColumnarFloatsSerializer implements ColumnarFloatsSerial
   private ByteBuffer endBuffer;
 
   BlockLayoutColumnarFloatsSerializer(
+      String columnName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder byteOrder,
       CompressionStrategy compression
   )
   {
+    this.columnName = columnName;
     this.flattener = GenericIndexedWriter.ofCompressedByteBuffers(
         segmentWriteOutMedium,
         filenameBase,
@@ -94,6 +97,9 @@ public class BlockLayoutColumnarFloatsSerializer implements ColumnarFloatsSerial
     }
     endBuffer.putFloat(value);
     ++numInserted;
+    if (numInserted < 0) {
+      throw new ColumnCapacityExceededException(columnName);
+    }
   }
 
   @Override

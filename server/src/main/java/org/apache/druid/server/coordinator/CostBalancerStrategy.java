@@ -52,7 +52,7 @@ public class CostBalancerStrategy implements BalancerStrategy
   /**
    * This defines the unnormalized cost function between two segments.
    *
-   * See https://github.com/apache/incubator-druid/pull/2972 for more details about the cost function.
+   * See https://github.com/apache/druid/pull/2972 for more details about the cost function.
    *
    * intervalCost: segments close together are more likely to be queried together
    *
@@ -209,13 +209,6 @@ public class CostBalancerStrategy implements BalancerStrategy
     return totalCost;
   }
 
-
-  @Override
-  public BalancerSegmentHolder pickSegmentToMove(final List<ServerHolder> serverHolders)
-  {
-    return ReservoirSegmentSampler.getRandomBalancerSegmentHolder(serverHolders);
-  }
-
   @Override
   public Iterator<ServerHolder> pickServersToDrop(DataSegment toDrop, NavigableSet<ServerHolder> serverHolders)
   {
@@ -363,7 +356,8 @@ public class CostBalancerStrategy implements BalancerStrategy
       final boolean includeCurrentServer
   )
   {
-    Pair<Double, ServerHolder> bestServer = Pair.of(Double.POSITIVE_INFINITY, null);
+    final Pair<Double, ServerHolder> noServer = Pair.of(Double.POSITIVE_INFINITY, null);
+    Pair<Double, ServerHolder> bestServer = noServer;
 
     List<ListenableFuture<Pair<Double, ServerHolder>>> futures = new ArrayList<>();
 
@@ -387,7 +381,11 @@ public class CostBalancerStrategy implements BalancerStrategy
           bestServers.add(server);
         }
       }
-
+      // If the best server list contains server whose cost of serving the segment is INFINITE then this means
+      // no usable servers are found so return a null server so that segment assignment does not happen
+      if (bestServers.get(0).lhs.isInfinite()) {
+        return noServer;
+      }
       // Randomly choose a server from the best servers
       bestServer = bestServers.get(ThreadLocalRandom.current().nextInt(bestServers.size()));
     }

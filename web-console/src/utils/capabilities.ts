@@ -16,11 +16,22 @@
  * limitations under the License.
  */
 
-import axios from 'axios';
+import { Api } from '../singletons';
 
 import { localStorageGetJson, LocalStorageKeys } from './local-storage-keys';
 
 export type CapabilitiesMode = 'full' | 'no-sql' | 'no-proxy';
+
+export type CapabilitiesModeExtended =
+  | 'full'
+  | 'no-sql'
+  | 'no-proxy'
+  | 'no-sql-no-proxy'
+  | 'coordinator-overlord'
+  | 'coordinator'
+  | 'overlord';
+
+export type QueryType = 'none' | 'nativeOnly' | 'nativeAndSql';
 
 export interface CapabilitiesOptions {
   queryType: QueryType;
@@ -28,21 +39,24 @@ export interface CapabilitiesOptions {
   overlord: boolean;
 }
 
-export type QueryType = 'none' | 'nativeOnly' | 'nativeAndSql';
-
 export class Capabilities {
-  static STATUS_TIMEOUT = 2000;
+  static STATUS_TIMEOUT = 15000;
   static FULL: Capabilities;
+  static NO_SQL: Capabilities;
+  static COORDINATOR_OVERLORD: Capabilities;
+  static COORDINATOR: Capabilities;
+  static OVERLORD: Capabilities;
+  static NO_PROXY: Capabilities;
 
-  private queryType: QueryType;
-  private coordinator: boolean;
-  private overlord: boolean;
+  private readonly queryType: QueryType;
+  private readonly coordinator: boolean;
+  private readonly overlord: boolean;
 
   static async detectQueryType(): Promise<QueryType | undefined> {
     // Check SQL endpoint
     try {
-      await axios.post(
-        '/druid/v2/sql',
+      await Api.instance.post(
+        '/druid/v2/sql?capabilities',
         { query: 'SELECT 1337', context: { timeout: Capabilities.STATUS_TIMEOUT } },
         { timeout: Capabilities.STATUS_TIMEOUT },
       );
@@ -52,15 +66,15 @@ export class Capabilities {
         return; // other failure
       }
       try {
-        await axios.get('/status', { timeout: Capabilities.STATUS_TIMEOUT });
+        await Api.instance.get('/status?capabilities', { timeout: Capabilities.STATUS_TIMEOUT });
       } catch (e) {
         return; // total failure
       }
       // Status works but SQL 405s => the SQL endpoint is disabled
 
       try {
-        await axios.post(
-          '/druid/v2',
+        await Api.instance.post(
+          '/druid/v2?capabilities',
           {
             queryType: 'dataSourceMetadata',
             dataSource: '__web_console_probe__',
@@ -82,16 +96,27 @@ export class Capabilities {
     return 'nativeAndSql';
   }
 
-  static async detectNode(node: 'coordinator' | 'overlord'): Promise<boolean | undefined> {
+  static async detectManagementProxy(): Promise<boolean> {
     try {
-      await axios.get(`/druid/${node === 'overlord' ? 'indexer' : node}/v1/isLeader`, {
+      await Api.instance.get(`/proxy/coordinator/status?capabilities`, {
         timeout: Capabilities.STATUS_TIMEOUT,
       });
     } catch (e) {
-      const { response } = e;
-      if (response.status !== 404) {
-        return; // other failure
-      }
+      return false;
+    }
+
+    return true;
+  }
+
+  static async detectNode(node: 'coordinator' | 'overlord'): Promise<boolean> {
+    try {
+      await Api.instance.get(
+        `/druid/${node === 'overlord' ? 'indexer' : node}/v1/isLeader?capabilities`,
+        {
+          timeout: Capabilities.STATUS_TIMEOUT,
+        },
+      );
+    } catch (e) {
       return false;
     }
 
@@ -100,16 +125,21 @@ export class Capabilities {
 
   static async detectCapabilities(): Promise<Capabilities | undefined> {
     const capabilitiesOverride = localStorageGetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE);
-    if (capabilitiesOverride) return new Capabilities(capabilitiesOverride as any);
+    if (capabilitiesOverride) return new Capabilities(capabilitiesOverride);
 
     const queryType = await Capabilities.detectQueryType();
     if (typeof queryType === 'undefined') return;
 
-    const coordinator = await Capabilities.detectNode('coordinator');
-    if (typeof coordinator === 'undefined') return;
-
-    const overlord = await Capabilities.detectNode('overlord');
-    if (typeof overlord === 'undefined') return;
+    let coordinator: boolean;
+    let overlord: boolean;
+    if (queryType === 'none') {
+      // must not be running on the router, figure out what node the console is on (or both?)
+      coordinator = await Capabilities.detectNode('coordinator');
+      overlord = await Capabilities.detectNode('overlord');
+    } else {
+      // must be running on the router, figure out if the management proxy is working
+      coordinator = overlord = await Capabilities.detectManagementProxy();
+    }
 
     return new Capabilities({
       queryType,
@@ -130,6 +160,38 @@ export class Capabilities {
     return 'full';
   }
 
+  public getModeExtended(): CapabilitiesModeExtended | undefined {
+    const { queryType, coordinator, overlord } = this;
+
+    if (queryType === 'nativeAndSql') {
+      if (coordinator && overlord) {
+        return 'full';
+      }
+      if (!coordinator && !overlord) {
+        return 'no-proxy';
+      }
+    } else if (queryType === 'nativeOnly') {
+      if (coordinator && overlord) {
+        return 'no-sql';
+      }
+      if (!coordinator && !overlord) {
+        return 'no-sql-no-proxy';
+      }
+    } else {
+      if (coordinator && overlord) {
+        return 'coordinator-overlord';
+      }
+      if (coordinator) {
+        return 'coordinator';
+      }
+      if (overlord) {
+        return 'overlord';
+      }
+    }
+
+    return;
+  }
+
   public hasEverything(): boolean {
     return this.queryType === 'nativeAndSql' && this.coordinator && this.overlord;
   }
@@ -146,12 +208,45 @@ export class Capabilities {
     return this.coordinator;
   }
 
+  public hasSqlOrCoordinatorAccess(): boolean {
+    return this.hasSql() || this.hasCoordinatorAccess();
+  }
+
   public hasOverlordAccess(): boolean {
     return this.overlord;
+  }
+
+  public hasSqlOrOverlordAccess(): boolean {
+    return this.hasSql() || this.hasOverlordAccess();
   }
 }
 Capabilities.FULL = new Capabilities({
   queryType: 'nativeAndSql',
   coordinator: true,
   overlord: true,
+});
+Capabilities.NO_SQL = new Capabilities({
+  queryType: 'nativeOnly',
+  coordinator: true,
+  overlord: true,
+});
+Capabilities.COORDINATOR_OVERLORD = new Capabilities({
+  queryType: 'none',
+  coordinator: true,
+  overlord: true,
+});
+Capabilities.COORDINATOR = new Capabilities({
+  queryType: 'none',
+  coordinator: true,
+  overlord: false,
+});
+Capabilities.OVERLORD = new Capabilities({
+  queryType: 'none',
+  coordinator: false,
+  overlord: true,
+});
+Capabilities.NO_PROXY = new Capabilities({
+  queryType: 'nativeAndSql',
+  coordinator: false,
+  overlord: false,
 });

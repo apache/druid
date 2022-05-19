@@ -19,12 +19,13 @@
 
 package org.apache.druid.cli;
 
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
@@ -44,13 +45,16 @@ import java.util.List;
 )
 public class CreateTables extends GuiceRunnable
 {
-  @Option(name = "--connectURI", description = "Database JDBC connection string", required = true)
+  @Option(name = "--connectURI", description = "Database JDBC connection string")
+  @Required
   private String connectURI;
 
-  @Option(name = "--user", description = "Database username", required = true)
+  @Option(name = "--user", description = "Database username")
+  @Required
   private String user;
 
-  @Option(name = "--password", description = "Database password", required = true)
+  @Option(name = "--password", description = "Database password")
+  @Required
   private String password;
 
   @Option(name = "--base", description = "Base table name")
@@ -69,7 +73,7 @@ public class CreateTables extends GuiceRunnable
     return ImmutableList.of(
         // It's unknown why those modules are required in CreateTables, and if all of those modules are required or not.
         // Maybe some of those modules could be removed.
-        // See https://github.com/apache/incubator-druid/pull/4429#discussion_r123602930
+        // See https://github.com/apache/druid/pull/4429#discussion_r123602930
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),

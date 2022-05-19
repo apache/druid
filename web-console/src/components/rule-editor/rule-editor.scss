@@ -21,13 +21,15 @@
     text-align: right;
   }
 
-  margin-bottom: 20px;
-
   .title {
     display: flex;
 
     .spacer {
       flex: 1;
     }
+  }
+
+  .include-future {
+    margin-left: 15px;
   }
 }

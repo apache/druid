@@ -24,107 +24,15 @@ sidebar_label: "Loading files natively"
   -->
 
 
-This tutorial demonstrates how to perform a batch file load, using Apache Druid (incubating)'s native batch ingestion.
+This tutorial demonstrates how to load data into Apache Druid from a file using Apache Druid's native batch ingestion feature.
 
-For this tutorial, we'll assume you've already downloaded Druid as described in
-the [quickstart](index.html) using the `micro-quickstart` single-machine configuration and have it
-running on your local machine. You don't need to have loaded any data yet.
+You initiate data loading in Druid by submitting an *ingestion task* spec to the Druid Overlord. You can write ingestion 
+specs by hand or using the _data loader_ built into the Druid console. 
 
-A data load is initiated by submitting an *ingestion task* spec to the Druid Overlord. For this tutorial, we'll be loading the sample Wikipedia page edits data.
-
-An ingestion spec can be written by hand or by using the "Data loader" that is built into the Druid console.
-The data loader can help you build an ingestion spec by sampling your data and and iteratively configuring various ingestion parameters.
-The data loader currently only supports native batch ingestion (support for streaming, including data stored in Apache Kafka and AWS Kinesis, is coming in future releases).
-Streaming ingestion is only available through a written ingestion spec today.
-
-We've included a sample of Wikipedia edits from September 12, 2015 to get you started.
-
-
-## Loading data with the data loader
-
-Navigate to [localhost:8888](http://localhost:8888) and click `Load data` in the console header.
-
-![Data loader init](../assets/tutorial-batch-data-loader-01.png "Data loader init")
-
-Select `Local disk` and click `Connect data`.
-
-![Data loader sample](../assets/tutorial-batch-data-loader-02.png "Data loader sample")
-
-Enter `quickstart/tutorial/` as the base directory and `wikiticker-2015-09-12-sampled.json.gz` as a filter.
-The separation of base directory and [wildcard file filter](https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) is there if you need to ingest data from multiple files.
-
-Click `Preview` and make sure that the data you are seeing is correct.
-
-Once the data is located, you can click "Next: Parse data" to go to the next step.
-
-![Data loader parse data](../assets/tutorial-batch-data-loader-03.png "Data loader parse data")
-
-The data loader will try to automatically determine the correct parser for the data.
-In this case it will successfully determine `json`.
-Feel free to play around with different parser options to get a preview of how Druid will parse your data.
-
-With the `json` parser selected, click `Next: Parse time` to get to the step centered around determining your primary timestamp column.
-
-![Data loader parse time](../assets/tutorial-batch-data-loader-04.png "Data loader parse time")
-
-Druid's architecture requires a primary timestamp column (internally stored in a column called `__time`).
-If you do not have a timestamp in your data, select `Constant value`.
-In our example, the data loader will determine that the `time` column in our raw data is the only candidate that can be used as the primary time column.
-
-Click `Next: ...` twice to go past the `Transform` and `Filter` steps.
-You do not need to enter anything in these steps as applying ingestion time transforms and filters are out of scope for this tutorial.
-
-![Data loader schema](../assets/tutorial-batch-data-loader-05.png "Data loader schema")
-
-In the `Configure schema` step, you can configure which [dimensions](../ingestion/index.md#dimensions) and [metrics](../ingestion/index.md#metrics) will be ingested into Druid.
-This is exactly what the data will appear like in Druid once it is ingested.
-Since our dataset is very small, go ahead and turn off [`Rollup`](../ingestion/index.md#rollup) by clicking on the switch and confirming the change.
-
-Once you are satisfied with the schema, click `Next` to go to the `Partition` step where you can fine tune how the data will be partitioned into segments.
-
-![Data loader partition](../assets/tutorial-batch-data-loader-06.png "Data loader partition")
-
-Here, you can adjust how the data will be split up into segments in Druid.
-Since this is a small dataset, there are no adjustments that need to be made in this step.
-
-Clicking past the `Tune` step, to get to the publish step.
-
-![Data loader publish](../assets/tutorial-batch-data-loader-07.png "Data loader publish")
-
-The `Publish` step is where we can specify what the datasource name in Druid.
-Let's name this datasource `wikipedia`.
-Finally, click `Next` to review your spec.
-
-![Data loader spec](../assets/tutorial-batch-data-loader-08.png "Data loader spec")
-
-This is the spec you have constructed.
-Feel free to go back and make changes in previous steps to see how changes will update the spec.
-Similarly, you can also edit the spec directly and see it reflected in the previous steps.
-
-Once you are satisfied with the spec, click `Submit` and an ingestion task will be created.
-
-![Tasks view](../assets/tutorial-batch-data-loader-09.png "Tasks view")
-
-You will be taken to the task view with the focus on the newly created task.
-The task view is set to auto refresh, wait until your task succeeds.
-
-When a tasks succeeds it means that it built one or more segments that will now be picked up by the data servers.
-
-Navigate to the `Datasources` view from the header.
- 
-![Datasource view](../assets/tutorial-batch-data-loader-10.png "Datasource view")
- 
-Wait until your datasource (`wikipedia`) appears.
-This can take a few seconds as the segments are being loaded.
-
-A datasource is queryable once you see a green (fully available) circle.
-At this point, you can go to the `Query` view to run SQL queries against the datasource.
-
-![Query view](../assets/tutorial-batch-data-loader-11.png "Query view")
-
-Run a `SELECT * FROM "wikipedia"` query to see your results.
-
-Check out the [query tutorial](../tutorials/tutorial-query.md) to run some example queries on the newly loaded data.
+The [Quickstart](./index.md) shows you how to use the data loader to build an ingestion spec. For production environments, it's 
+likely that you'll want to automate data ingestion. This tutorial starts by showing you how to submit an ingestion spec 
+directly in the Druid console, and then introduces ways to ingest batch data that lend themselves to 
+automation&mdash;from the command line and from a script. 
 
 
 ## Loading data with a spec (via console)
@@ -134,42 +42,36 @@ which has been configured to read the `quickstart/tutorial/wikiticker-2015-09-12
 
 ```json
 {
-  "type" : "index",
+  "type" : "index_parallel",
   "spec" : {
     "dataSchema" : {
       "dataSource" : "wikipedia",
-      "parser" : {
-        "type" : "string",
-        "parseSpec" : {
-          "format" : "json",
-          "dimensionsSpec" : {
-            "dimensions" : [
-              "channel",
-              "cityName",
-              "comment",
-              "countryIsoCode",
-              "countryName",
-              "isAnonymous",
-              "isMinor",
-              "isNew",
-              "isRobot",
-              "isUnpatrolled",
-              "metroCode",
-              "namespace",
-              "page",
-              "regionIsoCode",
-              "regionName",
-              "user",
-              { "name": "added", "type": "long" },
-              { "name": "deleted", "type": "long" },
-              { "name": "delta", "type": "long" }
-            ]
-          },
-          "timestampSpec": {
-            "column": "time",
-            "format": "iso"
-          }
-        }
+      "dimensionsSpec" : {
+        "dimensions" : [
+          "channel",
+          "cityName",
+          "comment",
+          "countryIsoCode",
+          "countryName",
+          "isAnonymous",
+          "isMinor",
+          "isNew",
+          "isRobot",
+          "isUnpatrolled",
+          "metroCode",
+          "namespace",
+          "page",
+          "regionIsoCode",
+          "regionName",
+          "user",
+          { "name": "added", "type": "long" },
+          { "name": "deleted", "type": "long" },
+          { "name": "delta", "type": "long" }
+        ]
+      },
+      "timestampSpec": {
+        "column": "time",
+        "format": "iso"
       },
       "metricsSpec" : [],
       "granularitySpec" : {
@@ -181,16 +83,19 @@ which has been configured to read the `quickstart/tutorial/wikiticker-2015-09-12
       }
     },
     "ioConfig" : {
-      "type" : "index",
-      "firehose" : {
+      "type" : "index_parallel",
+      "inputSource" : {
         "type" : "local",
         "baseDir" : "quickstart/tutorial/",
         "filter" : "wikiticker-2015-09-12-sampled.json.gz"
       },
+      "inputFormat" :  {
+        "type": "json"
+      },
       "appendToExisting" : false
     },
     "tuningConfig" : {
-      "type" : "index",
+      "type" : "index_parallel",
       "maxRowsPerSegment" : 5000000,
       "maxRowsInMemory" : 25000
     }
@@ -198,17 +103,17 @@ which has been configured to read the `quickstart/tutorial/wikiticker-2015-09-12
 }
 ```
 
-This spec will create a datasource named "wikipedia".
+This spec creates a datasource named "wikipedia".
 
-From the task view, click on `Submit task` and select `Raw JSON task`.
+From the Ingestion view, click the ellipses next to Tasks and choose `Submit JSON task`.
 
 ![Tasks view add task](../assets/tutorial-batch-submit-task-01.png "Tasks view add task")
 
-This will bring up the spec submission dialog where you can paste the spec above.
+This brings up the spec submission dialog where you can paste the spec above.
 
 ![Query view](../assets/tutorial-batch-submit-task-02.png "Query view")
 
-Once the spec is submitted, you can follow the same instructions as above to wait for the data to load and then query it.
+Once the spec is submitted, wait a few moments for the data to load, after which you can query it.
 
 
 ## Loading data with a spec (via command line)

@@ -23,13 +23,14 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -93,80 +94,157 @@ public class ExprMacroTable
   }
 
   /**
+   * stub interface to allow {@link Parser#flatten(Expr)} a way to recognize macro functions that exend this
+   */
+  public interface ExprMacroFunctionExpr extends Expr
+  {
+    List<Expr> getArgs();
+  }
+
+  /**
    * Base class for single argument {@link ExprMacro} function {@link Expr}
    */
-  public abstract static class BaseScalarUnivariateMacroFunctionExpr implements Expr
+  public abstract static class BaseScalarUnivariateMacroFunctionExpr implements ExprMacroFunctionExpr
   {
+    protected final String name;
     protected final Expr arg;
 
     // Use Supplier to memoize values as ExpressionSelectors#makeExprEvalSelector() can make repeated calls for them
-    private final Supplier<BindingDetails> analyzeInputsSupplier;
+    private final Supplier<BindingAnalysis> analyzeInputsSupplier;
 
-    public BaseScalarUnivariateMacroFunctionExpr(Expr arg)
+    public BaseScalarUnivariateMacroFunctionExpr(String name, Expr arg)
     {
+      this.name = name;
       this.arg = arg;
       analyzeInputsSupplier = Suppliers.memoize(this::supplyAnalyzeInputs);
     }
 
     @Override
-    public void visit(final Visitor visitor)
+    public List<Expr> getArgs()
     {
-      arg.visit(visitor);
-      visitor.visit(this);
+      return Collections.singletonList(arg);
     }
 
     @Override
-    public BindingDetails analyzeInputs()
+    public BindingAnalysis analyzeInputs()
     {
       return analyzeInputsSupplier.get();
     }
 
-    private BindingDetails supplyAnalyzeInputs()
+    @Override
+    public String stringify()
+    {
+      return StringUtils.format("%s(%s)", name, arg.stringify());
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      BaseScalarUnivariateMacroFunctionExpr that = (BaseScalarUnivariateMacroFunctionExpr) o;
+      return Objects.equals(name, that.name) &&
+             Objects.equals(arg, that.arg);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(name, arg);
+    }
+
+    private BindingAnalysis supplyAnalyzeInputs()
     {
       return arg.analyzeInputs().withScalarArguments(ImmutableSet.of(arg));
+    }
+
+
+    @Override
+    public String toString()
+    {
+      return StringUtils.format("(%s %s)", name, getArgs());
     }
   }
 
   /**
    * Base class for multi-argument {@link ExprMacro} function {@link Expr}
    */
-  public abstract static class BaseScalarMacroFunctionExpr implements Expr
+  public abstract static class BaseScalarMacroFunctionExpr implements ExprMacroFunctionExpr
   {
+    protected final String name;
     protected final List<Expr> args;
 
     // Use Supplier to memoize values as ExpressionSelectors#makeExprEvalSelector() can make repeated calls for them
-    private final Supplier<BindingDetails> analyzeInputsSupplier;
+    private final Supplier<BindingAnalysis> analyzeInputsSupplier;
 
-    public BaseScalarMacroFunctionExpr(final List<Expr> args)
+    public BaseScalarMacroFunctionExpr(String name, final List<Expr> args)
     {
+      this.name = name;
       this.args = args;
       analyzeInputsSupplier = Suppliers.memoize(this::supplyAnalyzeInputs);
     }
 
     @Override
-    public void visit(final Visitor visitor)
+    public List<Expr> getArgs()
     {
-      for (Expr arg : args) {
-        arg.visit(visitor);
-      }
-      visitor.visit(this);
+      return args;
     }
 
     @Override
-    public BindingDetails analyzeInputs()
+    public String stringify()
+    {
+      return StringUtils.format(
+          "%s(%s)",
+          name,
+          Expr.ARG_JOINER.join(args.stream().map(Expr::stringify).iterator())
+      );
+    }
+
+    @Override
+    public BindingAnalysis analyzeInputs()
     {
       return analyzeInputsSupplier.get();
     }
 
-    private BindingDetails supplyAnalyzeInputs()
+    @Override
+    public boolean equals(Object o)
     {
-      final Set<Expr> argSet = new HashSet<>(args.size());
-      BindingDetails accumulator = new BindingDetails();
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      BaseScalarMacroFunctionExpr that = (BaseScalarMacroFunctionExpr) o;
+      return Objects.equals(name, that.name) &&
+             Objects.equals(args, that.args);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(name, args);
+    }
+
+    private BindingAnalysis supplyAnalyzeInputs()
+    {
+      final Set<Expr> argSet = Sets.newHashSetWithExpectedSize(args.size());
+      BindingAnalysis accumulator = new BindingAnalysis();
       for (Expr arg : args) {
         accumulator = accumulator.with(arg);
         argSet.add(arg);
       }
       return accumulator.withScalarArguments(argSet);
+    }
+
+    @Override
+    public String toString()
+    {
+      return StringUtils.format("(%s %s)", name, getArgs());
     }
   }
 }

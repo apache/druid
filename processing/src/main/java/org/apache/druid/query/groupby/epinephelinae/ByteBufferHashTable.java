@@ -169,7 +169,7 @@ public class ByteBufferHashTable
     }
 
     if (newBuckets < maxBuckets) {
-      throw new ISE("WTF?! newBuckets[%,d] < maxBuckets[%,d]", newBuckets, maxBuckets);
+      throw new ISE("newBuckets[%,d] < maxBuckets[%,d]", newBuckets, maxBuckets);
     }
 
     ByteBuffer newTableBuffer = buffer.duplicate();
@@ -206,7 +206,7 @@ public class ByteBufferHashTable
         final int newBucket = findBucket(true, newBuckets, newTableBuffer, keyBuffer, keyHash);
 
         if (newBucket < 0) {
-          throw new ISE("WTF?! Couldn't find a bucket while resizing?!");
+          throw new ISE("Couldn't find a bucket while resizing");
         }
 
         final int newBucketOffset = newBucket * bucketSizeWithHash;
@@ -230,7 +230,7 @@ public class ByteBufferHashTable
     growthCount++;
 
     if (size != newSize) {
-      throw new ISE("WTF?! size[%,d] != newSize[%,d] after resizing?!", size, newSize);
+      throw new ISE("size[%,d] != newSize[%,d] after resizing", size, newSize);
     }
   }
 

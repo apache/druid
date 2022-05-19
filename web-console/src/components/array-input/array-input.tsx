@@ -16,48 +16,73 @@
  * limitations under the License.
  */
 
-import { Intent, TextArea } from '@blueprintjs/core';
+import { Button, Intent, Position, TextArea } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
+import classNames from 'classnames';
 import React, { useState } from 'react';
 
 import { compact } from '../../utils';
+import { Suggestion, SuggestionMenu } from '../suggestion-menu/suggestion-menu';
+
+import './array-input.scss';
 
 export interface ArrayInputProps {
   className?: string;
-  values: string[];
+  values: string[] | undefined;
   onChange: (newValues: string[] | undefined) => void;
   placeholder?: string;
   large?: boolean;
   disabled?: boolean;
   intent?: Intent;
+  suggestions?: Suggestion[];
 }
 
 export const ArrayInput = React.memo(function ArrayInput(props: ArrayInputProps) {
-  const { className, placeholder, large, disabled, intent } = props;
-  const [stringValue, setStringValue] = useState();
+  const { className, values, placeholder, large, disabled, intent, onChange, suggestions } = props;
+  const [intermediateValue, setIntermediateValue] = useState<string | undefined>();
 
   const handleChange = (e: any) => {
-    const { onChange } = props;
     const stringValue = e.target.value;
-    const newValues: string[] = stringValue.split(/[,\s]+/).map((v: string) => v.trim());
-    const newValuesFiltered = compact(newValues);
-    if (newValues.length === newValuesFiltered.length) {
-      onChange(stringValue === '' ? undefined : newValuesFiltered);
-      setStringValue(undefined);
-    } else {
-      setStringValue(stringValue);
-    }
+    setIntermediateValue(stringValue);
+
+    onChange(
+      stringValue === ''
+        ? undefined
+        : compact(stringValue.split(/[,\s]+/).map((v: string) => v.trim())),
+    );
   };
 
+  function handleSuggestionSelect(suggestion: undefined | string) {
+    if (!suggestion) return;
+    onChange((values || []).concat([suggestion]));
+  }
+
   return (
-    <TextArea
-      className={className}
-      value={stringValue || props.values.join(', ')}
-      onChange={handleChange}
-      placeholder={placeholder}
-      large={large}
-      disabled={disabled}
-      intent={intent}
-      fill
-    />
+    <div className={classNames('array-input', className)}>
+      <TextArea
+        className={className}
+        value={
+          typeof intermediateValue !== 'undefined' ? intermediateValue : values?.join(', ') || ''
+        }
+        onChange={handleChange}
+        onBlur={() => setIntermediateValue(undefined)}
+        placeholder={placeholder}
+        large={large}
+        disabled={disabled}
+        intent={intent}
+        fill
+      />
+      {suggestions && (
+        <Popover2
+          className="suggestion-button"
+          content={<SuggestionMenu suggestions={suggestions} onSuggest={handleSuggestionSelect} />}
+          position={Position.BOTTOM_RIGHT}
+          autoFocus={false}
+        >
+          <Button icon={IconNames.PLUS} minimal />
+        </Popover2>
+      )}
+    </div>
   );
 });

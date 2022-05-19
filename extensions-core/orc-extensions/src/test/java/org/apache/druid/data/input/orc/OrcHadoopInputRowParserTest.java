@@ -27,16 +27,15 @@ import org.apache.druid.indexer.path.StaticPathSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.mapred.FileSplit;
+import org.apache.hadoop.mapred.InputFormat;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.RecordReader;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.TaskAttemptID;
-import org.apache.hadoop.mapreduce.lib.input.FileSplit;
-import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.orc.mapred.OrcInputFormat;
 import org.apache.orc.mapred.OrcStruct;
-import org.apache.orc.mapreduce.OrcInputFormat;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -44,11 +43,12 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 public class OrcHadoopInputRowParserTest
 {
   @Test
-  public void testTest1() throws IOException, InterruptedException
+  public void testTest1() throws IOException
   {
     // total auto-discover fields (no flattenSpec, no dimensionSpec)
     HadoopDruidIndexerConfig config = loadHadoopDruidIndexerConfig("example/test_1_hadoop_job.json");
@@ -72,7 +72,7 @@ public class OrcHadoopInputRowParserTest
   }
 
   @Test
-  public void testTest2() throws IOException, InterruptedException
+  public void testTest2() throws IOException
   {
     HadoopDruidIndexerConfig config = loadHadoopDruidIndexerConfig("example/test_2_hadoop_job.json");
     Job job = Job.getInstance(new Configuration());
@@ -97,7 +97,7 @@ public class OrcHadoopInputRowParserTest
   }
 
   @Test
-  public void testOrcFile11Format() throws IOException, InterruptedException
+  public void testOrcFile11Format() throws IOException
   {
     // not sure what file 11 format means, but we'll test it!
 
@@ -133,8 +133,8 @@ public class OrcHadoopInputRowParserTest
 
     // first row has empty 'map' column, so lets read another!
     List<InputRow> allRows = getAllRows(config);
-    InputRow anotherRow = allRows.get(0);
-    Assert.assertEquals(14, rows.get(0).getDimensions().size());
+    InputRow anotherRow = allRows.get(allRows.size() - 1);
+    Assert.assertEquals(14, anotherRow.getDimensions().size());
     Assert.assertEquals("true", anotherRow.getDimension("boolean1").get(0));
     Assert.assertEquals("100", anotherRow.getDimension("byte1").get(0));
     Assert.assertEquals("2048", anotherRow.getDimension("short1").get(0));
@@ -142,7 +142,7 @@ public class OrcHadoopInputRowParserTest
     Assert.assertEquals("9223372036854775807", anotherRow.getDimension("long1").get(0));
     Assert.assertEquals("2.0", anotherRow.getDimension("float1").get(0));
     Assert.assertEquals("-5.0", anotherRow.getDimension("double1").get(0));
-    Assert.assertEquals("AAECAwQAAA==", rows.get(0).getDimension("bytes1").get(0));
+    Assert.assertEquals("", anotherRow.getDimension("bytes1").get(0));
     Assert.assertEquals("bye", anotherRow.getDimension("string1").get(0));
     Assert.assertEquals("1.23456786547457E7", anotherRow.getDimension("decimal1").get(0));
     Assert.assertEquals("2", anotherRow.getDimension("struct_list_struct_int").get(0));
@@ -151,7 +151,7 @@ public class OrcHadoopInputRowParserTest
   }
 
   @Test
-  public void testOrcSplitElim() throws IOException, InterruptedException
+  public void testOrcSplitElim() throws IOException
   {
     // not sure what SplitElim means, but we'll test it!
 
@@ -175,7 +175,7 @@ public class OrcHadoopInputRowParserTest
   }
 
   @Test
-  public void testDate1900() throws IOException, InterruptedException
+  public void testDate1900() throws IOException
   {
     /*
       TestOrcFile.testDate1900.orc
@@ -194,7 +194,7 @@ public class OrcHadoopInputRowParserTest
   }
 
   @Test
-  public void testDate2038() throws IOException, InterruptedException
+  public void testDate2038() throws IOException
   {
     /*
       TestOrcFile.testDate2038.orc
@@ -217,54 +217,68 @@ public class OrcHadoopInputRowParserTest
     return HadoopDruidIndexerConfig.fromFile(new File(configPath));
   }
 
-  private static OrcStruct getFirstRow(Job job, String orcPath) throws IOException, InterruptedException
+  private static OrcStruct getFirstRow(Job job, String orcPath) throws IOException
   {
     File testFile = new File(orcPath);
     Path path = new Path(testFile.getAbsoluteFile().toURI());
-    FileSplit split = new FileSplit(path, 0, testFile.length(), null);
+    FileSplit split = new FileSplit(path, 0, testFile.length(), new String[]{"host"});
 
-    InputFormat inputFormat = ReflectionUtils.newInstance(
+    InputFormat<NullWritable, OrcStruct> inputFormat = ReflectionUtils.newInstance(
         OrcInputFormat.class,
         job.getConfiguration()
     );
-    TaskAttemptContext context = new TaskAttemptContextImpl(job.getConfiguration(), new TaskAttemptID());
-
-    try (RecordReader reader = inputFormat.createRecordReader(split, context)) {
-
-      reader.initialize(split, context);
-      reader.nextKeyValue();
-      return (OrcStruct) reader.getCurrentValue();
+    RecordReader<NullWritable, OrcStruct> reader = inputFormat.getRecordReader(
+        split,
+        new JobConf(job.getConfiguration()),
+        null
+    );
+    try {
+      final NullWritable key = reader.createKey();
+      final OrcStruct value = reader.createValue();
+      if (reader.next(key, value)) {
+        return value;
+      } else {
+        throw new NoSuchElementException();
+      }
+    }
+    finally {
+      reader.close();
     }
   }
 
-  private static List<InputRow> getAllRows(HadoopDruidIndexerConfig config)
-      throws IOException, InterruptedException
+  private static List<InputRow> getAllRows(HadoopDruidIndexerConfig config) throws IOException
   {
     Job job = Job.getInstance(new Configuration());
     config.intoConfiguration(job);
 
     File testFile = new File(((StaticPathSpec) config.getPathSpec()).getPaths());
     Path path = new Path(testFile.getAbsoluteFile().toURI());
-    FileSplit split = new FileSplit(path, 0, testFile.length(), null);
+    FileSplit split = new FileSplit(path, 0, testFile.length(), new String[]{"host"});
 
-    InputFormat inputFormat = ReflectionUtils.newInstance(
+    InputFormat<NullWritable, OrcStruct> inputFormat = ReflectionUtils.newInstance(
         OrcInputFormat.class,
         job.getConfiguration()
     );
-    TaskAttemptContext context = new TaskAttemptContextImpl(job.getConfiguration(), new TaskAttemptID());
-
-    try (RecordReader reader = inputFormat.createRecordReader(split, context)) {
+    RecordReader<NullWritable, OrcStruct> reader = inputFormat.getRecordReader(
+        split,
+        new JobConf(job.getConfiguration()),
+        null
+    );
+    try {
       List<InputRow> records = new ArrayList<>();
       InputRowParser parser = config.getParser();
+      final NullWritable key = reader.createKey();
+      OrcStruct value = reader.createValue();
 
-      reader.initialize(split, context);
-      while (reader.nextKeyValue()) {
-        reader.nextKeyValue();
-        Object data = reader.getCurrentValue();
-        records.add(((List<InputRow>) parser.parseBatch(data)).get(0));
+      while (reader.next(key, value)) {
+        records.add(((List<InputRow>) parser.parseBatch(value)).get(0));
+        value = reader.createValue();
       }
 
       return records;
+    }
+    finally {
+      reader.close();
     }
   }
 }

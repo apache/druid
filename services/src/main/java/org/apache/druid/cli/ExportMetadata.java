@@ -21,14 +21,15 @@ package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.opencsv.CSVParser;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
@@ -64,7 +65,8 @@ import java.util.UUID;
 )
 public class ExportMetadata extends GuiceRunnable
 {
-  @Option(name = "--connectURI", description = "Database JDBC connection string", required = true)
+  @Option(name = "--connectURI", description = "Database JDBC connection string")
+  @Required
   private String connectURI;
 
   @Option(name = "--user", description = "Database username")
@@ -79,50 +81,43 @@ public class ExportMetadata extends GuiceRunnable
   @Option(
       name = {"-b", "--s3bucket"},
       title = "s3bucket",
-      description = "S3 bucket of the migrated segments",
-      required = false)
+      description = "S3 bucket of the migrated segments")
   public String s3Bucket = null;
 
   @Option(
       name = {"-k", "--s3baseKey"},
       title = "s3baseKey",
-      description = "S3 baseKey of the migrated segments",
-      required = false)
+      description = "S3 baseKey of the migrated segments")
   public String s3baseKey = null;
 
   @Option(
       name = {"-h", "--hadoopStorageDirectory"},
       title = "hadoopStorageDirectory",
-      description = "hadoopStorageDirectory of the migrated segments",
-      required = false)
+      description = "hadoopStorageDirectory of the migrated segments")
   public String hadoopStorageDirectory = null;
 
   @Option(
       name = {"-n", "--newLocalPath"},
       title = "newLocalPath",
-      description = "newLocalPath of the migrated segments",
-      required = false)
+      description = "newLocalPath of the migrated segments")
   public String newLocalPath = null;
 
   @Option(
       name = {"-o", "--output-path"},
       title = "output-path",
-      description = "CSV output path",
-      required = false)
+      description = "CSV output path")
   public String outputPath = null;
 
   @Option(
       name = {"-x", "--use-hex-blobs"},
       title = "use-hex-blobs",
-      description = "Write BLOB payloads as hex strings",
-      required = false)
+      description = "Write BLOB payloads as hex strings")
   public boolean useHexBlobs = false;
 
   @Option(
       name = {"-t", "--booleans-as-strings"},
       title = "booleans-as-strings",
-      description = "Write boolean values as true/false strings instead of 1/0",
-      required = false)
+      description = "Write boolean values as true/false strings instead of 1/0")
   public boolean booleansAsStrings = false;
 
   private static final Logger log = new Logger(ExportMetadata.class);
@@ -143,7 +138,7 @@ public class ExportMetadata extends GuiceRunnable
         // This area is copied from CreateTables.
         // It's unknown why those modules are required in CreateTables, and if all of those modules are required or not.
         // Maybe some of those modules could be removed.
-        // See https://github.com/apache/incubator-druid/pull/4429#discussion_r123602930
+        // See https://github.com/apache/druid/pull/4429#discussion_r123602930
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
@@ -272,13 +267,12 @@ public class ExportMetadata extends GuiceRunnable
       while ((line = reader.readLine()) != null) {
         String[] parsed = PARSER.parseLine(line);
 
-        StringBuilder newLineBuilder = new StringBuilder();
-        newLineBuilder.append(parsed[0]).append(","); //dataSource
-        newLineBuilder.append(parsed[1]).append(","); //created_date
-        newLineBuilder.append(rewriteHexPayloadAsEscapedJson(parsed[2])).append(","); //commit_metadata_payload
-        newLineBuilder.append(parsed[3]); //commit_metadata_sha1
-        newLineBuilder.append("\n");
-        writer.write(newLineBuilder.toString());
+        String newLine = parsed[0] + "," //dataSource
+                         + parsed[1] + "," //created_date
+                         + rewriteHexPayloadAsEscapedJson(parsed[2]) + "," //commit_metadata_payload
+                         + parsed[3] //commit_metadata_sha1
+                         + "\n";
+        writer.write(newLine);
 
       }
     }
@@ -303,13 +297,12 @@ public class ExportMetadata extends GuiceRunnable
       while ((line = reader.readLine()) != null) {
         String[] parsed = PARSER.parseLine(line);
 
-        StringBuilder newLineBuilder = new StringBuilder();
-        newLineBuilder.append(parsed[0]).append(","); //id
-        newLineBuilder.append(parsed[1]).append(","); //dataSource
-        newLineBuilder.append(parsed[2]).append(","); //version
-        newLineBuilder.append(rewriteHexPayloadAsEscapedJson(parsed[3])); //payload
-        newLineBuilder.append("\n");
-        writer.write(newLineBuilder.toString());
+        String newLine = parsed[0] + "," //id
+                         + parsed[1] + "," //dataSource
+                         + parsed[2] + "," //version
+                         + rewriteHexPayloadAsEscapedJson(parsed[3]) //payload
+                         + "\n";
+        writer.write(newLine);
 
       }
     }
@@ -334,11 +327,10 @@ public class ExportMetadata extends GuiceRunnable
       while ((line = reader.readLine()) != null) {
         String[] parsed = PARSER.parseLine(line);
 
-        StringBuilder newLineBuilder = new StringBuilder();
-        newLineBuilder.append(parsed[0]).append(","); //name
-        newLineBuilder.append(rewriteHexPayloadAsEscapedJson(parsed[1])); //payload
-        newLineBuilder.append("\n");
-        writer.write(newLineBuilder.toString());
+        String newLine = parsed[0] + "," //name
+                         + rewriteHexPayloadAsEscapedJson(parsed[1]) //payload
+                         + "\n";
+        writer.write(newLine);
 
       }
     }
@@ -363,13 +355,12 @@ public class ExportMetadata extends GuiceRunnable
       while ((line = reader.readLine()) != null) {
         String[] parsed = PARSER.parseLine(line);
 
-        StringBuilder newLineBuilder = new StringBuilder();
-        newLineBuilder.append(parsed[0]).append(","); //id
-        newLineBuilder.append(parsed[1]).append(","); //spec_id
-        newLineBuilder.append(parsed[2]).append(","); //created_date
-        newLineBuilder.append(rewriteHexPayloadAsEscapedJson(parsed[3])); //payload
-        newLineBuilder.append("\n");
-        writer.write(newLineBuilder.toString());
+        String newLine = parsed[0] + "," //id
+                         + parsed[1] + "," //spec_id
+                         + parsed[2] + "," //created_date
+                         + rewriteHexPayloadAsEscapedJson(parsed[3]) //payload
+                         + "\n";
+        writer.write(newLine);
 
       }
     }

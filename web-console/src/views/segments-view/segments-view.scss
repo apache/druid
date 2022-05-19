@@ -32,9 +32,43 @@
       display: none;
     }
 
-    .segment-detail {
-      padding: 20px;
-      background: #212d36;
+    .range-detail {
+      cursor: default;
+
+      .range-label {
+        display: inline-block;
+        width: 35px;
+        text-align: right;
+        margin-right: 5px;
+      }
+    }
+
+    .spec-detail {
+      position: relative;
+      cursor: pointer;
+
+      .full-shard-spec-icon {
+        position: absolute;
+        top: 0;
+        right: 0;
+        color: #f5f8fa;
+        display: none;
+      }
+
+      &:hover .full-shard-spec-icon {
+        display: block;
+      }
+    }
+  }
+
+  &.show-segment-timeline {
+    .segment-timeline {
+      height: calc(50% - 55px);
+      margin-top: 10px;
+    }
+
+    .ReactTable {
+      top: 50%;
     }
   }
 }

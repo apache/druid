@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.spec;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceWrapper;
@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
+import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -38,11 +39,15 @@ import java.io.IOException;
 import java.util.Collections;
 
 /**
+ *
  */
 public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
 {
   private final QueryRunner<T> base;
   private final SpecificSegmentSpec specificSpec;
+
+  @VisibleForTesting
+  static final String CTX_SET_THREAD_NAME = "setProcessingThreadNames";
 
   public SpecificSegmentQueryRunner(
       QueryRunner<T> base,
@@ -56,19 +61,33 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final QueryPlus<T> input, final ResponseContext responseContext)
   {
-    final QueryPlus<T> queryPlus = input.withQuerySegmentSpec(specificSpec);
+    final QueryPlus<T> queryPlus = input.withQuery(
+        Queries.withSpecificSegments(
+            input.getQuery(),
+            Collections.singletonList(specificSpec.getDescriptor())
+        )
+    );
+
+    final boolean setName = input.getQuery().getContextBoolean(CTX_SET_THREAD_NAME, true);
+
     final Query<T> query = queryPlus.getQuery();
 
-    final Thread currThread = Thread.currentThread();
-    final String currThreadName = currThread.getName();
-    final String newName = StringUtils.format("%s_%s_%s", query.getType(), query.getDataSource(), query.getIntervals());
+    final Thread currThread = setName ? Thread.currentThread() : null;
+    final String currThreadName = setName ? currThread.getName() : null;
+    final String newName = setName ? query.getType() + "_" + query.getDataSource() + "_" + query.getIntervals() : null;
 
-    final Sequence<T> baseSequence = doNamed(
-        currThread,
-        currThreadName,
-        newName,
-        () -> base.run(queryPlus, responseContext)
-    );
+    final Sequence<T> baseSequence;
+
+    if (setName) {
+      baseSequence = doNamed(
+          currThread,
+          currThreadName,
+          newName,
+          () -> base.run(queryPlus, responseContext)
+      );
+    } else {
+      baseSequence = base.run(queryPlus, responseContext);
+    }
 
     Sequence<T> segmentMissingCatchingSequence = new Sequence<T>()
     {
@@ -142,7 +161,11 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
           @Override
           public <RetType> RetType wrap(Supplier<RetType> sequenceProcessing)
           {
-            return doNamed(currThread, currThreadName, newName, sequenceProcessing);
+            if (setName) {
+              return doNamed(currThread, currThreadName, newName, sequenceProcessing);
+            } else {
+              return sequenceProcessing.get();
+            }
           }
         }
     );
@@ -150,8 +173,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
 
   private void appendMissingSegment(ResponseContext responseContext)
   {
-    responseContext.add(
-        ResponseContext.Key.MISSING_SEGMENTS,
+    responseContext.addMissingSegments(
         Collections.singletonList(specificSpec.getDescriptor())
     );
   }

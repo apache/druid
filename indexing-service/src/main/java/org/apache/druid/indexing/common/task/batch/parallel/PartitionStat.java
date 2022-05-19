@@ -19,122 +19,41 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
+import org.apache.druid.timeline.partition.BuildingShardSpec;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
-import java.util.Objects;
-
 /**
- * Statistics about a partition created by {@link PartialSegmentGenerateTask}. Each partition is a set of data
- * of the same time chunk (primary partition key) and the same partitionId (secondary partition key). This class
- * holds the statistics of a single partition created by a task.
+ * Statistics about a partition created by {@link PartialSegmentGenerateTask}. Each partition is a
+ * set of data of the same time chunk (primary partition key) and the same secondary partition key
+ * ({@link BucketNumberedShardSpec}). This class holds the statistics of a single partition created by a task.
  */
-public class PartitionStat
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = GenericPartitionStat.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = GenericPartitionStat.TYPE, value = GenericPartitionStat.class),
+    @JsonSubTypes.Type(name = DeepStoragePartitionStat.TYPE, value = DeepStoragePartitionStat.class)
+})
+public interface PartitionStat
 {
-  // Host and port of the task executor
-  private final String taskExecutorHost;
-  private final int taskExecutorPort;
-  private final boolean useHttps;
+  /**
+   * @return Uniquely identifying index from 0..N-1 of the N partitions
+   */
+  int getBucketId();
 
-  // Primary partition key
-  private final Interval interval;
-  // Secondary partition key
-  private final int partitionId;
+  /**
+   * @return Definition of secondary partition. For example, for range partitioning, this should include the start/end.
+   */
+  BucketNumberedShardSpec getSecondaryPartition();
 
-  // numRows and sizeBytes are always null currently and will be filled properly in the future.
-  @Nullable
-  private final Integer numRows;
-  @Nullable
-  private final Long sizeBytes;
+  /**
+   * @return interval for the partition
+   */
+  Interval getInterval();
 
-  @JsonCreator
-  public PartitionStat(
-      @JsonProperty("taskExecutorHost") String taskExecutorHost,
-      @JsonProperty("taskExecutorPort") int taskExecutorPort,
-      @JsonProperty("useHttps") boolean useHttps,
-      @JsonProperty("interval") Interval interval,
-      @JsonProperty("partitionId") int partitionId,
-      @JsonProperty("numRows") @Nullable Integer numRows,
-      @JsonProperty("sizeBytes") @Nullable Long sizeBytes
-  )
-  {
-    this.taskExecutorHost = taskExecutorHost;
-    this.taskExecutorPort = taskExecutorPort;
-    this.useHttps = useHttps;
-    this.interval = interval;
-    this.partitionId = partitionId;
-    this.numRows = numRows == null ? 0 : numRows;
-    this.sizeBytes = sizeBytes == null ? 0 : sizeBytes;
-  }
-
-  @JsonProperty
-  public String getTaskExecutorHost()
-  {
-    return taskExecutorHost;
-  }
-
-  @JsonProperty
-  public int getTaskExecutorPort()
-  {
-    return taskExecutorPort;
-  }
-
-  @JsonProperty
-  public boolean isUseHttps()
-  {
-    return useHttps;
-  }
-
-  @JsonProperty
-  public Interval getInterval()
-  {
-    return interval;
-  }
-
-  @JsonProperty
-  public int getPartitionId()
-  {
-    return partitionId;
-  }
-
-  @Nullable
-  @JsonProperty
-  public Integer getNumRows()
-  {
-    return numRows;
-  }
-
-  @Nullable
-  @JsonProperty
-  public Long getSizeBytes()
-  {
-    return sizeBytes;
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    PartitionStat that = (PartitionStat) o;
-    return taskExecutorPort == that.taskExecutorPort &&
-           useHttps == that.useHttps &&
-           partitionId == that.partitionId &&
-           Objects.equals(taskExecutorHost, that.taskExecutorHost) &&
-           Objects.equals(interval, that.interval) &&
-           Objects.equals(numRows, that.numRows) &&
-           Objects.equals(sizeBytes, that.sizeBytes);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(taskExecutorHost, taskExecutorPort, useHttps, interval, partitionId, numRows, sizeBytes);
-  }
+  /**
+   * Converts partition stat to PartitionLocation
+   * */
+  PartitionLocation toPartitionLocation(String subtaskId, BuildingShardSpec shardSpec);
 }

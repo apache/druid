@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
-import com.yahoo.sketches.hll.HllSketch;
+import org.apache.datasketches.hll.HllSketch;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchEstimateOperatorConversion;
@@ -40,7 +40,7 @@ import java.util.List;
 
 /**
  * This module is to support count-distinct operations using {@link HllSketch}.
- * See <a href="https://datasketches.github.io/docs/HLL/HLL.html">HyperLogLog Sketch documentation</a>
+ * See <a href="https://datasketches.apache.org/docs/HLL/HLL.html">HyperLogLog Sketch documentation</a>
  */
 public class HllSketchModule implements DruidModule
 {
@@ -65,6 +65,12 @@ public class HllSketchModule implements DruidModule
     SqlBindings.addOperatorConversion(binder, HllSketchEstimateWithErrorBoundsOperatorConversion.class);
     SqlBindings.addOperatorConversion(binder, HllSketchSetUnionOperatorConversion.class);
     SqlBindings.addOperatorConversion(binder, HllSketchToStringOperatorConversion.class);
+
+    SqlBindings.addApproxCountDistinctChoice(
+        binder,
+        HllSketchApproxCountDistinctSqlAggregator.NAME,
+        HllSketchApproxCountDistinctSqlAggregator.class
+    );
   }
 
   @Override

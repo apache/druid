@@ -283,27 +283,15 @@ public class CompressionFactory
 
     long read(int index);
 
-    default void read(long[] out, int outPosition, int startIndex, int length)
-    {
-      for (int i = 0; i < length; i++) {
-        out[outPosition + i] = read(startIndex + i);
-      }
-    }
+    void read(long[] out, int outPosition, int startIndex, int length);
 
-    default int read(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit)
-    {
-      for (int i = 0; i < length; i++) {
-        int index = indexes[outPosition + i] - indexOffset;
-        if (index >= limit) {
-          return i;
-        }
+    int read(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit);
 
-        out[outPosition + i] = read(index);
-      }
-
-      return length;
-    }
-
+    /**
+     * Duplicates this reader, creating a new reader that does not share any state. Important to achieve thread-safety,
+     * because a common pattern is to duplicate a reader multiple times and then call {@link #setBuffer} on the
+     * various duplicates.
+     */
     LongEncodingReader duplicate();
   }
 
@@ -331,6 +319,7 @@ public class CompressionFactory
   }
 
   public static ColumnarLongsSerializer getLongSerializer(
+      String columnName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder order,
@@ -339,12 +328,23 @@ public class CompressionFactory
   )
   {
     if (encodingStrategy == LongEncodingStrategy.AUTO) {
-      return new IntermediateColumnarLongsSerializer(segmentWriteOutMedium, filenameBase, order, compressionStrategy);
+      return new IntermediateColumnarLongsSerializer(
+          columnName,
+          segmentWriteOutMedium,
+          filenameBase,
+          order,
+          compressionStrategy
+      );
     } else if (encodingStrategy == LongEncodingStrategy.LONGS) {
       if (compressionStrategy == CompressionStrategy.NONE) {
-        return new EntireLayoutColumnarLongsSerializer(segmentWriteOutMedium, new LongsLongEncodingWriter(order));
+        return new EntireLayoutColumnarLongsSerializer(
+            columnName,
+            segmentWriteOutMedium,
+            new LongsLongEncodingWriter(order)
+        );
       } else {
         return new BlockLayoutColumnarLongsSerializer(
+            columnName,
             segmentWriteOutMedium,
             filenameBase,
             order,
@@ -375,6 +375,7 @@ public class CompressionFactory
   }
 
   public static ColumnarFloatsSerializer getFloatSerializer(
+      String columnName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder order,
@@ -382,9 +383,15 @@ public class CompressionFactory
   )
   {
     if (compressionStrategy == CompressionStrategy.NONE) {
-      return new EntireLayoutColumnarFloatsSerializer(segmentWriteOutMedium, order);
+      return new EntireLayoutColumnarFloatsSerializer(columnName, segmentWriteOutMedium, order);
     } else {
-      return new BlockLayoutColumnarFloatsSerializer(segmentWriteOutMedium, filenameBase, order, compressionStrategy);
+      return new BlockLayoutColumnarFloatsSerializer(
+          columnName,
+          segmentWriteOutMedium,
+          filenameBase,
+          order,
+          compressionStrategy
+      );
     }
   }
 
@@ -406,6 +413,7 @@ public class CompressionFactory
   }
 
   public static ColumnarDoublesSerializer getDoubleSerializer(
+      String columnName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder byteOrder,
@@ -413,9 +421,15 @@ public class CompressionFactory
   )
   {
     if (compression == CompressionStrategy.NONE) {
-      return new EntireLayoutColumnarDoublesSerializer(segmentWriteOutMedium, byteOrder);
+      return new EntireLayoutColumnarDoublesSerializer(columnName, segmentWriteOutMedium, byteOrder);
     } else {
-      return new BlockLayoutColumnarDoublesSerializer(segmentWriteOutMedium, filenameBase, byteOrder, compression);
+      return new BlockLayoutColumnarDoublesSerializer(
+          columnName,
+          segmentWriteOutMedium,
+          filenameBase,
+          byteOrder,
+          compression
+      );
     }
   }
 }

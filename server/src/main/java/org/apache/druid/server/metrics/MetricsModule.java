@@ -27,13 +27,17 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
+import io.timeandspace.cronscheduler.CronScheduler;
 import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.BasicMonitorScheduler;
+import org.apache.druid.java.util.metrics.ClockDriftSafeMonitorScheduler;
 import org.apache.druid.java.util.metrics.JvmCpuMonitor;
 import org.apache.druid.java.util.metrics.JvmMonitor;
 import org.apache.druid.java.util.metrics.JvmThreadsMonitor;
@@ -42,10 +46,12 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.query.ExecutorServiceMonitor;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Sets up the {@link MonitorScheduler} to monitor things on a regular schedule.  {@link Monitor}s must be explicitly
@@ -53,6 +59,7 @@ import java.util.Set;
  */
 public class MetricsModule implements Module
 {
+  static final String MONITORING_PROPERTY_PREFIX = "druid.monitoring";
   private static final Logger log = new Logger(MetricsModule.class);
 
   public static void register(Binder binder, Class<? extends Monitor> monitorClazz)
@@ -63,8 +70,8 @@ public class MetricsModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.monitoring", DruidMonitorSchedulerConfig.class);
-    JsonConfigProvider.bind(binder, "druid.monitoring", MonitorsConfig.class);
+    JsonConfigProvider.bind(binder, MONITORING_PROPERTY_PREFIX, DruidMonitorSchedulerConfig.class);
+    JsonConfigProvider.bind(binder, MONITORING_PROPERTY_PREFIX, MonitorsConfig.class);
 
     DruidBinders.metricMonitorBinder(binder); // get the binder so that it will inject the empty set at a minimum.
 
@@ -92,19 +99,35 @@ public class MetricsModule implements Module
     List<Monitor> monitors = new ArrayList<>();
 
     for (Class<? extends Monitor> monitorClass : Iterables.concat(monitorsConfig.getMonitors(), monitorSet)) {
-      final Monitor monitor = injector.getInstance(monitorClass);
-
-      log.info("Adding monitor[%s]", monitor);
-
-      monitors.add(monitor);
+      monitors.add(injector.getInstance(monitorClass));
     }
 
-    return new MonitorScheduler(
-        config.get(),
-        Execs.scheduledSingleThreaded("MonitorScheduler-%s"),
-        emitter,
-        monitors
-    );
+    if (!monitors.isEmpty()) {
+      log.info(
+          "Loaded %d monitors: %s",
+          monitors.size(),
+          monitors.stream().map(monitor -> monitor.getClass().getName()).collect(Collectors.joining(", "))
+      );
+    }
+
+    if (ClockDriftSafeMonitorScheduler.class.getName().equals(config.get().getSchedulerClassName())) {
+      return new ClockDriftSafeMonitorScheduler(
+          config.get(),
+          emitter,
+          monitors,
+          CronScheduler.newBuilder(Duration.ofSeconds(1L)).setThreadName("MonitorScheduler").build(),
+          Execs.singleThreaded("MonitorRunner")
+      );
+    } else if (BasicMonitorScheduler.class.getName().equals(config.get().getSchedulerClassName())) {
+      return new BasicMonitorScheduler(
+          config.get(),
+          emitter,
+          monitors,
+          Execs.scheduledSingleThreaded("MonitorScheduler-%s")
+      );
+    } else {
+      throw new IAE("Unknown monitor scheduler[%s]", config.get().getSchedulerClassName());
+    }
   }
 
   @Provides

@@ -19,8 +19,9 @@
 
 package org.apache.druid.segment.filter;
 
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.BaseVectorValueMatcher;
@@ -28,10 +29,16 @@ import org.apache.druid.query.filter.vector.ReadableVectorMatch;
 import org.apache.druid.query.filter.vector.VectorMatch;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.BitmapColumnIndex;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -40,20 +47,42 @@ public class NotFilter implements Filter
 {
   private final Filter baseFilter;
 
-  public NotFilter(
-      Filter baseFilter
-  )
+  public NotFilter(Filter baseFilter)
   {
     this.baseFilter = baseFilter;
   }
 
+  @Nullable
   @Override
-  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    return bitmapResultFactory.complement(
-        baseFilter.getBitmapResult(selector, bitmapResultFactory),
-        selector.getNumRows()
-    );
+    final BitmapColumnIndex baseIndex = baseFilter.getBitmapColumnIndex(selector);
+    if (baseIndex != null && baseIndex.getIndexCapabilities().isInvertible()) {
+      return new BitmapColumnIndex()
+      {
+        @Override
+        public ColumnIndexCapabilities getIndexCapabilities()
+        {
+          return baseIndex.getIndexCapabilities();
+        }
+
+        @Override
+        public double estimateSelectivity(int totalRows)
+        {
+          return 1. - baseFilter.estimateSelectivity(selector);
+        }
+
+        @Override
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        {
+          return bitmapResultFactory.complement(
+              baseIndex.computeBitmapResult(bitmapResultFactory),
+              selector.getNumRows()
+          );
+        }
+      };
+    }
+    return null;
   }
 
   @Override
@@ -100,9 +129,9 @@ public class NotFilter implements Filter
   }
 
   @Override
-  public boolean canVectorizeMatcher()
+  public boolean canVectorizeMatcher(ColumnInspector inspector)
   {
-    return baseFilter.canVectorizeMatcher();
+    return baseFilter.canVectorizeMatcher(inspector);
   }
 
   @Override
@@ -112,27 +141,47 @@ public class NotFilter implements Filter
   }
 
   @Override
-  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+  public boolean supportsRequiredColumnRewrite()
   {
-    return baseFilter.supportsBitmapIndex(selector);
+    return baseFilter.supportsRequiredColumnRewrite();
   }
 
   @Override
-  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+  public Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
   {
-    return baseFilter.shouldUseBitmapIndex(selector);
+    return new NotFilter(baseFilter.rewriteRequiredColumns(columnRewrites));
   }
 
   @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
   {
     return baseFilter.supportsSelectivityEstimation(columnSelector, indexSelector);
   }
 
   @Override
-  public double estimateSelectivity(BitmapIndexSelector indexSelector)
+  public String toString()
   {
-    return 1. - baseFilter.estimateSelectivity(indexSelector);
+    return StringUtils.format("~(%s)", baseFilter);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    NotFilter notFilter = (NotFilter) o;
+    return Objects.equals(baseFilter, notFilter.baseFilter);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    // to return a different hash from baseFilter
+    return Objects.hash(1, baseFilter);
   }
 
   public Filter getBaseFilter()

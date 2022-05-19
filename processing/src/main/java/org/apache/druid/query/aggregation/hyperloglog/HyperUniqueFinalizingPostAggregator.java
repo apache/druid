@@ -28,7 +28,10 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnType;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
@@ -37,17 +40,12 @@ import java.util.Set;
  */
 public class HyperUniqueFinalizingPostAggregator implements PostAggregator
 {
-  private static final Comparator<Double> DOUBLE_COMPARATOR = Ordering.from(new Comparator<Double>()
-  {
-    @Override
-    public int compare(Double lhs, Double rhs)
-    {
-      return Double.compare(lhs, rhs);
-    }
-  }).nullsFirst();
+  private static final Comparator<Double> DOUBLE_COMPARATOR =
+      Ordering.from((Comparator<Double>) (lhs, rhs) -> Double.compare(lhs, rhs)).nullsFirst();
 
   private final String name;
   private final String fieldName;
+  @Nullable
   private final AggregatorFactory aggregatorFactory;
 
   @JsonCreator
@@ -62,7 +60,7 @@ public class HyperUniqueFinalizingPostAggregator implements PostAggregator
   private HyperUniqueFinalizingPostAggregator(
       String name,
       String fieldName,
-      AggregatorFactory aggregatorFactory
+      @Nullable AggregatorFactory aggregatorFactory
   )
   {
     this.fieldName = Preconditions.checkNotNull(fieldName, "fieldName is null");
@@ -104,6 +102,14 @@ public class HyperUniqueFinalizingPostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  @Override
+  public ColumnType getType(ColumnInspector signature)
+  {
+    return aggregatorFactory != null
+           ? aggregatorFactory.getResultType()
+           : null;
   }
 
   @Override

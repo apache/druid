@@ -27,14 +27,15 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
-import org.apache.druid.indexing.common.task.SegmentLockHelper;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TaskLockHelper;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -50,27 +51,39 @@ import java.util.stream.Collectors;
 /**
  * Insert segments into metadata storage. The segment versions must all be less than or equal to a lock held by
  * your task for the segment intervals.
- * <p/>
- * Word of warning: Very large "segments" sets can cause oversized audit log entries, which is bad because it means
- * that the task cannot actually complete. Callers should avoid this by avoiding inserting too many segments in the
- * same action.
  */
 public class SegmentTransactionalInsertAction implements TaskAction<SegmentPublishResult>
 {
+  /**
+   * Set of segments that was fully overshadowed by new segments, {@link SegmentTransactionalInsertAction#segments}
+   */
   @Nullable
   private final Set<DataSegment> segmentsToBeOverwritten;
+  /**
+   * Set of segments to be inserted into metadata storage
+   */
   private final Set<DataSegment> segments;
+  /**
+   * Set of segments to be dropped (mark unused) when new segments, {@link SegmentTransactionalInsertAction#segments},
+   * are inserted into metadata storage.
+   */
+  @Nullable
+  private final Set<DataSegment> segmentsToBeDropped;
+
   @Nullable
   private final DataSourceMetadata startMetadata;
   @Nullable
   private final DataSourceMetadata endMetadata;
+  @Nullable
+  private final String dataSource;
 
   public static SegmentTransactionalInsertAction overwriteAction(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
+      @Nullable Set<DataSegment> segmentsToBeDropped,
       Set<DataSegment> segmentsToPublish
   )
   {
-    return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToPublish, null, null);
+    return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToBeDropped, segmentsToPublish, null, null, null);
   }
 
   public static SegmentTransactionalInsertAction appendAction(
@@ -79,21 +92,34 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       @Nullable DataSourceMetadata endMetadata
   )
   {
-    return new SegmentTransactionalInsertAction(null, segments, startMetadata, endMetadata);
+    return new SegmentTransactionalInsertAction(null, null, segments, startMetadata, endMetadata, null);
+  }
+
+  public static SegmentTransactionalInsertAction commitMetadataOnlyAction(
+      String dataSource,
+      DataSourceMetadata startMetadata,
+      DataSourceMetadata endMetadata
+  )
+  {
+    return new SegmentTransactionalInsertAction(null, null, null, startMetadata, endMetadata, dataSource);
   }
 
   @JsonCreator
   private SegmentTransactionalInsertAction(
       @JsonProperty("segmentsToBeOverwritten") @Nullable Set<DataSegment> segmentsToBeOverwritten,
-      @JsonProperty("segments") Set<DataSegment> segments,
+      @JsonProperty("segmentsToBeDropped") @Nullable Set<DataSegment> segmentsToBeDropped,
+      @JsonProperty("segments") @Nullable Set<DataSegment> segments,
       @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
-      @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata
+      @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata,
+      @JsonProperty("dataSource") @Nullable String dataSource
   )
   {
     this.segmentsToBeOverwritten = segmentsToBeOverwritten;
-    this.segments = ImmutableSet.copyOf(segments);
+    this.segmentsToBeDropped = segmentsToBeDropped;
+    this.segments = segments == null ? ImmutableSet.of() : ImmutableSet.copyOf(segments);
     this.startMetadata = startMetadata;
     this.endMetadata = endMetadata;
+    this.dataSource = dataSource;
   }
 
   @JsonProperty
@@ -101,6 +127,13 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   public Set<DataSegment> getSegmentsToBeOverwritten()
   {
     return segmentsToBeOverwritten;
+  }
+
+  @JsonProperty
+  @Nullable
+  public Set<DataSegment> getSegmentsToBeDropped()
+  {
+    return segmentsToBeDropped;
   }
 
   @JsonProperty
@@ -123,6 +156,13 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     return endMetadata;
   }
 
+  @JsonProperty
+  @Nullable
+  public String getDataSource()
+  {
+    return dataSource;
+  }
+
   @Override
   public TypeReference<SegmentPublishResult> getReturnTypeReference()
   {
@@ -137,10 +177,32 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
+    final SegmentPublishResult retVal;
+
+    if (segments.isEmpty()) {
+      // A stream ingestion task didn't ingest any rows and created no segments (e.g., all records were unparseable),
+      // but still needs to update metadata with the progress that the task made.
+      try {
+        retVal = toolbox.getIndexerMetadataStorageCoordinator().commitMetadataOnly(
+            dataSource,
+            startMetadata,
+            endMetadata
+        );
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+      return retVal;
+    }
+
     final Set<DataSegment> allSegments = new HashSet<>(segments);
     if (segmentsToBeOverwritten != null) {
       allSegments.addAll(segmentsToBeOverwritten);
     }
+    if (segmentsToBeDropped != null) {
+      allSegments.addAll(segmentsToBeDropped);
+    }
+
     TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), allSegments);
 
     if (segmentsToBeOverwritten != null && !segmentsToBeOverwritten.isEmpty()) {
@@ -151,7 +213,6 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       }
     }
 
-    final SegmentPublishResult retVal;
     try {
       retVal = toolbox.getTaskLockbox().doInCriticalSection(
           task,
@@ -160,6 +221,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
               .onValidLocks(
                   () -> toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
                       segments,
+                      segmentsToBeDropped,
                       startMetadata,
                       endMetadata
                   )
@@ -190,6 +252,10 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     // getSegments() should return an empty set if announceHistoricalSegments() failed
     for (DataSegment segment : retVal.getSegments()) {
       metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
+      metricBuilder.setDimension(
+          DruidMetrics.PARTITIONING_TYPE,
+          segment.getShardSpec() == null ? null : segment.getShardSpec().getType()
+      );
       toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
     }
 
@@ -201,8 +267,8 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     final Map<Interval, List<DataSegment>> oldSegmentsMap = groupSegmentsByIntervalAndSort(segmentsToBeOverwritten);
     final Map<Interval, List<DataSegment>> newSegmentsMap = groupSegmentsByIntervalAndSort(segments);
 
-    oldSegmentsMap.values().forEach(SegmentLockHelper::verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull);
-    newSegmentsMap.values().forEach(SegmentLockHelper::verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull);
+    oldSegmentsMap.values().forEach(TaskLockHelper::verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull);
+    newSegmentsMap.values().forEach(TaskLockHelper::verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull);
 
     oldSegmentsMap.forEach((interval, oldSegmentsPerInterval) -> {
       final List<DataSegment> newSegmentsPerInterval = Preconditions.checkNotNull(
@@ -267,10 +333,12 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   public String toString()
   {
     return "SegmentTransactionalInsertAction{" +
-           "segmentsToBeOverwritten=" + segmentsToBeOverwritten +
-           ", segments=" + segments +
+           "segmentsToBeOverwritten=" + SegmentUtils.commaSeparatedIdentifiers(segmentsToBeOverwritten) +
+           ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            ", startMetadata=" + startMetadata +
            ", endMetadata=" + endMetadata +
+           ", dataSource='" + dataSource + '\'' +
+           ", segmentsToBeDropped=" + SegmentUtils.commaSeparatedIdentifiers(segmentsToBeDropped) +
            '}';
   }
 }

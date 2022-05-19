@@ -21,13 +21,13 @@ import React from 'react';
 
 import { FilterTable } from './filter-table';
 
-describe('filter table', () => {
+describe('FilterTable', () => {
   it('matches snapshot', () => {
     const sampleData = {
       header: ['c1'],
       rows: [
         {
-          raw: `{"c1":"hello"}`,
+          input: { c1: 'hello' },
           parsed: { c1: 'hello' },
         },
       ],
@@ -39,7 +39,6 @@ describe('filter table', () => {
         columnFilter=""
         dimensionFilters={[]}
         selectedFilterName={undefined}
-        onShowGlobalFilter={() => {}}
         onFilterSelect={() => {}}
       />
     );

@@ -35,7 +35,7 @@ public class ConstantDimensionSelector implements SingleValueHistoricalDimension
 {
   private final String value;
 
-  ConstantDimensionSelector(final String value)
+  public ConstantDimensionSelector(final String value)
   {
     if (NullHandling.isNullOrEquivalent(value)) {
       // There's an optimized implementation for nulls that callers should use instead.

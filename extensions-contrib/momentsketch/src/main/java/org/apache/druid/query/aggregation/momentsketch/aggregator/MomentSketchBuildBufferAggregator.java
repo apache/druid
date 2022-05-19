@@ -56,6 +56,9 @@ public class MomentSketchBuildBufferAggregator implements BufferAggregator
   @Override
   public synchronized void aggregate(final ByteBuffer buffer, final int position)
   {
+    if (selector.isNull()) {
+      return;
+    }
     ByteBuffer mutationBuffer = buffer.duplicate();
     mutationBuffer.position(position);
 

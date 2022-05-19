@@ -23,11 +23,11 @@ title: "pull-deps tool"
   -->
 
 
-`pull-deps` is an Apache Druid (incubating) tool that can pull down dependencies to the local repository and lay dependencies out into the extension directory as needed.
+`pull-deps` is an Apache Druid tool that can pull down dependencies to the local repository and lay dependencies out into the extension directory as needed.
 
 `pull-deps` has several command line options, they are as follows:
 
-`-c` or `--coordinate` (Can be specified multiply times)
+`-c` or `--coordinate` (Can be specified multiple times)
 
 Extension coordinate to pull down, followed by a maven coordinate, e.g. org.apache.druid.extensions:mysql-metadata-storage
 
@@ -49,7 +49,7 @@ A local repository that Maven will use to put downloaded files. Then pull-deps w
 
 `-r` or `--remoteRepository`
 
-Add a remote repository. Unless --no-default-remote-repositories is provided, these will be used after https://repo1.maven.org/maven2/ and https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local
+Add a remote repository. Unless `--no-default-remote-repositories` is provided, these will be used after https://repo1.maven.org/maven2/ and http://metamx.artifactoryonline.com/metamx/pub-libs-releases-local
 
 `--no-default-remote-repositories`
 

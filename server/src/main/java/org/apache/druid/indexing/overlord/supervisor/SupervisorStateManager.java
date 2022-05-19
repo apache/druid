@@ -92,7 +92,7 @@ public class SupervisorStateManager
 
   private final Deque<ExceptionEvent> recentEventsQueue = new ConcurrentLinkedDeque<>();
 
-  private State supervisorState = BasicState.PENDING;
+  private volatile State supervisorState = BasicState.PENDING;
 
   private boolean atLeastOneSuccessfulRun = false;
   private boolean currentRunSuccessful = true;
@@ -214,6 +214,11 @@ public class SupervisorStateManager
     return supervisorState != null && supervisorState.isHealthy();
   }
 
+  public boolean isSteadyState()
+  {
+    return healthySteadyState.equals(supervisorState);
+  }
+
   public boolean isAtLeastOneSuccessfulRun()
   {
     return atLeastOneSuccessfulRun;
@@ -283,6 +288,16 @@ public class SupervisorStateManager
           .filter(x -> !shouldSkipException(x))
           .findFirst()
           .orElse(Exception.class.getName());
+    }
+
+    @Override
+    public String toString()
+    {
+      return "ExceptionEvent{" +
+             "timestamp=" + timestamp +
+             ", exceptionClass='" + exceptionClass + '\'' +
+             ", message='" + message + '\'' +
+             '}';
     }
   }
 }

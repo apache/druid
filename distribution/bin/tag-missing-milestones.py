@@ -27,6 +27,7 @@ if len(sys.argv) != 5:
   sys.stderr.write("  It is also necessary to set a GIT_TOKEN environment variable containing a personal access token.\n")
   sys.exit(1)
 
+expected_apache_html_url_prefix = "https://github.com/apache/druid/pull/"
 
 github_username = sys.argv[1]
 previous_release_commit = sys.argv[2]
@@ -40,16 +41,19 @@ all_commits = subprocess.check_output(command, shell=True).decode('UTF-8')
 
 for sha in all_commits.splitlines():
   try:
-    url = "https://api.github.com/repos/apache/incubator-druid/commits/{}/pulls".format(sha)
+    url = "https://api.github.com/repos/apache/druid/commits/{}/pulls".format(sha)
     headers = {'Accept': 'application/vnd.github.groot-preview+json'}
     pull_requests = requests.get(url, headers=headers, auth=(github_username, os.environ["GIT_TOKEN"])).json()
 
     print("Retrieved {} pull requests associated to commit {}".format(len(pull_requests), sha))
     for pr in pull_requests:
       pr_number = pr['number']
+      if expected_apache_html_url_prefix not in pr['html_url']:
+        print("Skipping Pull Request {} associatd with commit {} since the PR is not from the Apache repo.".format(pr_number, sha))
+        continue
       if pr['milestone'] is None:
         print("Tagging Pull Request {} with milestone {}".format(pr_number, milestone))
-        url = "https://api.github.com/repos/apache/incubator-druid/issues/{}".format(pr_number)
+        url = "https://api.github.com/repos/apache/druid/issues/{}".format(pr_number)
         requests.patch(url, json=milestone_json, auth=(github_username, os.environ["GIT_TOKEN"]))
       else:
         print("Skipping Pull Request {} since it's already tagged with milestone {}".format(pr_number, milestone))

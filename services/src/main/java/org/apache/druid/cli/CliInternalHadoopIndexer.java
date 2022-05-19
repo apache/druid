@@ -19,6 +19,9 @@
 
 package org.apache.druid.cli;
 
+import com.github.rvesse.airline.annotations.Arguments;
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
@@ -26,8 +29,6 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-import io.airlift.airline.Arguments;
-import io.airlift.airline.Command;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
@@ -36,7 +37,7 @@ import org.apache.druid.indexer.HadoopIngestionSpec;
 import org.apache.druid.indexer.JobHelper;
 import org.apache.druid.indexer.Jobby;
 import org.apache.druid.indexer.MetadataStorageUpdaterJobHandler;
-import org.apache.druid.indexer.path.MetadataStoreBasedUsedSegmentLister;
+import org.apache.druid.indexer.path.MetadataStoreBasedUsedSegmentsRetriever;
 import org.apache.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -61,7 +62,8 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
 {
   private static final Logger log = new Logger(CliHadoopIndexer.class);
 
-  @Arguments(description = "A JSON object or the path to a file that contains a JSON object", required = true)
+  @Arguments(description = "A JSON object or the path to a file that contains a JSON object")
+  @Required
   private String argumentSpec;
 
   private HadoopDruidIndexerConfig config;
@@ -108,20 +110,21 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
       Preconditions.checkNotNull(metadataSpec.getType(), "type in metadataUpdateSpec must not be null");
       injector.getInstance(Properties.class).setProperty("druid.metadata.storage.type", metadataSpec.getType());
 
-      config = HadoopDruidIndexerConfig.fromSpec(
-          HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
-              config.getSchema(),
-              HadoopDruidIndexerConfig.JSON_MAPPER,
-              new MetadataStoreBasedUsedSegmentLister(
-                  injector.getInstance(IndexerMetadataStorageCoordinator.class)
-              )
+      HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
+          config.getSchema(),
+          HadoopDruidIndexerConfig.JSON_MAPPER,
+          new MetadataStoreBasedUsedSegmentsRetriever(
+              injector.getInstance(IndexerMetadataStorageCoordinator.class)
           )
       );
 
       List<Jobby> jobs = new ArrayList<>();
+      HadoopDruidIndexerJob indexerJob = new HadoopDruidIndexerJob(config, injector.getInstance(MetadataStorageUpdaterJobHandler.class));
       jobs.add(new HadoopDruidDetermineConfigurationJob(config));
-      jobs.add(new HadoopDruidIndexerJob(config, injector.getInstance(MetadataStorageUpdaterJobHandler.class)));
-      JobHelper.runJobs(jobs, config);
+      jobs.add(indexerJob);
+      boolean jobsSucceeded = JobHelper.runJobs(jobs);
+      JobHelper.renameIndexFilesForSegments(config.getSchema(), indexerJob.getPublishedSegmentAndIndexZipFilePaths());
+      JobHelper.maybeDeleteIntermediatePath(jobsSucceeded, config.getSchema());
 
     }
     catch (Exception e) {

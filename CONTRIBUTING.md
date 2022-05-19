@@ -24,9 +24,9 @@ When submitting a pull request (PR), please use the following guidelines:
 - Make sure your code respects existing formatting conventions. In general, follow
   the same coding style as the code that you are modifying.
 - For Intellij you can import our code style settings xml: [`druid_intellij_formatting.xml`](
-  https://github.com/apache/incubator-druid/raw/master/dev/druid_intellij_formatting.xml).
+  https://github.com/apache/druid/raw/master/dev/druid_intellij_formatting.xml).
 - For Eclipse you can import our code style settings xml: [`eclipse_formatting.xml`](
-  https://github.com/apache/incubator-druid/raw/master/dev/eclipse_formatting.xml).
+  https://github.com/apache/druid/raw/master/dev/eclipse_formatting.xml).
 - Do add/update documentation appropriately for the change you are making.
 - If you are introducing a new feature you may want to first write about your idea
   for feedback to [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org). Or create an issue
@@ -37,29 +37,29 @@ When submitting a pull request (PR), please use the following guidelines:
 - Try to keep pull requests short and submit separate ones for unrelated
   features, but feel free to combine simple bugfixes/tests into one pull request.
 - If you are adding or updating a dependency, be sure to update the version, license, or notice information in
-  [licenses.yaml](https://github.com/apache/incubator-druid/blob/master/licenses.yaml) as appropriate to help ease
+  [licenses.yaml](https://github.com/apache/druid/blob/master/licenses.yaml) as appropriate to help ease
   LICENSE and NOTICE management for ASF releases.
 
 You can find more developers' resources in [`dev/`](dev) directory.
 
 ## GitHub Workflow
 
-1. Fork the apache/incubator-druid repository into your GitHub account
+1. Fork the apache/druid repository into your GitHub account
 
-    https://github.com/apache/incubator-druid/fork
+    https://github.com/apache/druid/fork
 
-1. Clone your fork of the GitHub repository
+2. Clone your fork of the GitHub repository
 
     ```sh
-    git clone git@github.com:<username>/incubator-druid.git
+    git clone git@github.com:<username>/druid.git
     ```
 
     replace `<username>` with your GitHub username.
 
-1. Add a remote to keep up with upstream changes
+3. Add a remote to keep up with upstream changes
 
     ```
-    git remote add upstream https://github.com/apache/incubator-druid.git
+    git remote add upstream https://github.com/apache/druid.git
     ```
 
     If you already have a copy, fetch upstream changes
@@ -68,20 +68,20 @@ You can find more developers' resources in [`dev/`](dev) directory.
     git fetch upstream master
     ```
 
-1. Create a feature branch to work in
+4. Create a feature branch to work in
 
     ```
     git checkout -b feature-xxx remotes/upstream/master
     ```
 
-1. _Before submitting a pull request_ periodically rebase your changes
+5. _Before submitting a pull request_ periodically rebase your changes
     (but don't do it when a pull request is already submitted)
 
     ```
     git pull --rebase upstream master
     ```
 
-1. Before submitting a pull request, combine ("squash") related commits into a single one
+6. Before submitting a pull request, combine ("squash") related commits into a single one
 
     ```
     git rebase -i upstream/master
@@ -91,7 +91,7 @@ You can find more developers' resources in [`dev/`](dev) directory.
     - Re-order the lines to change commit order (to the extent possible without creating conflicts)
     - Prefix commits using `s` (squash) or `f` (fixup) to merge extraneous commits.
 
-1. Submit a pull-request
+7. Submit a pull-request
 
     ```
     git push origin feature-xxx
@@ -100,18 +100,18 @@ You can find more developers' resources in [`dev/`](dev) directory.
     Go to your Druid fork main page
 
     ```
-    https://github.com/<username>/incubator-druid
+    https://github.com/<username>/druid
     ```
 
     If you recently pushed your changes GitHub will automatically pop up a
     `Compare & pull request` button for any branches you recently pushed to. If you
     click that button it will automatically offer you to submit your pull-request
-    to the apache/incubator-druid repository.
+    to the apache/druid repository.
 
     - Give your pull-request a meaningful title.
     - In the description, explain your changes and the problem they are solving.
 
-1. Addressing code review comments
+8. Addressing code review comments
 
     Address code review comments by committing changes and pushing them to your feature
     branch.
@@ -146,26 +146,25 @@ You can find more developers' resources in [`dev/`](dev) directory.
 Never fear! If you occasionally merged upstream/master, here is another way to squash your changes into a single commit:
 
 1. First, rename your existing branch to something else, e.g. `feature-xxx-unclean`
+    ```
+    git branch -m feature-xxx-unclean
+    ```
 
-  ```
-  git branch -m feature-xxx-unclean
-  ```
+2.  Checkout a new branch with the original name `feature-xxx` from upstream. This branch will supercede our old one.
 
-1. Checkout a new branch with the original name `feature-xxx` from upstream. This branch will supercede our old one.
+    ```
+    git checkout -b feature-xxx upstream/master
+    ```
 
-  ```
-  git checkout -b feature-xxx upstream/master
-  ```
+3. Then merge your changes in your original feature branch `feature-xxx-unclean` and create a single commit.
 
-1. Then merge your changes in your original feature branch `feature-xxx-unclean` and create a single commit.
+    ```
+    git merge --squash feature-xxx-unclean
+    git commit
+    ```
 
-  ```
-  git merge --squash feature-xxx-unclean
-  git commit
-  ```
+4. You can now submit this new branch and create or replace your existing pull request.
 
-1. You can now submit this new branch and create or replace your existing pull request.
-
-  ```
-  git push origin [--force] feature-xxx:feature-xxx
-  ```
+    ```
+    git push origin [--force] feature-xxx:feature-xxx
+    ```

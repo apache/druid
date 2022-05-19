@@ -20,7 +20,6 @@
 package org.apache.druid.query.filter;
 
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.timeline.partition.ShardSpec;
 
@@ -29,9 +28,11 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
+ *
  */
 public class DimFilterUtils
 {
@@ -51,9 +52,10 @@ public class DimFilterUtils
   static final byte COLUMN_COMPARISON_CACHE_ID = 0xD;
   static final byte EXPRESSION_CACHE_ID = 0xE;
   static final byte TRUE_CACHE_ID = 0xF;
-  public static byte BLOOM_DIM_FILTER_CACHE_ID = 0x10;
-  public static final byte STRING_SEPARATOR = (byte) 0xFF;
+  static final byte FALSE_CACHE_ID = 0x11;
+  public static final byte BLOOM_DIM_FILTER_CACHE_ID = 0x10;
 
+  public static final byte STRING_SEPARATOR = (byte) 0xFF;
 
   static byte[] computeCacheKey(byte cacheIdKey, List<DimFilter> filters)
   {
@@ -87,14 +89,15 @@ public class DimFilterUtils
    * {@link #filterShards(DimFilter, Iterable, Function, Map)} instead with a cached map
    *
    * @param dimFilter The filter to use
-   * @param input The iterable of objects to be filtered
+   * @param input     The iterable of objects to be filtered
    * @param converter The function to convert T to ShardSpec that can be filtered by
-   * @param <T> This can be any type, as long as transform function is provided to convert this to ShardSpec
+   * @param <T>       This can be any type, as long as transform function is provided to convert this to ShardSpec
+   *
    * @return The set of filtered object, in the same order as input
    */
   public static <T> Set<T> filterShards(DimFilter dimFilter, Iterable<T> input, Function<T, ShardSpec> converter)
   {
-    return filterShards(dimFilter, input, converter, new HashMap<String, Optional<RangeSet<String>>>());
+    return filterShards(dimFilter, input, converter, new HashMap<>());
   }
 
   /**
@@ -106,15 +109,20 @@ public class DimFilterUtils
    * between calls with the same dimFilter to save redundant calls of {@link DimFilter#getDimensionRangeSet(String)}
    * on same dimensions.
    *
-   * @param dimFilter The filter to use
-   * @param input The iterable of objects to be filtered
-   * @param converter The function to convert T to ShardSpec that can be filtered by
+   * @param dimFilter           The filter to use
+   * @param input               The iterable of objects to be filtered
+   * @param converter           The function to convert T to ShardSpec that can be filtered by
    * @param dimensionRangeCache The cache of RangeSets of different dimensions for the dimFilter
-   * @param <T> This can be any type, as long as transform function is provided to convert this to ShardSpec
+   * @param <T>                 This can be any type, as long as transform function is provided to convert this to ShardSpec
+   *
    * @return The set of filtered object, in the same order as input
    */
-  public static <T> Set<T> filterShards(DimFilter dimFilter, Iterable<T> input, Function<T, ShardSpec> converter,
-                                        Map<String, Optional<RangeSet<String>>> dimensionRangeCache)
+  public static <T> Set<T> filterShards(
+      final DimFilter dimFilter,
+      final Iterable<T> input,
+      final Function<T, ShardSpec> converter,
+      final Map<String, Optional<RangeSet<String>>> dimensionRangeCache
+  )
   {
     Set<T> retSet = new LinkedHashSet<>();
 
@@ -127,7 +135,7 @@ public class DimFilterUtils
         List<String> dimensions = shard.getDomainDimensions();
         for (String dimension : dimensions) {
           Optional<RangeSet<String>> optFilterRangeSet = dimensionRangeCache
-              .computeIfAbsent(dimension, d -> Optional.fromNullable(dimFilter.getDimensionRangeSet(d)));
+              .computeIfAbsent(dimension, d -> Optional.ofNullable(dimFilter.getDimensionRangeSet(d)));
 
           if (optFilterRangeSet.isPresent()) {
             filterDomain.put(dimension, optFilterRangeSet.get());

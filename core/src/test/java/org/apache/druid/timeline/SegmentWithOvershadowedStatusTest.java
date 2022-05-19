@@ -34,7 +34,6 @@ import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
@@ -44,28 +43,29 @@ import java.util.Map;
 
 public class SegmentWithOvershadowedStatusTest
 {
-  private static final ObjectMapper MAPPER = new TestObjectMapper();
+  private static final ObjectMapper MAPPER = createObjectMapper();
+  private static final Interval INTERVAL = Intervals.of("2011-10-01/2011-10-02");
+  private static final ImmutableMap<String, Object> LOAD_SPEC = ImmutableMap.of("something", "or_other");
+  private static final boolean OVERSHADOWED = true;
   private static final int TEST_VERSION = 0x9;
+  private static final SegmentWithOvershadowedStatus SEGMENT = createSegmentWithOvershadowedStatus();
 
-  @Before
-  public void setUp()
+  private static ObjectMapper createObjectMapper()
   {
+    ObjectMapper objectMapper = new TestObjectMapper();
     InjectableValues.Std injectableValues = new InjectableValues.Std();
     injectableValues.addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT);
-    MAPPER.setInjectableValues(injectableValues);
+    objectMapper.setInjectableValues(injectableValues);
+    return objectMapper;
   }
 
-  @Test
-  public void testUnwrappedSegmentWithOvershadowedStatusDeserialization() throws Exception
+  private static SegmentWithOvershadowedStatus createSegmentWithOvershadowedStatus()
   {
-    final Interval interval = Intervals.of("2011-10-01/2011-10-02");
-    final ImmutableMap<String, Object> loadSpec = ImmutableMap.of("something", "or_other");
-
-    final DataSegment dataSegment = new DataSegment(
+    DataSegment dataSegment = new DataSegment(
         "something",
-        interval,
+        INTERVAL,
         "1",
-        loadSpec,
+        LOAD_SPEC,
         Arrays.asList("dim1", "dim2"),
         Arrays.asList("met1", "met2"),
         NoneShardSpec.instance(),
@@ -74,42 +74,58 @@ public class SegmentWithOvershadowedStatusTest
         1
     );
 
-    final SegmentWithOvershadowedStatus segment = new SegmentWithOvershadowedStatus(dataSegment, false);
+    return new SegmentWithOvershadowedStatus(dataSegment, OVERSHADOWED);
+  }
 
+  @Test
+  public void testUnwrappedSegmentWithOvershadowedStatusDeserialization() throws Exception
+  {
     final Map<String, Object> objectMap = MAPPER.readValue(
-        MAPPER.writeValueAsString(segment),
+        MAPPER.writeValueAsString(SEGMENT),
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(12, objectMap.size());
+    Assert.assertEquals(11, objectMap.size());
     Assert.assertEquals("something", objectMap.get("dataSource"));
-    Assert.assertEquals(interval.toString(), objectMap.get("interval"));
+    Assert.assertEquals(INTERVAL.toString(), objectMap.get("interval"));
     Assert.assertEquals("1", objectMap.get("version"));
-    Assert.assertEquals(loadSpec, objectMap.get("loadSpec"));
+    Assert.assertEquals(LOAD_SPEC, objectMap.get("loadSpec"));
     Assert.assertEquals("dim1,dim2", objectMap.get("dimensions"));
     Assert.assertEquals("met1,met2", objectMap.get("metrics"));
     Assert.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
     Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
     Assert.assertEquals(1, objectMap.get("size"));
-    Assert.assertEquals(false, objectMap.get("overshadowed"));
+    Assert.assertEquals(OVERSHADOWED, objectMap.get("overshadowed"));
 
-    final String json = MAPPER.writeValueAsString(segment);
+    final String json = MAPPER.writeValueAsString(SEGMENT);
 
     final TestSegmentWithOvershadowedStatus deserializedSegment = MAPPER.readValue(
         json,
         TestSegmentWithOvershadowedStatus.class
     );
 
-    Assert.assertEquals(segment.getDataSegment().getDataSource(), deserializedSegment.getDataSource());
-    Assert.assertEquals(segment.getDataSegment().getInterval(), deserializedSegment.getInterval());
-    Assert.assertEquals(segment.getDataSegment().getVersion(), deserializedSegment.getVersion());
-    Assert.assertEquals(segment.getDataSegment().getLoadSpec(), deserializedSegment.getLoadSpec());
-    Assert.assertEquals(segment.getDataSegment().getDimensions(), deserializedSegment.getDimensions());
-    Assert.assertEquals(segment.getDataSegment().getMetrics(), deserializedSegment.getMetrics());
-    Assert.assertEquals(segment.getDataSegment().getShardSpec(), deserializedSegment.getShardSpec());
-    Assert.assertEquals(segment.getDataSegment().getSize(), deserializedSegment.getSize());
-    Assert.assertEquals(segment.getDataSegment().getId(), deserializedSegment.getId());
+    DataSegment dataSegment = SEGMENT.getDataSegment();
+    Assert.assertEquals(dataSegment.getDataSource(), deserializedSegment.getDataSource());
+    Assert.assertEquals(dataSegment.getInterval(), deserializedSegment.getInterval());
+    Assert.assertEquals(dataSegment.getVersion(), deserializedSegment.getVersion());
+    Assert.assertEquals(dataSegment.getLoadSpec(), deserializedSegment.getLoadSpec());
+    Assert.assertEquals(dataSegment.getDimensions(), deserializedSegment.getDimensions());
+    Assert.assertEquals(dataSegment.getMetrics(), deserializedSegment.getMetrics());
+    Assert.assertEquals(dataSegment.getShardSpec(), deserializedSegment.getShardSpec());
+    Assert.assertEquals(dataSegment.getSize(), deserializedSegment.getSize());
+    Assert.assertEquals(dataSegment.getId(), deserializedSegment.getId());
+  }
 
+  // Previously, the implementation of SegmentWithOvershadowedStatus had @JsonCreator/@JsonProperty and @JsonUnwrapped
+  // on the same field (dataSegment), which used to work in Jackson 2.6, but does not work with Jackson 2.9:
+  // https://github.com/FasterXML/jackson-databind/issues/265#issuecomment-264344051
+  @Test
+  public void testJsonCreatorAndJsonUnwrappedAnnotationsAreCompatible() throws Exception
+  {
+    String json = MAPPER.writeValueAsString(SEGMENT);
+    SegmentWithOvershadowedStatus segment = MAPPER.readValue(json, SegmentWithOvershadowedStatus.class);
+    Assert.assertEquals(SEGMENT, segment);
+    Assert.assertEquals(json, MAPPER.writeValueAsString(segment));
   }
 }
 

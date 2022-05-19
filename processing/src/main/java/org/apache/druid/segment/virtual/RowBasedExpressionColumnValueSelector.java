@@ -34,28 +34,27 @@ import java.util.stream.Collectors;
  * Expression column value selector that examines a set of 'unknown' type input bindings on a row by row basis,
  * transforming the expression to handle multi-value list typed inputs as they are encountered.
  *
- * Currently, string dimensions are the only bindings which might appear as a {@link String} or a {@link String[]}, so
+ * Currently, string dimensions are the only bindings which might appear as a {@link String} or a {@link Object[]}, so
  * numbers are eliminated from the set of 'unknown' bindings to check as they are encountered.
  */
 public class RowBasedExpressionColumnValueSelector extends ExpressionColumnValueSelector
 {
   private final List<String> unknownColumns;
-  private final Expr.BindingDetails baseExprBindingDetails;
+  private final Expr.BindingAnalysis baseBindingAnalysis;
   private final Set<String> ignoredColumns;
   private final Int2ObjectMap<Expr> transformedCache;
 
   public RowBasedExpressionColumnValueSelector(
-      Expr expression,
-      Expr.BindingDetails baseExprBindingDetails,
-      Expr.ObjectBinding bindings,
-      Set<String> unknownColumnsSet
+      ExpressionPlan plan,
+      Expr.ObjectBinding bindings
   )
   {
-    super(expression, bindings);
-    this.unknownColumns = unknownColumnsSet.stream()
-                                           .filter(x -> !baseExprBindingDetails.getArrayBindings().contains(x))
-                                           .collect(Collectors.toList());
-    this.baseExprBindingDetails = baseExprBindingDetails;
+    super(plan.getAppliedExpression(), bindings);
+    this.unknownColumns = plan.getUnknownInputs()
+                              .stream()
+                              .filter(x -> !plan.getAnalysis().getArrayBindings().contains(x))
+                              .collect(Collectors.toList());
+    this.baseBindingAnalysis = plan.getAnalysis();
     this.ignoredColumns = new HashSet<>();
     this.transformedCache = new Int2ObjectArrayMap<>(unknownColumns.size());
   }
@@ -79,7 +78,7 @@ public class RowBasedExpressionColumnValueSelector extends ExpressionColumnValue
       if (transformedCache.containsKey(key)) {
         return transformedCache.get(key).eval(bindings);
       }
-      Expr transformed = Parser.applyUnappliedBindings(expression, baseExprBindingDetails, arrayBindings);
+      Expr transformed = Parser.applyUnappliedBindings(expression, baseBindingAnalysis, arrayBindings);
       transformedCache.put(key, transformed);
       return transformed.eval(bindings);
     }
@@ -95,7 +94,7 @@ public class RowBasedExpressionColumnValueSelector extends ExpressionColumnValue
   {
     Object binding = bindings.get(x);
     if (binding != null) {
-      if (binding instanceof String[] && ((String[]) binding).length > 1) {
+      if (binding instanceof Object[] && ((Object[]) binding).length > 0) {
         return true;
       } else if (binding instanceof Number) {
         ignoredColumns.add(x);

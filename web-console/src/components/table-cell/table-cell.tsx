@@ -17,6 +17,7 @@
  */
 
 import { IconNames } from '@blueprintjs/icons';
+import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
@@ -53,7 +54,7 @@ export interface TableCellProps {
 
 export const TableCell = React.memo(function TableCell(props: TableCellProps) {
   const { value, unlimited } = props;
-  const [showValue, setShowValue] = useState();
+  const [showValue, setShowValue] = useState<string | undefined>();
 
   function renderShowValueDialog(): JSX.Element | undefined {
     if (!showValue) return;
@@ -63,46 +64,47 @@ export const TableCell = React.memo(function TableCell(props: TableCellProps) {
 
   function renderTruncated(str: string): JSX.Element {
     if (str.length <= MAX_CHARS_TO_SHOW) {
-      return <span className="table-cell plain">{str}</span>;
+      return <div className="table-cell plain">{str}</div>;
     }
 
     if (unlimited) {
       return (
-        <span className="table-cell plain">
+        <div className="table-cell plain">
           {str.length < ABSOLUTE_MAX_CHARS_TO_SHOW
             ? str
             : `${str.substr(0, ABSOLUTE_MAX_CHARS_TO_SHOW)}...`}
-        </span>
+        </div>
       );
     }
 
     const { prefix, omitted, suffix } = shortenString(str);
     return (
-      <span className="table-cell truncated">
+      <div className="table-cell truncated">
         {prefix}
         <span className="omitted">{omitted}</span>
         {suffix}
         <ActionIcon icon={IconNames.MORE} onClick={() => setShowValue(str)} />
         {renderShowValueDialog()}
-      </span>
+      </div>
     );
   }
 
   if (value !== '' && value != null) {
     if (value instanceof Date) {
+      const dateValue = value.valueOf();
       return (
-        <span className="table-cell timestamp" title={String(value.valueOf())}>
-          {value.toISOString()}
-        </span>
+        <div className="table-cell timestamp" title={String(value.valueOf())}>
+          {isNaN(dateValue) ? 'Unusable date' : value.toISOString()}
+        </div>
       );
     } else if (Array.isArray(value)) {
       return renderTruncated(`[${value.join(', ')}]`);
     } else if (typeof value === 'object') {
-      return renderTruncated(JSON.stringify(value));
+      return renderTruncated(JSONBig.stringify(value));
     } else {
       return renderTruncated(String(value));
     }
   } else {
-    return <span className="table-cell null">null</span>;
+    return <div className="table-cell null">null</div>;
   }
 });

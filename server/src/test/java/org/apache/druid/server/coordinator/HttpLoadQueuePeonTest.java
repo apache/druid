@@ -80,9 +80,19 @@ public class HttpLoadQueuePeonTest
       null,
       null,
       null,
-      10,
       null,
-      Duration.ZERO
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      10,
+      Duration.ZERO,
+      false
   )
   {
     @Override

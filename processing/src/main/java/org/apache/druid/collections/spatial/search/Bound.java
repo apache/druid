@@ -21,6 +21,7 @@ package org.apache.druid.collections.spatial.search;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.collections.spatial.ImmutableNode;
 import org.apache.druid.collections.spatial.ImmutablePoint;
 
@@ -32,6 +33,7 @@ import org.apache.druid.collections.spatial.ImmutablePoint;
     @JsonSubTypes.Type(name = "radius", value = RadiusBound.class),
     @JsonSubTypes.Type(name = "polygon", value = PolygonBound.class)
 })
+@SubclassesMustOverrideEqualsAndHashCode
 public interface Bound
 {
   int getLimit();

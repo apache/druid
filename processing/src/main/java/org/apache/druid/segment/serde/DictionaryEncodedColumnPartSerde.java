@@ -116,7 +116,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   private DictionaryEncodedColumnPartSerde(
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
-      Serializer serializer
+      @Nullable Serializer serializer
   )
   {
     this.byteOrder = byteOrder;
@@ -303,12 +303,20 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         final boolean hasMultipleValues = Feature.MULTI_VALUE.isSet(rFlags) || Feature.MULTI_VALUE_V3.isSet(rFlags);
 
+        builder.setType(ValueType.STRING);
+
+        // Duplicate the first buffer since we are reading the dictionary twice.
         final GenericIndexed<String> rDictionary = GenericIndexed.read(
-            buffer,
+            buffer.duplicate(),
             GenericIndexed.STRING_STRATEGY,
             builder.getFileMapper()
         );
-        builder.setType(ValueType.STRING);
+
+        final GenericIndexed<ByteBuffer> rDictionaryUtf8 = GenericIndexed.read(
+            buffer,
+            GenericIndexed.BYTE_BUFFER_STRATEGY,
+            builder.getFileMapper()
+        );
 
         final WritableSupplier<ColumnarInts> rSingleValuedColumn;
         final WritableSupplier<ColumnarMultiInts> rMultiValuedColumn;
@@ -321,35 +329,48 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           rMultiValuedColumn = null;
         }
 
+        final String firstDictionaryEntry = rDictionary.get(0);
+
         DictionaryEncodedColumnSupplier dictionaryEncodedColumnSupplier = new DictionaryEncodedColumnSupplier(
             rDictionary,
+            rDictionaryUtf8,
             rSingleValuedColumn,
             rMultiValuedColumn,
             columnConfig.columnCacheSizeBytes()
         );
+
         builder
             .setHasMultipleValues(hasMultipleValues)
+            .setHasNulls(firstDictionaryEntry == null)
             .setDictionaryEncodedColumnSupplier(dictionaryEncodedColumnSupplier);
 
+        GenericIndexed<ImmutableBitmap> rBitmaps = null;
+        ImmutableRTree rSpatialIndex = null;
         if (!Feature.NO_BITMAP_INDEX.isSet(rFlags)) {
-          GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
+          rBitmaps = GenericIndexed.read(
               buffer,
               bitmapSerdeFactory.getObjectStrategy(),
               builder.getFileMapper()
           );
-          builder.setBitmapIndex(
-              new BitmapIndexColumnPartSupplier(
-                  bitmapSerdeFactory.getBitmapFactory(),
-                  rBitmaps,
-                  rDictionary
-              )
-          );
         }
 
         if (buffer.hasRemaining()) {
-          ImmutableRTree rSpatialIndex =
-              new ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory()).fromByteBufferWithSize(buffer);
-          builder.setSpatialIndex(new SpatialIndexColumnPartSupplier(rSpatialIndex));
+          rSpatialIndex = new ImmutableRTreeObjectStrategy(
+              bitmapSerdeFactory.getBitmapFactory()
+          ).fromByteBufferWithSize(buffer);
+        }
+
+        if (rBitmaps != null || rSpatialIndex != null) {
+          builder.setIndexSupplier(
+              new DictionaryEncodedStringIndexSupplier(
+                  bitmapSerdeFactory.getBitmapFactory(),
+                  rDictionary,
+                  rBitmaps,
+                  rSpatialIndex
+              ),
+              rBitmaps != null,
+              rSpatialIndex != null
+          );
         }
       }
 

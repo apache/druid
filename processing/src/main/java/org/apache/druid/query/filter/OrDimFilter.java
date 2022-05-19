@@ -27,7 +27,6 @@ import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.filter.OrFilter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,17 +35,16 @@ import java.util.List;
 import java.util.Set;
 
 /**
+ *
  */
-public class OrDimFilter implements DimFilter
+public class OrDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
   private static final Joiner OR_JOINER = Joiner.on(" || ");
 
   private final List<DimFilter> fields;
 
   @JsonCreator
-  public OrDimFilter(
-      @JsonProperty("fields") List<DimFilter> fields
-  )
+  public OrDimFilter(@JsonProperty("fields") List<DimFilter> fields)
   {
     fields = DimFilters.filterNulls(fields);
     Preconditions.checkArgument(fields.size() > 0, "OR operator requires at least one field");
@@ -82,14 +80,22 @@ public class OrDimFilter implements DimFilter
   @Override
   public DimFilter optimize()
   {
-    List<DimFilter> elements = DimFilters.optimize(fields);
-    return elements.size() == 1 ? elements.get(0) : new OrDimFilter(elements);
+    // This method optimizes children, but doesn't do any special AND-related stuff like flattening or duplicate
+    // removal. That will happen in "toFilter", which allows us to share code with Filters.or(...).
+
+    final List<DimFilter> newFields = DimFilters.optimize(fields);
+
+    if (newFields.size() == 1) {
+      return newFields.get(0);
+    } else {
+      return new OrDimFilter(newFields);
+    }
   }
 
   @Override
   public Filter toFilter()
   {
-    return new OrFilter(Filters.toFilters(fields));
+    return Filters.or(Filters.toFilters(fields));
   }
 
   @Override

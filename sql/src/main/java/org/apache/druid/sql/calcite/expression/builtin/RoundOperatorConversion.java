@@ -24,11 +24,11 @@ import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 public class RoundOperatorConversion implements SqlOperatorConversion
 {
@@ -49,11 +49,11 @@ public class RoundOperatorConversion implements SqlOperatorConversion
   @Override
   public DruidExpression toDruidExpression(final PlannerContext plannerContext, final RowSignature rowSignature, final RexNode rexNode)
   {
-    return OperatorConversions.convertCall(plannerContext, rowSignature, rexNode, inputExpressions -> {
-      return DruidExpression.fromFunctionCall(
-        "round",
-        inputExpressions
-      );
-    });
+    return OperatorConversions.convertDirectCall(
+        plannerContext,
+        rowSignature,
+        rexNode,
+        "round"
+    );
   }
 }

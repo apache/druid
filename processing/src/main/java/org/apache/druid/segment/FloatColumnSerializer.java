@@ -33,14 +33,16 @@ import java.nio.channels.WritableByteChannel;
 public class FloatColumnSerializer implements GenericColumnSerializer<Object>
 {
   public static FloatColumnSerializer create(
+      String columnName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       CompressionStrategy compression
   )
   {
-    return new FloatColumnSerializer(segmentWriteOutMedium, filenameBase, IndexIO.BYTE_ORDER, compression);
+    return new FloatColumnSerializer(columnName, segmentWriteOutMedium, filenameBase, IndexIO.BYTE_ORDER, compression);
   }
 
+  private final String columnName;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final String filenameBase;
   private final ByteOrder byteOrder;
@@ -48,12 +50,14 @@ public class FloatColumnSerializer implements GenericColumnSerializer<Object>
   private ColumnarFloatsSerializer writer;
 
   private FloatColumnSerializer(
+      String columnName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder byteOrder,
       CompressionStrategy compression
   )
   {
+    this.columnName = columnName;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.filenameBase = filenameBase;
     this.byteOrder = byteOrder;
@@ -64,6 +68,7 @@ public class FloatColumnSerializer implements GenericColumnSerializer<Object>
   public void open() throws IOException
   {
     writer = CompressionFactory.getFloatSerializer(
+        columnName,
         segmentWriteOutMedium,
         StringUtils.format("%s.float_column", filenameBase),
         byteOrder,

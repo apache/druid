@@ -15,35 +15,53 @@
 
 grammar Expr;
 
-expr : 'null'                                         # null
-     | ('-'|'!') expr                                 # unaryOpExpr
-     |<assoc=right> expr '^' expr                     # powOpExpr
-     | expr ('*'|'/'|'%') expr                        # mulDivModuloExpr
-     | expr ('+'|'-') expr                            # addSubExpr
-     | expr ('<'|'<='|'>'|'>='|'=='|'!=') expr        # logicalOpExpr
-     | expr ('&&'|'||') expr                          # logicalAndOrExpr
-     | '(' expr ')'                                   # nestedExpr
-     | IDENTIFIER '(' lambda ',' fnArgs ')'           # applyFunctionExpr
-     | IDENTIFIER '(' fnArgs? ')'                     # functionExpr
-     | IDENTIFIER                                     # identifierExpr
-     | DOUBLE                                         # doubleExpr
-     | LONG                                           # longExpr
-     | STRING                                         # string
-     | '[' DOUBLE  (',' DOUBLE)* ']'                  # doubleArray
-     | '[' LONG (',' LONG)* ']'                       # longArray
-     | '[' STRING (',' STRING)* ']'                   # stringArray
-     | '[]'                                           # emptyArray
+start : expr EOF;
+
+expr : NULL                                                         # null
+     | ('-'|'!') expr                                               # unaryOpExpr
+     |<assoc=right> expr '^' expr                                   # powOpExpr
+     | expr ('*'|'/'|'%') expr                                      # mulDivModuloExpr
+     | expr ('+'|'-') expr                                          # addSubExpr
+     | expr ('<'|'<='|'>'|'>='|'=='|'!=') expr                      # logicalOpExpr
+     | expr ('&&'|'||') expr                                        # logicalAndOrExpr
+     | '(' expr ')'                                                 # nestedExpr
+     | IDENTIFIER '(' lambda ',' fnArgs ')'                         # applyFunctionExpr
+     | IDENTIFIER '(' fnArgs? ')'                                   # functionExpr
+     | IDENTIFIER                                                   # identifierExpr
+     | DOUBLE                                                       # doubleExpr
+     | LONG                                                         # longExpr
+     | STRING                                                       # string
+     | '[' (stringElement (',' stringElement)*)? ']'                # stringArray
+     | '[' longElement (',' longElement)*']'                        # longArray
+     | '<LONG>' '[' (numericElement (',' numericElement)*)? ']'     # explicitLongArray
+     | '<DOUBLE>'? '[' (numericElement (',' numericElement)*)? ']'  # doubleArray
+     | '<STRING>' '[' (literalElement (',' literalElement)*)? ']'   # explicitStringArray
+     | ARRAY_TYPE '[' (literalElement (',' literalElement)*)? ']'   # explicitArray
      ;
 
 lambda : (IDENTIFIER | '(' ')' | '(' IDENTIFIER (',' IDENTIFIER)* ')') '->' expr
        ;
 
-fnArgs : expr (',' expr)*                             # functionArgs
+fnArgs : expr (',' expr)*                                           # functionArgs
        ;
 
+stringElement : (STRING | NULL);
+
+longElement : (LONG | NULL);
+
+numericElement : (LONG | DOUBLE | NULL);
+
+literalElement : (STRING | LONG | DOUBLE | NULL);
+
+ARRAY_TYPE : 'ARRAY<' ( 'LONG' | 'DOUBLE' | 'STRING' | ('COMPLEX<' IDENTIFIER '>')| ARRAY_TYPE ) '>';
+
+NULL : 'null';
+LONG : [0-9]+;
+EXP: [eE] [-]? LONG;
+// DOUBLE provides partial support for java double format
+// see: https://docs.oracle.com/javase/8/docs/api/java/lang/Double.html#valueOf-java.lang.String-
+DOUBLE : 'NaN' | 'Infinity' | (LONG '.' LONG?) | (LONG EXP) | (LONG '.' LONG? EXP);
 IDENTIFIER : [_$a-zA-Z][_$a-zA-Z0-9]* | '"' (ESC | ~ [\"\\])* '"';
-LONG : [0-9]+ ;
-DOUBLE : [0-9]+ '.' [0-9]* ;
 WS : [ \t\r\n]+ -> skip ;
 
 STRING : '\'' (ESC | ~ [\'\\])* '\'';

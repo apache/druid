@@ -19,8 +19,8 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.coordination.DruidServerMetadata;
-import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;

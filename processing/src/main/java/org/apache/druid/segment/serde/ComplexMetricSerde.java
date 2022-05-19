@@ -24,6 +24,10 @@ import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ObjectStrategyComplexTypeStrategy;
+import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -45,7 +49,22 @@ public abstract class ComplexMetricSerde
    *
    * @param buffer  the buffer to deserialize
    * @param builder ColumnBuilder to add the column to
+   * @param columnConfig ColumnConfiguration used during deserialization
    */
+  public void deserializeColumn(
+      ByteBuffer buffer,
+      ColumnBuilder builder,
+      @SuppressWarnings("unused") ColumnConfig columnConfig
+  )
+  {
+    deserializeColumn(buffer, builder);
+  }
+
+  /**
+   * {@link ComplexMetricSerde#deserializeColumn(ByteBuffer, ColumnBuilder, ColumnConfig)} should be used instead of this.
+   * This method is left for backward compatibility.
+   */
+  @Deprecated
   public abstract void deserializeColumn(ByteBuffer buffer, ColumnBuilder builder);
 
   /**
@@ -60,6 +79,16 @@ public abstract class ComplexMetricSerde
    */
   @Deprecated
   public abstract ObjectStrategy getObjectStrategy();
+
+  /**
+   * Get a {@link TypeStrategy} to assist with writing individual complex values to a {@link ByteBuffer}.
+   *
+   * @see TypeStrategy
+   */
+  public <T extends Comparable<T>> TypeStrategy<T> getTypeStrategy()
+  {
+    return new ObjectStrategyComplexTypeStrategy<>(getObjectStrategy(), ColumnType.ofComplex(getTypeName()));
+  }
 
   /**
    * Returns a function that can convert the Object provided by the ComplexColumn created through deserializeColumn

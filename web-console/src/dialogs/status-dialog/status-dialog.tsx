@@ -16,129 +16,113 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, FormGroup, InputGroup, Intent } from '@blueprintjs/core';
-import axios from 'axios';
+import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
-import { Loader } from '../../components/loader/loader';
-import { UrlBaser } from '../../singletons/url-baser';
-import { QueryManager } from '../../utils';
+import { Loader } from '../../components';
+import { useQueryManager } from '../../hooks';
+import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
+import { Api, UrlBaser } from '../../singletons';
 
 import './status-dialog.scss';
 
+export function anywhereMatcher(filter: Filter, row: any): boolean {
+  return String(row[filter.id]).includes(filter.value);
+}
+
+interface StatusModule {
+  artifact: string;
+  name: string;
+  version: string;
+}
+
 interface StatusResponse {
   version: string;
-  modules: any[];
+  modules: StatusModule[];
 }
 
 interface StatusDialogProps {
   onClose: () => void;
 }
 
-interface StatusDialogState {
-  response?: StatusResponse;
-  loading: boolean;
-  error?: string;
-}
+export const StatusDialog = React.memo(function StatusDialog(props: StatusDialogProps) {
+  const { onClose } = props;
+  const [responseState] = useQueryManager<null, StatusResponse>({
+    processQuery: async () => {
+      const resp = await Api.instance.get(`/status`);
+      return resp.data;
+    },
+    initQuery: null,
+  });
 
-export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusDialogState> {
-  static anywhereMatcher(filter: Filter, row: any) {
-    return String(row[filter.id]).includes(filter.value);
-  }
+  function renderContent(): JSX.Element | undefined {
+    if (responseState.loading) return <Loader />;
 
-  private showStatusQueryManager: QueryManager<null, any>;
-
-  constructor(props: StatusDialogProps, context: any) {
-    super(props, context);
-    this.state = {
-      loading: false,
-    };
-
-    this.showStatusQueryManager = new QueryManager({
-      processQuery: async () => {
-        const resp = await axios.get(`/status`);
-        return resp.data;
-      },
-      onStateChange: ({ result, loading, error }) => {
-        this.setState({
-          loading,
-          response: result,
-          error,
-        });
-      },
-    });
-  }
-
-  componentDidMount(): void {
-    this.showStatusQueryManager.runQuery(null);
-  }
-
-  renderContent(): JSX.Element | undefined {
-    const { response, loading, error } = this.state;
-
-    if (loading) return <Loader loading />;
-
-    if (error) return <span>{`Error while loading status: ${error}`}</span>;
-
-    if (response) {
-      return (
-        <>
-          <FormGroup label="Version" labelFor="version" inline>
-            <InputGroup id="version" defaultValue={response.version} readOnly />
-          </FormGroup>
-          <ReactTable
-            data={response.modules}
-            columns={[
-              {
-                columns: [
-                  {
-                    Header: 'Extension name',
-                    accessor: 'artifact',
-                    width: 200,
-                  },
-                  {
-                    Header: 'Fully qualified name',
-                    accessor: 'name',
-                  },
-                  {
-                    Header: 'Version',
-                    accessor: 'version',
-                    width: 200,
-                  },
-                ],
-              },
-            ]}
-            loading={loading}
-            filterable
-            defaultFilterMethod={StatusDialog.anywhereMatcher}
-          />
-        </>
-      );
+    if (responseState.error) {
+      return <span>{`Error while loading status: ${responseState.error}`}</span>;
     }
 
-    return;
-  }
-
-  render(): JSX.Element {
-    const { onClose } = this.props;
+    const response = responseState.data;
+    if (!response) return;
 
     return (
-      <Dialog className={'status-dialog'} onClose={onClose} isOpen title="Status">
-        <div className={'status-dialog-main-area'}>{this.renderContent()}</div>
-        <div className={Classes.DIALOG_FOOTER}>
-          <div className="viewRawButton">
-            <Button
-              text="View raw"
-              minimal
-              onClick={() => window.open(UrlBaser.base(`/status`), '_blank')}
-            />
-          </div>
-          <div className="closeButton">
-            <Button text="Close" intent={Intent.PRIMARY} onClick={onClose} />
-          </div>
+      <div className="main-container">
+        <div className="version">
+          Version:&nbsp;<strong>{response.version}</strong>
         </div>
-      </Dialog>
+        <ReactTable
+          data={response.modules}
+          loading={responseState.loading}
+          filterable
+          defaultFilterMethod={anywhereMatcher}
+          defaultPageSize={SMALL_TABLE_PAGE_SIZE}
+          pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
+          showPagination={response.modules.length > SMALL_TABLE_PAGE_SIZE}
+          columns={[
+            {
+              columns: [
+                {
+                  Header: 'Extension name',
+                  accessor: 'artifact',
+                  width: 200,
+                  className: 'padded',
+                },
+                {
+                  Header: 'Version',
+                  accessor: 'version',
+                  width: 200,
+                  className: 'padded',
+                },
+                {
+                  Header: 'Fully qualified name',
+                  accessor: 'name',
+                  width: 500,
+                  className: 'padded',
+                },
+              ],
+            },
+          ]}
+        />
+      </div>
     );
   }
-}
+
+  return (
+    <Dialog className="status-dialog" onClose={onClose} isOpen title="Status">
+      <div className={Classes.DIALOG_BODY}>{renderContent()}</div>
+      <div className={Classes.DIALOG_FOOTER}>
+        <div className="view-raw-button">
+          <Button
+            text="View raw"
+            minimal
+            onClick={() => window.open(UrlBaser.base(`/status`), '_blank')}
+          />
+        </div>
+        <div className="close-button">
+          <Button text="Close" intent={Intent.PRIMARY} onClick={onClose} />
+        </div>
+      </div>
+    </Dialog>
+  );
+});

@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
-import com.yahoo.memory.Memory;
-import com.yahoo.sketches.quantiles.DoublesSketch;
+import org.apache.datasketches.memory.Memory;
+import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 
@@ -41,8 +41,9 @@ public class DoublesSketchOperations
       return (DoublesSketch) serializedSketch;
     }
     throw new ISE(
-        "Object is not of a type that can be deserialized to a quantiles DoublsSketch: "
-            + serializedSketch.getClass());
+        "Object is not of a type that can be deserialized to a quantiles DoublesSketch: %s",
+        serializedSketch == null ? "null" : serializedSketch.getClass()
+    );
   }
 
   public static DoublesSketch deserializeFromBase64EncodedString(final String str)

@@ -20,6 +20,8 @@
 package org.apache.druid.indexing.common.task;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Maps;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -28,36 +30,32 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.partition.BuildingNumberedShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
  * Segment allocator which allocates new segments locally per request.
  */
-class LocalSegmentAllocator implements IndexTaskSegmentAllocator
+class LocalSegmentAllocator implements SegmentAllocatorForBatch
 {
-  private final String taskId;
-
   private final SegmentAllocator internalAllocator;
+  private final SequenceNameFunction sequenceNameFunction;
 
-  LocalSegmentAllocator(TaskToolbox toolbox, String taskId, String dataSource, GranularitySpec granularitySpec)
-      throws IOException
+  LocalSegmentAllocator(TaskToolbox toolbox, String taskId, String dataSource, GranularitySpec granularitySpec) throws IOException
   {
-    this.taskId = taskId;
-    final Map<Interval, AtomicInteger> counters = new HashMap<>();
-
-    final Map<Interval, String> intervalToVersion = toolbox.getTaskActionClient()
-                                                           .submit(new LockListAction())
-                                                           .stream()
-                                                           .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
+    final Map<Interval, String> intervalToVersion = toolbox
+        .getTaskActionClient()
+        .submit(new LockListAction())
+        .stream()
+        .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
+    final Map<Interval, MutableInt> counters = Maps.newHashMapWithExpectedSize(intervalToVersion.size());
 
     internalAllocator = (row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> {
       final DateTime timestamp = row.getTimestamp();
@@ -67,30 +65,26 @@ class LocalSegmentAllocator implements IndexTaskSegmentAllocator
       }
 
       final Interval interval = maybeInterval.get();
-      final String version = intervalToVersion.entrySet().stream()
-                                              .filter(entry -> entry.getKey().contains(interval))
-                                              .map(Entry::getValue)
-                                              .findFirst()
-                                              .orElseThrow(() -> new ISE("Cannot find a version for interval[%s]", interval));
+      final String version = intervalToVersion
+          .entrySet()
+          .stream()
+          .filter(entry -> entry.getKey().contains(interval))
+          .map(Entry::getValue)
+          .findFirst()
+          .orElseThrow(() -> new ISE("Cannot find a version for interval[%s]", interval));
 
-      final int partitionNum = counters.computeIfAbsent(interval, x -> new AtomicInteger()).getAndIncrement();
+      final int partitionId = counters.computeIfAbsent(interval, x -> new MutableInt()).getAndIncrement();
       return new SegmentIdWithShardSpec(
           dataSource,
           interval,
           version,
-          new NumberedShardSpec(partitionNum, 0)
+          new BuildingNumberedShardSpec(partitionId)
       );
     };
+    sequenceNameFunction = new LinearlyPartitionedSequenceNameFunction(taskId);
   }
 
-  @Override
-  public String getSequenceName(Interval interval, InputRow inputRow)
-  {
-    // Segments are created as needed, using a single sequence name. They may be allocated from the overlord
-    // (in append mode) or may be created on our own authority (in overwrite mode).
-    return taskId;
-  }
-
+  @Nullable
   @Override
   public SegmentIdWithShardSpec allocate(
       InputRow row,
@@ -100,5 +94,11 @@ class LocalSegmentAllocator implements IndexTaskSegmentAllocator
   ) throws IOException
   {
     return internalAllocator.allocate(row, sequenceName, previousSegmentId, skipSegmentLineageCheck);
+  }
+
+  @Override
+  public SequenceNameFunction getSequenceNameFunction()
+  {
+    return sequenceNameFunction;
   }
 }

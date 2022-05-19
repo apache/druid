@@ -29,69 +29,99 @@ import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.logical.LogicalTableScan;
+import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.sql.calcite.external.ExternalTableScan;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
-import javax.annotation.Nonnull;
-import java.util.List;
+import javax.annotation.Nullable;
+import java.util.Set;
 
 /**
- * DruidRel that uses a "table" dataSource.
+ * DruidRel that operates on top of a {@link DruidTable} directly (no joining or subqueries).
  */
 public class DruidQueryRel extends DruidRel<DruidQueryRel>
 {
-  // Factors used for computing cost (see computeSelfCost). These are intended to encourage pushing down filters
-  // and limits through stacks of nested queries when possible.
-  private static final double COST_BASE = 1.0;
-  private static final double COST_PER_COLUMN = 0.001;
-  private static final double COST_FILTER_MULTIPLIER = 0.1;
-  private static final double COST_GROUPING_MULTIPLIER = 0.5;
-  private static final double COST_LIMIT_MULTIPLIER = 0.5;
-  private static final double COST_HAVING_MULTIPLIER = 5.0;
-
-  private final RelOptTable table;
+  @Nullable
+  private final RelOptTable table; // must not be null except for inline data
   private final DruidTable druidTable;
   private final PartialDruidQuery partialQuery;
 
   private DruidQueryRel(
       final RelOptCluster cluster,
       final RelTraitSet traitSet,
-      final RelOptTable table,
+      @Nullable final RelOptTable table,
       final DruidTable druidTable,
-      final QueryMaker queryMaker,
+      final PlannerContext plannerContext,
       final PartialDruidQuery partialQuery
   )
   {
-    super(cluster, traitSet, queryMaker);
-    this.table = Preconditions.checkNotNull(table, "table");
+    super(cluster, traitSet, plannerContext);
+    this.table = table;
     this.druidTable = Preconditions.checkNotNull(druidTable, "druidTable");
     this.partialQuery = Preconditions.checkNotNull(partialQuery, "partialQuery");
   }
 
   /**
-   * Create a DruidQueryRel representing a full scan.
+   * Create a DruidQueryRel representing a full scan of a builtin table or lookup.
    */
-  public static DruidQueryRel fullScan(
+  public static DruidQueryRel scanTable(
       final LogicalTableScan scanRel,
       final RelOptTable table,
       final DruidTable druidTable,
-      final QueryMaker queryMaker
+      final PlannerContext plannerContext
   )
   {
     return new DruidQueryRel(
         scanRel.getCluster(),
         scanRel.getCluster().traitSetOf(Convention.NONE),
-        table,
+        Preconditions.checkNotNull(table, "table"),
         druidTable,
-        queryMaker,
+        plannerContext,
         PartialDruidQuery.create(scanRel)
     );
   }
 
+  /**
+   * Create a DruidQueryRel representing a full scan of external data.
+   */
+  public static DruidQueryRel scanExternal(
+      final ExternalTableScan scanRel,
+      final PlannerContext plannerContext
+  )
+  {
+    return new DruidQueryRel(
+        scanRel.getCluster(),
+        scanRel.getCluster().traitSetOf(Convention.NONE),
+        null,
+        scanRel.getDruidTable(),
+        plannerContext,
+        PartialDruidQuery.create(scanRel)
+    );
+  }
+
+  /**
+   * Create a DruidQueryRel representing a full scan of inline, literal values.
+   */
+  public static DruidQueryRel scanValues(
+      final LogicalValues valuesRel,
+      final DruidTable druidTable,
+      final PlannerContext plannerContext
+  )
+  {
+    return new DruidQueryRel(
+        valuesRel.getCluster(),
+        valuesRel.getTraitSet(), // the traitSet of valuesRel should be kept
+        null,
+        druidTable,
+        plannerContext,
+        PartialDruidQuery.create(valuesRel)
+    );
+  }
+
   @Override
-  @Nonnull
   public DruidQuery toDruidQuery(final boolean finalizeAggregations)
   {
     return partialQuery.build(
@@ -117,15 +147,15 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         getTraitSet().replace(DruidConvention.instance()),
         table,
         druidTable,
-        getQueryMaker(),
+        getPlannerContext(),
         partialQuery
     );
   }
 
   @Override
-  public List<String> getDataSourceNames()
+  public Set<String> getDataSourceNames()
   {
-    return druidTable.getDataSource().getNames();
+    return druidTable.getDataSource().getTableNames();
   }
 
   @Override
@@ -142,25 +172,14 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         getTraitSet().plusAll(newQueryBuilder.getRelTraits()),
         table,
         druidTable,
-        getQueryMaker(),
+        getPlannerContext(),
         newQueryBuilder
     );
   }
 
-  @Override
-  public int getQueryCount()
+  public DruidTable getDruidTable()
   {
-    return 1;
-  }
-
-  @Override
-  public Sequence<Object[]> runQuery()
-  {
-    // runQuery doesn't need to finalize aggregations, because the fact that runQuery is happening suggests this
-    // is the outermost query and it will actually get run as a native query. Druid's native query layer will
-    // finalize aggregations for the outermost query even if we don't explicitly ask it to.
-
-    return getQueryMaker().runQuery(toDruidQuery(false));
+    return druidTable;
   }
 
   @Override
@@ -182,7 +201,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
     final DruidQuery druidQuery = toDruidQueryForExplaining();
 
     try {
-      queryString = getQueryMaker().getJsonMapper().writeValueAsString(druidQuery.getQuery());
+      queryString = getPlannerContext().getJsonMapper().writeValueAsString(druidQuery.getQuery());
     }
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);
@@ -195,38 +214,6 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   @Override
   public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
   {
-    double cost = COST_BASE;
-
-    if (partialQuery.getSelectProject() != null) {
-      cost += COST_PER_COLUMN * partialQuery.getSelectProject().getChildExps().size();
-    }
-
-    if (partialQuery.getWhereFilter() != null) {
-      cost *= COST_FILTER_MULTIPLIER;
-    }
-
-    if (partialQuery.getAggregate() != null) {
-      cost *= COST_GROUPING_MULTIPLIER;
-      cost += COST_PER_COLUMN * partialQuery.getAggregate().getGroupSet().size();
-      cost += COST_PER_COLUMN * partialQuery.getAggregate().getAggCallList().size();
-    }
-
-    if (partialQuery.getAggregateProject() != null) {
-      cost += COST_PER_COLUMN * partialQuery.getAggregateProject().getChildExps().size();
-    }
-
-    if (partialQuery.getSort() != null && partialQuery.getSort().fetch != null) {
-      cost *= COST_LIMIT_MULTIPLIER;
-    }
-
-    if (partialQuery.getSortProject() != null) {
-      cost += COST_PER_COLUMN * partialQuery.getSortProject().getChildExps().size();
-    }
-
-    if (partialQuery.getHavingFilter() != null) {
-      cost *= COST_HAVING_MULTIPLIER;
-    }
-
-    return planner.getCostFactory().makeCost(cost, 0, 0);
+    return planner.getCostFactory().makeCost(partialQuery.estimateCost(), 0, 0);
   }
 }

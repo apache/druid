@@ -27,13 +27,13 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchQueryConfig;
 import org.apache.druid.query.search.SearchQueryQueryToolChest;
@@ -51,41 +51,31 @@ public final class CachingClusteredClientTestUtils
    * Returns a new {@link QueryToolChestWarehouse} for unit tests and a resourceCloser which should be closed at the end
    * of the test.
    */
-  public static Pair<QueryToolChestWarehouse, Closer> createWarehouse(
-      ObjectMapper objectMapper
-  )
+  public static Pair<QueryToolChestWarehouse, Closer> createWarehouse()
   {
-    final Pair<GroupByQueryRunnerFactory, Closer> factoryCloserPair = GroupByQueryRunnerTest.makeQueryRunnerFactory(
-        new GroupByQueryConfig()
+    final Closer resourceCloser = Closer.create();
+    final GroupByQueryRunnerFactory groupByQueryRunnerFactory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+        new GroupByQueryConfig(),
+        resourceCloser.register(TestGroupByBuffers.createDefault())
     );
-    final GroupByQueryRunnerFactory factory = factoryCloserPair.lhs;
-    final Closer resourceCloser = factoryCloserPair.rhs;
     return Pair.of(
         new MapQueryToolChestWarehouse(
             ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
                 .put(
                     TimeseriesQuery.class,
-                    new TimeseriesQueryQueryToolChest(
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    )
+                    new TimeseriesQueryQueryToolChest()
                 )
                 .put(
                     TopNQuery.class,
-                    new TopNQueryQueryToolChest(
-                        new TopNQueryConfig(),
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    )
+                    new TopNQueryQueryToolChest(new TopNQueryConfig())
                 )
                 .put(
                     SearchQuery.class,
-                    new SearchQueryQueryToolChest(
-                        new SearchQueryConfig(),
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    )
+                    new SearchQueryQueryToolChest(new SearchQueryConfig())
                 )
                 .put(
                     GroupByQuery.class,
-                    factory.getToolchest()
+                    groupByQueryRunnerFactory.getToolchest()
                 )
                 .put(TimeBoundaryQuery.class, new TimeBoundaryQueryQueryToolChest())
                 .build()

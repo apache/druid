@@ -25,7 +25,6 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowPlusRaw;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -64,13 +63,7 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
   @Override
   public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
   {
-    return new TimedShutoffFirehose(parser, temporaryDirectory, false);
-  }
-
-  @Override
-  public Firehose connectForSampler(InputRowParser parser, File temporaryDirectory) throws IOException
-  {
-    return new TimedShutoffFirehose(parser, temporaryDirectory, true);
+    return new TimedShutoffFirehose(parser, temporaryDirectory);
   }
 
   class TimedShutoffFirehose implements Firehose
@@ -80,11 +73,9 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
     @GuardedBy("this")
     private boolean closed = false;
 
-    TimedShutoffFirehose(InputRowParser parser, File temporaryDirectory, boolean sampling) throws IOException
+    TimedShutoffFirehose(InputRowParser parser, File temporaryDirectory) throws IOException
     {
-      firehose = sampling
-                 ? delegateFactory.connectForSampler(parser, temporaryDirectory)
-                 : delegateFactory.connect(parser, temporaryDirectory);
+      firehose = delegateFactory.connect(parser, temporaryDirectory);
 
       shutdownExec = Execs.scheduledSingleThreaded("timed-shutoff-firehose-%d");
 
@@ -119,12 +110,6 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
       return firehose.nextRow();
     }
 
-    @Override
-    public InputRowPlusRaw nextRowWithRaw() throws IOException
-    {
-      return firehose.nextRowWithRaw();
-    }
-
     /**
      * This method is synchronized because it might be called concurrently from multiple threads: from {@link
      * #shutdownExec}, and explicitly on this Firehose object.
@@ -134,7 +119,7 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
     {
       if (!closed) {
         closed = true;
-        CloseableUtils.closeBoth(firehose, shutdownExec::shutdownNow);
+        CloseableUtils.closeAll(firehose, shutdownExec::shutdownNow);
       }
     }
   }

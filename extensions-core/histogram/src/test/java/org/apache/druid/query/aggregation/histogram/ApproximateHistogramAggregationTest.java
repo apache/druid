@@ -29,6 +29,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -46,7 +47,7 @@ import java.util.List;
  *
  */
 @RunWith(Parameterized.class)
-public class ApproximateHistogramAggregationTest
+public class ApproximateHistogramAggregationTest extends InitializedNullHandlingTest
 {
   private AggregationTestHelper helper;
 
@@ -86,6 +87,22 @@ public class ApproximateHistogramAggregationTest
     Assert.assertEquals(92.782760, row.getMetric("index_min").floatValue(), 0.0001);
     Assert.assertEquals(135.109191, row.getMetric("index_max").floatValue(), 0.0001);
     Assert.assertEquals(133.69340, row.getMetric("index_quantile").floatValue(), 0.0001);
+    Assert.assertEquals(
+        new Quantiles(new float[]{0.2f, 0.7f}, new float[]{92.78276f, 103.195305f}, 92.78276f, 135.109191f),
+        row.getRaw("index_quantiles")
+    );
+    Assert.assertEquals(
+        "Histogram{breaks=[92.0, 94.0, 96.0, 98.0, 100.0, 106.0, 108.0, 134.0, 136.0], counts=[1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0]}",
+        row.getRaw("index_buckets").toString()
+    );
+    Assert.assertEquals(
+        "Histogram{breaks=[50.0, 100.0], counts=[3.0]}",
+        row.getRaw("index_custom").toString()
+    );
+    Assert.assertEquals(
+        "Histogram{breaks=[71.61954498291016, 92.78276062011719, 113.94597625732422, 135.10919189453125], counts=[1.0, 3.0, 1.0]}",
+        row.getRaw("index_equal").toString()
+    );
   }
 
   @Test
@@ -98,6 +115,22 @@ public class ApproximateHistogramAggregationTest
       Assert.assertEquals(0.0F, row.getMetric("index_min"));
       Assert.assertEquals(135.109191, row.getMetric("index_max").floatValue(), 0.0001);
       Assert.assertEquals(131.428176, row.getMetric("index_quantile").floatValue(), 0.0001);
+      Assert.assertEquals(
+          new Quantiles(new float[]{0.2f, 0.7f}, new float[]{0.0f, 92.95146f}, 0.0f, 135.109191f),
+          row.getRaw("index_quantiles")
+      );
+      Assert.assertEquals(
+          "Histogram{breaks=[-2.0, 92.0, 94.0, 96.0, 98.0, 100.0, 106.0, 108.0, 134.0, 136.0], counts=[8.0, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0]}",
+          row.getRaw("index_buckets").toString()
+      );
+      Assert.assertEquals(
+          "Histogram{breaks=[50.0, 100.0], counts=[3.0]}",
+          row.getRaw("index_custom").toString()
+      );
+      Assert.assertEquals(
+          "Histogram{breaks=[-67.55459594726562, 0.0, 67.55459594726562, 135.10919189453125], counts=[8.0, 0.0, 5.0]}",
+          row.getRaw("index_equal").toString()
+      );
     }
   }
 
@@ -139,7 +172,11 @@ public class ApproximateHistogramAggregationTest
                    + "\"postAggregations\": ["
                    + "  { \"type\": \"min\", \"name\": \"index_min\", \"fieldName\": \"index_ah\"},"
                    + "  { \"type\": \"max\", \"name\": \"index_max\", \"fieldName\": \"index_ah\"},"
-                   + "  { \"type\": \"quantile\", \"name\": \"index_quantile\", \"fieldName\": \"index_ah\", \"probability\" : 0.99 }"
+                   + "  { \"type\": \"quantile\", \"name\": \"index_quantile\", \"fieldName\": \"index_ah\", \"probability\" : 0.99 },"
+                   + "  { \"type\": \"quantiles\", \"name\": \"index_quantiles\", \"fieldName\": \"index_ah\", \"probabilities\" : [0.2, 0.7] },"
+                   + "  { \"type\": \"buckets\", \"name\": \"index_buckets\", \"fieldName\": \"index_ah\", \"bucketSize\" : 2.0, \"offset\": 4.0 },"
+                   + "  { \"type\": \"customBuckets\", \"name\": \"index_custom\", \"fieldName\": \"index_ah\", \"breaks\" : [50.0, 100.0] },"
+                   + "  { \"type\": \"equalBuckets\", \"name\": \"index_equal\", \"fieldName\": \"index_ah\", \"numBuckets\" : 3 }"
                    + "],"
                    + "\"intervals\": [ \"1970/2050\" ]"
                    + "}";

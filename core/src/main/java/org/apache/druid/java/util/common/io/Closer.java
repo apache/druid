@@ -26,6 +26,7 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayDeque;
+import java.util.Collection;
 import java.util.Deque;
 
 /**
@@ -105,6 +106,13 @@ public final class Closer implements Closeable
 
   private Closer()
   {
+  }
+
+  public <C extends Closeable> void registerAll(Collection<C> closeables)
+  {
+    for (C closeable : closeables) {
+      register(closeable);
+    }
   }
 
   /**

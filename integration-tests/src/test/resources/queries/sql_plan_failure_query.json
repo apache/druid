@@ -1,0 +1,8 @@
+[
+  {
+    "query": {
+      "query": "%%QUERY%%"
+    },
+    "expectedResults": []
+  }
+]

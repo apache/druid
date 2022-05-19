@@ -21,6 +21,7 @@ package org.apache.druid.java.util.metrics;
 
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
+
 /**
  */
 public interface Monitor
@@ -29,5 +30,10 @@ public interface Monitor
 
   void stop();
 
+  /**
+   * Emit metrics using the given emitter.
+   *
+   * @return true if this monitor needs to continue monitoring. False otherwise.
+   */
   boolean monitor(ServiceEmitter emitter);
 }

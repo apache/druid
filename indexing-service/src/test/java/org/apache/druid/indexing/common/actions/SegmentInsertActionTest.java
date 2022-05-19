@@ -27,10 +27,12 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.LockResult;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.assertj.core.api.Assertions;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -117,13 +119,10 @@ public class SegmentInsertActionTest
                       .build()
     );
 
-    Assert.assertEquals(
-        ImmutableSet.of(SEGMENT1, SEGMENT2),
-        ImmutableSet.copyOf(
-            actionTestKit.getMetadataStorageCoordinator()
-                         .getUsedSegmentsForInterval(DATA_SOURCE, INTERVAL)
-        )
-    );
+    Assertions.assertThat(
+        actionTestKit.getMetadataStorageCoordinator()
+                     .retrieveUsedSegmentsForInterval(DATA_SOURCE, INTERVAL, Segments.ONLY_VISIBLE)
+    ).containsExactlyInAnyOrder(SEGMENT1, SEGMENT2);
   }
 
   @Test

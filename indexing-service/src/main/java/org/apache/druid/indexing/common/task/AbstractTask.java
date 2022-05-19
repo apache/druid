@@ -21,29 +21,25 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public abstract class AbstractTask implements Task
 {
-  private static final Joiner ID_JOINER = Joiner.on("_");
-
   @JsonIgnore
   private final String id;
 
@@ -75,30 +71,22 @@ public abstract class AbstractTask implements Task
     this.groupId = groupId == null ? id : groupId;
     this.taskResource = taskResource == null ? new TaskResource(id, 1) : taskResource;
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-    this.context = context == null ? new HashMap<>() : context;
+    // Copy the given context into a new mutable map because the Druid indexing service can add some internal contexts.
+    this.context = context == null ? new HashMap<>() : new HashMap<>(context);
   }
 
-  public static String getOrMakeId(String id, final String typeName, String dataSource)
+  public static String getOrMakeId(@Nullable String id, final String typeName, String dataSource)
   {
     return getOrMakeId(id, typeName, dataSource, null);
   }
 
-  static String getOrMakeId(String id, final String typeName, String dataSource, @Nullable Interval interval)
+  static String getOrMakeId(@Nullable String id, final String typeName, String dataSource, @Nullable Interval interval)
   {
     if (id != null) {
       return id;
     }
 
-    final List<Object> objects = new ArrayList<>();
-    objects.add(typeName);
-    objects.add(dataSource);
-    if (interval != null) {
-      objects.add(interval.getStart());
-      objects.add(interval.getEnd());
-    }
-    objects.add(DateTimes.nowUtc().toString());
-
-    return joinId(objects);
+    return IdUtils.newTaskId(typeName, dataSource, interval);
   }
 
   @JsonProperty
@@ -142,6 +130,12 @@ public abstract class AbstractTask implements Task
   }
 
   @Override
+  public boolean supportsQueries()
+  {
+    return false;
+  }
+
+  @Override
   public String getClasspathPrefix()
   {
     return null;
@@ -163,23 +157,6 @@ public abstract class AbstractTask implements Task
            ", dataSource='" + dataSource + '\'' +
            ", context=" + context +
            '}';
-  }
-
-  /**
-   * Start helper methods
-   *
-   * @param objects objects to join
-   *
-   * @return string of joined objects
-   */
-  static String joinId(List<Object> objects)
-  {
-    return ID_JOINER.join(objects);
-  }
-
-  static String joinId(Object... objects)
-  {
-    return ID_JOINER.join(objects);
   }
 
   public TaskStatus success()
@@ -230,5 +207,16 @@ public abstract class AbstractTask implements Task
   public Map<String, Object> getContext()
   {
     return context;
+  }
+
+  /**
+   * Whether maximum memory usage should be considered in estimation for indexing tasks.
+   */
+  protected boolean isUseMaxMemoryEstimates()
+  {
+    return getContextValue(
+        Tasks.USE_MAX_MEMORY_ESTIMATES,
+        Tasks.DEFAULT_USE_MAX_MEMORY_ESTIMATES
+    );
   }
 }

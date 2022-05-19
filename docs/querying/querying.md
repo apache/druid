@@ -1,7 +1,6 @@
 ---
 id: querying
 title: "Native queries"
-sidebar_label: "Making native queries"
 ---
 
 <!--
@@ -24,8 +23,10 @@ sidebar_label: "Making native queries"
   -->
 
 
-> Apache Druid (incubating) supports two query languages: [Druid SQL](sql.md) and native queries. Druid SQL
-> queries are planned into native queries. This document describes the native query language.
+> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+> This document describes the
+> native query language. For information about how Druid SQL chooses which native query types to use when
+> it runs a SQL query, refer to the [SQL documentation](sql-translation.md#query-types).
 
 Native queries in Druid are JSON objects and are typically issued to the Broker or Router processes. Queries can be
 posted like this:
@@ -34,8 +35,14 @@ posted like this:
 curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:application/json' -d @<query_json_file>
 ```
 
+> Replace `<queryable_host>:<port>` with the appropriate address and port for your system. For example, if running the quickstart configuration, replace `<queryable_host>:<port>` with localhost:8888. 
+
+You can also enter them directly in the Druid console's Query view. Simply pasting a native query into the console switches the editor into JSON mode.
+
+![Native query](../assets/native-queries-01.png "Native query")
+
 Druid's native query language is JSON over HTTP, although many members of the community have contributed different
-[client libraries](/libraries.html) in other languages to query Druid.
+[client libraries](https://druid.apache.org/libraries.html) in other languages to query Druid.
 
 The Content-Type/Accept Headers can also take 'application/x-jackson-smile'.
 
@@ -43,7 +50,7 @@ The Content-Type/Accept Headers can also take 'application/x-jackson-smile'.
 curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:application/x-jackson-smile' -d @<query_json_file>
 ```
 
-Note: If Accept header is not provided, it defaults to value of 'Content-Type' header.
+> If the Accept header is not provided, it defaults to the value of 'Content-Type' header.
 
 Druid's native query is relatively low level, mapping closely to how computations are performed internally. Druid queries
 are designed to be lightweight and complete very quickly. This means that for more complex analysis, or to build
@@ -70,15 +77,16 @@ Druid has numerous query types for various use cases. Queries are composed of va
 * [SegmentMetadata](../querying/segmentmetadataquery.md)
 * [DatasourceMetadata](../querying/datasourcemetadataquery.md)
 
-### Search queries
+### Other queries
 
+* [Scan](../querying/scan-query.md)
 * [Search](../querying/searchquery.md)
 
-## Which query should I use?
+## Which query type should I use?
 
-Where possible, we recommend using [Timeseries]() and [TopN]() queries instead of [GroupBy](). GroupBy is the most flexible Druid query, but also has the poorest performance.
- Timeseries are significantly faster than groupBy queries for aggregations that don't require grouping over dimensions. For grouping and sorting over a single dimension,
- topN queries are much more optimized than groupBys.
+For aggregation queries, if more than one would satisfy your needs, we generally recommend using Timeseries or TopN
+whenever possible, as they are specifically optimized for their use cases. If neither is a good fit, you should use
+the GroupBy query, which is the most flexible.
 
 ## Query cancellation
 
@@ -98,7 +106,13 @@ curl -X DELETE "http://host:port/druid/v2/abc123"
 
 ## Query errors
 
-If a query fails, you will get an HTTP 500 response containing a JSON object with the following structure:
+### Authentication and authorization failures
+
+For [secured](../design/auth.md) Druid clusters, query requests respond with an HTTP 401 response code in case of an authentication failure. For authorization failures, an HTTP 403 response code is returned. 
+
+### Query execution failures
+
+If a query fails, Druid returns a response with an HTTP response code and a JSON object with the following structure:
 
 ```json
 {
@@ -118,14 +132,17 @@ The fields in the response are:
 |errorClass|The class of the exception that caused this error. May be null.|
 |host|The host on which this error occurred. May be null.|
 
-Possible codes for the *error* field include:
+Possible Druid error codes for the `error` field include:
 
-|code|description|
-|----|-----------|
-|`Query timeout`|The query timed out.|
-|`Query interrupted`|The query was interrupted, possibly due to JVM shutdown.|
-|`Query cancelled`|The query was cancelled through the query cancellation API.|
-|`Resource limit exceeded`|The query exceeded a configured resource limit (e.g. groupBy maxResults).|
-|`Unauthorized request.`|The query was denied due to security policy. Either the user was not recognized, or the user was recognized but does not have access to the requested resource.|
-|`Unsupported operation`|The query attempted to perform an unsupported operation. This may occur when using undocumented features or when using an incompletely implemented extension.|
-|`Unknown exception`|Some other exception occurred. Check errorMessage and errorClass for details, although keep in mind that the contents of those fields are free-form and may change from release to release.|
+|Error code|HTTP response code|description|
+|----|-----------|-----------|
+|`SQL parse failed`|400|Only for SQL queries. The SQL query failed to parse.|
+|`Plan validation failed`|400|Only for SQL queries. The SQL query failed to validate.|
+|`Resource limit exceeded`|400|The query exceeded a configured resource limit (e.g. groupBy maxResults).|
+|`Query capacity exceeded`|429|The query failed to execute because of the lack of resources available at the time when the query was submitted. The resources could be any runtime resources such as [query scheduler lane capacity](../configuration/index.md#query-prioritization-and-laning), merge buffers, and so on. The error message should have more details about the failure.|
+|`Unsupported operation`|501|The query attempted to perform an unsupported operation. This may occur when using undocumented features or when using an incompletely implemented extension.|
+|`Query timeout`|504|The query timed out.|
+|`Query interrupted`|500|The query was interrupted, possibly due to JVM shutdown.|
+|`Query cancelled`|500|The query was cancelled through the query cancellation API.|
+|`Truncated response context`|500|An intermediate response context for the query exceeded the built-in limit of 7KiB.<br/><br/>The response context is an internal data structure that Druid servers use to share out-of-band information when sending query results to each other. It is serialized in an HTTP header with a maximum length of 7KiB. This error occurs when an intermediate response context sent from a data server (like a Historical) to the Broker exceeds this limit.<br/><br/>The response context is used for a variety of purposes, but the one most likely to generate a large context is sharing details about segments that move during a query. That means this error can potentially indicate that a very large number of segments moved in between the time a Broker issued a query and the time it was processed on Historicals. This should rarely, if ever, occur during normal operation.|
+|`Unknown exception`|500|Some other exception occurred. Check errorMessage and errorClass for details, although keep in mind that the contents of those fields are free-form and may change from release to release.|

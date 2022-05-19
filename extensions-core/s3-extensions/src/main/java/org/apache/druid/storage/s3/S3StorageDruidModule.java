@@ -28,6 +28,8 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
@@ -54,7 +56,9 @@ import java.util.List;
  */
 public class S3StorageDruidModule implements DruidModule
 {
-  public static final String SCHEME = "s3_zip";
+  public static final String SCHEME = "s3";
+  public static final String SCHEME_S3N = "s3n";
+  public static final String SCHEME_S3_ZIP = "s3_zip";
 
   private static final Logger log = new Logger(S3StorageDruidModule.class);
 
@@ -139,34 +143,43 @@ public class S3StorageDruidModule implements DruidModule
   public void configure(Binder binder)
   {
     MapBinder.newMapBinder(binder, String.class, SearchableVersionedDataFinder.class)
-             .addBinding("s3")
+             .addBinding(SCHEME)
              .to(S3TimestampVersionedDataFinder.class)
              .in(LazySingleton.class);
     MapBinder.newMapBinder(binder, String.class, SearchableVersionedDataFinder.class)
-             .addBinding("s3n")
+             .addBinding(SCHEME_S3N)
              .to(S3TimestampVersionedDataFinder.class)
              .in(LazySingleton.class);
-    Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME).to(S3DataSegmentKiller.class).in(LazySingleton.class);
-    Binders.dataSegmentMoverBinder(binder).addBinding(SCHEME).to(S3DataSegmentMover.class).in(LazySingleton.class);
+    Binders.dataSegmentKillerBinder(binder)
+           .addBinding(SCHEME_S3_ZIP)
+           .to(S3DataSegmentKiller.class)
+           .in(LazySingleton.class);
+    Binders.dataSegmentMoverBinder(binder)
+           .addBinding(SCHEME_S3_ZIP)
+           .to(S3DataSegmentMover.class)
+           .in(LazySingleton.class);
     Binders.dataSegmentArchiverBinder(binder)
-           .addBinding(SCHEME)
+           .addBinding(SCHEME_S3_ZIP)
            .to(S3DataSegmentArchiver.class)
            .in(LazySingleton.class);
-    Binders.dataSegmentPusherBinder(binder).addBinding("s3").to(S3DataSegmentPusher.class).in(LazySingleton.class);
+    Binders.dataSegmentPusherBinder(binder).addBinding(SCHEME).to(S3DataSegmentPusher.class).in(LazySingleton.class);
+    JsonConfigProvider.bind(binder, "druid.storage", S3InputDataConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage", S3DataSegmentPusherConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage", S3DataSegmentArchiverConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage", S3StorageConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage.sse.kms", S3SSEKmsConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage.sse.custom", S3SSECustomConfig.class);
 
-    Binders.taskLogsBinder(binder).addBinding("s3").to(S3TaskLogs.class);
+    Binders.taskLogsBinder(binder).addBinding(SCHEME).to(S3TaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", S3TaskLogsConfig.class);
     binder.bind(S3TaskLogs.class).in(LazySingleton.class);
   }
 
+  // This provides ServerSideEncryptingAmazonS3.Builder with default configs from Guice injection initially set.
+  // However, this builder can then be modified and have configuration(s) inside
+  // AmazonS3ClientBuilder and/or S3StorageConfig overridden before being built.
   @Provides
-  @LazySingleton
-  public ServerSideEncryptingAmazonS3 getAmazonS3Client(
+  public ServerSideEncryptingAmazonS3.Builder getServerSideEncryptingAmazonS3Builder(
       AWSCredentialsProvider provider,
       AWSProxyConfig proxyConfig,
       AWSEndpointConfig endpointConfig,
@@ -176,7 +189,7 @@ public class S3StorageDruidModule implements DruidModule
   {
     final ClientConfiguration configuration = new ClientConfigurationFactory().getConfig();
     final Protocol protocol = determineProtocol(clientConfig, endpointConfig);
-    final AmazonS3ClientBuilder builder = AmazonS3Client
+    final AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3Client
         .builder()
         .withCredentials(provider)
         .withClientConfiguration(setProxyConfig(configuration, proxyConfig).withProtocol(protocol))
@@ -185,11 +198,42 @@ public class S3StorageDruidModule implements DruidModule
         .withForceGlobalBucketAccessEnabled(clientConfig.isForceGlobalBucketAccessEnabled());
 
     if (StringUtils.isNotEmpty(endpointConfig.getUrl())) {
-      builder.setEndpointConfiguration(
+      amazonS3ClientBuilder.setEndpointConfiguration(
           new EndpointConfiguration(endpointConfig.getUrl(), endpointConfig.getSigningRegion())
       );
     }
 
-    return new ServerSideEncryptingAmazonS3(builder.build(), storageConfig.getServerSideEncryption());
+    return ServerSideEncryptingAmazonS3.builder()
+                                       .setAmazonS3ClientBuilder(amazonS3ClientBuilder)
+                                       .setS3StorageConfig(storageConfig);
+
+  }
+
+  // This provides ServerSideEncryptingAmazonS3 built with all default configs from Guice injection
+  /**
+   * Creates {@link ServerSideEncryptingAmazonS3} which may perform config validation immediately.
+   * You may want to avoid immediate config validation but defer it until you actually use the s3 client.
+   * Use {@link #getAmazonS3ClientSupplier} instead in that case.
+   */
+  @Provides
+  @LazySingleton
+  public ServerSideEncryptingAmazonS3 getAmazonS3Client(
+      ServerSideEncryptingAmazonS3.Builder serverSideEncryptingAmazonS3Builder
+  )
+  {
+    return serverSideEncryptingAmazonS3Builder.build();
+  }
+
+  /**
+   * Creates a supplier that lazily initialize {@link ServerSideEncryptingAmazonS3}.
+   * You may want to use the supplier to defer config validation until you actually use the s3 client.
+   */
+  @Provides
+  @LazySingleton
+  public Supplier<ServerSideEncryptingAmazonS3> getAmazonS3ClientSupplier(
+      ServerSideEncryptingAmazonS3.Builder serverSideEncryptingAmazonS3Builder
+  )
+  {
+    return Suppliers.memoize(serverSideEncryptingAmazonS3Builder::build);
   }
 }

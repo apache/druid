@@ -23,7 +23,7 @@ title: "Clustered deployment"
   -->
 
 
-Apache Druid (incubating) is designed to be deployed as a scalable, fault-tolerant cluster.
+Apache Druid is designed to be deployed as a scalable, fault-tolerant cluster.
 
 In this document, we'll set up a simple cluster and discuss how it can be further configured to meet
 your needs.
@@ -51,7 +51,7 @@ In this example, we will be deploying the equivalent of one AWS [m5.2xlarge](htt
 This hardware offers:
 
 - 8 vCPUs
-- 31 GB RAM
+- 32 GiB RAM
 
 Example Master server configurations that have been sized for this hardware can be found under `conf/druid/cluster/master`.
 
@@ -65,7 +65,7 @@ In this example, we will be deploying the equivalent of two AWS [i3.4xlarge](htt
 This hardware offers:
 
 - 16 vCPUs
-- 122 GB RAM
+- 122 GiB RAM
 - 2 * 1.9TB SSD storage
 
 Example Data server configurations that have been sized for this hardware can be found under `conf/druid/cluster/data`.
@@ -80,7 +80,7 @@ In this example, we will be deploying the equivalent of one AWS [m5.2xlarge](htt
 This hardware offers:
 
 - 8 vCPUs
-- 31 GB RAM
+- 32 GiB RAM
 
 You can consider co-locating any open source UIs or query libraries on the same server that the Broker is running on.
 
@@ -130,12 +130,12 @@ The [basic cluster tuning guide](../operations/basic-cluster-tuning.md) has info
 
 ## Select OS
 
-We recommend running your favorite Linux distribution. You will also need:
+We recommend running your favorite Linux distribution. You will also need Java 8 or 11.
 
-  * Java 8
+> If needed, you can specify where to find Java using the environment variables
+> `DRUID_JAVA_HOME` or `JAVA_HOME`. For more details run the `bin/verify-java` script.
 
-Your OS package manager should be able to help for both Java. If your Ubuntu-based OS
-does not have a recent enough version of Java, WebUpd8 offers [packages for those
+For information about installing Java, see the documentation for your OS package manager. If your Ubuntu-based OS does not have a recent enough version of Java, WebUpd8 offers [packages for those
 OSes](http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.html).
 
 ## Download the distribution
@@ -144,7 +144,7 @@ First, download and unpack the release archive. It's best to do this on a single
 since you will be editing the configurations and then copying the modified distribution out to all
 of your servers.
 
-[Download](https://www.apache.org/dyn/closer.cgi?path=/incubator/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz)
+[Download](https://www.apache.org/dyn/closer.cgi?path=/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz)
 the {{DRUIDVERSION}} release.
 
 Extract Druid by running the following commands in your terminal:
@@ -156,13 +156,13 @@ cd apache-druid-{{DRUIDVERSION}}
 
 In the package, you should find:
 
-* `DISCLAIMER`, `LICENSE`, and `NOTICE` files
-* `bin/*` - scripts related to the [single-machine quickstart](index.html)
+* `LICENSE` and `NOTICE` files
+* `bin/*` - scripts related to the [single-machine quickstart](index.md)
 * `conf/druid/cluster/*` - template configurations for a clustered setup
 * `extensions/*` - core Druid extensions
 * `hadoop-dependencies/*` - Druid Hadoop dependencies
 * `lib/*` - libraries and dependencies for core Druid
-* `quickstart/*` - files related to the [single-machine quickstart](index.html)
+* `quickstart/*` - files related to the [single-machine quickstart](index.md)
 
 We'll be editing the files in `conf/druid/cluster/` in order to get things running.
 
@@ -318,12 +318,12 @@ You can copy your existing `coordinator-overlord` configs from the single-server
 
 #### Data
 
-Suppose we are migrating from a single-server deployment that had 32 CPU and 256GB RAM. In the old deployment, the following configurations for Historicals and MiddleManagers were applied:
+Suppose we are migrating from a single-server deployment that had 32 CPU and 256GiB RAM. In the old deployment, the following configurations for Historicals and MiddleManagers were applied:
 
 Historical (Single-server)
 
 ```
-druid.processing.buffer.sizeBytes=500000000
+druid.processing.buffer.sizeBytes=500MiB
 druid.processing.numMergeBuffers=8
 druid.processing.numThreads=31
 ```
@@ -333,11 +333,11 @@ MiddleManager (Single-server)
 ```
 druid.worker.capacity=8
 druid.indexer.fork.property.druid.processing.numMergeBuffers=2
-druid.indexer.fork.property.druid.processing.buffer.sizeBytes=100000000
+druid.indexer.fork.property.druid.processing.buffer.sizeBytes=100MiB
 druid.indexer.fork.property.druid.processing.numThreads=1
 ```
 
-In the clustered deployment, we can choose a split factor (2 in this example), and deploy 2 Data servers with 16CPU and 128GB RAM each. The areas to scale are the following:
+In the clustered deployment, we can choose a split factor (2 in this example), and deploy 2 Data servers with 16CPU and 128GiB RAM each. The areas to scale are the following:
 
 Historical
 
@@ -357,9 +357,9 @@ The resulting configs after the split:
 New Historical (on 2 Data servers)
 
 ```
- druid.processing.buffer.sizeBytes=500000000
- druid.processing.numMergeBuffers=8
- druid.processing.numThreads=31
+druid.processing.buffer.sizeBytes=500MiB
+druid.processing.numMergeBuffers=8
+druid.processing.numThreads=31
 ```
 
 New MiddleManager (on 2 Data servers)
@@ -367,7 +367,7 @@ New MiddleManager (on 2 Data servers)
 ```
 druid.worker.capacity=4
 druid.indexer.fork.property.druid.processing.numMergeBuffers=2
-druid.indexer.fork.property.druid.processing.buffer.sizeBytes=100000000
+druid.indexer.fork.property.druid.processing.buffer.sizeBytes=100MiB
 druid.indexer.fork.property.druid.processing.numThreads=1
 ```
 

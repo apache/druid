@@ -26,11 +26,11 @@ import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 public class TruncateOperatorConversion implements SqlOperatorConversion
 {
@@ -55,7 +55,7 @@ public class TruncateOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    return OperatorConversions.convertCall(
+    return OperatorConversions.convertCallBuilder(
         plannerContext,
         rowSignature,
         rexNode,
@@ -77,13 +77,11 @@ public class TruncateOperatorConversion implements SqlOperatorConversion
             factorString = StringUtils.format("pow(10,%s)", inputExpressions.get(1));
           }
 
-          return DruidExpression.fromExpression(
-              StringUtils.format(
-                  "(cast(cast(%s * %s,'long'),'double') / %s)",
-                  arg.getExpression(),
-                  factorString,
-                  factorString
-              )
+          return StringUtils.format(
+              "(cast(cast(%s * %s,'long'),'double') / %s)",
+              arg.getExpression(),
+              factorString,
+              factorString
           );
         }
     );

@@ -24,11 +24,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.server.initialization.ZkPathsConfig;
-import org.apache.druid.server.listener.announcer.ListeningAnnouncerConfig;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 
-class LookupListeningAnnouncerConfig extends ListeningAnnouncerConfig
+class LookupListeningAnnouncerConfig
 {
   public static final String DEFAULT_TIER = "__default";
   private final DataSourceTaskIdHolder dataSourceTaskIdHolder;
@@ -39,11 +37,9 @@ class LookupListeningAnnouncerConfig extends ListeningAnnouncerConfig
 
   @JsonCreator
   public LookupListeningAnnouncerConfig(
-      @JacksonInject ZkPathsConfig zkPathsConfig,
       @JacksonInject DataSourceTaskIdHolder dataSourceTaskIdHolder
   )
   {
-    super(zkPathsConfig);
     this.dataSourceTaskIdHolder = dataSourceTaskIdHolder;
   }
 
@@ -60,10 +56,5 @@ class LookupListeningAnnouncerConfig extends ListeningAnnouncerConfig
         "Cannot have empty lookup tier from %s",
         lookupTierIsDatasource ? "bound value" : LookupModule.PROPERTY_BASE
     );
-  }
-
-  public String getLookupKey()
-  {
-    return LookupModule.getTierListenerPath(getLookupTier());
   }
 }

@@ -21,6 +21,7 @@ package org.apache.druid.collections.bitmap;
 
 import org.roaringbitmap.BatchIterator;
 import org.roaringbitmap.IntIterator;
+import org.roaringbitmap.PeekableIntIterator;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 
 import java.nio.ByteBuffer;
@@ -73,6 +74,12 @@ public class WrappedImmutableRoaringBitmap implements ImmutableBitmap
 
   @Override
   public IntIterator iterator()
+  {
+    return bitmap.getIntIterator();
+  }
+
+  @Override
+  public PeekableIntIterator peekableIterator()
   {
     return bitmap.getIntIterator();
   }

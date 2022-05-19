@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
@@ -38,7 +39,6 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import java.io.EOFException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -65,7 +65,7 @@ public class InlineSchemasAvroBytesDecoder implements AvroBytesDecoder
 
     this.schemas = schemas;
 
-    schemaObjs = new HashMap<>(schemas.size());
+    schemaObjs = Maps.newHashMapWithExpectedSize(schemas.size());
     for (Map.Entry<String, Map<String, Object>> e : schemas.entrySet()) {
 
       int id = Integer.parseInt(e.getKey());
@@ -101,18 +101,18 @@ public class InlineSchemasAvroBytesDecoder implements AvroBytesDecoder
   public GenericRecord parse(ByteBuffer bytes)
   {
     if (bytes.remaining() < 5) {
-      throw new ParseException("record must have at least 5 bytes carrying version and schemaId");
+      throw new ParseException(null, "record must have at least 5 bytes carrying version and schemaId");
     }
 
     byte version = bytes.get();
     if (version != V1) {
-      throw new ParseException("found record of arbitrary version [%s]", version);
+      throw new ParseException(null, "found record of arbitrary version [%s]", version);
     }
 
     int schemaId = bytes.getInt();
     Schema schemaObj = schemaObjs.get(schemaId);
     if (schemaObj == null) {
-      throw new ParseException("Failed to find schema for id [%s]", schemaId);
+      throw new ParseException(null, "Failed to find schema for id [%s]", schemaId);
     }
 
     DatumReader<GenericRecord> reader = new GenericDatumReader<>(schemaObj);
@@ -122,13 +122,14 @@ public class InlineSchemasAvroBytesDecoder implements AvroBytesDecoder
     catch (EOFException eof) {
       // waiting for avro v1.9.0 (#AVRO-813)
       throw new ParseException(
+          null,
           eof,
           "Avro's unnecessary EOFException, detail: [%s]",
           "https://issues.apache.org/jira/browse/AVRO-813"
       );
     }
     catch (Exception e) {
-      throw new ParseException(e, "Fail to decode avro message with schemaId [%s].", schemaId);
+      throw new ParseException(null, e, "Fail to decode avro message with schemaId [%s].", schemaId);
     }
   }
 }

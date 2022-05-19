@@ -22,6 +22,7 @@ package org.apache.druid.cli;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -45,16 +46,20 @@ import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 /**
+ *
  */
 public class QueryJettyServerInitializer implements JettyServerInitializer
 {
   private static final Logger log = new Logger(QueryJettyServerInitializer.class);
-  private static List<String> UNSECURED_PATHS = Collections.singletonList("/status/health");
+  private static List<String> UNSECURED_PATHS = Lists.newArrayList(
+      "/status/health",
+      "/druid/historical/v1/readiness",
+      "/druid/broker/v1/readiness"
+  );
 
   private final List<Handler> extensionHandlers;
 
@@ -103,6 +108,7 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
     AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());
+    JettyServerInitUtils.addAllowHttpMethodsFilter(root, serverConfig.getAllowedHttpMethods());
 
     JettyServerInitUtils.addExtensionFilters(root, injector);
 

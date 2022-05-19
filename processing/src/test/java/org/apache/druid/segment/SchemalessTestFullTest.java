@@ -60,6 +60,7 @@ import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -73,7 +74,7 @@ import java.util.Map;
 /**
  */
 @RunWith(Parameterized.class)
-public class SchemalessTestFullTest
+public class SchemalessTestFullTest extends InitializedNullHandlingTest
 {
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder()

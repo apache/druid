@@ -22,19 +22,25 @@ import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
 import { TableCellUnparseable } from '../../../components/table-cell-unparseable/table-cell-unparseable';
-import { caseInsensitiveContains, filterMap } from '../../../utils';
-import { possibleDruidFormatForValues } from '../../../utils/druid-time';
 import {
-  getTimestampSpecColumn,
-  isColumnTimestampSpec,
+  getTimestampDetailFromSpec,
+  getTimestampSpecColumnFromSpec,
+  IngestionSpec,
+  possibleDruidFormatForValues,
   TimestampSpec,
-} from '../../../utils/ingestion-spec';
-import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
+} from '../../../druid-models';
+import {
+  DEFAULT_TABLE_CLASS_NAME,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+} from '../../../react-table';
+import { caseInsensitiveContains, filterMap } from '../../../utils';
+import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './parse-time-table.scss';
 
 export function parseTimeTableSelectedColumnName(
-  sampleData: HeaderAndRows,
+  sampleData: SampleHeaderAndRows,
   timestampSpec: TimestampSpec | undefined,
 ): string | undefined {
   if (!timestampSpec) return;
@@ -45,8 +51,8 @@ export function parseTimeTableSelectedColumnName(
 
 export interface ParseTimeTableProps {
   sampleBundle: {
-    headerAndRows: HeaderAndRows;
-    timestampSpec: TimestampSpec;
+    headerAndRows: SampleHeaderAndRows;
+    spec: Partial<IngestionSpec>;
   };
   columnFilter: string;
   possibleTimestampColumnsOnly: boolean;
@@ -62,38 +68,42 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
     selectedColumnName,
     onTimestampColumnSelect,
   } = props;
-  const { headerAndRows, timestampSpec } = sampleBundle;
-  const timestampSpecColumn = getTimestampSpecColumn(timestampSpec);
-  const timestampSpecFromColumn = isColumnTimestampSpec(timestampSpec);
+  const { headerAndRows, spec } = sampleBundle;
+  const timestampSpecColumn = getTimestampSpecColumnFromSpec(spec);
+  const timestampDetail = getTimestampDetailFromSpec(spec);
 
   return (
     <ReactTable
-      className="parse-time-table -striped -highlight"
+      className={classNames('parse-time-table', DEFAULT_TABLE_CLASS_NAME)}
       data={headerAndRows.rows}
+      sortable={false}
+      defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+      pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+      showPagination={headerAndRows.rows.length > STANDARD_TABLE_PAGE_SIZE}
       columns={filterMap(
         headerAndRows.header.length ? headerAndRows.header : ['__error__'],
         (columnName, i) => {
-          const timestamp = columnName === '__time';
-          if (!timestamp && !caseInsensitiveContains(columnName, columnFilter)) return;
-          const used = timestampSpec.column === columnName;
-          const possibleFormat = timestamp
+          const isTimestamp = columnName === '__time';
+          if (!isTimestamp && !caseInsensitiveContains(columnName, columnFilter)) return;
+          const used = timestampSpecColumn === columnName;
+          const possibleFormat = isTimestamp
             ? null
             : possibleDruidFormatForValues(
                 filterMap(headerAndRows.rows, d => (d.parsed ? d.parsed[columnName] : undefined)),
               );
-          if (possibleTimestampColumnsOnly && !timestamp && !possibleFormat) return;
+          if (possibleTimestampColumnsOnly && !isTimestamp && !possibleFormat) return;
 
           const columnClassName = classNames({
-            timestamp,
+            timestamp: isTimestamp,
             used,
             selected: selectedColumnName === columnName,
           });
           return {
             Header: (
               <div
-                className={classNames({ clickable: !timestamp })}
+                className={classNames({ clickable: !isTimestamp })}
                 onClick={
-                  timestamp
+                  isTimestamp
                     ? undefined
                     : () => {
                         onTimestampColumnSelect({
@@ -105,11 +115,7 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
               >
                 <div className="column-name">{columnName}</div>
                 <div className="column-detail">
-                  {timestamp
-                    ? timestampSpecFromColumn
-                      ? `from: '${timestampSpecColumn}'`
-                      : `mv: ${timestampSpec.missingValue}`
-                    : possibleFormat || ''}
+                  {isTimestamp ? timestampDetail : possibleFormat || ''}
                   &nbsp;
                 </div>
               </div>
@@ -118,23 +124,20 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
             className: columnClassName,
             id: String(i),
             accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-            Cell: row => {
+            Cell: function ParseTimeTableCell(row) {
               if (columnName === '__error__') {
                 return <TableCell value={row.original.error} />;
               }
               if (row.original.unparseable) {
-                return <TableCellUnparseable timestamp={timestamp} />;
+                return <TableCellUnparseable timestamp={isTimestamp} />;
               }
-              return <TableCell value={timestamp ? new Date(row.value) : row.value} />;
+              return <TableCell value={isTimestamp ? new Date(row.value) : row.value} />;
             },
-            minWidth: timestamp ? 200 : 100,
-            resizable: !timestamp,
+            width: isTimestamp ? 200 : 140,
+            resizable: !isTimestamp,
           };
         },
       )}
-      defaultPageSize={50}
-      showPagination={false}
-      sortable={false}
     />
   );
 });

@@ -25,11 +25,15 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.HistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 @JsonTypeName("buckets")
@@ -65,6 +69,16 @@ public class BucketsPostAggregator extends ApproximateHistogramPostAggregator
   {
     ApproximateHistogram ah = (ApproximateHistogram) values.get(fieldName);
     return ah.toHistogram(bucketSize, offset);
+  }
+
+  /**
+   * actual type is {@link Histogram}
+   * @param signature
+   */
+  @Override
+  public ColumnType getType(ColumnInspector signature)
+  {
+    return HistogramAggregatorFactory.TYPE;
   }
 
   @Override
@@ -104,5 +118,28 @@ public class BucketsPostAggregator extends ApproximateHistogramPostAggregator
         .appendFloat(bucketSize)
         .appendFloat(offset)
         .build();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    BucketsPostAggregator that = (BucketsPostAggregator) o;
+    return Float.compare(that.bucketSize, bucketSize) == 0 &&
+           Float.compare(that.offset, offset) == 0;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), bucketSize, offset);
   }
 }

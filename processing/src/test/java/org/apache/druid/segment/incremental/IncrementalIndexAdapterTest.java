@@ -19,7 +19,10 @@
 
 package org.apache.druid.segment.incremental;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.segment.CloserRule;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.RowIterator;
@@ -29,14 +32,20 @@ import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.IncrementalIndexTest;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 
-public class IncrementalIndexAdapterTest
+@RunWith(Parameterized.class)
+public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
 {
   private static final IndexSpec INDEX_SPEC = new IndexSpec(
       new ConciseBitmapSerdeFactory(),
@@ -45,11 +54,31 @@ public class IncrementalIndexAdapterTest
       CompressionFactory.LongEncodingStrategy.LONGS
   );
 
+  public final IncrementalIndexCreator indexCreator;
+
+  @Rule
+  public final CloserRule closer = new CloserRule(false);
+
+  public IncrementalIndexAdapterTest(String indexType) throws JsonProcessingException
+  {
+    indexCreator = closer.closeLater(new IncrementalIndexCreator(indexType, (builder, args) -> builder
+        .setSimpleTestingIndexSchema("rollup".equals(args[0]), null, new CountAggregatorFactory("count"))
+        .setMaxRowCount(1_000_000)
+        .build()
+    ));
+  }
+
+  @Parameterized.Parameters(name = "{index}: {0}")
+  public static Collection<?> constructorFeeder()
+  {
+    return IncrementalIndexCreator.getAppendableIndexTypes();
+  }
+
   @Test
   public void testGetBitmapIndex() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex incrementalIndex = IncrementalIndexTest.createIndex(null);
+    IncrementalIndex incrementalIndex = indexCreator.createIndex("rollup");
     IncrementalIndexTest.populateIndex(timestamp, incrementalIndex);
     IndexableAdapter adapter = new IncrementalIndexAdapter(
         incrementalIndex.getInterval(),
@@ -69,7 +98,7 @@ public class IncrementalIndexAdapterTest
   public void testGetRowsIterable() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(null);
+    IncrementalIndex toPersist1 = indexCreator.createIndex("rollup");
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
     final IndexableAdapter incrementalAdapter = new IncrementalIndexAdapter(
@@ -93,7 +122,7 @@ public class IncrementalIndexAdapterTest
   public void testGetRowsIterableNoRollup() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createNoRollupIndex(null);
+    IncrementalIndex toPersist1 = indexCreator.createIndex("plain");
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);

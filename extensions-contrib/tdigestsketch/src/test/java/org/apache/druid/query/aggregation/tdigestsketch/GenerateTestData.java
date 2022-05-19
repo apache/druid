@@ -57,7 +57,8 @@ public class GenerateTestData
         buildData.write('\t');
         buildData.write(Integer.toString(product)); // product dimension
         buildData.write('\t');
-        buildData.write(Double.toString(value));
+        // make 20% of the values null
+        buildData.write((rand.nextInt(10) % 5 == 0) ? "" : Double.toString(value));
         buildData.newLine();
         sketch.add(value);
         sequenceNumber++;

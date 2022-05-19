@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -88,7 +87,7 @@ public class GroupByBinaryFnV2 implements BinaryOperator<ResultRow>
     if (query.getGranularity() instanceof AllGranularity) {
       return row.getLong(0);
     } else {
-      return query.getGranularity().bucketStart(DateTimes.utc(row.getLong(0))).getMillis();
+      return query.getGranularity().bucketStart(row.getLong(0));
     }
   }
 }

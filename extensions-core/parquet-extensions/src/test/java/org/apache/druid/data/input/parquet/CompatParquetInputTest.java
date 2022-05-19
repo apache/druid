@@ -67,7 +67,7 @@ public class CompatParquetInputTest extends BaseParquetInputTest
 
     InputRow row = ((List<InputRow>) config.getParser().parseBatch(data)).get(0);
 
-    // without binaryAsString: true, the value would something like "[104, 101, 121, 32, 116, 104, 105, 115, 32, 105, 115, 3.... ]"
+    // without binaryAsString: true, the value would be "aGV5IHRoaXMgaXMgJsOpKC3DqF/Dp8OgKT1eJMO5KiEgzqleXg=="
     Assert.assertEquals("hey this is &é(-è_çà)=^$ù*! Ω^^", row.getDimension("field").get(0));
     Assert.assertEquals(1471800234, row.getTimestampFromEpoch());
   }

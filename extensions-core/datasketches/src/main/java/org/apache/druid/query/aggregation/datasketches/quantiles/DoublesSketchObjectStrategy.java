@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
-import com.yahoo.memory.Memory;
-import com.yahoo.sketches.quantiles.DoublesSketch;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
+import org.apache.datasketches.memory.Memory;
+import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.druid.segment.data.ObjectStrategy;
 
 import java.nio.ByteBuffer;

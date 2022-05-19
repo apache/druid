@@ -26,7 +26,13 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 
 /**
  * Implement this for different ways to (optionally securely) access secrets.
+ *
+ * Any further use case of extensible configuration/secrets must use {@link DynamicConfigProvider} interface. Users
+ * may still implement this interface for existing use cases till https://github.com/apache/druid/issues/9351 is
+ * resolved.
+ *
  */
+@Deprecated
 @ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DefaultPasswordProvider.class)
 @JsonSubTypes(value = {

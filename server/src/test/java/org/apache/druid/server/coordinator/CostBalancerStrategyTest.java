@@ -166,7 +166,7 @@ public class CostBalancerStrategyTest
     CostBalancerStrategy strategy = new CostBalancerStrategy(
         MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(4))
     );
-    double segmentCost = strategy.computeJointSegmentsCost(
+    double segmentCost = CostBalancerStrategy.computeJointSegmentsCost(
         getSegment(
             100,
             "DUMMY",

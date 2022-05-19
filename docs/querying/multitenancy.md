@@ -1,6 +1,7 @@
 ---
 id: multitenancy
 title: "Multitenancy considerations"
+sidebar_label: "Multitenancy"
 ---
 
 <!--
@@ -23,7 +24,7 @@ title: "Multitenancy considerations"
   -->
 
 
-Apache Druid (incubating) is often used to power user-facing data applications, where multitenancy is an important requirement. This
+Apache Druid is often used to power user-facing data applications, where multitenancy is an important requirement. This
 document outlines Druid's multitenant storage and querying features.
 
 ## Shared datasources or datasource-per-tenant?
@@ -56,7 +57,7 @@ If your multitenant cluster uses shared datasources, most of your queries will l
 dimension. These sorts of queries perform best when data is well-partitioned by tenant. There are a few ways to
 accomplish this.
 
-With batch indexing, you can use [single-dimension partitioning](../ingestion/hadoop.html#single-dimension-range-partitioning)
+With batch indexing, you can use [single-dimension partitioning](../ingestion/hadoop.md#single-dimension-range-partitioning)
 to partition your data by tenant_id. Druid always partitions by time first, but the secondary partition within each
 time bucket will be on tenant_id.
 

@@ -19,9 +19,9 @@
 
 package org.apache.druid.segment.writeout;
 
-import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -42,7 +42,7 @@ public class WriteOutBytesTest
   public static Collection<Object[]> constructorFeeder() throws IOException
   {
     return Arrays.asList(
-        new Object[] {new TmpFileSegmentWriteOutMedium(Files.createTempDir())},
+        new Object[] {new TmpFileSegmentWriteOutMedium(FileUtils.createTempDir())},
         new Object[] {new OffHeapMemorySegmentWriteOutMedium()},
         new Object[] {new OnHeapMemorySegmentWriteOutMedium()}
     );

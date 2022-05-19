@@ -32,3 +32,5 @@ for row in iter(sys.stdin):
         setattr(metrics, k, v)
     pb = metrics.SerializeToString()
     producer.send(topic, pb)
+
+producer.flush()

@@ -19,13 +19,13 @@
 
 package org.apache.druid.segment.filter;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
@@ -34,23 +34,28 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
-import org.apache.druid.query.filter.vector.VectorValueMatcherColumnStrategizer;
+import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import javax.annotation.Nullable;
+import java.util.Objects;
 import java.util.Set;
 
 /**
+ *
  */
 public class DimensionPredicateFilter implements Filter
 {
-  private final String dimension;
-  private final DruidPredicateFactory predicateFactory;
-  private final String basePredicateString;
-  private final ExtractionFn extractionFn;
-  private final FilterTuning filterTuning;
+  protected final String dimension;
+  protected final DruidPredicateFactory predicateFactory;
+  protected final String basePredicateString;
+  protected final ExtractionFn extractionFn;
+  protected final FilterTuning filterTuning;
 
   public DimensionPredicateFilter(
       final String dimension,
@@ -77,41 +82,18 @@ public class DimensionPredicateFilter implements Filter
     if (extractionFn == null) {
       this.predicateFactory = predicateFactory;
     } else {
-      this.predicateFactory = new DruidPredicateFactory()
-      {
-        final Predicate<String> baseStringPredicate = predicateFactory.makeStringPredicate();
-
-        @Override
-        public Predicate<String> makeStringPredicate()
-        {
-          return input -> baseStringPredicate.apply(extractionFn.apply(input));
-        }
-
-        @Override
-        public DruidLongPredicate makeLongPredicate()
-        {
-          return input -> baseStringPredicate.apply(extractionFn.apply(input));
-        }
-
-        @Override
-        public DruidFloatPredicate makeFloatPredicate()
-        {
-          return input -> baseStringPredicate.apply(extractionFn.apply(input));
-        }
-
-        @Override
-        public DruidDoublePredicate makeDoublePredicate()
-        {
-          return input -> baseStringPredicate.apply(extractionFn.apply(input));
-        }
-      };
+      this.predicateFactory = new DelegatingStringPredicateFactory(predicateFactory, extractionFn);
     }
   }
 
+  @Nullable
   @Override
-  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    return Filters.matchPredicate(dimension, selector, bitmapResultFactory, predicateFactory.makeStringPredicate());
+    if (!Filters.checkFilterTuningUseIndex(dimension, selector, filterTuning)) {
+      return null;
+    }
+    return Filters.makePredicateIndex(dimension, selector, predicateFactory);
   }
 
   @Override
@@ -123,15 +105,15 @@ public class DimensionPredicateFilter implements Filter
   @Override
   public VectorValueMatcher makeVectorMatcher(final VectorColumnSelectorFactory factory)
   {
-    return DimensionHandlerUtils.makeVectorProcessor(
+    return ColumnProcessors.makeVectorProcessor(
         dimension,
-        VectorValueMatcherColumnStrategizer.instance(),
+        VectorValueMatcherColumnProcessorFactory.instance(),
         factory
     ).makeMatcher(predicateFactory);
   }
 
   @Override
-  public boolean canVectorizeMatcher()
+  public boolean canVectorizeMatcher(ColumnInspector inspector)
   {
     return true;
   }
@@ -143,31 +125,9 @@ public class DimensionPredicateFilter implements Filter
   }
 
   @Override
-  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
-  {
-    return selector.getBitmapIndex(dimension) != null;
-  }
-
-  @Override
-  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-  {
-    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
   {
     return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
-  }
-
-  @Override
-  public double estimateSelectivity(BitmapIndexSelector indexSelector)
-  {
-    return Filters.estimateSelectivity(
-        dimension,
-        indexSelector,
-        predicateFactory.makeStringPredicate()
-    );
   }
 
   @Override
@@ -178,5 +138,125 @@ public class DimensionPredicateFilter implements Filter
     } else {
       return StringUtils.format("%s = %s", dimension, basePredicateString);
     }
+  }
+
+  @VisibleForTesting
+  static class DelegatingStringPredicateFactory implements DruidPredicateFactory
+  {
+    private final Predicate<String> baseStringPredicate;
+    private final DruidPredicateFactory predicateFactory;
+    private final ExtractionFn extractionFn;
+
+    DelegatingStringPredicateFactory(DruidPredicateFactory predicateFactory, ExtractionFn extractionFn)
+    {
+      this.predicateFactory = predicateFactory;
+      this.baseStringPredicate = predicateFactory.makeStringPredicate();
+      this.extractionFn = extractionFn;
+    }
+
+    @Override
+    public Predicate<String> makeStringPredicate()
+    {
+      return input -> baseStringPredicate.apply(extractionFn.apply(input));
+    }
+
+    @Override
+    public DruidLongPredicate makeLongPredicate()
+    {
+      return new DruidLongPredicate()
+      {
+        @Override
+        public boolean applyLong(long input)
+        {
+          return baseStringPredicate.apply(extractionFn.apply(input));
+        }
+
+        @Override
+        public boolean applyNull()
+        {
+          return baseStringPredicate.apply(extractionFn.apply(null));
+        }
+      };
+    }
+
+    @Override
+    public DruidFloatPredicate makeFloatPredicate()
+    {
+      return new DruidFloatPredicate()
+      {
+        @Override
+        public boolean applyFloat(float input)
+        {
+          return baseStringPredicate.apply(extractionFn.apply(input));
+        }
+
+        @Override
+        public boolean applyNull()
+        {
+          return baseStringPredicate.apply(extractionFn.apply(null));
+        }
+      };
+    }
+
+    @Override
+    public DruidDoublePredicate makeDoublePredicate()
+    {
+      return new DruidDoublePredicate()
+      {
+        @Override
+        public boolean applyDouble(double input)
+        {
+          return baseStringPredicate.apply(extractionFn.apply(input));
+        }
+
+        @Override
+        public boolean applyNull()
+        {
+          return baseStringPredicate.apply(extractionFn.apply(null));
+        }
+      };
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      DelegatingStringPredicateFactory that = (DelegatingStringPredicateFactory) o;
+      return Objects.equals(predicateFactory, that.predicateFactory) &&
+             Objects.equals(extractionFn, that.extractionFn);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(predicateFactory, extractionFn);
+    }
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DimensionPredicateFilter that = (DimensionPredicateFilter) o;
+    return Objects.equals(dimension, that.dimension) &&
+           Objects.equals(basePredicateString, that.basePredicateString) &&
+           Objects.equals(extractionFn, that.extractionFn) &&
+           Objects.equals(filterTuning, that.filterTuning);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(dimension, basePredicateString, extractionFn, filterTuning);
   }
 }

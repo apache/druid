@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+import * as JSONBig from 'json-bigint-native';
+
 export interface QueryRecord {
   version: string;
   queryString: string;
@@ -24,10 +26,7 @@ export interface QueryRecord {
 
 export class QueryRecordUtil {
   static getHistoryVersion(): string {
-    return new Date()
-      .toISOString()
-      .split('.')[0]
-      .replace('T', ' ');
+    return new Date().toISOString().split('.')[0].replace('T', ' ');
   }
 
   static addQueryToHistory(
@@ -39,7 +38,7 @@ export class QueryRecordUtil {
     if (
       queryHistory.length &&
       queryHistory[0].queryString === queryString &&
-      JSON.stringify(queryHistory[0].queryContext) === JSON.stringify(queryContext)
+      JSONBig.stringify(queryHistory[0].queryContext) === JSONBig.stringify(queryContext)
     ) {
       return queryHistory;
     }

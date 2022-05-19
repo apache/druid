@@ -16,226 +16,109 @@
  * limitations under the License.
  */
 
-import { getDruidErrorMessage, parseHtmlError, parseQueryPlan } from './druid-query';
-import {
-  getColumnTypeFromHeaderAndRows,
-  getDimensionSpecs,
-  getMetricSecs,
-  guessTypeFromSample,
-  updateSchemaWithSample,
-} from './druid-type';
-import { IngestionSpec } from './ingestion-spec';
-import {
-  getSamplerType,
-  headerFromSampleResponse,
-  sampleForConnect,
-  sampleForExampleManifests,
-  sampleForFilter,
-  sampleForParser,
-  sampleForSchema,
-  sampleForTimestamp,
-  sampleForTransform,
-} from './sampler';
+import { IngestionSpec } from '../druid-models';
 
-describe('test-utils', () => {
-  const ingestionSpec = {
+import { applyCache, headerFromSampleResponse } from './sampler';
+
+describe('utils', () => {
+  const ingestionSpec: IngestionSpec = {
     type: 'index_parallel',
-    ioConfig: {
-      type: 'index_parallel',
-      firehose: {
-        type: 'http',
-        uris: ['https://static.imply.io/data/wikipedia.json.gz'],
-      },
-    },
-    tuningConfig: {
-      type: 'index_parallel',
-    },
-    dataSchema: {
-      dataSource: 'wikipedia',
-      granularitySpec: {
-        type: 'uniform',
-        segmentGranularity: 'DAY',
-        queryGranularity: 'HOUR',
-      },
-      parser: {
-        type: 'string',
-        parseSpec: {
-          format: 'json',
-          timestampSpec: {
-            column: 'timestamp',
-            format: 'iso',
-          },
-          dimensionsSpec: {},
+    spec: {
+      ioConfig: {
+        type: 'index_parallel',
+        inputSource: {
+          type: 'http',
+          uris: ['https://website.com/wikipedia.json.gz'],
         },
+        inputFormat: {
+          type: 'json',
+        },
+      },
+      tuningConfig: {
+        type: 'index_parallel',
+      },
+      dataSchema: {
+        dataSource: 'wikipedia',
+        granularitySpec: {
+          segmentGranularity: 'day',
+          queryGranularity: 'hour',
+        },
+        timestampSpec: {
+          column: 'timestamp',
+          format: 'iso',
+        },
+        dimensionsSpec: {},
       },
     },
   };
-  it('spec-utils getSamplerType', () => {
-    expect(getSamplerType(ingestionSpec as IngestionSpec)).toMatchInlineSnapshot(`"index"`);
-  });
+
+  // const cacheRows: CacheRows = [{ make: 'Honda', model: 'Civic' }, { make: 'BMW', model: 'M3' }];
+
   it('spec-utils headerFromSampleResponse', () => {
-    expect(headerFromSampleResponse({ cacheKey: 'abc123', data: [] })).toMatchInlineSnapshot(
-      `Array []`,
-    );
-  });
-  it('spec-utils sampleForParser', () => {
     expect(
-      sampleForParser(ingestionSpec as IngestionSpec, 'start', 'abc123'),
-    ).toMatchInlineSnapshot(`Promise {}`);
+      headerFromSampleResponse({
+        sampleResponse: { data: [{ input: { a: 1 }, parsed: { a: 1 } }] },
+      }),
+    ).toMatchInlineSnapshot(`
+      Array [
+        "a",
+      ]
+    `);
   });
-  it('spec-utils SampleSpec', () => {
-    expect(sampleForConnect(ingestionSpec as IngestionSpec, 'start')).toMatchInlineSnapshot(
-      `Promise {}`,
-    );
-  });
-  it('spec-utils sampleForTimestamp', () => {
-    expect(
-      sampleForTimestamp(ingestionSpec as IngestionSpec, 'start', 'abc123'),
-    ).toMatchInlineSnapshot(`Promise {}`);
-  });
-  it('spec-utils sampleForTransform', () => {
-    expect(
-      sampleForTransform(ingestionSpec as IngestionSpec, 'start', 'abc123'),
-    ).toMatchInlineSnapshot(`Promise {}`);
-  });
-  it('spec-utils sampleForFilter', () => {
-    expect(
-      sampleForFilter(ingestionSpec as IngestionSpec, 'start', 'abc123'),
-    ).toMatchInlineSnapshot(`Promise {}`);
-  });
-  it('spec-utils sampleForSchema', () => {
-    expect(
-      sampleForSchema(ingestionSpec as IngestionSpec, 'start', 'abc123'),
-    ).toMatchInlineSnapshot(`Promise {}`);
-  });
-  it('spec-utils sampleForExampleManifests', () => {
-    expect(sampleForExampleManifests('abc123')).toMatchInlineSnapshot(`Promise {}`);
-  });
-});
 
-describe('druid-type.ts', () => {
-  const ingestionSpec = {
-    type: 'index_parallel',
-    ioConfig: {
-      type: 'index_parallel',
-      firehose: {
-        type: 'http',
-        uris: ['https://static.imply.io/data/wikipedia.json.gz'],
-      },
-    },
-    tuningConfig: {
-      type: 'index_parallel',
-    },
-    dataSchema: {
-      dataSource: 'wikipedia',
-      granularitySpec: {
-        type: 'uniform',
-        segmentGranularity: 'DAY',
-        queryGranularity: 'HOUR',
-      },
-      parser: {
-        type: 'string',
-        parseSpec: {
-          format: 'json',
-          timestampSpec: {
-            column: 'timestamp',
-            format: 'iso',
+  it('spec-utils applyCache', () => {
+    expect(
+      applyCache(
+        {
+          ...ingestionSpec,
+          samplerConfig: {
+            numRows: 500,
+            timeoutMs: 15000,
           },
-          dimensionsSpec: {},
         },
-      },
-    },
-  };
-  it('spec-utils getSamplerType', () => {
-    expect(guessTypeFromSample([])).toMatchInlineSnapshot(`"string"`);
-  });
-  it('spec-utils getColumnTypeFromHeaderAndRows', () => {
-    expect(
-      getColumnTypeFromHeaderAndRows({ header: ['header'], rows: [] }, 'header'),
-    ).toMatchInlineSnapshot(`"string"`);
-  });
-  it('spec-utils getDimensionSpecs', () => {
-    expect(getDimensionSpecs({ header: ['header'], rows: [] }, true)).toMatchInlineSnapshot(`
-      Array [
-        "header",
-      ]
-    `);
-  });
-  it('spec-utils getMetricSecs', () => {
-    expect(getMetricSecs({ header: ['header'], rows: [] })).toMatchInlineSnapshot(`
-      Array [
-        Object {
-          "name": "count",
-          "type": "count",
-        },
-      ]
-    `);
-  });
-  it('spec-utils updateSchemaWithSample', () => {
-    expect(
-      updateSchemaWithSample(
-        ingestionSpec as IngestionSpec,
-        { header: ['header'], rows: [] },
-        'specific',
-        true,
+        [
+          { make: 'Honda', model: 'Accord' },
+          { make: 'Toyota', model: 'Prius' },
+        ],
       ),
     ).toMatchInlineSnapshot(`
       Object {
-        "dataSchema": Object {
-          "dataSource": "wikipedia",
-          "granularitySpec": Object {
-            "queryGranularity": "HOUR",
-            "rollup": true,
-            "segmentGranularity": "DAY",
-            "type": "uniform",
-          },
-          "metricsSpec": Array [
-            Object {
-              "name": "count",
-              "type": "count",
+        "samplerConfig": Object {
+          "numRows": 500,
+          "timeoutMs": 15000,
+        },
+        "spec": Object {
+          "dataSchema": Object {
+            "dataSource": "wikipedia",
+            "dimensionsSpec": Object {},
+            "granularitySpec": Object {
+              "queryGranularity": "hour",
+              "segmentGranularity": "day",
             },
-          ],
-          "parser": Object {
-            "parseSpec": Object {
-              "dimensionsSpec": Object {
-                "dimensions": Array [
-                  "header",
-                ],
-              },
-              "format": "json",
-              "timestampSpec": Object {
-                "column": "timestamp",
-                "format": "iso",
-              },
+            "timestampSpec": Object {
+              "column": "timestamp",
+              "format": "iso",
             },
-            "type": "string",
           },
-        },
-        "ioConfig": Object {
-          "firehose": Object {
-            "type": "http",
-            "uris": Array [
-              "https://static.imply.io/data/wikipedia.json.gz",
-            ],
+          "ioConfig": Object {
+            "inputFormat": Object {
+              "keepNullColumns": true,
+              "type": "json",
+            },
+            "inputSource": Object {
+              "data": "{\\"make\\":\\"Honda\\",\\"model\\":\\"Accord\\"}
+      {\\"make\\":\\"Toyota\\",\\"model\\":\\"Prius\\"}",
+              "type": "inline",
+            },
+            "type": "index",
           },
-          "type": "index_parallel",
+          "tuningConfig": Object {
+            "type": "index_parallel",
+          },
+          "type": "index",
         },
-        "tuningConfig": Object {
-          "type": "index_parallel",
-        },
-        "type": "index_parallel",
+        "type": "index",
       }
     `);
-  });
-});
-describe('druid-query.ts', () => {
-  it('spec-utils parseHtmlError', () => {
-    expect(parseHtmlError('<div></div>')).toMatchInlineSnapshot(`undefined`);
-  });
-  it('spec-utils parseHtmlError', () => {
-    expect(getDruidErrorMessage({})).toMatchInlineSnapshot(`undefined`);
-  });
-  it('spec-utils parseQueryPlan', () => {
-    expect(parseQueryPlan('start')).toMatchInlineSnapshot(`"start"`);
   });
 });

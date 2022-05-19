@@ -24,6 +24,7 @@ import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.filter.DimFilter;
@@ -32,6 +33,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -109,6 +111,12 @@ public class SelectQuery implements Query<Object>
   }
 
   @Override
+  public QueryContext getQueryContext()
+  {
+    throw new RuntimeException(REMOVED_ERROR_MESSAGE);
+  }
+
+  @Override
   public <ContextType> ContextType getContextValue(String key)
   {
     throw new RuntimeException(REMOVED_ERROR_MESSAGE);
@@ -158,6 +166,19 @@ public class SelectQuery implements Query<Object>
 
   @Override
   public String getId()
+  {
+    throw new RuntimeException(REMOVED_ERROR_MESSAGE);
+  }
+
+  @Override
+  public Query<Object> withSubQueryId(String subQueryId)
+  {
+    throw new RuntimeException(REMOVED_ERROR_MESSAGE);
+  }
+
+  @Nullable
+  @Override
+  public String getSubQueryId()
   {
     throw new RuntimeException(REMOVED_ERROR_MESSAGE);
   }

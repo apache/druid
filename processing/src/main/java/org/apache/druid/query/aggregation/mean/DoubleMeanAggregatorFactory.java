@@ -31,7 +31,10 @@ import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -43,6 +46,7 @@ import java.util.List;
  */
 public class DoubleMeanAggregatorFactory extends AggregatorFactory
 {
+  public static final ColumnType TYPE = ColumnType.ofComplex("doubleMean");
   private final String name;
   private final String fieldName;
 
@@ -75,10 +79,19 @@ public class DoubleMeanAggregatorFactory extends AggregatorFactory
     return Collections.singletonList(fieldName);
   }
 
+  /**
+   * actual type is {@link DoubleMeanHolder}
+   */
   @Override
-  public String getTypeName()
+  public ColumnType getIntermediateType()
   {
-    return "doubleMean";
+    return TYPE;
+  }
+
+  @Override
+  public ColumnType getResultType()
+  {
+    return ColumnType.DOUBLE;
   }
 
   @Override
@@ -106,9 +119,10 @@ public class DoubleMeanAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public boolean canVectorize()
+  public boolean canVectorize(ColumnInspector columnInspector)
   {
-    return true;
+    final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
+    return capabilities == null || capabilities.isNumeric();
   }
 
   @Override
@@ -148,7 +162,9 @@ public class DoubleMeanAggregatorFactory extends AggregatorFactory
   @Override
   public Object deserialize(Object object)
   {
-    if (object instanceof String) {
+    if (object instanceof byte[]) {
+      return DoubleMeanHolder.fromBytes((byte[]) object);
+    } else if (object instanceof String) {
       return DoubleMeanHolder.fromBytes(StringUtils.decodeBase64(StringUtils.toUtf8((String) object)));
     } else if (object instanceof DoubleMeanHolder) {
       return object;
@@ -161,7 +177,9 @@ public class DoubleMeanAggregatorFactory extends AggregatorFactory
   @Override
   public Object finalizeComputation(@Nullable Object object)
   {
-    if (object instanceof DoubleMeanHolder) {
+    if (object instanceof byte[]) {
+      return DoubleMeanHolder.fromBytes((byte[]) object).mean();
+    } else if (object instanceof DoubleMeanHolder) {
       return ((DoubleMeanHolder) object).mean();
     } else if (object == null) {
       return null;

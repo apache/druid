@@ -56,13 +56,14 @@ public class CuratorModule implements Module
 
   private static final int MAX_SLEEP_TIME_MS = 45000;
 
-  private static final int MAX_RETRIES = 30;
+  private static final int MAX_RETRIES = 29;
 
   private static final Logger log = new Logger(CuratorModule.class);
 
   @Override
   public void configure(Binder binder)
   {
+    JsonConfigProvider.bind(binder, CURATOR_CONFIG_PREFIX, ZkEnablementConfig.class);
     JsonConfigProvider.bind(binder, CURATOR_CONFIG_PREFIX, CuratorConfig.class);
     JsonConfigProvider.bind(binder, EXHIBITOR_CONFIG_PREFIX, ExhibitorConfig.class);
   }
@@ -70,8 +71,12 @@ public class CuratorModule implements Module
   @Provides
   @LazySingleton
   @SuppressForbidden(reason = "System#err")
-  public CuratorFramework makeCurator(CuratorConfig config, EnsembleProvider ensembleProvider, Lifecycle lifecycle)
+  public CuratorFramework makeCurator(ZkEnablementConfig zkEnablementConfig, CuratorConfig config, EnsembleProvider ensembleProvider, Lifecycle lifecycle)
   {
+    if (!zkEnablementConfig.isEnabled()) {
+      throw new RuntimeException("Zookeeper is disabled, Can't create CuratorFramework.");
+    }
+
     final CuratorFrameworkFactory.Builder builder = CuratorFrameworkFactory.builder();
     if (!Strings.isNullOrEmpty(config.getZkUser()) && !Strings.isNullOrEmpty(config.getZkPwd())) {
       builder.authorization(
@@ -92,7 +97,7 @@ public class CuratorModule implements Module
         .build();
 
     framework.getUnhandledErrorListenable().addListener((message, e) -> {
-      log.error(e, "Unhandled error in Curator Framework");
+      log.error(e, "Unhandled error in Curator, stopping server.");
       shutdown(lifecycle);
     });
 
@@ -102,14 +107,14 @@ public class CuratorModule implements Module
           @Override
           public void start()
           {
-            log.info("Starting Curator");
+            log.debug("Starting Curator");
             framework.start();
           }
 
           @Override
           public void stop()
           {
-            log.info("Stopping Curator");
+            log.debug("Stopping Curator");
             framework.close();
           }
         }
@@ -143,7 +148,7 @@ public class CuratorModule implements Module
       @Override
       public void start() throws Exception
       {
-        log.info("Poll the list of zookeeper servers for initial ensemble");
+        log.debug("Polling the list of ZooKeeper servers for the initial ensemble");
         this.pollForInitialEnsemble();
         super.start();
       }
@@ -177,7 +182,7 @@ public class CuratorModule implements Module
       lifecycle.stop();
     }
     catch (Throwable t) {
-      log.error(t, "Exception when stopping druid lifecycle");
+      log.error(t, "Exception when stopping server after unhandled Curator error.");
     }
     finally {
       System.exit(1);

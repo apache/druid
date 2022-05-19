@@ -23,15 +23,14 @@ import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.tasklogs.TaskLogs;
 
 import java.io.File;
-import java.io.FileFilter;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -52,25 +51,19 @@ public class FileTaskLogs implements TaskLogs
   @Override
   public void pushTaskLog(final String taskid, File file) throws IOException
   {
-    if (config.getDirectory().exists() || config.getDirectory().mkdirs()) {
-      final File outputFile = fileForTask(taskid, file.getName());
-      Files.copy(file, outputFile);
-      log.info("Wrote task log to: %s", outputFile);
-    } else {
-      throw new IOE("Unable to create task log dir[%s]", config.getDirectory());
-    }
+    FileUtils.mkdirp(config.getDirectory());
+    final File outputFile = fileForTask(taskid, file.getName());
+    Files.copy(file, outputFile);
+    log.info("Wrote task log to: %s", outputFile);
   }
 
   @Override
   public void pushTaskReports(String taskid, File reportFile) throws IOException
   {
-    if (config.getDirectory().exists() || config.getDirectory().mkdirs()) {
-      final File outputFile = fileForTask(taskid, reportFile.getName());
-      Files.copy(reportFile, outputFile);
-      log.info("Wrote task report to: %s", outputFile);
-    } else {
-      throw new IOE("Unable to create task report dir[%s]", config.getDirectory());
-    }
+    FileUtils.mkdirp(config.getDirectory());
+    final File outputFile = fileForTask(taskid, reportFile.getName());
+    Files.copy(reportFile, outputFile);
+    log.info("Wrote task report to: %s", outputFile);
   }
 
   @Override
@@ -135,20 +128,11 @@ public class FileTaskLogs implements TaskLogs
         throw new IOE("taskLogDir [%s] must be a directory.", taskLogDir);
       }
 
-      File[] files = taskLogDir.listFiles(
-          new FileFilter()
-          {
-            @Override
-            public boolean accept(File f)
-            {
-              return f.lastModified() < timestamp;
-            }
-          }
-      );
+      File[] files = taskLogDir.listFiles(f -> f.lastModified() < timestamp);
 
       for (File file : files) {
         log.info("Deleting local task log [%s].", file.getAbsolutePath());
-        FileUtils.forceDelete(file);
+        org.apache.commons.io.FileUtils.forceDelete(file);
 
         if (Thread.currentThread().isInterrupted()) {
           throw new IOException(

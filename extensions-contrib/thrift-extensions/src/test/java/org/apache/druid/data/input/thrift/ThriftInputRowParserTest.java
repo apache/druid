@@ -61,14 +61,16 @@ public class ThriftInputRowParserTest
                                   new DimensionsSpec(Lists.newArrayList(
                                       new StringDimensionSchema("title"),
                                       new StringDimensionSchema("lastName")
-                                  ), null, null),
+                                  )),
                                   new JSONPathSpec(
                                       true,
                                       Lists.newArrayList(
                                           new JSONPathFieldSpec(JSONPathFieldType.ROOT, "title", "title"),
                                           new JSONPathFieldSpec(JSONPathFieldType.PATH, "lastName", "$.author.lastName")
                                       )
-                                  ), null
+                                  ),
+                                  null,
+                                  null
     );
   }
 
@@ -126,9 +128,7 @@ public class ThriftInputRowParserTest
                     "dim1",
                     "dim2"
                 )
-            ),
-            null,
-            null
+            )
         ),
         "func",
         new JavaScriptConfig(false)

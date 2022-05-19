@@ -39,10 +39,46 @@ public class OpentsdbEmitterConfigTest
   @Test
   public void testSerDeserOpentsdbEmitterConfig() throws Exception
   {
-    OpentsdbEmitterConfig opentsdbEmitterConfig = new OpentsdbEmitterConfig("localhost", 9999, 2000, 2000, 200, 2000, 10000L, null);
+    OpentsdbEmitterConfig opentsdbEmitterConfig = new OpentsdbEmitterConfig("localhost", 9999, 2000, 2000, 200, 2000, 10000L, null, "druid");
     String opentsdbEmitterConfigString = mapper.writeValueAsString(opentsdbEmitterConfig);
     OpentsdbEmitterConfig expectedOpentsdbEmitterConfig = mapper.readerFor(OpentsdbEmitterConfig.class)
                                                                 .readValue(opentsdbEmitterConfigString);
     Assert.assertEquals(expectedOpentsdbEmitterConfig, opentsdbEmitterConfig);
+  }
+
+  @Test
+  public void testSerDeserOpentsdbEmitterConfigWithNamespacePrefixContainingSpace() throws Exception
+  {
+    OpentsdbEmitterConfig opentsdbEmitterConfig = new OpentsdbEmitterConfig("localhost", 9999, 2000, 2000, 200, 2000, 10000L, null, "legendary druid");
+    String opentsdbEmitterConfigString = mapper.writeValueAsString(opentsdbEmitterConfig);
+    OpentsdbEmitterConfig expectedOpentsdbEmitterConfig = mapper.readerFor(OpentsdbEmitterConfig.class)
+                                                                .readValue(opentsdbEmitterConfigString);
+    Assert.assertEquals(expectedOpentsdbEmitterConfig, opentsdbEmitterConfig);
+  }
+
+  @Test
+  public void testSerDeserOpentsdbEmitterConfigWithNullNamespacePrefix() throws Exception
+  {
+    OpentsdbEmitterConfig opentsdbEmitterConfig = new OpentsdbEmitterConfig("localhost", 9999, 2000, 2000, 200, 2000, 10000L, null, null);
+    String opentsdbEmitterConfigString = mapper.writeValueAsString(opentsdbEmitterConfig);
+    OpentsdbEmitterConfig expectedOpentsdbEmitterConfig = mapper.readerFor(OpentsdbEmitterConfig.class)
+        .readValue(opentsdbEmitterConfigString);
+    Assert.assertEquals(expectedOpentsdbEmitterConfig, opentsdbEmitterConfig);
+  }
+
+  @Test
+  public void testSerDeserOpentsdbEmitterConfigWithEmptyNamespacePrefix() throws Exception
+  {
+    OpentsdbEmitterConfig opentsdbEmitterConfig = new OpentsdbEmitterConfig("localhost", 9999, 2000, 2000, 200, 2000, 10000L, null, "");
+    String opentsdbEmitterConfigString = mapper.writeValueAsString(opentsdbEmitterConfig);
+    OpentsdbEmitterConfig expectedOpentsdbEmitterConfig = mapper.readerFor(OpentsdbEmitterConfig.class)
+        .readValue(opentsdbEmitterConfigString);
+    Assert.assertEquals(expectedOpentsdbEmitterConfig, opentsdbEmitterConfig);
+  }
+
+  @Test
+  public void testJacksonModules()
+  {
+    Assert.assertTrue(new OpentsdbEmitterModule().getJacksonModules().isEmpty());
   }
 }

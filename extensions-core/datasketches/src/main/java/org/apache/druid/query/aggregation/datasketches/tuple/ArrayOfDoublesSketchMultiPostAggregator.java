@@ -72,17 +72,18 @@ public abstract class ArrayOfDoublesSketchMultiPostAggregator extends ArrayOfDou
   }
 
   @Override
-  public boolean equals(final Object o)
+  public boolean equals(Object o)
   {
-    if (!super.equals(o)) {
-      return false;
+    if (this == o) {
+      return true;
     }
-    // this check is used here instead of instanceof because this is an abstract class
-    // and subclasses not overriding equals should not be equal to each other
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final ArrayOfDoublesSketchMultiPostAggregator that = (ArrayOfDoublesSketchMultiPostAggregator) o;
+    if (!super.equals(o)) {
+      return false;
+    }
+    ArrayOfDoublesSketchMultiPostAggregator that = (ArrayOfDoublesSketchMultiPostAggregator) o;
     return fields.equals(that.fields);
   }
 
@@ -91,5 +92,4 @@ public abstract class ArrayOfDoublesSketchMultiPostAggregator extends ArrayOfDou
   {
     return Objects.hash(super.hashCode(), fields);
   }
-
 }

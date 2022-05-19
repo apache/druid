@@ -44,7 +44,7 @@ public class UnionQueryRunnerTest
       {
         // verify that table datasource is passed to baseQueryRunner
         Assert.assertTrue(queryPlus.getQuery().getDataSource() instanceof TableDataSource);
-        String dsName = Iterables.getOnlyElement(queryPlus.getQuery().getDataSource().getNames());
+        String dsName = Iterables.getOnlyElement(queryPlus.getQuery().getDataSource().getTableNames());
         if ("ds1".equals(dsName)) {
           ds1.compareAndSet(false, true);
           return Sequences.simple(Arrays.asList(1, 2, 3));

@@ -20,15 +20,18 @@
 package org.apache.druid.indexing.appenderator;
 
 import com.google.common.collect.Iterables;
-import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.UsedSegmentChecker;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -45,34 +48,33 @@ public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
   }
 
   @Override
-  public Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> identifiers) throws IOException
+  public Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> segmentIds) throws IOException
   {
     // Group by dataSource
-    final Map<String, Set<SegmentIdWithShardSpec>> identifiersByDataSource = new TreeMap<>();
-    for (SegmentIdWithShardSpec identifier : identifiers) {
-      identifiersByDataSource.computeIfAbsent(identifier.getDataSource(), k -> new HashSet<>());
-
-      identifiersByDataSource.get(identifier.getDataSource()).add(identifier);
+    final Map<String, Set<SegmentId>> idsByDataSource = new TreeMap<>();
+    for (SegmentIdWithShardSpec segmentId : segmentIds) {
+      idsByDataSource.computeIfAbsent(segmentId.getDataSource(), i -> new HashSet<>()).add(segmentId.asSegmentId());
     }
 
-    final Set<DataSegment> retVal = new HashSet<>();
+    final Set<DataSegment> usedSegments = new HashSet<>();
 
-    for (Map.Entry<String, Set<SegmentIdWithShardSpec>> entry : identifiersByDataSource.entrySet()) {
+    for (Map.Entry<String, Set<SegmentId>> entry : idsByDataSource.entrySet()) {
+      String dataSource = entry.getKey();
+      Set<SegmentId> segmentIdsInDataSource = entry.getValue();
       final List<Interval> intervals = JodaUtils.condenseIntervals(
-          Iterables.transform(entry.getValue(), input -> input.getInterval())
+          Iterables.transform(segmentIdsInDataSource, SegmentId::getInterval)
       );
 
-      final List<DataSegment> usedSegmentsForIntervals = taskActionClient.submit(
-          new SegmentListUsedAction(entry.getKey(), null, intervals)
-      );
+      final Collection<DataSegment> usedSegmentsForIntervals = taskActionClient
+          .submit(new RetrieveUsedSegmentsAction(dataSource, null, intervals, Segments.ONLY_VISIBLE));
 
       for (DataSegment segment : usedSegmentsForIntervals) {
-        if (identifiers.contains(SegmentIdWithShardSpec.fromDataSegment(segment))) {
-          retVal.add(segment);
+        if (segmentIdsInDataSource.contains(segment.getId())) {
+          usedSegments.add(segment);
         }
       }
     }
 
-    return retVal;
+    return usedSegments;
   }
 }

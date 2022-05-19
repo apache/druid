@@ -20,7 +20,7 @@
 package org.apache.druid.segment.loading;
 
 import com.google.inject.Inject;
-import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
@@ -48,7 +48,7 @@ public class LocalDataSegmentKiller implements DataSegmentKiller
   public void kill(DataSegment segment) throws SegmentLoadingException
   {
     final File path = getPath(segment);
-    log.info("killing segment[%s] mapped to path[%s]", segment.getId(), path);
+    log.info("Deleting segment[%s] from directory[%s].", segment.getId(), path);
 
     try {
       if (path.getName().endsWith(".zip")) {
@@ -80,7 +80,7 @@ public class LocalDataSegmentKiller implements DataSegmentKiller
   @Override
   public void killAll() throws IOException
   {
-    log.info("Deleting all segment files from local dir [%s].", storageDirectory.getAbsolutePath());
+    log.info("Deleting all segments from directory[%s].", storageDirectory.getAbsolutePath());
     FileUtils.deleteDirectory(storageDirectory);
   }
 

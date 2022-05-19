@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import com.yahoo.sketches.hll.TgtHllType;
+import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.junit.Assert;
 import org.junit.Before;

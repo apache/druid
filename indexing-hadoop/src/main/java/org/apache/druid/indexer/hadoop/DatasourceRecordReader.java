@@ -23,12 +23,11 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
-import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.JobHelper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
@@ -86,7 +85,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
 
               logger.info("Fetch segment files from [%s]", path);
 
-              File dir = Files.createTempDir();
+              File dir = FileUtils.createTempDir();
               tmpSegmentDirs.add(dir);
               logger.info("Locally storing fetched segment at [%s]", dir);
 

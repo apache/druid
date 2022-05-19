@@ -1520,7 +1520,7 @@ public class ApproximateHistogram
    *
    * @param probabilities array of probabilities
    *
-   * @return an array of length probabilities.length representing the the approximate sample quantiles
+   * @return an array of length probabilities.length representing the approximate sample quantiles
    * corresponding to the given probabilities
    */
 
@@ -1557,7 +1557,7 @@ public class ApproximateHistogram
       final double s = probabilities[j] * this.count();
 
       int i = 0;
-      int sum = 0;
+      long sum = 0;
       int k = 1;
       long count;
       while (k <= this.binCount()) {

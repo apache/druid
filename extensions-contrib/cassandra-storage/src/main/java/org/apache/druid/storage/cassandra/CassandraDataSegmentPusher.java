@@ -77,11 +77,16 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
   public DataSegment push(final File indexFilesDir, DataSegment segment, final boolean useUniquePath) throws IOException
   {
     log.info("Writing [%s] to C*", indexFilesDir);
+    return pushToPath(indexFilesDir, segment, this.getStorageDir(segment, useUniquePath));
+  }
+
+  @Override
+  public DataSegment pushToPath(File indexFilesDir, DataSegment segment, String storageDirSuffix) throws IOException
+  {
     String key = JOINER.join(
         config.getKeyspace().isEmpty() ? null : config.getKeyspace(),
-        this.getStorageDir(segment, useUniquePath)
-    );
-
+        storageDirSuffix
+        );
     // Create index
     final File compressedIndexFile = File.createTempFile("druid", "index.zip");
     long indexSize = CompressionUtils.zip(indexFilesDir, compressedIndexFile);

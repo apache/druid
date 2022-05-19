@@ -22,11 +22,13 @@ package org.apache.druid.indexing.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.io.Files;
+import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestTasks;
 import org.apache.druid.indexing.common.TestUtils;
@@ -37,14 +39,17 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.TestTaskRunner;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
-import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.StorageLocationConfig;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import org.apache.druid.segment.IndexMergerV9Factory;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
+import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
+import org.apache.druid.server.security.AuthTestUtils;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -52,33 +57,33 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.Collections;
-import java.util.List;
+import java.util.Map;
 
 /**
  */
 public class WorkerTaskManagerTest
 {
   private final TaskLocation location = TaskLocation.create("localhost", 1, 2);
+  private final TestUtils testUtils;
   private final ObjectMapper jsonMapper;
-  private final IndexMergerV9 indexMergerV9;
+  private final IndexMergerV9Factory indexMergerV9Factory;
   private final IndexIO indexIO;
 
   private WorkerTaskManager workerTaskManager;
 
   public WorkerTaskManagerTest()
   {
-    TestUtils testUtils = new TestUtils();
+    testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
     TestTasks.registerSubtypes(jsonMapper);
-    indexMergerV9 = testUtils.getTestIndexMergerV9();
+    indexMergerV9Factory = testUtils.getIndexMergerV9Factory();
     indexIO = testUtils.getTestIndexIO();
   }
 
   private WorkerTaskManager createWorkerTaskManager()
   {
     TaskConfig taskConfig = new TaskConfig(
-        Files.createTempDir().toString(),
+        FileUtils.createTempDir().toString(),
         null,
         null,
         0,
@@ -86,6 +91,10 @@ public class WorkerTaskManagerTest
         false,
         null,
         null,
+        null,
+        false,
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null
     );
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
@@ -93,15 +102,6 @@ public class WorkerTaskManagerTest
     EasyMock.expect(taskActionClientFactory.create(EasyMock.anyObject())).andReturn(taskActionClient).anyTimes();
     SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
     EasyMock.replay(taskActionClientFactory, taskActionClient, notifierFactory);
-
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return Collections.emptyList();
-      }
-    };
 
     return new WorkerTaskManager(
         jsonMapper,
@@ -120,19 +120,28 @@ public class WorkerTaskManagerTest
                 notifierFactory,
                 null,
                 null,
+                NoopJoinableFactory.INSTANCE,
                 null,
-                new SegmentLoaderFactory(null, jsonMapper),
+                new SegmentCacheManagerFactory(jsonMapper),
                 jsonMapper,
                 indexIO,
                 null,
                 null,
                 null,
-                indexMergerV9,
+                indexMergerV9Factory,
                 null,
                 null,
                 null,
                 null,
                 new NoopTestTaskReportFileWriter(),
+                null,
+                AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+                new NoopChatHandlerProvider(),
+                testUtils.getRowIngestionMetersFactory(),
+                new TestAppenderatorsManager(),
+                new NoopIndexingServiceClient(),
+                null,
+                null,
                 null
             ),
             taskConfig,
@@ -173,8 +182,8 @@ public class WorkerTaskManagerTest
     Task task2 = createNoopTask("task2-completed-already");
     Task task3 = createNoopTask("task3-assigned-explicitly");
 
-    workerTaskManager.getAssignedTaskDir().mkdirs();
-    workerTaskManager.getCompletedTaskDir().mkdirs();
+    FileUtils.mkdirp(workerTaskManager.getAssignedTaskDir());
+    FileUtils.mkdirp(workerTaskManager.getCompletedTaskDir());
 
     // create a task in assigned task directory, to simulate MM shutdown right after a task was assigned.
     jsonMapper.writeValue(new File(workerTaskManager.getAssignedTaskDir(), task1.getId()), task1);
@@ -257,6 +266,35 @@ public class WorkerTaskManagerTest
     Assert.assertEquals(task3.getId(), update4.getTaskAnnouncement().getTaskStatus().getId());
     Assert.assertTrue(update4.getTaskAnnouncement().getTaskStatus().isSuccess());
     Assert.assertNotNull(update4.getTaskAnnouncement().getTaskLocation().getHost());
+  }
+
+  @Test(timeout = 30_000L)
+  public void testTaskStatusWhenTaskRunnerFutureThrowsException() throws Exception
+  {
+    Task task = new NoopTask("id", null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0))
+    {
+      @Override
+      public TaskStatus run(TaskToolbox toolbox)
+      {
+        throw new Error("task failure test");
+      }
+    };
+    workerTaskManager.start();
+    workerTaskManager.assignTask(task);
+
+    Map<String, TaskAnnouncement> completeTasks;
+    do {
+      completeTasks = workerTaskManager.getCompletedTasks();
+    } while (completeTasks.isEmpty());
+
+    Assert.assertEquals(1, completeTasks.size());
+    TaskAnnouncement announcement = completeTasks.get(task.getId());
+    Assert.assertNotNull(announcement);
+    Assert.assertEquals(TaskState.FAILED, announcement.getStatus());
+    Assert.assertEquals(
+        "Failed to run task with an exception. See middleManager or indexer logs for more details.",
+        announcement.getTaskStatus().getErrorMsg()
+    );
   }
 
   private NoopTask createNoopTask(String id)

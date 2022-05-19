@@ -57,7 +57,6 @@ public class CSVParseSpec extends ParseSpec
       for (String column : columns) {
         Preconditions.checkArgument(!column.contains(","), "Column[%s] has a comma, it cannot", column);
       }
-      verify(dimensionsSpec.getDimensionNames());
     } else {
       Preconditions.checkArgument(
           hasHeaderRow,
@@ -65,17 +64,6 @@ public class CSVParseSpec extends ParseSpec
           + " and hasHeaderRow must be set to true."
       );
     }
-  }
-
-  @Deprecated
-  public CSVParseSpec(
-      TimestampSpec timestampSpec,
-      DimensionsSpec dimensionsSpec,
-      String listDelimiter,
-      List<String> columns
-  )
-  {
-    this(timestampSpec, dimensionsSpec, listDelimiter, columns, false, 0);
   }
 
   @JsonProperty
@@ -103,14 +91,6 @@ public class CSVParseSpec extends ParseSpec
   }
 
   @Override
-  public void verify(List<String> usedCols)
-  {
-    for (String columnName : usedCols) {
-      Preconditions.checkArgument(columns.contains(columnName), "column[%s] not in columns.", columnName);
-    }
-  }
-
-  @Override
   public Parser<String, Object> makeParser()
   {
     return new CSVParser(listDelimiter, columns, hasHeaderRow, skipHeaderRows);
@@ -127,5 +107,4 @@ public class CSVParseSpec extends ParseSpec
   {
     return new CSVParseSpec(getTimestampSpec(), spec, listDelimiter, columns, hasHeaderRow, skipHeaderRows);
   }
-
 }

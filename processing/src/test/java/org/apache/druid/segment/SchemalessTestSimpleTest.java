@@ -57,6 +57,7 @@ import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -72,8 +73,9 @@ import java.util.List;
 /**
  */
 @RunWith(Parameterized.class)
-public class SchemalessTestSimpleTest
+public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
 {
+
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder()
   {

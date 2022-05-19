@@ -25,8 +25,10 @@ import org.joda.time.DateTime;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
+ *
  */
 @PublicApi
 public class MapBasedInputRow extends MapBasedRow implements InputRow
@@ -57,6 +59,28 @@ public class MapBasedInputRow extends MapBasedRow implements InputRow
   public List<String> getDimensions()
   {
     return dimensions;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    MapBasedInputRow that = (MapBasedInputRow) o;
+    return Objects.equals(dimensions, that.dimensions);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), dimensions);
   }
 
   @Override

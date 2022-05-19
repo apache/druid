@@ -30,37 +30,50 @@ import com.google.inject.Provider;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.worker.IntermediaryDataManager;
+import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
+import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
+import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentArchiver;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
+import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Stuff that may be needed by a Task in order to conduct its business.
@@ -84,10 +97,12 @@ public class TaskToolbox
    * because it may be unavailable, e. g. for batch tasks running in Spark or Hadoop.
    */
   private final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
-  private final MonitorScheduler monitorScheduler;
-  private final ExecutorService queryExecutorService;
-  private final SegmentLoader segmentLoader;
-  private final ObjectMapper objectMapper;
+  @Nullable
+  private final Provider<MonitorScheduler> monitorSchedulerProvider;
+  private final QueryProcessingPool queryProcessingPool;
+  private final JoinableFactory joinableFactory;
+  private final SegmentCacheManager segmentCacheManager;
+  private final ObjectMapper jsonMapper;
   private final File taskWorkDir;
   private final IndexIO indexIO;
   private final Cache cache;
@@ -100,7 +115,18 @@ public class TaskToolbox
   private final DruidNode druidNode;
   private final LookupNodeService lookupNodeService;
   private final DataNodeService dataNodeService;
+
+  private final AuthorizerMapper authorizerMapper;
+  private final ChatHandlerProvider chatHandlerProvider;
+  private final RowIngestionMetersFactory rowIngestionMetersFactory;
+  private final AppenderatorsManager appenderatorsManager;
+  private final IndexingServiceClient indexingServiceClient;
+  private final CoordinatorClient coordinatorClient;
+
+  // Used by only native parallel tasks
   private final IntermediaryDataManager intermediaryDataManager;
+  private final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> supervisorTaskClientFactory;
+  private final ShuffleClient shuffleClient;
 
   public TaskToolbox(
       TaskConfig config,
@@ -115,10 +141,11 @@ public class TaskToolbox
       DataSegmentServerAnnouncer serverAnnouncer,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider,
-      ExecutorService queryExecutorService,
-      MonitorScheduler monitorScheduler,
-      SegmentLoader segmentLoader,
-      ObjectMapper objectMapper,
+      QueryProcessingPool queryProcessingPool,
+      JoinableFactory joinableFactory,
+      @Nullable Provider<MonitorScheduler> monitorSchedulerProvider,
+      SegmentCacheManager segmentCacheManager,
+      ObjectMapper jsonMapper,
       File taskWorkDir,
       IndexIO indexIO,
       Cache cache,
@@ -130,7 +157,15 @@ public class TaskToolbox
       LookupNodeService lookupNodeService,
       DataNodeService dataNodeService,
       TaskReportFileWriter taskReportFileWriter,
-      IntermediaryDataManager intermediaryDataManager
+      IntermediaryDataManager intermediaryDataManager,
+      AuthorizerMapper authorizerMapper,
+      ChatHandlerProvider chatHandlerProvider,
+      RowIngestionMetersFactory rowIngestionMetersFactory,
+      AppenderatorsManager appenderatorsManager,
+      IndexingServiceClient indexingServiceClient,
+      CoordinatorClient coordinatorClient,
+      IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> supervisorTaskClientFactory,
+      ShuffleClient shuffleClient
   )
   {
     this.config = config;
@@ -145,10 +180,11 @@ public class TaskToolbox
     this.serverAnnouncer = serverAnnouncer;
     this.handoffNotifierFactory = handoffNotifierFactory;
     this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
-    this.queryExecutorService = queryExecutorService;
-    this.monitorScheduler = monitorScheduler;
-    this.segmentLoader = segmentLoader;
-    this.objectMapper = objectMapper;
+    this.queryProcessingPool = queryProcessingPool;
+    this.joinableFactory = joinableFactory;
+    this.monitorSchedulerProvider = monitorSchedulerProvider;
+    this.segmentCacheManager = segmentCacheManager;
+    this.jsonMapper = jsonMapper;
     this.taskWorkDir = taskWorkDir;
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
     this.cache = cache;
@@ -160,8 +196,16 @@ public class TaskToolbox
     this.lookupNodeService = lookupNodeService;
     this.dataNodeService = dataNodeService;
     this.taskReportFileWriter = taskReportFileWriter;
-    this.taskReportFileWriter.setObjectMapper(this.objectMapper);
+    this.taskReportFileWriter.setObjectMapper(this.jsonMapper);
     this.intermediaryDataManager = intermediaryDataManager;
+    this.authorizerMapper = authorizerMapper;
+    this.chatHandlerProvider = chatHandlerProvider;
+    this.rowIngestionMetersFactory = rowIngestionMetersFactory;
+    this.appenderatorsManager = appenderatorsManager;
+    this.indexingServiceClient = indexingServiceClient;
+    this.coordinatorClient = coordinatorClient;
+    this.supervisorTaskClientFactory = supervisorTaskClientFactory;
+    this.shuffleClient = shuffleClient;
   }
 
   public TaskConfig getConfig()
@@ -224,19 +268,51 @@ public class TaskToolbox
     return queryRunnerFactoryConglomerateProvider.get();
   }
 
-  public ExecutorService getQueryExecutorService()
+  public QueryProcessingPool getQueryProcessingPool()
   {
-    return queryExecutorService;
+    return queryProcessingPool;
   }
 
+  public JoinableFactory getJoinableFactory()
+  {
+    return joinableFactory;
+  }
+
+  @Nullable
   public MonitorScheduler getMonitorScheduler()
   {
-    return monitorScheduler;
+    return monitorSchedulerProvider == null ? null : monitorSchedulerProvider.get();
   }
 
-  public ObjectMapper getObjectMapper()
+  /**
+   * Adds a monitor to the monitorScheduler if it is configured
+   *
+   * @param monitor
+   */
+  public void addMonitor(Monitor monitor)
   {
-    return objectMapper;
+    MonitorScheduler scheduler = getMonitorScheduler();
+    if (scheduler != null) {
+      scheduler.addMonitor(monitor);
+    }
+  }
+
+  /**
+   * Adds a monitor to the monitorScheduler if it is configured
+   *
+   * @param monitor
+   */
+  public void removeMonitor(Monitor monitor)
+  {
+    MonitorScheduler scheduler = getMonitorScheduler();
+    if (scheduler != null) {
+      scheduler.removeMonitor(monitor);
+    }
+  }
+
+  public ObjectMapper getJsonMapper()
+  {
+    return jsonMapper;
   }
 
   public Map<DataSegment, File> fetchSegments(List<DataSegment> segments)
@@ -244,7 +320,7 @@ public class TaskToolbox
   {
     Map<DataSegment, File> retVal = Maps.newLinkedHashMap();
     for (DataSegment segment : segments) {
-      retVal.put(segment, segmentLoader.getSegmentFiles(segment));
+      retVal.put(segment, segmentCacheManager.getSegmentFiles(segment));
     }
 
     return retVal;
@@ -294,9 +370,16 @@ public class TaskToolbox
     return indexMergerV9;
   }
 
-  public File getFirehoseTemporaryDir()
+  public File getIndexingTmpDir()
   {
-    return new File(taskWorkDir, "firehose");
+    final File tmpDir = new File(taskWorkDir, "indexing-tmp");
+    try {
+      FileUtils.mkdirp(tmpDir);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return tmpDir;
   }
 
   public File getMergeDir()
@@ -337,5 +420,355 @@ public class TaskToolbox
   public IntermediaryDataManager getIntermediaryDataManager()
   {
     return intermediaryDataManager;
+  }
+
+  public AuthorizerMapper getAuthorizerMapper()
+  {
+    return authorizerMapper;
+  }
+
+  public ChatHandlerProvider getChatHandlerProvider()
+  {
+    return chatHandlerProvider;
+  }
+
+  public RowIngestionMetersFactory getRowIngestionMetersFactory()
+  {
+    return rowIngestionMetersFactory;
+  }
+
+  public AppenderatorsManager getAppenderatorsManager()
+  {
+    return appenderatorsManager;
+  }
+
+  public IndexingServiceClient getIndexingServiceClient()
+  {
+    return indexingServiceClient;
+  }
+
+  public CoordinatorClient getCoordinatorClient()
+  {
+    return coordinatorClient;
+  }
+
+  public IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> getSupervisorTaskClientFactory()
+  {
+    return supervisorTaskClientFactory;
+  }
+
+  public ShuffleClient getShuffleClient()
+  {
+    return shuffleClient;
+  }
+
+  public static class Builder
+  {
+    private TaskConfig config;
+    private DruidNode taskExecutorNode;
+    private TaskActionClient taskActionClient;
+    private ServiceEmitter emitter;
+    private DataSegmentPusher segmentPusher;
+    private DataSegmentKiller dataSegmentKiller;
+    private DataSegmentMover dataSegmentMover;
+    private DataSegmentArchiver dataSegmentArchiver;
+    private DataSegmentAnnouncer segmentAnnouncer;
+    private DataSegmentServerAnnouncer serverAnnouncer;
+    private SegmentHandoffNotifierFactory handoffNotifierFactory;
+    private Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
+    private QueryProcessingPool queryProcessingPool;
+    private JoinableFactory joinableFactory;
+    private Provider<MonitorScheduler> monitorSchedulerProvider;
+    private SegmentCacheManager segmentCacheManager;
+    private ObjectMapper jsonMapper;
+    private File taskWorkDir;
+    private IndexIO indexIO;
+    private Cache cache;
+    private CacheConfig cacheConfig;
+    private CachePopulatorStats cachePopulatorStats;
+    private IndexMergerV9 indexMergerV9;
+    private DruidNodeAnnouncer druidNodeAnnouncer;
+    private DruidNode druidNode;
+    private LookupNodeService lookupNodeService;
+    private DataNodeService dataNodeService;
+    private TaskReportFileWriter taskReportFileWriter;
+    private AuthorizerMapper authorizerMapper;
+    private ChatHandlerProvider chatHandlerProvider;
+    private RowIngestionMetersFactory rowIngestionMetersFactory;
+    private AppenderatorsManager appenderatorsManager;
+    private IndexingServiceClient indexingServiceClient;
+    private CoordinatorClient coordinatorClient;
+    private IntermediaryDataManager intermediaryDataManager;
+    private IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> supervisorTaskClientFactory;
+    private ShuffleClient shuffleClient;
+
+    public Builder()
+    {
+    }
+
+    public Builder config(final TaskConfig config)
+    {
+      this.config = config;
+      return this;
+    }
+
+    public Builder taskExecutorNode(final DruidNode taskExecutorNode)
+    {
+      this.taskExecutorNode = taskExecutorNode;
+      return this;
+    }
+
+    public Builder taskActionClient(final TaskActionClient taskActionClient)
+    {
+      this.taskActionClient = taskActionClient;
+      return this;
+    }
+
+    public Builder emitter(final ServiceEmitter emitter)
+    {
+      this.emitter = emitter;
+      return this;
+    }
+
+    public Builder segmentPusher(final DataSegmentPusher segmentPusher)
+    {
+      this.segmentPusher = segmentPusher;
+      return this;
+    }
+
+    public Builder dataSegmentKiller(final DataSegmentKiller dataSegmentKiller)
+    {
+      this.dataSegmentKiller = dataSegmentKiller;
+      return this;
+    }
+
+    public Builder dataSegmentMover(final DataSegmentMover dataSegmentMover)
+    {
+      this.dataSegmentMover = dataSegmentMover;
+      return this;
+    }
+
+    public Builder dataSegmentArchiver(final DataSegmentArchiver dataSegmentArchiver)
+    {
+      this.dataSegmentArchiver = dataSegmentArchiver;
+      return this;
+    }
+
+    public Builder segmentAnnouncer(final DataSegmentAnnouncer segmentAnnouncer)
+    {
+      this.segmentAnnouncer = segmentAnnouncer;
+      return this;
+    }
+
+    public Builder serverAnnouncer(final DataSegmentServerAnnouncer serverAnnouncer)
+    {
+      this.serverAnnouncer = serverAnnouncer;
+      return this;
+    }
+
+    public Builder handoffNotifierFactory(final SegmentHandoffNotifierFactory handoffNotifierFactory)
+    {
+      this.handoffNotifierFactory = handoffNotifierFactory;
+      return this;
+    }
+
+    public Builder queryRunnerFactoryConglomerateProvider(final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider)
+    {
+      this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
+      return this;
+    }
+
+    public Builder queryProcessingPool(final QueryProcessingPool queryProcessingPool)
+    {
+      this.queryProcessingPool = queryProcessingPool;
+      return this;
+    }
+
+    public Builder joinableFactory(final JoinableFactory joinableFactory)
+    {
+      this.joinableFactory = joinableFactory;
+      return this;
+    }
+
+    public Builder monitorSchedulerProvider(final Provider<MonitorScheduler> monitorSchedulerProvider)
+    {
+      this.monitorSchedulerProvider = monitorSchedulerProvider;
+      return this;
+    }
+
+    public Builder segmentCacheManager(final SegmentCacheManager segmentCacheManager)
+    {
+      this.segmentCacheManager = segmentCacheManager;
+      return this;
+    }
+
+    public Builder jsonMapper(final ObjectMapper jsonMapper)
+    {
+      this.jsonMapper = jsonMapper;
+      return this;
+    }
+
+    public Builder taskWorkDir(final File taskWorkDir)
+    {
+      this.taskWorkDir = taskWorkDir;
+      return this;
+    }
+
+    public Builder indexIO(final IndexIO indexIO)
+    {
+      this.indexIO = indexIO;
+      return this;
+    }
+
+    public Builder cache(final Cache cache)
+    {
+      this.cache = cache;
+      return this;
+    }
+
+    public Builder cacheConfig(final CacheConfig cacheConfig)
+    {
+      this.cacheConfig = cacheConfig;
+      return this;
+    }
+
+    public Builder cachePopulatorStats(final CachePopulatorStats cachePopulatorStats)
+    {
+      this.cachePopulatorStats = cachePopulatorStats;
+      return this;
+    }
+
+    public Builder indexMergerV9(final IndexMergerV9 indexMergerV9)
+    {
+      this.indexMergerV9 = indexMergerV9;
+      return this;
+    }
+
+    public Builder druidNodeAnnouncer(final DruidNodeAnnouncer druidNodeAnnouncer)
+    {
+      this.druidNodeAnnouncer = druidNodeAnnouncer;
+      return this;
+    }
+
+    public Builder druidNode(final DruidNode druidNode)
+    {
+      this.druidNode = druidNode;
+      return this;
+    }
+
+    public Builder lookupNodeService(final LookupNodeService lookupNodeService)
+    {
+      this.lookupNodeService = lookupNodeService;
+      return this;
+    }
+
+    public Builder dataNodeService(final DataNodeService dataNodeService)
+    {
+      this.dataNodeService = dataNodeService;
+      return this;
+    }
+
+    public Builder taskReportFileWriter(final TaskReportFileWriter taskReportFileWriter)
+    {
+      this.taskReportFileWriter = taskReportFileWriter;
+      return this;
+    }
+
+    public Builder authorizerMapper(final AuthorizerMapper authorizerMapper)
+    {
+      this.authorizerMapper = authorizerMapper;
+      return this;
+    }
+
+    public Builder chatHandlerProvider(final ChatHandlerProvider chatHandlerProvider)
+    {
+      this.chatHandlerProvider = chatHandlerProvider;
+      return this;
+    }
+
+    public Builder rowIngestionMetersFactory(final RowIngestionMetersFactory rowIngestionMetersFactory)
+    {
+      this.rowIngestionMetersFactory = rowIngestionMetersFactory;
+      return this;
+    }
+
+    public Builder appenderatorsManager(final AppenderatorsManager appenderatorsManager)
+    {
+      this.appenderatorsManager = appenderatorsManager;
+      return this;
+    }
+
+    public Builder indexingServiceClient(final IndexingServiceClient indexingServiceClient)
+    {
+      this.indexingServiceClient = indexingServiceClient;
+      return this;
+    }
+
+    public Builder coordinatorClient(final CoordinatorClient coordinatorClient)
+    {
+      this.coordinatorClient = coordinatorClient;
+      return this;
+    }
+
+    public Builder intermediaryDataManager(final IntermediaryDataManager intermediaryDataManager)
+    {
+      this.intermediaryDataManager = intermediaryDataManager;
+      return this;
+    }
+
+    public Builder supervisorTaskClientFactory(final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> supervisorTaskClientFactory)
+    {
+      this.supervisorTaskClientFactory = supervisorTaskClientFactory;
+      return this;
+    }
+
+    public Builder shuffleClient(final ShuffleClient shuffleClient)
+    {
+      this.shuffleClient = shuffleClient;
+      return this;
+    }
+
+    public TaskToolbox build()
+    {
+      return new TaskToolbox(
+          config,
+          taskExecutorNode,
+          taskActionClient,
+          emitter,
+          segmentPusher,
+          dataSegmentKiller,
+          dataSegmentMover,
+          dataSegmentArchiver,
+          segmentAnnouncer,
+          serverAnnouncer,
+          handoffNotifierFactory,
+          queryRunnerFactoryConglomerateProvider,
+          queryProcessingPool,
+          joinableFactory,
+          monitorSchedulerProvider,
+          segmentCacheManager,
+          jsonMapper,
+          taskWorkDir,
+          indexIO,
+          cache,
+          cacheConfig,
+          cachePopulatorStats,
+          indexMergerV9,
+          druidNodeAnnouncer,
+          druidNode,
+          lookupNodeService,
+          dataNodeService,
+          taskReportFileWriter,
+          intermediaryDataManager,
+          authorizerMapper,
+          chatHandlerProvider,
+          rowIngestionMetersFactory,
+          appenderatorsManager,
+          indexingServiceClient,
+          coordinatorClient,
+          supervisorTaskClientFactory,
+          shuffleClient
+      );
+    }
   }
 }

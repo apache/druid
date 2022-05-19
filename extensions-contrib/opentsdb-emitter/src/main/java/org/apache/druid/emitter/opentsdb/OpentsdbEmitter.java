@@ -47,7 +47,7 @@ public class OpentsdbEmitter implements Emitter
         config.getMaxQueueSize(),
         config.getConsumeDelay()
     );
-    this.converter = new EventConverter(mapper, config.getMetricMapPath());
+    this.converter = new EventConverter(mapper, config.getMetricMapPath(), config.getNamespacePrefix());
   }
 
   @Override
@@ -66,7 +66,7 @@ public class OpentsdbEmitter implements Emitter
   public void emit(Event event)
   {
     if (!started.get()) {
-      throw new ISE("WTF emit was called while service is not started yet");
+      throw new ISE("Emit called unexpectedly before service start");
     }
     if (event instanceof ServiceMetricEvent) {
       OpentsdbEvent opentsdbEvent = converter.convert((ServiceMetricEvent) event);

@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.histogram;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
@@ -77,5 +78,14 @@ public class QuantilesTest
     );
 
 
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(Quantiles.class)
+                  .withNonnullFields("probabilities", "quantiles", "min", "max")
+                  .usingGetClass()
+                  .verify();
   }
 }

@@ -24,11 +24,9 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.client.indexing.IndexingServiceSelectorConfig;
-import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
-import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.java.util.http.client.HttpClient;
 
@@ -45,29 +43,16 @@ public class IndexingServiceDiscoveryModule implements Module
   @Provides
   @IndexingService
   @ManageLifecycle
-  public ServerDiscoverySelector getServiceProvider(
-      IndexingServiceSelectorConfig config,
-      ServerDiscoveryFactory serverDiscoveryFactory
-  )
-  {
-    return serverDiscoveryFactory.createSelector(config.getServiceName());
-  }
-
-  @Provides
-  @IndexingService
-  @ManageLifecycle
   public DruidLeaderClient getLeaderHttpClient(
       @EscalatedGlobal HttpClient httpClient,
-      DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
-      @IndexingService ServerDiscoverySelector serverDiscoverySelector
+      DruidNodeDiscoveryProvider druidNodeDiscoveryProvider
   )
   {
     return new DruidLeaderClient(
         httpClient,
         druidNodeDiscoveryProvider,
-        NodeType.OVERLORD,
-        "/druid/indexer/v1/leader",
-        serverDiscoverySelector
+        NodeRole.OVERLORD,
+        "/druid/indexer/v1/leader"
     );
   }
 }

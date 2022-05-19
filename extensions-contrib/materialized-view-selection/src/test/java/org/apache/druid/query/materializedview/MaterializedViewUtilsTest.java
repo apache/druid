@@ -27,6 +27,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,7 +35,7 @@ import org.junit.Test;
 import java.util.List;
 import java.util.Set;
 
-public class MaterializedViewUtilsTest 
+public class MaterializedViewUtilsTest extends InitializedNullHandlingTest
 {
   private static ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
   

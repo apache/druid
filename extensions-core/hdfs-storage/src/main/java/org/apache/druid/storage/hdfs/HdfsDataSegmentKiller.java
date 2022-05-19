@@ -20,8 +20,11 @@
 package org.apache.druid.storage.hdfs;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.inject.Inject;
 import org.apache.commons.lang.StringUtils;
+import org.apache.druid.guice.Hdfs;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -30,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 public class HdfsDataSegmentKiller implements DataSegmentKiller
@@ -40,13 +44,19 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
 
   private final Configuration config;
 
+  @Nullable
   private final Path storageDirectory;
 
   @Inject
-  public HdfsDataSegmentKiller(final Configuration config, final HdfsDataSegmentPusherConfig pusherConfig)
+  public HdfsDataSegmentKiller(@Hdfs final Configuration config, final HdfsDataSegmentPusherConfig pusherConfig)
   {
     this.config = config;
-    this.storageDirectory = new Path(pusherConfig.getStorageDirectory());
+
+    if (!Strings.isNullOrEmpty(pusherConfig.getStorageDirectory())) {
+      this.storageDirectory = new Path(pusherConfig.getStorageDirectory());
+    } else {
+      this.storageDirectory = null;
+    }
   }
 
   private static Path getPath(DataSegment segment)
@@ -115,6 +125,10 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
   @Override
   public void killAll() throws IOException
   {
+    if (storageDirectory == null) {
+      throw new ISE("Cannot delete all segment files since druid.storage.storageDirectory is not set.");
+    }
+
     log.info("Deleting all segment files from hdfs dir [%s].", storageDirectory.toUri().toString());
     final FileSystem fs = storageDirectory.getFileSystem(config);
     fs.delete(storageDirectory, true);

@@ -17,19 +17,19 @@
  */
 
 import { render } from '@testing-library/react';
-import { sqlParserFactory } from 'druid-query-toolkit';
+import { SqlQuery } from 'druid-query-toolkit';
 import React from 'react';
 
 import { TimeMenuItems } from './time-menu-items';
 
-describe('time menu', () => {
-  const parser = sqlParserFactory(['COUNT']);
-
+describe('TimeMenuItems', () => {
   it('matches snapshot when menu is opened for column not inside group by', () => {
     const timeMenu = (
       <TimeMenuItems
-        columnName={'__time'}
-        parsedQuery={parser(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
+        table="table"
+        schema="schema"
+        columnName="__time"
+        parsedQuery={SqlQuery.parse(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
         onQueryChange={() => {}}
       />
     );
@@ -41,8 +41,10 @@ describe('time menu', () => {
   it('matches snapshot when menu is opened for column inside group by', () => {
     const timeMenu = (
       <TimeMenuItems
-        columnName={'__time'}
-        parsedQuery={parser(`SELECT __time, count(*) as cnt FROM wikipedia GROUP BY 1`)}
+        table="table"
+        schema="schema"
+        columnName="__time"
+        parsedQuery={SqlQuery.parse(`SELECT __time, count(*) as cnt FROM wikipedia GROUP BY 1`)}
         onQueryChange={() => {}}
       />
     );

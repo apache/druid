@@ -35,6 +35,7 @@ public final class DruidClusterBuilder
 
   private @Nullable Set<ServerHolder> realtimes = null;
   private final Map<String, Iterable<ServerHolder>> historicals = new HashMap<>();
+  private @Nullable Set<ServerHolder> brokers = null;
 
   private DruidClusterBuilder()
   {
@@ -43,6 +44,12 @@ public final class DruidClusterBuilder
   public DruidClusterBuilder withRealtimes(ServerHolder... realtimes)
   {
     this.realtimes = new HashSet<>(Arrays.asList(realtimes));
+    return this;
+  }
+
+  public DruidClusterBuilder withBrokers(ServerHolder... brokers)
+  {
+    this.brokers = new HashSet<>(Arrays.asList(brokers));
     return this;
   }
 
@@ -56,6 +63,6 @@ public final class DruidClusterBuilder
 
   public DruidCluster build()
   {
-    return DruidCluster.createDruidClusterFromBuilderInTest(realtimes, historicals);
+    return DruidCluster.createDruidClusterFromBuilderInTest(realtimes, historicals, brokers);
   }
 }

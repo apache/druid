@@ -43,13 +43,27 @@ public class KafkaEmitterConfigTest
   public void testSerDeserKafkaEmitterConfig() throws IOException
   {
     KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", "metricTest",
-                                                                   "alertTest", "clusterNameTest",
-                                                                   ImmutableMap.<String, String>builder()
-                                                                       .put("testKey", "testValue").build()
+        "alertTest", "requestTest",
+        "clusterNameTest", ImmutableMap.<String, String>builder()
+        .put("testKey", "testValue").build()
     );
     String kafkaEmitterConfigString = mapper.writeValueAsString(kafkaEmitterConfig);
     KafkaEmitterConfig kafkaEmitterConfigExpected = mapper.readerFor(KafkaEmitterConfig.class)
-                                                          .readValue(kafkaEmitterConfigString);
+        .readValue(kafkaEmitterConfigString);
+    Assert.assertEquals(kafkaEmitterConfigExpected, kafkaEmitterConfig);
+  }
+
+  @Test
+  public void testSerDeserKafkaEmitterConfigNullRequestTopic() throws IOException
+  {
+    KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", "metricTest",
+        "alertTest", null,
+        "clusterNameTest", ImmutableMap.<String, String>builder()
+        .put("testKey", "testValue").build()
+    );
+    String kafkaEmitterConfigString = mapper.writeValueAsString(kafkaEmitterConfig);
+    KafkaEmitterConfig kafkaEmitterConfigExpected = mapper.readerFor(KafkaEmitterConfig.class)
+        .readValue(kafkaEmitterConfigString);
     Assert.assertEquals(kafkaEmitterConfigExpected, kafkaEmitterConfig);
   }
 
@@ -57,8 +71,8 @@ public class KafkaEmitterConfigTest
   public void testSerDeNotRequiredKafkaProducerConfig()
   {
     KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("localhost:9092", "metricTest",
-                                                                   "alertTest", "clusterNameTest",
-                                                                   null
+        "alertTest", null,
+        "clusterNameTest", null
     );
     try {
       @SuppressWarnings("unused")
@@ -67,5 +81,11 @@ public class KafkaEmitterConfigTest
     catch (NullPointerException e) {
       Assert.fail();
     }
+  }
+
+  @Test
+  public void testJacksonModules()
+  {
+    Assert.assertTrue(new KafkaEmitterModule().getJacksonModules().isEmpty());
   }
 }

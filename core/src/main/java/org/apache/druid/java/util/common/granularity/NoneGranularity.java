@@ -43,9 +43,21 @@ public class NoneGranularity extends Granularity
   }
 
   @Override
+  public long increment(long time)
+  {
+    return time + 1;
+  }
+
+  @Override
   public DateTime increment(DateTime time)
   {
     return time.plus(1);
+  }
+
+  @Override
+  public long bucketStart(long time)
+  {
+    return time;
   }
 
   @Override

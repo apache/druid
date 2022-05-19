@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
@@ -57,6 +56,7 @@ import java.util.Map;
 import java.util.function.BinaryOperator;
 
 /**
+ *
  */
 public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResultValue>, SearchQuery>
 {
@@ -69,28 +69,21 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   };
 
   private final SearchQueryConfig config;
-  @Deprecated
-  private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final SearchQueryMetricsFactory queryMetricsFactory;
 
   @VisibleForTesting
-  public SearchQueryQueryToolChest(
-      SearchQueryConfig config,
-      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
-  )
+  public SearchQueryQueryToolChest(SearchQueryConfig config)
   {
-    this(config, intervalChunkingQueryRunnerDecorator, DefaultSearchQueryMetricsFactory.instance());
+    this(config, DefaultSearchQueryMetricsFactory.instance());
   }
 
   @Inject
   public SearchQueryQueryToolChest(
       SearchQueryConfig config,
-      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
       SearchQueryMetricsFactory queryMetricsFactory
   )
   {
     this.config = config;
-    this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
     this.queryMetricsFactory = queryMetricsFactory;
   }
 
@@ -140,8 +133,10 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
     {
       private final List<DimensionSpec> dimensionSpecs =
           query.getDimensions() != null ? query.getDimensions() : Collections.emptyList();
-      private final List<String> dimOutputNames = dimensionSpecs.size() > 0 ?
-          Lists.transform(dimensionSpecs, DimensionSpec::getOutputName) : Collections.emptyList();
+      private final List<String> dimOutputNames = dimensionSpecs.size() > 0
+                                                  ?
+                                                  Lists.transform(dimensionSpecs, DimensionSpec::getOutputName)
+                                                  : Collections.emptyList();
 
       @Override
       public boolean isCacheable(SearchQuery query, boolean willMergeRunners)
@@ -210,8 +205,8 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
           public Object apply(Result<SearchResultValue> input)
           {
             return dimensionSpecs.size() > 0
-                ? Lists.newArrayList(input.getTimestamp().getMillis(), input.getValue(), dimOutputNames)
-                : Lists.newArrayList(input.getTimestamp().getMillis(), input.getValue());
+                   ? Lists.newArrayList(input.getTimestamp().getMillis(), input.getValue(), dimOutputNames)
+                   : Lists.newArrayList(input.getTimestamp().getMillis(), input.getValue());
           }
         };
       }
@@ -230,8 +225,10 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
             final Map<String, String> outputNameMap = new HashMap<>();
             if (hasOutputName(result)) {
               List<String> cachedOutputNames = (List) result.get(2);
-              Preconditions.checkArgument(cachedOutputNames.size() == dimOutputNames.size(),
-                  "cache hit, but number of dimensions mismatch");
+              Preconditions.checkArgument(
+                  cachedOutputNames.size() == dimOutputNames.size(),
+                  "cache hit, but number of dimensions mismatch"
+              );
               needsRename = false;
               for (int idx = 0; idx < cachedOutputNames.size(); idx++) {
                 String cachedOutputName = cachedOutputNames.get(idx);
@@ -244,63 +241,63 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
             }
 
             return !needsRename
-                ? new Result<>(
-                    DateTimes.utc(((Number) result.get(0)).longValue()),
-                    new SearchResultValue(
-                        Lists.transform(
-                            (List) result.get(1),
-                            new Function<Object, SearchHit>()
-                            {
-                              @Override
-                              public SearchHit apply(@Nullable Object input)
-                              {
-                                if (input instanceof Map) {
-                                  return new SearchHit(
-                                      (String) ((Map) input).get("dimension"),
-                                      (String) ((Map) input).get("value"),
-                                      (Integer) ((Map) input).get("count")
-                                  );
-                                } else if (input instanceof SearchHit) {
-                                  return (SearchHit) input;
-                                } else {
-                                  throw new IAE("Unknown format [%s]", input.getClass());
-                                }
-                              }
+                   ? new Result<>(
+                DateTimes.utc(((Number) result.get(0)).longValue()),
+                new SearchResultValue(
+                    Lists.transform(
+                        (List) result.get(1),
+                        new Function<Object, SearchHit>()
+                        {
+                          @Override
+                          public SearchHit apply(@Nullable Object input)
+                          {
+                            if (input instanceof Map) {
+                              return new SearchHit(
+                                  (String) ((Map) input).get("dimension"),
+                                  (String) ((Map) input).get("value"),
+                                  (Integer) ((Map) input).get("count")
+                              );
+                            } else if (input instanceof SearchHit) {
+                              return (SearchHit) input;
+                            } else {
+                              throw new IAE("Unknown format [%s]", input.getClass());
                             }
-                        )
+                          }
+                        }
                     )
                 )
-                : new Result<>(
-                    DateTimes.utc(((Number) result.get(0)).longValue()),
-                    new SearchResultValue(
-                        Lists.transform(
-                            (List) result.get(1),
-                            new Function<Object, SearchHit>()
-                            {
-                              @Override
-                              public SearchHit apply(@Nullable Object input)
-                              {
-                                String dim;
-                                String val;
-                                Integer count;
-                                if (input instanceof Map) {
-                                  dim = outputNameMap.get((String) ((Map) input).get("dimension"));
-                                  val = (String) ((Map) input).get("value");
-                                  count = (Integer) ((Map) input).get("count");
-                                } else if (input instanceof SearchHit) {
-                                  SearchHit cached = (SearchHit) input;
-                                  dim = outputNameMap.get(cached.getDimension());
-                                  val = cached.getValue();
-                                  count = cached.getCount();
-                                } else {
-                                  throw new IAE("Unknown format [%s]", input.getClass());
-                                }
-                                return new SearchHit(dim, val, count);
-                              }
-                            }
-                        )
-                    )
-                );
+            )
+                   : new Result<>(
+                       DateTimes.utc(((Number) result.get(0)).longValue()),
+                       new SearchResultValue(
+                           Lists.transform(
+                               (List) result.get(1),
+                               new Function<Object, SearchHit>()
+                               {
+                                 @Override
+                                 public SearchHit apply(@Nullable Object input)
+                                 {
+                                   String dim;
+                                   String val;
+                                   Integer count;
+                                   if (input instanceof Map) {
+                                     dim = outputNameMap.get((String) ((Map) input).get("dimension"));
+                                     val = (String) ((Map) input).get("value");
+                                     count = (Integer) ((Map) input).get("count");
+                                   } else if (input instanceof SearchHit) {
+                                     SearchHit cached = (SearchHit) input;
+                                     dim = outputNameMap.get(cached.getDimension());
+                                     val = cached.getValue();
+                                     count = cached.getCount();
+                                   } else {
+                                     throw new IAE("Unknown format [%s]", input.getClass());
+                                   }
+                                   return new SearchHit(dim, val, count);
+                                 }
+                               }
+                           )
+                       )
+                   );
           }
         };
       }
@@ -324,25 +321,9 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   public QueryRunner<Result<SearchResultValue>> preMergeQueryDecoration(final QueryRunner<Result<SearchResultValue>> runner)
   {
     return new SearchThresholdAdjustingQueryRunner(
-        intervalChunkingQueryRunnerDecorator.decorate(
-            new QueryRunner<Result<SearchResultValue>>()
-            {
-              @Override
-              public Sequence<Result<SearchResultValue>> run(
-                  QueryPlus<Result<SearchResultValue>> queryPlus,
-                  ResponseContext responseContext
-              )
-              {
-                SearchQuery searchQuery = (SearchQuery) queryPlus.getQuery();
-                if (searchQuery.getDimensionsFilter() != null) {
-                  searchQuery = searchQuery.withDimFilter(searchQuery.getDimensionsFilter().optimize());
-                  queryPlus = queryPlus.withQuery(searchQuery);
-                }
-                return runner.run(queryPlus, responseContext);
-              }
-            },
-            this
-        ),
+        (queryPlus, responseContext) -> {
+          return runner.run(queryPlus, responseContext);
+        },
         config
     );
   }

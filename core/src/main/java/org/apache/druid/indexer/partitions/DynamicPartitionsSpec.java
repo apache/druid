@@ -53,6 +53,12 @@ public class DynamicPartitionsSpec implements PartitionsSpec
   }
 
   @Override
+  public SecondaryPartitionType getType()
+  {
+    return SecondaryPartitionType.LINEAR;
+  }
+
+  @Override
   @JsonProperty
   public Integer getMaxRowsPerSegment()
   {
@@ -79,6 +85,12 @@ public class DynamicPartitionsSpec implements PartitionsSpec
   public boolean needsDeterminePartitions(boolean useForHadoopTask)
   {
     return false;
+  }
+
+  @Override
+  public String getForceGuaranteedRollupIncompatiblityReason()
+  {
+    return NAME + " partitions unsupported";
   }
 
   @Override

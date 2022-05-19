@@ -25,15 +25,19 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
 {
+  private static final String FN_NAME = "timestamp_extract";
+
   public enum Unit
   {
     EPOCH,
@@ -59,7 +63,7 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public String name()
   {
-    return "timestamp_extract";
+    return FN_NAME;
   }
 
   @Override
@@ -93,7 +97,7 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
     {
       private TimestampExtractExpr(Expr arg)
       {
-        super(arg);
+        super(FN_NAME, arg);
       }
 
       @Nonnull
@@ -141,13 +145,13 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
             return ExprEval.of(dateTime.year().get());
           case DECADE:
             // The year field divided by 10, See https://www.postgresql.org/docs/10/functions-datetime.html
-            return ExprEval.of(Math.floor(dateTime.year().get() / 10));
+            return ExprEval.of(dateTime.year().get() / 10);
           case CENTURY:
-            return ExprEval.of(dateTime.centuryOfEra().get() + 1);
+            return ExprEval.of(Math.ceil((double) dateTime.year().get() / 100));
           case MILLENNIUM:
             // Years in the 1900s are in the second millennium. The third millennium started January 1, 2001.
             // See https://www.postgresql.org/docs/10/functions-datetime.html
-            return ExprEval.of(Math.round(Math.ceil(dateTime.year().get() / 1000)));
+            return ExprEval.of(Math.ceil((double) dateTime.year().get() / 1000));
           default:
             throw new ISE("Unhandled unit[%s]", unit);
         }
@@ -156,8 +160,35 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new TimestampExtractExpr(newArg));
+        return shuttle.visit(apply(shuttle.visitAll(args)));
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getOutputType(InputBindingInspector inspector)
+      {
+        switch (unit) {
+          case CENTURY:
+          case MILLENNIUM:
+            return ExpressionType.DOUBLE;
+          default:
+            return ExpressionType.LONG;
+        }
+      }
+
+      @Override
+      public String stringify()
+      {
+        if (args.size() > 2) {
+          return StringUtils.format(
+              "%s(%s, %s, %s)",
+              FN_NAME,
+              arg.stringify(),
+              args.get(1).stringify(),
+              args.get(2).stringify()
+          );
+        }
+        return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), args.get(1).stringify());
       }
     }
 

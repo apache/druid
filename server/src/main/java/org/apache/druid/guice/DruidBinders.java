@@ -24,20 +24,21 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.java.util.metrics.Monitor;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.DruidNode;
 
-/**
- */
 public class DruidBinders
 {
   public static MapBinder<Class<? extends Query>, QueryRunnerFactory> queryRunnerFactoryBinder(Binder binder)
   {
     return MapBinder.newMapBinder(
         binder,
-        new TypeLiteral<Class<? extends Query>>(){},
+        new TypeLiteral<Class<? extends Query>>() {},
         TypeLiteral.get(QueryRunnerFactory.class)
     );
   }
@@ -46,18 +47,44 @@ public class DruidBinders
   {
     return MapBinder.newMapBinder(
         binder,
-        new TypeLiteral<Class<? extends Query>>(){},
-        new TypeLiteral<QueryToolChest>(){}
+        new TypeLiteral<Class<? extends Query>>() {},
+        new TypeLiteral<QueryToolChest>() {}
     );
   }
 
   public static Multibinder<KeyHolder<DruidNode>> discoveryAnnouncementBinder(Binder binder)
   {
-    return Multibinder.newSetBinder(binder, new TypeLiteral<KeyHolder<DruidNode>>(){});
+    return Multibinder.newSetBinder(binder, new TypeLiteral<KeyHolder<DruidNode>>() {});
   }
 
   public static Multibinder<Class<? extends Monitor>> metricMonitorBinder(Binder binder)
   {
-    return Multibinder.newSetBinder(binder, new TypeLiteral<Class<? extends Monitor>>(){});
+    return Multibinder.newSetBinder(binder, new TypeLiteral<Class<? extends Monitor>>() {});
+  }
+
+  public static MapBinder<Class<? extends DataSource>, SegmentWrangler> segmentWranglerBinder(Binder binder)
+  {
+    return MapBinder.newMapBinder(
+        binder,
+        new TypeLiteral<Class<? extends DataSource>>() {},
+        new TypeLiteral<SegmentWrangler>() {}
+    );
+  }
+
+  public static Multibinder<JoinableFactory> joinableFactoryMultiBinder(Binder binder)
+  {
+    return Multibinder.newSetBinder(
+        binder,
+        new TypeLiteral<JoinableFactory>() {}
+    );
+  }
+
+  public static MapBinder<Class<? extends JoinableFactory>, Class<? extends DataSource>> joinableMappingBinder(Binder binder)
+  {
+    return MapBinder.newMapBinder(
+        binder,
+        new TypeLiteral<Class<? extends JoinableFactory>>() {},
+        new TypeLiteral<Class<? extends DataSource>>() {}
+    );
   }
 }

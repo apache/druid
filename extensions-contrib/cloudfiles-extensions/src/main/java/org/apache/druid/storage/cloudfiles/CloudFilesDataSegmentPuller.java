@@ -21,7 +21,6 @@ package org.apache.druid.storage.cloudfiles;
 
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.utils.CompressionUtils;
@@ -60,7 +59,7 @@ public class CloudFilesDataSegmentPuller
     }
     catch (Exception e) {
       try {
-        org.apache.commons.io.FileUtils.deleteDirectory(outDir);
+        FileUtils.deleteDirectory(outDir);
       }
       catch (IOException ioe) {
         log.warn(
@@ -81,16 +80,4 @@ public class CloudFilesDataSegmentPuller
       }
     }
   }
-
-  private void prepareOutDir(final File outDir) throws ISE
-  {
-    if (!outDir.exists()) {
-      outDir.mkdirs();
-    }
-
-    if (!outDir.isDirectory()) {
-      throw new ISE("outDir[%s] must be a directory.", outDir);
-    }
-  }
-
 }

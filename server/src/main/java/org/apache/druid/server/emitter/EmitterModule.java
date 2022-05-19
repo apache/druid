@@ -51,6 +51,7 @@ import java.util.Map;
 import java.util.Properties;
 
 /**
+ *
  */
 public class EmitterModule implements Module
 {
@@ -101,8 +102,7 @@ public class EmitterModule implements Module
   )
   {
     final DruidNode config = configSupplier.get();
-    log.info("Underlying emitter for ServiceEmitter: %s", emitter);
-    log.info("Extra service dimensions: %s", extraServiceDimensions);
+    log.info("Using emitter [%s] for metrics and alerts, with dimensions [%s].", emitter, extraServiceDimensions);
     final ServiceEmitter retVal = new ServiceEmitter(
         config.getServiceName(),
         config.getHostAndPortToUse(),
@@ -129,7 +129,7 @@ public class EmitterModule implements Module
     @Inject
     public void inject(Injector injector)
     {
-      final List<Binding<Emitter>> emitterBindings = injector.findBindingsByType(new TypeLiteral<Emitter>(){});
+      final List<Binding<Emitter>> emitterBindings = injector.findBindingsByType(new TypeLiteral<Emitter>() {});
 
       if (Strings.isNullOrEmpty(emitterType)) {
         // If the emitter is unspecified, we want to default to the no-op emitter. Include empty string here too, just

@@ -25,7 +25,7 @@ import java.nio.ByteBuffer;
 
 public class TableLongEncodingReader implements CompressionFactory.LongEncodingReader
 {
-  private final long table[];
+  private final long[] table;
   private final int bitsPerValue;
   private final ByteBuffer buffer;
   private VSizeLongSerde.LongDeserializer deserializer;
@@ -51,7 +51,7 @@ public class TableLongEncodingReader implements CompressionFactory.LongEncodingR
     }
   }
 
-  private TableLongEncodingReader(ByteBuffer buffer, long table[], int bitsPerValue)
+  private TableLongEncodingReader(ByteBuffer buffer, long[] table, int bitsPerValue)
   {
     this.buffer = buffer;
     this.table = table;
@@ -69,6 +69,18 @@ public class TableLongEncodingReader implements CompressionFactory.LongEncodingR
   public long read(int index)
   {
     return table[(int) deserializer.get(index)];
+  }
+
+  @Override
+  public void read(long[] out, int outPosition, int startIndex, int length)
+  {
+    deserializer.getTable(out, outPosition, startIndex, length, table);
+  }
+
+  @Override
+  public int read(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit)
+  {
+    return deserializer.getTable(out, outPosition, indexes, length, indexOffset, limit, table);
   }
 
   @Override

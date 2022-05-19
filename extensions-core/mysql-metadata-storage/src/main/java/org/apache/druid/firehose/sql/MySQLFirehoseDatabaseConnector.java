@@ -19,12 +19,21 @@
 
 package org.apache.druid.firehose.sql;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
+import org.apache.druid.metadata.storage.mysql.MySQLConnectorDriverConfig;
+import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
+import org.apache.druid.utils.ConnectionUriUtils;
 import org.skife.jdbi.v2.DBI;
+
+import javax.annotation.Nullable;
+import java.util.Objects;
+import java.util.Set;
 
 
 @JsonTypeName("mysql")
@@ -32,15 +41,26 @@ public class MySQLFirehoseDatabaseConnector extends SQLFirehoseDatabaseConnector
 {
   private final DBI dbi;
   private final MetadataStorageConnectorConfig connectorConfig;
+  @Nullable
+  private final String driverClassName;
 
+  @JsonCreator
   public MySQLFirehoseDatabaseConnector(
-      @JsonProperty("connectorConfig") MetadataStorageConnectorConfig connectorConfig
+      @JsonProperty("connectorConfig") MetadataStorageConnectorConfig connectorConfig,
+      @JsonProperty("driverClassName") @Nullable String driverClassName,
+      @JacksonInject JdbcAccessSecurityConfig securityConfig,
+      @JacksonInject MySQLConnectorDriverConfig mySQLConnectorDriverConfig
   )
   {
     this.connectorConfig = connectorConfig;
-    final BasicDataSource datasource = getDatasource(connectorConfig);
+    this.driverClassName = driverClassName;
+    final BasicDataSource datasource = getDatasource(connectorConfig, securityConfig);
     datasource.setDriverClassLoader(getClass().getClassLoader());
-    datasource.setDriverClassName("com.mysql.jdbc.Driver");
+    if (driverClassName != null) {
+      datasource.setDriverClassName(driverClassName);
+    } else {
+      datasource.setDriverClassName(mySQLConnectorDriverConfig.getDriverClassName());
+    }
     this.dbi = new DBI(datasource);
   }
 
@@ -50,9 +70,44 @@ public class MySQLFirehoseDatabaseConnector extends SQLFirehoseDatabaseConnector
     return connectorConfig;
   }
 
+  @Nullable
+  @JsonProperty
+  public String getDriverClassName()
+  {
+    return driverClassName;
+  }
+
   @Override
   public DBI getDBI()
   {
     return dbi;
+  }
+
+  @Override
+  public Set<String> findPropertyKeysFromConnectURL(String connectUrl, boolean allowUnknown)
+  {
+    return ConnectionUriUtils.tryParseJdbcUriParameters(connectUrl, allowUnknown);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    MySQLFirehoseDatabaseConnector that = (MySQLFirehoseDatabaseConnector) o;
+    return connectorConfig.equals(that.connectorConfig) && Objects.equals(
+        driverClassName,
+        that.driverClassName
+    );
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(connectorConfig, driverClassName);
   }
 }

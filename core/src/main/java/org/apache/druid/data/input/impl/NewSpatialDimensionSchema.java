@@ -22,13 +22,14 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.List;
 
 /**
  * NOTE: 
  * This class should be deprecated after Druid supports configurable index types on dimensions.
- * When that exists, this should be the implementation: https://github.com/apache/incubator-druid/issues/2622
+ * When that exists, this should be the implementation: https://github.com/apache/druid/issues/2622
  * 
  * This is a stop-gap solution to consolidate the dimension specs and remove the separate spatial 
  * section in DimensionsSpec.
@@ -61,9 +62,9 @@ public class NewSpatialDimensionSchema extends DimensionSchema
 
   @Override
   @JsonIgnore
-  public ValueType getValueType()
+  public ColumnType getColumnType()
   {
-    return ValueType.STRING;
+    return ColumnType.STRING;
   }
 
   @Override

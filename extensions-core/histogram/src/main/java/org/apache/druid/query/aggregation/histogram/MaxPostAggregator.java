@@ -27,6 +27,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -35,14 +37,8 @@ import java.util.Set;
 @JsonTypeName("max")
 public class MaxPostAggregator extends ApproximateHistogramPostAggregator
 {
-  static final Comparator COMPARATOR = new Comparator()
-  {
-    @Override
-    public int compare(Object o, Object o1)
-    {
-      return Double.compare(((Number) o).doubleValue(), ((Number) o1).doubleValue());
-    }
-  };
+  // this doesn't need to handle nulls because the values come from ApproximateHistogram
+  static final Comparator COMPARATOR = Comparator.comparingDouble(o -> ((Number) o).doubleValue());
 
   @JsonCreator
   public MaxPostAggregator(
@@ -79,6 +75,12 @@ public class MaxPostAggregator extends ApproximateHistogramPostAggregator
   }
 
   @Override
+  public ColumnType getType(ColumnInspector signature)
+  {
+    return ColumnType.DOUBLE;
+  }
+
+  @Override
   public PostAggregator decorate(Map<String, AggregatorFactory> aggregators)
   {
     return this;
@@ -87,7 +89,7 @@ public class MaxPostAggregator extends ApproximateHistogramPostAggregator
   @Override
   public String toString()
   {
-    return "QuantilePostAggregator{" +
+    return "MaxPostAggregator{" +
            "fieldName='" + fieldName + '\'' +
            '}';
   }

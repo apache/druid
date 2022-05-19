@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.groupby.having;
 
+import com.google.common.collect.Maps;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -41,7 +41,7 @@ public class HavingSpecUtil
 
   public static Map<String, AggregatorFactory> computeAggregatorsMap(List<AggregatorFactory> aggregatorSpecs)
   {
-    Map<String, AggregatorFactory> map = new HashMap<>(aggregatorSpecs.size());
+    Map<String, AggregatorFactory> map = Maps.newHashMapWithExpectedSize(aggregatorSpecs.size());
     aggregatorSpecs.forEach(v -> map.put(v.getName(), v));
     return map;
   }

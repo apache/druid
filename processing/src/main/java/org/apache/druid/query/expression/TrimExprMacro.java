@@ -19,14 +19,22 @@
 
 package org.apache.druid.query.expression;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.InputBindings;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Function;
 
 public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -35,17 +43,24 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
 
   enum TrimMode
   {
-    BOTH(true, true),
-    LEFT(true, false),
-    RIGHT(false, true);
+    BOTH("trim", true, true),
+    LEFT("ltrim", true, false),
+    RIGHT("rtrim", false, true);
 
+    private final String name;
     private final boolean left;
     private final boolean right;
 
-    TrimMode(final boolean left, final boolean right)
+    TrimMode(final String name, final boolean left, final boolean right)
     {
+      this.name = name;
       this.left = left;
       this.right = right;
+    }
+
+    public String getFnName()
+    {
+      return name;
     }
 
     public boolean isLeft()
@@ -60,18 +75,16 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
   }
 
   private final TrimMode mode;
-  private final String name;
 
-  public TrimExprMacro(final String name, final TrimMode mode)
+  public TrimExprMacro(final TrimMode mode)
   {
-    this.name = name;
     this.mode = mode;
   }
 
   @Override
   public String name()
   {
-    return name;
+    return mode.getFnName();
   }
 
   @Override
@@ -81,30 +94,43 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
       throw new IAE("Function[%s] must have 1 or 2 arguments", name());
     }
 
+    final Function<Expr.Shuttle, Expr> visitFn = shuttle -> shuttle.visit(apply(shuttle.visitAll(args)));
+
     if (args.size() == 1) {
-      return new TrimStaticCharsExpr(mode, args.get(0), DEFAULT_CHARS);
+      return new TrimStaticCharsExpr(mode, args.get(0), DEFAULT_CHARS, null, visitFn);
     } else {
       final Expr charsArg = args.get(1);
       if (charsArg.isLiteral()) {
-        final String charsString = charsArg.eval(ExprUtils.nilBindings()).asString();
+        final String charsString = charsArg.eval(InputBindings.nilBindings()).asString();
         final char[] chars = charsString == null ? EMPTY_CHARS : charsString.toCharArray();
-        return new TrimStaticCharsExpr(mode, args.get(0), chars);
+        return new TrimStaticCharsExpr(mode, args.get(0), chars, charsArg, visitFn);
       } else {
-        return new TrimDynamicCharsExpr(mode, args.get(0), args.get(1));
+        return new TrimDynamicCharsExpr(mode, args.get(0), args.get(1), visitFn);
       }
     }
   }
 
-  private static class TrimStaticCharsExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+  @VisibleForTesting
+  static class TrimStaticCharsExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
   {
     private final TrimMode mode;
     private final char[] chars;
+    private final Expr charsExpr;
+    private final Function<Shuttle, Expr> visitFn;
 
-    public TrimStaticCharsExpr(final TrimMode mode, final Expr stringExpr, final char[] chars)
+    public TrimStaticCharsExpr(
+        final TrimMode mode,
+        final Expr stringExpr,
+        final char[] chars,
+        final Expr charsExpr,
+        final Function<Shuttle, Expr> visitFn
+    )
     {
-      super(stringExpr);
+      super(mode.getFnName(), stringExpr);
       this.mode = mode;
       this.chars = chars;
+      this.charsExpr = charsExpr;
+      this.visitFn = visitFn;
     }
 
     @Nonnull
@@ -152,22 +178,73 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      Expr newStringExpr = arg.visit(shuttle);
-      return shuttle.visit(new TrimStaticCharsExpr(mode, newStringExpr, chars));
+      return visitFn.apply(shuttle);
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(InputBindingInspector inspector)
+    {
+      return ExpressionType.STRING;
+    }
+
+    @Override
+    public String stringify()
+    {
+      if (charsExpr != null) {
+        return StringUtils.format("%s(%s, %s)", mode.getFnName(), arg.stringify(), charsExpr.stringify());
+      }
+      return super.stringify();
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      if (!super.equals(o)) {
+        return false;
+      }
+      TrimStaticCharsExpr that = (TrimStaticCharsExpr) o;
+
+      // Doesn't use "visitFn", but that's OK, because visitFn is determined entirely by "mode".
+      return mode == that.mode &&
+             Arrays.equals(chars, that.chars) &&
+             Objects.equals(charsExpr, that.charsExpr);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      int result = Objects.hash(super.hashCode(), mode, charsExpr);
+      result = 31 * result + Arrays.hashCode(chars);
+      return result;
     }
   }
 
-  private static class TrimDynamicCharsExpr implements Expr
+  @VisibleForTesting
+  static class TrimDynamicCharsExpr implements Expr
   {
     private final TrimMode mode;
     private final Expr stringExpr;
     private final Expr charsExpr;
+    private final Function<Shuttle, Expr> visitFn;
 
-    public TrimDynamicCharsExpr(final TrimMode mode, final Expr stringExpr, final Expr charsExpr)
+    public TrimDynamicCharsExpr(
+        final TrimMode mode,
+        final Expr stringExpr,
+        final Expr charsExpr,
+        final Function<Shuttle, Expr> visitFn
+    )
     {
       this.mode = mode;
       this.stringExpr = stringExpr;
       this.charsExpr = charsExpr;
+      this.visitFn = visitFn;
     }
 
     @Nonnull
@@ -220,27 +297,53 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
     }
 
     @Override
-    public void visit(final Visitor visitor)
+    public String stringify()
     {
-      stringExpr.visit(visitor);
-      charsExpr.visit(visitor);
-      visitor.visit(this);
+      return StringUtils.format("%s(%s, %s)", mode.getFnName(), stringExpr.stringify(), charsExpr.stringify());
     }
 
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      Expr newStringExpr = stringExpr.visit(shuttle);
-      Expr newCharsExpr = charsExpr.visit(shuttle);
-      return shuttle.visit(new TrimDynamicCharsExpr(mode, newStringExpr, newCharsExpr));
+      return visitFn.apply(shuttle);
     }
 
     @Override
-    public BindingDetails analyzeInputs()
+    public BindingAnalysis analyzeInputs()
     {
       return stringExpr.analyzeInputs()
                        .with(charsExpr)
                        .withScalarArguments(ImmutableSet.of(stringExpr, charsExpr));
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(InputBindingInspector inspector)
+    {
+      return ExpressionType.STRING;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      TrimDynamicCharsExpr that = (TrimDynamicCharsExpr) o;
+
+      // Doesn't use "visitFn", but that's OK, because visitFn is determined entirely by "mode".
+      return mode == that.mode &&
+             Objects.equals(stringExpr, that.stringExpr) &&
+             Objects.equals(charsExpr, that.charsExpr);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(mode, stringExpr, charsExpr);
     }
   }
 
@@ -270,7 +373,7 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
   {
     public BothTrimExprMacro()
     {
-      super("trim", TrimMode.BOTH);
+      super(TrimMode.BOTH);
     }
   }
 
@@ -278,7 +381,7 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
   {
     public LeftTrimExprMacro()
     {
-      super("ltrim", TrimMode.LEFT);
+      super(TrimMode.LEFT);
     }
   }
 
@@ -286,7 +389,7 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
   {
     public RightTrimExprMacro()
     {
-      super("rtrim", TrimMode.RIGHT);
+      super(TrimMode.RIGHT);
     }
   }
 }

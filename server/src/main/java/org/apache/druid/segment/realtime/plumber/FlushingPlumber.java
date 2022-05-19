@@ -25,27 +25,30 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.common.guava.ThreadRenamingCallable;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -69,7 +72,8 @@ public class FlushingPlumber extends RealtimePlumber
       ServiceEmitter emitter,
       QueryRunnerFactoryConglomerate conglomerate,
       DataSegmentAnnouncer segmentAnnouncer,
-      ExecutorService queryExecutorService,
+      QueryProcessingPool queryProcessingPool,
+      JoinableFactory joinableFactory,
       IndexMerger indexMerger,
       IndexIO indexIO,
       Cache cache,
@@ -86,7 +90,8 @@ public class FlushingPlumber extends RealtimePlumber
         emitter,
         conglomerate,
         segmentAnnouncer,
-        queryExecutorService,
+        queryProcessingPool,
+        joinableFactory,
         null,
         null,
         null,
@@ -108,7 +113,13 @@ public class FlushingPlumber extends RealtimePlumber
   {
     log.info("Starting job for %s", getSchema().getDataSource());
 
-    computeBaseDir(getSchema()).mkdirs();
+    try {
+      FileUtils.mkdirp(computeBaseDir(getSchema()));
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
     initializeExecutors();
 
     if (flushScheduledExec == null) {

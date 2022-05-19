@@ -33,12 +33,25 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Represents a "UNION ALL" of various input {@link DruidRel}. Note that this rel doesn't represent a real native query,
+ * but rather, it represents the concatenation of a series of native queries in the SQL layer. Therefore,
+ * {@link #getPartialDruidQuery()} returns null, and this rel cannot be built on top of. It must be the outer rel in a
+ * query plan.
+ *
+ * See {@link DruidUnionDataSourceRel} for a version that does a regular Druid query using a {@link UnionDataSource}.
+ * In the future we expect that {@link UnionDataSource} will gain the ability to union query datasources together, and
+ * then this rel could be replaced by {@link DruidUnionDataSourceRel}.
+ */
 public class DruidUnionRel extends DruidRel<DruidUnionRel>
 {
   private final RelDataType rowType;
@@ -48,20 +61,20 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
   private DruidUnionRel(
       final RelOptCluster cluster,
       final RelTraitSet traitSet,
-      final QueryMaker queryMaker,
+      final PlannerContext plannerContext,
       final RelDataType rowType,
       final List<RelNode> rels,
       final int limit
   )
   {
-    super(cluster, traitSet, queryMaker);
+    super(cluster, traitSet, plannerContext);
     this.rowType = rowType;
     this.rels = rels;
     this.limit = limit;
   }
 
   public static DruidUnionRel create(
-      final QueryMaker queryMaker,
+      final PlannerContext plannerContext,
       final RelDataType rowType,
       final List<RelNode> rels,
       final int limit
@@ -72,7 +85,7 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
     return new DruidUnionRel(
         rels.get(0).getCluster(),
         rels.get(0).getTraitSet(),
-        queryMaker,
+        plannerContext,
         rowType,
         new ArrayList<>(rels),
         limit
@@ -84,12 +97,6 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
   public PartialDruidQuery getPartialDruidQuery()
   {
     return null;
-  }
-
-  @Override
-  public int getQueryCount()
-  {
-    return rels.stream().mapToInt(rel -> ((DruidRel) rel).getQueryCount()).sum();
   }
 
   @Override
@@ -114,7 +121,6 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
     throw new UnsupportedOperationException();
   }
 
-  @Nullable
   @Override
   public DruidQuery toDruidQuery(final boolean finalizeAggregations)
   {
@@ -133,7 +139,7 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
     return new DruidUnionRel(
         getCluster(),
         getTraitSet().replace(DruidConvention.instance()),
-        getQueryMaker(),
+        getPlannerContext(),
         rowType,
         rels.stream().map(rel -> RelOptRule.convert(rel, DruidConvention.instance())).collect(Collectors.toList()),
         limit
@@ -158,7 +164,7 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
     return new DruidUnionRel(
         getCluster(),
         traitSet,
-        getQueryMaker(),
+        getPlannerContext(),
         rowType,
         inputs,
         limit
@@ -166,12 +172,11 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
   }
 
   @Override
-  public List<String> getDataSourceNames()
+  public Set<String> getDataSourceNames()
   {
     return rels.stream()
                .flatMap(rel -> ((DruidRel<?>) rel).getDataSourceNames().stream())
-               .distinct()
-               .collect(Collectors.toList());
+               .collect(Collectors.toSet());
   }
 
   @Override
@@ -195,7 +200,7 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
   @Override
   public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
   {
-    return planner.getCostFactory().makeCost(rels.stream().mapToDouble(mq::getRowCount).sum(), 0, 0);
+    return planner.getCostFactory().makeCost(CostEstimates.COST_BASE, 0, 0);
   }
 
   public int getLimit()

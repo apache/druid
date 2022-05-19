@@ -23,12 +23,15 @@ title: "Retaining or automatically dropping data"
   -->
 
 
-In Apache Druid (incubating), Coordinator processes use rules to determine what data should be loaded to or dropped from the cluster. Rules are used for data retention and query execution, and are set on the Coordinator console (http://coordinator_ip:port).
+In Apache Druid, Coordinator processes use rules to determine what data should be loaded to or dropped from the cluster. Rules are used for data retention and query execution, and are set on the Coordinator console (http://coordinator_ip:port).
 
 There are three types of rules, i.e., load rules, drop rules, and broadcast rules. Load rules indicate how segments should be assigned to different historical process tiers and how many replicas of a segment should exist in each tier.
-Drop rules indicate when segments should be dropped entirely from the cluster. Finally, broadcast rules indicate how segments of different data sources should be co-located in Historical processes.
+Drop rules indicate when segments should be dropped entirely from the cluster. Finally, broadcast rules indicate how segments of different datasources should be co-located in Historical processes.
 
-The Coordinator loads a set of rules from the metadata storage. Rules may be specific to a certain datasource and/or a default set of rules can be configured. Rules are read in order and hence the ordering of rules is important. The Coordinator will cycle through all available segments and match each segment with the first rule that applies. Each segment may only match a single rule.
+The Coordinator loads a set of rules from the metadata storage. Rules may be specific to a certain datasource and/or a
+default set of rules can be configured. Rules are read in order and hence the ordering of rules is important. The
+Coordinator will cycle through all used segments and match each segment with the first rule that applies. Each segment
+may only match a single rule.
 
 Note: It is recommended that the Coordinator console is used to configure rules. However, the Coordinator process does have HTTP endpoints to programmatically configure rules.
 
@@ -167,8 +170,9 @@ The interval of a segment will be compared against the specified period. The per
 
 ## Broadcast Rules
 
-Broadcast rules indicate how segments of different data sources should be co-located in Historical processes.
-Once a broadcast rule is configured for a data source, all segments of the data source are broadcasted to the servers holding _any segments_ of the co-located data sources.
+Broadcast rules indicate that segments of a data source should be loaded by all servers of a cluster of the following types: historicals, brokers, tasks, and indexers.
+
+Note that the broadcast segments are only directly queryable through the historicals, but they are currently loaded on other server types to support join queries.
 
 ### Forever Broadcast Rule
 
@@ -176,13 +180,13 @@ Forever broadcast rules are of the form:
 
 ```json
 {
-  "type" : "broadcastForever",
-  "colocatedDataSources" : [ "target_source1", "target_source2" ]
+  "type" : "broadcastForever"
 }
 ```
 
 * `type` - this should always be "broadcastForever"
-* `colocatedDataSources` - A JSON List containing data source names to be co-located. `null` and empty list means broadcasting to every process in the cluster.
+
+This rule applies to all segments of a datasource, covering all intervals.
 
 ### Interval Broadcast Rule
 
@@ -191,13 +195,11 @@ Interval broadcast rules are of the form:
 ```json
 {
   "type" : "broadcastByInterval",
-  "colocatedDataSources" : [ "target_source1", "target_source2" ],
   "interval" : "2012-01-01/2013-01-01"
 }
 ```
 
 * `type` - this should always be "broadcastByInterval"
-* `colocatedDataSources` - A JSON List containing data source names to be co-located. `null` and empty list means broadcasting to every process in the cluster.
 * `interval` - A JSON Object representing ISO-8601 Periods. Only the segments of the interval will be broadcasted.
 
 ### Period Broadcast Rule
@@ -207,28 +209,26 @@ Period broadcast rules are of the form:
 ```json
 {
   "type" : "broadcastByPeriod",
-  "colocatedDataSources" : [ "target_source1", "target_source2" ],
   "period" : "P1M",
   "includeFuture" : true
 }
 ```
 
 * `type` - this should always be "broadcastByPeriod"
-* `colocatedDataSources` - A JSON List containing data source names to be co-located. `null` and empty list means broadcasting to every process in the cluster.
 * `period` - A JSON Object representing ISO-8601 Periods
 * `includeFuture` - A JSON Boolean indicating whether the load period should include the future. This property is optional, Default is true.
 
 The interval of a segment will be compared against the specified period. The period is from some time in the past to the future or to the current time, which depends on `includeFuture` is true or false. The rule matches if the period *overlaps* the interval.
 
-> broadcast rules don't guarantee that segments of the data sources are always co-located because segments for the colocated data sources are not loaded together atomically.
-> If you want to always co-locate the segments of some data sources together, it is recommended to leave colocatedDataSources empty.
-
 ## Permanently deleting data
 
-Druid can fully drop data from the cluster, wipe the metadata store entry, and remove the data from deep storage for any segments that are
-marked as unused (segments dropped from the cluster via rules are always marked as unused). You can submit a [kill task](../ingestion/tasks.md) to the [Overlord](../design/overlord.md) to do this.
+Druid can fully drop data from the cluster, wipe the metadata store entry, and remove the data from deep storage for any
+segments that are marked as unused (segments dropped from the cluster via rules are always marked as unused). You can
+submit a [kill task](../ingestion/tasks.md) to the [Overlord](../design/overlord.md) to do this.
 
 ## Reloading dropped data
 
-Data that has been dropped from a Druid cluster cannot be reloaded using only rules. To reload dropped data in Druid, you must first set your retention period (i.e. changing the retention period from 1 month to 2 months), and
-then enable the datasource in the Druid Coordinator console, or through the Druid Coordinator endpoints.
+Data that has been dropped from a Druid cluster cannot be reloaded using only rules. To reload dropped data in Druid,
+you must first set your retention period (i.e. changing the retention period from 1 month to 2 months), and then mark as
+used all segments belonging to the datasource in the Druid Coordinator console, or through the Druid Coordinator
+endpoints.

@@ -19,9 +19,12 @@
 
 package org.apache.druid.testing.utils;
 
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.testng.ITestResult;
 import org.testng.TestListenerAdapter;
+
+import java.util.Arrays;
 
 public class LoggerListener extends TestListenerAdapter
 {
@@ -30,25 +33,38 @@ public class LoggerListener extends TestListenerAdapter
   @Override
   public void onTestFailure(ITestResult tr)
   {
-    LOG.info("[%s] -- Test method failed", tr.getName());
+    LOG.error(tr.getThrowable(), "Failed %s", formatTestName(tr));
   }
 
   @Override
   public void onTestSkipped(ITestResult tr)
   {
-    LOG.info("[%s] -- Test method skipped", tr.getName());
+    LOG.warn("Skipped %s", formatTestName(tr));
   }
 
   @Override
   public void onTestSuccess(ITestResult tr)
   {
-    LOG.info("[%s] -- Test method passed", tr.getName());
+    LOG.info("Passed %s", formatTestName(tr));
   }
 
   @Override
   public void onTestStart(ITestResult tr)
   {
-    LOG.info("[%s] -- TEST START", tr.getName());
+    LOG.info("Starting %s", formatTestName(tr));
   }
 
+  private static String formatTestName(ITestResult tr)
+  {
+    if (tr.getParameters().length == 0) {
+      return StringUtils.format("[%s.%s]", tr.getTestClass().getName(), tr.getName());
+    } else {
+      return StringUtils.format(
+          "[%s.%s] with parameters %s",
+          tr.getTestClass().getName(),
+          tr.getName(),
+          Arrays.toString(tr.getParameters())
+      );
+    }
+  }
 }

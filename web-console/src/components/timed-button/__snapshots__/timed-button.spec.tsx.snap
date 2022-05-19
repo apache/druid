@@ -1,44 +1,52 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`Timed button matches snapshot 1`] = `
-<div
-  class="bp3-button-group"
+exports[`TimedButton matches snapshot 1`] = `
+<Blueprint4.ButtonGroup
+  className="timed-button"
 >
-  <button
-    class="bp3-button"
-    type="button"
+  <Blueprint4.Button
+    onClick={[Function]}
   />
-  <span
-    class="bp3-popover-wrapper"
+  <Blueprint4.Popover2
+    boundary="clippingParents"
+    captureDismiss={false}
+    content={
+      <Blueprint4.Menu>
+        <Blueprint4.MenuDivider
+          title="Select delay"
+        />
+        <Blueprint4.MenuItem
+          active={false}
+          disabled={false}
+          icon="selection"
+          multiline={false}
+          onClick={[Function]}
+          popoverProps={Object {}}
+          selected={false}
+          shouldDismissPopover={true}
+          text="timeValue"
+        />
+      </Blueprint4.Menu>
+    }
+    defaultIsOpen={false}
+    disabled={false}
+    fill={false}
+    hasBackdrop={false}
+    hoverCloseDelay={300}
+    hoverOpenDelay={150}
+    inheritDarkTheme={true}
+    interactionKind="click"
+    minimal={false}
+    openOnTargetFocus={true}
+    positioningStrategy="absolute"
+    shouldReturnFocusOnClose={false}
+    targetTagName="span"
+    transitionDuration={300}
+    usePortal={true}
   >
-    <span
-      class="bp3-popover-target"
-    >
-      <button
-        class="bp3-button"
-        type="button"
-      >
-        <span
-          class="bp3-icon bp3-icon-caret-down"
-          icon="caret-down"
-        >
-          <svg
-            data-icon="caret-down"
-            height="16"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <desc>
-              caret-down
-            </desc>
-            <path
-              d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
-              fill-rule="evenodd"
-            />
-          </svg>
-        </span>
-      </button>
-    </span>
-  </span>
-</div>
+    <Blueprint4.Button
+      rightIcon="caret-down"
+    />
+  </Blueprint4.Popover2>
+</Blueprint4.ButtonGroup>
 `;

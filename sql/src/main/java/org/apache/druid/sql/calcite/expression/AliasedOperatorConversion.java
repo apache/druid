@@ -24,8 +24,13 @@ import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
+
+import javax.annotation.Nullable;
 
 public class AliasedOperatorConversion implements SqlOperatorConversion
 {
@@ -67,5 +72,41 @@ public class AliasedOperatorConversion implements SqlOperatorConversion
   )
   {
     return baseConversion.toDruidExpression(plannerContext, rowSignature, rexNode);
+  }
+
+  @Nullable
+  @Override
+  public DruidExpression toDruidExpressionWithPostAggOperands(
+      PlannerContext plannerContext,
+      RowSignature rowSignature,
+      RexNode rexNode,
+      PostAggregatorVisitor postAggregatorVisitor
+  )
+  {
+    return baseConversion.toDruidExpression(plannerContext, rowSignature, rexNode);
+  }
+
+  @Nullable
+  @Override
+  public DimFilter toDruidFilter(
+      PlannerContext plannerContext,
+      RowSignature rowSignature,
+      @Nullable VirtualColumnRegistry virtualColumnRegistry,
+      RexNode rexNode
+  )
+  {
+    return baseConversion.toDruidFilter(plannerContext, rowSignature, virtualColumnRegistry, rexNode);
+  }
+
+  @Nullable
+  @Override
+  public PostAggregator toPostAggregator(
+      PlannerContext plannerContext,
+      RowSignature querySignature,
+      RexNode rexNode,
+      PostAggregatorVisitor postAggregatorVisitor
+  )
+  {
+    return baseConversion.toPostAggregator(plannerContext, querySignature, rexNode, postAggregatorVisitor);
   }
 }

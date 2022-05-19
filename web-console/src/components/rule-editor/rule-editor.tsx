@@ -25,37 +25,37 @@ import {
   HTMLSelect,
   InputGroup,
   NumericInput,
-  TagInput,
+  Switch,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
+import { durationSanitizer } from '../../utils';
 import { Rule, RuleUtil } from '../../utils/load-rule';
+import { SuggestibleInput } from '../suggestible-input/suggestible-input';
 
 import './rule-editor.scss';
+
+const PERIOD_SUGGESTIONS: string[] = ['P1D', 'P7D', 'P1M', 'P1Y', 'P1000Y'];
 
 export interface RuleEditorProps {
   rule: Rule;
   tiers: any[];
   onChange: (newRule: Rule) => void;
   onDelete: () => void;
-  moveUp: (() => void) | null;
-  moveDown: (() => void) | null;
+  moveUp: (() => void) | undefined;
+  moveDown: (() => void) | undefined;
 }
 
 export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps) {
   const { rule, onChange, tiers, onDelete, moveUp, moveDown } = props;
   const [isOpen, setIsOpen] = useState(true);
-  if (!rule) return null;
-
-  const ruleLoadType = RuleUtil.getLoadType(rule);
-  const ruleTimeType = RuleUtil.getTimeType(rule);
 
   function removeTier(key: string) {
-    const newTierReplicants = Object.assign({}, rule.tieredReplicants);
+    const newTierReplicants = { ...rule.tieredReplicants };
     delete newTierReplicants[key];
 
-    const newRule = Object.assign({}, rule, { tieredReplicants: newTierReplicants });
+    const newRule = { ...rule, tieredReplicants: newTierReplicants };
     onChange(newRule);
   }
 
@@ -71,14 +71,12 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
       }
     }
 
-    onChange(RuleUtil.changeTierReplication(rule, newTierName, 1));
+    onChange(RuleUtil.addTieredReplicant(rule, newTierName, 1));
   }
 
   function renderTiers() {
-    if (RuleUtil.getLoadType(rule) !== 'load') return null;
-
     const tieredReplicants = rule.tieredReplicants;
-    if (!tieredReplicants) return null;
+    if (!tieredReplicants) return;
 
     const ruleTiers = Object.keys(tieredReplicants).sort();
     return ruleTiers.map(tier => {
@@ -91,7 +89,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
             value={tieredReplicants[tier]}
             onValueChange={(v: number) => {
               if (isNaN(v)) return;
-              onChange(RuleUtil.changeTierReplication(rule, tier, v));
+              onChange(RuleUtil.addTieredReplicant(rule, tier, v));
             }}
             min={1}
             max={256}
@@ -102,10 +100,15 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
           <HTMLSelect
             fill
             value={tier}
-            onChange={(e: any) => onChange(RuleUtil.changeTier(rule, tier, e.target.value))}
+            onChange={(e: any) =>
+              onChange(RuleUtil.renameTieredReplicants(rule, tier, e.target.value))
+            }
           >
+            <option key={tier} value={tier}>
+              {tier}
+            </option>
             {tiers
-              .filter(t => t === tier || !tieredReplicants[t])
+              .filter(t => t !== tier && !tieredReplicants[t])
               .map(t => {
                 return (
                   <option key={t} value={t}>
@@ -126,27 +129,13 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
 
   function renderTierAdder() {
     const { rule, tiers } = props;
-    if (Object.keys(rule.tieredReplicants || {}).length >= Object.keys(tiers).length) return null;
+    if (Object.keys(rule.tieredReplicants || {}).length >= Object.keys(tiers).length) return;
 
     return (
       <FormGroup className="right">
         <Button onClick={addTier} minimal icon={IconNames.PLUS}>
           Add a tier
         </Button>
-      </FormGroup>
-    );
-  }
-
-  function renderColocatedDataSources() {
-    const { rule, onChange } = props;
-
-    return (
-      <FormGroup label="Colocated datasources:">
-        <TagInput
-          values={rule.colocatedDataSources || []}
-          onChange={(v: any) => onChange(RuleUtil.changeColocatedDataSources(rule, v))}
-          fill
-        />
       </FormGroup>
     );
   }
@@ -169,56 +158,58 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
       </div>
 
       <Collapse isOpen={isOpen}>
-        <Card>
+        <Card elevation={2}>
           <FormGroup>
             <ControlGroup>
               <HTMLSelect
-                value={ruleLoadType}
-                onChange={(e: any) =>
-                  onChange(RuleUtil.changeLoadType(rule, e.target.value as any))
-                }
+                value={rule.type}
+                onChange={(e: any) => onChange(RuleUtil.changeRuleType(rule, e.target.value))}
               >
-                <option value="load">Load</option>
-                <option value="drop">Drop</option>
-                <option value="broadcast">Broadcast</option>
+                {RuleUtil.TYPES.map(type => {
+                  return (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  );
+                })}
               </HTMLSelect>
-              <HTMLSelect
-                value={ruleTimeType}
-                onChange={(e: any) =>
-                  onChange(RuleUtil.changeTimeType(rule, e.target.value as any))
-                }
-              >
-                <option value="Forever">forever</option>
-                <option value="ByPeriod">by period</option>
-                <option value="ByInterval">by interval</option>
-              </HTMLSelect>
-              {ruleTimeType === 'ByPeriod' && (
-                <InputGroup
+              {RuleUtil.hasPeriod(rule) && (
+                <SuggestibleInput
                   value={rule.period || ''}
-                  onChange={(e: any) =>
-                    onChange(RuleUtil.changePeriod(rule, e.target.value as any))
-                  }
-                  placeholder="P1D"
+                  sanitizer={durationSanitizer}
+                  onValueChange={period => {
+                    if (typeof period === 'undefined') return;
+                    onChange(RuleUtil.changePeriod(rule, period));
+                  }}
+                  placeholder={PERIOD_SUGGESTIONS[0]}
+                  suggestions={PERIOD_SUGGESTIONS}
                 />
               )}
-              {ruleTimeType === 'ByInterval' && (
+              {RuleUtil.hasIncludeFuture(rule) && (
+                <Switch
+                  className="include-future"
+                  checked={rule.includeFuture || false}
+                  label="Include future"
+                  onChange={() => {
+                    onChange(RuleUtil.changeIncludeFuture(rule, !rule.includeFuture));
+                  }}
+                />
+              )}
+              {RuleUtil.hasInterval(rule) && (
                 <InputGroup
                   value={rule.interval || ''}
-                  onChange={(e: any) =>
-                    onChange(RuleUtil.changeInterval(rule, e.target.value as any))
-                  }
+                  onChange={(e: any) => onChange(RuleUtil.changeInterval(rule, e.target.value))}
                   placeholder="2010-01-01/2020-01-01"
                 />
               )}
             </ControlGroup>
           </FormGroup>
-          {ruleLoadType === 'load' && (
+          {RuleUtil.hasTieredReplicants(rule) && (
             <FormGroup>
               {renderTiers()}
               {renderTierAdder()}
             </FormGroup>
           )}
-          {ruleLoadType === 'broadcast' && <FormGroup>{renderColocatedDataSources()}</FormGroup>}
         </Card>
       </Collapse>
     </div>

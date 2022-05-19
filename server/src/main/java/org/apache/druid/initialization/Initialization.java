@@ -21,6 +21,7 @@ package org.apache.druid.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -29,6 +30,7 @@ import com.google.inject.util.Modules;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.curator.CuratorModule;
 import org.apache.druid.curator.discovery.DiscoveryModule;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.CoordinatorDiscoveryModule;
 import org.apache.druid.guice.DruidProcessingConfigModule;
@@ -50,6 +52,7 @@ import org.apache.druid.guice.StorageNodeModule;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.guice.http.HttpClientModule;
 import org.apache.druid.guice.security.AuthenticatorModule;
@@ -63,6 +66,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumModule;
 import org.apache.druid.server.emitter.EmitterModule;
 import org.apache.druid.server.initialization.AuthenticatorMapperModule;
 import org.apache.druid.server.initialization.AuthorizerMapperModule;
+import org.apache.druid.server.initialization.ExternalStorageAccessSecurityModule;
 import org.apache.druid.server.initialization.jetty.JettyServerModule;
 import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.server.security.TLSCertificateCheckerModule;
@@ -75,6 +79,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -84,8 +89,10 @@ import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
+ *
  */
 public class Initialization
 {
@@ -173,12 +180,21 @@ public class Initialization
     private void addAllFromFileSystem()
     {
       for (File extension : getExtensionFilesToLoad(extensionsConfig)) {
-        log.info("Loading extension [%s] for class [%s]", extension.getName(), serviceClass);
+        log.debug("Loading extension [%s] for class [%s]", extension.getName(), serviceClass);
         try {
           final URLClassLoader loader = getClassLoaderForExtension(
               extension,
               extensionsConfig.isUseExtensionClassloaderFirst()
           );
+
+          log.info(
+              "Loading extension [%s], jars: %s",
+              extension.getName(),
+              Arrays.stream(loader.getURLs())
+                    .map(u -> new File(u.getPath()).getName())
+                    .collect(Collectors.joining(", "))
+          );
+
           ServiceLoader.load(serviceClass, loader).forEach(impl -> tryAdd(impl, "local file system"));
         }
         catch (Exception e) {
@@ -197,7 +213,7 @@ public class Initialization
             serviceImpl.getClass().getName()
         );
       } else if (!implClassNamesToLoad.contains(serviceImplName)) {
-        log.info(
+        log.debug(
             "Adding implementation [%s] for class [%s] from %s extension",
             serviceImplName,
             serviceClass,
@@ -310,7 +326,7 @@ public class Initialization
       int i = 0;
       for (File jar : jars) {
         final URL url = jar.toURI().toURL();
-        log.info("added URL[%s] for extension[%s]", url, extension.getName());
+        log.debug("added URL[%s] for extension[%s]", url, extension.getName());
         urls[i++] = url;
       }
     }
@@ -361,9 +377,21 @@ public class Initialization
     }
   }
 
-  public static Injector makeInjectorWithModules(final Injector baseInjector, Iterable<? extends Module> modules)
+  public static Injector makeInjectorWithModules(
+      final Injector baseInjector,
+      final Iterable<? extends Module> modules
+  )
   {
-    final ModuleList defaultModules = new ModuleList(baseInjector);
+    return makeInjectorWithModules(ImmutableSet.of(), baseInjector, modules);
+  }
+
+  public static Injector makeInjectorWithModules(
+      final Set<NodeRole> nodeRoles,
+      final Injector baseInjector,
+      final Iterable<? extends Module> modules
+  )
+  {
+    final ModuleList defaultModules = new ModuleList(baseInjector, nodeRoles);
     defaultModules.addModules(
         // New modules should be added after Log4jShutterDownerModule
         new Log4jShutterDownerModule(),
@@ -392,6 +420,7 @@ public class Initialization
         new IndexingServiceDiscoveryModule(),
         new CoordinatorDiscoveryModule(),
         new LocalDataStorageDruidModule(),
+        new TombstoneDataStorageModule(),
         new FirehoseModule(),
         new JavaScriptModule(),
         new AuthenticatorModule(),
@@ -399,10 +428,11 @@ public class Initialization
         new EscalatorModule(),
         new AuthorizerModule(),
         new AuthorizerMapperModule(),
-        new StartupLoggingModule()
+        new StartupLoggingModule(),
+        new ExternalStorageAccessSecurityModule()
     );
 
-    ModuleList actualModules = new ModuleList(baseInjector);
+    ModuleList actualModules = new ModuleList(baseInjector, nodeRoles);
     actualModules.addModule(DruidSecondaryModule.class);
     for (Object module : modules) {
       actualModules.addModule(module);
@@ -410,7 +440,7 @@ public class Initialization
 
     Module intermediateModules = Modules.override(defaultModules.getModules()).with(actualModules.getModules());
 
-    ModuleList extensionModules = new ModuleList(baseInjector);
+    ModuleList extensionModules = new ModuleList(baseInjector, nodeRoles);
     final ExtensionsConfig config = baseInjector.getInstance(ExtensionsConfig.class);
     for (DruidModule module : Initialization.getFromExtensions(config, DruidModule.class)) {
       extensionModules.addModule(module);
@@ -422,14 +452,16 @@ public class Initialization
   private static class ModuleList
   {
     private final Injector baseInjector;
+    private final Set<NodeRole> nodeRoles;
     private final ModulesConfig modulesConfig;
     private final ObjectMapper jsonMapper;
     private final ObjectMapper smileMapper;
     private final List<Module> modules;
 
-    public ModuleList(Injector baseInjector)
+    public ModuleList(Injector baseInjector, Set<NodeRole> nodeRoles)
     {
       this.baseInjector = baseInjector;
+      this.nodeRoles = nodeRoles;
       this.modulesConfig = baseInjector.getInstance(ModulesConfig.class);
       this.jsonMapper = baseInjector.getInstance(Key.get(ObjectMapper.class, Json.class));
       this.smileMapper = baseInjector.getInstance(Key.get(ObjectMapper.class, Smile.class));
@@ -443,6 +475,10 @@ public class Initialization
 
     public void addModule(Object input)
     {
+      if (!shouldLoadOnCurrentNodeType(input)) {
+        return;
+      }
+
       if (input instanceof DruidModule) {
         if (!checkModuleClass(input.getClass())) {
           return;
@@ -470,6 +506,19 @@ public class Initialization
       } else {
         throw new ISE("Unknown module type[%s]", input.getClass());
       }
+    }
+
+    private boolean shouldLoadOnCurrentNodeType(Object object)
+    {
+      LoadScope loadScope = object.getClass().getAnnotation(LoadScope.class);
+      if (loadScope == null) {
+        // always load if annotation is not specified
+        return true;
+      }
+      Set<NodeRole> rolesPredicate = Arrays.stream(loadScope.roles())
+                                           .map(NodeRole::fromJsonName)
+                                           .collect(Collectors.toSet());
+      return rolesPredicate.stream().anyMatch(nodeRoles::contains);
     }
 
     private boolean checkModuleClass(Class<?> moduleClass)

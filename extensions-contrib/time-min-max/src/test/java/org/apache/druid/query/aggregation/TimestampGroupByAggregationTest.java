@@ -185,8 +185,8 @@ public class TimestampGroupByAggregationTest
         groupBy
     );
 
-    int groupByFieldNumber = ((GroupByQuery) helper.readQuery(groupBy)).getResultRowPositionLookup()
-                                                                       .getInt(groupByField);
+    int groupByFieldNumber = ((GroupByQuery) helper.readQuery(groupBy)).getResultRowSignature()
+                                                                       .indexOf(groupByField);
 
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(36, results.size());

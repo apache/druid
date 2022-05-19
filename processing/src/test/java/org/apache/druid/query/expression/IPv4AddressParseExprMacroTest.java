@@ -22,8 +22,8 @@ package org.apache.druid.query.expression;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.InputBindings;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -35,12 +35,9 @@ public class IPv4AddressParseExprMacroTest extends MacroTestBase
   private static final long EXPECTED = 3232235521L;
   private static final Long NULL = NullHandling.replaceWithDefault() ? NullHandling.ZERO_LONG : null;
 
-  private IPv4AddressParseExprMacro target;
-
-  @Before
-  public void setUp()
+  public IPv4AddressParseExprMacroTest()
   {
-    target = new IPv4AddressParseExprMacro();
+    super(new IPv4AddressParseExprMacro());
   }
 
   @Test
@@ -48,7 +45,7 @@ public class IPv4AddressParseExprMacroTest extends MacroTestBase
   {
     expectException(IllegalArgumentException.class, "must have 1 argument");
 
-    target.apply(Collections.emptyList());
+    apply(Collections.emptyList());
   }
 
   @Test
@@ -56,7 +53,7 @@ public class IPv4AddressParseExprMacroTest extends MacroTestBase
   {
     expectException(IllegalArgumentException.class, "must have 1 argument");
 
-    target.apply(Arrays.asList(VALID, VALID));
+    apply(Arrays.asList(VALID, VALID));
   }
 
   @Test
@@ -154,8 +151,8 @@ public class IPv4AddressParseExprMacroTest extends MacroTestBase
 
   private Object eval(Expr arg)
   {
-    Expr expr = target.apply(Collections.singletonList(arg));
-    ExprEval eval = expr.eval(ExprUtils.nilBindings());
+    Expr expr = apply(Collections.singletonList(arg));
+    ExprEval eval = expr.eval(InputBindings.nilBindings());
     return eval.value();
   }
 }

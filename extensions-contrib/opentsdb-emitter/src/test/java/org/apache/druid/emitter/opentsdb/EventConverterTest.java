@@ -32,23 +32,29 @@ import java.util.Map;
 
 public class EventConverterTest
 {
-  private EventConverter converter;
+  private EventConverter converterWithNamespacePrefix;
+  private EventConverter converterWithNamespacePrefixContainingSpace;
+  private EventConverter converterWithoutNamespacePrefix;
 
   @Before
   public void setUp()
   {
-    converter = new EventConverter(new ObjectMapper(), null);
+    converterWithNamespacePrefix = new EventConverter(new ObjectMapper(), null, "druid");
+    converterWithNamespacePrefixContainingSpace = new EventConverter(new ObjectMapper(), null, "legendary druid");
+    converterWithoutNamespacePrefix = new EventConverter(new ObjectMapper(), null, null);
   }
 
   @Test
   public void testSanitize()
   {
     String metric = " foo bar/baz";
-    Assert.assertEquals("foo_bar.baz", converter.sanitize(metric));
+    Assert.assertEquals("foo_bar.baz", converterWithNamespacePrefix.sanitize(metric));
+    Assert.assertEquals("foo_bar.baz", converterWithNamespacePrefixContainingSpace.sanitize(metric));
+    Assert.assertEquals("foo_bar.baz", converterWithoutNamespacePrefix.sanitize(metric));
   }
 
   @Test
-  public void testConvert()
+  public void testConvertWithNamespacePrefix()
   {
     DateTime dateTime = DateTimes.nowUtc();
     ServiceMetricEvent configuredEvent = new ServiceMetricEvent.Builder()
@@ -63,7 +69,67 @@ public class EventConverterTest
     expectedTags.put("dataSource", "foo_bar");
     expectedTags.put("type", "groupBy");
 
-    OpentsdbEvent opentsdbEvent = converter.convert(configuredEvent);
+    OpentsdbEvent opentsdbEvent = converterWithNamespacePrefix.convert(configuredEvent);
+    Assert.assertEquals("druid.query.time", opentsdbEvent.getMetric());
+    Assert.assertEquals(dateTime.getMillis() / 1000L, opentsdbEvent.getTimestamp());
+    Assert.assertEquals(10, opentsdbEvent.getValue());
+    Assert.assertEquals(expectedTags, opentsdbEvent.getTags());
+
+    ServiceMetricEvent notConfiguredEvent = new ServiceMetricEvent.Builder()
+        .setDimension("dataSource", "data-source")
+        .setDimension("type", "groupBy")
+        .build(dateTime, "foo/bar", 10)
+        .build("broker", "brokerHost1");
+    Assert.assertNull(converterWithNamespacePrefix.convert(notConfiguredEvent));
+  }
+
+  @Test
+  public void testConvertWithNamespacePrefixContainingSpace()
+  {
+    DateTime dateTime = DateTimes.nowUtc();
+    ServiceMetricEvent configuredEvent = new ServiceMetricEvent.Builder()
+        .setDimension("dataSource", "foo:bar")
+        .setDimension("type", "groupBy")
+        .build(dateTime, "query/time", 10)
+        .build("druid:broker", "127.0.0.1:8080");
+
+    Map<String, Object> expectedTags = new HashMap<>();
+    expectedTags.put("service", "druid_broker");
+    expectedTags.put("host", "127.0.0.1_8080");
+    expectedTags.put("dataSource", "foo_bar");
+    expectedTags.put("type", "groupBy");
+
+    OpentsdbEvent opentsdbEvent = converterWithNamespacePrefixContainingSpace.convert(configuredEvent);
+    Assert.assertEquals("legendary_druid.query.time", opentsdbEvent.getMetric());
+    Assert.assertEquals(dateTime.getMillis() / 1000L, opentsdbEvent.getTimestamp());
+    Assert.assertEquals(10, opentsdbEvent.getValue());
+    Assert.assertEquals(expectedTags, opentsdbEvent.getTags());
+
+    ServiceMetricEvent notConfiguredEvent = new ServiceMetricEvent.Builder()
+        .setDimension("dataSource", "data-source")
+        .setDimension("type", "groupBy")
+        .build(dateTime, "foo/bar", 10)
+        .build("broker", "brokerHost1");
+    Assert.assertNull(converterWithNamespacePrefixContainingSpace.convert(notConfiguredEvent));
+  }
+
+  @Test
+  public void testConvertWithoutNamespacePrefix()
+  {
+    DateTime dateTime = DateTimes.nowUtc();
+    ServiceMetricEvent configuredEvent = new ServiceMetricEvent.Builder()
+        .setDimension("dataSource", "foo:bar")
+        .setDimension("type", "groupBy")
+        .build(dateTime, "query/time", 10)
+        .build("druid:broker", "127.0.0.1:8080");
+
+    Map<String, Object> expectedTags = new HashMap<>();
+    expectedTags.put("service", "druid_broker");
+    expectedTags.put("host", "127.0.0.1_8080");
+    expectedTags.put("dataSource", "foo_bar");
+    expectedTags.put("type", "groupBy");
+
+    OpentsdbEvent opentsdbEvent = converterWithoutNamespacePrefix.convert(configuredEvent);
     Assert.assertEquals("query.time", opentsdbEvent.getMetric());
     Assert.assertEquals(dateTime.getMillis() / 1000L, opentsdbEvent.getTimestamp());
     Assert.assertEquals(10, opentsdbEvent.getValue());
@@ -74,6 +140,7 @@ public class EventConverterTest
         .setDimension("type", "groupBy")
         .build(dateTime, "foo/bar", 10)
         .build("broker", "brokerHost1");
-    Assert.assertNull(converter.convert(notConfiguredEvent));
+    Assert.assertNull(converterWithoutNamespacePrefix.convert(notConfiguredEvent));
   }
+
 }

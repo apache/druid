@@ -20,15 +20,10 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.data.input.FiniteFirehoseFactory;
-import org.apache.druid.data.input.FirehoseFactory;
-import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -42,16 +37,14 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * Base class for different implementations of {@link ParallelIndexTaskRunner}.
@@ -65,6 +58,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   private final TaskToolbox toolbox;
   private final String taskId;
   private final String groupId;
+  private final String baseSubtaskSpecName;
   private final ParallelIndexTuningConfig tuningConfig;
   private final Map<String, Object> context;
 
@@ -72,15 +66,12 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
    * Max number of sub tasks which can be executed concurrently at the same time.
    */
   private final int maxNumConcurrentSubTasks;
-  private final IndexingServiceClient indexingServiceClient;
 
   private final BlockingQueue<SubTaskCompleteEvent<SubTaskType>> taskCompleteEvents = new LinkedBlockingDeque<>();
 
-  // subTaskId -> report
-  private final ConcurrentHashMap<String, SubTaskReportType> reportsMap = new ConcurrentHashMap<>();
-
   private volatile boolean subTaskScheduleAndMonitorStopped;
-  private volatile TaskMonitor<SubTaskType> taskMonitor;
+  private volatile TaskMonitor<SubTaskType, SubTaskReportType> taskMonitor;
+  private volatile String stopReason;
 
   private int nextSpecId = 0;
 
@@ -88,18 +79,18 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
       TaskToolbox toolbox,
       String taskId,
       String groupId,
+      String baseSubtaskSpecName,
       ParallelIndexTuningConfig tuningConfig,
-      Map<String, Object> context,
-      IndexingServiceClient indexingServiceClient
+      Map<String, Object> context
   )
   {
     this.toolbox = toolbox;
     this.taskId = taskId;
     this.groupId = groupId;
+    this.baseSubtaskSpecName = baseSubtaskSpecName;
     this.tuningConfig = tuningConfig;
     this.context = context;
     this.maxNumConcurrentSubTasks = tuningConfig.getMaxNumConcurrentSubTasks();
-    this.indexingServiceClient = Preconditions.checkNotNull(indexingServiceClient, "indexingServiceClient");
   }
 
   /**
@@ -110,23 +101,28 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   /**
    * Returns the total number of sub tasks required to execute this phase.
    */
-  abstract int getTotalNumSubTasks() throws IOException;
+  abstract int estimateTotalNumSubTasks() throws IOException;
+
+  public Runnable getSubtaskCompletionCallback(SubTaskCompleteEvent<?> event)
+  {
+    return () -> {};
+  }
 
   @Override
   public TaskState run() throws Exception
   {
-    if (getTotalNumSubTasks() == 0) {
+    final CountingSubTaskSpecIterator subTaskSpecIterator = new CountingSubTaskSpecIterator(subTaskSpecIterator());
+    if (!subTaskSpecIterator.hasNext()) {
       LOG.warn("There's no input split to process");
       return TaskState.SUCCESS;
     }
 
-    final Iterator<SubTaskSpec<SubTaskType>> subTaskSpecIterator = subTaskSpecIterator();
     final long taskStatusCheckingPeriod = tuningConfig.getTaskStatusCheckPeriodMs();
 
     taskMonitor = new TaskMonitor<>(
-        Preconditions.checkNotNull(indexingServiceClient, "indexingServiceClient"),
+        toolbox.getIndexingServiceClient(),
         tuningConfig.getMaxRetry(),
-        getTotalNumSubTasks()
+        estimateTotalNumSubTasks()
     );
     TaskState state = TaskState.RUNNING;
 
@@ -148,30 +144,26 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
 
         if (taskCompleteEvent != null) {
           final TaskState completeState = taskCompleteEvent.getLastState();
+          getSubtaskCompletionCallback(taskCompleteEvent).run();
           switch (completeState) {
             case SUCCESS:
               final TaskStatusPlus completeStatus = taskCompleteEvent.getLastStatus();
               if (completeStatus == null) {
                 throw new ISE("Last status of complete task is missing!");
               }
-              // Pushed segments of complete tasks are supposed to be already reported.
-              if (!reportsMap.containsKey(completeStatus.getId())) {
-                throw new ISE("Missing reports from task[%s]!", completeStatus.getId());
-              }
-
               if (!subTaskSpecIterator.hasNext()) {
                 // We have no more subTasks to run
-                if (taskMonitor.getNumRunningTasks() == 0 && taskCompleteEvents.size() == 0) {
+                if (taskMonitor.getNumRunningTasks() == 0 && taskCompleteEvents.isEmpty()) {
                   subTaskScheduleAndMonitorStopped = true;
-                  if (taskMonitor.isSucceeded()) {
+                  if (subTaskSpecIterator.count == taskMonitor.getNumSucceededTasks()) {
                     // Succeeded
                     state = TaskState.SUCCESS;
                   } else {
                     // Failed
-                    final SinglePhaseParallelIndexingProgress monitorStatus = taskMonitor.getProgress();
+                    final ParallelIndexingPhaseProgress monitorStatus = taskMonitor.getProgress();
                     throw new ISE(
-                        "Expected for [%d] tasks to succeed, but we got [%d] succeeded tasks and [%d] failed tasks",
-                        monitorStatus.getExpectedSucceeded(),
+                        "Expected [%d] tasks to succeed, but we got [%d] succeeded tasks and [%d] failed tasks",
+                        subTaskSpecIterator.count,
                         monitorStatus.getSucceeded(),
                         monitorStatus.getFailed()
                     );
@@ -193,15 +185,8 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
               if (lastStatus != null) {
                 LOG.error("Failed because of the failed sub task[%s]", lastStatus.getId());
               } else {
-                final SinglePhaseSubTaskSpec spec =
-                    (SinglePhaseSubTaskSpec) taskCompleteEvent.getSpec();
-                LOG.error(
-                    "Failed to run sub tasks for inputSplits[%s]",
-                    getSplitsIfSplittable(
-                        spec.getIngestionSpec().getIOConfig().getFirehoseFactory(),
-                        tuningConfig.getSplitHintSpec()
-                    )
-                );
+                final SubTaskSpec<?> spec = taskCompleteEvent.getSpec();
+                LOG.error("Failed to process spec[%s] with an unknown last status", spec.getId());
               }
               break;
             default:
@@ -220,17 +205,44 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     return state;
   }
 
+  private class CountingSubTaskSpecIterator implements Iterator<SubTaskSpec<SubTaskType>>
+  {
+    private final Iterator<SubTaskSpec<SubTaskType>> delegate;
+    private int count;
+
+    private CountingSubTaskSpecIterator(Iterator<SubTaskSpec<SubTaskType>> delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+      return delegate.hasNext();
+    }
+
+    @Override
+    public SubTaskSpec<SubTaskType> next()
+    {
+      if (!delegate.hasNext()) {
+        throw new NoSuchElementException();
+      }
+      count++;
+      return delegate.next();
+    }
+  }
+
   private boolean isRunning()
   {
     return !subTaskScheduleAndMonitorStopped && !Thread.currentThread().isInterrupted();
   }
 
   private void submitNewTask(
-      TaskMonitor<SubTaskType> taskMonitor,
+      TaskMonitor<SubTaskType, SubTaskReportType> taskMonitor,
       SubTaskSpec<SubTaskType> spec
   )
   {
-    LOG.info("Submit a new task for spec[%s] and inputSplit[%s]", spec.getId(), spec.getInputSplit());
+    LOG.info("Submit a new task for spec[%s]", spec.getId());
     final ListenableFuture<SubTaskCompleteEvent<SubTaskType>> future = taskMonitor.submit(spec);
     Futures.addCallback(
         future,
@@ -247,30 +259,18 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
           public void onFailure(Throwable t)
           {
             // this callback is called only when there were some problems in TaskMonitor.
-            LOG.error(t, "Error while running a task for subTaskSpec[%s]", spec);
+            LOG.error(t, "Error while running a task for spec[%s]", spec.getId());
             taskCompleteEvents.offer(SubTaskCompleteEvent.fail(spec, t));
           }
         }
     );
   }
 
-  private static List<InputSplit> getSplitsIfSplittable(
-      FirehoseFactory firehoseFactory,
-      @Nullable SplitHintSpec splitHintSpec
-  ) throws IOException
-  {
-    if (firehoseFactory instanceof FiniteFirehoseFactory) {
-      final FiniteFirehoseFactory<?, ?> finiteFirehoseFactory = (FiniteFirehoseFactory) firehoseFactory;
-      return finiteFirehoseFactory.getSplits(splitHintSpec).collect(Collectors.toList());
-    } else {
-      throw new ISE("firehoseFactory[%s] is not splittable", firehoseFactory.getClass().getSimpleName());
-    }
-  }
-
   @Override
-  public void stopGracefully()
+  public void stopGracefully(String stopReason)
   {
     subTaskScheduleAndMonitorStopped = true;
+    this.stopReason = stopReason;
     stopInternal();
   }
 
@@ -291,32 +291,23 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   @Override
   public void collectReport(SubTaskReportType report)
   {
-    // subTasks might send their reports multiple times because of the HTTP retry.
-    // Here, we simply make sure the current report is exactly same with the previous one.
-    reportsMap.compute(report.getTaskId(), (taskId, prevReport) -> {
-      if (prevReport != null) {
-        Preconditions.checkState(
-            prevReport.equals(report),
-            "task[%s] sent two or more reports and previous report[%s] is different from the current one[%s]",
-            taskId,
-            prevReport,
-            report
-        );
-      }
-      return report;
-    });
+    // This method is only called when there is a subtask sending its report.
+    // Since TaskMonitor is responsible for spawning subtasks, the taskMonitor cannot be null if we have subtask sending report
+    // This null check is to ensure that the contract mentioned above is not broken
+    assert taskMonitor != null;
+    taskMonitor.collectReport(report);
   }
 
   @Override
   public Map<String, SubTaskReportType> getReports()
   {
-    return reportsMap;
+    return taskMonitor == null ? Collections.emptyMap() : taskMonitor.getReports();
   }
 
   @Override
-  public ParallelIndexingProgress getProgress()
+  public ParallelIndexingPhaseProgress getProgress()
   {
-    return taskMonitor == null ? SinglePhaseParallelIndexingProgress.notRunning() : taskMonitor.getProgress();
+    return taskMonitor == null ? ParallelIndexingPhaseProgress.notRunning() : taskMonitor.getProgress();
   }
 
   @Override
@@ -334,7 +325,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
           .getCompleteSubTaskSpecs();
       // Deduplicate subTaskSpecs because some subTaskSpec might exist both in runningSubTaskSpecs and
       // completeSubTaskSpecs.
-      final Map<String, SubTaskSpec<SubTaskType>> subTaskSpecMap = new HashMap<>(
+      final Map<String, SubTaskSpec<SubTaskType>> subTaskSpecMap = Maps.newHashMapWithExpectedSize(
           runningSubTaskSpecs.size() + completeSubTaskSpecs.size()
       );
       runningSubTaskSpecs.forEach(spec -> subTaskSpecMap.put(spec.getId(), spec));
@@ -431,6 +422,12 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     }
   }
 
+  @Override
+  public String getStopReason()
+  {
+    return stopReason;
+  }
+
   String getTaskId()
   {
     return taskId;
@@ -439,6 +436,11 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   String getGroupId()
   {
     return groupId;
+  }
+
+  String getBaseSubtaskSpecName()
+  {
+    return baseSubtaskSpecName;
   }
 
   Map<String, Object> getContext()
@@ -451,7 +453,6 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     return tuningConfig;
   }
 
-  @VisibleForTesting
   TaskToolbox getToolbox()
   {
     return toolbox;
@@ -459,7 +460,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
 
   @VisibleForTesting
   @Nullable
-  TaskMonitor<SubTaskType> getTaskMonitor()
+  TaskMonitor<SubTaskType, SubTaskReportType> getTaskMonitor()
   {
     return taskMonitor;
   }
@@ -468,11 +469,5 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   int getAndIncrementNextSpecId()
   {
     return nextSpecId++;
-  }
-
-  @VisibleForTesting
-  IndexingServiceClient getIndexingServiceClient()
-  {
-    return indexingServiceClient;
   }
 }

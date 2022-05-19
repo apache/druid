@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
@@ -51,21 +50,22 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.filtration.BoundRefKey;
 import org.apache.druid.sql.calcite.filtration.Bounds;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A collection of functions for translating from Calcite expressions into Druid objects.
@@ -88,13 +88,13 @@ public class Expressions
    */
   public static RexNode fromFieldAccess(
       final RowSignature rowSignature,
-      final Project project,
+      @Nullable final Project project,
       final int fieldNumber
   )
   {
     if (project == null) {
       // I don't think the factory impl matters here.
-      return RexInputRef.of(fieldNumber, rowSignature.getRelDataType(new JavaTypeFactoryImpl()));
+      return RexInputRef.of(fieldNumber, RowSignatures.toRelDataType(rowSignature, new JavaTypeFactoryImpl()));
     } else {
       return project.getChildExps().get(fieldNumber);
     }
@@ -132,9 +132,9 @@ public class Expressions
   /**
    * Translate a list of Calcite {@code RexNode} to Druid expressions, with the possibility of having postagg operands.
    *
-   * @param plannerContext SQL planner context
-   * @param rowSignature   signature of the rows to be extracted from
-   * @param rexNodes       list of Calcite expressions meant to be applied on top of the rows
+   * @param plannerContext        SQL planner context
+   * @param rowSignature          signature of the rows to be extracted from
+   * @param rexNodes              list of Calcite expressions meant to be applied on top of the rows
    * @param postAggregatorVisitor visitor that manages postagg names and tracks postaggs that were created as
    *                              by the translation
    *
@@ -167,13 +167,17 @@ public class Expressions
   }
 
   /**
-   * Translate a Calcite {@code RexNode} to a Druid expressions.
+   * Translate a Calcite {@link RexNode} to a Druid expression for projections or the aggregators that don't
+   * require numeric inputs.
+   *
+   * Consider using {@link org.apache.druid.sql.calcite.aggregation.Aggregations#toDruidExpressionForNumericAggregator}
+   * for the aggregators that require numeric inputs.
    *
    * @param plannerContext SQL planner context
    * @param rowSignature   signature of the rows to be extracted from
    * @param rexNode        expression meant to be applied on top of the rows
    *
-   * @return rexNode referring to fields in rowOrder, or null if not possible
+   * @return DruidExpression referring to fields in rowOrder, or null if not possible to translate
    */
   @Nullable
   public static DruidExpression toDruidExpression(
@@ -218,12 +222,13 @@ public class Expressions
   {
     // Translate field references.
     final RexInputRef ref = (RexInputRef) rexNode;
-    final String columnName = rowSignature.getRowOrder().get(ref.getIndex());
+    final String columnName = rowSignature.getColumnName(ref.getIndex());
+    final Optional<ColumnType> columnType = rowSignature.getColumnType(ref.getIndex());
     if (columnName == null) {
-      throw new ISE("WTF?! Expression referred to nonexistent index[%d]", ref.getIndex());
+      throw new ISE("Expression referred to nonexistent index[%d]", ref.getIndex());
     }
 
-    return DruidExpression.fromColumn(columnName);
+    return DruidExpression.ofColumn(columnType.orElse(null), columnName);
   }
 
   private static DruidExpression rexCallToDruidExpression(
@@ -239,6 +244,7 @@ public class Expressions
                                                            .lookupOperatorConversion(operator);
 
     if (conversion == null) {
+      plannerContext.setPlanningError("SQL query requires '%s' operator that is not supported.", operator.getName());
       return null;
     } else {
 
@@ -254,7 +260,7 @@ public class Expressions
         if (postAggregator != null) {
           postAggregatorVisitor.addPostAgg(postAggregator);
           String exprName = postAggregator.getName();
-          return DruidExpression.of(SimpleExtraction.of(exprName, null), exprName);
+          return DruidExpression.ofColumn(postAggregator.getType(rowSignature), exprName);
         }
       }
 
@@ -264,15 +270,11 @@ public class Expressions
           rexNode,
           postAggregatorVisitor
       );
-
-      if (expression == null) {
-        return null;
-      } else {
-        return expression;
-      }
+      return expression;
     }
   }
 
+  @Nullable
   private static DruidExpression literalToDruidExpression(
       final PlannerContext plannerContext,
       final RexNode rexNode
@@ -281,32 +283,34 @@ public class Expressions
     final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
 
     // Translate literal.
+    final ColumnType columnType = Calcites.getColumnTypeForRelDataType(rexNode.getType());
     if (RexLiteral.isNullLiteral(rexNode)) {
-      return DruidExpression.fromExpression(DruidExpression.nullLiteral());
+      return DruidExpression.ofLiteral(columnType, DruidExpression.nullLiteral());
     } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
-      return DruidExpression.fromExpression(DruidExpression.numberLiteral((Number) RexLiteral.value(rexNode)));
+      return DruidExpression.ofLiteral(columnType, DruidExpression.numberLiteral((Number) RexLiteral.value(rexNode)));
     } else if (SqlTypeFamily.INTERVAL_DAY_TIME == sqlTypeName.getFamily()) {
       // Calcite represents DAY-TIME intervals in milliseconds.
       final long milliseconds = ((Number) RexLiteral.value(rexNode)).longValue();
-      return DruidExpression.fromExpression(DruidExpression.numberLiteral(milliseconds));
+      return DruidExpression.ofLiteral(columnType, DruidExpression.numberLiteral(milliseconds));
     } else if (SqlTypeFamily.INTERVAL_YEAR_MONTH == sqlTypeName.getFamily()) {
       // Calcite represents YEAR-MONTH intervals in months.
       final long months = ((Number) RexLiteral.value(rexNode)).longValue();
-      return DruidExpression.fromExpression(DruidExpression.numberLiteral(months));
+      return DruidExpression.ofLiteral(columnType, DruidExpression.numberLiteral(months));
     } else if (SqlTypeName.STRING_TYPES.contains(sqlTypeName)) {
-      return DruidExpression.fromExpression(DruidExpression.stringLiteral(RexLiteral.stringValue(rexNode)));
+      return DruidExpression.ofStringLiteral(RexLiteral.stringValue(rexNode));
     } else if (SqlTypeName.TIMESTAMP == sqlTypeName || SqlTypeName.DATE == sqlTypeName) {
       if (RexLiteral.isNullLiteral(rexNode)) {
-        return DruidExpression.fromExpression(DruidExpression.nullLiteral());
+        return DruidExpression.ofLiteral(columnType, DruidExpression.nullLiteral());
       } else {
-        return DruidExpression.fromExpression(
+        return DruidExpression.ofLiteral(
+            columnType,
             DruidExpression.numberLiteral(
                 Calcites.calciteDateTimeLiteralToJoda(rexNode, plannerContext.getTimeZone()).getMillis()
             )
         );
       }
     } else if (SqlTypeName.BOOLEAN == sqlTypeName) {
-      return DruidExpression.fromExpression(DruidExpression.numberLiteral(RexLiteral.booleanValue(rexNode) ? 1 : 0));
+      return DruidExpression.ofLiteral(columnType, DruidExpression.numberLiteral(RexLiteral.booleanValue(rexNode) ? 1 : 0));
     } else {
       // Can't translate other literals.
       return null;
@@ -471,14 +475,13 @@ public class Expressions
             druidExpression.getSimpleExtraction().getExtractionFn()
         );
       } else if (virtualColumnRegistry != null) {
-        final VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-            plannerContext,
+        final String virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             druidExpression,
-            operand.getType().getSqlTypeName()
+            operand.getType()
         );
 
         equalFilter = new SelectorDimFilter(
-            virtualColumn.getOutputName(),
+            virtualColumn,
             NullHandling.defaultStringValue(),
             null
         );
@@ -494,7 +497,7 @@ public class Expressions
                || kind == SqlKind.LESS_THAN
                || kind == SqlKind.LESS_THAN_OR_EQUAL) {
       final List<RexNode> operands = ((RexCall) rexNode).getOperands();
-      Preconditions.checkState(operands.size() == 2, "WTF?! Expected 2 operands, got[%,d]", operands.size());
+      Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got[%,d]", operands.size());
       boolean flip = false;
       RexNode lhs = operands.get(0);
       RexNode rhs = operands.get(1);
@@ -529,7 +532,7 @@ public class Expressions
             flippedKind = SqlKind.GREATER_THAN_OR_EQUAL;
             break;
           default:
-            throw new ISE("WTF?! Kind[%s] not expected here", kind);
+            throw new ISE("Kind[%s] not expected here", kind);
         }
       } else {
         flippedKind = kind;
@@ -560,13 +563,10 @@ public class Expressions
         column = lhsExpression.getSimpleExtraction().getColumn();
         extractionFn = lhsExpression.getSimpleExtraction().getExtractionFn();
       } else if (virtualColumnRegistry != null) {
-        VirtualColumn virtualLhs = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-            plannerContext,
+        column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             lhsExpression,
-            lhs.getType().getSqlTypeName()
+            lhs.getType()
         );
-
-        column = virtualLhs.getOutputName();
         extractionFn = null;
       } else {
         return null;
@@ -611,7 +611,7 @@ public class Expressions
       }
 
       // Numeric lhs needs a numeric comparison.
-      final StringComparator comparator = Calcites.getStringComparatorForSqlTypeName(lhs.getType().getSqlTypeName());
+      final StringComparator comparator = Calcites.getStringComparatorForRelDataType(lhs.getType());
       final BoundRefKey boundRefKey = new BoundRefKey(column, extractionFn, comparator);
       final DimFilter filter;
 
@@ -636,7 +636,7 @@ public class Expressions
           filter = Bounds.lessThanOrEqualTo(boundRefKey, val);
           break;
         default:
-          throw new IllegalStateException("WTF?! Shouldn't have got here...");
+          throw new IllegalStateException("Shouldn't have got here");
       }
 
       return filter;
@@ -670,21 +670,6 @@ public class Expressions
            : null;
   }
 
-  public static ExprType exprTypeForValueType(final ValueType valueType)
-  {
-    switch (valueType) {
-      case LONG:
-        return ExprType.LONG;
-      case FLOAT:
-      case DOUBLE:
-        return ExprType.DOUBLE;
-      case STRING:
-        return ExprType.STRING;
-      default:
-        throw new ISE("No ExprType for valueType[%s]", valueType);
-    }
-  }
-
   /**
    * Converts an expression to a Granularity, if possible. This is possible if, and only if, the expression
    * is a timestamp_floor function on the __time column with literal parameters for period, origin, and timeZone.
@@ -703,7 +688,7 @@ public class Expressions
     final Expr arg = expr.getArg();
     final Granularity granularity = expr.getGranularity();
 
-    if (ColumnHolder.TIME_COLUMN_NAME.equals(arg.getIdentifierIfIdentifier())) {
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(arg.getBindingIfIdentifier())) {
       return granularity;
     } else {
       return null;
@@ -774,7 +759,7 @@ public class Expressions
       case LESS_THAN_OR_EQUAL:
         return Bounds.lessThan(boundRefKey, String.valueOf(interval.getEndMillis()));
       default:
-        throw new IllegalStateException("WTF?! Shouldn't have got here...");
+        throw new IllegalStateException("Shouldn't have got here");
     }
   }
 }

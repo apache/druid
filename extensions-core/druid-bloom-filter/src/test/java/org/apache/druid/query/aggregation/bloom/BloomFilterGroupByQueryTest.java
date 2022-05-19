@@ -36,6 +36,7 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -51,7 +52,7 @@ import java.util.Collection;
 import java.util.List;
 
 @RunWith(Parameterized.class)
-public class BloomFilterGroupByQueryTest
+public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
 {
   private static final BloomFilterExtensionModule MODULE = new BloomFilterExtensionModule();
 

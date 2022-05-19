@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.Query;
 import org.joda.time.DateTime;
 
@@ -55,9 +56,9 @@ public class RequestLogLine
   {
     this.query = query;
     this.sql = sql;
-    this.sqlQueryContext = sqlQueryContext;
+    this.sqlQueryContext = sqlQueryContext != null ? sqlQueryContext : ImmutableMap.of();
     this.timestamp = Preconditions.checkNotNull(timestamp, "timestamp");
-    this.remoteAddr = remoteAddr;
+    this.remoteAddr = StringUtils.nullToEmptyNonDruidDataString(remoteAddr);
     this.queryStats = Preconditions.checkNotNull(queryStats, "queryStats");
   }
 

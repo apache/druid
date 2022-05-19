@@ -21,24 +21,63 @@ package org.apache.druid.testing;
 
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * The values here should be kept in sync with the values used in the docker-compose files used to bring up the
+ * integration-test clusters.
+ *
+ * integration-tests/docker/docker-compose.base.yml defines most of the hostnames, ports, and addresses, but some
+ * might live in the overrides as well.
+ */
 public class DockerConfigProvider implements IntegrationTestingConfigProvider
 {
-
   @JsonProperty
   @NotNull
   private String dockerIp;
 
   @JsonProperty
-  @NotNull
-  private String hadoopDir;
+  private String extraDatasourceNameSuffix = "";
 
   @JsonProperty
-  private String extraDatasourceNameSuffix = "";
+  private String cloudPath;
+
+  @JsonProperty
+  private String cloudBucket;
+
+  @JsonProperty
+  private String cloudRegion;
+
+  @JsonProperty
+  private String s3AssumeRoleWithExternalId;
+
+  @JsonProperty
+  private String s3AssumeRoleExternalId;
+
+  @JsonProperty
+  private String s3AssumeRoleWithoutExternalId;
+
+  @JsonProperty
+  private String hadoopGcsCredentialsPath;
+
+  @JsonProperty
+  private String azureKey;
+
+  @JsonProperty
+  private String streamEndpoint;
+
+  @JsonProperty
+  @JsonDeserialize(using = ArbitraryPropertiesJsonDeserializer.class)
+  private Map<String, String> properties = new HashMap<>();
 
   @Override
   public IntegrationTestingConfig get()
@@ -58,15 +97,39 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       }
 
       @Override
-      public String getIndexerUrl()
+      public String getCoordinatorTwoUrl()
+      {
+        return "http://" + dockerIp + ":8581";
+      }
+
+      @Override
+      public String getCoordinatorTwoTLSUrl()
+      {
+        return "https://" + dockerIp + ":8781";
+      }
+
+      @Override
+      public String getOverlordUrl()
       {
         return "http://" + dockerIp + ":8090";
       }
 
       @Override
-      public String getIndexerTLSUrl()
+      public String getOverlordTLSUrl()
       {
         return "https://" + dockerIp + ":8290";
+      }
+
+      @Override
+      public String getOverlordTwoUrl()
+      {
+        return "http://" + dockerIp + ":8590";
+      }
+
+      @Override
+      public String getOverlordTwoTLSUrl()
+      {
+        return "https://" + dockerIp + ":8790";
       }
 
       @Override
@@ -142,7 +205,61 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       }
 
       @Override
+      public String getIndexerUrl()
+      {
+        return "http://" + dockerIp + ":8091";
+      }
+
+      @Override
+      public String getIndexerTLSUrl()
+      {
+        return "https://" + dockerIp + ":8291";
+      }
+
+      @Override
       public String getMiddleManagerHost()
+      {
+        return dockerIp;
+      }
+
+      @Override
+      public String getHistoricalHost()
+      {
+        return dockerIp;
+      }
+
+      @Override
+      public String getBrokerHost()
+      {
+        return dockerIp;
+      }
+
+      @Override
+      public String getRouterHost()
+      {
+        return dockerIp;
+      }
+
+      @Override
+      public String getCoordinatorHost()
+      {
+        return dockerIp;
+      }
+
+      @Override
+      public String getCoordinatorTwoHost()
+      {
+        return dockerIp;
+      }
+
+      @Override
+      public String getOverlordHost()
+      {
+        return dockerIp;
+      }
+
+      @Override
+      public String getOverlordTwoHost()
       {
         return dockerIp;
       }
@@ -154,16 +271,16 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       }
 
       @Override
+      public String getKafkaHost()
+      {
+        return dockerIp + ":9093";
+      }
+
+      @Override
       public String getZookeeperInternalHosts()
       {
         // docker container name
         return "druid-zookeeper-kafka:2181";
-      }
-
-      @Override
-      public String getKafkaHost()
-      {
-        return dockerIp + ":9093";
       }
 
       @Override
@@ -173,13 +290,65 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
         return "druid-zookeeper-kafka:9092";
       }
 
+
+      @Override
+      public String getBrokerInternalHost()
+      {
+        return "druid-broker";
+      }
+
+      @Override
+      public String getRouterInternalHost()
+      {
+        return "druid-router";
+      }
+
+      @Override
+      public String getCoordinatorInternalHost()
+      {
+        return "druid-coordinator";
+      }
+
+      @Override
+      public String getCoordinatorTwoInternalHost()
+      {
+        return "druid-coordinator-two";
+      }
+
+      @Override
+      public String getOverlordInternalHost()
+      {
+        return "druid-overlord";
+      }
+
+      @Override
+      public String getOverlordTwoInternalHost()
+      {
+        return "druid-overlord-two";
+      }
+
+      @Override
+      public String getHistoricalInternalHost()
+      {
+        return "druid-historical";
+      }
+
+      @Override
+      public String getSchemaRegistryHost()
+      {
+        return dockerIp + ":8085";
+      }
+
+      @Override
+      public String getSchemaRegistryInternalHost()
+      {
+        return "schema-registry:8085";
+      }
+
       @Override
       public String getProperty(String prop)
       {
-        if ("hadoopTestDir".equals(prop)) {
-          return hadoopDir;
-        }
-        throw new UnsupportedOperationException("DockerConfigProvider does not support property " + prop);
+        return properties.get(prop);
       }
 
       @Override
@@ -197,7 +366,7 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       @Override
       public Map<String, String> getProperties()
       {
-        return new HashMap<>();
+        return properties;
       }
 
       @Override
@@ -211,6 +380,103 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       {
         return extraDatasourceNameSuffix;
       }
+
+      @Override
+      public String getCloudBucket()
+      {
+        return cloudBucket;
+      }
+
+      @Override
+      public String getCloudPath()
+      {
+        return cloudPath;
+      }
+
+      @Override
+      public String getCloudRegion()
+      {
+        return cloudRegion;
+      }
+
+      @Override
+      public String getS3AssumeRoleWithExternalId()
+      {
+        return s3AssumeRoleWithExternalId;
+      }
+
+      @Override
+      public String getS3AssumeRoleExternalId()
+      {
+        return s3AssumeRoleExternalId;
+      }
+
+      @Override
+      public String getS3AssumeRoleWithoutExternalId()
+      {
+        return s3AssumeRoleWithoutExternalId;
+      }
+
+      @Override
+      public String getAzureKey()
+      {
+        return azureKey;
+      }
+
+      @Override
+      public String getHadoopGcsCredentialsPath()
+      {
+        return hadoopGcsCredentialsPath;
+      }
+
+      @Override
+      public String getStreamEndpoint()
+      {
+        return streamEndpoint;
+      }
+
+      @Override
+      public boolean isDocker()
+      {
+        return true;
+      }
+
+      @Override
+      @Nullable
+      public String getDockerHost()
+      {
+        return dockerIp;
+      }
     };
+  }
+
+  // there is probably a better way to do this...
+  static class ArbitraryPropertiesJsonDeserializer extends JsonDeserializer<Map<String, String>>
+  {
+    @Override
+    public Map<String, String> deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
+        throws IOException
+    {
+      // given some config input, such as
+      //    druid.test.config.properites.a.b.c=d
+      // calling jsonParser.readValueAs(Map.class) here results in a map that has both nested objects and also
+      // flattened string pairs, so the map looks something like this (in JSON form):
+      //    {
+      //      "a" : { "b": { "c" : "d" }}},
+      //      "a.b.c":"d"
+      //    }
+      // The string pairs are the values we want to populate this map with, so filtering out the top level keys which
+      // do not have string values leaves us with
+      //    { "a.b.c":"d"}
+      // from the given example, which is what we want
+      Map<String, Object> parsed = jsonParser.readValueAs(Map.class);
+      Map<String, String> flat = new HashMap<>();
+      for (Map.Entry<String, Object> entry : parsed.entrySet()) {
+        if (!(entry.getValue() instanceof Map)) {
+          flat.put(entry.getKey(), (String) entry.getValue());
+        }
+      }
+      return flat;
+    }
   }
 }

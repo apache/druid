@@ -29,7 +29,8 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.metadata.MetadataSegmentManager;
+import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.JettyUtils;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -65,19 +66,19 @@ import java.util.stream.Stream;
 @Path("/druid/coordinator/v1/metadata")
 public class MetadataResource
 {
-  private final MetadataSegmentManager segmentsMetadata;
+  private final SegmentsMetadataManager segmentsMetadataManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
 
   @Inject
   public MetadataResource(
-      MetadataSegmentManager segmentsMetadata,
+      SegmentsMetadataManager segmentsMetadataManager,
       IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       AuthorizerMapper authorizerMapper,
       @Json ObjectMapper jsonMapper
   )
   {
-    this.segmentsMetadata = segmentsMetadata;
+    this.segmentsMetadataManager = segmentsMetadataManager;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
     this.authorizerMapper = authorizerMapper;
   }
@@ -93,18 +94,18 @@ public class MetadataResource
   {
     final boolean includeUnused = JettyUtils.getQueryParam(uriInfo, "includeUnused", "includeDisabled") != null;
     Collection<ImmutableDruidDataSource> druidDataSources = null;
-    final Set<String> dataSourceNamesPreAuth;
+    final TreeSet<String> dataSourceNamesPreAuth;
     if (includeUnused) {
-      dataSourceNamesPreAuth = new TreeSet<>(segmentsMetadata.retrieveAllDataSourceNames());
+      dataSourceNamesPreAuth = new TreeSet<>(segmentsMetadataManager.retrieveAllDataSourceNames());
     } else {
-      druidDataSources = segmentsMetadata.getImmutableDataSourcesWithAllUsedSegments();
+      druidDataSources = segmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments();
       dataSourceNamesPreAuth = druidDataSources
           .stream()
           .map(ImmutableDruidDataSource::getName)
           .collect(Collectors.toCollection(TreeSet::new));
     }
 
-    final Set<String> dataSourceNamesPostAuth = new TreeSet<>();
+    final TreeSet<String> dataSourceNamesPostAuth = new TreeSet<>();
     Function<String, Iterable<ResourceAction>> raGenerator = datasourceName ->
         Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasourceName));
 
@@ -135,7 +136,7 @@ public class MetadataResource
   public Response getAllUsedSegments(
       @Context final HttpServletRequest req,
       @QueryParam("datasources") final @Nullable Set<String> dataSources,
-      @QueryParam("includeOvershadowedStatus") final String includeOvershadowedStatus
+      @QueryParam("includeOvershadowedStatus") final @Nullable String includeOvershadowedStatus
   )
   {
     if (includeOvershadowedStatus != null) {
@@ -143,7 +144,7 @@ public class MetadataResource
     }
 
     Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
-        segmentsMetadata.getImmutableDataSourcesWithAllUsedSegments();
+        segmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments();
     if (dataSources != null && !dataSources.isEmpty()) {
       dataSourcesWithUsedSegments = dataSourcesWithUsedSegments
           .stream()
@@ -169,7 +170,7 @@ public class MetadataResource
       @Nullable Set<String> dataSources
   )
   {
-    DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadata.getSnapshotOfDataSourcesWithAllUsedSegments();
+    DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments();
     Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
         dataSourcesSnapshot.getDataSourcesWithAllUsedSegments();
     if (dataSources != null && !dataSources.isEmpty()) {
@@ -184,10 +185,7 @@ public class MetadataResource
     final Set<SegmentId> overshadowedSegments = dataSourcesSnapshot.getOvershadowedSegments();
 
     final Stream<SegmentWithOvershadowedStatus> usedSegmentsWithOvershadowedStatus = usedSegments
-        .map(segment -> new SegmentWithOvershadowedStatus(
-            segment,
-            overshadowedSegments.contains(segment.getId())
-        ));
+        .map(segment -> new SegmentWithOvershadowedStatus(segment, overshadowedSegments.contains(segment.getId())));
 
     final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections
         .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
@@ -214,7 +212,7 @@ public class MetadataResource
   public Response getDataSourceWithUsedSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
     ImmutableDruidDataSource dataSource =
-        segmentsMetadata.getImmutableDataSourceWithUsedSegments(dataSourceName);
+        segmentsMetadataManager.getImmutableDataSourceWithUsedSegments(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -228,11 +226,11 @@ public class MetadataResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response getUsedSegmentsInDataSource(
       @PathParam("dataSourceName") String dataSourceName,
-      @QueryParam("full") String full
+      @QueryParam("full") @Nullable String full
   )
   {
     ImmutableDruidDataSource dataSource =
-        segmentsMetadata.getImmutableDataSourceWithUsedSegments(dataSourceName);
+        segmentsMetadataManager.getImmutableDataSourceWithUsedSegments(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -247,7 +245,7 @@ public class MetadataResource
 
   /**
    * This is a {@link POST} method to pass the list of intervals in the body,
-   * see https://github.com/apache/incubator-druid/pull/2109#issuecomment-182191258
+   * see https://github.com/apache/druid/pull/2109#issuecomment-182191258
    */
   @POST
   @Path("/datasources/{dataSourceName}/segments")
@@ -255,11 +253,12 @@ public class MetadataResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response getUsedSegmentsInDataSourceForIntervals(
       @PathParam("dataSourceName") String dataSourceName,
-      @QueryParam("full") String full,
+      @QueryParam("full") @Nullable String full,
       List<Interval> intervals
   )
   {
-    List<DataSegment> segments = metadataStorageCoordinator.getUsedSegmentsForIntervals(dataSourceName, intervals);
+    Collection<DataSegment> segments = metadataStorageCoordinator
+        .retrieveUsedSegmentsForIntervals(dataSourceName, intervals, Segments.INCLUDING_OVERSHADOWED);
 
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
     if (full != null) {
@@ -278,7 +277,7 @@ public class MetadataResource
       @PathParam("segmentId") String segmentId
   )
   {
-    ImmutableDruidDataSource dataSource = segmentsMetadata.getImmutableDataSourceWithUsedSegments(dataSourceName);
+    ImmutableDruidDataSource dataSource = segmentsMetadataManager.getImmutableDataSourceWithUsedSegments(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }

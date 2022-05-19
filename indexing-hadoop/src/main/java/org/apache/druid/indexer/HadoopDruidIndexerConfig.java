@@ -75,10 +75,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.SortedSet;
+import java.util.Properties;
 
 /**
+ *
  */
 public class HadoopDruidIndexerConfig
 {
@@ -90,12 +90,20 @@ public class HadoopDruidIndexerConfig
   static final Joiner TAB_JOINER = Joiner.on("\t");
   public static final ObjectMapper JSON_MAPPER;
   public static final IndexIO INDEX_IO;
-  static final IndexMerger INDEX_MERGER_V9;
+  static final IndexMerger INDEX_MERGER_V9; // storeEmptyColumns is off for this indexMerger
   static final HadoopKerberosConfig HADOOP_KERBEROS_CONFIG;
   static final DataSegmentPusher DATA_SEGMENT_PUSHER;
   private static final String DEFAULT_WORKING_PATH = "/tmp/druid-indexing";
 
-
+  /**
+   * Hadoop tasks running in an Indexer process need a reference to the Properties instance created
+   * in PropertiesModule so that the task sees properties that were specified in Druid's config files.
+   * <p>
+   * This is not strictly necessary for Peon-based tasks which have all properties, including config file properties,
+   * specified on their command line by ForkingTaskRunner (so they could use System.getProperties() only),
+   * but we always use the injected Properties for consistency.
+   */
+  public static final Properties PROPERTIES;
 
   static {
     INJECTOR = Initialization.makeInjectorWithModules(
@@ -117,6 +125,7 @@ public class HadoopDruidIndexerConfig
     INDEX_MERGER_V9 = INJECTOR.getInstance(IndexMergerV9.class);
     HADOOP_KERBEROS_CONFIG = INJECTOR.getInstance(HadoopKerberosConfig.class);
     DATA_SEGMENT_PUSHER = INJECTOR.getInstance(DataSegmentPusher.class);
+    PROPERTIES = INJECTOR.getInstance(Properties.class);
   }
 
   public enum IndexJobCounters
@@ -304,9 +313,9 @@ public class HadoopDruidIndexerConfig
 
   public Optional<List<Interval>> getIntervals()
   {
-    Optional<SortedSet<Interval>> setOptional = schema.getDataSchema().getGranularitySpec().bucketIntervals();
-    if (setOptional.isPresent()) {
-      return Optional.of(JodaUtils.condenseIntervals(setOptional.get()));
+    Iterable<Interval> bucketIntervals = schema.getDataSchema().getGranularitySpec().sortedBucketIntervals();
+    if (bucketIntervals.iterator().hasNext()) {
+      return Optional.of(JodaUtils.condenseIntervals(bucketIntervals));
     } else {
       return Optional.absent();
     }
@@ -346,7 +355,7 @@ public class HadoopDruidIndexerConfig
 
   public InputRowParser getParser()
   {
-    return schema.getDataSchema().getParser();
+    return Preconditions.checkNotNull(schema.getDataSchema().getParser(), "inputRowParser");
   }
 
   public HadoopyShardSpec getShardSpec(Bucket bucket)
@@ -369,11 +378,24 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().getMaxParseExceptions();
   }
 
+  public Map<String, String> getAllowedProperties()
+  {
+    Map<String, String> allowedPropertiesMap = new HashMap<>();
+    for (String propName : PROPERTIES.stringPropertyNames()) {
+      for (String prefix : allowedHadoopPrefix) {
+        if (propName.equals(prefix) || propName.startsWith(prefix + ".")) {
+          allowedPropertiesMap.put(propName, PROPERTIES.getProperty(propName));
+          break;
+        }
+      }
+    }
+    return allowedPropertiesMap;
+  }
+
   boolean isUseYarnRMJobStatusFallback()
   {
     return schema.getTuningConfig().isUseYarnRMJobStatusFallback();
   }
-
 
   void setHadoopJobIdFileName(String hadoopJobIdFileName)
   {
@@ -403,7 +425,6 @@ public class HadoopDruidIndexerConfig
    * Get the proper bucket for some input row.
    *
    * @param inputRow an InputRow
-   *
    * @return the Bucket that this row belongs to
    */
   Optional<Bucket> getBucket(InputRow inputRow)
@@ -432,14 +453,12 @@ public class HadoopDruidIndexerConfig
 
   }
 
-  Optional<Set<Interval>> getSegmentGranularIntervals()
+  Iterable<Interval> getSegmentGranularIntervals()
   {
-    return Optional.fromNullable(
+    return
         schema.getDataSchema()
               .getGranularitySpec()
-              .bucketIntervals()
-              .orNull()
-    );
+              .sortedBucketIntervals();
   }
 
   public List<Interval> getInputIntervals()
@@ -451,15 +470,17 @@ public class HadoopDruidIndexerConfig
 
   Optional<Iterable<Bucket>> getAllBuckets()
   {
-    Optional<Set<Interval>> intervals = getSegmentGranularIntervals();
-    if (intervals.isPresent()) {
+    Iterable<Interval> intervals = getSegmentGranularIntervals();
+    if (intervals.iterator().hasNext()) {
       return Optional.of(
           FunctionalIterable
-              .create(intervals.get())
+              .create(intervals)
               .transformCat(
                   input -> {
                     final DateTime bucketTime = input.getStart();
-                    final List<HadoopyShardSpec> specs = schema.getTuningConfig().getShardSpecs().get(bucketTime.getMillis());
+                    final List<HadoopyShardSpec> specs = schema.getTuningConfig()
+                                                               .getShardSpecs()
+                                                               .get(bucketTime.getMillis());
                     if (specs == null) {
                       return ImmutableList.of();
                     }
@@ -579,17 +600,12 @@ public class HadoopDruidIndexerConfig
   public void verify()
   {
     Preconditions.checkNotNull(schema.getDataSchema().getDataSource(), "dataSource");
+    Preconditions.checkNotNull(schema.getDataSchema().getParser(), "inputRowParser");
     Preconditions.checkNotNull(schema.getDataSchema().getParser().getParseSpec(), "parseSpec");
-    Preconditions.checkNotNull(schema.getDataSchema().getParser().getParseSpec().getTimestampSpec(), "timestampSpec");
     Preconditions.checkNotNull(schema.getDataSchema().getGranularitySpec(), "granularitySpec");
     Preconditions.checkNotNull(pathSpec, "inputSpec");
     Preconditions.checkNotNull(schema.getTuningConfig().getWorkingPath(), "workingPath");
     Preconditions.checkNotNull(schema.getIOConfig().getSegmentOutputPath(), "segmentOutputPath");
     Preconditions.checkNotNull(schema.getTuningConfig().getVersion(), "version");
-  }
-
-  List<String> getAllowedHadoopPrefix()
-  {
-    return allowedHadoopPrefix;
   }
 }

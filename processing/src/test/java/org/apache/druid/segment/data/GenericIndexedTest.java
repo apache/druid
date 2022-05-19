@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.data;
 
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,7 +33,7 @@ import java.util.Map;
 
 /**
  */
-public class GenericIndexedTest
+public class GenericIndexedTest extends InitializedNullHandlingTest
 {
   @Test(expected = UnsupportedOperationException.class)
   public void testNotSortedNoIndexOf()

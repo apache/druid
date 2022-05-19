@@ -53,7 +53,7 @@ public class SegmentIdWithShardSpecTest
     Assert.assertEquals(INTERVAL, id2.getInterval());
     Assert.assertEquals(VERSION, id2.getVersion());
     Assert.assertEquals(SHARD_SPEC_1.getPartitionNum(), id2.getShardSpec().getPartitionNum());
-    Assert.assertEquals(SHARD_SPEC_1.getPartitions(), ((NumberedShardSpec) id2.getShardSpec()).getPartitions());
+    Assert.assertEquals(SHARD_SPEC_1.getNumCorePartitions(), id2.getShardSpec().getNumCorePartitions());
   }
 
   @Test

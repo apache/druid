@@ -26,9 +26,6 @@ import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
-import java.util.Spliterator;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 /**
  * An object that clumps together multiple other objects which each represent a shard of some space.
@@ -36,6 +33,18 @@ import java.util.stream.StreamSupport;
 public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<PartitionChunk<T>>
 {
   private final OvershadowableManager<T> overshadowableManager;
+
+  public static <T extends Overshadowable<T>> PartitionHolder<T> copyWithOnlyVisibleChunks(
+      PartitionHolder<T> partitionHolder
+  )
+  {
+    return new PartitionHolder<>(OvershadowableManager.copyVisible(partitionHolder.overshadowableManager));
+  }
+
+  public static <T extends Overshadowable<T>> PartitionHolder<T> deepCopy(PartitionHolder<T> partitionHolder)
+  {
+    return new PartitionHolder<>(OvershadowableManager.deepCopy(partitionHolder.overshadowableManager));
+  }
 
   public PartitionHolder(PartitionChunk<T> initialChunk)
   {
@@ -51,9 +60,9 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
     }
   }
 
-  public PartitionHolder(PartitionHolder<T> partitionHolder)
+  protected PartitionHolder(OvershadowableManager<T> overshadowableManager)
   {
-    this.overshadowableManager = new OvershadowableManager<>(partitionHolder.overshadowableManager);
+    this.overshadowableManager = overshadowableManager;
   }
 
   public boolean add(PartitionChunk<T> chunk)
@@ -113,18 +122,7 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
   @Override
   public Iterator<PartitionChunk<T>> iterator()
   {
-    return overshadowableManager.getVisibleChunks().iterator();
-  }
-
-  @Override
-  public Spliterator<PartitionChunk<T>> spliterator()
-  {
-    return overshadowableManager.getVisibleChunks().spliterator();
-  }
-
-  public Stream<PartitionChunk<T>> stream()
-  {
-    return StreamSupport.stream(spliterator(), false);
+    return overshadowableManager.visibleChunksIterator();
   }
 
   public List<PartitionChunk<T>> getOvershadowed()
@@ -163,4 +161,16 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
            "overshadowableManager=" + overshadowableManager +
            '}';
   }
+
+  public boolean hasData()
+  {
+    // it has data as long as one of the payloads has data, otherwise it does not
+    for (T payload : payloads()) {
+      if (payload.hasData()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
 }

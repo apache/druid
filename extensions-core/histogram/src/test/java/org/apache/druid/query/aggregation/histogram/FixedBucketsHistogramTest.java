@@ -83,11 +83,6 @@ public class FixedBucketsHistogramTest
     );
 
     float[] quantiles = h.percentilesFloat(new double[]{12.5f, 50.0f, 98f});
-    double[] doubles = new double[VALUES2.length];
-
-    for (int i = 0; i < doubles.length; i++) {
-      doubles[i] = VALUES2[i];
-    }
 
     Assert.assertArrayEquals(
         new float[]{2.5f, 20.0f, 46.76f},
@@ -164,11 +159,6 @@ public class FixedBucketsHistogramTest
     );
 
     float[] quantiles = h.percentilesFloat(new double[]{12.5f, 50.0f, 98f});
-    double[] doubles = new double[VALUES2.length];
-
-    for (int i = 0; i < doubles.length; i++) {
-      doubles[i] = VALUES2[i];
-    }
 
     Assert.assertArrayEquals(
         new float[]{3.0f, 20.0f, 47.52f},
@@ -189,11 +179,6 @@ public class FixedBucketsHistogramTest
     );
 
     float[] quantiles = h.percentilesFloat(new double[]{12.5f, 50.0f, 98f});
-    double[] doubles = new double[VALUES3.length];
-
-    for (int i = 0; i < doubles.length; i++) {
-      doubles[i] = VALUES3[i];
-    }
 
     Assert.assertArrayEquals(
         new float[]{14.857142f, 20.0f, 28.4f},
@@ -214,11 +199,6 @@ public class FixedBucketsHistogramTest
     );
 
     float[] quantiles = h.percentilesFloat(new double[]{12.5f, 50.0f, 98f});
-    double[] doubles = new double[VALUES4.length];
-
-    for (int i = 0; i < doubles.length; i++) {
-      doubles[i] = VALUES4[i];
-    }
 
     Assert.assertArrayEquals(
         new float[]{-8.5f, 20.0f, 67.6f},
@@ -239,11 +219,6 @@ public class FixedBucketsHistogramTest
     );
 
     float[] quantiles = h.percentilesFloat(new double[]{12.5f, 50.0f, 98f});
-    double[] doubles = new double[VALUES5.length];
-
-    for (int i = 0; i < doubles.length; i++) {
-      doubles[i] = VALUES5[i];
-    }
 
     Assert.assertArrayEquals(
         new float[]{2.125f, 5.5f, 9.82f},
@@ -264,11 +239,6 @@ public class FixedBucketsHistogramTest
     );
 
     float[] quantiles = h.percentilesFloat(new double[]{12.5f, 50.0f, 98f});
-    double[] doubles = new double[VALUES6.length];
-
-    for (int i = 0; i < doubles.length; i++) {
-      doubles[i] = VALUES6[i];
-    }
 
     Assert.assertArrayEquals(
         new float[]{2.125f, 5.5f, 9.82f},
@@ -289,11 +259,6 @@ public class FixedBucketsHistogramTest
     );
 
     float[] quantiles = h.percentilesFloat(new double[]{12.5f, 50.0f, 98f});
-    double[] doubles = new double[VALUES7.length];
-
-    for (int i = 0; i < doubles.length; i++) {
-      doubles[i] = VALUES7[i];
-    }
 
     Assert.assertArrayEquals(
         new float[]{3.25f, 10f, 25.88f},
@@ -1275,6 +1240,94 @@ public class FixedBucketsHistogramTest
     Assert.assertEquals(0, hIgnore.getMissingValueCount());
     Assert.assertEquals(0, hIgnore.getLowerOutlierCount());
     Assert.assertEquals(0, hIgnore.getUpperOutlierCount());
+  }
+
+  @Test
+  public void testCombineBase64()
+  {
+    FixedBucketsHistogram h = buildHistogram(
+        0,
+        20,
+        5,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{1, 2, 7, 12, 18}
+    );
+
+    FixedBucketsHistogram h2 = buildHistogram(
+        0,
+        20,
+        7,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{3, 8, 9, 19, 99, -50}
+    );
+
+    h.combine(h2.toBase64());
+    Assert.assertEquals(5, h.getNumBuckets());
+    Assert.assertEquals(4.0, h.getBucketSize(), 0.01);
+    Assert.assertEquals(0, h.getLowerLimit(), 0.01);
+    Assert.assertEquals(20, h.getUpperLimit(), 0.01);
+    Assert.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h.getOutlierHandlingMode());
+    Assert.assertArrayEquals(new long[]{2, 3, 1, 1, 2}, h.getHistogram());
+    Assert.assertEquals(9, h.getCount());
+    Assert.assertEquals(1, h.getMin(), 0.01);
+    Assert.assertEquals(18, h.getMax(), 0.01);
+    Assert.assertEquals(0, h.getMissingValueCount());
+    Assert.assertEquals(1, h.getLowerOutlierCount());
+    Assert.assertEquals(1, h.getUpperOutlierCount());
+  }
+
+  @Test
+  public void testCombineAnotherHistogram()
+  {
+    FixedBucketsHistogram h = buildHistogram(
+        0,
+        20,
+        5,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{1, 2, 7, 12, 18}
+    );
+
+    FixedBucketsHistogram h2 = buildHistogram(
+        0,
+        20,
+        7,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{3, 8, 9, 19, 99, -50}
+    );
+
+    h.combine(h2);
+    Assert.assertEquals(5, h.getNumBuckets());
+    Assert.assertEquals(4.0, h.getBucketSize(), 0.01);
+    Assert.assertEquals(0, h.getLowerLimit(), 0.01);
+    Assert.assertEquals(20, h.getUpperLimit(), 0.01);
+    Assert.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h.getOutlierHandlingMode());
+    Assert.assertArrayEquals(new long[]{2, 3, 1, 1, 2}, h.getHistogram());
+    Assert.assertEquals(9, h.getCount());
+    Assert.assertEquals(1, h.getMin(), 0.01);
+    Assert.assertEquals(18, h.getMax(), 0.01);
+    Assert.assertEquals(0, h.getMissingValueCount());
+    Assert.assertEquals(1, h.getLowerOutlierCount());
+    Assert.assertEquals(1, h.getUpperOutlierCount());
+  }
+
+  @Test
+  public void testCombineNumber()
+  {
+    FixedBucketsHistogram h = new FixedBucketsHistogram(
+        0,
+        200,
+        200,
+        FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+    );
+
+    h.combine(10);
+    h.combine(20);
+
+    Assert.assertEquals(0, h.getUpperOutlierCount());
+    Assert.assertEquals(0, h.getLowerOutlierCount());
+    Assert.assertEquals(2, h.getCount());
+    Assert.assertEquals(10, h.getMin(), 0.01);
+    Assert.assertEquals(20, h.getMax(), 0.01);
   }
 
   @Test

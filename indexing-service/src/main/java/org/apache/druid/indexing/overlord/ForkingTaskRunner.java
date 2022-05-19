@@ -19,15 +19,19 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
@@ -37,19 +41,19 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.tasklogs.ConsoleLoggingEnforcementConfigurationFactory;
 import org.apache.druid.indexing.common.tasklogs.LogUtils;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IOE;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -58,7 +62,9 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.server.metrics.MonitorsConfig;
+import org.apache.druid.server.metrics.WorkerTaskCountStatsProvider;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.joda.time.DateTime;
@@ -79,13 +85,14 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Runs tasks in separate processes using the "internal peon" verb.
  */
 public class ForkingTaskRunner
     extends BaseRestorableTaskRunner<ForkingTaskRunner.ForkingTaskRunnerWorkItem>
-    implements TaskLogStreamer
+    implements TaskLogStreamer, WorkerTaskCountStatsProvider
 {
   private static final EmittingLogger LOGGER = new EmittingLogger(ForkingTaskRunner.class);
   private static final String CHILD_PROPERTY_PREFIX = "druid.indexer.fork.property.";
@@ -95,8 +102,15 @@ public class ForkingTaskRunner
   private final DruidNode node;
   private final ListeningExecutorService exec;
   private final PortFinder portFinder;
+  private final StartupLoggingConfig startupLoggingConfig;
+  private final WorkerConfig workerConfig;
 
   private volatile boolean stopping = false;
+
+  private static final AtomicLong LAST_REPORTED_FAILED_TASK_COUNT = new AtomicLong();
+  private static final AtomicLong FAILED_TASK_COUNT = new AtomicLong();
+  private static final AtomicLong SUCCESSFUL_TASK_COUNT = new AtomicLong();
+  private static final AtomicLong LAST_REPORTED_SUCCESSFUL_TASK_COUNT = new AtomicLong();
 
   @Inject
   public ForkingTaskRunner(
@@ -106,7 +120,8 @@ public class ForkingTaskRunner
       Properties props,
       TaskLogPusher taskLogPusher,
       ObjectMapper jsonMapper,
-      @Self DruidNode node
+      @Self DruidNode node,
+      StartupLoggingConfig startupLoggingConfig
   )
   {
     super(jsonMapper, taskConfig);
@@ -115,6 +130,8 @@ public class ForkingTaskRunner
     this.taskLogPusher = taskLogPusher;
     this.node = node;
     this.portFinder = new PortFinder(config.getStartPort(), config.getEndPort(), config.getPorts());
+    this.startupLoggingConfig = startupLoggingConfig;
+    this.workerConfig = workerConfig;
     this.exec = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(workerConfig.getCapacity(), "forking-task-runner-%d")
     );
@@ -155,9 +172,7 @@ public class ForkingTaskRunner
                   try {
                     final Closer closer = Closer.create();
                     try {
-                      if (!attemptDir.mkdirs()) {
-                        throw new IOE("Could not create directories: %s", attemptDir);
-                      }
+                      FileUtils.mkdirp(attemptDir);
 
                       final File taskFile = new File(taskDir, "task.json");
                       final File statusFile = new File(attemptDir, "status.json");
@@ -169,7 +184,7 @@ public class ForkingTaskRunner
                         final ForkingTaskRunnerWorkItem taskWorkItem = tasks.get(task.getId());
 
                         if (taskWorkItem == null) {
-                          LOGGER.makeAlert("WTF?! TaskInfo disappeared!").addData("task", task.getId()).emit();
+                          LOGGER.makeAlert("TaskInfo disappeared!").addData("task", task.getId()).emit();
                           throw new ISE("TaskInfo disappeared for task[%s]!", task.getId());
                         }
 
@@ -178,7 +193,7 @@ public class ForkingTaskRunner
                         }
 
                         if (taskWorkItem.processHolder != null) {
-                          LOGGER.makeAlert("WTF?! TaskInfo already has a processHolder")
+                          LOGGER.makeAlert("TaskInfo already has a processHolder")
                                 .addData("task", task.getId())
                                 .emit();
                           throw new ISE("TaskInfo already has processHolder for task[%s]!", task.getId());
@@ -213,9 +228,27 @@ public class ForkingTaskRunner
                           );
                         }
 
+                        // Override task specific javaOptsArray
+                        try {
+                          List<String> taskJavaOptsArray = jsonMapper.convertValue(
+                              task.getContextValue(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY),
+                              new TypeReference<List<String>>() {}
+                          );
+                          if (taskJavaOptsArray != null) {
+                            Iterables.addAll(command, taskJavaOptsArray);
+                          }
+                        }
+                        catch (Exception e) {
+                          throw new IllegalArgumentException(
+                              ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY
+                              + " in context of task: " + task.getId() + " must be an array of strings.",
+                              e
+                          );
+                        }
+
                         for (String propName : props.stringPropertyNames()) {
                           for (String allowedPrefix : config.getAllowedPrefixes()) {
-                            // See https://github.com/apache/incubator-druid/issues/1841
+                            // See https://github.com/apache/druid/issues/1841
                             if (propName.startsWith(allowedPrefix)
                                 && !ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY.equals(propName)
                                 && !ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY.equals(propName)
@@ -307,6 +340,7 @@ public class ForkingTaskRunner
                         command.add(
                             StringUtils.format("-Ddruid.task.executor.enableTlsPort=%s", node.isEnableTlsPort())
                         );
+                        command.add(StringUtils.format("-Dlog4j2.configurationFactory=%s", ConsoleLoggingEnforcementConfigurationFactory.class.getName()));
 
                         // These are not enabled per default to allow the user to either set or not set them
                         // Users are highly suggested to be set in druid.indexer.runner.javaOpts
@@ -327,18 +361,22 @@ public class ForkingTaskRunner
                           command.add(nodeType);
                         }
 
+                        // If the task type is queryable, we need to load broadcast segments on the peon, used for
+                        // join queries
+                        if (task.supportsQueries()) {
+                          command.add("--loadBroadcastSegments");
+                          command.add("true");
+                        }
+
                         if (!taskFile.exists()) {
                           jsonMapper.writeValue(taskFile, task);
                         }
 
-                        LOGGER.info("Running command: %s", Joiner.on(" ").join(command));
-                        taskWorkItem.processHolder = new ProcessHolder(
-                          new ProcessBuilder(ImmutableList.copyOf(command)).redirectErrorStream(true).start(),
-                          logFile,
-                          taskLocation.getHost(),
-                          taskLocation.getPort(),
-                          taskLocation.getTlsPort()
+                        LOGGER.info(
+                            "Running command: %s",
+                            getMaskedCommand(startupLoggingConfig.getMaskProperties(), command)
                         );
+                        taskWorkItem.processHolder = runTaskProcess(command, logFile, taskLocation);
 
                         processHolder = taskWorkItem.processHolder;
                         processHolder.registerWithCloser(closer);
@@ -352,40 +390,29 @@ public class ForkingTaskRunner
                       );
 
                       LOGGER.info("Logging task %s output to: %s", task.getId(), logFile);
-                      boolean runFailed = true;
-
-                      final ByteSink logSink = Files.asByteSink(logFile, FileWriteMode.APPEND);
-
-                      // This will block for a while. So we append the thread information with more details
-                      final String priorThreadName = Thread.currentThread().getName();
-                      Thread.currentThread().setName(StringUtils.format("%s-[%s]", priorThreadName, task.getId()));
-
-                      try (final OutputStream toLogfile = logSink.openStream()) {
-                        ByteStreams.copy(processHolder.process.getInputStream(), toLogfile);
-                        final int statusCode = processHolder.process.waitFor();
-                        LOGGER.info("Process exited with status[%d] for task: %s", statusCode, task.getId());
-                        if (statusCode == 0) {
-                          runFailed = false;
-                        }
-                      }
-                      finally {
-                        Thread.currentThread().setName(priorThreadName);
-                        // Upload task logs
-                        taskLogPusher.pushTaskLog(task.getId(), logFile);
-                        if (reportsFile.exists()) {
-                          taskLogPusher.pushTaskReports(task.getId(), reportsFile);
-                        }
-                      }
-
-                      TaskStatus status;
-                      if (!runFailed) {
+                      final int exitCode = waitForTaskProcessToComplete(task, processHolder, logFile, reportsFile);
+                      final TaskStatus status;
+                      if (exitCode == 0) {
+                        LOGGER.info("Process exited successfully for task: %s", task.getId());
                         // Process exited successfully
                         status = jsonMapper.readValue(statusFile, TaskStatus.class);
                       } else {
+                        LOGGER.error("Process exited with code[%d] for task: %s", exitCode, task.getId());
                         // Process exited unsuccessfully
-                        status = TaskStatus.failure(task.getId());
+                        status = TaskStatus.failure(
+                            task.getId(),
+                            StringUtils.format(
+                                "Task execution process exited unsuccessfully with code[%s]. "
+                                + "See middleManager logs for more details.",
+                                exitCode
+                            )
+                        );
                       }
-
+                      if (status.isSuccess()) {
+                        SUCCESSFUL_TASK_COUNT.incrementAndGet();
+                      } else {
+                        FAILED_TASK_COUNT.incrementAndGet();
+                      }
                       TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
                       return status;
                     }
@@ -405,7 +432,7 @@ public class ForkingTaskRunner
                       synchronized (tasks) {
                         final ForkingTaskRunnerWorkItem taskWorkItem = tasks.remove(task.getId());
                         if (taskWorkItem != null && taskWorkItem.processHolder != null) {
-                          taskWorkItem.processHolder.process.destroy();
+                          taskWorkItem.processHolder.shutdown();
                         }
                         if (!stopping) {
                           saveRunningTasks();
@@ -421,8 +448,8 @@ public class ForkingTaskRunner
 
                       try {
                         if (!stopping && taskDir.exists()) {
-                          LOGGER.info("Removing task directory: %s", taskDir);
                           FileUtils.deleteDirectory(taskDir);
+                          LOGGER.info("Removing task directory: %s", taskDir);
                         }
                       }
                       catch (Exception e) {
@@ -443,6 +470,42 @@ public class ForkingTaskRunner
       );
       saveRunningTasks();
       return tasks.get(task.getId()).getResult();
+    }
+  }
+
+  @VisibleForTesting
+  ProcessHolder runTaskProcess(List<String> command, File logFile, TaskLocation taskLocation) throws IOException
+  {
+    return new ProcessHolder(
+        new ProcessBuilder(ImmutableList.copyOf(command)).redirectErrorStream(true).start(),
+        logFile,
+        taskLocation.getHost(),
+        taskLocation.getPort(),
+        taskLocation.getTlsPort()
+    );
+  }
+
+  @VisibleForTesting
+  int waitForTaskProcessToComplete(Task task, ProcessHolder processHolder, File logFile, File reportsFile)
+      throws IOException, InterruptedException
+  {
+    final ByteSink logSink = Files.asByteSink(logFile, FileWriteMode.APPEND);
+
+    // This will block for a while. So we append the thread information with more details
+    final String priorThreadName = Thread.currentThread().getName();
+    Thread.currentThread().setName(StringUtils.format("%s-[%s]", priorThreadName, task.getId()));
+
+    try (final OutputStream toLogfile = logSink.openStream()) {
+      ByteStreams.copy(processHolder.process.getInputStream(), toLogfile);
+      return processHolder.process.waitFor();
+    }
+    finally {
+      Thread.currentThread().setName(priorThreadName);
+      // Upload task logs
+      taskLogPusher.pushTaskLog(task.getId(), logFile);
+      if (reportsFile.exists()) {
+        taskLogPusher.pushTaskReports(task.getId(), reportsFile);
+      }
     }
   }
 
@@ -620,6 +683,111 @@ public class ForkingTaskRunner
     }
   }
 
+  String getMaskedCommand(List<String> maskedProperties, List<String> command)
+  {
+    final Set<String> maskedPropertiesSet = Sets.newHashSet(maskedProperties);
+    final Iterator<String> maskedIterator = command.stream().map(element -> {
+      String[] splits = element.split("=", 2);
+      if (splits.length == 2) {
+        for (String masked : maskedPropertiesSet) {
+          if (splits[0].contains(masked)) {
+            return StringUtils.format("%s=%s", splits[0], "<masked>");
+          }
+        }
+      }
+      return element;
+    }).iterator();
+    return Joiner.on(" ").join(maskedIterator);
+  }
+
+  @Override
+  public Map<String, Long> getTotalTaskSlotCount()
+  {
+    return ImmutableMap.of(workerConfig.getCategory(), getTotalTaskSlotCountLong());
+  }
+
+  public long getTotalTaskSlotCountLong()
+  {
+    return workerConfig.getCapacity();
+  }
+
+  @Override
+  public Map<String, Long> getIdleTaskSlotCount()
+  {
+    return ImmutableMap.of(workerConfig.getCategory(), Math.max(getTotalTaskSlotCountLong() - getUsedTaskSlotCountLong(), 0));
+  }
+
+  @Override
+  public Map<String, Long> getUsedTaskSlotCount()
+  {
+    return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(portFinder.findUsedPortCount()));
+  }
+
+  public long getUsedTaskSlotCountLong()
+  {
+    return portFinder.findUsedPortCount();
+  }
+
+  @Override
+  public Map<String, Long> getLazyTaskSlotCount()
+  {
+    return ImmutableMap.of(workerConfig.getCategory(), 0L);
+  }
+
+  @Override
+  public Map<String, Long> getBlacklistedTaskSlotCount()
+  {
+    return ImmutableMap.of(workerConfig.getCategory(), 0L);
+  }
+
+  @Override
+  public Long getWorkerFailedTaskCount()
+  {
+    long failedTaskCount = FAILED_TASK_COUNT.get();
+    long lastReportedFailedTaskCount = LAST_REPORTED_FAILED_TASK_COUNT.get();
+    LAST_REPORTED_FAILED_TASK_COUNT.set(failedTaskCount);
+    return failedTaskCount - lastReportedFailedTaskCount;
+  }
+
+  @Override
+  public Long getWorkerIdleTaskSlotCount()
+  {
+    return Math.max(getTotalTaskSlotCountLong() - getUsedTaskSlotCountLong(), 0);
+  }
+
+  @Override
+  public Long getWorkerUsedTaskSlotCount()
+  {
+    return (long) portFinder.findUsedPortCount();
+  }
+
+  @Override
+  public Long getWorkerTotalTaskSlotCount()
+  {
+    return getTotalTaskSlotCountLong();
+  }
+
+  @Override
+  public String getWorkerCategory()
+  {
+    return workerConfig.getCategory();
+  }
+
+  @Override
+  public String getWorkerVersion()
+  {
+    return workerConfig.getVersion();
+  }
+
+  @Override
+  public Long getWorkerSuccessfulTaskCount()
+  {
+    long successfulTaskCount = SUCCESSFUL_TASK_COUNT.get();
+    long lastReportedSuccessfulTaskCount = LAST_REPORTED_SUCCESSFUL_TASK_COUNT.get();
+    LAST_REPORTED_SUCCESSFUL_TASK_COUNT.set(successfulTaskCount);
+    return successfulTaskCount - lastReportedSuccessfulTaskCount;
+  }
+
   protected static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem
   {
     private final Task task;
@@ -664,7 +832,8 @@ public class ForkingTaskRunner
     }
   }
 
-  private static class ProcessHolder
+  @VisibleForTesting
+  static class ProcessHolder
   {
     private final Process process;
     private final File logFile;
@@ -681,10 +850,17 @@ public class ForkingTaskRunner
       this.tlsPort = tlsPort;
     }
 
-    private void registerWithCloser(Closer closer)
+    @VisibleForTesting
+    void registerWithCloser(Closer closer)
     {
       closer.register(process.getInputStream());
       closer.register(process.getOutputStream());
+    }
+
+    @VisibleForTesting
+    void shutdown()
+    {
+      process.destroy();
     }
   }
 }

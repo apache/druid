@@ -22,11 +22,11 @@ package org.apache.druid.java.util.common;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteSource;
-import com.google.common.io.Files;
+import io.netty.util.SuppressForbidden;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
-import org.apache.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -38,6 +38,11 @@ import java.io.OutputStream;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.FileSystemException;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
@@ -47,19 +52,10 @@ import java.util.UUID;
 
 public class FileUtils
 {
-  private static final Logger log = new Logger(FileUtils.class);
-
   /**
    * Useful for retry functionality that doesn't want to stop Throwables, but does want to retry on Exceptions
    */
-  public static final Predicate<Throwable> IS_EXCEPTION = new Predicate<Throwable>()
-  {
-    @Override
-    public boolean apply(Throwable input)
-    {
-      return input instanceof Exception;
-    }
-  };
+  public static final Predicate<Throwable> IS_EXCEPTION = input -> input instanceof Exception;
 
   /**
    * Copy input byte source to outFile. If outFile exists, it is attempted to be deleted.
@@ -81,7 +77,7 @@ public class FileUtils
     try {
       StreamUtils.retryCopy(
           byteSource,
-          Files.asByteSink(outFile),
+          com.google.common.io.Files.asByteSink(outFile),
           shouldRetry,
           maxAttempts
       );
@@ -156,8 +152,8 @@ public class FileUtils
    *
    * <p>This only works for files <= {@link Integer#MAX_VALUE} bytes.
    *
-   * <p>Similar to {@link Files#map(File)}, but returns {@link MappedByteBufferHandler}, that makes it easier to unmap
-   * the buffer within try-with-resources pattern:
+   * <p>Similar to {@link com.google.common.io.Files#map(File)}, but returns {@link MappedByteBufferHandler}, that
+   * makes it easier to unmap the buffer within try-with-resources pattern:
    * <pre>{@code
    * try (MappedByteBufferHandler fileMappingHandler = FileUtils.map(file)) {
    *   ByteBuffer fileMapping = fileMappingHandler.get();
@@ -174,7 +170,7 @@ public class FileUtils
    */
   public static MappedByteBufferHandler map(File file) throws IOException
   {
-    MappedByteBuffer mappedByteBuffer = Files.map(file);
+    MappedByteBuffer mappedByteBuffer = com.google.common.io.Files.map(file);
     return new MappedByteBufferHandler(mappedByteBuffer);
   }
 
@@ -204,7 +200,7 @@ public class FileUtils
     final File tmpFile = new File(tmpDir, StringUtils.format(".%s.%s", file.getName(), UUID.randomUUID()));
 
     //noinspection unused
-    try (final Closeable deleter = () -> java.nio.file.Files.deleteIfExists(tmpFile.toPath())) {
+    try (final Closeable deleter = () -> Files.deleteIfExists(tmpFile.toPath())) {
       final T retVal;
 
       try (
@@ -221,12 +217,12 @@ public class FileUtils
         // fsync to avoid write-then-rename-then-crash causing empty files on some filesystems.
         // Must do this before "out" or "fileChannel" is closed. No need to flush "out" first, since
         // Channels.newOutputStream is unbuffered.
-        // See also https://github.com/apache/incubator-druid/pull/5187#pullrequestreview-85188984
+        // See also https://github.com/apache/druid/pull/5187#pullrequestreview-85188984
         fileChannel.force(true);
       }
 
       // No exception thrown; do the move.
-      java.nio.file.Files.move(
+      Files.move(
           tmpFile.toPath(),
           file.toPath(),
           StandardCopyOption.ATOMIC_MOVE,
@@ -249,7 +245,7 @@ public class FileUtils
       // Default implementation of this method in FilterOutputStream converts single write operation to
       // multiple write operations of 1 byte each, which is terribly inefficient.
       @Override
-      public void write(byte b[], int off, int len) throws IOException
+      public void write(byte[] b, int off, int len) throws IOException
       {
         out.write(b, off, len);
       }
@@ -267,13 +263,13 @@ public class FileUtils
    * This method is supposed to be used for copying large files.
    * The output file is deleted automatically if copy fails.
    *
-   * @param object              object to open
-   * @param objectOpenFunction  function to open the given object
-   * @param outFile             file to write data
-   * @param fetchBuffer         a buffer to copy data from the input stream to the file
-   * @param retryCondition      condition which should be satisfied for retry
-   * @param numRetries          max number of retries
-   * @param messageOnRetry      log message on retry
+   * @param object             object to open
+   * @param objectOpenFunction function to open the given object
+   * @param outFile            file to write data
+   * @param fetchBuffer        a buffer to copy data from the input stream to the file
+   * @param retryCondition     condition which should be satisfied for retry
+   * @param numTries           max number of retries
+   * @param messageOnRetry     log message on retry
    *
    * @return the number of bytes copied
    */
@@ -283,21 +279,43 @@ public class FileUtils
       File outFile,
       byte[] fetchBuffer,
       Predicate<Throwable> retryCondition,
-      int numRetries,
+      int numTries,
+      String messageOnRetry
+  ) throws IOException
+  {
+    return copyLarge(
+        () -> objectOpenFunction.open(object),
+        outFile,
+        fetchBuffer,
+        retryCondition,
+        numTries,
+        messageOnRetry
+    );
+  }
+
+  /**
+   * Copy a potentially large amount of data from an input source to a file.
+   */
+  public static long copyLarge(
+      InputStreamSupplier inputSource,
+      File outFile,
+      byte[] fetchBuffer,
+      Predicate<Throwable> retryCondition,
+      int numTries,
       String messageOnRetry
   ) throws IOException
   {
     try {
       return RetryUtils.retry(
           () -> {
-            try (InputStream inputStream = objectOpenFunction.open(object);
+            try (InputStream in = inputSource.openStream();
                  OutputStream out = new FileOutputStream(outFile)) {
-              return IOUtils.copyLarge(inputStream, out, fetchBuffer);
+              return IOUtils.copyLarge(in, out, fetchBuffer);
             }
           },
           retryCondition,
           outFile::delete,
-          numRetries,
+          numTries,
           messageOnRetry
       );
     }
@@ -306,8 +324,95 @@ public class FileUtils
     }
   }
 
+  /**
+   * Creates a temporary directory inside the configured temporary space (java.io.tmpdir). Similar to the method
+   * {@link com.google.common.io.Files#createTempDir()} from Guava, but has nicer error messages.
+   *
+   * @throws IllegalStateException if the directory could not be created
+   */
+  public static File createTempDir()
+  {
+    return createTempDir(null);
+  }
+
+  /**
+   * Creates a temporary directory inside the configured temporary space (java.io.tmpdir). Similar to the method
+   * {@link com.google.common.io.Files#createTempDir()} from Guava, but has nicer error messages.
+   *
+   * @param prefix base directory name; if null/empty then this method will use "druid"
+   *
+   * @throws IllegalStateException if the directory could not be created
+   */
+  @SuppressForbidden(reason = "Files#createTempDirectory")
+  public static File createTempDir(@Nullable final String prefix)
+  {
+    final String parentDirectory = System.getProperty("java.io.tmpdir");
+
+    if (parentDirectory == null) {
+      // Not expected.
+      throw new ISE("System property java.io.tmpdir is not set, cannot create temporary directories");
+    }
+
+    try {
+      final Path tmpPath = Files.createTempDirectory(
+          new File(parentDirectory).toPath(),
+          prefix == null || prefix.isEmpty() ? "druid" : prefix
+      );
+      return tmpPath.toFile();
+    }
+    catch (IOException e) {
+      // Some inspection to improve error messages.
+      if (e instanceof NoSuchFileException && !new File(parentDirectory).exists()) {
+        throw new ISE("java.io.tmpdir (%s) does not exist", parentDirectory);
+      } else if ((e instanceof FileSystemException && e.getMessage().contains("Read-only file system"))
+                 || (e instanceof AccessDeniedException)) {
+        throw new ISE("java.io.tmpdir (%s) is not writable, check permissions", parentDirectory);
+      } else {
+        // Well, maybe it was something else.
+        throw new ISE(e, "Failed to create temporary directory in java.io.tmpdir (%s)", parentDirectory);
+      }
+    }
+  }
+
+  /**
+   * Create "directory" and all intermediate directories as needed. If the directory is successfully created, or already
+   * exists, returns quietly. Otherwise, throws an IOException.
+   *
+   * Simpler to use than {@link File#mkdirs()}, and more reliable since it is safe from races where two threads try
+   * to create the same directory at the same time.
+   *
+   * The name is inspired by UNIX {@code mkdir -p}, which has the same behavior.
+   */
+  @SuppressForbidden(reason = "File#mkdirs")
+  public static void mkdirp(final File directory) throws IOException
+  {
+    // isDirectory check after mkdirs is necessary in case of concurrent calls to mkdirp, because two concurrent
+    // calls to mkdirs cannot both succeed.
+    if (!directory.mkdirs() && !directory.isDirectory()) {
+      throw new IOE("Cannot create directory [%s]", directory);
+    }
+  }
+
+  /**
+   * Equivalent to {@link org.apache.commons.io.FileUtils#deleteDirectory(File)}. Exists here mostly so callers
+   * can avoid dealing with our FileUtils and the Commons FileUtils having the same name.
+   */
+  @SuppressForbidden(reason = "FilesUtils#deleteDirectory")
+  public static void deleteDirectory(final File directory) throws IOException
+  {
+    org.apache.commons.io.FileUtils.deleteDirectory(directory);
+  }
+
   public interface OutputStreamConsumer<T>
   {
     T apply(OutputStream outputStream) throws IOException;
+  }
+
+  /**
+   * Like {@link ByteSource}, but this is an interface, which allows use of lambdas.
+   */
+  public interface InputStreamSupplier
+  {
+    InputStream openStream() throws IOException;
   }
 }

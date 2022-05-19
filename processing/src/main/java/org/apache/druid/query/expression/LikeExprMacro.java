@@ -21,21 +21,25 @@ package org.apache.druid.query.expression;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.LikeDimFilter;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class LikeExprMacro implements ExprMacroTable.ExprMacro
 {
+  private static final String FN_NAME = "like";
+
   @Override
   public String name()
   {
-    return "like";
+    return FN_NAME;
   }
 
   @Override
@@ -71,21 +75,42 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
     {
       private LikeExtractExpr(Expr arg)
       {
-        super(arg);
+        super(FN_NAME, arg);
       }
 
       @Nonnull
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
-        return ExprEval.of(likeMatcher.matches(arg.eval(bindings).asString()), ExprType.LONG);
+        return ExprEval.ofLongBoolean(likeMatcher.matches(arg.eval(bindings).asString()));
       }
 
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new LikeExtractExpr(newArg));
+        return shuttle.visit(apply(shuttle.visitAll(args)));
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getOutputType(InputBindingInspector inspector)
+      {
+        return ExpressionType.LONG;
+      }
+
+      @Override
+      public String stringify()
+      {
+        if (escapeExpr != null) {
+          return StringUtils.format(
+              "%s(%s, %s, %s)",
+              FN_NAME,
+              arg.stringify(),
+              patternExpr.stringify(),
+              escapeExpr.stringify()
+          );
+        }
+        return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), patternExpr.stringify());
       }
     }
     return new LikeExtractExpr(arg);

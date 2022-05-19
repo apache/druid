@@ -23,6 +23,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.TestFloatColumnSelector;
 import org.apache.druid.segment.TestObjectColumnSelector;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,7 +33,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class VarianceAggregatorCollectorTest
+public class VarianceAggregatorCollectorTest extends InitializedNullHandlingTest
 {
   private static final float[] MARKET_UPFRONT = new float[]{
       800.0f, 800.0f, 826.0602f, 1564.6177f, 1006.4021f, 869.64374f, 809.04175f, 1458.4027f, 852.4375f, 879.9881f,
@@ -141,6 +142,35 @@ public class VarianceAggregatorCollectorTest
         Assert.assertEquals(holder2.getVariance(false), variance_sample, 0.01);
       }
     }
+  }
+
+  @Test
+  public void testVarianceComparatorShouldCompareVarianceFirst()
+  {
+    VarianceAggregatorCollector v1 = new VarianceAggregatorCollector(4, 2d, 1.0);
+    VarianceAggregatorCollector v2 = new VarianceAggregatorCollector(3, 5d, 2.0);
+    Assert.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v1, v2) < 0);
+    Assert.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v2, v1) > 0);
+  }
+
+  @Test
+  public void testVarianceComparatorShouldCompareCountsIfVarianceIsEqual()
+  {
+    VarianceAggregatorCollector v1 = new VarianceAggregatorCollector(4, 2d, 1.0);
+    VarianceAggregatorCollector v2 = new VarianceAggregatorCollector(3, 5d, 1.0);
+    Assert.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v1, v2) > 0);
+    Assert.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v2, v1) < 0);
+  }
+
+  @Test
+  public void testVarianceComparatorShouldCompareSumIfVarianceAndCountsAreEqual()
+  {
+    VarianceAggregatorCollector v1 = new VarianceAggregatorCollector(4, 2d, 1.0);
+    VarianceAggregatorCollector v2 = new VarianceAggregatorCollector(4, 5d, 1.0);
+    Assert.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v1, v2) < 0);
+    Assert.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v2, v1) > 0);
+    v2.sum = v1.sum;
+    Assert.assertEquals(0, VarianceAggregatorCollector.COMPARATOR.compare(v1, v2));
   }
 
   private static class FloatHandOver extends TestFloatColumnSelector

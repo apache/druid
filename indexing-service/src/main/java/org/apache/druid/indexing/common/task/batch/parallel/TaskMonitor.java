@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskState;
@@ -36,6 +37,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,11 +51,11 @@ import java.util.stream.Collectors;
  * Responsible for submitting tasks, monitoring task statuses, resubmitting failed tasks, and returning the final task
  * status.
  */
-public class TaskMonitor<T extends Task>
+public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport>
 {
   private static final Logger log = new Logger(TaskMonitor.class);
 
-  private final ScheduledExecutorService taskStatusChecker = Execs.scheduledSingleThreaded(("task-monitor-%d"));
+  private final ScheduledExecutorService taskStatusChecker = Execs.scheduledSingleThreaded("task-monitor-%d");
 
   /**
    * A map of subTaskSpecId to {@link MonitorEntry}. This map stores the state of running {@link SubTaskSpec}s. This is
@@ -71,6 +73,9 @@ public class TaskMonitor<T extends Task>
    */
   private final ConcurrentMap<String, TaskHistory<T>> taskHistories = new ConcurrentHashMap<>();
 
+  // subTaskId -> report
+  private final ConcurrentHashMap<String, SubTaskReportType> reportsMap = new ConcurrentHashMap<>();
+
   // lock for updating numRunningTasks, numSucceededTasks, and numFailedTasks
   private final Object taskCountLock = new Object();
 
@@ -80,26 +85,32 @@ public class TaskMonitor<T extends Task>
   // overlord client
   private final IndexingServiceClient indexingServiceClient;
   private final int maxRetry;
-  private final int expectedNumSucceededTasks;
+  private final int estimatedNumSucceededTasks;
 
+  @GuardedBy("taskCountLock")
   private int numRunningTasks;
+  @GuardedBy("taskCountLock")
   private int numSucceededTasks;
+  @GuardedBy("taskCountLock")
   private int numFailedTasks;
-  // This metric is used only for unit tests because the current taskStatus system doesn't track the killed task status.
-  // Currently, this metric only represents # of killed tasks by ParallelIndexTaskRunner.
-  // See killAllRunningTasks(), SinglePhaseParallelIndexTaskRunner.run(), and
-  // SinglePhaseParallelIndexTaskRunner.stopGracefully()
-  private int numKilledTasks;
+  /**
+   * This metric is used only for unit tests because the current task status system doesn't track the canceled task
+   * status. Currently, this metric only represents the number of canceled tasks by {@link ParallelIndexTaskRunner}.
+   * See {@link #stop()}, {@link ParallelIndexPhaseRunner#run()}, and
+   * {@link ParallelIndexPhaseRunner#stopGracefully(String)} ()}.
+   */
+  private int numCanceledTasks;
 
+  @GuardedBy("startStopLock")
   private boolean running = false;
 
-  TaskMonitor(IndexingServiceClient indexingServiceClient, int maxRetry, int expectedNumSucceededTasks)
+  TaskMonitor(IndexingServiceClient indexingServiceClient, int maxRetry, int estimatedNumSucceededTasks)
   {
     this.indexingServiceClient = Preconditions.checkNotNull(indexingServiceClient, "indexingServiceClient");
     this.maxRetry = maxRetry;
-    this.expectedNumSucceededTasks = expectedNumSucceededTasks;
+    this.estimatedNumSucceededTasks = estimatedNumSucceededTasks;
 
-    log.info("TaskMonitor is initialized with expectedNumSucceededTasks[%d]", expectedNumSucceededTasks);
+    log.info("TaskMonitor is initialized with estimatedNumSucceededTasks[%d]", estimatedNumSucceededTasks);
   }
 
   public void start(long taskStatusCheckingPeriod)
@@ -123,6 +134,10 @@ public class TaskMonitor<T extends Task>
                 if (taskStatus != null) {
                   switch (Preconditions.checkNotNull(taskStatus.getStatusCode(), "taskState")) {
                     case SUCCESS:
+                      // Succeeded tasks must have sent a report
+                      if (!reportsMap.containsKey(taskId)) {
+                        throw new ISE("Missing reports from task[%s]!", taskId);
+                      }
                       incrementNumSucceededTasks();
 
                       // Remote the current entry after updating taskHistories to make sure that task history
@@ -131,6 +146,8 @@ public class TaskMonitor<T extends Task>
                       iterator.remove();
                       break;
                     case FAILED:
+                      // We don't need reports from failed tasks
+                      reportsMap.remove(taskId);
                       incrementNumFailedTasks();
 
                       log.warn("task[%s] failed!", taskId);
@@ -178,7 +195,7 @@ public class TaskMonitor<T extends Task>
   }
 
   /**
-   * Stop task monitoring and kill all running tasks.
+   * Stop task monitoring and cancel all running tasks.
    */
   public void stop()
   {
@@ -187,23 +204,26 @@ public class TaskMonitor<T extends Task>
         running = false;
         taskStatusChecker.shutdownNow();
 
-        if (numRunningTasks > 0) {
-          final Iterator<MonitorEntry> iterator = runningTasks.values().iterator();
-          while (iterator.hasNext()) {
-            final MonitorEntry entry = iterator.next();
-            iterator.remove();
-            final String taskId = entry.runningTask.getId();
-            log.info("Request to kill subtask[%s]", taskId);
-            indexingServiceClient.killTask(taskId);
-            numRunningTasks--;
-            numKilledTasks++;
-          }
 
+        synchronized (taskCountLock) {
           if (numRunningTasks > 0) {
-            log.warn(
-                "Inconsistent state: numRunningTasks[%d] is still not zero after trying to kill all running tasks.",
-                numRunningTasks
-            );
+            final Iterator<MonitorEntry> iterator = runningTasks.values().iterator();
+            while (iterator.hasNext()) {
+              final MonitorEntry entry = iterator.next();
+              iterator.remove();
+              final String taskId = entry.runningTask.getId();
+              log.info("Request to cancel subtask[%s]", taskId);
+              indexingServiceClient.cancelTask(taskId);
+              numRunningTasks--;
+              numCanceledTasks++;
+            }
+
+            if (numRunningTasks > 0) {
+              log.warn(
+                  "Inconsistent state: numRunningTasks[%d] is still not zero after trying to cancel all running tasks.",
+                  numRunningTasks
+              );
+            }
           }
         }
 
@@ -222,11 +242,10 @@ public class TaskMonitor<T extends Task>
   {
     synchronized (startStopLock) {
       if (!running) {
-        return Futures.immediateFailedFuture(new ISE("TaskMonitore is not running"));
+        return Futures.immediateFailedFuture(new ISE("TaskMonitor is not running"));
       }
-      final T task = spec.newSubTask(0);
-      log.info("Submitting a new task[%s] for spec[%s]", task.getId(), spec.getId());
-      indexingServiceClient.runTask(task);
+      final T task = submitTask(spec, 0);
+      log.info("Submitted a new task[%s] for spec[%s]", task.getId(), spec.getId());
       incrementNumRunningTasks();
 
       final SettableFuture<SubTaskCompleteEvent<T>> taskFuture = SettableFuture.create();
@@ -239,6 +258,30 @@ public class TaskMonitor<T extends Task>
     }
   }
 
+  public void collectReport(SubTaskReportType report)
+  {
+    // subTasks might send their reports multiple times because of the HTTP retry.
+    // Here, we simply make sure the current report is exactly the same as the previous one.
+    reportsMap.compute(report.getTaskId(), (taskId, prevReport) -> {
+      if (prevReport != null) {
+        log.warn("Received duplicate report for task [%s]", taskId);
+        Preconditions.checkState(
+            prevReport.equals(report),
+            "task[%s] sent two or more reports and previous report[%s] is different from the current one[%s]",
+            taskId,
+            prevReport,
+            report
+        );
+      }
+      return report;
+    });
+  }
+
+  public Map<String, SubTaskReportType> getReports()
+  {
+    return reportsMap;
+  }
+
   /**
    * Submit a retry task for a failed spec. This method should be called inside of the
    * {@link java.util.concurrent.Callable} executed by {@link #taskStatusChecker}.
@@ -248,9 +291,8 @@ public class TaskMonitor<T extends Task>
     synchronized (startStopLock) {
       if (running) {
         final SubTaskSpec<T> spec = monitorEntry.spec;
-        final T task = spec.newSubTask(monitorEntry.taskHistory.size() + 1);
-        log.info("Submitting a new task[%s] for retrying spec[%s]", task.getId(), spec.getId());
-        indexingServiceClient.runTask(task);
+        final T task = submitTask(spec, monitorEntry.taskHistory.size() + 1);
+        log.info("Submitted a new task[%s] for retrying spec[%s]", task.getId(), spec.getId());
         incrementNumRunningTasks();
 
         runningTasks.put(
@@ -262,6 +304,38 @@ public class TaskMonitor<T extends Task>
             )
         );
       }
+    }
+  }
+
+  private T submitTask(SubTaskSpec<T> spec, int numAttempts)
+  {
+    T task = spec.newSubTask(numAttempts);
+    try {
+      indexingServiceClient.runTask(task.getId(), task);
+    }
+    catch (Exception e) {
+      if (isUnknownTypeIdException(e)) {
+        log.warn(e, "Got an unknown type id error. Retrying with a backward compatible type.");
+        task = spec.newSubTaskWithBackwardCompatibleType(numAttempts);
+        indexingServiceClient.runTask(task.getId(), task);
+      } else {
+        throw e;
+      }
+    }
+    return task;
+  }
+
+  private boolean isUnknownTypeIdException(Throwable e)
+  {
+    if (e instanceof IllegalStateException) {
+      if (e.getMessage() != null && e.getMessage().contains("Could not resolve type id")) {
+        return true;
+      }
+    }
+    if (e.getCause() != null) {
+      return isUnknownTypeIdException(e.getCause());
+    } else {
+      return false;
     }
   }
 
@@ -277,7 +351,7 @@ public class TaskMonitor<T extends Task>
     synchronized (taskCountLock) {
       numRunningTasks--;
       numSucceededTasks++;
-      log.info("[%d/%d] tasks succeeded", numSucceededTasks, expectedNumSucceededTasks);
+      log.info("[%d/%d] tasks succeeded", numSucceededTasks, estimatedNumSucceededTasks);
     }
   }
 
@@ -289,10 +363,10 @@ public class TaskMonitor<T extends Task>
     }
   }
 
-  boolean isSucceeded()
+  int getNumSucceededTasks()
   {
     synchronized (taskCountLock) {
-      return numSucceededTasks == expectedNumSucceededTasks;
+      return numSucceededTasks;
     }
   }
 
@@ -304,21 +378,21 @@ public class TaskMonitor<T extends Task>
   }
 
   @VisibleForTesting
-  int getNumKilledTasks()
+  int getNumCanceledTasks()
   {
-    return numKilledTasks;
+    return numCanceledTasks;
   }
 
-  SinglePhaseParallelIndexingProgress getProgress()
+  ParallelIndexingPhaseProgress getProgress()
   {
     synchronized (taskCountLock) {
-      return new SinglePhaseParallelIndexingProgress(
+      return new ParallelIndexingPhaseProgress(
           numRunningTasks,
           numSucceededTasks,
           numFailedTasks,
           numSucceededTasks + numFailedTasks,
           numRunningTasks + numSucceededTasks + numFailedTasks,
-          expectedNumSucceededTasks
+          estimatedNumSucceededTasks
       );
     }
   }

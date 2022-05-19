@@ -26,13 +26,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.LookupNodeService;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -43,8 +42,8 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
@@ -68,10 +67,10 @@ import org.apache.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import org.apache.druid.segment.realtime.plumber.VersioningPolicy;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Timer;
@@ -197,6 +196,12 @@ public class RealtimeIndexTask extends AbstractTask
   }
 
   @Override
+  public boolean supportsQueries()
+  {
+    return true;
+  }
+
+  @Override
   public boolean isReady(TaskActionClient taskActionClient)
   {
     return true;
@@ -208,7 +213,7 @@ public class RealtimeIndexTask extends AbstractTask
     runThread = Thread.currentThread();
 
     if (this.plumber != null) {
-      throw new IllegalStateException("WTF?!? run with non-null plumber??!");
+      throw new IllegalStateException("Plumber must be null");
     }
 
     setupTimeoutAlert();
@@ -234,13 +239,16 @@ public class RealtimeIndexTask extends AbstractTask
       public void announceSegment(final DataSegment segment) throws IOException
       {
         // Side effect: Calling announceSegment causes a lock to be acquired
-        Preconditions.checkNotNull(
+        final TaskLock lock = Preconditions.checkNotNull(
             toolbox.getTaskActionClient().submit(
                 new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
             ),
             "Cannot acquire a lock for interval[%s]",
             segment.getInterval()
         );
+        if (lock.isRevoked()) {
+          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segment.getInterval()));
+        }
         toolbox.getSegmentAnnouncer().announceSegment(segment);
       }
 
@@ -260,13 +268,16 @@ public class RealtimeIndexTask extends AbstractTask
       {
         // Side effect: Calling announceSegments causes locks to be acquired
         for (DataSegment segment : segments) {
-          Preconditions.checkNotNull(
+          final TaskLock lock = Preconditions.checkNotNull(
               toolbox.getTaskActionClient().submit(
                   new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
               ),
               "Cannot acquire a lock for interval[%s]",
               segment.getInterval()
           );
+          if (lock.isRevoked()) {
+            throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segment.getInterval()));
+          }
         }
         toolbox.getSegmentAnnouncer().announceSegments(segments);
       }
@@ -298,13 +309,19 @@ public class RealtimeIndexTask extends AbstractTask
       {
         try {
           // Side effect: Calling getVersion causes a lock to be acquired
-          final TimeChunkLockAcquireAction action = new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs);
+          final TimeChunkLockAcquireAction action = new TimeChunkLockAcquireAction(
+              TaskLockType.EXCLUSIVE,
+              interval,
+              lockTimeoutMs
+          );
           final TaskLock lock = Preconditions.checkNotNull(
               toolbox.getTaskActionClient().submit(action),
               "Cannot acquire a lock for interval[%s]",
               interval
           );
-
+          if (lock.isRevoked()) {
+            throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
+          }
           return lock.getVersion();
         }
         catch (IOException e) {
@@ -340,26 +357,26 @@ public class RealtimeIndexTask extends AbstractTask
         lockingSegmentAnnouncer,
         segmentPublisher,
         toolbox.getSegmentHandoffNotifierFactory(),
-        toolbox.getQueryExecutorService(),
+        toolbox.getQueryProcessingPool(),
+        toolbox.getJoinableFactory(),
         toolbox.getIndexMergerV9(),
         toolbox.getIndexIO(),
         toolbox.getCache(),
         toolbox.getCacheConfig(),
         toolbox.getCachePopulatorStats(),
-        toolbox.getObjectMapper()
+        toolbox.getJsonMapper()
     );
 
     this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, metrics);
 
     final Supplier<Committer> committerSupplier = Committers.nilSupplier();
-    final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
 
     LookupNodeService lookupNodeService = getContextValue(CTX_KEY_LOOKUP_TIER) == null ?
                                           toolbox.getLookupNodeService() :
                                           new LookupNodeService((String) getContextValue(CTX_KEY_LOOKUP_TIER));
     DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(
         toolbox.getDruidNode(),
-        NodeType.PEON,
+        NodeRole.PEON,
         ImmutableMap.of(
             toolbox.getDataNodeService().getName(), toolbox.getDataNodeService(),
             lookupNodeService.getName(), lookupNodeService
@@ -374,10 +391,7 @@ public class RealtimeIndexTask extends AbstractTask
       plumber.startJob();
 
       // Set up metrics emission
-      toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
-
-      // Firehose temporary directory is automatically removed when this RealtimeIndexTask completes.
-      FileUtils.forceMkdir(firehoseTempDir);
+      toolbox.addMonitor(metricsMonitor);
 
       // Delay firehose connection to avoid claiming input resources while the plumber is starting up.
       final FirehoseFactory firehoseFactory = spec.getIOConfig().getFirehoseFactory();
@@ -386,7 +400,10 @@ public class RealtimeIndexTask extends AbstractTask
       // Skip connecting firehose if we've been stopped before we got started.
       synchronized (this) {
         if (!gracefullyStopped) {
-          firehose = firehoseFactory.connect(spec.getDataSchema().getParser(), firehoseTempDir);
+          firehose = firehoseFactory.connect(
+              Preconditions.checkNotNull(spec.getDataSchema().getParser(), "inputRowParser"),
+              toolbox.getIndexingTmpDir()
+          );
         }
       }
 
@@ -467,9 +484,9 @@ public class RealtimeIndexTask extends AbstractTask
         }
         finally {
           if (firehose != null) {
-            CloseQuietly.close(firehose);
+            CloseableUtils.closeAndSuppressExceptions(firehose, e -> log.warn("Failed to close Firehose"));
           }
-          toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
+          toolbox.removeMonitor(metricsMonitor);
         }
       }
 

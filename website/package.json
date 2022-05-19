@@ -14,13 +14,13 @@
     "spellcheck": "mdspell --en-us --ignore-numbers --report '../docs/**/*.md'"
   },
   "devDependencies": {
-    "docusaurus": "^1.12.0",
+    "docusaurus": "^1.14.4",
     "markdown-spellcheck": "^1.3.1",
-    "node-sass": "^4.12.0"
+    "node-sass": "^4.13.1"
   },
   "dependencies": {
-    "fast-glob": "^3.0.4",
+    "fast-glob": "^3.2.2",
     "fs-extra": "^8.1.0",
-    "replace-in-file": "^4.1.3"
+    "replace-in-file": "^4.3.1"
   }
 }

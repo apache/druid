@@ -17,6 +17,12 @@
 
 cd /tls
 
+FILE_CHECK_IF_RAN=/tls/server.key
+if [ -f "$FILE_CHECK_IF_RAN" ]; then
+  echo "Using existing certs/keys since /tls/server.key exists. Skipping generation (most likely this script was ran previously). To generate new certs, delete /tls/server.key"
+  exit
+fi
+
 rm -f cert_db.txt
 touch cert_db.txt
 
@@ -55,15 +61,14 @@ DNS.2 = localhost
 EOT
 
 # Generate a server certificate for this machine
-openssl genrsa -out server.key 1024 -sha256
+openssl genrsa -out server.key 4096
 openssl req -new -out server.csr -key server.key -reqexts req_ext -config csr.conf
 openssl x509 -req -days 3650 -in server.csr -CA root.pem -CAkey root.key -set_serial 0x22222222 -out server.pem -sha256 -extfile csr.conf -extensions req_ext
 
-# Create a Java keystore containing the generated certificate
+# Create a Java keystore containing the generated certificate in PKCS12 format
 openssl pkcs12 -export -in server.pem -inkey server.key -out server.p12 -name druid -CAfile root.pem -caname druid-it-root -password pass:druid123
-keytool -importkeystore -srckeystore server.p12 -srcstoretype PKCS12 -destkeystore server.jks -deststoretype JKS -srcstorepass druid123 -deststorepass druid123
 
-# Create a Java truststore with the imply test cluster root CA
+# Create a Java truststore with the druid test cluster root CA
 keytool -import -alias druid-it-root -keystore truststore.jks -file root.pem -storepass druid123 -noprompt
 
 # Revoke one of the client certs

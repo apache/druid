@@ -21,11 +21,13 @@ package org.apache.druid.segment;
 
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.RowOffsetMatcherFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
@@ -41,7 +43,7 @@ public final class FilteredOffset extends Offset
       ColumnSelectorFactory columnSelectorFactory,
       boolean descending,
       Filter postFilter,
-      ColumnSelectorBitmapIndexSelector bitmapIndexSelector
+      ColumnSelectorColumnIndexSelector bitmapIndexSelector
   )
   {
     this.baseOffset = baseOffset;
@@ -56,9 +58,12 @@ public final class FilteredOffset extends Offset
           rowOffsetMatcherFactory
       );
     } else {
-      if (postFilter.shouldUseBitmapIndex(bitmapIndexSelector)) {
+      final BitmapColumnIndex columnIndex = postFilter.getBitmapColumnIndex(bitmapIndexSelector);
+      // we only consider "exact" indexes here, because if false, we've already used the bitmap index for the base
+      // offset and must use the value matcher here
+      if (columnIndex != null && columnIndex.getIndexCapabilities().isExact()) {
         filterMatcher = rowOffsetMatcherFactory.makeRowOffsetMatcher(
-            postFilter.getBitmapIndex(bitmapIndexSelector)
+            columnIndex.computeBitmapResult(new DefaultBitmapResultFactory(bitmapIndexSelector.getBitmapFactory()))
         );
       } else {
         filterMatcher = postFilter.makeMatcher(columnSelectorFactory);
@@ -118,7 +123,7 @@ public final class FilteredOffset extends Offset
    * If clone is made possible for FilteredOffset, some improvements could become possible in {@link
    * org.apache.druid.query.topn.PooledTopNAlgorithm#computeSpecializedScanAndAggregateImplementations}.
    *
-   * See also https://github.com/apache/incubator-druid/issues/5132.
+   * See also https://github.com/apache/druid/issues/5132.
    */
   @Override
   public Offset clone()

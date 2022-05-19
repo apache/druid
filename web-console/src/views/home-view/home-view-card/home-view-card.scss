@@ -16,8 +16,43 @@
  * limitations under the License.
  */
 
+@import '../../../variables';
+@import '../../../blueprint-overrides/common/colors';
+
 .home-view-card {
-  .bp3-card {
+  .#{$bp-ns}-card {
     height: 170px;
   }
+
+  &:hover {
+    text-decoration: none;
+  }
+
+  p {
+    padding-left: 34px;
+  }
+
+  h5 span {
+    vertical-align: middle;
+    margin-top: -2px;
+    margin-right: 10px;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      fill: $blue3;
+
+      .#{$bp-ns}-dark & {
+        fill: $druid-brand;
+      }
+    }
+  }
+}
+
+a.home-view-card,
+a.home-view-card:hover {
+  .#{$bp-ns}-dark & {
+    color: $gray4;
+  }
+  color: $gray2;
 }

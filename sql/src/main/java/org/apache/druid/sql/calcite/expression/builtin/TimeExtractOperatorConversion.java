@@ -30,12 +30,12 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.expression.TimestampExtractExprMacro;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 import org.joda.time.DateTimeZone;
 
 public class TimeExtractOperatorConversion implements SqlOperatorConversion
@@ -44,7 +44,7 @@ public class TimeExtractOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("TIME_EXTRACT")
       .operandTypes(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
       .requiredOperands(2)
-      .returnType(SqlTypeName.BIGINT)
+      .returnTypeCascadeNullable(SqlTypeName.BIGINT)
       .functionCategory(SqlFunctionCategory.TIMEDATE)
       .build();
 
@@ -54,12 +54,13 @@ public class TimeExtractOperatorConversion implements SqlOperatorConversion
       final DateTimeZone timeZone
   )
   {
-    return DruidExpression.fromFunctionCall(
+    return DruidExpression.ofFunctionCall(
+        timeExpression.getDruidType(),
         "timestamp_extract",
         ImmutableList.of(
             timeExpression,
-            DruidExpression.fromExpression(DruidExpression.stringLiteral(unit.name())),
-            DruidExpression.fromExpression(DruidExpression.stringLiteral(timeZone.getID()))
+            DruidExpression.ofStringLiteral(unit.name()),
+            DruidExpression.ofStringLiteral(timeZone.getID())
         )
     );
   }

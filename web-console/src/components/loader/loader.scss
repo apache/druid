@@ -81,6 +81,26 @@
 
     .label {
       text-align: center;
+
+      &.cancel-label {
+        cursor: pointer;
+        color: #48aff0;
+        opacity: 1;
+        animation: 1s ease-in-out fadeInOpacity;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
     }
+  }
+}
+
+@keyframes fadeInOpacity {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
   }
 }

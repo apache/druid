@@ -20,14 +20,19 @@
 package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.task.batch.parallel.LegacySinglePhaseSubTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
-import org.apache.druid.indexing.common.task.batch.parallel.PartialSegmentGenerateTask;
-import org.apache.druid.indexing.common.task.batch.parallel.PartialSegmentMergeTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionCardinalityTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionDistributionTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmentMergeTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialRangeSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -48,21 +53,25 @@ import java.util.Map;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "kill", value = KillTask.class),
-    @JsonSubTypes.Type(name = "move", value = MoveTask.class),
-    @JsonSubTypes.Type(name = "archive", value = ArchiveTask.class),
-    @JsonSubTypes.Type(name = "restore", value = RestoreTask.class),
-    @JsonSubTypes.Type(name = "index", value = IndexTask.class),
-    @JsonSubTypes.Type(name = ParallelIndexSupervisorTask.TYPE, value = ParallelIndexSupervisorTask.class),
-    @JsonSubTypes.Type(name = SinglePhaseSubTask.TYPE, value = SinglePhaseSubTask.class),
-    @JsonSubTypes.Type(name = "index_sub", value = SinglePhaseSubTask.class), // for backward compatibility
-    @JsonSubTypes.Type(name = PartialSegmentGenerateTask.TYPE, value = PartialSegmentGenerateTask.class),
-    @JsonSubTypes.Type(name = PartialSegmentMergeTask.TYPE, value = PartialSegmentMergeTask.class),
-    @JsonSubTypes.Type(name = "index_hadoop", value = HadoopIndexTask.class),
-    @JsonSubTypes.Type(name = "index_realtime", value = RealtimeIndexTask.class),
-    @JsonSubTypes.Type(name = "index_realtime_appenderator", value = AppenderatorDriverRealtimeIndexTask.class),
-    @JsonSubTypes.Type(name = "noop", value = NoopTask.class),
-    @JsonSubTypes.Type(name = "compact", value = CompactionTask.class)
+    @Type(name = "kill", value = KillUnusedSegmentsTask.class),
+    @Type(name = "move", value = MoveTask.class),
+    @Type(name = "archive", value = ArchiveTask.class),
+    @Type(name = "restore", value = RestoreTask.class),
+    @Type(name = "index", value = IndexTask.class),
+    @Type(name = ParallelIndexSupervisorTask.TYPE, value = ParallelIndexSupervisorTask.class),
+    @Type(name = SinglePhaseSubTask.TYPE, value = SinglePhaseSubTask.class),
+    // for backward compatibility
+    @Type(name = SinglePhaseSubTask.OLD_TYPE_NAME, value = LegacySinglePhaseSubTask.class),
+    @Type(name = PartialHashSegmentGenerateTask.TYPE, value = PartialHashSegmentGenerateTask.class),
+    @Type(name = PartialDimensionCardinalityTask.TYPE, value = PartialDimensionCardinalityTask.class),
+    @Type(name = PartialRangeSegmentGenerateTask.TYPE, value = PartialRangeSegmentGenerateTask.class),
+    @Type(name = PartialDimensionDistributionTask.TYPE, value = PartialDimensionDistributionTask.class),
+    @Type(name = PartialGenericSegmentMergeTask.TYPE, value = PartialGenericSegmentMergeTask.class),
+    @Type(name = "index_hadoop", value = HadoopIndexTask.class),
+    @Type(name = "index_realtime", value = RealtimeIndexTask.class),
+    @Type(name = "index_realtime_appenderator", value = AppenderatorDriverRealtimeIndexTask.class),
+    @Type(name = "noop", value = NoopTask.class),
+    @Type(name = "compact", value = CompactionTask.class)
 })
 public interface Task
 {
@@ -138,6 +147,11 @@ public interface Task
   <T> QueryRunner<T> getQueryRunner(Query<T> query);
 
   /**
+   * @return true if this Task type is queryable, such as streaming ingestion tasks
+   */
+  boolean supportsQueries();
+
+  /**
    * Returns an extra classpath that should be prepended to the default classpath when running this task. If no
    * extra classpath should be prepended, this should return null or the empty string.
    */
@@ -146,8 +160,11 @@ public interface Task
   /**
    * Execute preflight actions for a task. This can be used to acquire locks, check preconditions, and so on. The
    * actions must be idempotent, since this method may be executed multiple times. This typically runs on the
-   * coordinator. If this method throws an exception, the task should be considered a failure.
-   * <p/>
+   * Overlord. If this method throws an exception, the task should be considered a failure.
+   *
+   * This method will not necessarily be executed before {@link #run(TaskToolbox)}, since this task readiness check
+   * may be done on a different machine from the one that actually runs the task.
+   *
    * This method must be idempotent, as it may be run multiple times per task.
    *
    * @param taskActionClient action client for this task (not the full toolbox)

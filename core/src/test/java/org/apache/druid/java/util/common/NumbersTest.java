@@ -127,4 +127,36 @@ public class NumbersTest
     expectedException.expectMessage(CoreMatchers.startsWith("Unknown type"));
     Numbers.parseBoolean(new Object());
   }
+
+  @Test
+  public void testParseLongObject()
+  {
+    Assert.assertEquals(null, Numbers.parseLongObject(null));
+    Assert.assertEquals((Long) 1L, Numbers.parseLongObject("1"));
+    Assert.assertEquals((Long) 32L, Numbers.parseLongObject("32.1243"));
+  }
+
+  @Test
+  public void testParseLongObjectUnparseable()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Cannot parse string to long");
+    Assert.assertEquals((Long) 1337L, Numbers.parseLongObject("'1'"));
+  }
+
+  @Test
+  public void testParseDoubleObject()
+  {
+    Assert.assertEquals(null, Numbers.parseLongObject(null));
+    Assert.assertEquals((Double) 1.0, Numbers.parseDoubleObject("1"));
+    Assert.assertEquals((Double) 32.1243, Numbers.parseDoubleObject("32.1243"));
+  }
+
+  @Test
+  public void testParseDoubleObjectUnparseable()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Cannot parse string to double");
+    Assert.assertEquals((Double) 300.0, Numbers.parseDoubleObject("'1.1'"));
+  }
 }

@@ -19,59 +19,52 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
-import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
-import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.calcite.sql.type.SqlTypeUtil;
+import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
-import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
-public class ArrayOrdinalOperatorConversion implements SqlOperatorConversion
+public class ArrayOrdinalOperatorConversion extends DirectOperatorConversion
 {
+  static final SqlReturnTypeInference ARG0_ELEMENT_INFERENCE = new ArrayElementReturnTypeInference();
+
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("ARRAY_ORDINAL")
       .operandTypeChecker(
           OperandTypes.sequence(
               "(array,expr)",
               OperandTypes.or(
-                  OperandTypes.family(SqlTypeFamily.STRING),
                   OperandTypes.family(SqlTypeFamily.ARRAY),
-                  OperandTypes.family(SqlTypeFamily.MULTISET)
+                  OperandTypes.family(SqlTypeFamily.STRING)
               ),
               OperandTypes.family(SqlTypeFamily.NUMERIC)
           )
       )
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnType(SqlTypeName.VARCHAR)
+      .returnTypeInference(ARG0_ELEMENT_INFERENCE)
       .build();
 
-  @Override
-  public SqlOperator calciteOperator()
+  public ArrayOrdinalOperatorConversion()
   {
-    return SQL_FUNCTION;
+    super(SQL_FUNCTION, "array_ordinal");
   }
 
-  @Override
-  public DruidExpression toDruidExpression(
-      final PlannerContext plannerContext,
-      final RowSignature rowSignature,
-      final RexNode rexNode
-  )
+  static class ArrayElementReturnTypeInference implements SqlReturnTypeInference
   {
-    return OperatorConversions.convertCall(
-        plannerContext,
-        rowSignature,
-        rexNode,
-        druidExpressions -> DruidExpression.of(
-            null,
-            DruidExpression.functionCall("array_ordinal", druidExpressions)
-        )
-    );
+    @Override
+    public RelDataType inferReturnType(SqlOperatorBinding sqlOperatorBinding)
+    {
+      RelDataType type = sqlOperatorBinding.getOperandType(0);
+      if (SqlTypeUtil.isArray(type)) {
+        type.getComponentType();
+      }
+      return type;
+    }
   }
 }

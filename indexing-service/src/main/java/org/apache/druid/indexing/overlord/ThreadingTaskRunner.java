@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.Futures;
@@ -29,7 +30,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
@@ -43,7 +43,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IOE;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -64,6 +64,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -95,6 +96,7 @@ public class ThreadingTaskRunner
   private final MultipleFileTaskReportFileWriter taskReportFileWriter;
   private final ListeningExecutorService taskExecutor;
   private final ListeningExecutorService controlThreadExecutor;
+  private final WorkerConfig workerConfig;
 
   private volatile boolean stopping = false;
 
@@ -116,6 +118,7 @@ public class ThreadingTaskRunner
     this.node = node;
     this.appenderatorsManager = appenderatorsManager;
     this.taskReportFileWriter = (MultipleFileTaskReportFileWriter) taskReportFileWriter;
+    this.workerConfig = workerConfig;
     this.taskExecutor = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(workerConfig.getCapacity(), "threading-task-runner-executor-%d")
     );
@@ -163,9 +166,7 @@ public class ThreadingTaskRunner
                           final ThreadingTaskRunnerWorkItem taskWorkItem;
 
                           try {
-                            if (!attemptDir.mkdirs()) {
-                              throw new IOE("Could not create directories: %s", attemptDir);
-                            }
+                            FileUtils.mkdirp(attemptDir);
 
                             final File taskFile = new File(taskDir, "task.json");
                             final File reportsFile = new File(attemptDir, "report.json");
@@ -176,7 +177,7 @@ public class ThreadingTaskRunner
                               taskWorkItem = tasks.get(task.getId());
 
                               if (taskWorkItem == null) {
-                                LOGGER.makeAlert("WTF?! TaskInfo disappeared!").addData("task", task.getId()).emit();
+                                LOGGER.makeAlert("TaskInfo disappeared").addData("task", task.getId()).emit();
                                 throw new ISE("TaskInfo disappeared for task[%s]!", task.getId());
                               }
 
@@ -193,9 +194,9 @@ public class ThreadingTaskRunner
                             // This will block for a while. So we append the thread information with more details
                             final String priorThreadName = Thread.currentThread().getName();
                             Thread.currentThread()
-                                  .setName(StringUtils.format("%s-[%s]", priorThreadName, task.getId()));
+                                  .setName(StringUtils.format("[%s]-%s", task.getId(), priorThreadName));
 
-                            TaskStatus taskStatus = null;
+                            TaskStatus taskStatus;
                             final TaskToolbox toolbox = toolboxFactory.build(task);
                             TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
                             TaskRunnerUtils.notifyStatusChanged(
@@ -210,12 +211,13 @@ public class ThreadingTaskRunner
                             }
                             catch (Throwable t) {
                               LOGGER.error(t, "Exception caught while running the task.");
+                              taskStatus = TaskStatus.failure(
+                                  task.getId(),
+                                  "Failed with an exception. See indexer logs for more details."
+                              );
                             }
                             finally {
                               taskWorkItem.setState(RunnerTaskState.NONE);
-                              if (taskStatus == null) {
-                                taskStatus = TaskStatus.failure(task.getId());
-                              }
                               Thread.currentThread().setName(priorThreadName);
                               if (reportsFile.exists()) {
                                 taskLogPusher.pushTaskReports(task.getId(), reportsFile);
@@ -243,8 +245,8 @@ public class ThreadingTaskRunner
 
                               try {
                                 if (!stopping && taskDir.exists()) {
-                                  LOGGER.info("Removing task directory: %s", taskDir);
                                   FileUtils.deleteDirectory(taskDir);
+                                  LOGGER.info("Removed task directory: %s", taskDir);
                                 }
                               }
                               catch (Exception e) {
@@ -449,6 +451,46 @@ public class ThreadingTaskRunner
   public Optional<ScalingStats> getScalingStats()
   {
     return Optional.absent();
+  }
+
+  @Override
+  public Map<String, Long> getTotalTaskSlotCount()
+  {
+    return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(workerConfig.getCapacity()));
+  }
+
+  public long getTotalTaskSlotCountLong()
+  {
+    return workerConfig.getCapacity();
+  }
+
+  @Override
+  public Map<String, Long> getIdleTaskSlotCount()
+  {
+    return ImmutableMap.of(workerConfig.getCategory(), Math.max(getTotalTaskSlotCountLong() - getUsedTaskSlotCountLong(), 0));
+  }
+
+  @Override
+  public Map<String, Long> getUsedTaskSlotCount()
+  {
+    return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(getRunningTasks().size()));
+  }
+
+  public long getUsedTaskSlotCountLong()
+  {
+    return getRunningTasks().size();
+  }
+
+  @Override
+  public Map<String, Long> getLazyTaskSlotCount()
+  {
+    return ImmutableMap.of(workerConfig.getCategory(), 0L);
+  }
+
+  @Override
+  public Map<String, Long> getBlacklistedTaskSlotCount()
+  {
+    return ImmutableMap.of(workerConfig.getCategory(), 0L);
   }
 
   @Override

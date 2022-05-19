@@ -16,84 +16,109 @@
  * limitations under the License.
  */
 
+import { deepMove, deepSet } from './object-change';
+
+export type RuleType =
+  | 'loadForever'
+  | 'loadByInterval'
+  | 'loadByPeriod'
+  | 'dropForever'
+  | 'dropByInterval'
+  | 'dropByPeriod'
+  | 'dropBeforeByPeriod'
+  | 'broadcastForever'
+  | 'broadcastByInterval'
+  | 'broadcastByPeriod';
+
 export interface Rule {
-  type:
-    | 'loadForever'
-    | 'loadByInterval'
-    | 'loadByPeriod'
-    | 'dropForever'
-    | 'dropByInterval'
-    | 'dropByPeriod'
-    | 'broadcastForever'
-    | 'broadcastByInterval'
-    | 'broadcastByPeriod';
+  type: RuleType;
   interval?: string;
   period?: string;
+  includeFuture?: boolean;
   tieredReplicants?: Record<string, number>;
-  colocatedDataSources?: string[];
 }
 
-export type LoadType = 'load' | 'drop' | 'broadcast';
-export type TimeType = 'Forever' | 'ByInterval' | 'ByPeriod';
-
 export class RuleUtil {
+  static TYPES: RuleType[] = [
+    'loadForever',
+    'loadByInterval',
+    'loadByPeriod',
+    'dropForever',
+    'dropByInterval',
+    'dropByPeriod',
+    'dropBeforeByPeriod',
+    'broadcastForever',
+    'broadcastByInterval',
+    'broadcastByPeriod',
+  ];
+
   static ruleToString(rule: Rule): string {
-    return (
-      rule.type +
-      (rule.period ? `(${rule.period})` : '') +
-      (rule.interval ? `(${rule.interval})` : '')
-    );
+    return [
+      rule.type,
+      rule.period ? `(${rule.period}${rule.includeFuture ? `+future` : ''})` : '',
+      rule.interval ? `(${rule.interval})` : '',
+    ].join('');
   }
 
-  static getLoadType(rule: Rule): LoadType {
-    const m = rule.type.match(/^(load|drop|broadcast)(\w+)$/);
-    if (!m) throw new Error(`unknown rule type: '${rule.type}'`);
-    return m[1] as any;
-  }
+  static changeRuleType(rule: Rule, type: RuleType): Rule {
+    const newRule = deepSet(rule, 'type', type);
 
-  static getTimeType(rule: Rule): TimeType {
-    const m = rule.type.match(/^(load|drop|broadcast)(\w+)$/);
-    if (!m) throw new Error(`unknown rule type: '${rule.type}'`);
-    return m[2] as any;
-  }
+    if (RuleUtil.hasPeriod(newRule)) {
+      if (!newRule.period) newRule.period = 'P1M';
+    } else {
+      delete newRule.period;
+      delete newRule.includeFuture;
+    }
 
-  static changeLoadType(rule: Rule, loadType: LoadType): Rule {
-    const newRule = Object.assign({}, rule, { type: loadType + RuleUtil.getTimeType(rule) });
-    if (loadType !== 'load') delete newRule.tieredReplicants;
-    if (loadType !== 'broadcast') delete newRule.colocatedDataSources;
+    if (RuleUtil.hasInterval(newRule)) {
+      if (!newRule.interval) newRule.interval = '2010-01-01/2020-01-01';
+    } else {
+      delete newRule.interval;
+    }
+
+    if (RuleUtil.hasTieredReplicants(newRule)) {
+      if (!newRule.tieredReplicants) newRule.tieredReplicants = { _default_tier: 2 };
+    } else {
+      delete newRule.tieredReplicants;
+    }
+
     return newRule;
   }
 
-  static changeTimeType(rule: Rule, timeType: TimeType): Rule {
-    const newRule = Object.assign({}, rule, { type: RuleUtil.getLoadType(rule) + timeType });
-    if (timeType !== 'ByPeriod') delete newRule.period;
-    if (timeType !== 'ByInterval') delete newRule.interval;
-    return newRule;
+  static hasPeriod(rule: Rule): boolean {
+    return rule.type.endsWith('ByPeriod');
   }
 
   static changePeriod(rule: Rule, period: string): Rule {
-    return Object.assign({}, rule, { period });
+    return deepSet(rule, 'period', period);
+  }
+
+  static hasIncludeFuture(rule: Rule): boolean {
+    return RuleUtil.hasPeriod(rule) && rule.type !== 'dropBeforeByPeriod';
+  }
+
+  static changeIncludeFuture(rule: Rule, includeFuture: boolean): Rule {
+    return deepSet(rule, 'includeFuture', includeFuture);
+  }
+
+  static hasInterval(rule: Rule): boolean {
+    return rule.type.endsWith('ByInterval');
   }
 
   static changeInterval(rule: Rule, interval: string): Rule {
-    return Object.assign({}, rule, { interval });
+    return deepSet(rule, 'interval', interval);
   }
 
-  static changeTier(rule: Rule, oldTier: string, newTier: string): Rule {
-    const newRule = Object.assign({}, rule);
-    newRule.tieredReplicants = Object.assign({}, newRule.tieredReplicants);
-    newRule.tieredReplicants[newTier] = newRule.tieredReplicants[oldTier];
-    delete newRule.tieredReplicants[oldTier];
-    return newRule;
+  static hasTieredReplicants(rule: Rule): boolean {
+    return rule.type.startsWith('load');
   }
 
-  static changeTierReplication(rule: Rule, tier: string, replication: number): Rule {
-    const newRule = Object.assign({}, rule);
-    newRule.tieredReplicants = Object.assign({}, newRule.tieredReplicants, { [tier]: replication });
-    return newRule;
+  static renameTieredReplicants(rule: Rule, oldTier: string, newTier: string): Rule {
+    return deepMove(rule, `tieredReplicants.${oldTier}`, `tieredReplicants.${newTier}`);
   }
 
-  static changeColocatedDataSources(rule: Rule, colocatedDataSources: string[]): Rule {
-    return Object.assign({}, rule, { colocatedDataSources });
+  static addTieredReplicant(rule: Rule, tier: string, replication: number): Rule {
+    const newTieredReplicants = deepSet(rule.tieredReplicants || {}, tier, replication);
+    return deepSet(rule, 'tieredReplicants', newTieredReplicants);
   }
 }

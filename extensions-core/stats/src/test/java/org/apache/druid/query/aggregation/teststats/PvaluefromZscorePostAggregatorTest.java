@@ -20,30 +20,50 @@
 package org.apache.druid.query.aggregation.teststats;
 
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class PvaluefromZscorePostAggregatorTest
 {
   PvaluefromZscorePostAggregator pvaluefromZscorePostAggregator;
-  ConstantPostAggregator zscore;
+  FieldAccessPostAggregator zscore;
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
+  @Before
+  public void setup()
+  {
+    zscore = new FieldAccessPostAggregator("f1", "zscore");
+    pvaluefromZscorePostAggregator = new PvaluefromZscorePostAggregator("pvalue", zscore);
+  }
 
   @Test
   public void testPvaluefromZscorePostAggregator()
   {
-    zscore = new ConstantPostAggregator("zscore", -1783.8762354220219);
-
-    pvaluefromZscorePostAggregator = new PvaluefromZscorePostAggregator("pvalue", zscore);
-
-    double pvalue = ((Number) pvaluefromZscorePostAggregator.compute(ImmutableMap.of(
-        "zscore",
-        -1783.8762354220219
-    ))).doubleValue();
+    Map<String, Object> row = ImmutableMap.of("zscore", -1783.8762354220219);
+    double pvalue = ((Number) pvaluefromZscorePostAggregator.compute(row)).doubleValue();
 
     /* Assert P-value is positive and very small */
     Assert.assertTrue(pvalue >= 0 && pvalue < 0.00001);
+  }
+
+  @Test
+  public void testPvaluefromNullZscorePostAggregator()
+  {
+    Map<String, Object> row = new HashMap<>();
+    row.put("zscore", null);
+    Object result = pvaluefromZscorePostAggregator.compute(row);
+    Assert.assertNull(result);
   }
 
   @Test
@@ -56,6 +76,25 @@ public class PvaluefromZscorePostAggregatorTest
     );
 
     Assert.assertEquals(pvaluefromZscorePostAggregator, postAggregator1);
+    Assert.assertArrayEquals(pvaluefromZscorePostAggregator.getCacheKey(), postAggregator1.getCacheKey());
+    Assert.assertEquals(pvaluefromZscorePostAggregator.getDependentFields(), postAggregator1.getDependentFields());
   }
 
+  @Test
+  public void testToString()
+  {
+    Assert.assertEquals(
+        "PvaluefromZscorePostAggregator{name='pvalue', zScore=FieldAccessPostAggregator{name='f1', fieldName='zscore'}}",
+        pvaluefromZscorePostAggregator.toString()
+    );
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(PvaluefromZscorePostAggregator.class)
+                  .withNonnullFields("name", "zScore")
+                  .usingGetClass()
+                  .verify();
+  }
 }

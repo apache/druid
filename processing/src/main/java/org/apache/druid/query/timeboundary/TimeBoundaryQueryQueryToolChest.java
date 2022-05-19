@@ -23,6 +23,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.DateTimes;
@@ -40,10 +42,14 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.LogicalSegment;
 
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 import java.util.List;
+import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
 
 /**
@@ -110,6 +116,27 @@ public class TimeBoundaryQueryQueryToolChest
         );
       }
     };
+  }
+
+  @Override
+  public BinaryOperator<Result<TimeBoundaryResultValue>> createMergeFn(Query<Result<TimeBoundaryResultValue>> query)
+  {
+    TimeBoundaryQuery boundQuery = (TimeBoundaryQuery) query;
+    return (result1, result2) -> {
+      final List<Result<TimeBoundaryResultValue>> mergeList;
+      if (result1 == null) {
+        mergeList = result2 != null ? ImmutableList.of(result2) : null;
+      } else {
+        mergeList = result2 != null ? ImmutableList.of(result1, result2) : ImmutableList.of(result1);
+      }
+      return Iterables.getOnlyElement(boundQuery.mergeResults(mergeList));
+    };
+  }
+
+  @Override
+  public Comparator<Result<TimeBoundaryResultValue>> createResultComparator(Query<Result<TimeBoundaryResultValue>> query)
+  {
+    return query.getResultOrdering();
   }
 
   @Override
@@ -198,5 +225,41 @@ public class TimeBoundaryQueryQueryToolChest
         };
       }
     };
+  }
+
+  @Override
+  public RowSignature resultArraySignature(TimeBoundaryQuery query)
+  {
+    if (query.isMinTime() || query.isMaxTime()) {
+      RowSignature.Builder builder = RowSignature.builder();
+      String outputName = query.isMinTime() ?
+                          query.getContextValue(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, TimeBoundaryQuery.MIN_TIME) :
+                          query.getContextValue(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, TimeBoundaryQuery.MAX_TIME);
+      return builder.add(outputName, ColumnType.LONG).build();
+    }
+    return super.resultArraySignature(query);
+  }
+
+  @Override
+  public Sequence<Object[]> resultsAsArrays(
+      TimeBoundaryQuery query,
+      Sequence<Result<TimeBoundaryResultValue>> resultSequence
+  )
+  {
+    if (query.isMaxTime()) {
+      return Sequences.map(
+          resultSequence,
+          result -> result == null || result.getValue() == null || result.getValue().getMaxTime() == null ? null :
+                    new Object[]{result.getValue().getMaxTime().getMillis()}
+      );
+    } else if (query.isMinTime()) {
+      return Sequences.map(
+          resultSequence,
+          result -> result == null || result.getValue() == null || result.getValue().getMinTime() == null ? null :
+                    new Object[]{result.getValue().getMinTime().getMillis()}
+      );
+    } else {
+      return super.resultsAsArrays(query, resultSequence);
+    }
   }
 }

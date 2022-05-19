@@ -21,13 +21,13 @@ import React from 'react';
 
 import { ClearableInput } from './clearable-input';
 
-describe('clearable-input', () => {
+describe('ClearableInput', () => {
   it('matches snapshot', () => {
     const centerMessage = (
       <ClearableInput
-        className={'testClassName'}
-        value={'testValue'}
-        placeholder={'testPlaceholder'}
+        className="testClassName"
+        value="testValue"
+        placeholder="testPlaceholder"
         onChange={() => {}}
       />
     );

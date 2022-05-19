@@ -37,10 +37,13 @@ import java.util.Set;
  */
 public class LifecycleModule implements Module
 {
-  // this scope includes final logging shutdown, so all other handlers in this lifecycle scope should avoid logging in
-  // the 'stop' method, either failing silently or failing violently and throwing an exception causing an ungraceful exit
+  /**
+   * This scope includes final logging shutdown, so all other handlers in this lifecycle scope should avoid logging in
+   * their stop() method, either failing silently or failing violently and throwing an exception causing an ungraceful
+   * exit.
+   */
   private final LifecycleScope initScope = new LifecycleScope(Lifecycle.Stage.INIT);
-  private final LifecycleScope scope = new LifecycleScope(Lifecycle.Stage.NORMAL);
+  private final LifecycleScope normalScope = new LifecycleScope(Lifecycle.Stage.NORMAL);
   private final LifecycleScope serverScope = new LifecycleScope(Lifecycle.Stage.SERVER);
   private final LifecycleScope annoucementsScope = new LifecycleScope(Lifecycle.Stage.ANNOUNCEMENTS);
 
@@ -54,8 +57,11 @@ public class LifecycleModule implements Module
    *
    * This mechanism exists to allow the {@link Lifecycle} to be the primary entry point from the injector, not to
    * auto-register things with the {@link Lifecycle}.  It is also possible to just bind things eagerly with Guice,
-   * it is not clear which is actually the best approach.  This is more explicit, but eager bindings inside of modules
-   * is less error-prone.
+   * but that is almost never the correct option.  Guice eager bindings are pre-instantiated before the object graph
+   * is materialized and injected, meaning that objects are not actually instantiated in dependency order.
+   * Registering with the LifecyceModule, on the other hand, will instantiate the objects after the normal object
+   * graph has already been instantiated, meaning that objects will be created in dependency order and this will
+   * only actually instantiate something that wasn't actually dependend upon.
    *
    * @param clazz the class to instantiate
    * @return this, for chaining.
@@ -75,8 +81,11 @@ public class LifecycleModule implements Module
    *
    * This mechanism exists to allow the {@link Lifecycle} to be the primary entry point from the injector, not to
    * auto-register things with the {@link Lifecycle}.  It is also possible to just bind things eagerly with Guice,
-   * it is not clear which is actually the best approach.  This is more explicit, but eager bindings inside of modules
-   * is less error-prone.
+   * but that is almost never the correct option.  Guice eager bindings are pre-instantiated before the object graph
+   * is materialized and injected, meaning that objects are not actually instantiated in dependency order.
+   * Registering with the LifecyceModule, on the other hand, will instantiate the objects after the normal object
+   * graph has already been instantiated, meaning that objects will be created in dependency order and this will
+   * only actually instantiate something that wasn't actually dependend upon.
    *
    * @param clazz the class to instantiate
    * @param annotation The annotation class to register with Guice
@@ -95,10 +104,13 @@ public class LifecycleModule implements Module
    * scope.  That is, they are generally eagerly loaded because the loading operation will produce some beneficial
    * side-effect even if nothing actually directly depends on the instance.
    *
-   * This mechanism exists to allow the {@link Lifecycle} to be the primary entry point
-   * from the injector, not to auto-register things with the {@link Lifecycle}.  It is
-   * also possible to just bind things eagerly with Guice, it is not clear which is actually the best approach.
-   * This is more explicit, but eager bindings inside of modules is less error-prone.
+   * This mechanism exists to allow the {@link Lifecycle} to be the primary entry point from the injector, not to
+   * auto-register things with the {@link Lifecycle}.  It is also possible to just bind things eagerly with Guice,
+   * but that is almost never the correct option.  Guice eager bindings are pre-instantiated before the object graph
+   * is materialized and injected, meaning that objects are not actually instantiated in dependency order.
+   * Registering with the LifecyceModule, on the other hand, will instantiate the objects after the normal object
+   * graph has already been instantiated, meaning that objects will be created in dependency order and this will
+   * only actually instantiate something that wasn't actually dependend upon.
    *
    * @param key The key to use in finding the DruidNode instance
    */
@@ -118,7 +130,7 @@ public class LifecycleModule implements Module
     getEagerBinder(binder); // Load up the eager binder so that it will inject the empty set at a minimum.
 
     binder.bindScope(ManageLifecycleInit.class, initScope);
-    binder.bindScope(ManageLifecycle.class, scope);
+    binder.bindScope(ManageLifecycle.class, normalScope);
     binder.bindScope(ManageLifecycleServer.class, serverScope);
     binder.bindScope(ManageLifecycleAnnouncements.class, annoucementsScope);
   }
@@ -141,7 +153,7 @@ public class LifecycleModule implements Module
       }
     };
     initScope.setLifecycle(lifecycle);
-    scope.setLifecycle(lifecycle);
+    normalScope.setLifecycle(lifecycle);
     serverScope.setLifecycle(lifecycle);
     annoucementsScope.setLifecycle(lifecycle);
 

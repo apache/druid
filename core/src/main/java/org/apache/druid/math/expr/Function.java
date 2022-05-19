@@ -22,21 +22,37 @@ package org.apache.druid.math.expr;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.VectorMathProcessors;
+import org.apache.druid.math.expr.vector.VectorProcessors;
+import org.apache.druid.math.expr.vector.VectorStringProcessors;
+import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.segment.column.TypeStrategy;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 
+import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
+import java.util.function.BinaryOperator;
+import java.util.function.DoubleBinaryOperator;
+import java.util.function.LongBinaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -47,7 +63,7 @@ import java.util.stream.Stream;
  * Do NOT remove "unused" members in this class. They are used by generated Antlr
  */
 @SuppressWarnings("unused")
-interface Function
+public interface Function
 {
   /**
    * Name of the function.
@@ -97,6 +113,39 @@ interface Function
    * Validate function arguments
    */
   void validateArguments(List<Expr> args);
+
+  /**
+   * Compute the output type of this function for a given set of argument expression inputs.
+   *
+   * @see Expr#getOutputType
+   */
+  @Nullable
+  ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args);
+
+  /**
+   * Check if a function can be 'vectorized', for a given set of {@link Expr} inputs. If this method returns true,
+   * {@link #asVectorProcessor} is expected to produce a {@link ExprVectorProcessor} which can evaluate values in
+   * batches to use with vectorized query engines.
+   *
+   * @see Expr#canVectorize(Expr.InputBindingInspector)
+   * @see ApplyFunction#canVectorize(Expr.InputBindingInspector, Expr, List)
+   */
+  default boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+  {
+    return false;
+  }
+
+  /**
+   * Builds a 'vectorized' function expression processor, that can build vectorized processors for its input values
+   * using {@link Expr#buildVectorized}, for use in vectorized query engines.
+   *
+   * @see Expr#buildVectorized(Expr.VectorInputBindingInspector)
+   * @see ApplyFunction#asVectorProcessor(Expr.VectorInputBindingInspector, Expr, List)
+   */
+  default <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+  {
+    throw new UOE("%s is not vectorized", name());
+  }
 
   /**
    * Base class for a single variable input {@link Function} implementation
@@ -157,9 +206,9 @@ interface Function
       if (NullHandling.sqlCompatible() && param.isNumericNull()) {
         return ExprEval.of(null);
       }
-      if (param.type() == ExprType.LONG) {
+      if (param.type().is(ExprType.LONG)) {
         return eval(param.asLong());
-      } else if (param.type() == ExprType.DOUBLE) {
+      } else if (param.type().is(ExprType.DOUBLE)) {
         return eval(param.asDouble());
       }
       return ExprEval.of(null);
@@ -172,7 +221,36 @@ interface Function
 
     protected ExprEval eval(double param)
     {
+      if (param < Long.MIN_VALUE || param > Long.MAX_VALUE) {
+        throw new IAE("Possible data truncation, param [%f] is out of long value range", param);
+      }
       return eval((long) param);
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return args.get(0).getOutputType(inspector);
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return inspector.areNumeric(args) && inspector.canVectorize(args);
+    }
+  }
+
+  /**
+   * Many math functions always output a {@link Double} primitive, regardless of input type.
+   */
+  abstract class DoubleUnivariateMathFunction extends UnivariateMathFunction
+  {
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.DOUBLE;
     }
   }
 
@@ -185,13 +263,20 @@ interface Function
     @Override
     protected final ExprEval eval(ExprEval x, ExprEval y)
     {
-      if (x.type() == ExprType.STRING || y.type() == ExprType.STRING) {
+      // match the logic of BinaryEvalOpExprBase.eval, except there is no string handling so both strings is also null
+      if (NullHandling.sqlCompatible() && (x.value() == null || y.value() == null)) {
         return ExprEval.of(null);
       }
-      if (x.type() == ExprType.LONG && y.type() == ExprType.LONG) {
-        return eval(x.asLong(), y.asLong());
-      } else {
-        return eval(x.asDouble(), y.asDouble());
+
+      ExpressionType type = ExpressionTypeConversion.autoDetect(x, y);
+      switch (type.getType()) {
+        case STRING:
+          return ExprEval.of(null);
+        case LONG:
+          return eval(x.asLong(), y.asLong());
+        case DOUBLE:
+        default:
+          return eval(x.asDouble(), y.asDouble());
       }
     }
 
@@ -204,6 +289,69 @@ interface Function
     {
       return eval((long) x, (long) y);
     }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionTypeConversion.function(
+          args.get(0).getOutputType(inspector),
+          args.get(1).getOutputType(inspector)
+      );
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return inspector.areNumeric(args) && inspector.canVectorize(args);
+    }
+  }
+
+  /**
+   * Many math functions always output a {@link Double} primitive, regardless of input type.
+   */
+  abstract class DoubleBivariateMathFunction extends BivariateMathFunction
+  {
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.DOUBLE;
+    }
+  }
+
+  abstract class BivariateBitwiseMathFunction extends BivariateFunction
+  {
+    @Override
+    protected final ExprEval eval(ExprEval x, ExprEval y)
+    {
+      // this is a copy of the logic of BivariateMathFunction for string handling, which itself is a
+      // remix of BinaryEvalOpExprBase.eval modified so that string inputs are always null outputs
+      if (NullHandling.sqlCompatible() && (x.value() == null || y.value() == null)) {
+        return ExprEval.of(null);
+      }
+
+      ExpressionType type = ExpressionTypeConversion.autoDetect(x, y);
+      if (type.is(ExprType.STRING)) {
+        return ExprEval.of(null);
+      }
+      return eval(x.asLong(), y.asLong());
+    }
+
+    protected abstract ExprEval eval(long x, long y);
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return inspector.areNumeric(args) && inspector.canVectorize(args);
+    }
   }
 
   /**
@@ -215,7 +363,7 @@ interface Function
     @Override
     protected final ExprEval eval(ExprEval x, ExprEval y)
     {
-      if (x.type() != ExprType.STRING || y.type() != ExprType.LONG) {
+      if (!x.type().is(ExprType.STRING) || !y.type().is(ExprType.LONG)) {
         throw new IAE(
             "Function[%s] needs a string as first argument and an integer as second argument",
             name()
@@ -224,7 +372,7 @@ interface Function
       return eval(x.asString(), y.asInt());
     }
 
-    protected abstract ExprEval eval(String x, int y);
+    protected abstract ExprEval eval(@Nullable String x, int y);
   }
 
   /**
@@ -243,13 +391,13 @@ interface Function
     @Override
     public Set<Expr> getScalarInputs(List<Expr> args)
     {
-      return ImmutableSet.of(args.get(1));
+      return ImmutableSet.of(getScalarArgument(args));
     }
 
     @Override
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
-      return ImmutableSet.of(args.get(0));
+      return ImmutableSet.of(getArrayArgument(args));
     }
 
     @Override
@@ -261,12 +409,22 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      final ExprEval arrayExpr = args.get(0).eval(bindings);
-      final ExprEval scalarExpr = args.get(1).eval(bindings);
+      final ExprEval arrayExpr = getArrayArgument(args).eval(bindings);
+      final ExprEval scalarExpr = getScalarArgument(args).eval(bindings);
       if (arrayExpr.asArray() == null) {
         return ExprEval.of(null);
       }
       return doApply(arrayExpr, scalarExpr);
+    }
+
+    Expr getScalarArgument(List<Expr> args)
+    {
+      return args.get(1);
+    }
+
+    Expr getArrayArgument(List<Expr> args)
+    {
+      return args.get(0);
     }
 
     abstract ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr);
@@ -309,14 +467,198 @@ interface Function
       final ExprEval arrayExpr1 = args.get(0).eval(bindings);
       final ExprEval arrayExpr2 = args.get(1).eval(bindings);
 
-      if (arrayExpr1.asArray() == null || arrayExpr2.asArray() == null) {
-        return ExprEval.of(null);
+      if (arrayExpr1.asArray() == null) {
+        return arrayExpr1;
+      }
+      if (arrayExpr2.asArray() == null) {
+        return arrayExpr2;
       }
 
       return doApply(arrayExpr1, arrayExpr2);
     }
 
     abstract ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr);
+  }
+
+  /**
+   * Scaffolding for a 2 argument {@link Function} which accepts one array and one scalar input and adds the scalar
+   * input to the array in some way.
+   */
+  abstract class ArrayAddElementFunction extends ArrayScalarFunction
+  {
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      ExpressionType arrayType = getArrayArgument(args).getOutputType(inspector);
+      return Optional.ofNullable(ExpressionType.asArrayType(arrayType)).orElse(arrayType);
+    }
+
+    @Override
+    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
+    {
+      final ExpressionType arrayType = arrayExpr.asArrayType();
+      if (!scalarExpr.type().equals(arrayExpr.elementType())) {
+        // try to cast
+        ExprEval coerced = scalarExpr.castTo(arrayExpr.elementType());
+        return ExprEval.ofArray(arrayType, add(arrayType.getElementType(), arrayExpr.asArray(), coerced.value()).toArray());
+      }
+      return ExprEval.ofArray(arrayType, add(arrayType.getElementType(), arrayExpr.asArray(), scalarExpr.value()).toArray());
+    }
+
+    abstract <T> Stream<T> add(TypeSignature<ExprType> elementType, T[] array, @Nullable T val);
+  }
+
+  /**
+   * Base scaffolding for functions which accept 2 array arguments and combine them in some way
+   */
+  abstract class ArraysMergeFunction extends ArraysFunction
+  {
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      ExpressionType arrayType = args.get(0).getOutputType(inspector);
+      return Optional.ofNullable(ExpressionType.asArrayType(arrayType)).orElse(arrayType);
+    }
+
+    @Override
+    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
+    {
+      final Object[] array1 = lhsExpr.asArray();
+      final Object[] array2 = rhsExpr.asArray();
+
+      if (array1 == null) {
+        return ExprEval.of(null);
+      }
+      if (array2 == null) {
+        return lhsExpr;
+      }
+
+      final ExpressionType arrayType = lhsExpr.asArrayType();
+
+      if (!lhsExpr.asArrayType().equals(rhsExpr.asArrayType())) {
+        // try to cast if they types don't match
+        ExprEval coerced = rhsExpr.castTo(arrayType);
+        ExprEval.ofArray(arrayType, merge(arrayType.getElementType(), lhsExpr.asArray(), coerced.asArray()).toArray());
+      }
+
+      return ExprEval.ofArray(arrayType, merge(arrayType.getElementType(), lhsExpr.asArray(), rhsExpr.asArray()).toArray());
+    }
+
+    abstract <T> Stream<T> merge(TypeSignature<ExprType> elementType, T[] array1, T[] array2);
+  }
+
+  abstract class ReduceFunction implements Function
+  {
+    private final DoubleBinaryOperator doubleReducer;
+    private final LongBinaryOperator longReducer;
+    private final BinaryOperator<String> stringReducer;
+
+    ReduceFunction(
+        DoubleBinaryOperator doubleReducer,
+        LongBinaryOperator longReducer,
+        BinaryOperator<String> stringReducer
+    )
+    {
+      this.doubleReducer = doubleReducer;
+      this.longReducer = longReducer;
+      this.stringReducer = stringReducer;
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      // anything goes
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      ExpressionType outputType = ExpressionType.LONG;
+      for (Expr expr : args) {
+        outputType = ExpressionTypeConversion.function(outputType, expr.getOutputType(inspector));
+      }
+      return outputType;
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.isEmpty()) {
+        return ExprEval.of(null);
+      }
+
+      // evaluate arguments and collect output type
+      List<ExprEval<?>> evals = new ArrayList<>();
+      ExpressionType outputType = ExpressionType.LONG;
+
+      for (Expr expr : args) {
+        ExprEval<?> exprEval = expr.eval(bindings);
+        ExpressionType exprType = exprEval.type();
+
+        if (isValidType(exprType)) {
+          outputType = ExpressionTypeConversion.function(outputType, exprType);
+        }
+
+        if (exprEval.value() != null) {
+          evals.add(exprEval);
+        }
+      }
+
+      if (evals.isEmpty()) {
+        // The GREATEST/LEAST functions are not in the SQL standard. Emulate the behavior of postgres (return null if
+        // all expressions are null, otherwise skip null values) since it is used as a base for a wide number of
+        // databases. This also matches the behavior the long/double greatest/least post aggregators. Some other
+        // databases (e.g., MySQL) return null if any expression is null.
+        // https://www.postgresql.org/docs/9.5/functions-conditional.html
+        // https://dev.mysql.com/doc/refman/8.0/en/comparison-operators.html#function_least
+        return ExprEval.of(null);
+      }
+
+      switch (outputType.getType()) {
+        case DOUBLE:
+          //noinspection OptionalGetWithoutIsPresent (empty list handled earlier)
+          return ExprEval.of(evals.stream().mapToDouble(ExprEval::asDouble).reduce(doubleReducer).getAsDouble());
+        case LONG:
+          //noinspection OptionalGetWithoutIsPresent (empty list handled earlier)
+          return ExprEval.of(evals.stream().mapToLong(ExprEval::asLong).reduce(longReducer).getAsLong());
+        default:
+          //noinspection OptionalGetWithoutIsPresent (empty list handled earlier)
+          return ExprEval.of(evals.stream().map(ExprEval::asString).reduce(stringReducer).get());
+      }
+    }
+
+    private boolean isValidType(ExpressionType exprType)
+    {
+      switch (exprType.getType()) {
+        case DOUBLE:
+        case LONG:
+        case STRING:
+          return true;
+        default:
+          throw new IAE("Function[%s] does not accept %s types", name(), exprType);
+      }
+    }
   }
 
   // ------------------------------ implementations ------------------------------
@@ -335,6 +677,13 @@ interface Function
       if (args.size() != 1 && args.size() != 2) {
         throw new IAE("Function[%s] needs 1 or 2 arguments", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
     }
 
     @Override
@@ -362,6 +711,25 @@ interface Function
 
       return ExprEval.of(retVal);
     }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return (args.size() == 1 || (args.get(1).isLiteral() && args.get(1).getLiteralValue() instanceof Number)) &&
+             inspector.canVectorize(args);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      if (args.size() == 1 || args.get(1).isLiteral()) {
+        final int radix = args.size() == 1 ? 10 : ((Number) args.get(1).getLiteralValue()).intValue();
+        return VectorProcessors.parseLong(inspector, args.get(0), radix);
+      }
+      // only single argument and 2 argument where the radix is constant is currently implemented
+      // the canVectorize check should prevent this from happening, but explode just in case
+      throw Exprs.cannotVectorize(this);
+    }
   }
 
   class Pi implements Function
@@ -387,6 +755,25 @@ interface Function
         throw new IAE("Function[%s] needs 0 argument", name());
       }
     }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.DOUBLE;
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return true;
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorProcessors.constant(PI, inspector.getMaxVectorSize());
+    }
   }
 
   class Abs extends UnivariateMathFunction
@@ -408,9 +795,15 @@ interface Function
     {
       return ExprEval.of(Math.abs(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.abs(inspector, args.get(0));
+    }
   }
 
-  class Acos extends UnivariateMathFunction
+  class Acos extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -423,9 +816,15 @@ interface Function
     {
       return ExprEval.of(Math.acos(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.acos(inspector, args.get(0));
+    }
   }
 
-  class Asin extends UnivariateMathFunction
+  class Asin extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -438,9 +837,15 @@ interface Function
     {
       return ExprEval.of(Math.asin(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.asin(inspector, args.get(0));
+    }
   }
 
-  class Atan extends UnivariateMathFunction
+  class Atan extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -453,9 +858,212 @@ interface Function
     {
       return ExprEval.of(Math.atan(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.atan(inspector, args.get(0));
+    }
   }
 
-  class Cbrt extends UnivariateMathFunction
+  class BitwiseComplement extends UnivariateMathFunction
+  {
+    @Override
+    public String name()
+    {
+      return "bitwiseComplement";
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+
+    @Override
+    protected ExprEval eval(long param)
+    {
+      return ExprEval.of(~param);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.bitwiseComplement(inspector, args.get(0));
+    }
+  }
+
+  class BitwiseConvertLongBitsToDouble extends UnivariateMathFunction
+  {
+    @Override
+    public String name()
+    {
+      return "bitwiseConvertLongBitsToDouble";
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      ExpressionType type = args.get(0).getOutputType(inspector);
+      if (type == null) {
+        return null;
+      }
+      return ExpressionType.DOUBLE;
+    }
+
+    @Override
+    protected ExprEval eval(long param)
+    {
+      return ExprEval.of(Double.longBitsToDouble(param));
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.bitwiseConvertLongBitsToDouble(inspector, args.get(0));
+    }
+  }
+
+  class BitwiseConvertDoubleToLongBits extends UnivariateMathFunction
+  {
+    @Override
+    public String name()
+    {
+      return "bitwiseConvertDoubleToLongBits";
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      ExpressionType type = args.get(0).getOutputType(inspector);
+      if (type == null) {
+        return null;
+      }
+      return ExpressionType.LONG;
+    }
+
+    @Override
+    protected ExprEval eval(double param)
+    {
+      return ExprEval.of(Double.doubleToLongBits(param));
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.bitwiseConvertDoubleToLongBits(inspector, args.get(0));
+    }
+  }
+
+  class BitwiseAnd extends BivariateBitwiseMathFunction
+  {
+    @Override
+    public String name()
+    {
+      return "bitwiseAnd";
+    }
+
+    @Override
+    protected ExprEval eval(long x, long y)
+    {
+      return ExprEval.of(x & y);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.bitwiseAnd(inspector, args.get(0), args.get(1));
+    }
+  }
+
+  class BitwiseOr extends BivariateBitwiseMathFunction
+  {
+    @Override
+    public String name()
+    {
+      return "bitwiseOr";
+    }
+
+    @Override
+    protected ExprEval eval(long x, long y)
+    {
+      return ExprEval.of(x | y);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.bitwiseOr(inspector, args.get(0), args.get(1));
+    }
+  }
+
+  class BitwiseShiftLeft extends BivariateBitwiseMathFunction
+  {
+    @Override
+    public String name()
+    {
+      return "bitwiseShiftLeft";
+    }
+
+    @Override
+    protected ExprEval eval(long x, long y)
+    {
+      return ExprEval.of(x << y);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.bitwiseShiftLeft(inspector, args.get(0), args.get(1));
+    }
+  }
+
+  class BitwiseShiftRight extends BivariateBitwiseMathFunction
+  {
+    @Override
+    public String name()
+    {
+      return "bitwiseShiftRight";
+    }
+
+    @Override
+    protected ExprEval eval(long x, long y)
+    {
+      return ExprEval.of(x >> y);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.bitwiseShiftRight(inspector, args.get(0), args.get(1));
+    }
+  }
+
+  class BitwiseXor extends BivariateBitwiseMathFunction
+  {
+    @Override
+    public String name()
+    {
+      return "bitwiseXor";
+    }
+
+    @Override
+    protected ExprEval eval(long x, long y)
+    {
+      return ExprEval.of(x ^ y);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.bitwiseXor(inspector, args.get(0), args.get(1));
+    }
+  }
+
+  class Cbrt extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -468,9 +1076,15 @@ interface Function
     {
       return ExprEval.of(Math.cbrt(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.cbrt(inspector, args.get(0));
+    }
   }
 
-  class Ceil extends UnivariateMathFunction
+  class Ceil extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -483,9 +1097,15 @@ interface Function
     {
       return ExprEval.of(Math.ceil(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.ceil(inspector, args.get(0));
+    }
   }
 
-  class Cos extends UnivariateMathFunction
+  class Cos extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -498,9 +1118,15 @@ interface Function
     {
       return ExprEval.of(Math.cos(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.cos(inspector, args.get(0));
+    }
   }
 
-  class Cosh extends UnivariateMathFunction
+  class Cosh extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -513,9 +1139,15 @@ interface Function
     {
       return ExprEval.of(Math.cosh(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.cosh(inspector, args.get(0));
+    }
   }
 
-  class Cot extends UnivariateMathFunction
+  class Cot extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -527,6 +1159,57 @@ interface Function
     protected ExprEval eval(double param)
     {
       return ExprEval.of(Math.cos(param) / Math.sin(param));
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.cot(inspector, args.get(0));
+    }
+  }
+
+  class SafeDivide extends BivariateMathFunction
+  {
+    public static final String NAME = "safe_divide";
+
+    @Override
+    public String name()
+    {
+      return NAME;
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionTypeConversion.function(
+          args.get(0).getOutputType(inspector),
+          args.get(1).getOutputType(inspector)
+      );
+    }
+
+    @Override
+    protected ExprEval eval(final long x, final long y)
+    {
+      if (y == 0) {
+        if (x != 0) {
+          return ExprEval.ofLong(NullHandling.defaultLongValue());
+        }
+        return ExprEval.ofLong(0);
+      }
+      return ExprEval.ofLong(x / y);
+    }
+
+    @Override
+    protected ExprEval eval(final double x, final double y)
+    {
+      if (y == 0 || Double.isNaN(y)) {
+        if (x != 0) {
+          return ExprEval.ofDouble(NullHandling.defaultDoubleValue());
+        }
+        return ExprEval.ofDouble(0);
+      }
+      return ExprEval.ofDouble(x / y);
     }
   }
 
@@ -549,9 +1232,25 @@ interface Function
     {
       return ExprEval.of((long) (x / y));
     }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionTypeConversion.integerMathFunction(
+          args.get(0).getOutputType(inspector),
+          args.get(1).getOutputType(inspector)
+      );
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.longDivide(inspector, args.get(0), args.get(1));
+    }
   }
 
-  class Exp extends UnivariateMathFunction
+  class Exp extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -564,9 +1263,15 @@ interface Function
     {
       return ExprEval.of(Math.exp(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.exp(inspector, args.get(0));
+    }
   }
 
-  class Expm1 extends UnivariateMathFunction
+  class Expm1 extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -579,9 +1284,15 @@ interface Function
     {
       return ExprEval.of(Math.expm1(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.expm1(inspector, args.get(0));
+    }
   }
 
-  class Floor extends UnivariateMathFunction
+  class Floor extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -593,6 +1304,12 @@ interface Function
     protected ExprEval eval(double param)
     {
       return ExprEval.of(Math.floor(param));
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.floor(inspector, args.get(0));
     }
   }
 
@@ -609,9 +1326,22 @@ interface Function
     {
       return ExprEval.of(Math.getExponent(param));
     }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.getExponent(inspector, args.get(0));
+    }
   }
 
-  class Log extends UnivariateMathFunction
+  class Log extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -624,9 +1354,15 @@ interface Function
     {
       return ExprEval.of(Math.log(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.log(inspector, args.get(0));
+    }
   }
 
-  class Log10 extends UnivariateMathFunction
+  class Log10 extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -639,9 +1375,15 @@ interface Function
     {
       return ExprEval.of(Math.log10(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.log10(inspector, args.get(0));
+    }
   }
 
-  class Log1p extends UnivariateMathFunction
+  class Log1p extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -654,9 +1396,15 @@ interface Function
     {
       return ExprEval.of(Math.log1p(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.log1p(inspector, args.get(0));
+    }
   }
 
-  class NextUp extends UnivariateMathFunction
+  class NextUp extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -669,9 +1417,15 @@ interface Function
     {
       return ExprEval.of(Math.nextUp(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.nextUp(inspector, args.get(0));
+    }
   }
 
-  class Rint extends UnivariateMathFunction
+  class Rint extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -684,10 +1438,21 @@ interface Function
     {
       return ExprEval.of(Math.rint(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.rint(inspector, args.get(0));
+    }
   }
 
   class Round implements Function
   {
+    //CHECKSTYLE.OFF: Regexp
+    private static final BigDecimal MAX_FINITE_VALUE = BigDecimal.valueOf(Double.MAX_VALUE);
+    private static final BigDecimal MIN_FINITE_VALUE = BigDecimal.valueOf(-1 * Double.MAX_VALUE);
+    //CHECKSTYLE.ON: Regexp
+
     @Override
     public String name()
     {
@@ -698,16 +1463,29 @@ interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       ExprEval value1 = args.get(0).eval(bindings);
-      if (value1.type() != ExprType.LONG && value1.type() != ExprType.DOUBLE) {
-        throw new IAE("The first argument to the function[%s] should be integer or double type but get the %s type", name(), value1.type());
+
+      if (NullHandling.sqlCompatible() && value1.isNumericNull()) {
+        return ExprEval.of(null);
+      }
+
+      if (!value1.type().anyOf(ExprType.LONG, ExprType.DOUBLE)) {
+        throw new IAE(
+            "The first argument to the function[%s] should be integer or double type but got the type: %s",
+            name(),
+            value1.type()
+        );
       }
 
       if (args.size() == 1) {
         return eval(value1);
       } else {
         ExprEval value2 = args.get(1).eval(bindings);
-        if (value2.type() != ExprType.LONG) {
-          throw new IAE("The second argument to the function[%s] should be integer type but get the %s type", name(), value2.type());
+        if (!value2.type().is(ExprType.LONG)) {
+          throw new IAE(
+              "The second argument to the function[%s] should be integer type but got the type: %s",
+              name(),
+              value2.type()
+          );
         }
         return eval(value1, value2.asInt());
       }
@@ -721,6 +1499,13 @@ interface Function
       }
     }
 
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return args.get(0).getOutputType(inspector);
+    }
+
     private ExprEval eval(ExprEval param)
     {
       return eval(param, 0);
@@ -728,17 +1513,33 @@ interface Function
 
     private ExprEval eval(ExprEval param, int scale)
     {
-      if (param.type() == ExprType.LONG) {
+      if (param.type().is(ExprType.LONG)) {
         return ExprEval.of(BigDecimal.valueOf(param.asLong()).setScale(scale, RoundingMode.HALF_UP).longValue());
-      } else if (param.type() == ExprType.DOUBLE) {
-        return ExprEval.of(BigDecimal.valueOf(param.asDouble()).setScale(scale, RoundingMode.HALF_UP).doubleValue());
+      } else if (param.type().is(ExprType.DOUBLE)) {
+        BigDecimal decimal = safeGetFromDouble(param.asDouble());
+        return ExprEval.of(decimal.setScale(scale, RoundingMode.HALF_UP).doubleValue());
       } else {
         return ExprEval.of(null);
       }
     }
+
+    /**
+     * Converts non-finite doubles to BigDecimal values instead of throwing a NumberFormatException.
+     */
+    private static BigDecimal safeGetFromDouble(double val)
+    {
+      if (Double.isNaN(val)) {
+        return BigDecimal.ZERO;
+      } else if (val == Double.POSITIVE_INFINITY) {
+        return MAX_FINITE_VALUE;
+      } else if (val == Double.NEGATIVE_INFINITY) {
+        return MIN_FINITE_VALUE;
+      }
+      return BigDecimal.valueOf(val);
+    }
   }
 
-  class Signum extends UnivariateMathFunction
+  class Signum extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -751,9 +1552,15 @@ interface Function
     {
       return ExprEval.of(Math.signum(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.signum(inspector, args.get(0));
+    }
   }
 
-  class Sin extends UnivariateMathFunction
+  class Sin extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -766,9 +1573,15 @@ interface Function
     {
       return ExprEval.of(Math.sin(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.sin(inspector, args.get(0));
+    }
   }
 
-  class Sinh extends UnivariateMathFunction
+  class Sinh extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -781,9 +1594,15 @@ interface Function
     {
       return ExprEval.of(Math.sinh(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.sinh(inspector, args.get(0));
+    }
   }
 
-  class Sqrt extends UnivariateMathFunction
+  class Sqrt extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -796,9 +1615,15 @@ interface Function
     {
       return ExprEval.of(Math.sqrt(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.sqrt(inspector, args.get(0));
+    }
   }
 
-  class Tan extends UnivariateMathFunction
+  class Tan extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -811,9 +1636,15 @@ interface Function
     {
       return ExprEval.of(Math.tan(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.tan(inspector, args.get(0));
+    }
   }
 
-  class Tanh extends UnivariateMathFunction
+  class Tanh extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -826,9 +1657,15 @@ interface Function
     {
       return ExprEval.of(Math.tanh(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.tanh(inspector, args.get(0));
+    }
   }
 
-  class ToDegrees extends UnivariateMathFunction
+  class ToDegrees extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -841,9 +1678,15 @@ interface Function
     {
       return ExprEval.of(Math.toDegrees(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.toDegrees(inspector, args.get(0));
+    }
   }
 
-  class ToRadians extends UnivariateMathFunction
+  class ToRadians extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -856,9 +1699,15 @@ interface Function
     {
       return ExprEval.of(Math.toRadians(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.toRadians(inspector, args.get(0));
+    }
   }
 
-  class Ulp extends UnivariateMathFunction
+  class Ulp extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -871,9 +1720,15 @@ interface Function
     {
       return ExprEval.of(Math.ulp(param));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.ulp(inspector, args.get(0));
+    }
   }
 
-  class Atan2 extends BivariateMathFunction
+  class Atan2 extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -886,9 +1741,15 @@ interface Function
     {
       return ExprEval.of(Math.atan2(y, x));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.atan2(inspector, args.get(0), args.get(1));
+    }
   }
 
-  class CopySign extends BivariateMathFunction
+  class CopySign extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -901,9 +1762,15 @@ interface Function
     {
       return ExprEval.of(Math.copySign(x, y));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.copySign(inspector, args.get(0), args.get(1));
+    }
   }
 
-  class Hypot extends BivariateMathFunction
+  class Hypot extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -916,9 +1783,15 @@ interface Function
     {
       return ExprEval.of(Math.hypot(x, y));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.hypot(inspector, args.get(0), args.get(1));
+    }
   }
 
-  class Remainder extends BivariateMathFunction
+  class Remainder extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -930,6 +1803,12 @@ interface Function
     protected ExprEval eval(double x, double y)
     {
       return ExprEval.of(Math.IEEEremainder(x, y));
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.remainder(inspector, args.get(0), args.get(1));
     }
   }
 
@@ -952,6 +1831,12 @@ interface Function
     {
       return ExprEval.of(Math.max(x, y));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.max(inspector, args.get(0), args.get(1));
+    }
   }
 
   class Min extends BivariateMathFunction
@@ -973,9 +1858,15 @@ interface Function
     {
       return ExprEval.of(Math.min(x, y));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.min(inspector, args.get(0), args.get(1));
+    }
   }
 
-  class NextAfter extends BivariateMathFunction
+  class NextAfter extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -988,9 +1879,15 @@ interface Function
     {
       return ExprEval.of(Math.nextAfter(x, y));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.nextAfter(inspector, args.get(0), args.get(1));
+    }
   }
 
-  class Pow extends BivariateMathFunction
+  class Pow extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -1003,6 +1900,12 @@ interface Function
     {
       return ExprEval.of(Math.pow(x, y));
     }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.doublePower(inspector, args.get(0), args.get(1));
+    }
   }
 
   class Scalb extends BivariateFunction
@@ -1013,10 +1916,168 @@ interface Function
       return "scalb";
     }
 
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.DOUBLE;
+    }
+
     @Override
     protected ExprEval eval(ExprEval x, ExprEval y)
     {
-      return ExprEval.of(Math.scalb(x.asDouble(), y.asInt()));
+      if (NullHandling.sqlCompatible() && (x.value() == null || y.value() == null)) {
+        return ExprEval.of(null);
+      }
+
+      ExpressionType type = ExpressionTypeConversion.autoDetect(x, y);
+      switch (type.getType()) {
+        case STRING:
+          return ExprEval.of(null);
+        default:
+          return ExprEval.of(Math.scalb(x.asDouble(), y.asInt()));
+      }
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return inspector.areNumeric(args) && inspector.canVectorize(args);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorMathProcessors.scalb(inspector, args.get(0), args.get(1));
+    }
+  }
+
+  class CastFunc extends BivariateFunction
+  {
+    @Override
+    public String name()
+    {
+      return "cast";
+    }
+
+    @Override
+    protected ExprEval eval(ExprEval x, ExprEval y)
+    {
+      if (NullHandling.sqlCompatible() && x.value() == null) {
+        return ExprEval.of(null);
+      }
+      ExpressionType castTo;
+      try {
+        castTo = ExpressionType.fromString(StringUtils.toUpperCase(y.asString()));
+      }
+      catch (IllegalArgumentException e) {
+        throw new IAE("invalid type '%s'", y.asString());
+      }
+      return x.castTo(castTo);
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      if (args.get(1).isLiteral()) {
+        ExpressionType castTo = ExpressionType.fromString(
+            StringUtils.toUpperCase(args.get(1).getLiteralValue().toString())
+        );
+        switch (castTo.getType()) {
+          case ARRAY:
+            return Collections.emptySet();
+          default:
+            return ImmutableSet.of(args.get(0));
+        }
+      }
+      // unknown cast, can't safely assume either way
+      return Collections.emptySet();
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      if (args.get(1).isLiteral()) {
+        ExpressionType castTo = ExpressionType.fromString(
+            StringUtils.toUpperCase(args.get(1).getLiteralValue().toString())
+        );
+        switch (castTo.getType()) {
+          case LONG:
+          case DOUBLE:
+          case STRING:
+            return Collections.emptySet();
+          default:
+            return ImmutableSet.of(args.get(0));
+        }
+      }
+      // unknown cast, can't safely assume either way
+      return Collections.emptySet();
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      // can only know cast output type if cast to argument is constant
+      if (args.get(1).isLiteral()) {
+        return ExpressionType.fromString(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
+      }
+      return null;
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return args.get(0).canVectorize(inspector) && args.get(1).isLiteral();
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return CastToTypeVectorProcessor.cast(
+          args.get(0).buildVectorized(inspector),
+          ExpressionType.fromString(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()))
+      );
+    }
+  }
+
+  class GreatestFunc extends ReduceFunction
+  {
+    public static final String NAME = "greatest";
+
+    public GreatestFunc()
+    {
+      super(
+          Math::max,
+          Math::max,
+          BinaryOperator.maxBy(Comparator.naturalOrder())
+      );
+    }
+
+    @Override
+    public String name()
+    {
+      return NAME;
+    }
+  }
+
+  class LeastFunc extends ReduceFunction
+  {
+    public static final String NAME = "least";
+
+    public LeastFunc()
+    {
+      super(
+          Math::min,
+          Math::min,
+          BinaryOperator.minBy(Comparator.naturalOrder())
+      );
+    }
+
+    @Override
+    public String name()
+    {
+      return NAME;
     }
   }
 
@@ -1041,6 +2102,13 @@ interface Function
       if (args.size() != 3) {
         throw new IAE("Function[%s] needs 3 arguments", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionTypeConversion.conditional(inspector, args.subList(1, 3));
     }
   }
 
@@ -1078,6 +2146,19 @@ interface Function
         throw new IAE("Function[%s] must have at least 2 arguments", name());
       }
     }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      List<Expr> results = new ArrayList<>();
+      for (int i = 1; i < args.size(); i += 2) {
+        results.add(args.get(i));
+      }
+      // add else
+      results.add(args.get(args.size() - 1));
+      return ExpressionTypeConversion.conditional(inspector, results);
+    }
   }
 
   /**
@@ -1114,129 +2195,18 @@ interface Function
         throw new IAE("Function[%s] must have at least 3 arguments", name());
       }
     }
-  }
 
-  class CastFunc extends BivariateFunction
-  {
+    @Nullable
     @Override
-    public String name()
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return "cast";
-    }
-
-    @Override
-    protected ExprEval eval(ExprEval x, ExprEval y)
-    {
-      if (NullHandling.sqlCompatible() && x.value() == null) {
-        return ExprEval.of(null);
+      List<Expr> results = new ArrayList<>();
+      for (int i = 2; i < args.size(); i += 2) {
+        results.add(args.get(i));
       }
-      ExprType castTo;
-      try {
-        castTo = ExprType.valueOf(StringUtils.toUpperCase(y.asString()));
-      }
-      catch (IllegalArgumentException e) {
-        throw new IAE("invalid type '%s'", y.asString());
-      }
-      return x.castTo(castTo);
-    }
-
-    @Override
-    public Set<Expr> getScalarInputs(List<Expr> args)
-    {
-      if (args.get(1).isLiteral()) {
-        ExprType castTo = ExprType.valueOf(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
-        switch (castTo) {
-          case LONG_ARRAY:
-          case DOUBLE_ARRAY:
-          case STRING_ARRAY:
-            return Collections.emptySet();
-          default:
-            return ImmutableSet.of(args.get(0));
-        }
-      }
-      // unknown cast, can't safely assume either way
-      return Collections.emptySet();
-    }
-
-    @Override
-    public Set<Expr> getArrayInputs(List<Expr> args)
-    {
-      if (args.get(1).isLiteral()) {
-        ExprType castTo = ExprType.valueOf(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
-        switch (castTo) {
-          case LONG:
-          case DOUBLE:
-          case STRING:
-            return Collections.emptySet();
-          default:
-            return ImmutableSet.of(args.get(0));
-        }
-      }
-      // unknown cast, can't safely assume either way
-      return Collections.emptySet();
-    }
-  }
-
-  class TimestampFromEpochFunc implements Function
-  {
-    @Override
-    public String name()
-    {
-      return "timestamp";
-    }
-
-    @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
-    {
-      ExprEval value = args.get(0).eval(bindings);
-      if (value.type() != ExprType.STRING) {
-        throw new IAE("first argument should be string type but got %s type", value.type());
-      }
-
-      DateTimes.UtcFormatter formatter = DateTimes.ISO_DATE_OPTIONAL_TIME;
-      if (args.size() > 1) {
-        ExprEval format = args.get(1).eval(bindings);
-        if (format.type() != ExprType.STRING) {
-          throw new IAE("second argument should be string type but got %s type", format.type());
-        }
-        formatter = DateTimes.wrapFormatter(DateTimeFormat.forPattern(format.asString()));
-      }
-      DateTime date;
-      try {
-        date = formatter.parse(value.asString());
-      }
-      catch (IllegalArgumentException e) {
-        throw new IAE(e, "invalid value %s", value.asString());
-      }
-      return toValue(date);
-    }
-
-    @Override
-    public void validateArguments(List<Expr> args)
-    {
-      if (args.size() != 1 && args.size() != 2) {
-        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
-      }
-    }
-
-    protected ExprEval toValue(DateTime date)
-    {
-      return ExprEval.of(date.getMillis());
-    }
-  }
-
-  class UnixTimestampFunc extends TimestampFromEpochFunc
-  {
-    @Override
-    public String name()
-    {
-      return "unix_timestamp";
-    }
-
-    @Override
-    protected final ExprEval toValue(DateTime date)
-    {
-      return ExprEval.of(date.getMillis() / 1000);
+      // add else
+      results.add(args.get(args.size() - 1));
+      return ExpressionTypeConversion.conditional(inspector, results);
     }
   }
 
@@ -1261,6 +2231,112 @@ interface Function
       if (args.size() != 2) {
         throw new IAE("Function[%s] needs 2 arguments", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionTypeConversion.conditional(inspector, args);
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return inspector.canVectorize(args);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorProcessors.nvl(inspector, args.get(0), args.get(1));
+    }
+  }
+
+  class IsNullFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "isnull";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval expr = args.get(0).eval(bindings);
+      return ExprEval.ofLongBoolean(expr.value() == null);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return args.get(0).canVectorize(inspector);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorProcessors.isNull(inspector, args.get(0));
+    }
+  }
+
+  class IsNotNullFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "notnull";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval expr = args.get(0).eval(bindings);
+      return ExprEval.ofLongBoolean(expr.value() != null);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return args.get(0).canVectorize(inspector);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorProcessors.isNotNull(inspector, args.get(0));
     }
   }
 
@@ -1305,6 +2381,28 @@ interface Function
     {
       // anything goes
     }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING;
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return inspector.areScalar(args) && inspector.canVectorize(args);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(
+        Expr.VectorInputBindingInspector inspector,
+        List<Expr> args
+    )
+    {
+      return VectorStringProcessors.concat(inspector, args);
+    }
   }
 
   class StrlenFunc implements Function
@@ -1328,6 +2426,13 @@ interface Function
       if (args.size() != 1) {
         throw new IAE("Function[%s] needs 1 argument", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
     }
   }
 
@@ -1362,6 +2467,13 @@ interface Function
       if (args.size() < 1) {
         throw new IAE("Function[%s] needs 1 or more arguments", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING;
     }
   }
 
@@ -1400,6 +2512,13 @@ interface Function
       if (args.size() < 2 || args.size() > 3) {
         throw new IAE("Function[%s] needs 2 or 3 arguments", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
     }
   }
 
@@ -1444,6 +2563,13 @@ interface Function
         throw new IAE("Function[%s] needs 3 arguments", name());
       }
     }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING;
+    }
   }
 
   class RightFunc extends StringLongFunction
@@ -1454,14 +2580,24 @@ interface Function
       return "right";
     }
 
+    @Nullable
     @Override
-    protected ExprEval eval(String x, int y)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING;
+    }
+
+    @Override
+    protected ExprEval eval(@Nullable String x, int y)
     {
       if (y < 0) {
         throw new IAE(
             "Function[%s] needs a postive integer as second argument",
             name()
         );
+      }
+      if (x == null) {
+        return ExprEval.of(null);
       }
       int len = x.length();
       return ExprEval.of(y < len ? x.substring(len - y) : x);
@@ -1476,14 +2612,24 @@ interface Function
       return "left";
     }
 
+    @Nullable
     @Override
-    protected ExprEval eval(String x, int y)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING;
+    }
+
+    @Override
+    protected ExprEval eval(@Nullable String x, int y)
     {
       if (y < 0) {
         throw new IAE(
             "Function[%s] needs a postive integer as second argument",
             name()
         );
+      }
+      if (x == null) {
+        return ExprEval.of(null);
       }
       return ExprEval.of(y < x.length() ? x.substring(0, y) : x);
     }
@@ -1516,6 +2662,13 @@ interface Function
         throw new IAE("Function[%s] needs 3 arguments", name());
       }
     }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING;
+    }
   }
 
   class LowerFunc implements Function
@@ -1542,6 +2695,13 @@ interface Function
       if (args.size() != 1) {
         throw new IAE("Function[%s] needs 1 argument", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING;
     }
   }
 
@@ -1570,6 +2730,13 @@ interface Function
         throw new IAE("Function[%s] needs 1 argument", name());
       }
     }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING;
+    }
   }
 
   class ReverseFunc extends UnivariateFunction
@@ -1580,10 +2747,17 @@ interface Function
       return "reverse";
     }
 
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING;
+    }
+
     @Override
     protected ExprEval eval(ExprEval param)
     {
-      if (param.type() != ExprType.STRING) {
+      if (!param.type().is(ExprType.STRING)) {
         throw new IAE(
             "Function[%s] needs a string argument",
             name()
@@ -1602,58 +2776,20 @@ interface Function
       return "repeat";
     }
 
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING;
+    }
+
     @Override
     protected ExprEval eval(String x, int y)
     {
+      if (x == null) {
+        return ExprEval.of(null);
+      }
       return ExprEval.of(y < 1 ? NullHandling.defaultStringValue() : StringUtils.repeat(x, y));
-    }
-  }
-
-  class IsNullFunc implements Function
-  {
-    @Override
-    public String name()
-    {
-      return "isnull";
-    }
-
-    @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
-    {
-      final ExprEval expr = args.get(0).eval(bindings);
-      return ExprEval.of(expr.value() == null, ExprType.LONG);
-    }
-
-    @Override
-    public void validateArguments(List<Expr> args)
-    {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs 1 argument", name());
-      }
-    }
-  }
-
-  class IsNotNullFunc implements Function
-  {
-    @Override
-    public String name()
-    {
-      return "notnull";
-    }
-
-    @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
-    {
-      final ExprEval expr = args.get(0).eval(bindings);
-      return ExprEval.of(expr.value() != null, ExprType.LONG);
-    }
-
-    @Override
-    public void validateArguments(List<Expr> args)
-    {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs 1 argument", name());
-      }
     }
   }
 
@@ -1687,6 +2823,13 @@ interface Function
         throw new IAE("Function[%s] needs 3 arguments", name());
       }
     }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING;
+    }
   }
 
   class RpadFunc implements Function
@@ -1718,6 +2861,83 @@ interface Function
       if (args.size() != 3) {
         throw new IAE("Function[%s] needs 3 arguments", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING;
+    }
+  }
+
+  class TimestampFromEpochFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "timestamp";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      ExprEval value = args.get(0).eval(bindings);
+      if (!value.type().is(ExprType.STRING)) {
+        throw new IAE("first argument should be string type but got %s type", value.type());
+      }
+
+      DateTimes.UtcFormatter formatter = DateTimes.ISO_DATE_OPTIONAL_TIME;
+      if (args.size() > 1) {
+        ExprEval format = args.get(1).eval(bindings);
+        if (!format.type().is(ExprType.STRING)) {
+          throw new IAE("second argument should be string type but got %s type", format.type());
+        }
+        formatter = DateTimes.wrapFormatter(DateTimeFormat.forPattern(format.asString()));
+      }
+      DateTime date;
+      try {
+        date = formatter.parse(value.asString());
+      }
+      catch (IllegalArgumentException e) {
+        throw new IAE(e, "invalid value %s", value.asString());
+      }
+      return toValue(date);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 1 && args.size() != 2) {
+        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+
+    protected ExprEval toValue(DateTime date)
+    {
+      return ExprEval.of(date.getMillis());
+    }
+  }
+
+  class UnixTimestampFunc extends TimestampFromEpochFunc
+  {
+    @Override
+    public String name()
+    {
+      return "unix_timestamp";
+    }
+
+    @Override
+    protected final ExprEval toValue(DateTime date)
+    {
+      return ExprEval.of(date.getMillis() / 1000);
     }
   }
 
@@ -1751,8 +2971,76 @@ interface Function
         throw new IAE("Function[%s] needs 3 arguments", name());
       }
     }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
   }
 
+  class MVToArrayFunction implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "mv_to_array";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      return args.get(0).eval(bindings).castTo(ExpressionType.STRING_ARRAY);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs exactly 1 argument of type String", name());
+      }
+      IdentifierExpr expr = args.get(0).getIdentifierExprIfIdentifierExpr();
+
+      if (expr == null) {
+        throw new IAE(
+            "Arg %s should be an identifier expression ie refer to columns directaly. Use array() instead",
+            args.get(0).toString()
+        );
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING_ARRAY;
+    }
+
+    @Override
+    public boolean hasArrayInputs()
+    {
+      return true;
+    }
+
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return Collections.emptySet();
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+  }
   class ArrayConstructorFunction implements Function
   {
     @Override
@@ -1767,68 +3055,17 @@ interface Function
       // this is copied from 'BaseMapFunction.applyMap', need to find a better way to consolidate, or construct arrays,
       // or.. something...
       final int length = args.size();
-      String[] stringsOut = null;
-      Long[] longsOut = null;
-      Double[] doublesOut = null;
+      Object[] out = new Object[length];
 
-      ExprType elementType = null;
+      ExpressionType arrayType = null;
+
       for (int i = 0; i < length; i++) {
-
-        ExprEval evaluated = args.get(i).eval(bindings);
-        if (elementType == null) {
-          elementType = evaluated.type();
-          switch (elementType) {
-            case STRING:
-              stringsOut = new String[length];
-              break;
-            case LONG:
-              longsOut = new Long[length];
-              break;
-            case DOUBLE:
-              doublesOut = new Double[length];
-              break;
-            default:
-              throw new RE("Unhandled array constructor element type [%s]", elementType);
-          }
-        }
-
-        setArrayOutputElement(stringsOut, longsOut, doublesOut, elementType, i, evaluated);
+        ExprEval<?> evaluated = args.get(i).eval(bindings);
+        arrayType = setArrayOutput(arrayType, out, i, evaluated);
       }
 
-      switch (elementType) {
-        case STRING:
-          return ExprEval.ofStringArray(stringsOut);
-        case LONG:
-          return ExprEval.ofLongArray(longsOut);
-        case DOUBLE:
-          return ExprEval.ofDoubleArray(doublesOut);
-        default:
-          throw new RE("Unhandled array constructor element type [%s]", elementType);
-      }
+      return ExprEval.ofArray(arrayType, out);
     }
-
-    static void setArrayOutputElement(
-        String[] stringsOut,
-        Long[] longsOut,
-        Double[] doublesOut,
-        ExprType elementType,
-        int i,
-        ExprEval evaluated
-    )
-    {
-      switch (elementType) {
-        case STRING:
-          stringsOut[i] = evaluated.asString();
-          break;
-        case LONG:
-          longsOut[i] = evaluated.isNumericNull() ? null : evaluated.asLong();
-          break;
-        case DOUBLE:
-          doublesOut[i] = evaluated.isNumericNull() ? null : evaluated.asDouble();
-          break;
-      }
-    }
-
 
     @Override
     public Set<Expr> getScalarInputs(List<Expr> args)
@@ -1854,6 +3091,40 @@ interface Function
       if (args.isEmpty()) {
         throw new IAE("Function[%s] needs at least 1 argument", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      ExpressionType type = ExpressionType.LONG;
+      for (Expr arg : args) {
+        type = ExpressionTypeConversion.function(type, arg.getOutputType(inspector));
+      }
+      return ExpressionType.asArrayType(type);
+    }
+
+    /**
+     * Set an array element to the output array, checking for null if the array is numeric. If the type of the evaluated
+     * array element does not match the array element type, this method will attempt to call {@link ExprEval#castTo}
+     * to the array element type, else will set the element as is. If the type of the array is unknown, it will be
+     * detected and defined from the first element. Returns the type of the array, which will be identical to the input
+     * type, unless the input type was null.
+     */
+    static ExpressionType setArrayOutput(@Nullable ExpressionType arrayType, Object[] out, int i, ExprEval evaluated)
+    {
+      if (arrayType == null) {
+        arrayType = ExpressionTypeFactory.getInstance().ofArray(evaluated.type());
+      }
+      ExpressionType.checkNestedArrayAllowed(arrayType);
+      if (arrayType.getElementType().isNumeric() && evaluated.isNumericNull()) {
+        out[i] = null;
+      } else if (!evaluated.asArrayType().equals(arrayType)) {
+        out[i] = evaluated.castTo((ExpressionType) arrayType.getElementType()).value();
+      } else {
+        out[i] = evaluated.value();
+      }
+      return arrayType;
     }
   }
 
@@ -1901,6 +3172,13 @@ interface Function
       }
     }
 
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+
     @Override
     public Set<Expr> getScalarInputs(List<Expr> args)
     {
@@ -1922,6 +3200,13 @@ interface Function
       if (args.size() != 2) {
         throw new IAE("Function[%s] needs 2 argument", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING_ARRAY;
     }
 
     @Override
@@ -1958,6 +3243,13 @@ interface Function
       return "array_to_string";
     }
 
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING;
+    }
+
     @Override
     ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
@@ -1980,6 +3272,13 @@ interface Function
       return "array_offset";
     }
 
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.elementType(args.get(0).getOutputType(inspector));
+    }
+
     @Override
     ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
@@ -1987,7 +3286,7 @@ interface Function
       final int position = scalarExpr.asInt();
 
       if (array.length > position) {
-        return ExprEval.bestEffortOf(array[position]);
+        return ExprEval.ofType(arrayExpr.elementType(), array[position]);
       }
       return ExprEval.of(null);
     }
@@ -2001,6 +3300,13 @@ interface Function
       return "array_ordinal";
     }
 
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.elementType(args.get(0).getOutputType(inspector));
+    }
+
     @Override
     ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
@@ -2008,7 +3314,7 @@ interface Function
       final int position = scalarExpr.asInt() - 1;
 
       if (array.length > position) {
-        return ExprEval.bestEffortOf(array[position]);
+        return ExprEval.ofType(arrayExpr.elementType(), array[position]);
       }
       return ExprEval.of(null);
     }
@@ -2022,12 +3328,19 @@ interface Function
       return "array_offset_of";
     }
 
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+
     @Override
     ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
       final Object[] array = arrayExpr.asArray();
 
-      switch (scalarExpr.type()) {
+      switch (scalarExpr.type().getType()) {
         case STRING:
         case LONG:
         case DOUBLE:
@@ -2053,11 +3366,18 @@ interface Function
       return "array_ordinal_of";
     }
 
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+
     @Override
     ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
       final Object[] array = arrayExpr.asArray();
-      switch (scalarExpr.type()) {
+      switch (scalarExpr.type().getType()) {
         case STRING:
         case LONG:
         case DOUBLE:
@@ -2068,14 +3388,16 @@ interface Function
               break;
             }
           }
-          return index < 0 ? ExprEval.ofLong(NullHandling.replaceWithDefault() ? -1 : null) : ExprEval.ofLong(index + 1);
+          return index < 0
+                 ? ExprEval.ofLong(NullHandling.replaceWithDefault() ? -1 : null)
+                 : ExprEval.ofLong(index + 1);
         default:
           throw new IAE("Function[%s] 2nd argument must be a a scalar type", name());
       }
     }
   }
 
-  class ArrayAppendFunction extends ArrayScalarFunction
+  class ArrayAppendFunction extends ArrayAddElementFunction
   {
     @Override
     public String name()
@@ -2084,40 +3406,7 @@ interface Function
     }
 
     @Override
-    public boolean hasArrayOutput()
-    {
-      return true;
-    }
-
-    @Override
-    ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
-    {
-      switch (arrayExpr.type()) {
-        case STRING:
-        case STRING_ARRAY:
-          return ExprEval.ofStringArray(this.append(arrayExpr.asStringArray(), scalarExpr.asString()).toArray(String[]::new));
-        case LONG:
-        case LONG_ARRAY:
-          return ExprEval.ofLongArray(
-              this.append(
-                  arrayExpr.asLongArray(),
-                  scalarExpr.isNumericNull() ? null : scalarExpr.asLong()).toArray(Long[]::new
-              )
-          );
-        case DOUBLE:
-        case DOUBLE_ARRAY:
-          return ExprEval.ofDoubleArray(
-              this.append(
-                  arrayExpr.asDoubleArray(),
-                  scalarExpr.isNumericNull() ? null : scalarExpr.asDouble()).toArray(Double[]::new
-              )
-          );
-      }
-
-      throw new RE("Unable to append to unknown type %s", arrayExpr.type());
-    }
-
-    private <T> Stream<T> append(T[] array, T val)
+    <T> Stream<T> add(TypeSignature<ExprType> elementType, T[] array, @Nullable T val)
     {
       List<T> l = new ArrayList<>(Arrays.asList(array));
       l.add(val);
@@ -2125,7 +3414,36 @@ interface Function
     }
   }
 
-  class ArrayConcatFunction extends ArraysFunction
+  class ArrayPrependFunction extends ArrayAddElementFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_prepend";
+    }
+
+    @Override
+    Expr getScalarArgument(List<Expr> args)
+    {
+      return args.get(0);
+    }
+
+    @Override
+    Expr getArrayArgument(List<Expr> args)
+    {
+      return args.get(1);
+    }
+
+    @Override
+    <T> Stream<T> add(TypeSignature<ExprType> elementType, T[] array, @Nullable T val)
+    {
+      List<T> l = new ArrayList<>(Arrays.asList(array));
+      l.add(0, val);
+      return l.stream();
+    }
+  }
+
+  class ArrayConcatFunction extends ArraysMergeFunction
   {
     @Override
     public String name()
@@ -2134,53 +3452,45 @@ interface Function
     }
 
     @Override
-    public Set<Expr> getArrayInputs(List<Expr> args)
-    {
-      return ImmutableSet.copyOf(args);
-    }
-
-    @Override
-    public boolean hasArrayOutput()
-    {
-      return true;
-    }
-
-    @Override
-    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
-    {
-      final Object[] array1 = lhsExpr.asArray();
-      final Object[] array2 = rhsExpr.asArray();
-
-      if (array1 == null) {
-        return ExprEval.of(null);
-      }
-      if (array2 == null) {
-        return lhsExpr;
-      }
-
-      switch (lhsExpr.type()) {
-        case STRING:
-        case STRING_ARRAY:
-          return ExprEval.ofStringArray(
-              cat(lhsExpr.asStringArray(), rhsExpr.asStringArray()).toArray(String[]::new)
-          );
-        case LONG:
-        case LONG_ARRAY:
-          return ExprEval.ofLongArray(
-              cat(lhsExpr.asLongArray(), rhsExpr.asLongArray()).toArray(Long[]::new)
-          );
-        case DOUBLE:
-        case DOUBLE_ARRAY:
-          return ExprEval.ofDoubleArray(
-              cat(lhsExpr.asDoubleArray(), rhsExpr.asDoubleArray()).toArray(Double[]::new)
-          );
-      }
-      throw new RE("Unable to concatenate to unknown type %s", lhsExpr.type());
-    }
-
-    private <T> Stream<T> cat(T[] array1, T[] array2)
+    <T> Stream<T> merge(TypeSignature<ExprType> elementType, T[] array1, T[] array2)
     {
       List<T> l = new ArrayList<>(Arrays.asList(array1));
+      l.addAll(Arrays.asList(array2));
+      return l.stream();
+    }
+  }
+
+  class ArraySetAddFunction extends ArrayAddElementFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_set_add";
+    }
+
+    @Override
+    <T> Stream<T> add(TypeSignature<ExprType> elementType, T[] array, @Nullable T val)
+    {
+      Set<T> l = new TreeSet<>(elementType.getNullableStrategy());
+      l.addAll(Arrays.asList(array));
+      l.add(val);
+      return l.stream();
+    }
+  }
+
+  class ArraySetAddAllFunction extends ArraysMergeFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_set_add_all";
+    }
+
+    @Override
+    <T> Stream<T> merge(TypeSignature<ExprType> elementType, T[] array1, T[] array2)
+    {
+      Set<T> l = new TreeSet<>(elementType.getNullableStrategy());
+      l.addAll(Arrays.asList(array1));
       l.addAll(Arrays.asList(array2));
       return l.stream();
     }
@@ -2200,12 +3510,19 @@ interface Function
       return true;
     }
 
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+
     @Override
     ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
     {
       final Object[] array1 = lhsExpr.asArray();
       final Object[] array2 = rhsExpr.asArray();
-      return ExprEval.of(Arrays.asList(array1).containsAll(Arrays.asList(array2)), ExprType.LONG);
+      return ExprEval.ofLongBoolean(Arrays.asList(array1).containsAll(Arrays.asList(array2)));
     }
   }
 
@@ -2217,6 +3534,13 @@ interface Function
       return "array_overlap";
     }
 
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+
     @Override
     ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
     {
@@ -2226,7 +3550,7 @@ interface Function
       for (Object check : array1) {
         any |= array2.contains(check);
       }
-      return ExprEval.of(any, ExprType.LONG);
+      return ExprEval.ofLongBoolean(any);
     }
   }
 
@@ -2244,6 +3568,13 @@ interface Function
       if (args.size() != 2 && args.size() != 3) {
         throw new IAE("Function[%s] needs 2 or 3 arguments", name());
       }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return args.get(0).getOutputType(inspector);
     }
 
     @Override
@@ -2294,27 +3625,152 @@ interface Function
         return ExprEval.of(null);
       }
 
-      switch (expr.type()) {
-        case STRING:
-        case STRING_ARRAY:
-          return ExprEval.ofStringArray(Arrays.copyOfRange(expr.asStringArray(), start, end));
-        case LONG:
-        case LONG_ARRAY:
-          return ExprEval.ofLongArray(Arrays.copyOfRange(expr.asLongArray(), start, end));
-        case DOUBLE:
-        case DOUBLE_ARRAY:
-          return ExprEval.ofDoubleArray(Arrays.copyOfRange(expr.asDoubleArray(), start, end));
-      }
-      throw new RE("Unable to slice to unknown type %s", expr.type());
+      return ExprEval.ofArray(expr.asArrayType(), Arrays.copyOfRange(expr.asArray(), start, end));
     }
   }
 
-  class ArrayPrependFunction implements Function
+  abstract class SizeFormatFunc implements Function
+  {
+    protected abstract HumanReadableBytes.UnitSystem getUnitSystem();
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval valueParam = args.get(0).eval(bindings);
+      if (NullHandling.sqlCompatible() && valueParam.isNumericNull()) {
+        return ExprEval.of(null);
+      }
+
+      /**
+       * only LONG and DOUBLE are allowed
+       * For a DOUBLE, it will be cast to LONG before format
+       */
+      if (valueParam.value() != null && !valueParam.type().anyOf(ExprType.LONG, ExprType.DOUBLE)) {
+        throw new IAE("Function[%s] needs a number as its first argument", name());
+      }
+
+      /**
+       * By default, precision is 2
+       */
+      long precision = 2;
+      if (args.size() > 1) {
+        ExprEval precisionParam = args.get(1).eval(bindings);
+        if (!precisionParam.type().is(ExprType.LONG)) {
+          throw new IAE("Function[%s] needs an integer as its second argument", name());
+        }
+        precision = precisionParam.asLong();
+        if (precision < 0 || precision > 3) {
+          throw new IAE("Given precision[%d] of Function[%s] must be in the range of [0,3]", precision, name());
+        }
+      }
+
+      return ExprEval.of(HumanReadableBytes.format(valueParam.asLong(), precision, this.getUnitSystem()));
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() < 1 || args.size() > 2) {
+        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
+    {
+      return ExpressionType.STRING;
+    }
+  }
+
+  class HumanReadableDecimalByteFormatFunc extends SizeFormatFunc
   {
     @Override
     public String name()
     {
-      return "array_prepend";
+      return "human_readable_decimal_byte_format";
+    }
+
+    @Override
+    protected HumanReadableBytes.UnitSystem getUnitSystem()
+    {
+      return HumanReadableBytes.UnitSystem.DECIMAL_BYTE;
+    }
+  }
+
+  class HumanReadableBinaryByteFormatFunc extends SizeFormatFunc
+  {
+    @Override
+    public String name()
+    {
+      return "human_readable_binary_byte_format";
+    }
+
+    @Override
+    protected HumanReadableBytes.UnitSystem getUnitSystem()
+    {
+      return HumanReadableBytes.UnitSystem.BINARY_BYTE;
+    }
+  }
+
+  class HumanReadableDecimalFormatFunc extends SizeFormatFunc
+  {
+    @Override
+    public String name()
+    {
+      return "human_readable_decimal_format";
+    }
+
+    @Override
+    protected HumanReadableBytes.UnitSystem getUnitSystem()
+    {
+      return HumanReadableBytes.UnitSystem.DECIMAL;
+    }
+  }
+
+  class ComplexDecodeBase64Function implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "complex_decode_base64";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      ExprEval arg0 = args.get(0).eval(bindings);
+      if (!arg0.type().is(ExprType.STRING)) {
+        throw new IAE(
+            "Function[%s] first argument must be constant 'STRING' expression containing a valid complex type name",
+            name()
+        );
+      }
+      ExpressionType type = ExpressionTypeFactory.getInstance().ofComplex((String) args.get(0).getLiteralValue());
+      TypeStrategy strategy;
+      try {
+        strategy = type.getStrategy();
+      }
+      catch (IAE illegal) {
+        throw new IAE(
+            "Function[%s] first argument must be a valid complex type name, unknown complex type [%s]",
+            name(),
+            type.asTypeString()
+        );
+      }
+      ExprEval base64String = args.get(1).eval(bindings);
+      if (!base64String.type().is(ExprType.STRING)) {
+        throw new IAE(
+            "Function[%s] second argument must be a base64 encoded 'STRING' value",
+            name()
+        );
+      }
+      if (base64String.value() == null) {
+        return ExprEval.ofComplex(type, null);
+      }
+
+      final byte[] base64 = StringUtils.decodeBase64String(base64String.asString());
+      return ExprEval.ofComplex(type, strategy.read(ByteBuffer.wrap(base64)));
     }
 
     @Override
@@ -2323,69 +3779,29 @@ interface Function
       if (args.size() != 2) {
         throw new IAE("Function[%s] needs 2 arguments", name());
       }
-    }
-
-    @Override
-    public Set<Expr> getScalarInputs(List<Expr> args)
-    {
-      return ImmutableSet.of(args.get(0));
-    }
-
-    @Override
-    public Set<Expr> getArrayInputs(List<Expr> args)
-    {
-      return ImmutableSet.of(args.get(1));
-    }
-
-    @Override
-    public boolean hasArrayInputs()
-    {
-      return true;
-    }
-
-    @Override
-    public boolean hasArrayOutput()
-    {
-      return true;
-    }
-
-    @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
-    {
-      final ExprEval scalarExpr = args.get(0).eval(bindings);
-      final ExprEval arrayExpr = args.get(1).eval(bindings);
-      if (arrayExpr.asArray() == null) {
-        return ExprEval.of(null);
+      if (!args.get(0).isLiteral() || args.get(0).isNullLiteral()) {
+        throw new IAE(
+            "Function[%s] first argument must be constant 'STRING' expression containing a valid complex type name",
+            name()
+        );
       }
-      switch (arrayExpr.type()) {
-        case STRING:
-        case STRING_ARRAY:
-          return ExprEval.ofStringArray(this.prepend(scalarExpr.asString(), arrayExpr.asStringArray()).toArray(String[]::new));
-        case LONG:
-        case LONG_ARRAY:
-          return ExprEval.ofLongArray(
-              this.prepend(
-                  scalarExpr.isNumericNull() ? null : scalarExpr.asLong(),
-                  arrayExpr.asLongArray()).toArray(Long[]::new
-              )
-          );
-        case DOUBLE:
-        case DOUBLE_ARRAY:
-          return ExprEval.ofDoubleArray(
-              this.prepend(
-                  scalarExpr.isNumericNull() ? null : scalarExpr.asDouble(),
-                  arrayExpr.asDoubleArray()).toArray(Double[]::new
-              )
-          );
-      }
-
-      throw new RE("Unable to prepend to unknown type %s", arrayExpr.type());
     }
-    private <T> Stream<T> prepend(T val, T[] array)
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(
+        Expr.InputBindingInspector inspector,
+        List<Expr> args
+    )
     {
-      List<T> l = new ArrayList<>(Arrays.asList(array));
-      l.add(0, val);
-      return l.stream();
+      ExpressionType arg0Type = args.get(0).getOutputType(inspector);
+      if (arg0Type == null || !arg0Type.is(ExprType.STRING)) {
+        throw new IAE(
+            "Function[%s] first argument must be constant 'STRING' expression containing a valid complex type name",
+            name()
+        );
+      }
+      return ExpressionTypeFactory.getInstance().ofComplex((String) args.get(0).getLiteralValue());
     }
   }
 }

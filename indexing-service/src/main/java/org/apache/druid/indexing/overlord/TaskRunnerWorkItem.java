@@ -86,6 +86,7 @@ public abstract class TaskRunnerWorkItem
     return queueInsertionTime;
   }
 
+  @JsonProperty
   public abstract TaskLocation getLocation();
 
   /**

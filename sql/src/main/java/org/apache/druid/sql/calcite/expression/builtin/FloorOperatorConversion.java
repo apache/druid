@@ -23,11 +23,13 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 
@@ -51,16 +53,16 @@ public class FloorOperatorConversion implements SqlOperatorConversion
 
     if (call.getOperands().size() == 1) {
       // FLOOR(expr) -- numeric FLOOR
-      return OperatorConversions.convertCall(plannerContext, rowSignature, call, "floor");
+      return OperatorConversions.convertDirectCall(plannerContext, rowSignature, call, "floor");
     } else if (call.getOperands().size() == 2) {
       // FLOOR(expr TO timeUnit) -- time FLOOR
-      return DruidExpression.fromFunctionCall(
+      return DruidExpression.ofFunctionCall(
+          Calcites.getColumnTypeForRelDataType(rexNode.getType()),
           "timestamp_floor",
           TimeFloorOperatorConversion.toTimestampFloorOrCeilArgs(plannerContext, rowSignature, call.getOperands())
       );
     } else {
-      // WTF? FLOOR with the wrong number of arguments?
-      return null;
+      throw new ISE("Unexpected number of arguments");
     }
   }
 }

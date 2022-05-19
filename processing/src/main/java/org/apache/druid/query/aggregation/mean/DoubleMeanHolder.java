@@ -27,10 +27,11 @@ import com.google.common.primitives.Doubles;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
+import java.util.Objects;
 
 public class DoubleMeanHolder
 {
-  public static final int MAX_INTERMEDIATE_SIZE = Long.SIZE + Double.SIZE;
+  public static final int MAX_INTERMEDIATE_SIZE = Long.BYTES + Double.BYTES;
   public static final Comparator<DoubleMeanHolder> COMPARATOR = (o1, o2) -> Doubles.compare(o1.mean(), o2.mean());
 
   private double sum;
@@ -62,16 +63,36 @@ public class DoubleMeanHolder
 
   public byte[] toBytes()
   {
-    ByteBuffer buf = ByteBuffer.allocate(Double.SIZE + Long.SIZE);
+    ByteBuffer buf = ByteBuffer.allocate(Double.BYTES + Long.BYTES);
     buf.putDouble(0, sum);
-    buf.putLong(Double.SIZE, count);
+    buf.putLong(Double.BYTES, count);
     return buf.array();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DoubleMeanHolder that = (DoubleMeanHolder) o;
+    return Double.compare(that.sum, sum) == 0 &&
+           count == that.count;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(sum, count);
   }
 
   public static DoubleMeanHolder fromBytes(byte[] data)
   {
     ByteBuffer buf = ByteBuffer.wrap(data);
-    return new DoubleMeanHolder(buf.getDouble(0), buf.getLong(Double.SIZE));
+    return new DoubleMeanHolder(buf.getDouble(0), buf.getLong(Double.BYTES));
   }
 
   public static void init(ByteBuffer buf, int position)
@@ -109,12 +130,12 @@ public class DoubleMeanHolder
 
   private static void writeCount(ByteBuffer buf, int position, long count)
   {
-    buf.putLong(position + Double.SIZE, count);
+    buf.putLong(position + Double.BYTES, count);
   }
 
   private static long getCount(ByteBuffer buf, int position)
   {
-    return buf.getLong(position + Double.SIZE);
+    return buf.getLong(position + Double.BYTES);
   }
 
   public static class Serializer extends JsonSerializer<DoubleMeanHolder>

@@ -53,8 +53,6 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
     String container = this.config.getContainer();
     this.objectApi = new CloudFilesObjectApiProxy(cloudFilesApi, region, container);
     this.jsonMapper = jsonMapper;
-
-    log.info("Configured CloudFiles as deep storage");
   }
 
   @Override
@@ -73,11 +71,16 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment push(final File indexFilesDir, final DataSegment inSegment, final boolean useUniquePath)
   {
+    return pushToPath(indexFilesDir, inSegment, getStorageDir(inSegment, useUniquePath));
+  }
+
+  @Override
+  public DataSegment pushToPath(File indexFilesDir, DataSegment inSegment, String storageDirSuffix)
+  {
     final String segmentPath = CloudFilesUtils.buildCloudFilesPath(
         this.config.getBasePath(),
-        getStorageDir(inSegment, useUniquePath)
-    );
-
+        storageDirSuffix
+        );
     File descriptorFile = null;
     File zipOutFile = null;
 

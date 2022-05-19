@@ -30,13 +30,13 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.common.guava.ThreadRenamingRunnable;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.indexer.hadoop.SegmentInputRow;
 import org.apache.druid.indexer.path.DatasourcePathSpec;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -47,10 +47,9 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.ProgressIndicator;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -77,6 +76,7 @@ import org.joda.time.Interval;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -102,14 +102,14 @@ public class IndexGeneratorJob implements Jobby
 {
   private static final Logger log = new Logger(IndexGeneratorJob.class);
 
-  public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config)
+  public static List<DataSegmentAndIndexZipFilePath> getPublishedSegmentAndIndexZipFilePaths(HadoopDruidIndexerConfig config)
   {
-    final Configuration conf = JobHelper.injectSystemProperties(new Configuration());
+    final Configuration conf = JobHelper.injectSystemProperties(new Configuration(), config);
     config.addJobProperties(conf);
 
     final ObjectMapper jsonMapper = HadoopDruidIndexerConfig.JSON_MAPPER;
 
-    ImmutableList.Builder<DataSegment> publishedSegmentsBuilder = ImmutableList.builder();
+    ImmutableList.Builder<DataSegmentAndIndexZipFilePath> publishedSegmentAndIndexZipFilePathsBuilder = ImmutableList.builder();
 
     final Path descriptorInfoDir = config.makeDescriptorInfoDir();
 
@@ -117,9 +117,13 @@ public class IndexGeneratorJob implements Jobby
       FileSystem fs = descriptorInfoDir.getFileSystem(conf);
 
       for (FileStatus status : fs.listStatus(descriptorInfoDir)) {
-        final DataSegment segment = jsonMapper.readValue(fs.open(status.getPath()), DataSegment.class);
-        publishedSegmentsBuilder.add(segment);
-        log.info("Adding segment %s to the list of published segments", segment.getId());
+        final DataSegmentAndIndexZipFilePath segmentAndIndexZipFilePath = jsonMapper.readValue((InputStream) fs.open(
+            status.getPath()), DataSegmentAndIndexZipFilePath.class);
+        publishedSegmentAndIndexZipFilePathsBuilder.add(segmentAndIndexZipFilePath);
+        log.info(
+            "Adding segment %s to the list of published segments",
+            segmentAndIndexZipFilePath.getSegment().getId()
+        );
       }
     }
     catch (FileNotFoundException e) {
@@ -133,9 +137,9 @@ public class IndexGeneratorJob implements Jobby
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-    List<DataSegment> publishedSegments = publishedSegmentsBuilder.build();
+    List<DataSegmentAndIndexZipFilePath> publishedSegmentAndIndexZipFilePaths = publishedSegmentAndIndexZipFilePathsBuilder.build();
 
-    return publishedSegments;
+    return publishedSegmentAndIndexZipFilePaths;
   }
 
   private final HadoopDruidIndexerConfig config;
@@ -166,10 +170,10 @@ public class IndexGeneratorJob implements Jobby
 
       job.getConfiguration().set("io.sort.record.percent", "0.23");
 
-      JobHelper.injectSystemProperties(job);
+      JobHelper.injectSystemProperties(job.getConfiguration(), config);
       config.addJobProperties(job);
       // inject druid properties like deep storage bindings
-      JobHelper.injectDruidProperties(job.getConfiguration(), config.getAllowedHadoopPrefix());
+      JobHelper.injectDruidProperties(job.getConfiguration(), config);
 
       job.setMapperClass(IndexGeneratorMapper.class);
       job.setMapOutputValueClass(BytesWritable.class);
@@ -280,7 +284,7 @@ public class IndexGeneratorJob implements Jobby
       return null;
     }
 
-    return Utils.getFailureMessage(job, config.JSON_MAPPER);
+    return Utils.getFailureMessage(job, HadoopDruidIndexerConfig.JSON_MAPPER);
   }
 
   private static IncrementalIndex makeIncrementalIndex(
@@ -288,25 +292,25 @@ public class IndexGeneratorJob implements Jobby
       AggregatorFactory[] aggs,
       HadoopDruidIndexerConfig config,
       Iterable<String> oldDimOrder,
-      Map<String, ColumnCapabilitiesImpl> oldCapabilities
+      Map<String, ColumnCapabilities> oldCapabilities
   )
   {
     final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(theBucket.time.getMillis())
-        .withTimestampSpec(config.getSchema().getDataSchema().getParser().getParseSpec().getTimestampSpec())
-        .withDimensionsSpec(config.getSchema().getDataSchema().getParser())
+        .withTimestampSpec(config.getSchema().getDataSchema().getTimestampSpec())
+        .withDimensionsSpec(config.getSchema().getDataSchema().getDimensionsSpec())
         .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
         .withMetrics(aggs)
         .withRollup(config.getSchema().getDataSchema().getGranularitySpec().isRollup())
         .build();
 
-    IncrementalIndex newIndex = new IncrementalIndex.Builder()
-        .setIndexSchema(indexSchema)
-        .setReportParseExceptions(!tuningConfig.isIgnoreInvalidRows()) // only used by OffHeapIncrementalIndex
-        .setMaxRowCount(tuningConfig.getRowFlushBoundary())
-        .setMaxBytesInMemory(TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()))
-        .buildOnheap();
+    // Build the incremental-index according to the spec that was chosen by the user
+    IncrementalIndex newIndex = tuningConfig.getAppendableIndexSpec().builder()
+                                            .setIndexSchema(indexSchema)
+                                            .setMaxRowCount(tuningConfig.getMaxRowsInMemory())
+                                            .setMaxBytesInMemory(tuningConfig.getMaxBytesInMemoryOrDefault())
+                                            .build();
 
     if (oldDimOrder != null && !indexSchema.getDimensionsSpec().hasCustomDimensions()) {
       newIndex.loadDimensionIterable(oldDimOrder, oldCapabilities);
@@ -341,11 +345,7 @@ public class IndexGeneratorJob implements Jobby
           aggsForSerializingSegmentInputRow[i] = aggregators[i].getCombiningFactory();
         }
       }
-      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema()
-                                                           .getDataSchema()
-                                                           .getParser()
-                                                           .getParseSpec()
-                                                           .getDimensionsSpec());
+      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema().getDataSchema().getDimensionsSpec());
     }
 
     @Override
@@ -358,7 +358,7 @@ public class IndexGeneratorJob implements Jobby
       final Optional<Bucket> bucket = getConfig().getBucket(inputRow);
 
       if (!bucket.isPresent()) {
-        throw new ISE("WTF?! No bucket found for row: %s", inputRow);
+        throw new ISE("No bucket found for row: %s", inputRow);
       }
 
       final long truncatedTimestamp = granularitySpec.getQueryGranularity()
@@ -431,11 +431,7 @@ public class IndexGeneratorJob implements Jobby
       for (int i = 0; i < aggregators.length; ++i) {
         combiningAggs[i] = aggregators[i].getCombiningFactory();
       }
-      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema()
-                                                           .getDataSchema()
-                                                           .getParser()
-                                                           .getParseSpec()
-                                                           .getDimensionsSpec());
+      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema().getDataSchema().getDimensionsSpec());
     }
 
     @Override
@@ -617,7 +613,18 @@ public class IndexGeneratorJob implements Jobby
     {
       boolean rollup = config.getSchema().getDataSchema().getGranularitySpec().isRollup();
       return HadoopDruidIndexerConfig.INDEX_MERGER_V9
-          .mergeQueryableIndex(indexes, rollup, aggs, file, config.getIndexSpec(), progressIndicator, null);
+          .mergeQueryableIndex(
+              indexes,
+              rollup,
+              aggs,
+              null,
+              file,
+              config.getIndexSpec(),
+              config.getIndexSpecForIntermediatePersists(),
+              progressIndicator,
+              null,
+              -1
+          );
     }
 
     @Override
@@ -631,11 +638,7 @@ public class IndexGeneratorJob implements Jobby
         metricNames.add(aggregators[i].getName());
         combiningAggs[i] = aggregators[i].getCombiningFactory();
       }
-      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema()
-                                                           .getDataSchema()
-                                                           .getParser()
-                                                           .getParseSpec()
-                                                           .getDimensionsSpec());
+      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema().getDataSchema().getDimensionsSpec());
     }
 
     @Override
@@ -657,10 +660,7 @@ public class IndexGeneratorJob implements Jobby
           null
       );
       try {
-        File baseFlushFile = File.createTempFile("base", "flush");
-        baseFlushFile.delete();
-        baseFlushFile.mkdirs();
-
+        File baseFlushFile = FileUtils.createTempDir("base-flush");
         Set<File> toMerge = new TreeSet<>();
         int indexCount = 0;
         int lineCount = 0;
@@ -821,10 +821,10 @@ public class IndexGeneratorJob implements Jobby
             metricNames,
             shardSpecForPublishing,
             -1,
-            -1
+            0
         );
 
-        final DataSegment segment = JobHelper.serializeOutIndex(
+        final DataSegmentAndIndexZipFilePath segmentAndIndexZipFilePath = JobHelper.serializeOutIndex(
             segmentTemplate,
             context.getConfiguration(),
             context,
@@ -834,19 +834,19 @@ public class IndexGeneratorJob implements Jobby
                 outputFS,
                 segmentTemplate,
                 JobHelper.INDEX_ZIP,
-                config.DATA_SEGMENT_PUSHER
+                HadoopDruidIndexerConfig.DATA_SEGMENT_PUSHER
             ),
             JobHelper.makeTmpPath(
                 new Path(config.getSchema().getIOConfig().getSegmentOutputPath()),
                 outputFS,
                 segmentTemplate,
                 context.getTaskAttemptID(),
-                config.DATA_SEGMENT_PUSHER
+                HadoopDruidIndexerConfig.DATA_SEGMENT_PUSHER
             ),
-            config.DATA_SEGMENT_PUSHER
+            HadoopDruidIndexerConfig.DATA_SEGMENT_PUSHER
         );
 
-        Path descriptorPath = config.makeDescriptorInfoPath(segment);
+        Path descriptorPath = config.makeDescriptorInfoPath(segmentAndIndexZipFilePath.getSegment());
         descriptorPath = JobHelper.prependFSIfNullScheme(
             FileSystem.get(
                 descriptorPath.toUri(),
@@ -857,7 +857,7 @@ public class IndexGeneratorJob implements Jobby
         log.info("Writing descriptor to path[%s]", descriptorPath);
         JobHelper.writeSegmentDescriptor(
             config.makeDescriptorInfoDir().getFileSystem(context.getConfiguration()),
-            segment,
+            segmentAndIndexZipFilePath,
             descriptorPath,
             context
         );

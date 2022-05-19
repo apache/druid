@@ -27,18 +27,28 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.ObjectArrays;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
+import com.google.common.io.CharSource;
+import com.google.common.io.LineProcessor;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.MetricsEmittingQueryRunner;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.filter.AndDimFilter;
@@ -46,10 +56,12 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -70,42 +82,55 @@ import java.util.Set;
  *
  */
 @RunWith(Parameterized.class)
-public class ScanQueryRunnerTest
+public class ScanQueryRunnerTest extends InitializedNullHandlingTest
 {
-  private static final VirtualColumn EXPR_COLUMN =
-      new ExpressionVirtualColumn("expr", "index * 2", ValueType.LONG, TestExprMacroTable.INSTANCE);
 
-  // copied from druid.sample.numeric.tsv
-  public static final String[] V_0112 = {
-      "2011-01-12T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t10000.0\t100000\tpreferred\tapreferred\t100.000000",
-      "2011-01-12T00:00:00.000Z\tspot\tbusiness\t1100\t11000.0\t11000.0\t110000\tpreferred\tbpreferred\t100.000000",
-      "2011-01-12T00:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t12000.0\t120000\tpreferred\tepreferred\t100.000000",
-      "2011-01-12T00:00:00.000Z\tspot\thealth\t1300\t13000.0\t13000.0\t130000\tpreferred\thpreferred\t100.000000",
-      "2011-01-12T00:00:00.000Z\tspot\tmezzanine\t1400\t14000.0\t14000.0\t140000\tpreferred\tmpreferred\t100.000000",
-      "2011-01-12T00:00:00.000Z\tspot\tnews\t1500\t15000.0\t15000.0\t150000\tpreferred\tnpreferred\t100.000000",
-      "2011-01-12T00:00:00.000Z\tspot\tpremium\t1600\t16000.0\t16000.0\t160000\tpreferred\tppreferred\t100.000000",
-      "2011-01-12T00:00:00.000Z\tspot\ttechnology\t1700\t17000.0\t17000.0\t170000\tpreferred\ttpreferred\t100.000000",
-      "2011-01-12T00:00:00.000Z\tspot\ttravel\t1800\t18000.0\t18000.0\t180000\tpreferred\ttpreferred\t100.000000",
-      "2011-01-12T00:00:00.000Z\ttotal_market\tmezzanine\t1400\t14000.0\t14000.0\t140000\tpreferred\tmpreferred\t1000.000000",
-      "2011-01-12T00:00:00.000Z\ttotal_market\tpremium\t1600\t16000.0\t16000.0\t160000\tpreferred\tppreferred\t1000.000000",
-      "2011-01-12T00:00:00.000Z\tupfront\tmezzanine\t1400\t14000.0\t14000.0\t140000\tpreferred\tmpreferred\t800.000000\tvalue",
-      "2011-01-12T00:00:00.000Z\tupfront\tpremium\t1600\t16000.0\t16000.0\t160000\tpreferred\tppreferred\t800.000000\tvalue"
-  };
-  public static final String[] V_0113 = {
-      "2011-01-13T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t10000.0\t100000\tpreferred\tapreferred\t94.874713",
-      "2011-01-13T00:00:00.000Z\tspot\tbusiness\t1100\t11000.0\t11000.0\t110000\tpreferred\tbpreferred\t103.629399",
-      "2011-01-13T00:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t12000.0\t120000\tpreferred\tepreferred\t110.087299",
-      "2011-01-13T00:00:00.000Z\tspot\thealth\t1300\t13000.0\t13000.0\t130000\tpreferred\thpreferred\t114.947403",
-      "2011-01-13T00:00:00.000Z\tspot\tmezzanine\t1400\t14000.0\t14000.0\t140000\tpreferred\tmpreferred\t104.465767",
-      "2011-01-13T00:00:00.000Z\tspot\tnews\t1500\t15000.0\t15000.0\t150000\tpreferred\tnpreferred\t102.851683",
-      "2011-01-13T00:00:00.000Z\tspot\tpremium\t1600\t16000.0\t16000.0\t160000\tpreferred\tppreferred\t108.863011",
-      "2011-01-13T00:00:00.000Z\tspot\ttechnology\t1700\t17000.0\t17000.0\t170000\tpreferred\ttpreferred\t111.356672",
-      "2011-01-13T00:00:00.000Z\tspot\ttravel\t1800\t18000.0\t18000.0\t180000\tpreferred\ttpreferred\t106.236928",
-      "2011-01-13T00:00:00.000Z\ttotal_market\tmezzanine\t1400\t14000.0\t14000.0\t140000\tpreferred\tmpreferred\t1040.945505",
-      "2011-01-13T00:00:00.000Z\ttotal_market\tpremium\t1600\t16000.0\t16000.0\t160000\tpreferred\tppreferred\t1689.012875",
-      "2011-01-13T00:00:00.000Z\tupfront\tmezzanine\t1400\t14000.0\t14000.0\t140000\tpreferred\tmpreferred\t826.060182\tvalue",
-      "2011-01-13T00:00:00.000Z\tupfront\tpremium\t1600\t16000.0\t16000.0\t160000\tpreferred\tppreferred\t1564.617729\tvalue"
-  };
+  private static final VirtualColumn EXPR_COLUMN =
+      new ExpressionVirtualColumn("expr", "index * 2", ColumnType.LONG, TestExprMacroTable.INSTANCE);
+
+  // Read the first set of 12 lines from the sample data, which covers the day 2011-01-12T00:00:00.000Z
+  public static final String[] V_0112 = readLinesFromSample(0, 13).toArray(new String[0]);
+
+  // Read the second set of 12 lines from the sample data, which covers the day 2011-01-13T00:00:00.000Z
+  public static final String[] V_0113 = readLinesFromSample(13, 26).toArray(new String[0]);
+
+  private static List<String> readLinesFromSample(
+      int startLineNum,
+      int endLineNum
+  )
+  {
+    CharSource sampleData = TestIndex.getResourceCharSource("druid.sample.numeric.tsv");
+    List<String> lines = new ArrayList<>();
+    try {
+      sampleData.readLines(
+          new LineProcessor<Object>()
+          {
+            int count = 0;
+
+            @Override
+            public boolean processLine(String line)
+            {
+              if (count >= startLineNum && count < endLineNum) {
+                lines.add(line);
+              }
+              count++;
+              return count < endLineNum;
+            }
+
+            @Override
+            public Object getResult()
+            {
+              return null;
+            }
+          }
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return lines;
+  }
+
 
   public static final QuerySegmentSpec I_0112_0114 = new LegacySegmentSpec(
       Intervals.of("2011-01-12T00:00:00.000Z/2011-01-14T00:00:00.000Z")
@@ -117,16 +142,19 @@ public class ScanQueryRunnerTest
       DefaultGenericQueryMetricsFactory.instance()
   );
 
+  private static final ScanQueryRunnerFactory FACTORY = new ScanQueryRunnerFactory(
+      TOOL_CHEST,
+      new ScanQueryEngine(),
+      new ScanQueryConfig()
+  );
+
   @Parameterized.Parameters(name = "{0}, legacy = {1}")
   public static Iterable<Object[]> constructorFeeder()
   {
+
     return QueryRunnerTestHelper.cartesian(
         QueryRunnerTestHelper.makeQueryRunners(
-            new ScanQueryRunnerFactory(
-                TOOL_CHEST,
-                new ScanQueryEngine(),
-                new ScanQueryConfig()
-            )
+            FACTORY
         ),
         ImmutableList.of(false, true)
     );
@@ -134,11 +162,36 @@ public class ScanQueryRunnerTest
 
   private final QueryRunner runner;
   private final boolean legacy;
+  private final List<String> columns;
 
   public ScanQueryRunnerTest(final QueryRunner runner, final boolean legacy)
   {
     this.runner = runner;
     this.legacy = legacy;
+    this.columns = Lists.newArrayList(
+        getTimestampName(),
+        "expr",
+        "market",
+        "quality",
+        "qualityLong",
+        "qualityFloat",
+        "qualityDouble",
+        "qualityNumericString",
+        "longNumericNull",
+        "floatNumericNull",
+        "doubleNumericNull",
+        "placement",
+        "placementish",
+        "partial_null_column",
+        "null_column",
+        "index",
+        "indexMin",
+        "indexMaxPlusTen",
+        "quality_uniques",
+        "indexFloat",
+        "indexMaxFloat",
+        "indexMinFloat"
+    );
   }
 
   private Druids.ScanQueryBuilder newTestQuery()
@@ -146,7 +199,7 @@ public class ScanQueryRunnerTest
     return Druids.newScanQueryBuilder()
                  .dataSource(new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE))
                  .columns(Collections.emptyList())
-                 .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                 .eternityInterval()
                  .limit(3)
                  .legacy(legacy);
   }
@@ -154,33 +207,22 @@ public class ScanQueryRunnerTest
   @Test
   public void testFullOnSelect()
   {
-    List<String> columns = Lists.newArrayList(
-        getTimestampName(),
-        "expr",
-        "market",
-        "quality",
-        "qualityLong",
-        "qualityFloat",
-        "qualityDouble",
-        "qualityNumericString",
-        "placement",
-        "placementish",
-        "partial_null_column",
-        "null_column",
-        "index",
-        "indexMin",
-        "indexMaxPlusTen",
-        "quality_uniques",
-        "indexFloat",
-        "indexMaxFloat",
-        "indexMinFloat"
-    );
+
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
         .virtualColumns(EXPR_COLUMN)
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+    StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("", "");
+    MetricsEmittingQueryRunner<ScanResultValue> metricsEmittingQueryRunner =
+        new MetricsEmittingQueryRunner<ScanResultValue>(
+            stubServiceEmitter,
+            TOOL_CHEST,
+            runner,
+            (obj, lng) -> {},
+            (metrics) -> {}
+        ).withWaitMeasuredFromNow();
+    Iterable<ScanResultValue> results = metricsEmittingQueryRunner.run(QueryPlus.wrap(query)).toList();
 
     List<ScanResultValue> expectedResults = toExpected(
         toFullEvents(V_0112_0114),
@@ -188,33 +230,14 @@ public class ScanQueryRunnerTest
         0,
         3
     );
+    Assert.assertEquals(1, stubServiceEmitter.getEvents().size());
+    Assert.assertEquals(false, stubServiceEmitter.getEvents().get(0).toMap().getOrDefault("vectorized", null));
     verify(expectedResults, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
   }
 
   @Test
   public void testFullOnSelectAsCompactedList()
   {
-    final List<String> columns = Lists.newArrayList(
-        getTimestampName(),
-        "expr",
-        "market",
-        "quality",
-        "qualityLong",
-        "qualityFloat",
-        "qualityDouble",
-        "qualityNumericString",
-        "placement",
-        "placementish",
-        "partial_null_column",
-        "null_column",
-        "index",
-        "indexMin",
-        "indexMaxPlusTen",
-        "quality_uniques",
-        "indexFloat",
-        "indexMaxFloat",
-        "indexMinFloat"
-    );
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
         .virtualColumns(EXPR_COLUMN)
@@ -250,6 +273,9 @@ public class ScanQueryRunnerTest
         new String[]{
             getTimestampName() + ":TIME",
             QueryRunnerTestHelper.MARKET_DIMENSION + ":STRING",
+            null,
+            null,
+            null,
             null,
             null,
             null,
@@ -304,6 +330,9 @@ public class ScanQueryRunnerTest
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
                 QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
             },
             V_0112_0114
@@ -331,6 +360,9 @@ public class ScanQueryRunnerTest
             new String[]{
                 legacy ? getTimestampName() + ":TIME" : null,
                 QueryRunnerTestHelper.MARKET_DIMENSION + ":STRING",
+                null,
+                null,
+                null,
                 null,
                 null,
                 null,
@@ -868,6 +900,89 @@ public class ScanQueryRunnerTest
     }
   }
 
+  @Test
+  public void testScanQueryTimeout()
+  {
+    ScanQuery query = newTestQuery()
+        .intervals(I_0112_0114)
+        .virtualColumns(EXPR_COLUMN)
+        .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
+        .build();
+    ResponseContext responseContext = DefaultResponseContext.createEmpty();
+    final long timeoutAt = System.currentTimeMillis();
+    responseContext.putTimeoutTime(timeoutAt);
+    try {
+      runner.run(QueryPlus.wrap(query), responseContext).toList();
+      Assert.fail("didn't timeout");
+    }
+    catch (RuntimeException e) {
+      Assert.assertTrue(e instanceof QueryTimeoutException);
+      Assert.assertEquals("Query timeout", ((QueryTimeoutException) e).getErrorCode());
+      Assert.assertEquals(timeoutAt, responseContext.getTimeoutTime().longValue());
+    }
+  }
+
+  @Test
+  public void testScanQueryTimeoutMerge()
+  {
+    ScanQuery query = newTestQuery()
+        .intervals(I_0112_0114)
+        .virtualColumns(EXPR_COLUMN)
+        .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
+        .build();
+    try {
+      FACTORY.mergeRunners(
+          DirectQueryProcessingPool.INSTANCE,
+          ImmutableList.of(
+              (queryPlus, responseContext) -> {
+                try {
+                  Thread.sleep(2);
+                }
+                catch (InterruptedException ignored) {
+                }
+                return runner.run(queryPlus, responseContext);
+              })
+      ).run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
+
+      Assert.fail("didn't timeout");
+    }
+    catch (RuntimeException e) {
+      Assert.assertTrue(e instanceof QueryTimeoutException);
+      Assert.assertEquals("Query timeout", ((QueryTimeoutException) e).getErrorCode());
+    }
+  }
+
+  @Test
+  public void testScanQueryTimeoutZeroDoesntTimeOut()
+  {
+    ScanQuery query = newTestQuery()
+        .intervals(I_0112_0114)
+        .virtualColumns(EXPR_COLUMN)
+        .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 0))
+        .build();
+
+    Iterable<ScanResultValue> results = FACTORY.mergeRunners(
+        DirectQueryProcessingPool.INSTANCE,
+        ImmutableList.of(
+            (queryPlus, responseContext) -> {
+              try {
+                Thread.sleep(2);
+              }
+              catch (InterruptedException ignored) {
+              }
+              return runner.run(queryPlus, responseContext);
+            })
+    ).run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
+
+    List<ScanResultValue> expectedResults = toExpected(
+        toFullEvents(V_0112_0114),
+        columns,
+        0,
+        3
+    );
+    verify(expectedResults, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
+  }
+
   private List<List<Map<String, Object>>> toFullEvents(final String[]... valueSet)
   {
     return toEvents(
@@ -879,6 +994,9 @@ public class ScanQueryRunnerTest
             "qualityFloat" + ":FLOAT",
             "qualityDouble" + ":DOUBLE",
             "qualityNumericString" + ":STRING",
+            "longNumericNull" + ":LONG",
+            "floatNumericNull" + ":FLOAT",
+            "doubleNumericNull" + ":DOUBLE",
             QueryRunnerTestHelper.PLACEMENT_DIMENSION + ":STRING",
             QueryRunnerTestHelper.PLACEMENTISH_DIMENSION + ":STRINGS",
             QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE",
@@ -953,17 +1071,26 @@ public class ScanQueryRunnerTest
 
                     String[] specs = dimSpecs[i].split(":");
 
-                    event.put(
-                        specs[0],
-                        specs.length == 1 || specs[1].equals("STRING") ? values1[i] :
-                        specs[1].equals("TIME") ? toTimestamp(values1[i]) :
-                        specs[1].equals("FLOAT") ? Float.valueOf(values1[i]) :
-                        specs[1].equals("DOUBLE") ? Double.valueOf(values1[i]) :
-                        specs[1].equals("LONG") ? Long.valueOf(values1[i]) :
-                        specs[1].equals("NULL") ? null :
-                        specs[1].equals("STRINGS") ? Arrays.asList(values1[i].split("\u0001")) :
-                        values1[i]
-                    );
+                    Object eventVal;
+                    if (specs.length == 1 || specs[1].equals("STRING")) {
+                      eventVal = values1[i];
+                    } else if (specs[1].equals("TIME")) {
+                      eventVal = toTimestamp(values1[i]);
+                    } else if (specs[1].equals("FLOAT")) {
+                      eventVal = values1[i].isEmpty() ? NullHandling.defaultFloatValue() : Float.valueOf(values1[i]);
+                    } else if (specs[1].equals("DOUBLE")) {
+                      eventVal = values1[i].isEmpty() ? NullHandling.defaultDoubleValue() : Double.valueOf(values1[i]);
+                    } else if (specs[1].equals("LONG")) {
+                      eventVal = values1[i].isEmpty() ? NullHandling.defaultLongValue() : Long.valueOf(values1[i]);
+                    } else if (specs[1].equals(("NULL"))) {
+                      eventVal = null;
+                    } else if (specs[1].equals("STRINGS")) {
+                      eventVal = Arrays.asList(values1[i].split("\u0001"));
+                    } else {
+                      eventVal = values1[i];
+                    }
+
+                    event.put(specs[0], eventVal);
                   }
                   return event;
                 }
@@ -1041,6 +1168,14 @@ public class ScanQueryRunnerTest
           Object exValue = ex.getValue();
           if (exValue instanceof Double || exValue instanceof Float) {
             final double expectedDoubleValue = ((Number) exValue).doubleValue();
+            Assert.assertNotNull(
+                StringUtils.format(
+                    "invalid null value for %s (expected %f)",
+                    ex.getKey(),
+                    expectedDoubleValue
+                ),
+                actVal
+            );
             Assert.assertEquals(
                 "invalid value for " + ex.getKey(),
                 expectedDoubleValue,

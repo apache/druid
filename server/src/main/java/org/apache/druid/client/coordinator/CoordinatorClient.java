@@ -35,6 +35,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
+import java.util.Collection;
 import java.util.List;
 
 public class CoordinatorClient
@@ -126,7 +127,7 @@ public class CoordinatorClient
     }
   }
 
-  public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+  public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(String dataSource, List<Interval> intervals)
   {
     try {
       StringFullResponseHolder response = druidLeaderClient.go(
@@ -141,7 +142,7 @@ public class CoordinatorClient
 
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
-            "Error while fetching database segment data source segments status[%s] content[%s]",
+            "Error while fetching used segments in a data source for intervals: status[%s] content[%s]",
             response.getStatus(),
             response.getContent()
         );
@@ -157,7 +158,7 @@ public class CoordinatorClient
     }
   }
 
-  public DataSegment getDatabaseSegmentDataSourceSegment(String dataSource, String segmentId)
+  public DataSegment fetchUsedSegment(String dataSource, String segmentId)
   {
     try {
       StringFullResponseHolder response = druidLeaderClient.go(

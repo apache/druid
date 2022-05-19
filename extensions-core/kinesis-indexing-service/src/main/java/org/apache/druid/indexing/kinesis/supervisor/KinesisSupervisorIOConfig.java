@@ -22,11 +22,15 @@ package org.apache.druid.indexing.kinesis.supervisor;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskIOConfig;
 import org.apache.druid.indexing.kinesis.KinesisRegion;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
+
+import javax.annotation.Nullable;
 
 public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 {
@@ -52,6 +56,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   @JsonCreator
   public KinesisSupervisorIOConfig(
       @JsonProperty("stream") String stream,
+      @JsonProperty("inputFormat") InputFormat inputFormat,
       @JsonProperty("endpoint") String endpoint,
       @JsonProperty("region") KinesisRegion region,
       @JsonProperty("replicas") Integer replicas,
@@ -68,11 +73,13 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
       @JsonProperty("awsExternalId") String awsExternalId,
+      @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig,
       @JsonProperty("deaggregate") boolean deaggregate
   )
   {
     super(
         Preconditions.checkNotNull(stream, "stream"),
+        inputFormat,
         replicas,
         taskCount,
         taskDuration,
@@ -82,8 +89,10 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         completionTimeout,
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        autoScalerConfig,
         lateMessageRejectionStartDateTime
     );
+
     this.endpoint = endpoint != null
                     ? endpoint
                     : (region != null ? region.getEndpoint() : KinesisRegion.US_EAST_1.getEndpoint());
@@ -142,6 +151,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", endpoint='" + endpoint + '\'' +
            ", replicas=" + getReplicas() +
            ", taskCount=" + getTaskCount() +
+           ", autoScalerConfig=" + getAutoScalerConfig() +
            ", taskDuration=" + getTaskDuration() +
            ", startDelay=" + getStartDelay() +
            ", period=" + getPeriod() +

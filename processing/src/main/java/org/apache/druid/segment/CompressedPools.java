@@ -30,8 +30,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- */
 public class CompressedPools
 {
   private static final Logger log = new Logger(CompressedPools.class);
@@ -46,7 +44,7 @@ public class CompressedPools
         @Override
         public BufferRecycler get()
         {
-          log.info("Allocating new bufferRecycler[%,d]", counter.incrementAndGet());
+          log.debug("Allocating new bufferRecycler[%,d]", counter.incrementAndGet());
           return new BufferRecycler();
         }
       }
@@ -66,7 +64,7 @@ public class CompressedPools
         @Override
         public byte[] get()
         {
-          log.info("Allocating new outputBytesPool[%,d]", counter.incrementAndGet());
+          log.debug("Allocating new outputBytesPool[%,d]", counter.incrementAndGet());
           return new byte[BUFFER_SIZE];
         }
       }
@@ -86,7 +84,7 @@ public class CompressedPools
         @Override
         public ByteBuffer get()
         {
-          log.info("Allocating new bigEndByteBuf[%,d]", counter.incrementAndGet());
+          log.debug("Allocating new bigEndByteBuf[%,d]", counter.incrementAndGet());
           return ByteBuffer.allocateDirect(BUFFER_SIZE).order(ByteOrder.BIG_ENDIAN);
         }
       }
@@ -101,7 +99,7 @@ public class CompressedPools
         @Override
         public ByteBuffer get()
         {
-          log.info("Allocating new littleEndByteBuf[%,d]", counter.incrementAndGet());
+          log.debug("Allocating new littleEndByteBuf[%,d]", counter.incrementAndGet());
           return ByteBuffer.allocateDirect(BUFFER_SIZE).order(ByteOrder.LITTLE_ENDIAN);
         }
       }

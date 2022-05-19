@@ -35,7 +35,7 @@ public class BitmapSerdeFactoryTest
     Assert.assertEquals("{\"type\":\"roaring\",\"compressRunOnSerialization\":true}", mapper.writeValueAsString(new RoaringBitmapSerdeFactory(true)));
     Assert.assertEquals("{\"type\":\"concise\"}", mapper.writeValueAsString(new ConciseBitmapSerdeFactory()));
     Assert.assertEquals("{\"type\":\"concise\"}", mapper.writeValueAsString(BitmapSerde.createLegacyFactory()));
-    Assert.assertEquals("{\"type\":\"concise\"}", mapper.writeValueAsString(new BitmapSerde.DefaultBitmapSerdeFactory()));
+    Assert.assertEquals("{\"type\":\"roaring\",\"compressRunOnSerialization\":true}", mapper.writeValueAsString(new BitmapSerde.DefaultBitmapSerdeFactory()));
     Assert.assertEquals("{\"type\":\"concise\"}", mapper.writeValueAsString(new BitmapSerde.LegacyBitmapSerdeFactory()));
   }
 
@@ -55,6 +55,6 @@ public class BitmapSerdeFactoryTest
     Assert.assertFalse(((RoaringBitmapSerdeFactory) compressingRoaringFactory).getCompressRunOnSerialization());
 
     Assert.assertTrue(mapper.readValue("{\"type\":\"concise\"}", BitmapSerdeFactory.class) instanceof ConciseBitmapSerdeFactory);
-    Assert.assertTrue(mapper.readValue("{\"type\":\"BitmapSerde$SomeRandomClass\"}", BitmapSerdeFactory.class) instanceof ConciseBitmapSerdeFactory);
+    Assert.assertTrue(mapper.readValue("{\"type\":\"BitmapSerde$SomeRandomClass\"}", BitmapSerdeFactory.class) instanceof RoaringBitmapSerdeFactory);
   }
 }

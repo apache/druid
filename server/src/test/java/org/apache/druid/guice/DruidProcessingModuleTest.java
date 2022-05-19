@@ -70,6 +70,7 @@ public class DruidProcessingModuleTest
     };
 
     DruidProcessingModule module = new DruidProcessingModule();
+    config.getNumInitalBuffersForIntermediatePool();
     module.getIntermediateResultsPool(config);
   }
 }

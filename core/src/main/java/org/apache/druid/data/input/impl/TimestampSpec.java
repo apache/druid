@@ -26,6 +26,7 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.parsers.TimestampParser;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -57,10 +58,10 @@ public class TimestampSpec
 
   @JsonCreator
   public TimestampSpec(
-      @JsonProperty("column") String timestampColumn,
-      @JsonProperty("format") String format,
+      @JsonProperty("column") @Nullable String timestampColumn,
+      @JsonProperty("format") @Nullable String format,
       // this value should never be set for production data; the data loader uses it before a timestamp column is chosen
-      @JsonProperty("missingValue") DateTime missingValue
+      @JsonProperty("missingValue") @Nullable DateTime missingValue
   )
   {
     this.timestampColumn = (timestampColumn == null) ? DEFAULT_COLUMN : timestampColumn;
@@ -89,12 +90,20 @@ public class TimestampSpec
     return missingValue;
   }
 
-  public DateTime extractTimestamp(Map<String, Object> input)
+  @Nullable
+  public DateTime extractTimestamp(@Nullable Map<String, Object> input)
   {
-    return parseDateTime(input.get(timestampColumn));
+    return parseDateTime(getRawTimestamp(input));
   }
 
-  public DateTime parseDateTime(Object input)
+  @Nullable
+  public Object getRawTimestamp(@Nullable Map<String, Object> input)
+  {
+    return input == null ? null : input.get(timestampColumn);
+  }
+
+  @Nullable
+  public DateTime parseDateTime(@Nullable Object input)
   {
     DateTime extracted = missingValue;
     if (input != null) {

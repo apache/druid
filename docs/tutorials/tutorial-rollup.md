@@ -24,12 +24,12 @@ sidebar_label: "Roll-up"
   -->
 
 
-Apache Druid (incubating) can summarize raw data at ingestion time using a process we refer to as "roll-up". Roll-up is a first-level aggregation operation over a selected set of columns that reduces the size of stored data.
+Apache Druid can summarize raw data at ingestion time using a process we refer to as "roll-up". Roll-up is a first-level aggregation operation over a selected set of columns that reduces the size of stored data.
 
 This tutorial will demonstrate the effects of roll-up on an example dataset.
 
 For this tutorial, we'll assume you've already downloaded Druid as described in
-the [single-machine quickstart](index.html) and have it running on your local machine.
+the [single-machine quickstart](index.md) and have it running on your local machine.
 
 It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
 
@@ -55,25 +55,19 @@ We'll ingest this data using the following ingestion task spec, located at `quic
 
 ```json
 {
-  "type" : "index",
+  "type" : "index_parallel",
   "spec" : {
     "dataSchema" : {
       "dataSource" : "rollup-tutorial",
-      "parser" : {
-        "type" : "string",
-        "parseSpec" : {
-          "format" : "json",
-          "dimensionsSpec" : {
-            "dimensions" : [
-              "srcIP",
-              "dstIP"
-            ]
-          },
-          "timestampSpec": {
-            "column": "timestamp",
-            "format": "iso"
-          }
-        }
+      "dimensionsSpec" : {
+        "dimensions" : [
+          "srcIP",
+          "dstIP"
+        ]
+      },
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "iso"
       },
       "metricsSpec" : [
         { "type" : "count", "name" : "count" },
@@ -89,16 +83,19 @@ We'll ingest this data using the following ingestion task spec, located at `quic
       }
     },
     "ioConfig" : {
-      "type" : "index",
-      "firehose" : {
+      "type" : "index_parallel",
+      "inputSource" : {
         "type" : "local",
         "baseDir" : "quickstart/tutorial",
         "filter" : "rollup-data.json"
       },
+      "inputFormat" : {
+        "type" : "json"
+      },
       "appendToExisting" : false
     },
     "tuningConfig" : {
-      "type" : "index",
+      "type" : "index_parallel",
       "maxRowsPerSegment" : 5000000,
       "maxRowsInMemory" : 25000
     }

@@ -21,13 +21,13 @@ import React from 'react';
 
 import { TransformTable } from './transform-table';
 
-describe('transform table', () => {
+describe('TransformTable', () => {
   it('matches snapshot', () => {
     const sampleData = {
       header: ['c1'],
       rows: [
         {
-          raw: `{"c1":"hello"}`,
+          input: { c1: 'hello' },
           parsed: { c1: 'hello' },
         },
       ],

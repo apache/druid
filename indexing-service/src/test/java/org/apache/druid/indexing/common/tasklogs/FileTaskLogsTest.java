@@ -22,8 +22,8 @@ package org.apache.druid.indexing.common.tasklogs;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.junit.Assert;
@@ -84,7 +84,7 @@ public class FileTaskLogsTest
     final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
 
     expectedException.expect(IOException.class);
-    expectedException.expectMessage("Unable to create task log dir");
+    expectedException.expectMessage("Cannot create directory");
     taskLogs.pushTaskLog("foo", logFile);
   }
 

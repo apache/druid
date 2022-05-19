@@ -26,11 +26,12 @@ import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -41,7 +42,7 @@ public class TimeCeilOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("TIME_CEIL")
       .operandTypes(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.CHARACTER, SqlTypeFamily.TIMESTAMP, SqlTypeFamily.CHARACTER)
       .requiredOperands(2)
-      .returnType(SqlTypeName.TIMESTAMP)
+      .returnTypeCascadeNullable(SqlTypeName.TIMESTAMP)
       .functionCategory(SqlFunctionCategory.TIMEDATE)
       .build();
 
@@ -70,6 +71,6 @@ public class TimeCeilOperatorConversion implements SqlOperatorConversion
       return null;
     }
 
-    return DruidExpression.fromFunctionCall("timestamp_ceil", functionArgs);
+    return DruidExpression.ofFunctionCall(Calcites.getColumnTypeForRelDataType(rexNode.getType()), "timestamp_ceil", functionArgs);
   }
 }

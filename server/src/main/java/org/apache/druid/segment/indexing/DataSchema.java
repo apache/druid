@@ -21,28 +21,38 @@ package org.apache.druid.segment.indexing;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.collect.Sets;
+import com.google.common.collect.Multiset;
+import com.google.common.collect.TreeMultiset;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.transform.TransformSpec;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 
 /**
@@ -51,33 +61,44 @@ import java.util.regex.Pattern;
 public class DataSchema
 {
   private static final Logger log = new Logger(DataSchema.class);
-  private static final Pattern INVALIDCHARS = Pattern.compile("(?s).*[^\\S ].*");
   private final String dataSource;
-  private final Map<String, Object> parser;
   private final AggregatorFactory[] aggregators;
   private final GranularitySpec granularitySpec;
   private final TransformSpec transformSpec;
+  private final Map<String, Object> parserMap;
+  private final ObjectMapper objectMapper;
 
-  private final ObjectMapper jsonMapper;
+  // The below fields can be initialized lazily from parser for backward compatibility.
+  private TimestampSpec timestampSpec;
+  private DimensionsSpec dimensionsSpec;
 
-  private InputRowParser cachedParser;
+  // This is used for backward compatibility
+  private InputRowParser inputRowParser;
 
   @JsonCreator
   public DataSchema(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("parser") Map<String, Object> parser,
+      @JsonProperty("timestampSpec") @Nullable TimestampSpec timestampSpec, // can be null in old task spec
+      @JsonProperty("dimensionsSpec") @Nullable DimensionsSpec dimensionsSpec, // can be null in old task spec
       @JsonProperty("metricsSpec") AggregatorFactory[] aggregators,
       @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
       @JsonProperty("transformSpec") TransformSpec transformSpec,
-      @JacksonInject ObjectMapper jsonMapper
+      @Deprecated @JsonProperty("parser") @Nullable Map<String, Object> parserMap,
+      @JacksonInject ObjectMapper objectMapper
   )
   {
-    this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "null ObjectMapper.");
-    this.parser = parser;
-    this.transformSpec = transformSpec == null ? TransformSpec.NONE : transformSpec;
-
     validateDatasourceName(dataSource);
     this.dataSource = dataSource;
+
+    this.timestampSpec = timestampSpec;
+    this.aggregators = aggregators == null ? new AggregatorFactory[]{} : aggregators;
+    this.dimensionsSpec = dimensionsSpec == null
+                          ? null
+                          : computeDimensionsSpec(
+                              Preconditions.checkNotNull(timestampSpec, "timestampSpec"),
+                              dimensionsSpec,
+                              this.aggregators
+                          );
 
     if (granularitySpec == null) {
       log.warn("No granularitySpec has been specified. Using UniformGranularitySpec as default.");
@@ -85,34 +106,168 @@ public class DataSchema
     } else {
       this.granularitySpec = granularitySpec;
     }
+    this.transformSpec = transformSpec == null ? TransformSpec.NONE : transformSpec;
+    this.parserMap = parserMap;
+    this.objectMapper = objectMapper;
 
-    if (aggregators != null && aggregators.length != 0) {
-      // validate for no duplication
-      Set<String> names = new HashSet<>();
-      for (AggregatorFactory factory : aggregators) {
-        if (!names.add(factory.getName())) {
-          throw new IAE("duplicate aggregators found with name [%s].", factory.getName());
-        }
-      }
-    } else if (this.granularitySpec.isRollup()) {
-      log.warn("No metricsSpec has been specified. Are you sure this is what you want?");
+    // Fail-fast if there are output name collisions. Note: because of the pull-from-parser magic in getDimensionsSpec,
+    // this validation is not necessarily going to be able to catch everything. It will run again in getDimensionsSpec.
+    computeAndValidateOutputFieldNames(this.dimensionsSpec, this.aggregators);
+
+    if (this.granularitySpec.isRollup() && this.aggregators.length == 0) {
+      log.warn(
+          "Rollup is enabled for dataSource [%s] but no metricsSpec has been provided. "
+          + "Are you sure this is what you want?",
+          dataSource
+      );
     }
-
-    this.aggregators = aggregators == null ? new AggregatorFactory[]{} : aggregators;
   }
 
-  static void validateDatasourceName(String dataSource)
+  @VisibleForTesting
+  public DataSchema(
+      String dataSource,
+      TimestampSpec timestampSpec,
+      DimensionsSpec dimensionsSpec,
+      AggregatorFactory[] aggregators,
+      GranularitySpec granularitySpec,
+      TransformSpec transformSpec
+  )
   {
-    Preconditions.checkArgument(
-        !Strings.isNullOrEmpty(dataSource),
-        "dataSource cannot be null or empty. Please provide a dataSource."
+    this(dataSource, timestampSpec, dimensionsSpec, aggregators, granularitySpec, transformSpec, null, null);
+  }
+
+  // old constructor for backward compatibility
+  @Deprecated
+  public DataSchema(
+      String dataSource,
+      Map<String, Object> parserMap,
+      AggregatorFactory[] aggregators,
+      GranularitySpec granularitySpec,
+      TransformSpec transformSpec,
+      ObjectMapper objectMapper
+  )
+  {
+    this(dataSource, null, null, aggregators, granularitySpec, transformSpec, parserMap, objectMapper);
+  }
+
+  private static void validateDatasourceName(String dataSource)
+  {
+    IdUtils.validateId("dataSource", dataSource);
+  }
+
+  /**
+   * Computes the {@link DimensionsSpec} that we will actually use. It is derived from, but not necessarily identical
+   * to, the one that we were given.
+   */
+  private static DimensionsSpec computeDimensionsSpec(
+      final TimestampSpec timestampSpec,
+      final DimensionsSpec dimensionsSpec,
+      final AggregatorFactory[] aggregators
+  )
+  {
+    final Set<String> inputFieldNames = computeInputFieldNames(timestampSpec, dimensionsSpec, aggregators);
+    final Set<String> outputFieldNames = computeAndValidateOutputFieldNames(dimensionsSpec, aggregators);
+
+    // Set up additional exclusions: all inputs and outputs, minus defined dimensions.
+    final Set<String> additionalDimensionExclusions = new HashSet<>();
+    additionalDimensionExclusions.addAll(inputFieldNames);
+    additionalDimensionExclusions.addAll(outputFieldNames);
+    additionalDimensionExclusions.removeAll(dimensionsSpec.getDimensionNames());
+
+    return dimensionsSpec.withDimensionExclusions(additionalDimensionExclusions);
+  }
+
+  private static Set<String> computeInputFieldNames(
+      final TimestampSpec timestampSpec,
+      final DimensionsSpec dimensionsSpec,
+      final AggregatorFactory[] aggregators
+  )
+  {
+    final Set<String> fields = new HashSet<>();
+
+    fields.add(timestampSpec.getTimestampColumn());
+    fields.addAll(dimensionsSpec.getDimensionNames());
+    Arrays.stream(aggregators)
+          .flatMap(aggregator -> aggregator.requiredFields().stream())
+          .forEach(fields::add);
+
+    return fields;
+  }
+
+  /**
+   * Computes the set of field names that are specified by the provided dimensions and aggregator lists.
+   *
+   * If either list is null, it is ignored.
+   *
+   * @throws IllegalArgumentException if there are duplicate field names, or if any dimension or aggregator
+   *                                  has a null name
+   */
+  private static Set<String> computeAndValidateOutputFieldNames(
+      @Nullable final DimensionsSpec dimensionsSpec,
+      @Nullable final AggregatorFactory[] aggregators
+  )
+  {
+    // Field name -> where it was seen
+    final Map<String, Multiset<String>> fields = new TreeMap<>();
+
+    fields.computeIfAbsent(ColumnHolder.TIME_COLUMN_NAME, k -> TreeMultiset.create()).add(
+        StringUtils.format(
+            "primary timestamp (%s cannot appear as a dimension or metric)",
+            ColumnHolder.TIME_COLUMN_NAME
+        )
     );
-    Matcher m = INVALIDCHARS.matcher(dataSource);
-    Preconditions.checkArgument(
-        !m.matches(),
-        "dataSource cannot contain whitespace character except space."
-    );
-    Preconditions.checkArgument(!dataSource.contains("/"), "dataSource cannot contain the '/' character.");
+
+    if (dimensionsSpec != null) {
+      for (int i = 0; i < dimensionsSpec.getDimensions().size(); i++) {
+        final String field = dimensionsSpec.getDimensions().get(i).getName();
+        if (Strings.isNullOrEmpty(field)) {
+          throw new IAE("Encountered dimension with null or empty name at position %d", i);
+        }
+
+        fields.computeIfAbsent(field, k -> TreeMultiset.create()).add("dimensions list");
+      }
+    }
+
+    if (aggregators != null) {
+      for (int i = 0; i < aggregators.length; i++) {
+        final String field = aggregators[i].getName();
+        if (Strings.isNullOrEmpty(field)) {
+          throw new IAE("Encountered metric with null or empty name at position %d", i);
+        }
+
+        fields.computeIfAbsent(field, k -> TreeMultiset.create()).add("metricsSpec list");
+      }
+    }
+
+    final List<String> errors = new ArrayList<>();
+
+    for (Map.Entry<String, Multiset<String>> fieldEntry : fields.entrySet()) {
+      if (fieldEntry.getValue().entrySet().stream().mapToInt(Multiset.Entry::getCount).sum() > 1) {
+        errors.add(
+            StringUtils.format(
+                "[%s] seen in %s",
+                fieldEntry.getKey(),
+                fieldEntry.getValue().entrySet().stream().map(
+                    entry ->
+                        StringUtils.format(
+                            "%s%s",
+                            entry.getElement(),
+                            entry.getCount() == 1 ? "" : StringUtils.format(
+                                " (%d occurrences)",
+                                entry.getCount()
+                            )
+                        )
+                ).collect(Collectors.joining(", "))
+            )
+        );
+      }
+    }
+
+    if (errors.isEmpty()) {
+      return fields.keySet();
+    } else {
+      throw new IAE("Cannot specify a column more than once: %s", String.join("; ", errors));
+    }
   }
 
   @JsonProperty
@@ -121,77 +276,38 @@ public class DataSchema
     return dataSource;
   }
 
-  @JsonProperty("parser")
-  public Map<String, Object> getParserMap()
+  @Nullable
+  @JsonProperty("timestampSpec")
+  private TimestampSpec getGivenTimestampSpec()
   {
-    return parser;
+    return timestampSpec;
   }
 
-  @JsonIgnore
-  public InputRowParser getParser()
+  public TimestampSpec getTimestampSpec()
   {
-    if (parser == null) {
-      log.warn("No parser has been specified");
-      return null;
+    if (timestampSpec == null) {
+      timestampSpec = Preconditions.checkNotNull(getParser(), "inputRowParser").getParseSpec().getTimestampSpec();
     }
+    return timestampSpec;
+  }
 
-    if (cachedParser != null) {
-      return cachedParser;
+  @Nullable
+  @JsonProperty("dimensionsSpec")
+  private DimensionsSpec getGivenDimensionsSpec()
+  {
+    return dimensionsSpec;
+  }
+
+  public DimensionsSpec getDimensionsSpec()
+  {
+    if (dimensionsSpec == null) {
+      dimensionsSpec = computeDimensionsSpec(
+          getTimestampSpec(),
+          Preconditions.checkNotNull(getParser(), "inputRowParser").getParseSpec().getDimensionsSpec(),
+          aggregators
+      );
     }
-
-    final InputRowParser inputRowParser = transformSpec.decorate(
-        jsonMapper.convertValue(this.parser, InputRowParser.class)
-    );
-
-    final Set<String> dimensionExclusions = new HashSet<>();
-    for (AggregatorFactory aggregator : aggregators) {
-      dimensionExclusions.addAll(aggregator.requiredFields());
-      dimensionExclusions.add(aggregator.getName());
-    }
-
-    if (inputRowParser.getParseSpec() != null) {
-      final DimensionsSpec dimensionsSpec = inputRowParser.getParseSpec().getDimensionsSpec();
-      final TimestampSpec timestampSpec = inputRowParser.getParseSpec().getTimestampSpec();
-
-      // exclude timestamp from dimensions by default, unless explicitly included in the list of dimensions
-      if (timestampSpec != null) {
-        final String timestampColumn = timestampSpec.getTimestampColumn();
-        if (!(dimensionsSpec.hasCustomDimensions() && dimensionsSpec.getDimensionNames().contains(timestampColumn))) {
-          dimensionExclusions.add(timestampColumn);
-        }
-      }
-      if (dimensionsSpec != null) {
-        final Set<String> metSet = new HashSet<>();
-        for (AggregatorFactory aggregator : aggregators) {
-          metSet.add(aggregator.getName());
-        }
-        final Set<String> dimSet = Sets.newHashSet(dimensionsSpec.getDimensionNames());
-        final Set<String> overlap = Sets.intersection(metSet, dimSet);
-        if (!overlap.isEmpty()) {
-          throw new IAE(
-              "Cannot have overlapping dimensions and metrics of the same name. Please change the name of the metric. Overlap: %s",
-              overlap
-          );
-        }
-
-        cachedParser = inputRowParser.withParseSpec(
-            inputRowParser.getParseSpec()
-                          .withDimensionsSpec(
-                              dimensionsSpec
-                                  .withDimensionExclusions(
-                                      Sets.difference(dimensionExclusions, dimSet)
-                                  )
-                          )
-        );
-      } else {
-        cachedParser = inputRowParser;
-      }
-    } else {
-      log.warn("No parseSpec in parser has been specified.");
-      cachedParser = inputRowParser;
-    }
-
-    return cachedParser;
+    return dimensionsSpec;
   }
 
   @JsonProperty("metricsSpec")
@@ -212,14 +328,79 @@ public class DataSchema
     return transformSpec;
   }
 
+  @Deprecated
+  @JsonProperty("parser")
+  @Nullable
+  @JsonInclude(Include.NON_NULL)
+  public Map<String, Object> getParserMap()
+  {
+    return parserMap;
+  }
+
+  @Nullable
+  public InputRowParser getParser()
+  {
+    if (inputRowParser == null) {
+      if (parserMap == null) {
+        return null;
+      }
+      //noinspection unchecked
+      inputRowParser = transformSpec.decorate(objectMapper.convertValue(this.parserMap, InputRowParser.class));
+      ParseSpec parseSpec = inputRowParser.getParseSpec();
+      parseSpec = parseSpec.withDimensionsSpec(
+          computeDimensionsSpec(parseSpec.getTimestampSpec(), parseSpec.getDimensionsSpec(), aggregators)
+      );
+      if (timestampSpec != null) {
+        parseSpec = parseSpec.withTimestampSpec(timestampSpec);
+      }
+      if (dimensionsSpec != null) {
+        parseSpec = parseSpec.withDimensionsSpec(dimensionsSpec);
+      }
+      inputRowParser = inputRowParser.withParseSpec(parseSpec);
+    }
+    return inputRowParser;
+  }
+
   public DataSchema withGranularitySpec(GranularitySpec granularitySpec)
   {
-    return new DataSchema(dataSource, parser, aggregators, granularitySpec, transformSpec, jsonMapper);
+    return new DataSchema(
+        dataSource,
+        timestampSpec,
+        dimensionsSpec,
+        aggregators,
+        granularitySpec,
+        transformSpec,
+        parserMap,
+        objectMapper
+    );
   }
 
   public DataSchema withTransformSpec(TransformSpec transformSpec)
   {
-    return new DataSchema(dataSource, parser, aggregators, granularitySpec, transformSpec, jsonMapper);
+    return new DataSchema(
+        dataSource,
+        timestampSpec,
+        dimensionsSpec,
+        aggregators,
+        granularitySpec,
+        transformSpec,
+        parserMap,
+        objectMapper
+    );
+  }
+
+  public DataSchema withDimensionsSpec(DimensionsSpec dimensionsSpec)
+  {
+    return new DataSchema(
+        dataSource,
+        timestampSpec,
+        dimensionsSpec,
+        aggregators,
+        granularitySpec,
+        transformSpec,
+        parserMap,
+        objectMapper
+    );
   }
 
   @Override
@@ -227,10 +408,13 @@ public class DataSchema
   {
     return "DataSchema{" +
            "dataSource='" + dataSource + '\'' +
-           ", parser=" + parser +
            ", aggregators=" + Arrays.toString(aggregators) +
            ", granularitySpec=" + granularitySpec +
            ", transformSpec=" + transformSpec +
+           ", parserMap=" + parserMap +
+           ", timestampSpec=" + timestampSpec +
+           ", dimensionsSpec=" + dimensionsSpec +
+           ", inputRowParser=" + inputRowParser +
            '}';
   }
 }

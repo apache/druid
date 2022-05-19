@@ -19,42 +19,58 @@
 
 package org.apache.druid.guice;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
+import com.google.inject.name.Named;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.DruidServerConfig;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.loading.StorageLocation;
+import org.apache.druid.segment.loading.StorageLocationSelectorStrategy;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.server.coordination.ServerType;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  */
 public class StorageNodeModule implements Module
 {
+  private static final EmittingLogger log = new EmittingLogger(StorageNodeModule.class);
+  @VisibleForTesting
+  static final String IS_SEGMENT_CACHE_CONFIGURED = "IS_SEGMENT_CACHE_CONFIGURED";
+
   @Override
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.server", DruidServerConfig.class);
     JsonConfigProvider.bind(binder, "druid.segmentCache", SegmentLoaderConfig.class);
+    bindLocationSelectorStrategy(binder);
 
-    binder.bind(NodeTypeConfig.class).toProvider(Providers.of(null));
+    binder.bind(ServerTypeConfig.class).toProvider(Providers.of(null));
     binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
   }
 
   @Provides
   @LazySingleton
-  public DruidServerMetadata getMetadata(@Self DruidNode node, @Nullable NodeTypeConfig nodeType, DruidServerConfig config)
+  public DruidServerMetadata getMetadata(
+      @Self DruidNode node,
+      @Nullable ServerTypeConfig serverTypeConfig,
+      DruidServerConfig config
+  )
   {
-    if (nodeType == null) {
-      throw new ProvisionException("Must override the binding for NodeTypeConfig if you want a DruidServerMetadata.");
+    if (serverTypeConfig == null) {
+      throw new ProvisionException("Must override the binding for ServerTypeConfig if you want a DruidServerMetadata.");
     }
 
     return new DruidServerMetadata(
@@ -62,7 +78,7 @@ public class StorageNodeModule implements Module
         node.getHostAndPort(),
         node.getHostAndTlsPort(),
         config.getMaxSize(),
-        nodeType.getNodeType(),
+        serverTypeConfig.getServerType(),
         config.getTier(),
         config.getPriority()
     );
@@ -71,19 +87,57 @@ public class StorageNodeModule implements Module
   @Provides
   @LazySingleton
   public DataNodeService getDataNodeService(
-      @Nullable NodeTypeConfig nodeType,
-      DruidServerConfig config
+      @Nullable ServerTypeConfig serverTypeConfig,
+      DruidServerConfig config,
+      @Named(IS_SEGMENT_CACHE_CONFIGURED) Boolean isSegmentCacheConfigured
   )
   {
-    if (nodeType == null) {
-      throw new ProvisionException("Must override the binding for NodeTypeConfig if you want a DruidServerMetadata.");
+    if (serverTypeConfig == null) {
+      throw new ProvisionException("Must override the binding for ServerTypeConfig if you want a DataNodeService.");
+    }
+    if (!isSegmentCacheConfigured) {
+      log.info(
+          "Segment cache not configured on ServerType [%s]. It will not be assignable for segment placement",
+          serverTypeConfig.getServerType()
+      );
+      if (ServerType.HISTORICAL.equals(serverTypeConfig.getServerType())) {
+        throw new ProvisionException("Segment cache locations must be set on historicals.");
+      }
     }
 
     return new DataNodeService(
         config.getTier(),
         config.getMaxSize(),
-        nodeType.getNodeType(),
-        config.getPriority()
+        serverTypeConfig.getServerType(),
+        config.getPriority(),
+        isSegmentCacheConfigured
     );
+  }
+
+  @Provides
+  @LazySingleton
+  @Named(IS_SEGMENT_CACHE_CONFIGURED)
+  public Boolean isSegmentCacheConfigured(SegmentLoaderConfig segmentLoaderConfig)
+  {
+    return !segmentLoaderConfig.getLocations().isEmpty();
+  }
+
+  /**
+   * provide a list of StorageLocation
+   * so that it can be injected into objects such as implementations of {@link StorageLocationSelectorStrategy}
+   */
+  @Provides
+  @LazySingleton
+  public List<StorageLocation> provideStorageLocation(SegmentLoaderConfig config)
+  {
+    return config.toStorageLocations();
+  }
+
+  /**
+   * a helper method for both storage module and independent unit test cases
+   */
+  public static void bindLocationSelectorStrategy(Binder binder)
+  {
+    JsonConfigProvider.bind(binder, "druid.segmentCache.locationSelector", StorageLocationSelectorStrategy.class);
   }
 }

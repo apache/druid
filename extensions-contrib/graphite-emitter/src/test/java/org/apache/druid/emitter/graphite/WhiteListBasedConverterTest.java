@@ -26,10 +26,8 @@ import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -37,7 +35,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.HashMap;
 
 
 @RunWith(JUnitParamsRunner.class)
@@ -52,22 +49,10 @@ public class WhiteListBasedConverterTest
       null,
       new DefaultObjectMapper()
   );
-  private ServiceMetricEvent event;
-  private DateTime createdTime = DateTimes.nowUtc();
-  private String hostname = "testHost.yahoo.com:8080";
-  private String serviceName = "historical";
-  private String defaultNamespace = prefix + "." + serviceName + "." + GraphiteEmitter.sanitize(hostname);
-
-  @Before
-  public void setUp()
-  {
-    event = EasyMock.createMock(ServiceMetricEvent.class);
-    EasyMock.expect(event.getHost()).andReturn(hostname).anyTimes();
-    EasyMock.expect(event.getService()).andReturn(serviceName).anyTimes();
-    EasyMock.expect(event.getCreatedTime()).andReturn(createdTime).anyTimes();
-    EasyMock.expect(event.getUserDims()).andReturn(new HashMap<>()).anyTimes();
-    EasyMock.expect(event.getValue()).andReturn(10).anyTimes();
-  }
+  private final DateTime createdTime = DateTimes.nowUtc();
+  private final String hostname = "testHost.yahoo.com:8080";
+  private final String serviceName = "historical";
+  private final String defaultNamespace = prefix + "." + serviceName + "." + GraphiteEmitter.sanitize(hostname);
 
   @Test
   @Parameters(
@@ -75,7 +60,6 @@ public class WhiteListBasedConverterTest
           "query/time, true",
           "query/node/ttfb, true",
           "query/segmentAndCache/time, true",
-          "query/intervalChunk/time, false",
           "query/time/balaba, true",
           "query/tim, false",
           "segment/added/bytes, false",
@@ -95,8 +79,11 @@ public class WhiteListBasedConverterTest
   )
   public void testDefaultIsInWhiteList(String key, boolean expectedValue)
   {
-    EasyMock.expect(event.getMetric()).andReturn(key).anyTimes();
-    EasyMock.replay(event);
+    ServiceMetricEvent event = ServiceMetricEvent
+        .builder()
+        .build(createdTime, key, 10)
+        .build(serviceName, hostname);
+
     boolean isIn = defaultWhiteListBasedConverter.druidEventToGraphite(event) != null;
     Assert.assertEquals(expectedValue, isIn);
   }
@@ -136,7 +123,7 @@ public class WhiteListBasedConverterTest
     );
 
     ServiceMetricEvent event = new ServiceMetricEvent.Builder()
-        .setDimension("gcName", new String[] {"g1"})
+        .setDimension("gcName", new String[]{"g1"})
         .build(createdTime, "jvm/gc/cpu", 10)
         .build(serviceName, hostname);
 
@@ -190,7 +177,7 @@ public class WhiteListBasedConverterTest
             defaultNamespace + ".ingest/persists/count"
         },
         new Object[]{
-            new ServiceMetricEvent.Builder().setDimension("bufferPoolName", "BufferPool")
+            new ServiceMetricEvent.Builder().setDimension("bufferpoolName", "BufferPool")
                                             .setDimension("type", "groupBy")
                                             .setDimension("some_random_dim1", "random_dim_value1")
                                             .build(createdTime, "jvm/bufferpool/capacity", 10)

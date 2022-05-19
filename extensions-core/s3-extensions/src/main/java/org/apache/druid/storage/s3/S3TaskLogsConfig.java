@@ -61,6 +61,12 @@ public class S3TaskLogsConfig
     return s3Prefix;
   }
 
+  @VisibleForTesting
+  void setS3Prefix(String s3Prefix)
+  {
+    this.s3Prefix = s3Prefix;
+  }
+
   public boolean getDisableAcl()
   {
     return disableAcl;

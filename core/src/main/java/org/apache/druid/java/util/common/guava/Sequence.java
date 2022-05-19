@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common.guava;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Ordering;
 
@@ -85,8 +86,21 @@ public interface Sequence<T>
     return accumulate(new ArrayList<>(), Accumulators.list());
   }
 
+  default Sequence<T> skip(long skip)
+  {
+    Preconditions.checkArgument(skip >= 0, "skip >= 0");
+
+    if (skip >= 1) {
+      return new SkippingSequence<>(this, skip);
+    } else {
+      return this;
+    }
+  }
+
   default Sequence<T> limit(long limit)
   {
+    Preconditions.checkArgument(limit >= 0, "limit >= 0");
+
     return new LimitedSequence<>(this, limit);
   }
 

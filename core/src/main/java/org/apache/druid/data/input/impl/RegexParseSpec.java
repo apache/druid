@@ -22,7 +22,6 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.parsers.Parser;
 import org.apache.druid.java.util.common.parsers.RegexParser;
 
@@ -50,8 +49,6 @@ public class RegexParseSpec extends ParseSpec
     this.listDelimiter = listDelimiter;
     this.columns = columns;
     this.pattern = pattern;
-
-    verify(dimensionsSpec.getDimensionNames());
   }
 
   @JsonProperty
@@ -70,16 +67,6 @@ public class RegexParseSpec extends ParseSpec
   public List<String> getColumns()
   {
     return columns;
-  }
-
-  @Override
-  public void verify(List<String> usedCols)
-  {
-    if (columns != null) {
-      for (String columnName : usedCols) {
-        Preconditions.checkArgument(columns.contains(columnName), "column[%s] not in columns.", columnName);
-      }
-    }
   }
 
   @Override

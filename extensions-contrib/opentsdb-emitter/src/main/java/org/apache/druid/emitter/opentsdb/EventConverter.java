@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
@@ -41,15 +42,27 @@ public class EventConverter
   private static final Pattern WHITESPACE = Pattern.compile("[\\s]+");
 
   private final Map<String, Set<String>> metricMap;
+  private final String namespacePrefix;
 
-  public EventConverter(ObjectMapper mapper, String metricMapPath)
+  public EventConverter(ObjectMapper mapper, String metricMapPath, String namespacePrefix)
   {
     metricMap = readMap(mapper, metricMapPath);
+    this.namespacePrefix = namespacePrefix;
   }
 
   protected String sanitize(String metric)
   {
     return WHITESPACE.matcher(metric.trim()).replaceAll("_").replace('/', '.');
+  }
+
+  private String buildMetric(String metric)
+  {
+    final String sanitized = sanitize(metric);
+    if (namespacePrefix == null) {
+      return sanitized;
+    } else {
+      return StringUtils.format("%s.%s", sanitize(namespacePrefix), sanitized);
+    }
   }
 
   /**
@@ -88,7 +101,7 @@ public class EventConverter
       }
     }
 
-    return new OpentsdbEvent(sanitize(metric), timestamp, value, tags);
+    return new OpentsdbEvent(buildMetric(metric), timestamp, value, tags);
   }
 
   private Map<String, Set<String>> readMap(ObjectMapper mapper, String metricMapPath)

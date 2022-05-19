@@ -42,6 +42,7 @@ import java.lang.annotation.Target;
  * update of Druid.
  *
  * @see PublicApi
+ * @see UnstableApi
  */
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.SOURCE)

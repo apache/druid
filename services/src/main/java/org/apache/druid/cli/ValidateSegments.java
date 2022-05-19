@@ -19,13 +19,14 @@
 
 package org.apache.druid.cli;
 
+import com.github.rvesse.airline.annotations.Arguments;
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import io.airlift.airline.Arguments;
-import io.airlift.airline.Command;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
@@ -51,9 +52,8 @@ public class ValidateSegments extends GuiceRunnable
     super(log);
   }
 
-  @Arguments(
-      description = "Two directories where each directory contains segment files to validate.",
-      required = true)
+  @Arguments(description = "Two directories where each directory contains segment files to validate.")
+  @Required
   public List<String> directories;
 
   @Override
@@ -81,7 +81,7 @@ public class ValidateSegments extends GuiceRunnable
     return ImmutableList.of(
         // It's unknown if those modules are required in ValidateSegments.
         // Maybe some of those modules could be removed.
-        // See https://github.com/apache/incubator-druid/pull/4429#discussion_r123603498
+        // See https://github.com/apache/druid/pull/4429#discussion_r123603498
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),

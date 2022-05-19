@@ -23,15 +23,13 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.data.input.Firehose;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
-import org.apache.druid.indexing.overlord.sampler.FirehoseSampler;
+import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSamplerSpec;
-import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,47 +40,33 @@ public class KafkaSamplerSpec extends SeekableStreamSamplerSpec
   @JsonCreator
   public KafkaSamplerSpec(
       @JsonProperty("spec") final KafkaSupervisorSpec ingestionSpec,
-      @JsonProperty("samplerConfig") final SamplerConfig samplerConfig,
-      @JacksonInject FirehoseSampler firehoseSampler,
+      @JsonProperty("samplerConfig") @Nullable final SamplerConfig samplerConfig,
+      @JacksonInject InputSourceSampler inputSourceSampler,
       @JacksonInject ObjectMapper objectMapper
   )
   {
-    super(ingestionSpec, samplerConfig, firehoseSampler);
+    super(ingestionSpec, samplerConfig, inputSourceSampler);
 
     this.objectMapper = objectMapper;
   }
 
   @Override
-  protected Firehose getFirehose(InputRowParser parser)
+  protected KafkaRecordSupplier createRecordSupplier()
   {
-    return new KafkaSamplerFirehose(parser);
-  }
+    ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-  protected class KafkaSamplerFirehose extends SeekableStreamSamplerFirehose
-  {
-    private KafkaSamplerFirehose(InputRowParser parser)
-    {
-      super(parser);
+      final Map<String, Object> props = new HashMap<>(((KafkaSupervisorIOConfig) ioConfig).getConsumerProperties());
+
+      props.put("enable.auto.commit", "false");
+      props.put("auto.offset.reset", "none");
+      props.put("request.timeout.ms", Integer.toString(samplerConfig.getTimeoutMs()));
+
+      return new KafkaRecordSupplier(props, objectMapper);
     }
-
-    @Override
-    protected RecordSupplier getRecordSupplier()
-    {
-      ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
-      try {
-        Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-
-        final Map<String, Object> props = new HashMap<>(((KafkaSupervisorIOConfig) ioConfig).getConsumerProperties());
-
-        props.put("enable.auto.commit", "false");
-        props.put("auto.offset.reset", "none");
-        props.put("request.timeout.ms", Integer.toString(samplerConfig.getTimeoutMs()));
-
-        return new KafkaRecordSupplier(props, objectMapper);
-      }
-      finally {
-        Thread.currentThread().setContextClassLoader(currCtxCl);
-      }
+    finally {
+      Thread.currentThread().setContextClassLoader(currCtxCl);
     }
   }
 }

@@ -80,5 +80,22 @@ public abstract class SubTaskSpec<T extends Task>
     return inputSplit;
   }
 
+  /**
+   * Creates a new task for this SubTaskSpec.
+   */
   public abstract T newSubTask(int numAttempts);
+
+  /**
+   * Creates a new task but with a backward compatible type for this SubTaskSpec. This is to support to rolling update
+   * for parallel indexing task and subclasses override this method properly if its type name has changed between
+   * releases. See https://github.com/apache/druid/issues/8836 for more details.
+   *
+   * This method will be called if {@link #newSubTask} fails with an {@link IllegalStateException} with an error
+   * message starting with "Could not resolve type id". The failure of {@link #newSubTask} with this error is NOT
+   * recorded as a failed attempt in {@link TaskHistory}.
+   */
+  public T newSubTaskWithBackwardCompatibleType(int numAttempts)
+  {
+    return newSubTask(numAttempts);
+  }
 }

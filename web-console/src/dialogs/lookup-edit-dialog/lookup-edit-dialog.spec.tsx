@@ -16,28 +16,27 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
+import { shallow } from 'enzyme';
 import React from 'react';
 
 import { LookupEditDialog } from './lookup-edit-dialog';
 
-describe('lookup edit dialog', () => {
+describe('LookupEditDialog', () => {
   it('matches snapshot', () => {
-    const lookupEditDialog = (
+    const lookupEditDialog = shallow(
       <LookupEditDialog
         onClose={() => {}}
         onSubmit={() => {}}
         onChange={() => {}}
-        lookupName={'test'}
-        lookupTier={'test'}
-        lookupVersion={'test'}
-        lookupSpec={'test'}
+        lookupId="test"
+        lookupTier="test"
+        lookupVersion="test"
+        lookupSpec={{ type: 'map', map: { a: 1 } }}
         isEdit={false}
-        allLookupTiers={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']}
-      />
+        allLookupTiers={['__default', 'alt-tier']}
+      />,
     );
 
-    render(lookupEditDialog);
-    expect(document.body.lastChild).toMatchSnapshot();
+    expect(lookupEditDialog).toMatchSnapshot();
   });
 });

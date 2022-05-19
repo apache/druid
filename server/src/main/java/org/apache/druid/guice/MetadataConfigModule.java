@@ -22,9 +22,9 @@ package org.apache.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import org.apache.druid.metadata.MetadataRuleManagerConfig;
-import org.apache.druid.metadata.MetadataSegmentManagerConfig;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 
 public class MetadataConfigModule implements Module
 {
@@ -34,7 +34,7 @@ public class MetadataConfigModule implements Module
     JsonConfigProvider.bind(binder, "druid.metadata.storage.tables", MetadataStorageTablesConfig.class);
     JsonConfigProvider.bind(binder, "druid.metadata.storage.connector", MetadataStorageConnectorConfig.class);
 
-    JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
+    JsonConfigProvider.bind(binder, "druid.manager.segments", SegmentsMetadataManagerConfig.class);
     JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
   }
 }

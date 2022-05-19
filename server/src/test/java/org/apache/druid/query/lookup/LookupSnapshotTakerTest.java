@@ -125,7 +125,7 @@ public class LookupSnapshotTakerTest
   {
     File snapshotFile = lookupSnapshotTaker.getPersistFile(TIER1);
     Assert.assertTrue(snapshotFile.createNewFile());
-    Assert.assertEquals(Collections.EMPTY_LIST, lookupSnapshotTaker.pullExistingSnapshot(TIER1));
+    Assert.assertEquals(Collections.emptyList(), lookupSnapshotTaker.pullExistingSnapshot(TIER1));
   }
 
   @Test(expected = ISE.class)
@@ -144,6 +144,6 @@ public class LookupSnapshotTakerTest
     File directory = temporaryFolder.newFolder();
     LookupSnapshotTaker lookupSnapshotTaker = new LookupSnapshotTaker(mapper, directory.getAbsolutePath());
     List<LookupBean> actualList = lookupSnapshotTaker.pullExistingSnapshot(TIER1);
-    Assert.assertEquals(Collections.EMPTY_LIST, actualList);
+    Assert.assertEquals(Collections.emptyList(), actualList);
   }
 }

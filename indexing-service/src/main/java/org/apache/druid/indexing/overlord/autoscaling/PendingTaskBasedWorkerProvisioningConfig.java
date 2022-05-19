@@ -29,6 +29,8 @@ public class PendingTaskBasedWorkerProvisioningConfig extends SimpleWorkerProvis
   @JsonProperty
   private int maxScalingStep = 10;
 
+  @JsonProperty
+  private int workerCapacityHint = -1;
 
   public int getMaxScalingStep()
   {
@@ -76,4 +78,14 @@ public class PendingTaskBasedWorkerProvisioningConfig extends SimpleWorkerProvis
     return this;
   }
 
+  public int getWorkerCapacityHint()
+  {
+    return workerCapacityHint;
+  }
+
+  public PendingTaskBasedWorkerProvisioningConfig setWorkerCapacityHint(int workerCapacityHint)
+  {
+    this.workerCapacityHint = workerCapacityHint;
+    return this;
+  }
 }

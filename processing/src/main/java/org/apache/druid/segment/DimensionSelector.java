@@ -34,6 +34,8 @@ import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelecto
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Selector for a string-typed column, either single- or multi-valued. This is named a "dimension" selector for legacy
@@ -75,7 +77,7 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
   @Override
   default float getFloat()
   {
-    // This is controversial, see https://github.com/apache/incubator-druid/issues/4888
+    // This is controversial, see https://github.com/apache/druid/issues/4888
     return 0.0f;
   }
 
@@ -88,7 +90,7 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
   @Override
   default double getDouble()
   {
-    // This is controversial, see https://github.com/apache/incubator-druid/issues/4888
+    // This is controversial, see https://github.com/apache/druid/issues/4888
     return 0.0;
   }
 
@@ -101,7 +103,7 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
   @Override
   default long getLong()
   {
-    // This is controversial, see https://github.com/apache/incubator-druid/issues/4888
+    // This is controversial, see https://github.com/apache/druid/issues/4888
     return 0L;
   }
 
@@ -122,16 +124,25 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
   @Nullable
   default Object defaultGetObject()
   {
-    IndexedInts row = getRow();
+    return rowToObject(getRow(), this);
+  }
+
+  /**
+   * Converts a particular {@link IndexedInts} to an Object in a standard way, assuming each element in the IndexedInts
+   * is a dictionary ID that can be resolved with the provided selector.
+   */
+  @Nullable
+  static Object rowToObject(IndexedInts row, DimensionDictionarySelector selector)
+  {
     int rowSize = row.size();
     if (rowSize == 0) {
       return null;
     } else if (rowSize == 1) {
-      return lookupName(row.get(0));
+      return selector.lookupName(row.get(0));
     } else {
       final String[] strings = new String[rowSize];
       for (int i = 0; i < rowSize; i++) {
-        strings[i] = lookupName(row.get(i));
+        strings[i] = selector.lookupName(row.get(i));
       }
       return Arrays.asList(strings);
     }
@@ -152,6 +163,38 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
       return constant(value);
     } else {
       return constant(extractionFn.apply(value));
+    }
+  }
+
+  static DimensionSelector multiConstant(@Nullable final List<String> values)
+  {
+    // this method treats null, [], and [null] equivalently as null
+    if (values == null || values.isEmpty()) {
+      return NullDimensionSelectorHolder.NULL_DIMENSION_SELECTOR;
+    } else if (values.size() == 1) {
+      // the single value constant selector is more optimized than the multi-value constant selector because the latter
+      // does not report value cardinality, but otherwise behaves identically when used for grouping or selecting to a
+      // normal multi-value dimension selector (getObject on a row with a single value returns the object instead of
+      // the list)
+      return constant(values.get(0));
+    } else {
+      return new ConstantMultiValueDimensionSelector(values);
+    }
+  }
+
+  static DimensionSelector multiConstant(@Nullable final List<String> values, @Nullable final ExtractionFn extractionFn)
+  {
+    if (extractionFn == null) {
+      return multiConstant(values);
+    } else {
+      if (values == null) {
+        // the single value constant selector is more optimized than the multi-value constant selector because the
+        // latter does not report value cardinality, but otherwise behaves identically when used for grouping or
+        // selecting to a normal multi-value dimension selector (getObject on a row with a single value returns the
+        // object instead of the list)
+        return constant(extractionFn.apply(null));
+      }
+      return multiConstant(values.stream().map(extractionFn::apply).collect(Collectors.toList()));
     }
   }
 

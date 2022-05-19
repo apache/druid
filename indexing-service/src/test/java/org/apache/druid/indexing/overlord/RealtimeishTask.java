@@ -103,6 +103,7 @@ public class RealtimeishTask extends AbstractTask
                        .dataSource("foo")
                        .interval(interval1)
                        .version(lock1.getVersion())
+                       .size(0)
                        .build()
         )
     );
@@ -122,6 +123,7 @@ public class RealtimeishTask extends AbstractTask
                        .dataSource("foo")
                        .interval(interval2)
                        .version(lock2.getVersion())
+                       .size(0)
                        .build()
         )
     );

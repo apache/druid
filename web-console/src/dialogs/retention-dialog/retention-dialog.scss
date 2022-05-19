@@ -16,22 +16,21 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .retention-dialog {
-  &.bp3-dialog {
+  &.#{$bp-ns}-dialog {
     top: 5%;
     width: 750px;
   }
 
-  .dialog-body {
-    overflow: scroll;
-    max-height: 70vh;
-
-    .form-group {
-      margin: 0 0 5px;
+  .#{$bp-ns}-dialog-body {
+    .rule-editor {
+      margin-bottom: 15px;
     }
 
-    .small {
-      width: 0px;
+    .no-rules-message {
+      font-style: italic;
     }
 
     .comment {
@@ -41,6 +40,10 @@
         max-width: 200px;
         padding: 0 15px;
       }
+    }
+
+    .default-rule {
+      margin-top: 10px;
     }
   }
 }

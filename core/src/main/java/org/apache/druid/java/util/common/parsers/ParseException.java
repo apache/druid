@@ -21,20 +21,59 @@ package org.apache.druid.java.util.common.parsers;
 
 import org.apache.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
+
 /**
+ * ParseException can be thrown on both ingestion side and query side.
+ *
+ * During ingestion, ParseException can be thrown in two places, i.e., {@code InputSourceReader#read()}
+ * and {@code IncrementalIndex#addToFacts()}. To easily handle ParseExceptions, consider using
+ * {@code FilteringCloseableInputRowIterator} and {@code ParseExceptionHandler} to iterate input rows and
+ * to add rows to IncrementalIndex, respectively.
+ *
+ * When you use {@code InputSourceReader#sample()}, the ParseException will not be thrown, but be stored in
+ * {@code InputRowListPlusRawValues}.
+ *
+ * During query, ParseException can be thrown in SQL planning. It should be never thrown once a query plan is
+ * constructed.
  */
 public class ParseException extends RuntimeException
 {
-  private boolean fromPartiallyValidRow = false;
+  /**
+   * If true, the row was partially parseable, but some columns could not be parsed
+   * (e.g., non-numeric values for a numeric column)
+   */
+  private final boolean fromPartiallyValidRow;
 
-  public ParseException(String formatText, Object... arguments)
+  /**
+   * The timestamp in millis when the parse exception occurred.
+   */
+  private final long timeOfExceptionMillis;
+
+  /**
+   * A string representation of the input data that had a parse exception.
+   */
+  private final String input;
+
+  public ParseException(@Nullable String input, String formatText, Object... arguments)
   {
     super(StringUtils.nonStrictFormat(formatText, arguments));
+    this.input = input;
+    this.fromPartiallyValidRow = false;
+    this.timeOfExceptionMillis = System.currentTimeMillis();
   }
 
-  public ParseException(Throwable cause, String formatText, Object... arguments)
+  public ParseException(@Nullable String input, boolean fromPartiallyValidRow, String formatText, Object... arguments)
   {
-    super(StringUtils.nonStrictFormat(formatText, arguments), cause);
+    super(StringUtils.nonStrictFormat(formatText, arguments));
+    this.input = input;
+    this.fromPartiallyValidRow = fromPartiallyValidRow;
+    this.timeOfExceptionMillis = System.currentTimeMillis();
+  }
+
+  public ParseException(@Nullable String input, Throwable cause, String formatText, Object... arguments)
+  {
+    this(input, false, StringUtils.nonStrictFormat(formatText, arguments), cause);
   }
 
   public boolean isFromPartiallyValidRow()
@@ -42,8 +81,14 @@ public class ParseException extends RuntimeException
     return fromPartiallyValidRow;
   }
 
-  public void setFromPartiallyValidRow(boolean fromPartiallyValidRow)
+  public long getTimeOfExceptionMillis()
   {
-    this.fromPartiallyValidRow = fromPartiallyValidRow;
+    return timeOfExceptionMillis;
+  }
+
+  @Nullable
+  public String getInput()
+  {
+    return input;
   }
 }

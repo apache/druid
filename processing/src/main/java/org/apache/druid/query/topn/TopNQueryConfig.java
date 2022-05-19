@@ -27,9 +27,11 @@ import javax.validation.constraints.Min;
  */
 public class TopNQueryConfig
 {
+  public static final int DEFAULT_MIN_TOPN_THRESHOLD = 1000;
+
   @JsonProperty
   @Min(1)
-  private int minTopNThreshold = 1000;
+  private int minTopNThreshold = DEFAULT_MIN_TOPN_THRESHOLD;
 
   public int getMinTopNThreshold()
   {
