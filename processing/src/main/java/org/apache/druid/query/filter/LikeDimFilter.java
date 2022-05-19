@@ -32,6 +32,7 @@ import com.google.common.primitives.Chars;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.filter.LikeFilter;
 
 import javax.annotation.Nullable;
@@ -298,15 +299,17 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
      * of s are ignored. This method is useful if you've already independently verified the prefix. This method
      * evalutes strings.get(i) lazily to save time when it isn't necessary to actually look at the string.
      */
-    public boolean matchesSuffixOnly(@Nullable String value)
+    public boolean matchesSuffixOnly(final Indexed<String> strings, final int i)
     {
       if (suffixMatch == SuffixMatch.MATCH_ANY) {
         return true;
       } else if (suffixMatch == SuffixMatch.MATCH_EMPTY) {
-        return value == null ? matches(null) : value.length() == prefix.length();
+        final String s = strings.get(i);
+        return s == null ? matches(null) : s.length() == prefix.length();
       } else {
         // suffixMatch is MATCH_PATTERN
-        return matches(value);
+        final String s = strings.get(i);
+        return matches(s);
       }
     }
 

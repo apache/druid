@@ -233,18 +233,15 @@ public class ExpressionSelectors
    * and that single column has a dictionary.
    *
    * @param bindingAnalysis       result of calling {@link Expr#analyzeInputs()} on an expression
-   * @param columnCapabilities    {@link ColumnCapabilities} for the input binding
+   * @param hasMultipleValues result of calling {@link ColumnCapabilities#hasMultipleValues()}
    */
   public static boolean canMapOverDictionary(
       final Expr.BindingAnalysis bindingAnalysis,
-      final ColumnCapabilities columnCapabilities
+      final ColumnCapabilities.Capable hasMultipleValues
   )
   {
     Preconditions.checkState(bindingAnalysis.getRequiredBindings().size() == 1, "requiredBindings.size == 1");
-    return columnCapabilities != null &&
-           !columnCapabilities.hasMultipleValues().isUnknown() &&
-           !bindingAnalysis.hasInputArrays() &&
-           !bindingAnalysis.isOutputArray();
+    return !hasMultipleValues.isUnknown() && !bindingAnalysis.hasInputArrays() && !bindingAnalysis.isOutputArray();
   }
 
   /**

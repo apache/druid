@@ -28,8 +28,6 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 
-import javax.annotation.Nullable;
-
 public class MockBitmapIndexSelector implements BitmapIndexSelector
 {
   private final GenericIndexed<String> dictionary;
@@ -73,7 +71,7 @@ public class MockBitmapIndexSelector implements BitmapIndexSelector
   @Override
   public ImmutableBitmap getBitmapIndex(String dimension, String value)
   {
-    return bitmapIndex.getBitmapForValue(value);
+    return bitmapIndex.getBitmap(bitmapIndex.getIndex(value));
   }
 
   @Override
@@ -86,12 +84,5 @@ public class MockBitmapIndexSelector implements BitmapIndexSelector
   public ImmutableRTree getSpatialIndex(String dimension)
   {
     throw new UnsupportedOperationException();
-  }
-
-  @Nullable
-  @Override
-  public ColumnCapabilities getColumnCapabilities(String column)
-  {
-    return null;
   }
 }

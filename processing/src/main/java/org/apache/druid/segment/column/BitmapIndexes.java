@@ -21,17 +21,13 @@ package org.apache.druid.segment.column;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.serde.StringBitmapIndexColumnPartSupplier;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.Set;
 import java.util.function.IntSupplier;
-import java.util.function.Predicate;
 
 public final class BitmapIndexes
 {
@@ -99,67 +95,6 @@ public final class BitmapIndexes
         } else {
           return bitmapFactory.makeEmptyImmutableBitmap();
         }
-      }
-
-      @Override
-      public ImmutableBitmap getBitmapForValue(@Nullable String value)
-      {
-        if (NullHandling.isNullOrEquivalent(value)) {
-          return nullBitmapSupplier.get();
-        } else {
-          return bitmapFactory.makeEmptyImmutableBitmap();
-        }
-      }
-
-      @Override
-      public Iterable<ImmutableBitmap> getBitmapsInRange(
-          @Nullable String startValue,
-          boolean startStrict,
-          @Nullable String endValue,
-          boolean endStrict,
-          Predicate<String> matcher
-      )
-      {
-        final int startIndex; // inclusive
-        int endIndex; // exclusive
-
-        if (startValue == null) {
-          startIndex = 0;
-        } else {
-          if (NullHandling.isNullOrEquivalent(startValue)) {
-            startIndex = startStrict ? 1 : 0;
-          } else {
-            startIndex = 1;
-          }
-        }
-
-        if (endValue == null) {
-          endIndex = 1;
-        } else {
-          if (NullHandling.isNullOrEquivalent(endValue)) {
-            endIndex = endStrict ? 0 : 1;
-          } else {
-            endIndex = 1;
-          }
-        }
-
-        endIndex = Math.max(startIndex, endIndex);
-        if (startIndex == endIndex) {
-          return Collections.emptyList();
-        }
-        if (matcher.test(null)) {
-          return ImmutableList.of(getBitmap(0));
-        }
-        return ImmutableList.of(bitmapFactory.makeEmptyImmutableBitmap());
-      }
-
-      @Override
-      public Iterable<ImmutableBitmap> getBitmapsForValues(Set<String> values)
-      {
-        if (values.contains(null) || (NullHandling.replaceWithDefault() && values.contains(""))) {
-          return ImmutableList.of(getBitmap(0));
-        }
-        return ImmutableList.of(bitmapFactory.makeEmptyImmutableBitmap());
       }
     };
   }

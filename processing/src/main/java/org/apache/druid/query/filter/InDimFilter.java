@@ -38,6 +38,8 @@ import com.google.common.collect.TreeRangeSet;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntIterable;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
@@ -58,6 +60,7 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.IntIteratorUtils;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -68,6 +71,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -301,7 +305,8 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     if (extractionFn == null) {
       final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(dimension);
       return Filters.estimateSelectivity(
-          bitmapIndex.getBitmapsForValues(values).iterator(),
+          bitmapIndex,
+          IntIteratorUtils.toIntList(getBitmapIndexIterable(values, bitmapIndex).iterator()),
           indexSelector.getNumRows()
       );
     } else {
@@ -498,7 +503,27 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 
   private static Iterable<ImmutableBitmap> getBitmapIterable(final Set<String> values, final BitmapIndex bitmapIndex)
   {
-    return bitmapIndex.getBitmapsForValues(values);
+    return Filters.bitmapsFromIndexes(getBitmapIndexIterable(values, bitmapIndex), bitmapIndex);
+  }
+
+  private static IntIterable getBitmapIndexIterable(final Set<String> values, final BitmapIndex bitmapIndex)
+  {
+    return () -> new IntIterator()
+    {
+      final Iterator<String> iterator = values.iterator();
+
+      @Override
+      public boolean hasNext()
+      {
+        return iterator.hasNext();
+      }
+
+      @Override
+      public int nextInt()
+      {
+        return bitmapIndex.getIndex(iterator.next());
+      }
+    };
   }
 
   @SuppressWarnings("ReturnValueIgnored")
