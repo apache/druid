@@ -20,9 +20,10 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.io.Files;
-import junit.framework.Assert;
+import org.apache.druid.collections.ResourceHolder;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -40,6 +41,18 @@ public class ByteBufferUtilsTest
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Test
+  public void testAllocateDirect()
+  {
+    final int sz = 10;
+
+    try (final ResourceHolder<ByteBuffer> holder = ByteBufferUtils.allocateDirect(sz)) {
+      final ByteBuffer buf = holder.get();
+      Assert.assertTrue(buf.isDirect());
+      Assert.assertEquals(sz, buf.remaining());
+    }
+  }
 
   @Test
   public void testUnmapDoesntCrashJVM() throws Exception

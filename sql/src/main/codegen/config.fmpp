@@ -51,6 +51,7 @@ data: {
     # List of additional classes and packages to import.
     # Example. "org.apache.calcite.sql.*", "java.util.List".
     imports: [
+      "java.util.List"
       "org.apache.calcite.sql.SqlNode"
       "org.apache.calcite.sql.SqlInsert"
       "org.apache.druid.java.util.common.granularity.Granularity"
@@ -63,6 +64,7 @@ data: {
     # keyword add it to 'nonReservedKeywords' section.
     keywords: [
       "CLUSTERED"
+      "OVERWRITE"
       "PARTITIONED"
     ]
 
@@ -218,6 +220,7 @@ data: {
         "OTHERS"
         "OUTPUT"
         "OVERRIDING"
+        "OVERWRITE"
         "PAD"
         "PARAMETER_MODE"
         "PARAMETER_NAME"
@@ -384,6 +387,7 @@ data: {
     statementParserMethods: [
       "DruidSqlInsertEof()"
       "DruidSqlExplain()"
+      "DruidSqlReplaceEof()"
     ]
 
     # List of methods for parsing custom literals.
@@ -433,8 +437,10 @@ data: {
     # given as part of "statementParserMethods", "literalParserMethods" or
     # "dataTypeParserMethods".
     implementationFiles: [
+      "common.ftl"
       "insert.ftl"
       "explain.ftl"
+      "replace.ftl"
     ]
 
     includePosixOperators: false

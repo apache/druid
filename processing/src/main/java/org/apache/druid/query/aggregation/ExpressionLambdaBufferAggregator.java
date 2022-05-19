@@ -75,7 +75,7 @@ public class ExpressionLambdaBufferAggregator implements BufferAggregator
         }
       }
     }
-    ExprEval<?> acc = ExprEval.deserialize(buf, position, outputType);
+    ExprEval<?> acc = ExprEval.deserialize(buf, position, maxSizeBytes, outputType, true);
     bindings.setAccumulator(acc);
     ExprEval<?> newAcc = lambda.eval(bindings);
     ExprEval.serialize(buf, position, outputType, newAcc, maxSizeBytes);
@@ -90,25 +90,25 @@ public class ExpressionLambdaBufferAggregator implements BufferAggregator
     if (isNullUnlessAggregated && (buf.get(position) & NOT_AGGREGATED_BIT) != 0) {
       return null;
     }
-    return ExprEval.deserialize(buf, position, outputType).value();
+    return ExprEval.deserialize(buf, position, maxSizeBytes, outputType, false).value();
   }
 
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return (float) ExprEval.deserialize(buf, position, outputType).asDouble();
+    return (float) ExprEval.deserialize(buf, position, maxSizeBytes, outputType, true).asDouble();
   }
 
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    return ExprEval.deserialize(buf, position, outputType).asDouble();
+    return ExprEval.deserialize(buf, position, maxSizeBytes, outputType, true).asDouble();
   }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    return ExprEval.deserialize(buf, position, outputType).asLong();
+    return ExprEval.deserialize(buf, position, maxSizeBytes, outputType, true).asLong();
   }
 
   @Override

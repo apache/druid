@@ -102,6 +102,15 @@ public final class NullableTypeStrategy<T> implements Comparator<T>
     }
   }
 
+  /**
+   * Whether the {@link #read} methods return an object that may retain a reference to the provided {@link ByteBuffer}.
+   * If a reference is sometimes retained, this method returns true. It returns false if, and only if, a reference
+   * is *never* retained.
+   */
+  public boolean readRetainsBufferReference()
+  {
+    return delegate.readRetainsBufferReference();
+  }
 
   public int write(ByteBuffer buffer, int offset, @Nullable T value, int maxSizeBytes)
   {

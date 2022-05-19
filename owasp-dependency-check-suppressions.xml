@@ -300,6 +300,11 @@
     <cve>CVE-2019-20445</cve>
     <cve>CVE-2021-37136</cve>
     <cve>CVE-2021-37137</cve>
+    <cve>CVE-2021-4104</cve>
+    <cve>CVE-2020-9493</cve>
+    <cve>CVE-2022-23307</cve>
+    <cve>CVE-2022-23305</cve>
+    <cve>CVE-2022-23302</cve>
   </suppress>
   <suppress>
        <!--
@@ -383,6 +388,7 @@
     <cve>CVE-2021-29943</cve>
     <cve>CVE-2021-27905</cve>
     <cve>CVE-2021-29262</cve>
+    <cve>CVE-2021-44548</cve>
   </suppress>
 
   <suppress>
@@ -480,6 +486,31 @@
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.asynchttpclient/async-http-client-netty-utils@2.5.3$</packageUrl>
     <cve>CVE-2021-43138</cve>
+  </suppress>
+
+  <suppress>
+    <!-- Jackson CVEs when processing objects of large depth. Consider updating -->
+    <notes><![CDATA[
+   file name: *jackson-*.jar
+   ]]></notes>
+    <cve>CVE-2020-36518</cve>
+  </suppress>
+
+  <suppress>
+    <!-- Non-applicable CVE for gson -->
+    <notes><![CDATA[
+   file name: gson-*.jar
+   ]]></notes>
+    <cve>CVE-2022-25647</cve>
+  </suppress>
+
+  <suppress>
+    <!-- Non-applicable CVE for jedis, since we don't use lua scripts -->
+    <notes><![CDATA[
+   file name: jedis-2.9.0.jar
+   ]]></notes>
+    <cve>CVE-2021-32626</cve>
+    <cve>CVE-2022-24735</cve>
   </suppress>
 
 </suppressions>

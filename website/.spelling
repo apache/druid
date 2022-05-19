@@ -285,6 +285,7 @@ gzipped
 hadoop
 hasher
 hashtable
+high-QPS
 historicals
 hostname
 hostnames
@@ -377,6 +378,7 @@ procs
 programmatically
 proto
 proxied
+QPS
 quantile
 quantiles
 queryable
@@ -403,6 +405,7 @@ searchable
 secondaryPartitionPruning
 seekable-stream
 servlet
+setProcessingThreadNames
 simple-client-sslcontext
 sharded
 sharding
@@ -568,6 +571,7 @@ IEC
 100x
  - ../docs/configuration/logging.md
 _common
+appenders
  - ../docs/dependencies/deep-storage.md
 druid-hdfs-storage
 druid-s3-extensions

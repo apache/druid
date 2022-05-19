@@ -43,6 +43,8 @@ public class DruidSqlInsert extends SqlInsert
   public static final SqlOperator OPERATOR = SqlInsert.OPERATOR;
 
   private final Granularity partitionedBy;
+
+  // Used in the unparse function to generate the original query since we convert the string to an enum
   private final String partitionedByStringForUnparse;
 
   @Nullable

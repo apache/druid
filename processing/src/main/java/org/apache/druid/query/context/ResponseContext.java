@@ -408,7 +408,6 @@ public abstract class ResponseContext
 
     /**
      * Query fail time (current time + timeout).
-     * It is not updated continuously as {@link Keys#TIMEOUT_AT}.
      */
     public static final Key QUERY_FAIL_DEADLINE_MILLIS = new LongKey(
         "queryFailTime",
@@ -417,8 +416,6 @@ public abstract class ResponseContext
     /**
      * This variable indicates when a running query should be expired,
      * and is effective only when 'timeout' of queryContext has a positive value.
-     * Continuously updated by {@link org.apache.druid.query.scan.ScanQueryEngine}
-     * by reducing its value on the time of every scan iteration.
      */
     public static final Key TIMEOUT_AT = new LongKey(
         "timeoutAt",

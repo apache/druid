@@ -689,68 +689,56 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
   protected TaskToolbox createTaskToolbox(Task task, TaskActionClient actionClient) throws IOException
   {
-    return new TaskToolbox(
-        new TaskConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            null,
-            null,
-            null,
-            false,
-            false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-            null
-        ),
-        new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
-        actionClient,
-        null,
-        new LocalDataSegmentPusher(
-            new LocalDataSegmentPusherConfig()
-            {
-              @Override
-              public File getStorageDirectory()
-              {
-                return localDeepStorage;
-              }
-            }
-        ),
-        new NoopDataSegmentKiller(),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        NoopJoinableFactory.INSTANCE,
-        null,
-        newSegmentLoader(temporaryFolder.newFolder()),
-        objectMapper,
-        temporaryFolder.newFolder(task.getId()),
-        getIndexIO(),
-        null,
-        null,
-        null,
-        getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)),
-        null,
-        null,
-        null,
-        null,
-        new NoopTestTaskReportFileWriter(),
-        intermediaryDataManager,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new NoopChatHandlerProvider(),
-        new TestUtils().getRowIngestionMetersFactory(),
-        new TestAppenderatorsManager(),
-        indexingServiceClient,
-        coordinatorClient,
-        new LocalParallelIndexTaskClientFactory(taskRunner, transientApiCallFailureRate),
-        new LocalShuffleClient(intermediaryDataManager)
-    );
+    return new TaskToolbox.Builder()
+        .config(
+            new TaskConfig(
+                null,
+                null,
+                null,
+                null,
+                null,
+                false,
+                null,
+                null,
+                null,
+                false,
+                false,
+                TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+                null
+            )
+        )
+        .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
+        .taskActionClient(actionClient)
+        .segmentPusher(
+            new LocalDataSegmentPusher(
+                new LocalDataSegmentPusherConfig()
+                {
+                  @Override
+                  public File getStorageDirectory()
+                  {
+                    return localDeepStorage;
+                  }
+                }
+            )
+        )
+        .dataSegmentKiller(new NoopDataSegmentKiller())
+        .joinableFactory(NoopJoinableFactory.INSTANCE)
+        .segmentCacheManager(newSegmentLoader(temporaryFolder.newFolder()))
+        .jsonMapper(objectMapper)
+        .taskWorkDir(temporaryFolder.newFolder(task.getId()))
+        .indexIO(getIndexIO())
+        .indexMergerV9(getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
+        .taskReportFileWriter(new NoopTestTaskReportFileWriter())
+        .intermediaryDataManager(intermediaryDataManager)
+        .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
+        .chatHandlerProvider(new NoopChatHandlerProvider())
+        .rowIngestionMetersFactory(new TestUtils().getRowIngestionMetersFactory())
+        .appenderatorsManager(new TestAppenderatorsManager())
+        .indexingServiceClient(indexingServiceClient)
+        .coordinatorClient(coordinatorClient)
+        .supervisorTaskClientFactory(new LocalParallelIndexTaskClientFactory(taskRunner, transientApiCallFailureRate))
+        .shuffleClient(new LocalShuffleClient(intermediaryDataManager))
+        .build();
   }
 
   static class TestParallelIndexSupervisorTask extends ParallelIndexSupervisorTask

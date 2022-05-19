@@ -118,6 +118,7 @@ import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -151,6 +152,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -281,7 +283,8 @@ public class CompactionTaskTest
                   binder.bind(ChatHandlerProvider.class).toInstance(new NoopChatHandlerProvider());
                   binder.bind(RowIngestionMetersFactory.class).toInstance(TEST_UTILS.getRowIngestionMetersFactory());
                   binder.bind(CoordinatorClient.class).toInstance(COORDINATOR_CLIENT);
-                  binder.bind(SegmentCacheManagerFactory.class).toInstance(new SegmentCacheManagerFactory(objectMapper));
+                  binder.bind(SegmentCacheManagerFactory.class)
+                        .toInstance(new SegmentCacheManagerFactory(objectMapper));
                   binder.bind(AppenderatorsManager.class).toInstance(new TestAppenderatorsManager());
                   binder.bind(IndexingServiceClient.class).toInstance(INDEXING_SERVICE_CLIENT);
                 }
@@ -360,7 +363,7 @@ public class CompactionTaskTest
   public void setup()
   {
     final IndexIO testIndexIO = new TestIndexIO(OBJECT_MAPPER, SEGMENT_MAP);
-    toolbox = new TestTaskToolbox(
+    toolbox = makeTaskToolbox(
         new TestTaskActionClient(new ArrayList<>(SEGMENT_MAP.keySet())),
         testIndexIO,
         SEGMENT_MAP
@@ -428,7 +431,8 @@ public class CompactionTaskTest
   @Test
   public void testCreateCompactionTaskWithTransformSpec()
   {
-    ClientCompactionTaskTransformSpec transformSpec = new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null));
+    ClientCompactionTaskTransformSpec transformSpec =
+        new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null));
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory,
@@ -447,7 +451,7 @@ public class CompactionTaskTest
   @Test
   public void testCreateCompactionTaskWithMetricsSpec()
   {
-    AggregatorFactory[] aggregatorFactories = new AggregatorFactory[] {new CountAggregatorFactory("cnt")};
+    AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{new CountAggregatorFactory("cnt")};
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory,
@@ -1942,82 +1946,87 @@ public class CompactionTaskTest
     }
   }
 
-  private static class TestTaskToolbox extends TaskToolbox
+  private static TaskToolbox makeTaskToolbox(
+      TaskActionClient taskActionClient,
+      IndexIO indexIO,
+      Map<DataSegment, File> segments
+  )
   {
-    private final Map<DataSegment, File> segmentFileMap;
-
-    TestTaskToolbox(
-        TaskActionClient taskActionClient,
-        IndexIO indexIO,
-        Map<DataSegment, File> segmentFileMap
-    )
+    final SegmentCacheManager segmentCacheManager = new SegmentCacheManager()
     {
-      super(
-          new TaskConfig(
-              null,
-              null,
-              null,
-              null,
-              null,
-              false,
-              null,
-              null,
-              null,
-              false,
-              false,
-              TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-              null
-          ),
-          null,
-          taskActionClient,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          NoopJoinableFactory.INSTANCE,
-          null,
-          null,
-          null,
-          null,
-          indexIO,
-          null,
-          null,
-          null,
-          new IndexMergerV9(OBJECT_MAPPER, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance(), true),
-          null,
-          null,
-          null,
-          null,
-          new NoopTestTaskReportFileWriter(),
-          null,
-          AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-          new NoopChatHandlerProvider(),
-          TEST_UTILS.getRowIngestionMetersFactory(),
-          new TestAppenderatorsManager(),
-          INDEXING_SERVICE_CLIENT,
-          COORDINATOR_CLIENT,
-          null,
-          null
-      );
-      this.segmentFileMap = segmentFileMap;
-    }
-
-    @Override
-    public Map<DataSegment, File> fetchSegments(List<DataSegment> segments)
-    {
-      final Map<DataSegment, File> submap = Maps.newHashMapWithExpectedSize(segments.size());
-      for (DataSegment segment : segments) {
-        final File file = Preconditions.checkNotNull(segmentFileMap.get(segment));
-        submap.put(segment, file);
+      @Override
+      public boolean isSegmentCached(DataSegment segment)
+      {
+        throw new UnsupportedOperationException();
       }
-      return submap;
-    }
+
+      @Override
+      public File getSegmentFiles(DataSegment segment)
+      {
+        return Preconditions.checkNotNull(segments.get(segment));
+      }
+
+      @Override
+      public boolean reserve(DataSegment segment)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public boolean release(DataSegment segment)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public void cleanup(DataSegment segment)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
+      {
+        throw new UnsupportedOperationException();
+      }
+    };
+
+    return new TaskToolbox.Builder()
+        .config(
+            new TaskConfig(
+                null,
+                null,
+                null,
+                null,
+                null,
+                false,
+                null,
+                null,
+                null,
+                false,
+                false,
+                TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+                null
+            )
+        )
+        .taskActionClient(taskActionClient)
+        .joinableFactory(NoopJoinableFactory.INSTANCE)
+        .indexIO(indexIO)
+        .indexMergerV9(new IndexMergerV9(
+            OBJECT_MAPPER,
+            indexIO,
+            OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+            true
+        ))
+        .taskReportFileWriter(new NoopTestTaskReportFileWriter())
+        .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
+        .chatHandlerProvider(new NoopChatHandlerProvider())
+        .rowIngestionMetersFactory(TEST_UTILS.getRowIngestionMetersFactory())
+        .appenderatorsManager(new TestAppenderatorsManager())
+        .indexingServiceClient(INDEXING_SERVICE_CLIENT)
+        .coordinatorClient(COORDINATOR_CLIENT)
+        .segmentCacheManager(segmentCacheManager)
+        .build();
   }
 
   private static class TestTaskActionClient implements TaskActionClient
