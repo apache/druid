@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.BitmapResultFactory;
@@ -310,7 +311,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
       return -(minIndex + 1);
     }
 
-    Iterable<ImmutableBitmap> getBitmapsInRange(@Nullable Predicate<String> matcher, int start, int end)
+    Iterable<ImmutableBitmap> getBitmapsInRange(Predicate<String> matcher, int start, int end)
     {
       return () -> new Iterator<ImmutableBitmap>()
       {
@@ -323,8 +324,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
 
         private int findNext()
         {
-          while (currIndex < end
-                 && !(matcher == null || matcher.apply(delegate.getValue(idMapping.getReverseId(currIndex))))) {
+          while (currIndex < end && !matcher.apply(delegate.getValue(idMapping.getReverseId(currIndex)))) {
             currIndex++;
           }
 
@@ -512,8 +512,19 @@ public class ListFilteredVirtualColumn implements VirtualColumn
         @Nullable String startValue,
         boolean startStrict,
         @Nullable String endValue,
+        boolean endStrict
+    )
+    {
+      return forRange(startValue, startStrict, endValue, endStrict, Predicates.alwaysTrue());
+    }
+
+    @Override
+    public BitmapColumnIndex forRange(
+        @Nullable String startValue,
+        boolean startStrict,
+        @Nullable String endValue,
         boolean endStrict,
-        @Nullable Predicate<String> matcher
+        Predicate<String> matcher
     )
     {
       return new BaseVirtualIndex()

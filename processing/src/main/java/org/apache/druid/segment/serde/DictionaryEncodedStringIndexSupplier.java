@@ -468,7 +468,7 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
         boolean startStrict,
         @Nullable String endValue,
         boolean endStrict,
-        @Nullable Predicate<String> matcher
+        Predicate<String> matcher
     )
     {
       return new DictionaryEncodedStringBitmapColumnIndex()
@@ -535,9 +535,7 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
 
         private boolean applyMatcher(@Nullable final ByteBuffer valueUtf8)
         {
-          if (matcher == null) {
-            return true;
-          } else if (valueUtf8 == null) {
+          if (valueUtf8 == null) {
             return matcher.apply(null);
           } else {
             // Duplicate buffer, because StringUtils.fromUtf8 advances the position, and we do not want to do that.
