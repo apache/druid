@@ -1,0 +1,1102 @@
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+==============================================================
+Test cases from the CalciteInsertDmlTest file
+
+==============================================================
+Converted from testInsertFromTable()
+=== case
+INSERT from table
+=== SQL
+INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME
+=== schema
+dataSource VARCHAR
+signature OTHER
+=== targetSchema
+__time TIMESTAMP(3)
+cnt BIGINT
+dim1 VARCHAR
+dim2 VARCHAR
+dim3 VARCHAR
+m1 FLOAT
+m2 DOUBLE
+unique_dim1 COMPLEX<hyperUnique>
+=== resources
+DATASOURCE/dst/WRITE
+DATASOURCE/foo/READ
+=== plan
+LogicalInsert(target=[dst], granularity=[AllGranularity])
+  LogicalProject(__time=[$0], cnt=[$1], dim1=[$2], dim2=[$3], dim3=[$4], m1=[$5], m2=[$6], unique_dim1=[$7])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1" ],
+  "context" : {
+    "sqlInsertSegmentGranularity" : "{\"type\":\"all\"}"
+  },
+  "granularity" : {
+    "type" : "all"
+  }
+}
+==============================================================
+Converted from testInsertFromView()
+=== case
+INSERT from view
+=== SQL
+INSERT INTO dst SELECT * FROM view.aview PARTITIONED BY ALL TIME
+=== schema
+dataSource VARCHAR
+signature OTHER
+=== targetSchema
+dim1_firstchar VARCHAR
+=== resources
+DATASOURCE/dst/WRITE
+VIEW/aview/READ
+=== plan
+LogicalInsert(target=[dst], granularity=[AllGranularity])
+  LogicalProject(dim1_firstchar=[SUBSTRING($2, 1, 1)])
+    LogicalFilter(condition=[=($3, 'a')])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "substring(\"dim1\", 0, 1)",
+    "outputType" : "STRING"
+  } ],
+  "resultFormat" : "compactedList",
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "dim2",
+    "value" : "a"
+  },
+  "columns" : [ "v0" ],
+  "context" : {
+    "sqlInsertSegmentGranularity" : "{\"type\":\"all\"}"
+  },
+  "granularity" : {
+    "type" : "all"
+  }
+}
+==============================================================
+Converted from testInsertIntoExistingTable()
+=== case
+INSERT into existing table
+=== SQL
+INSERT INTO foo SELECT * FROM foo PARTITIONED BY ALL TIME
+=== schema
+dataSource VARCHAR
+signature OTHER
+=== targetSchema
+__time TIMESTAMP(3)
+cnt BIGINT
+dim1 VARCHAR
+dim2 VARCHAR
+dim3 VARCHAR
+m1 FLOAT
+m2 DOUBLE
+unique_dim1 COMPLEX<hyperUnique>
+=== resources
+DATASOURCE/foo/READ
+DATASOURCE/foo/WRITE
+=== plan
+LogicalInsert(target=[foo], granularity=[AllGranularity])
+  LogicalProject(__time=[$0], cnt=[$1], dim1=[$2], dim2=[$3], dim3=[$4], m1=[$5], m2=[$6], unique_dim1=[$7])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1" ],
+  "context" : {
+    "sqlInsertSegmentGranularity" : "{\"type\":\"all\"}"
+  },
+  "granularity" : {
+    "type" : "all"
+  }
+}
+==============================================================
+Converted from testInsertIntoQualifiedTable()
+=== case
+INSERT from view
+=== SQL
+INSERT INTO druid.dst SELECT * FROM foo PARTITIONED BY ALL TIME
+=== schema
+dataSource VARCHAR
+signature OTHER
+=== targetSchema
+__time TIMESTAMP(3)
+cnt BIGINT
+dim1 VARCHAR
+dim2 VARCHAR
+dim3 VARCHAR
+m1 FLOAT
+m2 DOUBLE
+unique_dim1 COMPLEX<hyperUnique>
+=== resources
+DATASOURCE/dst/WRITE
+DATASOURCE/foo/READ
+=== plan
+LogicalInsert(target=[druid.dst], granularity=[AllGranularity])
+  LogicalProject(__time=[$0], cnt=[$1], dim1=[$2], dim2=[$3], dim3=[$4], m1=[$5], m2=[$6], unique_dim1=[$7])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1" ],
+  "context" : {
+    "sqlInsertSegmentGranularity" : "{\"type\":\"all\"}"
+  },
+  "granularity" : {
+    "type" : "all"
+  }
+}
+==============================================================
+Converted from testInsertIntoInvalidDataSourceName()
+=== case
+INSERT into invalid datasource name
+=== SQL
+INSERT INTO "in/valid" SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME
+=== exception
+ValidationException
+=== error
+INSERT dataSource cannot contain the '/' character.
+==============================================================
+Converted from testInsertUsingColumnList()
+=== case
+INSERT using column list
+=== SQL
+INSERT INTO dst (foo, bar) SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME
+=== exception
+ValidationException
+=== error
+INSERT with target column list is not supported.
+==============================================================
+Converted from testUpsert()
+=== case
+Upsert
+=== SQL
+UPSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME
+=== exception
+ValidationException
+=== error
+UPSERT is not supported.
+==============================================================
+Converted from testInsertIntoSystemTable()
+=== case
+INSERT into system table
+=== SQL
+INSERT INTO INFORMATION_SCHEMA.COLUMNS SELECT * FROM foo PARTITIONED BY ALL TIME
+=== exception
+ValidationException
+=== error
+Cannot INSERT into [INFORMATION_SCHEMA.COLUMNS] because it is not a Druid datasource.
+==============================================================
+Converted from testInsertIntoView()
+=== case
+INSERT into view
+=== SQL
+INSERT INTO view.aview SELECT * FROM foo PARTITIONED BY ALL TIME
+=== exception
+ValidationException
+=== error
+Cannot INSERT into [view.aview] because it is not a Druid datasource.
+==============================================================
+Not converted here because the planner does not enforce security:
+* testInsertFromUnauthorizedDataSource()
+* testInsertIntoUnauthorizedDataSource()
+==============================================================
+Converted from testInsertIntoNonexistentSchema()
+=== case
+INSERT into nonexistent schema
+=== SQL
+INSERT INTO nonexistent.dst SELECT * FROM foo PARTITIONED BY ALL TIME
+=== exception
+ValidationException
+=== error
+Cannot INSERT into [nonexistent.dst] because it is not a Druid datasource.
+==============================================================
+Converted from testInsertFromExternal()
+=== case
+INSERT from external
+=== SQL
+INSERT INTO dst SELECT *
+FROM TABLE(extern(
+   '{
+     "type": "inline",
+     "data": "a,b,1\nc,d,2\n"
+    }',
+	'{
+	  "type": "csv",
+	  "columns": ["x","y","z"],
+	  "listDelimiter": null,
+	  "findColumnsFromHeader": false,
+	  "skipHeaderRows": 0
+	 }',
+	 '[
+	   {"name": "x", "type": "STRING"},
+	   {"name": "y", "type": "STRING"},
+	   {"name": "z", "type": "LONG"}
+	 ]'
+))
+PARTITIONED BY ALL TIME
+=== schema
+dataSource VARCHAR
+signature OTHER
+=== targetSchema
+x VARCHAR
+y VARCHAR
+z BIGINT
+=== resources
+DATASOURCE/dst/WRITE
+EXTERNAL/EXTERNAL/READ
+=== plan
+LogicalInsert(target=[dst], granularity=[AllGranularity])
+  LogicalProject(x=[$0], y=[$1], z=[$2])
+    ExternalTableScan(dataSource=[{"type":"external","inputSource":{"type":"inline","data":"a,b,1\nc,d,2\n"},"inputFormat":{"type":"csv","columns":["x","y","z"],"listDelimiter":null,"findColumnsFromHeader":false,"skipHeaderRows":0},"signature":[{"name":"x","type":"STRING"},{"name":"y","type":"STRING"},{"name":"z","type":"LONG"}]}])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "external",
+    "inputSource" : {
+      "type" : "inline",
+      "data" : "a,b,1\nc,d,2\n"
+    },
+    "inputFormat" : {
+      "type" : "csv",
+      "columns" : [ "x", "y", "z" ],
+      "listDelimiter" : null,
+      "findColumnsFromHeader" : false,
+      "skipHeaderRows" : 0
+    },
+    "signature" : [ {
+      "name" : "x",
+      "type" : "STRING"
+    }, {
+      "name" : "y",
+      "type" : "STRING"
+    }, {
+      "name" : "z",
+      "type" : "LONG"
+    } ]
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "x", "y", "z" ],
+  "context" : {
+    "sqlInsertSegmentGranularity" : "{\"type\":\"all\"}"
+  },
+  "granularity" : {
+    "type" : "all"
+  }
+}
+==============================================================
+Converted from testInsertWithPartitionedBy()
+=== case
+INSERT with PARTITIONED BY
+=== SQL
+INSERT INTO druid.dst
+SELECT
+  __time,
+  FLOOR(m1) as floor_m1,
+  dim1 FROM foo
+PARTITIONED BY TIME_FLOOR(__time, 'PT1H')
+=== schema
+dataSource VARCHAR
+signature OTHER
+=== targetSchema
+__time TIMESTAMP(3)
+floor_m1 FLOAT
+dim1 VARCHAR
+=== resources
+DATASOURCE/dst/WRITE
+DATASOURCE/foo/READ
+=== plan
+LogicalInsert(target=[druid.dst], granularity=[{type=period, period=PT1H, timeZone=UTC, origin=null}])
+  LogicalProject(__time=[$0], floor_m1=[FLOOR($5)], dim1=[$2])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "floor(\"m1\")",
+    "outputType" : "FLOAT"
+  } ],
+  "resultFormat" : "compactedList",
+  "columns" : [ "__time", "dim1", "v0" ],
+  "context" : {
+    "sqlInsertSegmentGranularity" : "\"HOUR\""
+  },
+  "granularity" : {
+    "type" : "all"
+  }
+}
+==============================================================
+Not converted because the the code form iterates over many
+variations:
+* testPartitionedBySupportedClauses
+==============================================================
+Converted from testInsertWithClusteredBy()
+=== case
+INSERT with CLUSTERED BY
+=== SQL
+INSERT INTO druid.dst
+SELECT
+    __time,
+    FLOOR(m1) as floor_m1,
+    dim1, CEIL(m2) as ceil_m2
+FROM foo
+PARTITIONED BY FLOOR(__time TO DAY)
+CLUSTERED BY 2, dim1 DESC, CEIL(m2)
+=== schema
+dataSource VARCHAR
+signature OTHER
+=== targetSchema
+__time TIMESTAMP(3)
+floor_m1 FLOAT
+dim1 VARCHAR
+ceil_m2 DOUBLE
+=== resources
+DATASOURCE/dst/WRITE
+DATASOURCE/foo/READ
+=== plan
+LogicalInsert(target=[druid.dst], granularity=[{type=period, period=P1D, timeZone=UTC, origin=null}])
+  Clustered By: 2, `dim1` DESC, CEIL(`m2`)  LogicalSort(sort0=[$1], sort1=[$2], sort2=[$3], dir0=[ASC], dir1=[DESC], dir2=[ASC])
+    LogicalProject(__time=[$0], floor_m1=[FLOOR($5)], dim1=[$2], ceil_m2=[CEIL($6)])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "floor(\"m1\")",
+    "outputType" : "FLOAT"
+  }, {
+    "type" : "expression",
+    "name" : "v1",
+    "expression" : "ceil(\"m2\")",
+    "outputType" : "DOUBLE"
+  } ],
+  "resultFormat" : "compactedList",
+  "orderBy" : [ {
+    "columnName" : "v0",
+    "order" : "ascending"
+  }, {
+    "columnName" : "dim1",
+    "order" : "descending"
+  }, {
+    "columnName" : "v1",
+    "order" : "ascending"
+  } ],
+  "columns" : [ "__time", "dim1", "v0", "v1" ],
+  "context" : {
+    "sqlInsertSegmentGranularity" : "\"DAY\""
+  },
+  "granularity" : {
+    "type" : "all"
+  }
+}
+==============================================================
+Converted from testInsertWithPartitionedByAndClusteredBy()
+=== case
+INSERT with PARTITIONED BY and CLUSTERED BY
+=== SQL
+INSERT INTO druid.dst
+SELECT
+    __time,
+    FLOOR(m1) as floor_m1,
+    dim1 FROM foo
+PARTITIONED BY DAY
+CLUSTERED BY 2, dim1
+=== schema
+dataSource VARCHAR
+signature OTHER
+=== targetSchema
+__time TIMESTAMP(3)
+floor_m1 FLOAT
+dim1 VARCHAR
+=== resources
+DATASOURCE/dst/WRITE
+DATASOURCE/foo/READ
+=== plan
+LogicalInsert(target=[druid.dst], granularity=[{type=period, period=P1D, timeZone=UTC, origin=null}])
+  Clustered By: 2, `dim1`  LogicalSort(sort0=[$1], sort1=[$2], dir0=[ASC], dir1=[ASC])
+    LogicalProject(__time=[$0], floor_m1=[FLOOR($5)], dim1=[$2])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "floor(\"m1\")",
+    "outputType" : "FLOAT"
+  } ],
+  "resultFormat" : "compactedList",
+  "orderBy" : [ {
+    "columnName" : "v0",
+    "order" : "ascending"
+  }, {
+    "columnName" : "dim1",
+    "order" : "ascending"
+  } ],
+  "columns" : [ "__time", "dim1", "v0" ],
+  "context" : {
+    "sqlInsertSegmentGranularity" : "\"DAY\""
+  },
+  "granularity" : {
+    "type" : "all"
+  }
+}
+==============================================================
+Converted from testInsertWithPartitionedByAndLimitOffset()
+=== case
+INSERT with PARTITIONED BY and LIMIT OFFSET
+=== SQL
+INSERT INTO druid.dst
+SELECT
+    __time,
+    FLOOR(m1) as floor_m1,
+    dim1 FROM foo
+LIMIT 10
+OFFSET 20
+PARTITIONED BY DAY
+=== schema
+dataSource VARCHAR
+signature OTHER
+=== targetSchema
+__time TIMESTAMP(3)
+floor_m1 FLOAT
+dim1 VARCHAR
+=== resources
+DATASOURCE/dst/WRITE
+DATASOURCE/foo/READ
+=== plan
+LogicalInsert(target=[druid.dst], granularity=[{type=period, period=P1D, timeZone=UTC, origin=null}])
+  LogicalSort(offset=[20], fetch=[10])
+    LogicalProject(__time=[$0], floor_m1=[FLOOR($5)], dim1=[$2])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "floor(\"m1\")",
+    "outputType" : "FLOAT"
+  } ],
+  "resultFormat" : "compactedList",
+  "offset" : 20,
+  "limit" : 10,
+  "columns" : [ "__time", "dim1", "v0" ],
+  "context" : {
+    "sqlInsertSegmentGranularity" : "\"DAY\""
+  },
+  "granularity" : {
+    "type" : "all"
+  }
+}
+==============================================================
+Converted from testInsertWithClusteredByAndOrderBy()
+=== case
+INSERT with CLUSTERED BY and ORDER BY
+=== SQL
+INSERT INTO dst
+SELECT *
+FROM TABLE(extern(
+   '{
+     "type": "inline",
+     "data": "a,b,1\nc,d,2\n"
+    }',
+	'{
+	  "type": "csv",
+	  "columns": ["x","y","z"],
+	  "listDelimiter": null,
+	  "findColumnsFromHeader": false,
+	  "skipHeaderRows": 0
+	 }',
+	 '[
+	   {"name": "x", "type": "STRING"},
+	   {"name": "y", "type": "STRING"},
+	   {"name": "z", "type": "LONG"}
+	 ]'
+))
+ORDER BY 2
+PARTITIONED BY ALL TIME
+=== exception
+ValidationException
+=== error
+Cannot have ORDER BY on an INSERT query, use CLUSTERED BY instead.
+==============================================================
+Converted from testInsertWithPartitionedByContainingInvalidGranularity()
+=== case
+INSERT with PARTITIONED BY containing an invalid granularity
+=== SQL
+INSERT INTO dst SELECT * FROM foo PARTITIONED BY 'invalid_granularity'
+=== exception
+SqlParseException
+=== error
+Encountered 'invalid_granularity' after PARTITIONED BY. Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR function or TIME_FLOOR function
+==============================================================
+Converted from testInsertWithOrderBy()
+=== case
+INSERT with ORDER BY
+=== SQL
+INSERT INTO dst
+SELECT *
+FROM TABLE(extern(
+   '{
+     "type": "inline",
+     "data": "a,b,1\nc,d,2\n"
+    }',
+	'{
+	  "type": "csv",
+	  "columns": ["x","y","z"],
+	  "listDelimiter": null,
+	  "findColumnsFromHeader": false,
+	  "skipHeaderRows": 0
+	 }',
+	 '[
+	   {"name": "x", "type": "STRING"},
+	   {"name": "y", "type": "STRING"},
+	   {"name": "z", "type": "LONG"}
+	 ]'
+))
+ORDER BY 2
+PARTITIONED BY ALL TIME
+=== exception
+ValidationException
+=== error
+Cannot have ORDER BY on an INSERT query, use CLUSTERED BY instead.
+==============================================================
+Converted from testInsertWithoutPartitionedBy()
+=== case
+INSERT without PARTITIONED BY
+=== SQL
+INSERT INTO dst
+SELECT *
+FROM TABLE(extern(
+   '{
+     "type": "inline",
+     "data": "a,b,1\nc,d,2\n"
+    }',
+	'{
+	  "type": "csv",
+	  "columns": ["x","y","z"],
+	  "listDelimiter": null,
+	  "findColumnsFromHeader": false,
+	  "skipHeaderRows": 0
+	 }',
+	 '[
+	   {"name": "x", "type": "STRING"},
+	   {"name": "y", "type": "STRING"},
+	   {"name": "z", "type": "LONG"}
+	 ]'
+))
+=== exception
+SqlParseException
+=== error
+INSERT statements must specify PARTITIONED BY clause explicitly
+==============================================================
+Converted from testExplainInsertFromExternal()
+=== case
+EXPLAIN INSERT from external
+=== SQL
+EXPLAIN PLAN FOR
+INSERT INTO dst
+SELECT *
+FROM TABLE(extern(
+   '{
+     "type": "inline",
+     "data": "a,b,1\nc,d,2\n"
+    }',
+	'{
+	  "type": "csv",
+	  "columns": ["x","y","z"],
+	  "listDelimiter": null,
+	  "findColumnsFromHeader": false,
+	  "skipHeaderRows": 0
+	 }',
+	 '[
+	   {"name": "x", "type": "STRING"},
+	   {"name": "y", "type": "STRING"},
+	   {"name": "z", "type": "LONG"}
+	 ]'
+))
+PARTITIONED BY ALL TIME
+=== options
+user=testSuperuser
+=== explain
+DruidQueryRel(query=[(
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "external",
+    "inputSource" : {
+      "type" : "inline",
+      "data" : "a,b,1\nc,d,2\n"
+    },
+    "inputFormat" : {
+      "type" : "csv",
+      "columns" : [ "x", "y", "z" ],
+      "listDelimiter" : null,
+      "findColumnsFromHeader" : false,
+      "skipHeaderRows" : 0
+    },
+    "signature" : [ {
+      "name" : "x",
+      "type" : "STRING"
+    }, {
+      "name" : "y",
+      "type" : "STRING"
+    }, {
+      "name" : "z",
+      "type" : "LONG"
+    } ]
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "x", "y", "z" ],
+  "context" : {
+    "sqlInsertSegmentGranularity" : "{\"type\":\"all\"}",
+!    "sqlQueryId" : ".*"
+  },
+  "granularity" : {
+    "type" : "all"
+  }
+},
+signature=[(
+  {x:STRING, y:STRING, z:LONG}
+])
+---
+[ {
+  "name" : "EXTERNAL",
+  "type" : "EXTERNAL"
+}, {
+  "name" : "dst",
+  "type" : "DATASOURCE"
+} ]
+==============================================================
+Converted from testInsertFromExternalProjectSort()
+=== case
+INSERT from external project sort
+=== SQL
+INSERT INTO dst
+SELECT
+  x || y AS xy,
+  z
+FROM TABLE(extern(
+   '{
+     "type": "inline",
+     "data": "a,b,1\nc,d,2\n"
+    }',
+	'{
+	  "type": "csv",
+	  "columns": ["x","y","z"],
+	  "listDelimiter": null,
+	  "findColumnsFromHeader": false,
+	  "skipHeaderRows": 0
+	 }',
+	 '[
+	   {"name": "x", "type": "STRING"},
+	   {"name": "y", "type": "STRING"},
+	   {"name": "z", "type": "LONG"}
+	 ]'
+))
+PARTITIONED BY ALL TIME
+CLUSTERED BY 1, 2
+=== targetSchema
+xy VARCHAR
+z BIGINT
+=== resources
+DATASOURCE/dst/WRITE
+EXTERNAL/EXTERNAL/READ
+=== plan
+LogicalInsert(target=[dst], granularity=[AllGranularity])
+  Clustered By: 1, 2  LogicalSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[ASC])
+    LogicalProject(xy=[||($0, $1)], z=[$2])
+      ExternalTableScan(dataSource=[{"type":"external","inputSource":{"type":"inline","data":"a,b,1\nc,d,2\n"},"inputFormat":{"type":"csv","columns":["x","y","z"],"listDelimiter":null,"findColumnsFromHeader":false,"skipHeaderRows":0},"signature":[{"name":"x","type":"STRING"},{"name":"y","type":"STRING"},{"name":"z","type":"LONG"}]}])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "external",
+    "inputSource" : {
+      "type" : "inline",
+      "data" : "a,b,1\nc,d,2\n"
+    },
+    "inputFormat" : {
+      "type" : "csv",
+      "columns" : [ "x", "y", "z" ],
+      "listDelimiter" : null,
+      "findColumnsFromHeader" : false,
+      "skipHeaderRows" : 0
+    },
+    "signature" : [ {
+      "name" : "x",
+      "type" : "STRING"
+    }, {
+      "name" : "y",
+      "type" : "STRING"
+    }, {
+      "name" : "z",
+      "type" : "LONG"
+    } ]
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "concat(\"x\",\"y\")",
+    "outputType" : "STRING"
+  } ],
+  "resultFormat" : "compactedList",
+  "orderBy" : [ {
+    "columnName" : "v0",
+    "order" : "ascending"
+  }, {
+    "columnName" : "z",
+    "order" : "ascending"
+  } ],
+  "columns" : [ "v0", "z" ],
+  "context" : {
+    "sqlInsertSegmentGranularity" : "{\"type\":\"all\"}"
+  },
+  "granularity" : {
+    "type" : "all"
+  }
+}
+==============================================================
+Converted from testInsertFromExternalAggregate()
+INSERT with rollup
+=== case
+INSERT from external aggregate
+=== SQL
+INSERT INTO dst
+SELECT
+  x,
+  SUM(z) AS sum_z,
+  COUNT(*) AS cnt
+FROM TABLE(extern(
+   '{
+     "type": "inline",
+     "data": "a,b,1\nc,d,2\n"
+    }',
+	'{
+	  "type": "csv",
+	  "columns": ["x","y","z"],
+	  "listDelimiter": null,
+	  "findColumnsFromHeader": false,
+	  "skipHeaderRows": 0
+	 }',
+	 '[
+	   {"name": "x", "type": "STRING"},
+	   {"name": "y", "type": "STRING"},
+	   {"name": "z", "type": "LONG"}
+	 ]'
+))
+GROUP BY 1
+PARTITIONED BY ALL TIME
+=== targetSchema
+x VARCHAR
+sum_z BIGINT
+cnt BIGINT
+=== resources
+DATASOURCE/dst/WRITE
+EXTERNAL/EXTERNAL/READ
+=== plan
+LogicalInsert(target=[dst], granularity=[AllGranularity])
+  LogicalAggregate(group=[{0}], sum_z=[SUM($1)], cnt=[COUNT()])
+    LogicalProject(x=[$0], z=[$2])
+      ExternalTableScan(dataSource=[{"type":"external","inputSource":{"type":"inline","data":"a,b,1\nc,d,2\n"},"inputFormat":{"type":"csv","columns":["x","y","z"],"listDelimiter":null,"findColumnsFromHeader":false,"skipHeaderRows":0},"signature":[{"name":"x","type":"STRING"},{"name":"y","type":"STRING"},{"name":"z","type":"LONG"}]}])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "external",
+    "inputSource" : {
+      "type" : "inline",
+      "data" : "a,b,1\nc,d,2\n"
+    },
+    "inputFormat" : {
+      "type" : "csv",
+      "columns" : [ "x", "y", "z" ],
+      "listDelimiter" : null,
+      "findColumnsFromHeader" : false,
+      "skipHeaderRows" : 0
+    },
+    "signature" : [ {
+      "name" : "x",
+      "type" : "STRING"
+    }, {
+      "name" : "y",
+      "type" : "STRING"
+    }, {
+      "name" : "z",
+      "type" : "LONG"
+    } ]
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "x",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "z"
+  }, {
+    "type" : "count",
+    "name" : "a1"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "context" : {
+    "sqlInsertSegmentGranularity" : "{\"type\":\"all\"}"
+  }
+}
+==============================================================
+Converted from testInsertFromExternalAggregateAll()
+INSERT with rollup into a single row (no GROUP BY exprs).
+=== case
+INSERT from external aggregate all
+=== SQL
+INSERT INTO dst
+SELECT COUNT(*) AS cnt
+FROM TABLE(extern(
+   '{
+     "type": "inline",
+     "data": "a,b,1\nc,d,2\n"
+    }',
+	'{
+	  "type": "csv",
+	  "columns": ["x","y","z"],
+	  "listDelimiter": null,
+	  "findColumnsFromHeader": false,
+	  "skipHeaderRows": 0
+	 }',
+	 '[
+	   {"name": "x", "type": "STRING"},
+	   {"name": "y", "type": "STRING"},
+	   {"name": "z", "type": "LONG"}
+	 ]'
+))
+PARTITIONED BY ALL TIME
+=== targetSchema
+cnt BIGINT
+=== resources
+DATASOURCE/dst/WRITE
+EXTERNAL/EXTERNAL/READ
+=== plan
+LogicalInsert(target=[dst], granularity=[AllGranularity])
+  LogicalAggregate(group=[{}], cnt=[COUNT()])
+    LogicalProject($f0=[0])
+      ExternalTableScan(dataSource=[{"type":"external","inputSource":{"type":"inline","data":"a,b,1\nc,d,2\n"},"inputFormat":{"type":"csv","columns":["x","y","z"],"listDelimiter":null,"findColumnsFromHeader":false,"skipHeaderRows":0},"signature":[{"name":"x","type":"STRING"},{"name":"y","type":"STRING"},{"name":"z","type":"LONG"}]}])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "external",
+    "inputSource" : {
+      "type" : "inline",
+      "data" : "a,b,1\nc,d,2\n"
+    },
+    "inputFormat" : {
+      "type" : "csv",
+      "columns" : [ "x", "y", "z" ],
+      "listDelimiter" : null,
+      "findColumnsFromHeader" : false,
+      "skipHeaderRows" : 0
+    },
+    "signature" : [ {
+      "name" : "x",
+      "type" : "STRING"
+    }, {
+      "name" : "y",
+      "type" : "STRING"
+    }, {
+      "name" : "z",
+      "type" : "LONG"
+    } ]
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "context" : {
+    "sqlInsertSegmentGranularity" : "{\"type\":\"all\"}"
+  }
+}
+==============================================================
+Converted from testInsertWithInvalidSelectStatement()
+=== case
+INSERT with invalid SELECT statement
+=== SQL
+INSERT INTO t
+SELECT channel, added as count -- count is a keyword
+FROM foo
+PARTITIONED BY ALL
+=== exception
+SqlParseException
+=== error
+Encountered "as count" at line 2, column 23.
+**
+==============================================================
+Converted from testInsertWithUnnamedColumnInSelectStatement()
+=== case
+INSERT with unnamed column in SELECT statement
+=== SQL
+INSERT INTO t
+SELECT dim1, dim2 || '-lol'
+FROM foo
+PARTITIONED BY ALL
+=== exception
+ValidationException
+=== error
+Cannot ingest expressions that do not have an alias or columns with names like EXPR$[digit].
+E.g. if you are ingesting "func(X)", then you can rewrite it as "func(X) as myColumn"
+==============================================================
+Converted from testInsertWithInvalidColumnNameInIngest()
+=== case
+INSERT with unnamed column in SELECT statement
+=== SQL
+INSERT INTO t
+SELECT dim1, dim2 || '-lol'
+FROM foo
+PARTITIONED BY ALL
+=== exception
+ValidationException
+=== error
+Cannot ingest expressions that do not have an alias or columns with names like EXPR$[digit].
+E.g. if you are ingesting "func(X)", then you can rewrite it as "func(X) as myColumn"
+==============================================================
+Converted from testInsertWithUnnamedColumnInNestedSelectStatement()
+=== case
+INSERT with unnamed column in nested SELECT statement
+=== SQL
+INSERT INTO test
+SELECT __time, *
+FROM
+  (SELECT __time, LOWER(dim1) FROM foo)
+PARTITIONED BY ALL TIME
+=== exception
+ValidationException
+=== error
+Cannot ingest expressions that do not have an alias or columns with names like EXPR$[digit].
+E.g. if you are ingesting "func(X)", then you can rewrite it as "func(X) as myColumn"

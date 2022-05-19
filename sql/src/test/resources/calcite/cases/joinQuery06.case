@@ -1,0 +1,1514 @@
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+==============================================================
+Test cases from the CalciteJoinQueryTest file
+
+==============================================================
+Converted from testSemiJoinWithOuterTimeExtractAggregateWithOrderBy()
+
+Cannot vectorize due to virtual columns.
+=== case
+Semi join with outer time extract aggregate with ORDER BY
+=== SQL
+SELECT COUNT(DISTINCT dim1), EXTRACT(MONTH FROM __time)
+FROM druid.foo
+WHERE dim2 IN (
+   SELECT dim2
+   FROM druid.foo
+   WHERE dim1 = 'def'
+   )
+  AND dim1 <> ''
+GROUP BY EXTRACT(MONTH FROM __time)
+ORDER BY EXTRACT(MONTH FROM __time)
+=== options
+sqlCompatibleNulls=false
+=== schema
+EXPR$0 BIGINT
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[ASC])
+  LogicalProject(EXPR$0=[$1], EXPR$1=[$0])
+    LogicalAggregate(group=[{0}], EXPR$0=[COUNT(DISTINCT $1)])
+      LogicalProject(EXPR$1=[EXTRACT(FLAG(MONTH), $0)], dim1=[$2])
+        LogicalFilter(condition=[AND(IN($3, {
+LogicalProject(dim2=[$3])
+  LogicalFilter(condition=[=($2, 'def')])
+    LogicalTableScan(table=[[druid, foo]])
+}), <>($2, ''))])
+          LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "filter" : {
+          "type" : "selector",
+          "dimension" : "dim1",
+          "value" : "def"
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "dim2",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim2\" == \"j0.d0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "timestamp_extract(\"__time\",'MONTH','UTC')",
+    "outputType" : "LONG"
+  } ],
+  "filter" : {
+    "type" : "not",
+    "field" : {
+      "type" : "selector",
+      "dimension" : "dim1"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "cardinality",
+    "name" : "a0",
+    "fields" : [ {
+      "type" : "default",
+      "dimension" : "dim1",
+      "outputName" : "dim1",
+      "outputType" : "STRING"
+    } ],
+    "byRow" : false,
+    "round" : true
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "d0",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== results
+[1,1]
+==============================================================
+Converted from testSemiJoinWithOuterTimeExtractAggregateWithOrderBy()
+
+Cannot vectorize due to virtual columns.
+=== case
+Semi join with outer time extract aggregate with ORDER BY
+=== SQL copy
+=== options
+sqlCompatibleNulls=true
+vectorize=false
+=== schema copy
+=== plan copy
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "filter" : {
+          "type" : "selector",
+          "dimension" : "dim1",
+          "value" : "def"
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "dim2",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim2\" == \"j0.d0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "timestamp_extract(\"__time\",'MONTH','UTC')",
+    "outputType" : "LONG"
+  } ],
+  "filter" : {
+    "type" : "not",
+    "field" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : ""
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "cardinality",
+    "name" : "a0",
+    "fields" : [ {
+      "type" : "default",
+      "dimension" : "dim1",
+      "outputName" : "dim1",
+      "outputType" : "STRING"
+    } ],
+    "byRow" : false,
+    "round" : true
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "d0",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== results copy
+==============================================================
+Converted from testJoinOnMultiValuedColumnShouldThrowException()
+
+Fails at runtime. Should fail at plan time.
+=== case
+Join on multi valued column should throw exception
+=== SQL
+SELECT dim3, l.v
+from druid.foo f
+inner join lookup.lookyloo l on f.dim3 = l.k
+=== options
+provider=QueryContextForJoinProvider
+vectorize=true
+=== schema
+dim3 VARCHAR
+v VARCHAR
+=== plan
+LogicalProject(dim3=[$4], v=[$9])
+  LogicalJoin(condition=[=($4, $8)], joinType=[inner])
+    LogicalTableScan(table=[[druid, foo]])
+    LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim3\" == \"j0.k\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "dim3", "j0.v" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== run
+=== exception
+QueryUnsupportedException
+=== error
+Joining against a multi-value dimension is not supported.
+==============================================================
+Converted from testUnionAllTwoQueriesLeftQueryIsJoin()
+=== case
+Union all two queries left query is join
+=== SQL
+( SELECT COUNT(*)
+  FROM foo
+  INNER JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k)
+UNION ALL
+SELECT SUM(cnt)
+FROM foo
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalUnion(all=[true])
+  LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+    LogicalProject($f0=[0])
+      LogicalJoin(condition=[=($2, $8)], joinType=[inner])
+        LogicalTableScan(table=[[druid, foo]])
+        LogicalTableScan(table=[[lookup, lookyloo]])
+  LogicalAggregate(group=[{}], EXPR$0=[SUM($0)])
+    LogicalProject(cnt=[$1])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "artificialQueryType" : "union",
+  "inputs" : [ {
+    "dataSource" : {
+      "type" : "join",
+      "left" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "right" : {
+        "type" : "lookup",
+        "lookup" : "lookyloo"
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "(\"dim1\" == \"j0.k\")",
+      "joinType" : "INNER"
+    },
+    "intervals" : {
+      "type" : "intervals",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    },
+    "granularity" : {
+      "type" : "all"
+    },
+    "aggregations" : [ {
+      "type" : "count",
+      "name" : "a0"
+    } ]
+  }, {
+    "dataSource" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "intervals" : {
+      "type" : "intervals",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    },
+    "granularity" : {
+      "type" : "all"
+    },
+    "aggregations" : [ {
+      "type" : "longSum",
+      "name" : "a0",
+      "fieldName" : "cnt"
+    } ]
+  } ]
+}
+=== results
+[1]
+[6]
+==============================================================
+Converted from testUnionAllTwoQueriesRightQueryIsJoin()
+
+Fully removing the join allows this query to vectorize.
+=== case
+Union all two queries right query is join
+=== SQL
+( SELECT SUM(cnt)
+  FROM foo
+  UNION ALL
+  SELECT COUNT(*)
+  FROM foo
+  INNER JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k
+  )
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalUnion(all=[true])
+  LogicalAggregate(group=[{}], EXPR$0=[SUM($0)])
+    LogicalProject(cnt=[$1])
+      LogicalTableScan(table=[[druid, foo]])
+  LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+    LogicalProject($f0=[0])
+      LogicalJoin(condition=[=($2, $8)], joinType=[inner])
+        LogicalTableScan(table=[[druid, foo]])
+        LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "artificialQueryType" : "union",
+  "inputs" : [ {
+    "dataSource" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "intervals" : {
+      "type" : "intervals",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    },
+    "granularity" : {
+      "type" : "all"
+    },
+    "aggregations" : [ {
+      "type" : "longSum",
+      "name" : "a0",
+      "fieldName" : "cnt"
+    } ]
+  }, {
+    "dataSource" : {
+      "type" : "join",
+      "left" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "right" : {
+        "type" : "lookup",
+        "lookup" : "lookyloo"
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "(\"dim1\" == \"j0.k\")",
+      "joinType" : "INNER"
+    },
+    "intervals" : {
+      "type" : "intervals",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    },
+    "granularity" : {
+      "type" : "all"
+    },
+    "aggregations" : [ {
+      "type" : "count",
+      "name" : "a0"
+    } ]
+  } ]
+}
+=== results
+[6]
+[1]
+==============================================================
+Converted from testUnionAllTwoQueriesBothQueriesAreJoin()
+=== case
+UNION ALL two queries both queries are join
+=== SQL
+( SELECT COUNT(*)
+  FROM foo LEFT JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k
+UNION ALL
+SELECT COUNT(*)
+FROM foo INNER JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k)
+=== options
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalUnion(all=[true])
+  LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+    LogicalProject($f0=[0])
+      LogicalJoin(condition=[=($2, $8)], joinType=[left])
+        LogicalTableScan(table=[[druid, foo]])
+        LogicalTableScan(table=[[lookup, lookyloo]])
+  LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+    LogicalProject($f0=[0])
+      LogicalJoin(condition=[=($2, $8)], joinType=[inner])
+        LogicalTableScan(table=[[druid, foo]])
+        LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "artificialQueryType" : "union",
+  "inputs" : [ {
+    "dataSource" : {
+      "type" : "join",
+      "left" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "right" : {
+        "type" : "lookup",
+        "lookup" : "lookyloo"
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "(\"dim1\" == \"j0.k\")",
+      "joinType" : "LEFT"
+    },
+    "intervals" : {
+      "type" : "intervals",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    },
+    "granularity" : {
+      "type" : "all"
+    },
+    "aggregations" : [ {
+      "type" : "count",
+      "name" : "a0"
+    } ]
+  }, {
+    "dataSource" : {
+      "type" : "join",
+      "left" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "right" : {
+        "type" : "lookup",
+        "lookup" : "lookyloo"
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "(\"dim1\" == \"j0.k\")",
+      "joinType" : "INNER"
+    },
+    "intervals" : {
+      "type" : "intervals",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    },
+    "granularity" : {
+      "type" : "all"
+    },
+    "aggregations" : [ {
+      "type" : "count",
+      "name" : "a0"
+    } ]
+  } ]
+}
+=== results
+[6]
+[1]
+==============================================================
+Converted from testTopNFilterJoin()
+=== case
+Top n filter join
+=== SQL
+SELECT t1.dim1, SUM(t1.cnt)
+FROM druid.foo t1
+  INNER JOIN (
+  SELECT
+    SUM(cnt) AS sum_cnt,
+    dim2
+  FROM druid.foo
+  GROUP BY dim2
+  ORDER BY 1 DESC
+  LIMIT 2
+) t2 ON (t1.dim2 = t2.dim2)
+GROUP BY t1.dim1
+ORDER BY 1
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+dim1 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$0], dir0=[ASC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(dim1=[$2], cnt=[$1])
+      LogicalJoin(condition=[=($3, $9)], joinType=[inner])
+        LogicalTableScan(table=[[druid, foo]])
+        LogicalSort(sort0=[$0], dir0=[DESC], fetch=[2])
+          LogicalProject(sum_cnt=[$1], dim2=[$0])
+            LogicalAggregate(group=[{0}], sum_cnt=[SUM($1)])
+              LogicalProject(dim2=[$3], cnt=[$1])
+                LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "topN",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "dimension" : {
+          "type" : "default",
+          "dimension" : "dim2",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        },
+        "metric" : {
+          "type" : "numeric",
+          "metric" : "a0"
+        },
+        "threshold" : 2,
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "aggregations" : [ {
+          "type" : "longSum",
+          "name" : "a0",
+          "fieldName" : "cnt"
+        } ]
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim2\" == \"j0.d0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "d0",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "lexicographic"
+      }
+    } ]
+  }
+}
+=== results
+["",1]
+["1",1]
+==============================================================
+Converted from testTopNFilterJoinWithProjection()
+
+Cannot vectorize JOIN operator.
+Filters on top N values of some dimension by using an inner
+join. Also projects the outer dimension.
+=== case
+Top n filter join with projection
+=== SQL
+SELECT SUBSTRING(t1.dim1, 1, 10), SUM(t1.cnt)
+FROM druid.foo t1
+  INNER JOIN (
+  SELECT
+    SUM(cnt) AS sum_cnt,
+    dim2
+  FROM druid.foo
+  GROUP BY dim2
+  ORDER BY 1 DESC
+  LIMIT 2
+) t2 ON (t1.dim2 = t2.dim2)
+GROUP BY SUBSTRING(t1.dim1, 1, 10)
+=== options
+provider=QueryContextForJoinProvider
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+  LogicalProject(EXPR$0=[SUBSTRING($2, 1, 10)], cnt=[$1])
+    LogicalJoin(condition=[=($3, $9)], joinType=[inner])
+      LogicalTableScan(table=[[druid, foo]])
+      LogicalSort(sort0=[$0], dir0=[DESC], fetch=[2])
+        LogicalProject(sum_cnt=[$1], dim2=[$0])
+          LogicalAggregate(group=[{0}], sum_cnt=[SUM($1)])
+            LogicalProject(dim2=[$3], cnt=[$1])
+              LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "topN",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "dimension" : {
+          "type" : "default",
+          "dimension" : "dim2",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        },
+        "metric" : {
+          "type" : "numeric",
+          "metric" : "a0"
+        },
+        "threshold" : 2,
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "aggregations" : [ {
+          "type" : "longSum",
+          "name" : "a0",
+          "fieldName" : "cnt"
+        } ]
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim2\" == \"j0.d0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "extraction",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING",
+    "extractionFn" : {
+      "type" : "substring",
+      "index" : 0,
+      "length" : 10
+    }
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",1]
+["1",1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,1]
+["1",1]
+==============================================================
+Converted from testRemovableLeftJoin()
+Disabled in the Java file.
+Stopped working after the ability to join on subqueries was
+added to DruidJoinRule.
+LEFT JOIN where the right-hand side can be ignored.
+==============================================================
+Converted from testCountDistinctOfLookupUsingJoinOperator()
+
+Cannot yet vectorize the JOIN operator.
+=== case
+Count distinct of lookup using join operator
+=== SQL
+SELECT COUNT(DISTINCT lookyloo.v)
+FROM foo LEFT JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k
+=== options
+provider=QueryContextForJoinProvider
+vectorize=false
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT(DISTINCT $0)])
+  LogicalProject(v=[$9])
+    LogicalJoin(condition=[=($2, $8)], joinType=[left])
+      LogicalTableScan(table=[[druid, foo]])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim1\" == \"j0.k\")",
+    "joinType" : "LEFT"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "cardinality",
+    "name" : "a0",
+    "fields" : [ {
+      "type" : "default",
+      "dimension" : "j0.v",
+      "outputName" : "j0.v",
+      "outputType" : "STRING"
+    } ],
+    "byRow" : false,
+    "round" : true
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[2]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[1]
+==============================================================
+Converted from testUsingSubqueryAsPartOfAndFilter()
+=== case
+Using subquery as part of and filter
+=== SQL
+SELECT dim1, dim2, COUNT(*)
+FROM druid.foo
+WHERE dim2 IN (SELECT dim1 FROM druid.foo WHERE dim1 <> '')
+  AND dim1 <> 'xxx'
+group by dim1, dim2
+ORDER BY dim2
+=== options
+provider=QueryContextForJoinProviderNoRewriteJoinToFilter
+sqlCompatibleNulls=false
+vectorize=false
+=== schema
+dim1 VARCHAR
+dim2 VARCHAR
+EXPR$2 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[ASC])
+  LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT()])
+    LogicalProject(dim1=[$2], dim2=[$3])
+      LogicalFilter(condition=[AND(IN($3, {
+LogicalProject(dim1=[$2])
+  LogicalFilter(condition=[<>($2, '')])
+    LogicalTableScan(table=[[druid, foo]])
+}), <>($2, 'xxx'))])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "filter" : {
+          "type" : "not",
+          "field" : {
+            "type" : "selector",
+            "dimension" : "dim1"
+          }
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "dim1",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim2\" == \"j0.d0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "not",
+    "field" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "xxx"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "dim2",
+    "outputName" : "d1",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "d1",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "lexicographic"
+      }
+    } ]
+  }
+}
+=== results
+["def","abc",1]
+==============================================================
+Converted from testUsingSubqueryAsPartOfAndFilter()
+
+Fully removing the join allows this query to vectorize.
+=== case
+Using subquery as part of and filter
+=== SQL copy
+=== options
+provider=QueryContextForJoinProviderWithRewriteJoinToFilter
+sqlCompatibleNulls=false
+vectorize=true
+=== schema copy
+=== plan
+LogicalSort(sort0=[$1], dir0=[ASC])
+  LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT()])
+    LogicalProject(dim1=[$2], dim2=[$3])
+      LogicalFilter(condition=[AND(IN($3, {
+LogicalProject(dim1=[$2])
+  LogicalFilter(condition=[<>($2, '')])
+    LogicalTableScan(table=[[druid, foo]])
+}), <>($2, 'xxx'))])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "filter" : {
+          "type" : "not",
+          "field" : {
+            "type" : "selector",
+            "dimension" : "dim1"
+          }
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "dim1",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim2\" == \"j0.d0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "not",
+    "field" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "xxx"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "dim2",
+    "outputName" : "d1",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "d1",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "lexicographic"
+      }
+    } ]
+  }
+}
+=== results copy
+==============================================================
+Converted from testUsingSubqueryAsPartOfAndFilter()
+=== case
+Using subquery as part of and filter
+=== SQL copy
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=true
+vectorize=false
+=== schema copy
+=== plan copy
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "filter" : {
+          "type" : "not",
+          "field" : {
+            "type" : "selector",
+            "dimension" : "dim1",
+            "value" : ""
+          }
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "dim1",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim2\" == \"j0.d0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "not",
+    "field" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "xxx"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "dim2",
+    "outputName" : "d1",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "d1",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "lexicographic"
+      }
+    } ]
+  }
+}
+=== results copy
+==============================================================
+Converted from testUsingSubqueryAsPartOfOrFilter()
+
+Cannot vectorize JOIN operator.
+=== case
+Using subquery as part of or filter
+=== SQL
+SELECT dim1, dim2, COUNT(*)
+FROM druid.foo
+WHERE dim1 = 'xxx'
+  OR dim2 IN (SELECT dim1 FROM druid.foo WHERE dim1 LIKE '%bc')
+group by dim1, dim2
+ORDER BY dim2
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+dim1 VARCHAR
+dim2 VARCHAR
+EXPR$2 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[ASC])
+  LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT()])
+    LogicalProject(dim1=[$2], dim2=[$3])
+      LogicalFilter(condition=[OR(=($2, 'xxx'), IN($3, {
+LogicalProject(dim1=[$2])
+  LogicalFilter(condition=[LIKE($2, '%bc')])
+    LogicalTableScan(table=[[druid, foo]])
+}))])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "right" : {
+        "type" : "query",
+        "query" : {
+          "queryType" : "timeseries",
+          "dataSource" : {
+            "type" : "table",
+            "name" : "foo"
+          },
+          "intervals" : {
+            "type" : "intervals",
+            "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+          },
+          "filter" : {
+            "type" : "like",
+            "dimension" : "dim1",
+            "pattern" : "%bc",
+            "escape" : null,
+            "extractionFn" : null
+          },
+          "granularity" : {
+            "type" : "all"
+          },
+          "aggregations" : [ {
+            "type" : "count",
+            "name" : "a0"
+          } ]
+        }
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "1",
+      "joinType" : "INNER"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "1",
+          "outputType" : "LONG"
+        } ],
+        "filter" : {
+          "type" : "like",
+          "dimension" : "dim1",
+          "pattern" : "%bc",
+          "escape" : null,
+          "extractionFn" : null
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "dim1",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        }, {
+          "type" : "default",
+          "dimension" : "v0",
+          "outputName" : "d1",
+          "outputType" : "LONG"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "rightPrefix" : "_j0.",
+    "condition" : "(\"dim2\" == \"_j0.d0\")",
+    "joinType" : "LEFT"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "or",
+    "fields" : [ {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "xxx"
+    }, {
+      "type" : "and",
+      "fields" : [ {
+        "type" : "not",
+        "field" : {
+          "type" : "selector",
+          "dimension" : "j0.a0",
+          "value" : "0"
+        }
+      }, {
+        "type" : "not",
+        "field" : {
+          "type" : "selector",
+          "dimension" : "_j0.d1"
+        }
+      }, {
+        "type" : "not",
+        "field" : {
+          "type" : "selector",
+          "dimension" : "dim2"
+        }
+      } ]
+    } ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "dim2",
+    "outputName" : "d1",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "d1",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "lexicographic"
+      }
+    } ]
+  }
+}
+=== results
+["def","abc",1]
+==============================================================
+Converted from testNestedGroupByOnInlineDataSourceWithFilter()
+
+Cannot vectorize due to virtual columns.
+=== case
+Nested group by on inline data source with filter
+=== SQL
+with
+abc as(
+  SELECT dim1, m2
+  from druid.foo
+  where "__time" >= '2001-01-02'),
+def as(
+  SELECT t1.dim1, SUM(t2.m2) as "metricSum"
+  from abc as t1
+  inner join abc as t2 on t1.dim1 = t2.dim1
+  where t1.dim1='def'
+  group by 1)
+SELECT count(*)
+from def
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalAggregate(group=[{0}], metricSum=[SUM($1)])
+      LogicalProject(dim1=[$0], m20=[$3])
+        LogicalFilter(condition=[=($0, 'def')])
+          LogicalJoin(condition=[=($0, $2)], joinType=[inner])
+            LogicalProject(dim1=[$2], m2=[$6])
+              LogicalFilter(condition=[>=($0, CAST('2001-01-02'):TIMESTAMP(3) NOT NULL)])
+                LogicalTableScan(table=[[druid, foo]])
+            LogicalProject(dim1=[$2], m2=[$6])
+              LogicalFilter(condition=[>=($0, CAST('2001-01-02'):TIMESTAMP(3) NOT NULL)])
+                LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "groupBy",
+      "dataSource" : {
+        "type" : "join",
+        "left" : {
+          "type" : "query",
+          "query" : {
+            "queryType" : "scan",
+            "dataSource" : {
+              "type" : "table",
+              "name" : "foo"
+            },
+            "intervals" : {
+              "type" : "intervals",
+              "intervals" : [ "2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z" ]
+            },
+            "resultFormat" : "compactedList",
+            "columns" : [ "dim1" ],
+            "granularity" : {
+              "type" : "all"
+            }
+          }
+        },
+        "right" : {
+          "type" : "query",
+          "query" : {
+            "queryType" : "scan",
+            "dataSource" : {
+              "type" : "table",
+              "name" : "foo"
+            },
+            "intervals" : {
+              "type" : "intervals",
+              "intervals" : [ "2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z" ]
+            },
+            "resultFormat" : "compactedList",
+            "columns" : [ "dim1", "m2" ],
+            "granularity" : {
+              "type" : "all"
+            }
+          }
+        },
+        "rightPrefix" : "j0.",
+        "condition" : "(\"dim1\" == \"j0.dim1\")",
+        "joinType" : "INNER"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "virtualColumns" : [ {
+        "type" : "expression",
+        "name" : "v0",
+        "expression" : "'def'",
+        "outputType" : "STRING"
+      } ],
+      "filter" : {
+        "type" : "selector",
+        "dimension" : "dim1",
+        "value" : "def"
+      },
+      "granularity" : {
+        "type" : "all"
+      },
+      "dimensions" : [ {
+        "type" : "default",
+        "dimension" : "v0",
+        "outputName" : "d0",
+        "outputType" : "STRING"
+      } ],
+      "limitSpec" : {
+        "type" : "NoopLimitSpec"
+      }
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== results
+[1]

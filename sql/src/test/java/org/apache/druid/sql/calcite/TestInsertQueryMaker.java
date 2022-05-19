@@ -98,4 +98,10 @@ public class TestInsertQueryMaker implements QueryMaker
     // 2) Return the dataSource and signature of the insert operation, so tests can confirm they are correct.
     return Sequences.simple(ImmutableList.of(new Object[]{targetDataSource, signature}));
   }
+
+  @Override
+  public Object explain(DruidQuery druidQuery)
+  {
+    return druidQuery.getQuery();
+  }
 }

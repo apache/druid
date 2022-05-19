@@ -1,0 +1,2863 @@
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+==============================================================
+Test cases from the CalciteMultiValueStringQueryTest file
+
+Various queries on multi-valued string dimensions using them
+like strings.
+==============================================================
+Converted from testMultiValueStringWorksLikeStringGroupBy()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Multi-value string works like string GROUP BY
+=== SQL
+SELECT concat(dim3, 'foo'), SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== context
+groupByEnableMultiValueUnnesting=true
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[CONCAT($6, 'foo')], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "concat(\"dim3\",'foo')",
+    "outputType" : "STRING"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  },
+  "context" : {
+    "groupByEnableMultiValueUnnesting" : true
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["bfoo",2]
+["foo",2]
+["",1]
+["afoo",1]
+["cfoo",1]
+["dfoo",1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,2]
+["bfoo",2]
+["afoo",1]
+["cfoo",1]
+["dfoo",1]
+["foo",1]
+==============================================================
+Converted from testMultiValueStringGroupByDoesNotWork()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Multi value string group by does not work
+=== SQL
+SELECT concat(dim3, 'foo'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC
+=== context
+groupByEnableMultiValueUnnesting=false
+=== options
+vectorize=false
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[CONCAT($6, 'foo')], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== run
+=== exception
+RuntimeException
+=== error
+java.util.concurrent.ExecutionException: org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensionException: Encountered multi-value dimension [v0] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false. Consider setting 'groupByEnableMultiValueUnnesting' to true in your query context.
+==============================================================
+Converted from testMultiValueStringWorksLikeStringGroupByWithFilter()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Multi-value string works like string GROUP BY with filter
+=== SQL
+SELECT concat(dim3, 'foo'), SUM(cnt)
+FROM druid.numfoo
+where concat(dim3, 'foo') = 'bfoo'
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[CONCAT($6, 'foo')], cnt=[$1])
+      LogicalFilter(condition=[=(CONCAT($6, 'foo'), 'bfoo')])
+        LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "concat(\"dim3\",'foo')",
+    "outputType" : "STRING"
+  } ],
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "v0",
+    "value" : "bfoo"
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== results
+["bfoo",2]
+["afoo",1]
+["cfoo",1]
+==============================================================
+Converted from testMultiValueStringWorksLikeStringScan()
+=== case
+Multi-value string works like string scan
+=== SQL
+SELECT concat(dim3, 'foo') FROM druid.numfoo
+=== options
+vectorize=true
+=== schema
+EXPR$0 VARCHAR
+=== plan
+LogicalProject(EXPR$0=[CONCAT($6, 'foo')])
+  LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "concat(\"dim3\",'foo')",
+    "outputType" : "STRING"
+  } ],
+  "resultFormat" : "compactedList",
+  "columns" : [ "v0" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["[\"afoo\",\"bfoo\"]"]
+["[\"bfoo\",\"cfoo\"]"]
+["[\"dfoo\"]"]
+["[\"foo\"]"]
+["[\"foo\"]"]
+["[\"foo\"]"]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["[\"afoo\",\"bfoo\"]"]
+["[\"bfoo\",\"cfoo\"]"]
+["[\"dfoo\"]"]
+["[\"foo\"]"]
+["[null]"]
+["[null]"]
+==============================================================
+Converted from testMultiValueStringWorksLikeStringSelfConcatScan()
+=== case
+Multi-value string works like string self concat scan
+=== SQL
+SELECT concat(dim3, '-lol-', dim3) FROM druid.numfoo
+=== options
+vectorize=true
+=== schema
+EXPR$0 VARCHAR
+=== plan
+LogicalProject(EXPR$0=[CONCAT($6, '-lol-', $6)])
+  LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "concat(\"dim3\",'-lol-',\"dim3\")",
+    "outputType" : "STRING"
+  } ],
+  "resultFormat" : "compactedList",
+  "columns" : [ "v0" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["[\"a-lol-a\",\"b-lol-b\"]"]
+["[\"b-lol-b\",\"c-lol-c\"]"]
+["[\"d-lol-d\"]"]
+["[\"-lol-\"]"]
+["[\"-lol-\"]"]
+["[\"-lol-\"]"]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["[\"a-lol-a\",\"b-lol-b\"]"]
+["[\"b-lol-b\",\"c-lol-c\"]"]
+["[\"d-lol-d\"]"]
+["[\"-lol-\"]"]
+["[null]"]
+["[null]"]
+==============================================================
+Converted from testMultiValueStringWorksLikeStringScanWithFilter()
+=== case
+Multi-value string works like string scan with filter
+=== SQL
+SELECT concat(dim3, 'foo')
+FROM druid.numfoo
+where concat(dim3, 'foo') = 'bfoo'
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 VARCHAR
+=== plan
+LogicalProject(EXPR$0=[CONCAT($6, 'foo')])
+  LogicalFilter(condition=[=(CONCAT($6, 'foo'), 'bfoo')])
+    LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "concat(\"dim3\",'foo')",
+    "outputType" : "STRING"
+  } ],
+  "resultFormat" : "compactedList",
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "v0",
+    "value" : "bfoo"
+  },
+  "columns" : [ "v0" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+["[\"afoo\",\"bfoo\"]"]
+["[\"bfoo\",\"cfoo\"]"]
+==============================================================
+These are a copy of the ARRAY functions tests in CalciteArraysQueryTest
+==============================================================
+Converted from testMultiValueStringOverlapFilter()
+=== case
+Multi-value string overlap filter
+=== SQL
+SELECT dim3
+FROM druid.numfoo
+WHERE MV_OVERLAP(dim3, ARRAY['a','b'])
+LIMIT 5
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim3 VARCHAR
+=== plan
+LogicalSort(fetch=[5])
+  LogicalProject(dim3=[$6])
+    LogicalFilter(condition=[MV_OVERLAP($6, ARRAY('a', 'b'))])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "limit" : 5,
+  "filter" : {
+    "type" : "in",
+    "dimension" : "dim3",
+    "values" : [ "a", "b" ]
+  },
+  "columns" : [ "dim3" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+["[\"a\",\"b\"]"]
+["[\"b\",\"c\"]"]
+==============================================================
+Converted from testMultiValueStringOverlapFilterNonLiteral()
+=== case
+Multi-value string overlap filter non-literal
+=== SQL
+SELECT dim3
+FROM druid.numfoo
+WHERE MV_OVERLAP(dim3, ARRAY[dim2])
+LIMIT 5
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim3 VARCHAR
+=== plan
+LogicalSort(fetch=[5])
+  LogicalProject(dim3=[$6])
+    LogicalFilter(condition=[MV_OVERLAP($6, ARRAY($5))])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "limit" : 5,
+  "filter" : {
+    "type" : "expression",
+    "expression" : "array_overlap(\"dim3\",array(\"dim2\"))"
+  },
+  "columns" : [ "dim3" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+["[\"a\",\"b\"]"]
+==============================================================
+Converted from testMultiValueStringContainsFilter()
+=== case
+Multi-value string CONTAINS filter
+=== SQL
+SELECT dim3
+FROM druid.numfoo
+WHERE MV_CONTAINS(dim3, ARRAY['a','b'])
+LIMIT 5
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim3 VARCHAR
+=== plan
+LogicalSort(fetch=[5])
+  LogicalProject(dim3=[$6])
+    LogicalFilter(condition=[MV_CONTAINS($6, ARRAY('a', 'b'))])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "limit" : 5,
+  "filter" : {
+    "type" : "and",
+    "fields" : [ {
+      "type" : "selector",
+      "dimension" : "dim3",
+      "value" : "a"
+    }, {
+      "type" : "selector",
+      "dimension" : "dim3",
+      "value" : "b"
+    } ]
+  },
+  "columns" : [ "dim3" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+["[\"a\",\"b\"]"]
+==============================================================
+Converted from testMultiValueStringContainsArrayOfOneElement()
+=== case
+Multi-value string CONTAINS array of one element
+=== SQL
+SELECT dim3
+FROM druid.numfoo
+WHERE MV_CONTAINS(dim3, ARRAY['a'])
+LIMIT 5
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim3 VARCHAR
+=== plan
+LogicalSort(fetch=[5])
+  LogicalProject(dim3=[$6])
+    LogicalFilter(condition=[MV_CONTAINS($6, ARRAY('a'))])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "limit" : 5,
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "dim3",
+    "value" : "a"
+  },
+  "columns" : [ "dim3" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+["[\"a\",\"b\"]"]
+==============================================================
+Converted from testMultiValueStringContainsArrayOfNonLiteral()
+=== case
+Multi-value string CONTAINS array of non-literal
+=== SQL
+SELECT dim3
+FROM druid.numfoo
+WHERE MV_CONTAINS(dim3, ARRAY[dim2])
+LIMIT 5
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim3 VARCHAR
+=== plan
+LogicalSort(fetch=[5])
+  LogicalProject(dim3=[$6])
+    LogicalFilter(condition=[MV_CONTAINS($6, ARRAY($5))])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "limit" : 5,
+  "filter" : {
+    "type" : "expression",
+    "expression" : "array_contains(\"dim3\",array(\"dim2\"))"
+  },
+  "columns" : [ "dim3" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+["[\"a\",\"b\"]"]
+==============================================================
+Converted from testMultiValueStringSlice()
+=== case
+Multi-value string SLICE
+=== SQL
+SELECT MV_SLICE(dim3, 1)
+FROM druid.numfoo
+=== options
+vectorize=true
+=== schema
+EXPR$0 VARCHAR
+=== plan
+LogicalProject(EXPR$0=[MV_SLICE($6, 1)])
+  LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_slice(\"dim3\",1)",
+    "outputType" : "STRING"
+  } ],
+  "resultFormat" : "compactedList",
+  "columns" : [ "v0" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["[\"b\"]"]
+["[\"c\"]"]
+["[]"]
+[""]
+[""]
+[""]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["[\"b\"]"]
+["[\"c\"]"]
+["[]"]
+["[]"]
+[null]
+[null]
+==============================================================
+Converted from testMultiValueStringLength()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Multi-value string length
+=== SQL
+SELECT dim1, MV_LENGTH(dim3), SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1, 2
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+dim1 VARCHAR
+EXPR$1 INTEGER
+EXPR$2 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0, 1}], EXPR$2=[SUM($2)])
+    LogicalProject(dim1=[$4], EXPR$1=[MV_LENGTH($6)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_length(\"dim3\")",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d1",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "_d1",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",2,1]
+["10.1",2,1]
+["2",1,1]
+["1",0,1]
+["abc",0,1]
+["def",0,1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["",2,1]
+["10.1",2,1]
+["1",1,1]
+["2",1,1]
+["abc",null,1]
+["def",null,1]
+==============================================================
+Converted from testMultiValueStringAppend()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Multi-value string APPEND
+=== SQL
+SELECT MV_APPEND(dim3, 'foo'), SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[MV_APPEND($6, 'foo')], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_append(\"dim3\",'foo')",
+    "outputType" : "STRING"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",3]
+["foo",3]
+["b",2]
+["a",1]
+["c",1]
+["d",1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["foo",4]
+[null,2]
+["b",2]
+["",1]
+["a",1]
+["c",1]
+["d",1]
+==============================================================
+Converted from testMultiValueStringPrepend()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Multi-value string PREPEND
+=== SQL
+SELECT MV_PREPEND('foo', dim3), SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[MV_PREPEND('foo', $6)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_prepend('foo',\"dim3\")",
+    "outputType" : "STRING"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",3]
+["foo",3]
+["b",2]
+["a",1]
+["c",1]
+["d",1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["foo",4]
+[null,2]
+["b",2]
+["",1]
+["a",1]
+["c",1]
+["d",1]
+==============================================================
+Converted from testMultiValueStringPrependAppend()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Multi-value string prepend/append
+=== SQL
+SELECT
+  MV_TO_STRING(MV_PREPEND('foo', dim3), ','),
+  MV_TO_STRING(MV_APPEND(dim3, 'foo'), ','),
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1,2
+ORDER BY 3 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 VARCHAR
+EXPR$2 BIGINT
+=== plan
+LogicalSort(sort0=[$2], dir0=[DESC])
+  LogicalAggregate(group=[{0, 1}], EXPR$2=[SUM($2)])
+    LogicalProject(EXPR$0=[MV_TO_STRING(MV_PREPEND('foo', $6), ',')], EXPR$1=[MV_TO_STRING(MV_APPEND($6, 'foo'), ',')], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_to_string(array_prepend('foo',\"dim3\"),',')",
+    "outputType" : "STRING"
+  }, {
+    "type" : "expression",
+    "name" : "v1",
+    "expression" : "array_to_string(array_append(\"dim3\",'foo'),',')",
+    "outputType" : "STRING"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "v1",
+    "outputName" : "_d1",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["","",3]
+["foo,a,b","a,b,foo",1]
+["foo,b,c","b,c,foo",1]
+["foo,d","d,foo",1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,null,2]
+["foo,",",foo",1]
+["foo,a,b","a,b,foo",1]
+["foo,b,c","b,c,foo",1]
+["foo,d","d,foo",1]
+==============================================================
+Converted from testMultiValueStringConcat()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Multi-value string CONCAT
+=== SQL
+SELECT MV_CONCAT(dim3, dim3), SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[MV_CONCAT($6, $6)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_concat(\"dim3\",\"dim3\")",
+    "outputType" : "STRING"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["b",4]
+["",3]
+["a",2]
+["c",2]
+["d",2]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["b",4]
+[null,2]
+["",2]
+["a",2]
+["c",2]
+["d",2]
+==============================================================
+Converted from testMultiValueStringConcatBackwardsCompat0dot22andOlder()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Multi-value string CONCAT backwards compatibility 0.22 and older
+=== SQL
+SELECT MV_CONCAT(dim3, dim3), SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+homogenizeNullMultiValueStrings=true
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[MV_CONCAT($6, $6)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_concat(\"dim3\",\"dim3\")",
+    "outputType" : "STRING"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",6]
+["b",4]
+["a",2]
+["c",2]
+["d",2]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,4]
+["b",4]
+["",2]
+["a",2]
+["c",2]
+["d",2]
+==============================================================
+Converted from testMultiValueStringOffset()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Multi-value string OFFSET
+=== SQL
+SELECT MV_OFFSET(dim3, 1), SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[MV_OFFSET($6, 1)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_offset(\"dim3\",1)",
+    "outputType" : "STRING"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",4]
+["b",1]
+["c",1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,4]
+["b",1]
+["c",1]
+==============================================================
+Converted from testMultiValueStringOrdinal()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Multi-value string ORDINAL
+=== SQL
+SELECT MV_ORDINAL(dim3, 2), SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[MV_ORDINAL($6, 2)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_ordinal(\"dim3\",2)",
+    "outputType" : "STRING"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",4]
+["b",1]
+["c",1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,4]
+["b",1]
+["c",1]
+==============================================================
+Converted from testMultiValueStringOffsetOf()
+
+Cannot vectorize due to usage of expressions.
+=== case
+MV_OFFSET_OF
+=== SQL
+SELECT MV_OFFSET_OF(dim3, 'b'), SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 INTEGER
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[MV_OFFSET_OF($6, 'b')], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_offset_of(\"dim3\",'b')",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[0,4]
+[-1,1]
+[1,1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,4]
+[0,1]
+[1,1]
+==============================================================
+Converted from testMultiValueStringOrdinalOf()
+
+Cannot vectorize due to usage of expressions.
+=== case
+MV_ORDINAL_OF
+=== SQL
+SELECT MV_ORDINAL_OF(dim3, 'b'), SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 INTEGER
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[MV_ORDINAL_OF($6, 'b')], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_ordinal_of(\"dim3\",'b')",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[0,3]
+[-1,1]
+[1,1]
+[2,1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,4]
+[1,1]
+[2,1]
+==============================================================
+Converted from testMultiValueStringToString()
+
+Cannot vectorize due to usage of expressions.
+=== case
+MV_TO_STRING
+=== SQL
+SELECT MV_TO_STRING(dim3, ','), SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[MV_TO_STRING($6, ',')], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_to_string(\"dim3\",',')",
+    "outputType" : "STRING"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",3]
+["a,b",1]
+["b,c",1]
+["d",1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,2]
+["",1]
+["a,b",1]
+["b,c",1]
+["d",1]
+==============================================================
+Converted from testMultiValueStringToStringToMultiValueString()
+
+Cannot vectorize due to usage of expressions.
+=== case
+MV_TO_STRING to string to STRING_TO_MV
+=== SQL
+SELECT
+  STRING_TO_MV(CONCAT(MV_TO_STRING(dim3, ','), ',d'), ','),
+  SUM(cnt)
+FROM druid.numfoo
+WHERE MV_LENGTH(dim3) > 0
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[STRING_TO_MV(CONCAT(MV_TO_STRING($6, ','), ',d'), ',')], cnt=[$1])
+      LogicalFilter(condition=[>(MV_LENGTH($6), 0)])
+        LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_length(\"dim3\")",
+    "outputType" : "LONG"
+  }, {
+    "type" : "expression",
+    "name" : "v1",
+    "expression" : "string_to_array(concat(array_to_string(\"dim3\",','),',d'),',')",
+    "outputType" : "STRING"
+  } ],
+  "filter" : {
+    "type" : "bound",
+    "dimension" : "v0",
+    "lower" : "0",
+    "lowerStrict" : true,
+    "ordering" : {
+      "type" : "numeric"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v1",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["d",4]
+["b",2]
+["a",1]
+["c",1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["d",5]
+["b",2]
+["",1]
+["a",1]
+["c",1]
+==============================================================
+Converted from testMultiValueListFilter()
+
+Cannot vectorize due to usage of expressions.
+=== case
+MV_FILTER_ONLY
+=== SQL
+SELECT MV_FILTER_ONLY(dim3, ARRAY['b']), SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[MV_FILTER_ONLY($6, ARRAY('b'))], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "mv-filtered",
+    "name" : "v0",
+    "delegate" : {
+      "type" : "default",
+      "dimension" : "dim3",
+      "outputName" : "dim3",
+      "outputType" : "STRING"
+    },
+    "values" : [ "b" ],
+    "isAllowList" : true
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",4]
+["b",2]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,4]
+["b",2]
+==============================================================
+Converted from testMultiValueListFilterDeny()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Multi-value list filter deny
+=== SQL
+SELECT MV_FILTER_NONE(dim3, ARRAY['b']), SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[MV_FILTER_NONE($6, ARRAY('b'))], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "mv-filtered",
+    "name" : "v0",
+    "delegate" : {
+      "type" : "default",
+      "dimension" : "dim3",
+      "outputName" : "dim3",
+      "outputType" : "STRING"
+    },
+    "values" : [ "b" ],
+    "isAllowList" : false
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",3]
+["a",1]
+["c",1]
+["d",1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,2]
+["",1]
+["a",1]
+["c",1]
+["d",1]
+==============================================================
+Converted from testMultiValueListFilterComposed()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Multi-value list filter composed
+=== SQL
+SELECT
+  MV_LENGTH(MV_FILTER_ONLY(dim3, ARRAY['b'])),
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 INTEGER
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[MV_LENGTH(MV_FILTER_ONLY($6, ARRAY('b')))], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_length(\"v1\")",
+    "outputType" : "LONG"
+  }, {
+    "type" : "mv-filtered",
+    "name" : "v1",
+    "delegate" : {
+      "type" : "default",
+      "dimension" : "dim3",
+      "outputName" : "dim3",
+      "outputType" : "STRING"
+    },
+    "values" : [ "b" ],
+    "isAllowList" : true
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[0,4]
+[1,2]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,4]
+[1,2]
+==============================================================
+Converted from testMultiValueListFilterComposedNested()
+
+Cannot vectorize due to usage of expressions.
+
+This run behavior is strange - you might be expecting instead of
+default values it should actually be 'no b', but instead we end
+up with something else.
+
+It happens when using 'notnull' on the mv-filtered virtual column
+because deferred expression selector returns a 0 sized row, which
+is treated as a missing value by the grouping, and so the expression
+which would evaluate and return 'no b' is never evaluated. If we
+were not using the deferred selector, the results would be 'no b'
+because IndexedInts representing [], [null], and null are
+homogenized into [null] to handle variation between segments.
+
+If the 'notnull' was instead using the array filtering fallback
+expression
+case_searched(notnull(filter((x) -> array_contains(array('b'), x), \"dim3\")),\"v1\",'no b')
+where it doesn't use the deferred selector because it is no longer
+a single input expression, it would still evaluate to null
+because the filter expression never returns null, only an empty
+array, which is not null, so it evaluates 'v1' which of course is
+null because it is an empty row.
+=== case
+Multi value list filter composed nested
+=== SQL
+SELECT
+  COALESCE(MV_FILTER_ONLY(dim3, ARRAY['b']), 'no b'),
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[CASE(IS NOT NULL(MV_FILTER_ONLY($6, ARRAY('b'))), MV_FILTER_ONLY($6, ARRAY('b')), 'no b':VARCHAR)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "case_searched(notnull(\"v1\"),\"v1\",'no b')",
+    "outputType" : "STRING"
+  }, {
+    "type" : "mv-filtered",
+    "name" : "v1",
+    "delegate" : {
+      "type" : "default",
+      "dimension" : "dim3",
+      "outputName" : "dim3",
+      "outputType" : "STRING"
+    },
+    "values" : [ "b" ],
+    "isAllowList" : true
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",4]
+["b",2]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,4]
+["b",2]
+==============================================================
+Converted from testMultiValueListFilterComposedNested2Input()
+Cannot vectorize due to usage of expressions.
+
+With 2 inputs, the non-deferred selector is used, and so
+the values of dim1 are used for all of the 'null'
+values returned by MV_FILTER_ONLY
+=== case
+Multi value list filter composed nested2 input
+=== SQL
+SELECT
+  COALESCE(MV_FILTER_ONLY(dim3, ARRAY['b']), dim1),
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[CASE(IS NOT NULL(MV_FILTER_ONLY($6, ARRAY('b'))), MV_FILTER_ONLY($6, ARRAY('b')), $4)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "case_searched(notnull(\"v1\"),\"v1\",\"dim1\")",
+    "outputType" : "STRING"
+  }, {
+    "type" : "mv-filtered",
+    "name" : "v1",
+    "delegate" : {
+      "type" : "default",
+      "dimension" : "dim3",
+      "outputName" : "dim3",
+      "outputType" : "STRING"
+    },
+    "values" : [ "b" ],
+    "isAllowList" : true
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== results
+["b",2]
+["1",1]
+["2",1]
+["abc",1]
+["def",1]
+==============================================================
+Converted from testMultiValueListFilterComposedNestedNullLiteral()
+
+Cannot vectorize due to usage of expressions.
+
+Unfortunately, unable to work around the strange behavior by
+adding nulls to the allow list, since not all of the values are
+actually [], so some of them end up as 'no b'
+=== case
+Multi value list filter composed nested null literal
+=== SQL
+SELECT
+  COALESCE(MV_FILTER_ONLY(dim3, ARRAY[NULL, 'b']), 'no b'),
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[CASE(IS NOT NULL(MV_FILTER_ONLY($6, ARRAY(null:NULL, 'b'))), MV_FILTER_ONLY($6, ARRAY(null:NULL, 'b')), 'no b':VARCHAR)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "case_searched(notnull(\"v1\"),\"v1\",'no b')",
+    "outputType" : "STRING"
+  }, {
+    "type" : "mv-filtered",
+    "name" : "v1",
+    "delegate" : {
+      "type" : "default",
+      "dimension" : "dim3",
+      "outputName" : "dim3",
+      "outputType" : "STRING"
+    },
+    "values" : [ null, "b" ],
+    "isAllowList" : true
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",2]
+["b",2]
+["no b",2]
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",2]
+["b",2]
+["no b",2]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,3]
+["b",2]
+["no b",1]
+==============================================================
+Converted from testMultiValueListFilterComposedDeny()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Multi-value list filter composed deny
+=== SQL
+SELECT
+  MV_LENGTH(MV_FILTER_NONE(dim3, ARRAY['b'])),
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 INTEGER
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[MV_LENGTH(MV_FILTER_NONE($6, ARRAY('b')))], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_length(\"v1\")",
+    "outputType" : "LONG"
+  }, {
+    "type" : "mv-filtered",
+    "name" : "v1",
+    "delegate" : {
+      "type" : "default",
+      "dimension" : "dim3",
+      "outputName" : "dim3",
+      "outputType" : "STRING"
+    },
+    "values" : [ "b" ],
+    "isAllowList" : false
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[0,3]
+[1,3]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[1,4]
+[null,2]
+==============================================================
+Converted from testFilterOnMultiValueListFilterNoMatch()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Filter on multi-value list filter with no match
+=== SQL
+SELECT dim3, SUM(cnt)
+FROM druid.numfoo
+WHERE MV_FILTER_ONLY(dim3, ARRAY['b']) = 'a'
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+dim3 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(dim3=[$6], cnt=[$1])
+      LogicalFilter(condition=[=(MV_FILTER_ONLY($6, ARRAY('b')), 'a')])
+        LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "mv-filtered",
+    "name" : "v0",
+    "delegate" : {
+      "type" : "default",
+      "dimension" : "dim3",
+      "outputName" : "dim3",
+      "outputType" : "STRING"
+    },
+    "values" : [ "b" ],
+    "isAllowList" : true
+  } ],
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "v0",
+    "value" : "a"
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim3",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== results
+==============================================================
+Converted from testFilterOnMultiValueListFilterMatch()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Filter on multi-value list filter with with match
+=== SQL
+SELECT dim3, SUM(cnt)
+FROM druid.numfoo
+WHERE MV_FILTER_ONLY(dim3, ARRAY['b']) = 'b'
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+dim3 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(dim3=[$6], cnt=[$1])
+      LogicalFilter(condition=[=(MV_FILTER_ONLY($6, ARRAY('b')), 'b')])
+        LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "mv-filtered",
+    "name" : "v0",
+    "delegate" : {
+      "type" : "default",
+      "dimension" : "dim3",
+      "outputName" : "dim3",
+      "outputType" : "STRING"
+    },
+    "values" : [ "b" ],
+    "isAllowList" : true
+  } ],
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "v0",
+    "value" : "b"
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim3",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== results
+["b",2]
+["a",1]
+["c",1]
+==============================================================
+Converted from testFilterOnMultiValueListFilterMatchLike()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Filter on multi-value list filter match LIKE
+=== SQL
+SELECT dim3, SUM(cnt)
+FROM druid.numfoo
+WHERE MV_FILTER_ONLY(dim3, ARRAY['b']) LIKE 'b%'
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+dim3 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(dim3=[$6], cnt=[$1])
+      LogicalFilter(condition=[LIKE(MV_FILTER_ONLY($6, ARRAY('b')), 'b%')])
+        LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "mv-filtered",
+    "name" : "v0",
+    "delegate" : {
+      "type" : "default",
+      "dimension" : "dim3",
+      "outputName" : "dim3",
+      "outputType" : "STRING"
+    },
+    "values" : [ "b" ],
+    "isAllowList" : true
+  } ],
+  "filter" : {
+    "type" : "like",
+    "dimension" : "v0",
+    "pattern" : "b%",
+    "escape" : null,
+    "extractionFn" : null
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim3",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== results
+["b",2]
+["a",1]
+["c",1]
+==============================================================
+Converted from testMultiValueToArrayGroupAsArrayWithMultiValueDimension()
+
+Cannot vectorize as we do not have support in native query
+subsystem for grouping on arrays as keys
+=== case
+Multi-value to array group as array with multi-value dimension
+=== SQL
+SELECT MV_TO_ARRAY(dim3), SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== context
+sqlStringifyArrays=false
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR ARRAY
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[MV_TO_ARRAY($6)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "mv_to_array(\"dim3\")",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  },
+  "context" : {
+    "sqlStringifyArrays" : false
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[null,3]
+[["a","b"],1]
+[["b","c"],1]
+[["d"],1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,2]
+[[""],1]
+[["a","b"],1]
+[["b","c"],1]
+[["d"],1]
+==============================================================
+Converted from testMultiValueToArrayGroupAsArrayWithSingleValueDim()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Multi-value to array group as array with string value dimension
+=== SQL
+SELECT MV_TO_ARRAY(dim1), SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== context
+sqlStringifyArrays=false
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR ARRAY
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[MV_TO_ARRAY($4)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "mv_to_array(\"dim1\")",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  },
+  "context" : {
+    "sqlStringifyArrays" : false
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[null,1]
+[["1"],1]
+[["10.1"],1]
+[["2"],1]
+[["abc"],1]
+[["def"],1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[[""],1]
+[["1"],1]
+[["10.1"],1]
+[["2"],1]
+[["abc"],1]
+[["def"],1]
+==============================================================
+Converted from testMultiValueToArrayGroupAsArrayWithSingleValueDimIsNotConvertedToTopN()
+
+Test for method org.apache.druid.sql.calcite.rel.DruidQuery.toTopNQuery()
+ so that it does not convert group by on array to topn
+
+Cannot vectorize due to usage of expressions.
+=== case
+Multi-value array to array group as array with string value dim not converted to TopN
+=== SQL
+SELECT MV_TO_ARRAY(dim1), SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+limit 10
+=== context
+sqlStringifyArrays=false
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR ARRAY
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC], fetch=[10])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[MV_TO_ARRAY($4)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "mv_to_array(\"dim1\")",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ],
+    "limit" : 10
+  },
+  "context" : {
+    "sqlStringifyArrays" : false
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[null,1]
+[["1"],1]
+[["10.1"],1]
+[["2"],1]
+[["abc"],1]
+[["def"],1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[[""],1]
+[["1"],1]
+[["10.1"],1]
+[["2"],1]
+[["abc"],1]
+[["def"],1]
+==============================================================
+Converted from testMultiValueToArrayMoreArgs()
+=== case
+MV_TO_ARRAY with too many args
+=== SQL
+SELECT MV_TO_ARRAY(dim3,dim3) FROM druid.numfoo
+=== error
+!.*: From line 1, column 8 to line 1, column 29: Invalid number of arguments to function 'MV_TO_ARRAY'. Was expecting 1 arguments
+==============================================================
+Converted from testMultiValueToArrayNoArgs()
+=== case
+MV_TO_ARRAY with no args
+=== SQL
+SELECT MV_TO_ARRAY()
+FROM druid.numfoo
+=== error
+!.*: Invalid number of arguments to function 'MV_TO_ARRAY'. Was expecting 1 arguments
+==============================================================
+Converted from testMultiValueToArrayArgsWithMultiValueDimFunc()
+=== case
+MV_TO_ARRAY args with multi-value dimension func
+=== SQL
+SELECT MV_TO_ARRAY(concat(dim3,'c'))
+FROM druid.numfoo
+=== exception
+RuntimeException
+=== error
+!Error while applying rule DruidQueryRule\(SELECT_PROJECT\), args .*
+==============================================================
+Converted from testMultiValueToArrayArgsWithSingleDimFunc()
+Note that the SQL for this test is identical to above. Error?
+=== case
+MV_TO_ARRAY args with single dimension func
+=== SQL
+SELECT MV_TO_ARRAY(concat(dim1,'c'))
+FROM druid.numfoo
+=== exception
+RuntimeException
+=== error
+!Error while applying rule DruidQueryRule\(SELECT_PROJECT\), args .*
+==============================================================
+Converted from testMultiValueToArrayArgsWithConstant()
+Note that the SQL for this test is identical to above. Error?
+=== case
+MV_TO_ARRAY with constant args
+=== SQL
+SELECT MV_TO_ARRAY(concat(dim1,'c'))
+FROM druid.numfoo
+=== exception
+RuntimeException
+=== error
+!Error while applying rule DruidQueryRule\(SELECT_PROJECT\), args .*
+==============================================================
+Converted from testMultiValueToArrayArgsWithArray()
+=== case
+MV_TO_ARRAY with array arg
+=== SQL
+SELECT MV_TO_ARRAY(Array[1,2]) FROM druid.numfoo
+=== error
+!.*: \QCannot apply 'MV_TO_ARRAY' to arguments of type 'MV_TO_ARRAY(<INTEGER ARRAY>)'. Supported form(s): 'MV_TO_ARRAY(<STRING>)'\E

@@ -1,0 +1,3488 @@
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+==============================================================
+Converted from testTimeseriesDescending()
+Cannot vectorize due to descending order.
+=== case
+Timeseries descending
+=== SQL
+SELECT gran, SUM(cnt) FROM (
+  SELECT floor(__time TO month) AS gran,
+  cnt FROM druid.foo
+) AS x
+GROUP BY gran
+ORDER BY gran DESC
+=== options
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+gran TIMESTAMP(3)
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$0], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(gran=[FLOOR($0, FLAG(MONTH))], cnt=[$1])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "descending" : true,
+  "granularity" : "MONTH",
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "context" : {
+    "skipEmptyBuckets" : true,
+    "timestampResultField" : "d0"
+  }
+}
+=== results
+[978307200000,3]
+[946684800000,3]
+==============================================================
+Converted from testTimeseriesEmptyResultsAggregatorDefaultValues()
+Timeseries with all granularity have a single group, so should
+return default results for given aggregators
+=== case
+Timeseries empty results aggregator default values
+=== SQL
+SELECT
+  count(*),
+  COUNT(DISTINCT dim1),
+  APPROX_COUNT_DISTINCT(distinct dim1),
+  sum(d1),
+  max(d1),
+  min(d1),
+  sum(l1),
+  max(l1),
+  min(l1),
+  avg(l1),
+  avg(d1)
+FROM druid.numfoo
+WHERE dim2 = 0
+=== options
+sqlCompatibleNulls=false
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+EXPR$1 BIGINT
+EXPR$2 BIGINT
+EXPR$3 DOUBLE
+EXPR$4 DOUBLE
+EXPR$5 DOUBLE
+EXPR$6 BIGINT
+EXPR$7 BIGINT
+EXPR$8 BIGINT
+EXPR$9 BIGINT
+EXPR$10 DOUBLE
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()], EXPR$1=[COUNT(DISTINCT $0)], EXPR$2=[APPROX_COUNT_DISTINCT(DISTINCT $0)], EXPR$3=[SUM($1)], EXPR$4=[MAX($1)], EXPR$5=[MIN($1)], EXPR$6=[SUM($2)], EXPR$7=[MAX($2)], EXPR$8=[MIN($2)], EXPR$9=[AVG($2)], EXPR$10=[AVG($1)])
+  LogicalProject(dim1=[$4], d1=[$2], l1=[$12])
+    LogicalFilter(condition=[=(CAST($5):INTEGER, 0)])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "bound",
+    "dimension" : "dim2",
+    "lower" : "0",
+    "upper" : "0",
+    "ordering" : {
+      "type" : "numeric"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  }, {
+    "type" : "cardinality",
+    "name" : "a1",
+    "fields" : [ {
+      "type" : "default",
+      "dimension" : "dim1",
+      "outputName" : "dim1",
+      "outputType" : "STRING"
+    } ],
+    "byRow" : false,
+    "round" : true
+  }, {
+    "type" : "cardinality",
+    "name" : "a2",
+    "fields" : [ {
+      "type" : "default",
+      "dimension" : "dim1",
+      "outputName" : "dim1",
+      "outputType" : "STRING"
+    } ],
+    "byRow" : false,
+    "round" : true
+  }, {
+    "type" : "doubleSum",
+    "name" : "a3",
+    "fieldName" : "d1"
+  }, {
+    "type" : "doubleMax",
+    "name" : "a4",
+    "fieldName" : "d1"
+  }, {
+    "type" : "doubleMin",
+    "name" : "a5",
+    "fieldName" : "d1"
+  }, {
+    "type" : "longSum",
+    "name" : "a6",
+    "fieldName" : "l1"
+  }, {
+    "type" : "longMax",
+    "name" : "a7",
+    "fieldName" : "l1"
+  }, {
+    "type" : "longMin",
+    "name" : "a8",
+    "fieldName" : "l1"
+  }, {
+    "type" : "longSum",
+    "name" : "a9:sum",
+    "fieldName" : "l1"
+  }, {
+    "type" : "count",
+    "name" : "a9:count"
+  }, {
+    "type" : "doubleSum",
+    "name" : "a10:sum",
+    "fieldName" : "d1"
+  }, {
+    "type" : "count",
+    "name" : "a10:count"
+  } ],
+  "postAggregations" : [ {
+    "type" : "arithmetic",
+    "name" : "a9",
+    "fn" : "quotient",
+    "fields" : [ {
+      "type" : "fieldAccess",
+      "fieldName" : "a9:sum"
+    }, {
+      "type" : "fieldAccess",
+      "fieldName" : "a9:count"
+    } ]
+  }, {
+    "type" : "arithmetic",
+    "name" : "a10",
+    "fn" : "quotient",
+    "fields" : [ {
+      "type" : "fieldAccess",
+      "fieldName" : "a10:sum"
+    }, {
+      "type" : "fieldAccess",
+      "fieldName" : "a10:count"
+    } ]
+  } ]
+}
+=== results
+[0,0,0,0.0,"-Infinity","Infinity",0,-9223372036854775808,9223372036854775807,0,"NaN"]
+==============================================================
+Converted from testTimeseriesEmptyResultsAggregatorDefaultValues()
+Timeseries with all granularity have a single group, so should
+return default results for given aggregators
+=== case
+Timeseries empty results aggregator default values
+=== SQL copy
+=== options
+sqlCompatibleNulls=true
+vectorize=true
+=== schema copy
+=== plan copy
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "bound",
+    "dimension" : "dim2",
+    "lower" : "0",
+    "upper" : "0",
+    "ordering" : {
+      "type" : "numeric"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  }, {
+    "type" : "cardinality",
+    "name" : "a1",
+    "fields" : [ {
+      "type" : "default",
+      "dimension" : "dim1",
+      "outputName" : "dim1",
+      "outputType" : "STRING"
+    } ],
+    "byRow" : false,
+    "round" : true
+  }, {
+    "type" : "cardinality",
+    "name" : "a2",
+    "fields" : [ {
+      "type" : "default",
+      "dimension" : "dim1",
+      "outputName" : "dim1",
+      "outputType" : "STRING"
+    } ],
+    "byRow" : false,
+    "round" : true
+  }, {
+    "type" : "doubleSum",
+    "name" : "a3",
+    "fieldName" : "d1"
+  }, {
+    "type" : "doubleMax",
+    "name" : "a4",
+    "fieldName" : "d1"
+  }, {
+    "type" : "doubleMin",
+    "name" : "a5",
+    "fieldName" : "d1"
+  }, {
+    "type" : "longSum",
+    "name" : "a6",
+    "fieldName" : "l1"
+  }, {
+    "type" : "longMax",
+    "name" : "a7",
+    "fieldName" : "l1"
+  }, {
+    "type" : "longMin",
+    "name" : "a8",
+    "fieldName" : "l1"
+  }, {
+    "type" : "longSum",
+    "name" : "a9:sum",
+    "fieldName" : "l1"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "a9:count"
+    },
+    "filter" : {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "l1"
+      }
+    },
+    "name" : "a9:count"
+  }, {
+    "type" : "doubleSum",
+    "name" : "a10:sum",
+    "fieldName" : "d1"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "a10:count"
+    },
+    "filter" : {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "d1"
+      }
+    },
+    "name" : "a10:count"
+  } ],
+  "postAggregations" : [ {
+    "type" : "arithmetic",
+    "name" : "a9",
+    "fn" : "quotient",
+    "fields" : [ {
+      "type" : "fieldAccess",
+      "fieldName" : "a9:sum"
+    }, {
+      "type" : "fieldAccess",
+      "fieldName" : "a9:count"
+    } ]
+  }, {
+    "type" : "arithmetic",
+    "name" : "a10",
+    "fn" : "quotient",
+    "fields" : [ {
+      "type" : "fieldAccess",
+      "fieldName" : "a10:sum"
+    }, {
+      "type" : "fieldAccess",
+      "fieldName" : "a10:count"
+    } ]
+  } ],
+  "context" : {
+    "defaultTimeout" : 300000,
+    "maxScatterGatherBytes" : 9223372036854775807,
+    "sqlCurrentTimestamp" : "2000-01-01T00:00:00Z",
+    "sqlQueryId" : "dummy"
+  }
+}
+=== results
+[0,0,0,null,null,null,null,null,null,null,null]
+==============================================================
+Converted from testTimeseriesEmptyResultsAggregatorDefaultValuesNonVectorized()
+Timeseries with all granularity have a single group, so should
+return default results for given aggregators
+=== case
+Timeseries empty results aggregator default values non vectorized
+=== SQL
+SELECT
+  ANY_VALUE(dim1, 1024),
+  ANY_VALUE(l1),
+  EARLIEST(dim1, 1024),
+  EARLIEST(l1),
+  LATEST(dim1, 1024),
+  LATEST(l1),
+  ARRAY_AGG(DISTINCT dim3),
+  STRING_AGG(DISTINCT dim3, '|'),
+  BIT_AND(l1),
+  BIT_OR(l1),
+  BIT_XOR(l1)
+FROM druid.numfoo
+WHERE dim2 = 0
+=== options
+sqlCompatibleNulls=false
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+EXPR$2 VARCHAR
+EXPR$3 BIGINT
+EXPR$4 VARCHAR
+EXPR$5 BIGINT
+EXPR$6 VARCHAR ARRAY
+EXPR$7 VARCHAR
+EXPR$8 BIGINT
+EXPR$9 BIGINT
+EXPR$10 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[ANY_VALUE($0, $1)], EXPR$1=[ANY_VALUE($2)], EXPR$2=[EARLIEST($0, $1)], EXPR$3=[EARLIEST($2)], EXPR$4=[LATEST($0, $1)], EXPR$5=[LATEST($2)], EXPR$6=[ARRAY_AGG(DISTINCT $3)], EXPR$7=[STRING_AGG(DISTINCT $3, $4)], EXPR$8=[BIT_AND($2)], EXPR$9=[BIT_OR($2)], EXPR$10=[BIT_XOR($2)])
+  LogicalProject(dim1=[$4], $f1=[1024], l1=[$12], dim3=[$6], $f4=['|'])
+    LogicalFilter(condition=[=(CAST($5):INTEGER, 0)])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "bound",
+    "dimension" : "dim2",
+    "lower" : "0",
+    "upper" : "0",
+    "ordering" : {
+      "type" : "numeric"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "stringAny",
+    "name" : "a0",
+    "fieldName" : "dim1",
+    "maxStringBytes" : 1024
+  }, {
+    "type" : "longAny",
+    "name" : "a1",
+    "fieldName" : "l1"
+  }, {
+    "type" : "stringFirst",
+    "name" : "a2",
+    "fieldName" : "dim1",
+    "timeColumn" : "__time",
+    "maxStringBytes" : 1024
+  }, {
+    "type" : "longFirst",
+    "name" : "a3",
+    "fieldName" : "l1",
+    "timeColumn" : "__time"
+  }, {
+    "type" : "stringLast",
+    "name" : "a4",
+    "fieldName" : "dim1",
+    "timeColumn" : "__time",
+    "maxStringBytes" : 1024
+  }, {
+    "type" : "longLast",
+    "name" : "a5",
+    "fieldName" : "l1",
+    "timeColumn" : "__time"
+  }, {
+    "type" : "expression",
+    "name" : "a6",
+    "fields" : [ "dim3" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<STRING>[]",
+    "initialCombineValue" : "ARRAY<STRING>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_set_add(\"__acc\", \"dim3\")",
+    "combine" : "array_set_add_all(\"__acc\", \"a6\")",
+    "maxSizeBytes" : 1024
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "expression",
+      "name" : "a7",
+      "fields" : [ "dim3" ],
+      "accumulatorIdentifier" : "__acc",
+      "initialValue" : "[]",
+      "initialCombineValue" : "[]",
+      "isNullUnlessAggregated" : true,
+      "shouldAggregateNullInputs" : false,
+      "shouldCombineAggregateNullInputs" : false,
+      "fold" : "array_set_add(\"__acc\", \"dim3\")",
+      "combine" : "array_set_add_all(\"__acc\", \"a7\")",
+      "finalize" : "if(array_length(o) == 0, null, array_to_string(o, '|'))",
+      "maxSizeBytes" : 1024
+    },
+    "filter" : {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "dim3"
+      }
+    },
+    "name" : "a7"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "expression",
+      "name" : "a8",
+      "fields" : [ "l1" ],
+      "accumulatorIdentifier" : "__acc",
+      "initialValue" : "0",
+      "initialCombineValue" : "0",
+      "isNullUnlessAggregated" : false,
+      "shouldAggregateNullInputs" : false,
+      "shouldCombineAggregateNullInputs" : false,
+      "fold" : "bitwiseAnd(\"__acc\", \"l1\")",
+      "combine" : "bitwiseAnd(\"__acc\", \"a8\")",
+      "maxSizeBytes" : 1024
+    },
+    "filter" : {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "l1"
+      }
+    },
+    "name" : "a8"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "expression",
+      "name" : "a9",
+      "fields" : [ "l1" ],
+      "accumulatorIdentifier" : "__acc",
+      "initialValue" : "0",
+      "initialCombineValue" : "0",
+      "isNullUnlessAggregated" : false,
+      "shouldAggregateNullInputs" : false,
+      "shouldCombineAggregateNullInputs" : false,
+      "fold" : "bitwiseOr(\"__acc\", \"l1\")",
+      "combine" : "bitwiseOr(\"__acc\", \"a9\")",
+      "maxSizeBytes" : 1024
+    },
+    "filter" : {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "l1"
+      }
+    },
+    "name" : "a9"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "expression",
+      "name" : "a10",
+      "fields" : [ "l1" ],
+      "accumulatorIdentifier" : "__acc",
+      "initialValue" : "0",
+      "initialCombineValue" : "0",
+      "isNullUnlessAggregated" : false,
+      "shouldAggregateNullInputs" : false,
+      "shouldCombineAggregateNullInputs" : false,
+      "fold" : "bitwiseXor(\"__acc\", \"l1\")",
+      "combine" : "bitwiseXor(\"__acc\", \"a10\")",
+      "maxSizeBytes" : 1024
+    },
+    "filter" : {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "l1"
+      }
+    },
+    "name" : "a10"
+  } ]
+}
+=== results
+["",0,"",0,"",0,null,"",0,0,0]
+==============================================================
+Converted from testTimeseriesEmptyResultsAggregatorDefaultValuesNonVectorized()
+Timeseries with all granularity have a single group, so should
+return default results for given aggregators
+=== case
+Timeseries empty results aggregator default values non vectorized
+=== SQL copy
+=== options
+sqlCompatibleNulls=true
+vectorize=false
+=== schema copy
+=== plan copy
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "bound",
+    "dimension" : "dim2",
+    "lower" : "0",
+    "upper" : "0",
+    "ordering" : {
+      "type" : "numeric"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "stringAny",
+    "name" : "a0",
+    "fieldName" : "dim1",
+    "maxStringBytes" : 1024
+  }, {
+    "type" : "longAny",
+    "name" : "a1",
+    "fieldName" : "l1"
+  }, {
+    "type" : "stringFirst",
+    "name" : "a2",
+    "fieldName" : "dim1",
+    "timeColumn" : "__time",
+    "maxStringBytes" : 1024
+  }, {
+    "type" : "longFirst",
+    "name" : "a3",
+    "fieldName" : "l1",
+    "timeColumn" : "__time"
+  }, {
+    "type" : "stringLast",
+    "name" : "a4",
+    "fieldName" : "dim1",
+    "timeColumn" : "__time",
+    "maxStringBytes" : 1024
+  }, {
+    "type" : "longLast",
+    "name" : "a5",
+    "fieldName" : "l1",
+    "timeColumn" : "__time"
+  }, {
+    "type" : "expression",
+    "name" : "a6",
+    "fields" : [ "dim3" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<STRING>[]",
+    "initialCombineValue" : "ARRAY<STRING>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_set_add(\"__acc\", \"dim3\")",
+    "combine" : "array_set_add_all(\"__acc\", \"a6\")",
+    "maxSizeBytes" : 1024
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "expression",
+      "name" : "a7",
+      "fields" : [ "dim3" ],
+      "accumulatorIdentifier" : "__acc",
+      "initialValue" : "[]",
+      "initialCombineValue" : "[]",
+      "isNullUnlessAggregated" : true,
+      "shouldAggregateNullInputs" : false,
+      "shouldCombineAggregateNullInputs" : false,
+      "fold" : "array_set_add(\"__acc\", \"dim3\")",
+      "combine" : "array_set_add_all(\"__acc\", \"a7\")",
+      "finalize" : "if(array_length(o) == 0, null, array_to_string(o, '|'))",
+      "maxSizeBytes" : 1024
+    },
+    "filter" : {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "dim3"
+      }
+    },
+    "name" : "a7"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "expression",
+      "name" : "a8",
+      "fields" : [ "l1" ],
+      "accumulatorIdentifier" : "__acc",
+      "initialValue" : "0",
+      "initialCombineValue" : "0",
+      "isNullUnlessAggregated" : true,
+      "shouldAggregateNullInputs" : false,
+      "shouldCombineAggregateNullInputs" : false,
+      "fold" : "bitwiseAnd(\"__acc\", \"l1\")",
+      "combine" : "bitwiseAnd(\"__acc\", \"a8\")",
+      "maxSizeBytes" : 1024
+    },
+    "filter" : {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "l1"
+      }
+    },
+    "name" : "a8"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "expression",
+      "name" : "a9",
+      "fields" : [ "l1" ],
+      "accumulatorIdentifier" : "__acc",
+      "initialValue" : "0",
+      "initialCombineValue" : "0",
+      "isNullUnlessAggregated" : true,
+      "shouldAggregateNullInputs" : false,
+      "shouldCombineAggregateNullInputs" : false,
+      "fold" : "bitwiseOr(\"__acc\", \"l1\")",
+      "combine" : "bitwiseOr(\"__acc\", \"a9\")",
+      "maxSizeBytes" : 1024
+    },
+    "filter" : {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "l1"
+      }
+    },
+    "name" : "a9"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "expression",
+      "name" : "a10",
+      "fields" : [ "l1" ],
+      "accumulatorIdentifier" : "__acc",
+      "initialValue" : "0",
+      "initialCombineValue" : "0",
+      "isNullUnlessAggregated" : true,
+      "shouldAggregateNullInputs" : false,
+      "shouldCombineAggregateNullInputs" : false,
+      "fold" : "bitwiseXor(\"__acc\", \"l1\")",
+      "combine" : "bitwiseXor(\"__acc\", \"a10\")",
+      "maxSizeBytes" : 1024
+    },
+    "filter" : {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "l1"
+      }
+    },
+    "name" : "a10"
+  } ],
+  "context" : {
+    "defaultTimeout" : 300000,
+    "maxScatterGatherBytes" : 9223372036854775807,
+    "sqlCurrentTimestamp" : "2000-01-01T00:00:00Z",
+    "sqlQueryId" : "dummy"
+  }
+}
+=== results
+[null,null,null,null,null,null,null,null,null,null,null]
+==============================================================
+Converted from testGroupByAggregatorDefaultValues()
+=== case
+Group by aggregator default values
+=== SQL
+SELECT
+  dim2,
+  count(*) FILTER(WHERE dim1 = 'nonexistent'),
+  COUNT(DISTINCT dim1) FILTER(WHERE dim1 = 'nonexistent'),
+  APPROX_COUNT_DISTINCT(distinct dim1) FILTER(WHERE dim1 = 'nonexistent'),
+  sum(d1) FILTER(WHERE dim1 = 'nonexistent'),
+  max(d1) FILTER(WHERE dim1 = 'nonexistent'),
+  min(d1) FILTER(WHERE dim1 = 'nonexistent'),
+  sum(l1) FILTER(WHERE dim1 = 'nonexistent'),
+  max(l1) FILTER(WHERE dim1 = 'nonexistent'),
+  min(l1) FILTER(WHERE dim1 = 'nonexistent'),
+  avg(l1) FILTER(WHERE dim1 = 'nonexistent'),
+  avg(d1) FILTER(WHERE dim1 = 'nonexistent')
+FROM druid.numfoo
+WHERE dim2 = 'a'
+GROUP BY dim2
+=== options
+sqlCompatibleNulls=false
+vectorize=true
+=== schema
+dim2 VARCHAR
+EXPR$1 BIGINT
+EXPR$2 BIGINT
+EXPR$3 BIGINT
+EXPR$4 DOUBLE
+EXPR$5 DOUBLE
+EXPR$6 DOUBLE
+EXPR$7 BIGINT
+EXPR$8 BIGINT
+EXPR$9 BIGINT
+EXPR$10 BIGINT
+EXPR$11 DOUBLE
+=== plan
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT() FILTER $1], EXPR$2=[COUNT(DISTINCT $2) FILTER $1], EXPR$3=[APPROX_COUNT_DISTINCT(DISTINCT $2) FILTER $1], EXPR$4=[SUM($3) FILTER $1], EXPR$5=[MAX($3) FILTER $1], EXPR$6=[MIN($3) FILTER $1], EXPR$7=[SUM($4) FILTER $1], EXPR$8=[MAX($4) FILTER $1], EXPR$9=[MIN($4) FILTER $1], EXPR$10=[AVG($4) FILTER $1], EXPR$11=[AVG($3) FILTER $1])
+  LogicalProject(dim2=[$5], $f1=[IS TRUE(=($4, 'nonexistent'))], dim1=[$4], d1=[$2], l1=[$12])
+    LogicalFilter(condition=[=($5, 'a')])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "'a'",
+    "outputType" : "STRING"
+  } ],
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "dim2",
+    "value" : "a"
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "a0"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a0"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "cardinality",
+      "name" : "a1",
+      "fields" : [ {
+        "type" : "default",
+        "dimension" : "dim1",
+        "outputName" : "dim1",
+        "outputType" : "STRING"
+      } ],
+      "byRow" : false,
+      "round" : true
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a1"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "cardinality",
+      "name" : "a2",
+      "fields" : [ {
+        "type" : "default",
+        "dimension" : "dim1",
+        "outputName" : "dim1",
+        "outputType" : "STRING"
+      } ],
+      "byRow" : false,
+      "round" : true
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a2"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "doubleSum",
+      "name" : "a3",
+      "fieldName" : "d1"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a3"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "doubleMax",
+      "name" : "a4",
+      "fieldName" : "d1"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a4"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "doubleMin",
+      "name" : "a5",
+      "fieldName" : "d1"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a5"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "longSum",
+      "name" : "a6",
+      "fieldName" : "l1"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a6"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "longMax",
+      "name" : "a7",
+      "fieldName" : "l1"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a7"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "longMin",
+      "name" : "a8",
+      "fieldName" : "l1"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a8"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "longSum",
+      "name" : "a9:sum",
+      "fieldName" : "l1"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a9:sum"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "a9:count"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a9:count"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "doubleSum",
+      "name" : "a10:sum",
+      "fieldName" : "d1"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a10:sum"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "a10:count"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a10:count"
+  } ],
+  "postAggregations" : [ {
+    "type" : "arithmetic",
+    "name" : "a9",
+    "fn" : "quotient",
+    "fields" : [ {
+      "type" : "fieldAccess",
+      "fieldName" : "a9:sum"
+    }, {
+      "type" : "fieldAccess",
+      "fieldName" : "a9:count"
+    } ]
+  }, {
+    "type" : "arithmetic",
+    "name" : "a10",
+    "fn" : "quotient",
+    "fields" : [ {
+      "type" : "fieldAccess",
+      "fieldName" : "a10:sum"
+    }, {
+      "type" : "fieldAccess",
+      "fieldName" : "a10:count"
+    } ]
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== results
+["a",0,0,0,0.0,"-Infinity","Infinity",0,-9223372036854775808,9223372036854775807,0,"NaN"]
+==============================================================
+Converted from testGroupByAggregatorDefaultValues()
+=== case
+Group by aggregator default values
+=== SQL copy
+=== options
+sqlCompatibleNulls=true
+vectorize=true
+=== schema copy
+=== plan copy
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "'a'",
+    "outputType" : "STRING"
+  } ],
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "dim2",
+    "value" : "a"
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "a0"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a0"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "cardinality",
+      "name" : "a1",
+      "fields" : [ {
+        "type" : "default",
+        "dimension" : "dim1",
+        "outputName" : "dim1",
+        "outputType" : "STRING"
+      } ],
+      "byRow" : false,
+      "round" : true
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a1"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "cardinality",
+      "name" : "a2",
+      "fields" : [ {
+        "type" : "default",
+        "dimension" : "dim1",
+        "outputName" : "dim1",
+        "outputType" : "STRING"
+      } ],
+      "byRow" : false,
+      "round" : true
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a2"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "doubleSum",
+      "name" : "a3",
+      "fieldName" : "d1"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a3"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "doubleMax",
+      "name" : "a4",
+      "fieldName" : "d1"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a4"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "doubleMin",
+      "name" : "a5",
+      "fieldName" : "d1"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a5"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "longSum",
+      "name" : "a6",
+      "fieldName" : "l1"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a6"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "longMax",
+      "name" : "a7",
+      "fieldName" : "l1"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a7"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "longMin",
+      "name" : "a8",
+      "fieldName" : "l1"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a8"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "longSum",
+      "name" : "a9:sum",
+      "fieldName" : "l1"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a9:sum"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "a9:count"
+    },
+    "filter" : {
+      "type" : "and",
+      "fields" : [ {
+        "type" : "not",
+        "field" : {
+          "type" : "selector",
+          "dimension" : "l1"
+        }
+      }, {
+        "type" : "selector",
+        "dimension" : "dim1",
+        "value" : "nonexistent"
+      } ]
+    },
+    "name" : "a9:count"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "doubleSum",
+      "name" : "a10:sum",
+      "fieldName" : "d1"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a10:sum"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "a10:count"
+    },
+    "filter" : {
+      "type" : "and",
+      "fields" : [ {
+        "type" : "not",
+        "field" : {
+          "type" : "selector",
+          "dimension" : "d1"
+        }
+      }, {
+        "type" : "selector",
+        "dimension" : "dim1",
+        "value" : "nonexistent"
+      } ]
+    },
+    "name" : "a10:count"
+  } ],
+  "postAggregations" : [ {
+    "type" : "arithmetic",
+    "name" : "a9",
+    "fn" : "quotient",
+    "fields" : [ {
+      "type" : "fieldAccess",
+      "fieldName" : "a9:sum"
+    }, {
+      "type" : "fieldAccess",
+      "fieldName" : "a9:count"
+    } ]
+  }, {
+    "type" : "arithmetic",
+    "name" : "a10",
+    "fn" : "quotient",
+    "fields" : [ {
+      "type" : "fieldAccess",
+      "fieldName" : "a10:sum"
+    }, {
+      "type" : "fieldAccess",
+      "fieldName" : "a10:count"
+    } ]
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "context" : {
+    "defaultTimeout" : 300000,
+    "maxScatterGatherBytes" : 9223372036854775807,
+    "sqlCurrentTimestamp" : "2000-01-01T00:00:00Z",
+    "sqlQueryId" : "dummy"
+  }
+}
+=== results
+["a",0,0,0,null,null,null,null,null,null,null,null]
+==============================================================
+Converted from testGroupByAggregatorDefaultValuesNonVectorized()
+=== case
+Group by aggregator default values non vectorized
+=== SQL
+SELECT
+  dim2,
+  ANY_VALUE(dim1, 1024) FILTER(WHERE dim1 = 'nonexistent'),
+  ANY_VALUE(l1) FILTER(WHERE dim1 = 'nonexistent'),
+  EARLIEST(dim1, 1024) FILTER(WHERE dim1 = 'nonexistent'),
+  EARLIEST(l1) FILTER(WHERE dim1 = 'nonexistent'),
+  LATEST(dim1, 1024) FILTER(WHERE dim1 = 'nonexistent'),
+  LATEST(l1) FILTER(WHERE dim1 = 'nonexistent'),
+  ARRAY_AGG(DISTINCT dim3) FILTER(WHERE dim1 = 'nonexistent'),
+  STRING_AGG(DISTINCT dim3, '|') FILTER(WHERE dim1 = 'nonexistent'),
+  BIT_AND(l1) FILTER(WHERE dim1 = 'nonexistent'),
+  BIT_OR(l1) FILTER(WHERE dim1 = 'nonexistent'),
+  BIT_XOR(l1) FILTER(WHERE dim1 = 'nonexistent')
+FROM druid.numfoo
+WHERE dim2 = 'a'
+GROUP BY dim2
+=== options
+vectorize=false
+=== schema
+dim2 VARCHAR
+EXPR$1 VARCHAR
+EXPR$2 BIGINT
+EXPR$3 VARCHAR
+EXPR$4 BIGINT
+EXPR$5 VARCHAR
+EXPR$6 BIGINT
+EXPR$7 VARCHAR ARRAY
+EXPR$8 VARCHAR
+EXPR$9 BIGINT
+EXPR$10 BIGINT
+EXPR$11 BIGINT
+=== plan
+LogicalAggregate(group=[{0}], EXPR$1=[ANY_VALUE($1, $2) FILTER $3], EXPR$2=[ANY_VALUE($4) FILTER $3], EXPR$3=[EARLIEST($1, $2) FILTER $3], EXPR$4=[EARLIEST($4) FILTER $3], EXPR$5=[LATEST($1, $2) FILTER $3], EXPR$6=[LATEST($4) FILTER $3], EXPR$7=[ARRAY_AGG(DISTINCT $5) FILTER $3], EXPR$8=[STRING_AGG(DISTINCT $5, $6) FILTER $3], EXPR$9=[BIT_AND($4) FILTER $3], EXPR$10=[BIT_OR($4) FILTER $3], EXPR$11=[BIT_XOR($4) FILTER $3])
+  LogicalProject(dim2=[$5], dim1=[$4], $f2=[1024], $f3=[IS TRUE(=($4, 'nonexistent'))], l1=[$12], dim3=[$6], $f6=['|'])
+    LogicalFilter(condition=[=($5, 'a')])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "'a'",
+    "outputType" : "STRING"
+  } ],
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "dim2",
+    "value" : "a"
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "stringAny",
+      "name" : "a0",
+      "fieldName" : "dim1",
+      "maxStringBytes" : 1024
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a0"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "longAny",
+      "name" : "a1",
+      "fieldName" : "l1"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a1"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "stringFirst",
+      "name" : "a2",
+      "fieldName" : "dim1",
+      "timeColumn" : "__time",
+      "maxStringBytes" : 1024
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a2"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "longFirst",
+      "name" : "a3",
+      "fieldName" : "l1",
+      "timeColumn" : "__time"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a3"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "stringLast",
+      "name" : "a4",
+      "fieldName" : "dim1",
+      "timeColumn" : "__time",
+      "maxStringBytes" : 1024
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a4"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "longLast",
+      "name" : "a5",
+      "fieldName" : "l1",
+      "timeColumn" : "__time"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a5"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "expression",
+      "name" : "a6",
+      "fields" : [ "dim3" ],
+      "accumulatorIdentifier" : "__acc",
+      "initialValue" : "ARRAY<STRING>[]",
+      "initialCombineValue" : "ARRAY<STRING>[]",
+      "isNullUnlessAggregated" : true,
+      "shouldAggregateNullInputs" : true,
+      "shouldCombineAggregateNullInputs" : false,
+      "fold" : "array_set_add(\"__acc\", \"dim3\")",
+      "combine" : "array_set_add_all(\"__acc\", \"a6\")",
+      "maxSizeBytes" : 1024
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "nonexistent"
+    },
+    "name" : "a6"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "expression",
+      "name" : "a7",
+      "fields" : [ "dim3" ],
+      "accumulatorIdentifier" : "__acc",
+      "initialValue" : "[]",
+      "initialCombineValue" : "[]",
+      "isNullUnlessAggregated" : true,
+      "shouldAggregateNullInputs" : false,
+      "shouldCombineAggregateNullInputs" : false,
+      "fold" : "array_set_add(\"__acc\", \"dim3\")",
+      "combine" : "array_set_add_all(\"__acc\", \"a7\")",
+      "finalize" : "if(array_length(o) == 0, null, array_to_string(o, '|'))",
+      "maxSizeBytes" : 1024
+    },
+    "filter" : {
+      "type" : "and",
+      "fields" : [ {
+        "type" : "not",
+        "field" : {
+          "type" : "selector",
+          "dimension" : "dim3"
+        }
+      }, {
+        "type" : "selector",
+        "dimension" : "dim1",
+        "value" : "nonexistent"
+      } ]
+    },
+    "name" : "a7"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "expression",
+      "name" : "a8",
+      "fields" : [ "l1" ],
+      "accumulatorIdentifier" : "__acc",
+      "initialValue" : "0",
+      "initialCombineValue" : "0",
+      "isNullUnlessAggregated" : false,
+      "shouldAggregateNullInputs" : false,
+      "shouldCombineAggregateNullInputs" : false,
+      "fold" : "bitwiseAnd(\"__acc\", \"l1\")",
+      "combine" : "bitwiseAnd(\"__acc\", \"a8\")",
+      "maxSizeBytes" : 1024
+    },
+    "filter" : {
+      "type" : "and",
+      "fields" : [ {
+        "type" : "not",
+        "field" : {
+          "type" : "selector",
+          "dimension" : "l1"
+        }
+      }, {
+        "type" : "selector",
+        "dimension" : "dim1",
+        "value" : "nonexistent"
+      } ]
+    },
+    "name" : "a8"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "expression",
+      "name" : "a9",
+      "fields" : [ "l1" ],
+      "accumulatorIdentifier" : "__acc",
+      "initialValue" : "0",
+      "initialCombineValue" : "0",
+      "isNullUnlessAggregated" : false,
+      "shouldAggregateNullInputs" : false,
+      "shouldCombineAggregateNullInputs" : false,
+      "fold" : "bitwiseOr(\"__acc\", \"l1\")",
+      "combine" : "bitwiseOr(\"__acc\", \"a9\")",
+      "maxSizeBytes" : 1024
+    },
+    "filter" : {
+      "type" : "and",
+      "fields" : [ {
+        "type" : "not",
+        "field" : {
+          "type" : "selector",
+          "dimension" : "l1"
+        }
+      }, {
+        "type" : "selector",
+        "dimension" : "dim1",
+        "value" : "nonexistent"
+      } ]
+    },
+    "name" : "a9"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "expression",
+      "name" : "a10",
+      "fields" : [ "l1" ],
+      "accumulatorIdentifier" : "__acc",
+      "initialValue" : "0",
+      "initialCombineValue" : "0",
+      "isNullUnlessAggregated" : false,
+      "shouldAggregateNullInputs" : false,
+      "shouldCombineAggregateNullInputs" : false,
+      "fold" : "bitwiseXor(\"__acc\", \"l1\")",
+      "combine" : "bitwiseXor(\"__acc\", \"a10\")",
+      "maxSizeBytes" : 1024
+    },
+    "filter" : {
+      "type" : "and",
+      "fields" : [ {
+        "type" : "not",
+        "field" : {
+          "type" : "selector",
+          "dimension" : "l1"
+        }
+      }, {
+        "type" : "selector",
+        "dimension" : "dim1",
+        "value" : "nonexistent"
+      } ]
+    },
+    "name" : "a10"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["a","",0,"",0,"",0,null,"",0,0,0]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["a",null,null,null,null,null,null,null,null,null,null,null]
+==============================================================
+Converted from testGroupByExtractYear()
+Cannot vectorize due to virtual columns.
+=== case
+Group by extract year
+=== SQL
+SELECT
+  EXTRACT(YEAR FROM __time) AS "year",
+  SUM(cnt)
+FROM druid.foo
+GROUP BY EXTRACT(YEAR FROM __time)
+ORDER BY 1
+=== options
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+year BIGINT
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$0], dir0=[ASC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(year=[EXTRACT(FLAG(YEAR), $0)], cnt=[$1])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "timestamp_extract(\"__time\",'YEAR','UTC')",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "d0",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== results
+[2000,3]
+[2001,3]
+==============================================================
+Converted from testGroupByFormatYearAndMonth()
+Cannot vectorize due to virtual columns.
+=== case
+Group by format year and month
+=== SQL
+SELECT
+  TIME_FORMAt(__time, 'yyyy MM') AS "year",
+  SUM(cnt)
+FROM druid.foo
+GROUP BY TIME_FORMAt(__time, 'yyyy MM')
+ORDER BY 1
+=== options
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+year VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$0], dir0=[ASC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(year=[TIME_FORMAT($0, 'yyyy MM')], cnt=[$1])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "timestamp_format(\"__time\",'yyyy MM','UTC')",
+    "outputType" : "STRING"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "d0",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "lexicographic"
+      }
+    } ]
+  }
+}
+=== results
+["2000 01",3]
+["2001 01",3]
+==============================================================
+Converted from testGroupByExtractFloorTime()
+Cannot vectorize due to virtual columns.
+=== case
+Group by extract floor time
+=== SQL
+SELECT
+EXTRACT(YEAR FROM FLOOR(__time TO YEAR)) AS "year", SUM(cnt)
+FROM druid.foo
+GROUP BY EXTRACT(YEAR FROM FLOOR(__time TO YEAR))
+=== options
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+year BIGINT
+EXPR$1 BIGINT
+=== plan
+LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+  LogicalProject(year=[EXTRACT(FLAG(YEAR), FLOOR($0, FLAG(YEAR)))], cnt=[$1])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "timestamp_extract(timestamp_floor(\"__time\",'P1Y',null,'UTC'),'YEAR','UTC')",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== results
+[2000,3]
+[2001,3]
+==============================================================
+Converted from testGroupByExtractFloorTimeLosAngeles()
+Cannot vectorize due to virtual columns.
+=== case
+Group by extract floor time los angeles
+=== SQL
+SELECT
+EXTRACT(YEAR FROM FLOOR(__time TO YEAR)) AS "year", SUM(cnt)
+FROM druid.foo
+GROUP BY EXTRACT(YEAR FROM FLOOR(__time TO YEAR))
+=== context
+sqlTimeZone=America/Los_Angeles
+=== options
+sqlCompatibleNulls=both
+vectorize=false
+=== plan
+LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+  LogicalProject(year=[EXTRACT(FLAG(YEAR), FLOOR($0, FLAG(YEAR)))], cnt=[$1])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "timestamp_extract(timestamp_floor(\"__time\",'P1Y',null,'America/Los_Angeles'),'YEAR','America/Los_Angeles')",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "context" : {
+    "sqlTimeZone" : "America/Los_Angeles"
+  }
+}
+=== results
+[1999,1]
+[2000,3]
+[2001,2]
+==============================================================
+Converted from testTimeseriesWithLimitNoTopN()
+=== case
+Timeseries with limit no top n
+=== SQL
+SELECT gran, SUM(cnt)
+FROM (
+  SELECT floor(__time TO month) AS gran, cnt
+  FROM druid.foo
+) AS x
+GROUP BY gran
+ORDER BY gran
+LIMIT 1
+=== options
+planner.maxTopNLimit=0
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+gran TIMESTAMP(3)
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$0], dir0=[ASC], fetch=[1])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(gran=[FLOOR($0, FLAG(MONTH))], cnt=[$1])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : "MONTH",
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limit" : 1,
+  "context" : {
+    "skipEmptyBuckets" : true,
+    "timestampResultField" : "d0"
+  }
+}
+=== results
+[946684800000,3]
+==============================================================
+Converted from testTimeseriesWithLimit()
+=== case
+Timeseries with limit
+=== SQL
+SELECT gran, SUM(cnt)
+FROM (
+  SELECT floor(__time TO month) AS gran, cnt
+  FROM druid.foo
+) AS x
+GROUP BY gran
+LIMIT 1
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+gran TIMESTAMP(3)
+EXPR$1 BIGINT
+=== plan
+LogicalSort(fetch=[1])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(gran=[FLOOR($0, FLAG(MONTH))], cnt=[$1])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : "MONTH",
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limit" : 1,
+  "context" : {
+    "skipEmptyBuckets" : true,
+    "timestampResultField" : "d0"
+  }
+}
+=== results
+[946684800000,3]
+==============================================================
+Converted from testTimeseriesWithLimitAndOffset()
+Timeseries cannot handle offsets, so the query morphs into a groupBy.
+=== case
+Timeseries with limit and offset
+=== SQL
+SELECT gran, SUM(cnt)
+FROM (
+  SELECT floor(__time TO month) AS gran, cnt
+  FROM druid.foo
+) AS x
+GROUP BY gran
+LIMIT 2
+OFFSET 1
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+gran TIMESTAMP(3)
+EXPR$1 BIGINT
+=== plan
+LogicalSort(offset=[1], fetch=[2])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(gran=[FLOOR($0, FLAG(MONTH))], cnt=[$1])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ ],
+    "offset" : 1,
+    "limit" : 2
+  }
+}
+=== results
+[978307200000,3]
+==============================================================
+Converted from testTimeseriesWithOrderByAndLimit()
+=== case
+Timeseries with order by and limit
+=== SQL
+SELECT gran, SUM(cnt)
+FROM (
+  SELECT floor(__time TO month) AS gran, cnt
+  FROM druid.foo
+) AS x
+GROUP BY gran
+ORDER BY gran
+LIMIT 1
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+gran TIMESTAMP(3)
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$0], dir0=[ASC], fetch=[1])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(gran=[FLOOR($0, FLAG(MONTH))], cnt=[$1])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : "MONTH",
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limit" : 1,
+  "context" : {
+    "skipEmptyBuckets" : true,
+    "timestampResultField" : "d0"
+  }
+}
+=== results
+[946684800000,3]
+==============================================================
+Converted from testGroupByTimeAndOtherDimension()
+=== case
+Group by time and other dimension
+=== SQL
+SELECT dim2, gran, SUM(cnt)
+FROM (SELECT FLOOR(__time TO MONTH) AS gran, dim2, cnt FROM druid.foo) AS x
+GROUP BY dim2, gran
+ORDER BY dim2, gran
+=== options
+vectorize=true
+=== schema
+dim2 VARCHAR
+gran TIMESTAMP(3)
+EXPR$2 BIGINT
+=== plan
+LogicalSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[ASC])
+  LogicalAggregate(group=[{0, 1}], EXPR$2=[SUM($2)])
+    LogicalProject(dim2=[$3], gran=[FLOOR($0, FLAG(MONTH))], cnt=[$1])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim2",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d1",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "d0",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "lexicographic"
+      }
+    }, {
+      "dimension" : "d1",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  },
+  "context" : {
+    "timestampResultField" : "d1",
+    "timestampResultFieldGranularity" : "MONTH",
+    "timestampResultFieldInOriginalDimensions" : 1
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",946684800000,2]
+["",978307200000,1]
+["a",946684800000,1]
+["a",978307200000,1]
+["abc",978307200000,1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,946684800000,1]
+[null,978307200000,1]
+["",946684800000,1]
+["a",946684800000,1]
+["a",978307200000,1]
+["abc",978307200000,1]
+==============================================================
+Converted from testGroupByTimeFloorAndDimOnGroupByTimeFloorAndDim()
+=== case
+Group by time floor and dim on group by time floor and dim
+=== SQL
+SELECT dim2, time_floor(gran, 'P1M') gran, sum(s)
+FROM (
+  SELECT time_floor(__time, 'P1D') AS gran, dim2, sum(m1) as s
+  FROM druid.foo
+  GROUP BY 1, 2
+  HAVING sum(m1) > 1
+  ) AS x
+GROUP BY 1, 2
+ORDER BY dim2, gran desc
+=== options
+vectorize=true
+=== schema
+dim2 VARCHAR
+gran TIMESTAMP(3)
+EXPR$2 DOUBLE
+=== plan
+LogicalSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[DESC])
+  LogicalAggregate(group=[{0, 1}], EXPR$2=[SUM($2)])
+    LogicalProject(dim2=[$1], gran=[TIME_FLOOR($0, 'P1M')], s=[$2])
+      LogicalFilter(condition=[>($2, 1)])
+        LogicalAggregate(group=[{0, 1}], s=[SUM($2)])
+          LogicalProject(gran=[TIME_FLOOR($0, 'P1D')], dim2=[$3], m1=[$5])
+            LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "groupBy",
+      "dataSource" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "virtualColumns" : [ {
+        "type" : "expression",
+        "name" : "v0",
+        "expression" : "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+        "outputType" : "LONG"
+      } ],
+      "granularity" : {
+        "type" : "all"
+      },
+      "dimensions" : [ {
+        "type" : "default",
+        "dimension" : "v0",
+        "outputName" : "d0",
+        "outputType" : "LONG"
+      }, {
+        "type" : "default",
+        "dimension" : "dim2",
+        "outputName" : "d1",
+        "outputType" : "STRING"
+      } ],
+      "aggregations" : [ {
+        "type" : "doubleSum",
+        "name" : "a0",
+        "fieldName" : "m1"
+      } ],
+      "limitSpec" : {
+        "type" : "NoopLimitSpec"
+      },
+      "context" : {
+        "timestampResultField" : "d0",
+        "timestampResultFieldGranularity" : "DAY",
+        "timestampResultFieldInOriginalDimensions" : 0
+      }
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "timestamp_floor(\"d0\",'P1M',null,'UTC')",
+    "outputType" : "LONG"
+  } ],
+  "filter" : {
+    "type" : "bound",
+    "dimension" : "a0",
+    "lower" : "1",
+    "lowerStrict" : true,
+    "ordering" : {
+      "type" : "numeric"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "d1",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d1",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "doubleSum",
+    "name" : "_a0",
+    "fieldName" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "_d0",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "lexicographic"
+      }
+    }, {
+      "dimension" : "_d1",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",978307200000,6.0]
+["",946684800000,5.0]
+["a",978307200000,4.0]
+["abc",978307200000,5.0]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,978307200000,6.0]
+[null,946684800000,2.0]
+["",946684800000,3.0]
+["a",978307200000,4.0]
+["abc",978307200000,5.0]
+==============================================================
+Converted from testGroupingSets()
+Cannot vectorize due to virtual columns.
+=== case
+Grouping sets
+=== SQL
+SELECT dim2, gran, SUM(cnt), GROUPING(dim2, gran)
+FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x
+GROUP BY GROUPING SETS ( (dim2, gran), (dim2), (gran), () )
+=== options
+vectorize=false
+=== schema
+dim2 VARCHAR
+gran TIMESTAMP(3)
+EXPR$2 BIGINT
+EXPR$3 BIGINT
+=== plan
+LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {1}, {}]], EXPR$2=[SUM($2)], EXPR$3=[GROUPING($0, $1)])
+  LogicalProject(dim2=[CASE(IS NOT NULL($3), $3, '':VARCHAR)], gran=[FLOOR($0, FLAG(MONTH))], cnt=[$1])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+    "outputType" : "STRING"
+  }, {
+    "type" : "expression",
+    "name" : "v1",
+    "expression" : "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "v1",
+    "outputName" : "d1",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  }, {
+    "type" : "grouping",
+    "name" : "a1",
+    "groupings" : [ "v0", "v1" ]
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "subtotalsSpec" : [ [ "d0", "d1" ], [ "d0" ], [ "d1" ], [ ] ],
+  "context" : {
+    "timestampResultField" : "d1",
+    "timestampResultFieldGranularity" : "MONTH",
+    "timestampResultFieldInOriginalDimensions" : 1
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",946684800000,2,0]
+["",978307200000,1,0]
+["a",946684800000,1,0]
+["a",978307200000,1,0]
+["abc",978307200000,1,0]
+["",null,3,1]
+["a",null,2,1]
+["abc",null,1,1]
+["",946684800000,3,2]
+["",978307200000,3,2]
+["",null,6,3]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["",946684800000,2,0]
+["",978307200000,1,0]
+["a",946684800000,1,0]
+["a",978307200000,1,0]
+["abc",978307200000,1,0]
+["",null,3,1]
+["a",null,2,1]
+["abc",null,1,1]
+[null,946684800000,3,2]
+[null,978307200000,3,2]
+[null,null,6,3]
+==============================================================
+Converted from testGroupingAggregatorDifferentOrder()
+Cannot vectorize due to virtual columns.
+=== case
+Grouping aggregator different order
+=== SQL
+SELECT dim2, gran, SUM(cnt), GROUPING(gran, dim2)
+FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x
+GROUP BY GROUPING SETS ( (dim2, gran), (dim2), (gran), () )
+=== options
+mergeBufferCount=3
+vectorize=false
+=== schema
+dim2 VARCHAR
+gran TIMESTAMP(3)
+EXPR$2 BIGINT
+EXPR$3 BIGINT
+=== plan
+LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {1}, {}]], EXPR$2=[SUM($2)], EXPR$3=[GROUPING($1, $0)])
+  LogicalProject(dim2=[CASE(IS NOT NULL($3), $3, '':VARCHAR)], gran=[FLOOR($0, FLAG(MONTH))], cnt=[$1])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+    "outputType" : "STRING"
+  }, {
+    "type" : "expression",
+    "name" : "v1",
+    "expression" : "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "v1",
+    "outputName" : "d1",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  }, {
+    "type" : "grouping",
+    "name" : "a1",
+    "groupings" : [ "v1", "v0" ]
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "subtotalsSpec" : [ [ "d0", "d1" ], [ "d0" ], [ "d1" ], [ ] ],
+  "context" : {
+    "timestampResultField" : "d1",
+    "timestampResultFieldGranularity" : "MONTH",
+    "timestampResultFieldInOriginalDimensions" : 1
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",946684800000,2,0]
+["",978307200000,1,0]
+["a",946684800000,1,0]
+["a",978307200000,1,0]
+["abc",978307200000,1,0]
+["",null,3,2]
+["a",null,2,2]
+["abc",null,1,2]
+["",946684800000,3,1]
+["",978307200000,3,1]
+["",null,6,3]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["",946684800000,2,0]
+["",978307200000,1,0]
+["a",946684800000,1,0]
+["a",978307200000,1,0]
+["abc",978307200000,1,0]
+["",null,3,2]
+["a",null,2,2]
+["abc",null,1,2]
+[null,946684800000,3,1]
+[null,978307200000,3,1]
+[null,null,6,3]
+==============================================================
+Converted from testGroupingAggregatorWithPostAggregator()
+=== case
+Grouping aggregator with post aggregator
+=== SQL
+SELECT
+  dim2,
+  SUM(cnt),
+  GROUPING(dim2),
+  CASE WHEN GROUPING(dim2) = 1 THEN 'ALL' ELSE dim2 END
+FROM druid.foo
+GROUP BY GROUPING SETS ( (dim2), () )
+=== options
+vectorize=true
+=== schema
+dim2 VARCHAR
+EXPR$1 BIGINT
+EXPR$2 BIGINT
+EXPR$3 VARCHAR
+=== plan
+LogicalProject(dim2=[$0], EXPR$1=[$1], EXPR$2=[$2], EXPR$3=[CASE(=($2, 1), 'ALL':VARCHAR, $0)])
+  LogicalAggregate(group=[{0}], groups=[[{0}, {}]], EXPR$1=[SUM($1)], EXPR$2=[GROUPING($0)])
+    LogicalProject(dim2=[$3], cnt=[$1])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim2",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  }, {
+    "type" : "grouping",
+    "name" : "a1",
+    "groupings" : [ "dim2" ]
+  } ],
+  "postAggregations" : [ {
+    "type" : "expression",
+    "name" : "p0",
+    "expression" : "case_searched((\"a1\" == 1),'ALL',\"d0\")"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "subtotalsSpec" : [ [ "d0" ], [ ] ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",3,0,""]
+["a",2,0,"a"]
+["abc",1,0,"abc"]
+["",6,1,"ALL"]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,2,0,null]
+["",1,0,""]
+["a",2,0,"a"]
+["abc",1,0,"abc"]
+[null,6,1,"ALL"]
+==============================================================
+Converted from testGroupingSetsWithNumericDimension()
+=== case
+Grouping sets with numeric dimension
+=== SQL
+SELECT cnt, COUNT(*)
+FROM foo
+GROUP BY GROUPING SETS ( (cnt), () )
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+cnt BIGINT
+EXPR$1 BIGINT
+=== plan
+LogicalAggregate(group=[{0}], groups=[[{0}, {}]], EXPR$1=[COUNT()])
+  LogicalProject(cnt=[$1])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "cnt",
+    "outputName" : "d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "subtotalsSpec" : [ [ "d0" ], [ ] ]
+}
+=== results
+[1,6]
+[null,6]
+==============================================================
+Converted from testGroupByRollup()
+Cannot vectorize due to virtual columns.
+=== case
+Group by rollup
+=== SQL
+SELECT dim2, gran, SUM(cnt)
+FROM (
+  SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt
+  FROM druid.foo) AS x
+GROUP BY ROLLUP (dim2, gran)
+=== options
+vectorize=false
+=== schema
+dim2 VARCHAR
+gran TIMESTAMP(3)
+EXPR$2 BIGINT
+=== plan
+LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {}]], EXPR$2=[SUM($2)])
+  LogicalProject(dim2=[CASE(IS NOT NULL($3), $3, '':VARCHAR)], gran=[FLOOR($0, FLAG(MONTH))], cnt=[$1])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+    "outputType" : "STRING"
+  }, {
+    "type" : "expression",
+    "name" : "v1",
+    "expression" : "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "v1",
+    "outputName" : "d1",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "subtotalsSpec" : [ [ "d0", "d1" ], [ "d0" ], [ ] ],
+  "context" : {
+    "timestampResultField" : "d1",
+    "timestampResultFieldGranularity" : "MONTH",
+    "timestampResultFieldInOriginalDimensions" : 1
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",946684800000,2]
+["",978307200000,1]
+["a",946684800000,1]
+["a",978307200000,1]
+["abc",978307200000,1]
+["",null,3]
+["a",null,2]
+["abc",null,1]
+["",null,6]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["",946684800000,2]
+["",978307200000,1]
+["a",946684800000,1]
+["a",978307200000,1]
+["abc",978307200000,1]
+["",null,3]
+["a",null,2]
+["abc",null,1]
+[null,null,6]
+==============================================================
+Converted from testGroupByRollupDifferentOrder()
+Cannot vectorize due to virtual columns.
+=== case
+Group by rollup different order
+=== SQL
+SELECT dim2, gran, SUM(cnt)
+FROM (
+  SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt
+  FROM druid.foo
+  ) AS x
+GROUP BY ROLLUP (gran, dim2)
+=== options
+vectorize=false
+=== schema
+dim2 VARCHAR
+gran TIMESTAMP(3)
+EXPR$2 BIGINT
+=== plan
+LogicalProject(dim2=[$1], gran=[$0], EXPR$2=[$2])
+  LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {}]], EXPR$2=[SUM($2)])
+    LogicalProject(gran=[FLOOR($0, FLAG(MONTH))], dim2=[CASE(IS NOT NULL($3), $3, '':VARCHAR)], cnt=[$1])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+    "outputType" : "LONG"
+  }, {
+    "type" : "expression",
+    "name" : "v1",
+    "expression" : "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+    "outputType" : "STRING"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "LONG"
+  }, {
+    "type" : "default",
+    "dimension" : "v1",
+    "outputName" : "d1",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "subtotalsSpec" : [ [ "d0", "d1" ], [ "d0" ], [ ] ],
+  "context" : {
+    "timestampResultField" : "d0",
+    "timestampResultFieldGranularity" : "MONTH",
+    "timestampResultFieldInOriginalDimensions" : 0
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",946684800000,2]
+["a",946684800000,1]
+["",978307200000,1]
+["a",978307200000,1]
+["abc",978307200000,1]
+["",946684800000,3]
+["",978307200000,3]
+["",null,6]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["",946684800000,2]
+["a",946684800000,1]
+["",978307200000,1]
+["a",978307200000,1]
+["abc",978307200000,1]
+[null,946684800000,3]
+[null,978307200000,3]
+[null,null,6]
+==============================================================
+Converted from testGroupByCube()
+Cannot vectorize due to virtual columns.
+=== case
+Group by cube
+=== SQL
+SELECT dim2, gran, SUM(cnt)
+FROM (
+  SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt
+  FROM druid.foo
+  ) AS x
+GROUP BY CUBE (dim2, gran)
+=== options
+vectorize=false
+=== schema
+dim2 VARCHAR
+gran TIMESTAMP(3)
+EXPR$2 BIGINT
+=== plan
+LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {1}, {}]], EXPR$2=[SUM($2)])
+  LogicalProject(dim2=[CASE(IS NOT NULL($3), $3, '':VARCHAR)], gran=[FLOOR($0, FLAG(MONTH))], cnt=[$1])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+    "outputType" : "STRING"
+  }, {
+    "type" : "expression",
+    "name" : "v1",
+    "expression" : "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "v1",
+    "outputName" : "d1",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "subtotalsSpec" : [ [ "d0", "d1" ], [ "d0" ], [ "d1" ], [ ] ],
+  "context" : {
+    "timestampResultField" : "d1",
+    "timestampResultFieldGranularity" : "MONTH",
+    "timestampResultFieldInOriginalDimensions" : 1
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",946684800000,2]
+["",978307200000,1]
+["a",946684800000,1]
+["a",978307200000,1]
+["abc",978307200000,1]
+["",null,3]
+["a",null,2]
+["abc",null,1]
+["",946684800000,3]
+["",978307200000,3]
+["",null,6]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["",946684800000,2]
+["",978307200000,1]
+["a",946684800000,1]
+["a",978307200000,1]
+["abc",978307200000,1]
+["",null,3]
+["a",null,2]
+["abc",null,1]
+[null,946684800000,3]
+[null,978307200000,3]
+[null,null,6]
+==============================================================
+Converted from testGroupingSetsWithDummyDimension()
+Cannot vectorize due to virtual columns.
+=== case
+Grouping sets with dummy dimension
+=== SQL
+SELECT dim2, gran, SUM(cnt)
+FROM (
+  SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt
+  FROM druid.foo
+  ) AS x
+GROUP BY GROUPING SETS ( (dim2, 'dummy', gran), (dim2), (gran), ('dummy') )
+=== options
+vectorize=false
+=== schema
+dim2 VARCHAR
+gran TIMESTAMP(3)
+EXPR$2 BIGINT
+=== plan
+LogicalProject(dim2=[$0], gran=[$2], EXPR$2=[$3])
+  LogicalAggregate(group=[{0, 1, 2}], groups=[[{0, 1, 2}, {0}, {1}, {2}]], EXPR$2=[SUM($3)])
+    LogicalProject(dim2=[CASE(IS NOT NULL($3), $3, '':VARCHAR)], $f1=['dummy'], gran=[FLOOR($0, FLAG(MONTH))], cnt=[$1])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+    "outputType" : "STRING"
+  }, {
+    "type" : "expression",
+    "name" : "v2",
+    "expression" : "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "v2",
+    "outputName" : "d2",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "subtotalsSpec" : [ [ "d0", "d2" ], [ "d0" ], [ ], [ "d2" ] ],
+  "context" : {
+    "timestampResultField" : "d2",
+    "timestampResultFieldGranularity" : "MONTH",
+    "timestampResultFieldInOriginalDimensions" : 1
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",946684800000,2]
+["",978307200000,1]
+["a",946684800000,1]
+["a",978307200000,1]
+["abc",978307200000,1]
+["",null,3]
+["a",null,2]
+["abc",null,1]
+["",null,6]
+["",946684800000,3]
+["",978307200000,3]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["",946684800000,2]
+["",978307200000,1]
+["a",946684800000,1]
+["a",978307200000,1]
+["abc",978307200000,1]
+["",null,3]
+["a",null,2]
+["abc",null,1]
+[null,null,6]
+[null,946684800000,3]
+[null,978307200000,3]
+==============================================================
+Converted from testGroupingSetsNoSuperset()
+Cannot vectorize due to virtual columns.
+Note: the grouping sets are reordered in the output of this
+query, but this is allowed.
+=== case
+Grouping sets no superset
+=== SQL
+SELECT dim2, gran, SUM(cnt)
+FROM (
+  SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt
+  FROM druid.foo
+  ) AS x
+GROUP BY GROUPING SETS ( (), (dim2), (gran) )
+=== options
+vectorize=false
+=== schema
+dim2 VARCHAR
+gran TIMESTAMP(3)
+EXPR$2 BIGINT
+=== plan
+LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}, {}]], EXPR$2=[SUM($2)])
+  LogicalProject(dim2=[CASE(IS NOT NULL($3), $3, '':VARCHAR)], gran=[FLOOR($0, FLAG(MONTH))], cnt=[$1])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+    "outputType" : "STRING"
+  }, {
+    "type" : "expression",
+    "name" : "v1",
+    "expression" : "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "v1",
+    "outputName" : "d1",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "subtotalsSpec" : [ [ "d0" ], [ "d1" ], [ ] ],
+  "context" : {
+    "timestampResultField" : "d1",
+    "timestampResultFieldGranularity" : "MONTH",
+    "timestampResultFieldInOriginalDimensions" : 1
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",null,3]
+["a",null,2]
+["abc",null,1]
+["",946684800000,3]
+["",978307200000,3]
+["",null,6]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["",null,3]
+["a",null,2]
+["abc",null,1]
+[null,946684800000,3]
+[null,978307200000,3]
+[null,null,6]
+==============================================================
+Converted from testGroupingSetsWithOrderByDimension()
+Cannot vectorize due to virtual columns.
+=== case
+Grouping sets with order by dimension
+=== SQL
+SELECT dim2, gran, SUM(cnt)
+FROM (
+  SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt
+  FROM druid.foo
+  ) AS x
+GROUP BY GROUPING SETS ( (), (dim2), (gran) )
+ORDER BY gran, dim2 DESC
+=== options
+vectorize=false
+=== schema
+dim2 VARCHAR
+gran TIMESTAMP(3)
+EXPR$2 BIGINT
+=== plan
+LogicalSort(sort0=[$1], sort1=[$0], dir0=[ASC], dir1=[DESC])
+  LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}, {}]], EXPR$2=[SUM($2)])
+    LogicalProject(dim2=[CASE(IS NOT NULL($3), $3, '':VARCHAR)], gran=[FLOOR($0, FLAG(MONTH))], cnt=[$1])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+    "outputType" : "STRING"
+  }, {
+    "type" : "expression",
+    "name" : "v1",
+    "expression" : "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "v1",
+    "outputName" : "d1",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "d1",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    }, {
+      "dimension" : "d0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "lexicographic"
+      }
+    } ]
+  },
+  "subtotalsSpec" : [ [ "d0" ], [ "d1" ], [ ] ],
+  "context" : {
+    "timestampResultField" : "d1",
+    "timestampResultFieldGranularity" : "MONTH",
+    "timestampResultFieldInOriginalDimensions" : 1
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["abc",null,1]
+["a",null,2]
+["",null,3]
+["",null,6]
+["",946684800000,3]
+["",978307200000,3]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["abc",null,1]
+["a",null,2]
+["",null,3]
+[null,null,6]
+[null,946684800000,3]
+[null,978307200000,3]
+==============================================================
+Converted from testGroupingSetsWithOrderByAggregator()
+Cannot vectorize due to virtual columns.
+=== case
+Grouping sets with order by aggregator
+=== SQL
+SELECT dim2, gran, SUM(cnt)
+FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x
+GROUP BY GROUPING SETS ( (), (dim2), (gran) )
+ORDER BY SUM(cnt)
+=== options
+vectorize=false
+=== schema
+dim2 VARCHAR
+gran TIMESTAMP(3)
+EXPR$2 BIGINT
+=== plan
+LogicalSort(sort0=[$2], dir0=[ASC])
+  LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}, {}]], EXPR$2=[SUM($2)])
+    LogicalProject(dim2=[CASE(IS NOT NULL($3), $3, '':VARCHAR)], gran=[FLOOR($0, FLAG(MONTH))], cnt=[$1])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+    "outputType" : "STRING"
+  }, {
+    "type" : "expression",
+    "name" : "v1",
+    "expression" : "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "v1",
+    "outputName" : "d1",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  },
+  "subtotalsSpec" : [ [ "d0" ], [ "d1" ], [ ] ],
+  "context" : {
+    "timestampResultField" : "d1",
+    "timestampResultFieldGranularity" : "MONTH",
+    "timestampResultFieldInOriginalDimensions" : 1
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["abc",null,1]
+["a",null,2]
+["",null,3]
+["",946684800000,3]
+["",978307200000,3]
+["",null,6]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["abc",null,1]
+["a",null,2]
+["",null,3]
+[null,946684800000,3]
+[null,978307200000,3]
+[null,null,6]
+==============================================================
+Converted from testGroupingSetsWithOrderByAggregatorWithLimit()
+Cannot vectorize due to virtual columns.
+=== case
+Grouping sets with order by aggregator with limit
+=== SQL
+SELECT dim2, gran, SUM(cnt)
+FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x
+GROUP BY GROUPING SETS ( (), (dim2), (gran) )
+ORDER BY SUM(cnt)
+LIMIT 1
+=== options
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+dim2 VARCHAR
+gran TIMESTAMP(3)
+EXPR$2 BIGINT
+=== plan
+LogicalSort(sort0=[$2], dir0=[ASC], fetch=[1])
+  LogicalAggregate(group=[{0, 1}], groups=[[{0}, {1}, {}]], EXPR$2=[SUM($2)])
+    LogicalProject(dim2=[CASE(IS NOT NULL($3), $3, '':VARCHAR)], gran=[FLOOR($0, FLAG(MONTH))], cnt=[$1])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+    "outputType" : "STRING"
+  }, {
+    "type" : "expression",
+    "name" : "v1",
+    "expression" : "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "v1",
+    "outputName" : "d1",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ],
+    "limit" : 1
+  },
+  "subtotalsSpec" : [ [ "d0" ], [ "d1" ], [ ] ],
+  "context" : {
+    "timestampResultField" : "d1",
+    "timestampResultFieldGranularity" : "MONTH",
+    "timestampResultFieldInOriginalDimensions" : 1
+  }
+}
+=== results
+["abc",null,1]

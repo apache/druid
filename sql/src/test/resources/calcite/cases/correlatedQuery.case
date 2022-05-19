@@ -1,0 +1,1119 @@
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+==============================================================
+Test cases from the CalciteCorrelatedQueryTest file
+
+==============================================================
+Converted from testCorrelatedSubquery()
+=== case
+Correlated subquery
+=== SQL
+select
+    country,
+    ANY_VALUE(
+        select avg("users")
+        from (
+            select
+              floor(__time to day),
+              count(distinct user) "users"
+            from visits f
+            where f.country = visits.country
+            group by 1
+        )
+     ) as "DAU"
+from visits
+group by 1
+=== context
+enableJoinLeftTableScanDirect=true
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=false
+vectorize=false
+=== schema
+country VARCHAR
+DAU BIGINT
+=== plan
+LogicalAggregate(group=[{0}], DAU=[ANY_VALUE($1)])
+  LogicalProject(country=[$3], $f1=[$SCALAR_QUERY({
+LogicalAggregate(group=[{}], EXPR$0=[AVG($0)])
+  LogicalProject(users=[$1])
+    LogicalAggregate(group=[{0}], users=[COUNT(DISTINCT $1)])
+      LogicalProject(EXPR$0=[FLOOR($0, FLAG(DAY))], user=[$7])
+        LogicalFilter(condition=[=($3, $cor0.country)])
+          LogicalTableScan(table=[[druid, visits]])
+})])
+    LogicalTableScan(table=[[druid, visits]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "visits"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "query",
+          "query" : {
+            "queryType" : "groupBy",
+            "dataSource" : {
+              "type" : "table",
+              "name" : "visits"
+            },
+            "intervals" : {
+              "type" : "intervals",
+              "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+            },
+            "virtualColumns" : [ {
+              "type" : "expression",
+              "name" : "v0",
+              "expression" : "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+              "outputType" : "LONG"
+            } ],
+            "filter" : {
+              "type" : "not",
+              "field" : {
+                "type" : "selector",
+                "dimension" : "country"
+              }
+            },
+            "granularity" : {
+              "type" : "all"
+            },
+            "dimensions" : [ {
+              "type" : "default",
+              "dimension" : "v0",
+              "outputName" : "d0",
+              "outputType" : "LONG"
+            }, {
+              "type" : "default",
+              "dimension" : "country",
+              "outputName" : "d1",
+              "outputType" : "STRING"
+            } ],
+            "aggregations" : [ {
+              "type" : "cardinality",
+              "name" : "a0:a",
+              "fields" : [ {
+                "type" : "default",
+                "dimension" : "user",
+                "outputName" : "user",
+                "outputType" : "STRING"
+              } ],
+              "byRow" : false,
+              "round" : true
+            } ],
+            "postAggregations" : [ {
+              "type" : "hyperUniqueCardinality",
+              "name" : "a0",
+              "fieldName" : "a0:a"
+            } ],
+            "limitSpec" : {
+              "type" : "NoopLimitSpec"
+            },
+            "context" : {
+              "enableJoinLeftTableScanDirect" : true,
+              "timestampResultField" : "d0",
+              "timestampResultFieldGranularity" : "DAY",
+              "timestampResultFieldInOriginalDimensions" : 0
+            }
+          }
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "d1",
+          "outputName" : "_d0",
+          "outputType" : "STRING"
+        } ],
+        "aggregations" : [ {
+          "type" : "longSum",
+          "name" : "_a0:sum",
+          "fieldName" : "a0"
+        }, {
+          "type" : "count",
+          "name" : "_a0:count"
+        } ],
+        "postAggregations" : [ {
+          "type" : "arithmetic",
+          "name" : "_a0",
+          "fn" : "quotient",
+          "fields" : [ {
+            "type" : "fieldAccess",
+            "fieldName" : "_a0:sum"
+          }, {
+            "type" : "fieldAccess",
+            "fieldName" : "_a0:count"
+          } ]
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        },
+        "context" : {
+          "enableJoinLeftTableScanDirect" : true
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"country\" == \"j0._d0\")",
+    "joinType" : "LEFT"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "country",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longAny",
+    "name" : "a0",
+    "fieldName" : "j0._a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "context" : {
+    "enableJoinLeftTableScanDirect" : true
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["India",2]
+["USA",1]
+["canada",3]
+==============================================================
+Converted from testCorrelatedSubquery()
+=== case
+Correlated subquery
+=== SQL copy
+=== context copy
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=true
+vectorize=false
+=== schema copy
+=== plan copy
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "visits"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "query",
+          "query" : {
+            "queryType" : "groupBy",
+            "dataSource" : {
+              "type" : "table",
+              "name" : "visits"
+            },
+            "intervals" : {
+              "type" : "intervals",
+              "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+            },
+            "virtualColumns" : [ {
+              "type" : "expression",
+              "name" : "v0",
+              "expression" : "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+              "outputType" : "LONG"
+            } ],
+            "filter" : {
+              "type" : "not",
+              "field" : {
+                "type" : "selector",
+                "dimension" : "country"
+              }
+            },
+            "granularity" : {
+              "type" : "all"
+            },
+            "dimensions" : [ {
+              "type" : "default",
+              "dimension" : "v0",
+              "outputName" : "d0",
+              "outputType" : "LONG"
+            }, {
+              "type" : "default",
+              "dimension" : "country",
+              "outputName" : "d1",
+              "outputType" : "STRING"
+            } ],
+            "aggregations" : [ {
+              "type" : "cardinality",
+              "name" : "a0:a",
+              "fields" : [ {
+                "type" : "default",
+                "dimension" : "user",
+                "outputName" : "user",
+                "outputType" : "STRING"
+              } ],
+              "byRow" : false,
+              "round" : true
+            } ],
+            "postAggregations" : [ {
+              "type" : "hyperUniqueCardinality",
+              "name" : "a0",
+              "fieldName" : "a0:a"
+            } ],
+            "limitSpec" : {
+              "type" : "NoopLimitSpec"
+            },
+            "context" : {
+              "enableJoinLeftTableScanDirect" : true,
+              "timestampResultField" : "d0",
+              "timestampResultFieldGranularity" : "DAY",
+              "timestampResultFieldInOriginalDimensions" : 0
+            }
+          }
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "d1",
+          "outputName" : "_d0",
+          "outputType" : "STRING"
+        } ],
+        "aggregations" : [ {
+          "type" : "longSum",
+          "name" : "_a0:sum",
+          "fieldName" : "a0"
+        }, {
+          "type" : "filtered",
+          "aggregator" : {
+            "type" : "count",
+            "name" : "_a0:count"
+          },
+          "filter" : {
+            "type" : "not",
+            "field" : {
+              "type" : "selector",
+              "dimension" : "a0"
+            }
+          },
+          "name" : "_a0:count"
+        } ],
+        "postAggregations" : [ {
+          "type" : "arithmetic",
+          "name" : "_a0",
+          "fn" : "quotient",
+          "fields" : [ {
+            "type" : "fieldAccess",
+            "fieldName" : "_a0:sum"
+          }, {
+            "type" : "fieldAccess",
+            "fieldName" : "_a0:count"
+          } ]
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        },
+        "context" : {
+          "enableJoinLeftTableScanDirect" : true
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"country\" == \"j0._d0\")",
+    "joinType" : "LEFT"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "country",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longAny",
+    "name" : "a0",
+    "fieldName" : "j0._a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "context" : {
+    "enableJoinLeftTableScanDirect" : true
+  }
+}
+=== results copy
+==============================================================
+Converted from testCorrelatedSubqueryWithLeftFilter()
+=== case
+Correlated subquery with left filter
+=== SQL
+select
+    country,
+    ANY_VALUE(
+        select max("users")
+        from (
+            select
+              floor(__time to day),
+              count(*) "users"
+            from visits f
+            where f.country = visits.country
+            group by 1
+        )
+     ) as "dailyVisits"
+from visits
+where city = 'B' and __time between '2021-01-01 01:00:00'
+  AND '2021-01-02 23:59:59'
+group by 1
+=== context
+enableJoinLeftTableScanDirect=true
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+country VARCHAR
+dailyVisits BIGINT
+=== plan
+LogicalAggregate(group=[{0}], dailyVisits=[ANY_VALUE($1)])
+  LogicalProject(country=[$3], $f1=[$SCALAR_QUERY({
+LogicalAggregate(group=[{}], EXPR$0=[MAX($0)])
+  LogicalProject(users=[$1])
+    LogicalAggregate(group=[{0}], users=[COUNT()])
+      LogicalProject(EXPR$0=[FLOOR($0, FLAG(DAY))])
+        LogicalFilter(condition=[=($3, $cor0.country)])
+          LogicalTableScan(table=[[druid, visits]])
+})])
+    LogicalFilter(condition=[AND(=($1, 'B'), >=($0, CAST('2021-01-01 01:00:00'):TIMESTAMP(3) NOT NULL), <=($0, CAST('2021-01-02 23:59:59'):TIMESTAMP(3) NOT NULL))])
+      LogicalTableScan(table=[[druid, visits]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "visits"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "query",
+          "query" : {
+            "queryType" : "groupBy",
+            "dataSource" : {
+              "type" : "table",
+              "name" : "visits"
+            },
+            "intervals" : {
+              "type" : "intervals",
+              "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+            },
+            "virtualColumns" : [ {
+              "type" : "expression",
+              "name" : "v0",
+              "expression" : "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+              "outputType" : "LONG"
+            } ],
+            "filter" : {
+              "type" : "not",
+              "field" : {
+                "type" : "selector",
+                "dimension" : "country"
+              }
+            },
+            "granularity" : {
+              "type" : "all"
+            },
+            "dimensions" : [ {
+              "type" : "default",
+              "dimension" : "v0",
+              "outputName" : "d0",
+              "outputType" : "LONG"
+            }, {
+              "type" : "default",
+              "dimension" : "country",
+              "outputName" : "d1",
+              "outputType" : "STRING"
+            } ],
+            "aggregations" : [ {
+              "type" : "count",
+              "name" : "a0"
+            } ],
+            "limitSpec" : {
+              "type" : "NoopLimitSpec"
+            },
+            "context" : {
+              "enableJoinLeftTableScanDirect" : true,
+              "timestampResultField" : "d0",
+              "timestampResultFieldGranularity" : "DAY",
+              "timestampResultFieldInOriginalDimensions" : 0
+            }
+          }
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "d1",
+          "outputName" : "_d0",
+          "outputType" : "STRING"
+        } ],
+        "aggregations" : [ {
+          "type" : "longMax",
+          "name" : "_a0",
+          "fieldName" : "a0"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        },
+        "context" : {
+          "enableJoinLeftTableScanDirect" : true
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"country\" == \"j0._d0\")",
+    "joinType" : "LEFT",
+    "leftFilter" : {
+      "type" : "selector",
+      "dimension" : "city",
+      "value" : "B"
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "2021-01-01T01:00:00.000Z/2021-01-02T23:59:59.001Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "country",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longAny",
+    "name" : "a0",
+    "fieldName" : "j0._a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "context" : {
+    "enableJoinLeftTableScanDirect" : true
+  }
+}
+=== results
+["canada",4]
+==============================================================
+Converted from testCorrelatedSubqueryWithLeftFilter_leftDirectAccessDisabled()
+=== case
+Correlates subquery with left filter - left direct access disabled
+=== SQL
+select
+    country,
+    ANY_VALUE(
+        select max("users")
+        from (
+            select
+              floor(__time to day),
+              count(*) "users"
+            from visits f
+            where f.country = visits.country
+            group by 1
+        )
+     ) as "dailyVisits"
+from visits
+where city = 'B' and __time between '2021-01-01 01:00:00'
+   AND '2021-01-02 23:59:59'
+group by 1
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+country VARCHAR
+dailyVisits BIGINT
+=== plan
+LogicalAggregate(group=[{0}], dailyVisits=[ANY_VALUE($1)])
+  LogicalProject(country=[$3], $f1=[$SCALAR_QUERY({
+LogicalAggregate(group=[{}], EXPR$0=[MAX($0)])
+  LogicalProject(users=[$1])
+    LogicalAggregate(group=[{0}], users=[COUNT()])
+      LogicalProject(EXPR$0=[FLOOR($0, FLAG(DAY))])
+        LogicalFilter(condition=[=($3, $cor0.country)])
+          LogicalTableScan(table=[[druid, visits]])
+})])
+    LogicalFilter(condition=[AND(=($1, 'B'), >=($0, CAST('2021-01-01 01:00:00'):TIMESTAMP(3) NOT NULL), <=($0, CAST('2021-01-02 23:59:59'):TIMESTAMP(3) NOT NULL))])
+      LogicalTableScan(table=[[druid, visits]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "visits"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "2021-01-01T01:00:00.000Z/2021-01-02T23:59:59.001Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "filter" : {
+          "type" : "selector",
+          "dimension" : "city",
+          "value" : "B"
+        },
+        "columns" : [ "__time", "city", "country" ],
+        "granularity" : {
+          "type" : "all"
+        }
+      }
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "query",
+          "query" : {
+            "queryType" : "groupBy",
+            "dataSource" : {
+              "type" : "table",
+              "name" : "visits"
+            },
+            "intervals" : {
+              "type" : "intervals",
+              "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+            },
+            "virtualColumns" : [ {
+              "type" : "expression",
+              "name" : "v0",
+              "expression" : "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+              "outputType" : "LONG"
+            } ],
+            "filter" : {
+              "type" : "not",
+              "field" : {
+                "type" : "selector",
+                "dimension" : "country"
+              }
+            },
+            "granularity" : {
+              "type" : "all"
+            },
+            "dimensions" : [ {
+              "type" : "default",
+              "dimension" : "v0",
+              "outputName" : "d0",
+              "outputType" : "LONG"
+            }, {
+              "type" : "default",
+              "dimension" : "country",
+              "outputName" : "d1",
+              "outputType" : "STRING"
+            } ],
+            "aggregations" : [ {
+              "type" : "count",
+              "name" : "a0"
+            } ],
+            "limitSpec" : {
+              "type" : "NoopLimitSpec"
+            },
+            "context" : {
+              "timestampResultField" : "d0",
+              "timestampResultFieldGranularity" : "DAY",
+              "timestampResultFieldInOriginalDimensions" : 0
+            }
+          }
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "d1",
+          "outputName" : "_d0",
+          "outputType" : "STRING"
+        } ],
+        "aggregations" : [ {
+          "type" : "longMax",
+          "name" : "_a0",
+          "fieldName" : "a0"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"country\" == \"j0._d0\")",
+    "joinType" : "LEFT"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "country",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longAny",
+    "name" : "a0",
+    "fieldName" : "j0._a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== results
+["canada",4]
+==============================================================
+Converted from testCorrelatedSubqueryWithCorrelatedQueryFilter()
+=== case
+Correlated subquery with Correlated query filter
+=== SQL
+select
+    country,
+    ANY_VALUE(
+        select max("users") from (
+            select
+              floor(__time to day),
+              count(user) "users"
+            from visits f
+            where f.country = visits.country
+              and f.city = 'A'
+            group by 1
+        )
+     ) as "dailyVisits"
+from visits
+where city = 'B'
+group by 1
+=== context
+enableJoinLeftTableScanDirect=true
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+country VARCHAR
+dailyVisits BIGINT
+=== plan
+LogicalAggregate(group=[{0}], dailyVisits=[ANY_VALUE($1)])
+  LogicalProject(country=[$3], $f1=[$SCALAR_QUERY({
+LogicalAggregate(group=[{}], EXPR$0=[MAX($0)])
+  LogicalProject(users=[$1])
+    LogicalAggregate(group=[{0}], users=[COUNT($1)])
+      LogicalProject(EXPR$0=[FLOOR($0, FLAG(DAY))], user=[$7])
+        LogicalFilter(condition=[AND(=($3, $cor0.country), =($1, 'A'))])
+          LogicalTableScan(table=[[druid, visits]])
+})])
+    LogicalFilter(condition=[=($1, 'B')])
+      LogicalTableScan(table=[[druid, visits]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "visits"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "query",
+          "query" : {
+            "queryType" : "groupBy",
+            "dataSource" : {
+              "type" : "table",
+              "name" : "visits"
+            },
+            "intervals" : {
+              "type" : "intervals",
+              "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+            },
+            "virtualColumns" : [ {
+              "type" : "expression",
+              "name" : "v0",
+              "expression" : "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+              "outputType" : "LONG"
+            } ],
+            "filter" : {
+              "type" : "and",
+              "fields" : [ {
+                "type" : "selector",
+                "dimension" : "city",
+                "value" : "A"
+              }, {
+                "type" : "not",
+                "field" : {
+                  "type" : "selector",
+                  "dimension" : "country"
+                }
+              } ]
+            },
+            "granularity" : {
+              "type" : "all"
+            },
+            "dimensions" : [ {
+              "type" : "default",
+              "dimension" : "v0",
+              "outputName" : "d0",
+              "outputType" : "LONG"
+            }, {
+              "type" : "default",
+              "dimension" : "country",
+              "outputName" : "d1",
+              "outputType" : "STRING"
+            } ],
+            "aggregations" : [ {
+              "type" : "filtered",
+              "aggregator" : {
+                "type" : "count",
+                "name" : "a0"
+              },
+              "filter" : {
+                "type" : "not",
+                "field" : {
+                  "type" : "selector",
+                  "dimension" : "user"
+                }
+              },
+              "name" : "a0"
+            } ],
+            "limitSpec" : {
+              "type" : "NoopLimitSpec"
+            },
+            "context" : {
+              "enableJoinLeftTableScanDirect" : true,
+              "timestampResultField" : "d0",
+              "timestampResultFieldGranularity" : "DAY",
+              "timestampResultFieldInOriginalDimensions" : 0
+            }
+          }
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "d1",
+          "outputName" : "_d0",
+          "outputType" : "STRING"
+        } ],
+        "aggregations" : [ {
+          "type" : "longMax",
+          "name" : "_a0",
+          "fieldName" : "a0"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        },
+        "context" : {
+          "enableJoinLeftTableScanDirect" : true
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"country\" == \"j0._d0\")",
+    "joinType" : "LEFT",
+    "leftFilter" : {
+      "type" : "selector",
+      "dimension" : "city",
+      "value" : "B"
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "country",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longAny",
+    "name" : "a0",
+    "fieldName" : "j0._a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "context" : {
+    "enableJoinLeftTableScanDirect" : true
+  }
+}
+=== results
+["canada",2]
+==============================================================
+Converted from testCorrelatedSubqueryWithCorrelatedQueryFilter_Scan()
+=== case
+Correlated subquery with correlated query filter - scan
+=== SQL
+select
+    country,
+    ANY_VALUE(
+        select max("users")
+        from (
+            select
+              floor(__time to day),
+              count(user) "users"
+            from visits f
+            where f.country = visits.country
+              and f.city = 'A'
+            group by 1
+        )
+     ) as "dailyVisits"
+from visits
+where city = 'B'
+group by 1
+=== context
+enableJoinLeftTableScanDirect=true
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+country VARCHAR
+dailyVisits BIGINT
+=== plan
+LogicalAggregate(group=[{0}], dailyVisits=[ANY_VALUE($1)])
+  LogicalProject(country=[$3], $f1=[$SCALAR_QUERY({
+LogicalAggregate(group=[{}], EXPR$0=[MAX($0)])
+  LogicalProject(users=[$1])
+    LogicalAggregate(group=[{0}], users=[COUNT($1)])
+      LogicalProject(EXPR$0=[FLOOR($0, FLAG(DAY))], user=[$7])
+        LogicalFilter(condition=[AND(=($3, $cor0.country), =($1, 'A'))])
+          LogicalTableScan(table=[[druid, visits]])
+})])
+    LogicalFilter(condition=[=($1, 'B')])
+      LogicalTableScan(table=[[druid, visits]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "visits"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "query",
+          "query" : {
+            "queryType" : "groupBy",
+            "dataSource" : {
+              "type" : "table",
+              "name" : "visits"
+            },
+            "intervals" : {
+              "type" : "intervals",
+              "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+            },
+            "virtualColumns" : [ {
+              "type" : "expression",
+              "name" : "v0",
+              "expression" : "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+              "outputType" : "LONG"
+            } ],
+            "filter" : {
+              "type" : "and",
+              "fields" : [ {
+                "type" : "selector",
+                "dimension" : "city",
+                "value" : "A"
+              }, {
+                "type" : "not",
+                "field" : {
+                  "type" : "selector",
+                  "dimension" : "country"
+                }
+              } ]
+            },
+            "granularity" : {
+              "type" : "all"
+            },
+            "dimensions" : [ {
+              "type" : "default",
+              "dimension" : "v0",
+              "outputName" : "d0",
+              "outputType" : "LONG"
+            }, {
+              "type" : "default",
+              "dimension" : "country",
+              "outputName" : "d1",
+              "outputType" : "STRING"
+            } ],
+            "aggregations" : [ {
+              "type" : "filtered",
+              "aggregator" : {
+                "type" : "count",
+                "name" : "a0"
+              },
+              "filter" : {
+                "type" : "not",
+                "field" : {
+                  "type" : "selector",
+                  "dimension" : "user"
+                }
+              },
+              "name" : "a0"
+            } ],
+            "limitSpec" : {
+              "type" : "NoopLimitSpec"
+            },
+            "context" : {
+              "enableJoinLeftTableScanDirect" : true,
+              "timestampResultField" : "d0",
+              "timestampResultFieldGranularity" : "DAY",
+              "timestampResultFieldInOriginalDimensions" : 0
+            }
+          }
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "d1",
+          "outputName" : "_d0",
+          "outputType" : "STRING"
+        } ],
+        "aggregations" : [ {
+          "type" : "longMax",
+          "name" : "_a0",
+          "fieldName" : "a0"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        },
+        "context" : {
+          "enableJoinLeftTableScanDirect" : true
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"country\" == \"j0._d0\")",
+    "joinType" : "LEFT",
+    "leftFilter" : {
+      "type" : "selector",
+      "dimension" : "city",
+      "value" : "B"
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "country",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longAny",
+    "name" : "a0",
+    "fieldName" : "j0._a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "context" : {
+    "enableJoinLeftTableScanDirect" : true
+  }
+}
+=== results
+["canada",2]

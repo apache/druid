@@ -1,0 +1,1624 @@
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+==============================================================
+Converted from testGroupByDouble()
+=== case
+Group by double (1)
+=== SQL
+SELECT m2, COUNT(*)
+FROM druid.foo
+GROUP BY m2
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+m2 DOUBLE
+EXPR$1 BIGINT
+=== plan
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
+  LogicalProject(m2=[$6])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "m2",
+    "outputName" : "d0",
+    "outputType" : "DOUBLE"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== results
+[1.0,1]
+[2.0,1]
+[3.0,1]
+[4.0,1]
+[5.0,1]
+[6.0,1]
+==============================================================
+Converted from testFilterOnFloat()
+=== case
+Filter on float (1)
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE m1 = 1.0
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[=(CAST($5):DOUBLE NOT NULL, 1.0)])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "m1",
+    "value" : "1.0"
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[1]
+==============================================================
+Converted from testFilterOnDouble()
+=== case
+Filter on double (1)
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE m2 = 1.0
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[=($6, 1.0)])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "m2",
+    "value" : "1.0"
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[1]
+==============================================================
+Converted from testHavingOnGrandTotal()
+=== case
+Having on grand total
+=== SQL
+SELECT SUM(m1) AS m1_sum
+FROM foo
+HAVING m1_sum = 21
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+m1_sum DOUBLE
+=== plan
+LogicalFilter(condition=[=($0, 21)])
+  LogicalAggregate(group=[{}], m1_sum=[SUM($0)])
+    LogicalProject(m1=[$5])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ ],
+  "aggregations" : [ {
+    "type" : "doubleSum",
+    "name" : "a0",
+    "fieldName" : "m1"
+  } ],
+  "having" : {
+    "type" : "filter",
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "a0",
+      "value" : "21"
+    },
+    "finalize" : true
+  },
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== results
+[21.0]
+==============================================================
+Converted from testHavingOnDoubleSum()
+=== case
+Having on double sum
+=== SQL
+SELECT dim1, SUM(m1) AS m1_sum
+FROM druid.foo
+GROUP BY dim1
+HAVING SUM(m1) > 1
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim1 VARCHAR
+m1_sum DOUBLE
+=== plan
+LogicalFilter(condition=[>($1, 1)])
+  LogicalAggregate(group=[{0}], m1_sum=[SUM($1)])
+    LogicalProject(dim1=[$2], m1=[$5])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "doubleSum",
+    "name" : "a0",
+    "fieldName" : "m1"
+  } ],
+  "having" : {
+    "type" : "filter",
+    "filter" : {
+      "type" : "bound",
+      "dimension" : "a0",
+      "lower" : "1",
+      "lowerStrict" : true,
+      "ordering" : {
+        "type" : "numeric"
+      }
+    },
+    "finalize" : true
+  },
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== results
+["1",4.0]
+["10.1",2.0]
+["2",3.0]
+["abc",6.0]
+["def",5.0]
+==============================================================
+Converted from testHavingOnApproximateCountDistinct()
+=== case
+Having on approximate count distinct
+=== SQL
+SELECT dim2, COUNT(DISTINCT m1)
+FROM druid.foo
+GROUP BY dim2
+HAVING COUNT(DISTINCT m1) > 1
+=== options
+vectorize=true
+=== schema
+dim2 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalFilter(condition=[>($1, 1)])
+  LogicalAggregate(group=[{0}], EXPR$1=[COUNT(DISTINCT $1)])
+    LogicalProject(dim2=[$3], m1=[$5])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim2",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "cardinality",
+    "name" : "a0",
+    "fields" : [ {
+      "type" : "default",
+      "dimension" : "m1",
+      "outputName" : "m1",
+      "outputType" : "FLOAT"
+    } ],
+    "byRow" : false,
+    "round" : true
+  } ],
+  "having" : {
+    "type" : "filter",
+    "filter" : {
+      "type" : "bound",
+      "dimension" : "a0",
+      "lower" : "1",
+      "lowerStrict" : true,
+      "ordering" : {
+        "type" : "numeric"
+      }
+    },
+    "finalize" : true
+  },
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",3]
+["a",2]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,2]
+["a",2]
+==============================================================
+Converted from testHavingOnExactCountDistinct()
+=== case
+Having on exact count distinct
+=== SQL
+SELECT dim2, COUNT(DISTINCT m1)
+FROM druid.foo
+GROUP BY dim2
+HAVING COUNT(DISTINCT m1) > 1
+=== options
+planner.useApproximateCountDistinct=false
+sqlCompatibleNulls=false
+vectorize=true
+=== schema
+dim2 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalFilter(condition=[>($1, 1)])
+  LogicalAggregate(group=[{0}], EXPR$1=[COUNT(DISTINCT $1)])
+    LogicalProject(dim2=[$3], m1=[$5])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "groupBy",
+      "dataSource" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "granularity" : {
+        "type" : "all"
+      },
+      "dimensions" : [ {
+        "type" : "default",
+        "dimension" : "dim2",
+        "outputName" : "d0",
+        "outputType" : "STRING"
+      }, {
+        "type" : "default",
+        "dimension" : "m1",
+        "outputName" : "d1",
+        "outputType" : "FLOAT"
+      } ],
+      "limitSpec" : {
+        "type" : "NoopLimitSpec"
+      }
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "d0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "having" : {
+    "type" : "filter",
+    "filter" : {
+      "type" : "bound",
+      "dimension" : "a0",
+      "lower" : "1",
+      "lowerStrict" : true,
+      "ordering" : {
+        "type" : "numeric"
+      }
+    },
+    "finalize" : true
+  },
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== results
+["",3]
+["a",2]
+==============================================================
+Converted from testHavingOnExactCountDistinct()
+=== case
+Having on exact count distinct
+=== SQL copy
+=== options
+planner.useApproximateCountDistinct=false
+sqlCompatibleNulls=true
+vectorize=true
+=== schema copy
+=== plan copy
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "groupBy",
+      "dataSource" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "granularity" : {
+        "type" : "all"
+      },
+      "dimensions" : [ {
+        "type" : "default",
+        "dimension" : "dim2",
+        "outputName" : "d0",
+        "outputType" : "STRING"
+      }, {
+        "type" : "default",
+        "dimension" : "m1",
+        "outputName" : "d1",
+        "outputType" : "FLOAT"
+      } ],
+      "limitSpec" : {
+        "type" : "NoopLimitSpec"
+      },
+      "context" : {
+        "defaultTimeout" : 300000,
+        "maxScatterGatherBytes" : 9223372036854775807,
+        "sqlCurrentTimestamp" : "2000-01-01T00:00:00Z",
+        "sqlQueryId" : "dummy"
+      }
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "d0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "a0"
+    },
+    "filter" : {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "d1"
+      }
+    },
+    "name" : "a0"
+  } ],
+  "having" : {
+    "type" : "filter",
+    "filter" : {
+      "type" : "bound",
+      "dimension" : "a0",
+      "lower" : "1",
+      "lowerStrict" : true,
+      "ordering" : {
+        "type" : "numeric"
+      }
+    },
+    "finalize" : true
+  },
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "context" : {
+    "defaultTimeout" : 300000,
+    "maxScatterGatherBytes" : 9223372036854775807,
+    "sqlCurrentTimestamp" : "2000-01-01T00:00:00Z",
+    "sqlQueryId" : "dummy"
+  }
+}
+=== results
+[null,2]
+["a",2]
+==============================================================
+Converted from testExactCountDistinctWithFilter()
+When useApproximateCountDistinct=true and
+useGroupingSetForExactDistinct=false, planning fails due
+to a bug in the Calcite's rule (AggregateExpandDistinctAggregatesRule)
+=== case
+Exact count distinct with filter
+=== SQL
+SELECT
+  COUNT(DISTINCT foo.dim1) FILTER(WHERE foo.cnt = 1),
+  SUM(foo.cnt)
+FROM druid.foo
+=== options
+planner.useApproximateCountDistinct=false
+vectorize=true
+=== exception
+RuntimeException
+=== error
+!Error while applying rule AggregateExpandDistinctAggregatesRule.*
+==============================================================
+Converted from testHavingOnFloatSum()
+=== case
+Having on float sum
+=== SQL
+SELECT
+  dim1,
+  CAST(SUM(m1) AS FLOAT) AS m1_sum
+FROM druid.foo
+GROUP BY dim1
+HAVING CAST(SUM(m1) AS FLOAT) > 1
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim1 VARCHAR
+m1_sum FLOAT
+=== plan
+LogicalProject(dim1=[$0], m1_sum=[CAST($1):FLOAT NOT NULL])
+  LogicalFilter(condition=[>(CAST($1):FLOAT NOT NULL, 1)])
+    LogicalAggregate(group=[{0}], agg#0=[SUM($1)])
+      LogicalProject(dim1=[$2], m1=[$5])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "doubleSum",
+    "name" : "a0",
+    "fieldName" : "m1"
+  } ],
+  "having" : {
+    "type" : "filter",
+    "filter" : {
+      "type" : "bound",
+      "dimension" : "a0",
+      "lower" : "1",
+      "lowerStrict" : true,
+      "ordering" : {
+        "type" : "numeric"
+      }
+    },
+    "finalize" : true
+  },
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== results
+["1",4.0]
+["10.1",2.0]
+["2",3.0]
+["abc",6.0]
+["def",5.0]
+==============================================================
+Converted from testColumnComparison()
+=== case
+Column comparison
+=== SQL
+SELECT dim1, m1, COUNT(*)
+FROM druid.foo
+WHERE m1 - 1 = dim1
+GROUP BY dim1, m1
+=== options
+vectorize=true
+=== schema
+dim1 VARCHAR
+m1 FLOAT
+EXPR$2 BIGINT
+=== plan
+LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT()])
+  LogicalProject(dim1=[$2], m1=[$5])
+    LogicalFilter(condition=[=(-($5, 1), CAST($2):FLOAT)])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "expression",
+    "expression" : "((\"m1\" - 1) == CAST(\"dim1\", 'DOUBLE'))"
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "m1",
+    "outputName" : "d1",
+    "outputType" : "FLOAT"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",1.0,1]
+["2",3.0,1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["2",3.0,1]
+==============================================================
+Converted from testHavingOnRatio()
+Test for https://github.com/apache/druid/issues/4264
+=== case
+Having on ratio
+=== SQL
+SELECT
+  dim1,
+  COUNT(*) FILTER(WHERE dim2 <> 'a')/COUNT(*) as ratio
+FROM druid.foo
+GROUP BY dim1
+HAVING COUNT(*) FILTER(WHERE dim2 <> 'a')/COUNT(*) = 1
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim1 VARCHAR
+ratio BIGINT
+=== plan
+LogicalProject(dim1=[$0], ratio=[/($1, $2)])
+  LogicalFilter(condition=[=(/($1, $2), 1)])
+    LogicalAggregate(group=[{0}], agg#0=[COUNT() FILTER $1], agg#1=[COUNT()])
+      LogicalProject(dim1=[$2], $f1=[IS TRUE(<>($3, 'a'))])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "a0"
+    },
+    "filter" : {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "dim2",
+        "value" : "a"
+      }
+    },
+    "name" : "a0"
+  }, {
+    "type" : "count",
+    "name" : "a1"
+  } ],
+  "postAggregations" : [ {
+    "type" : "expression",
+    "name" : "p0",
+    "expression" : "(\"a0\" / \"a1\")"
+  } ],
+  "having" : {
+    "type" : "filter",
+    "filter" : {
+      "type" : "expression",
+      "expression" : "((\"a0\" / \"a1\") == 1)"
+    },
+    "finalize" : true
+  },
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== results
+["10.1",1]
+["2",1]
+["abc",1]
+["def",1]
+==============================================================
+Converted from testGroupByWithSelectProjections()
+=== case
+Group by with select projections
+=== SQL
+SELECT
+  dim1, SUBSTRING(dim1, 2)
+FROM druid.foo
+GROUP BY dim1
+=== options
+vectorize=true
+=== schema
+dim1 VARCHAR
+EXPR$1 VARCHAR
+=== plan
+LogicalProject(dim1=[$0], EXPR$1=[SUBSTRING($0, 2)])
+  LogicalAggregate(group=[{0}])
+    LogicalProject(dim1=[$2])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "postAggregations" : [ {
+    "type" : "expression",
+    "name" : "p0",
+    "expression" : "substring(\"d0\", 1, -1)"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",""]
+["1",""]
+["10.1","0.1"]
+["2",""]
+["abc","bc"]
+["def","ef"]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["",null]
+["1",null]
+["10.1","0.1"]
+["2",null]
+["abc","bc"]
+["def","ef"]
+==============================================================
+Converted from testGroupByWithSelectAndOrderByProjections()
+=== case
+Group by with select and order by projections
+=== SQL
+SELECT
+  dim1, SUBSTRING(dim1, 2)
+FROM druid.foo
+GROUP BY dim1
+ORDER BY CHARACTER_LENGTH(dim1) DESC, dim1
+=== options
+vectorize=true
+=== schema
+dim1 VARCHAR
+EXPR$1 VARCHAR
+=== plan
+LogicalSort(sort0=[$2], sort1=[$0], dir0=[DESC], dir1=[ASC])
+  LogicalProject(dim1=[$0], EXPR$1=[SUBSTRING($0, 2)], EXPR$2=[CHAR_LENGTH($0)])
+    LogicalAggregate(group=[{0}])
+      LogicalProject(dim1=[$2])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "postAggregations" : [ {
+    "type" : "expression",
+    "name" : "p0",
+    "expression" : "substring(\"d0\", 1, -1)"
+  }, {
+    "type" : "expression",
+    "name" : "p1",
+    "expression" : "strlen(\"d0\")"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "p1",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    }, {
+      "dimension" : "d0",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "lexicographic"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["10.1","0.1"]
+["abc","bc"]
+["def","ef"]
+["1",""]
+["2",""]
+["",""]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["10.1","0.1"]
+["abc","bc"]
+["def","ef"]
+["1",null]
+["2",null]
+["",null]
+==============================================================
+Converted from testTopNWithSelectProjections()
+=== case
+Top n with select projections
+=== SQL
+SELECT
+  dim1,
+  SUBSTRING(dim1, 2)
+FROM druid.foo
+GROUP BY dim1
+LIMIT 10
+=== options
+vectorize=true
+=== schema
+dim1 VARCHAR
+EXPR$1 VARCHAR
+=== plan
+LogicalSort(fetch=[10])
+  LogicalProject(dim1=[$0], EXPR$1=[SUBSTRING($0, 2)])
+    LogicalAggregate(group=[{0}])
+      LogicalProject(dim1=[$2])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "topN",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "dimension" : {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  },
+  "metric" : {
+    "type" : "dimension",
+    "ordering" : {
+      "type" : "lexicographic"
+    }
+  },
+  "threshold" : 10,
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ ],
+  "postAggregations" : [ {
+    "type" : "expression",
+    "name" : "s0",
+    "expression" : "substring(\"d0\", 1, -1)"
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",""]
+["1",""]
+["10.1","0.1"]
+["2",""]
+["abc","bc"]
+["def","ef"]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["",null]
+["1",null]
+["10.1","0.1"]
+["2",null]
+["abc","bc"]
+["def","ef"]
+==============================================================
+Converted from testTopNWithSelectAndOrderByProjections()
+=== case
+Top n with select and order by projections
+=== SQL
+SELECT
+  dim1, SUBSTRING(dim1, 2)
+FROM druid.foo
+GROUP BY dim1
+ORDER BY CHARACTER_LENGTH(dim1) DESC
+LIMIT 10
+=== options
+vectorize=true
+=== schema
+dim1 VARCHAR
+EXPR$1 VARCHAR
+=== plan
+LogicalSort(sort0=[$2], dir0=[DESC], fetch=[10])
+  LogicalProject(dim1=[$0], EXPR$1=[SUBSTRING($0, 2)], EXPR$2=[CHAR_LENGTH($0)])
+    LogicalAggregate(group=[{0}])
+      LogicalProject(dim1=[$2])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "topN",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "dimension" : {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  },
+  "metric" : {
+    "type" : "numeric",
+    "metric" : "p1"
+  },
+  "threshold" : 10,
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ ],
+  "postAggregations" : [ {
+    "type" : "expression",
+    "name" : "p0",
+    "expression" : "substring(\"d0\", 1, -1)"
+  }, {
+    "type" : "expression",
+    "name" : "p1",
+    "expression" : "strlen(\"d0\")"
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["10.1","0.1"]
+["abc","bc"]
+["def","ef"]
+["1",""]
+["2",""]
+["",""]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["10.1","0.1"]
+["abc","bc"]
+["def","ef"]
+["1",null]
+["2",null]
+["",null]
+==============================================================
+Converted from testUnionAllQueries()
+=== case
+Union all queries
+=== SQL
+SELECT COUNT(*)
+FROM foo
+UNION ALL
+SELECT SUM(cnt)
+FROM foo
+UNION ALL
+SELECT COUNT(*)
+FROM foo
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalUnion(all=[true])
+  LogicalUnion(all=[true])
+    LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+      LogicalProject($f0=[0])
+        LogicalTableScan(table=[[druid, foo]])
+    LogicalAggregate(group=[{}], EXPR$0=[SUM($0)])
+      LogicalProject(cnt=[$1])
+        LogicalTableScan(table=[[druid, foo]])
+  LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+    LogicalProject($f0=[0])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "artificialQueryType" : "union",
+  "inputs" : [ {
+    "artificialQueryType" : "union",
+    "inputs" : [ {
+      "dataSource" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "granularity" : {
+        "type" : "all"
+      },
+      "aggregations" : [ {
+        "type" : "count",
+        "name" : "a0"
+      } ]
+    }, {
+      "dataSource" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "granularity" : {
+        "type" : "all"
+      },
+      "aggregations" : [ {
+        "type" : "longSum",
+        "name" : "a0",
+        "fieldName" : "cnt"
+      } ]
+    } ]
+  }, {
+    "dataSource" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "intervals" : {
+      "type" : "intervals",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    },
+    "granularity" : {
+      "type" : "all"
+    },
+    "aggregations" : [ {
+      "type" : "count",
+      "name" : "a0"
+    } ]
+  } ]
+}
+=== results
+[6]
+[6]
+[6]
+==============================================================
+Converted from testUnionAllQueriesWithLimit()
+=== case
+Union all queries with limit
+=== SQL
+SELECT *
+FROM (
+  SELECT COUNT(*)
+  FROM foo
+  UNION ALL
+  SELECT SUM(cnt)
+  FROM foo
+  UNION ALL
+  SELECT COUNT(*)
+  FROM foo
+  )
+LIMIT 2
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalSort(fetch=[2])
+  LogicalProject(EXPR$0=[$0])
+    LogicalUnion(all=[true])
+      LogicalUnion(all=[true])
+        LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+          LogicalProject($f0=[0])
+            LogicalTableScan(table=[[druid, foo]])
+        LogicalAggregate(group=[{}], EXPR$0=[SUM($0)])
+          LogicalProject(cnt=[$1])
+            LogicalTableScan(table=[[druid, foo]])
+      LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+        LogicalProject($f0=[0])
+          LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "artificialQueryType" : "union",
+  "inputs" : [ {
+    "artificialQueryType" : "union",
+    "inputs" : [ {
+      "dataSource" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "granularity" : {
+        "type" : "all"
+      },
+      "aggregations" : [ {
+        "type" : "count",
+        "name" : "a0"
+      } ]
+    }, {
+      "dataSource" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "granularity" : {
+        "type" : "all"
+      },
+      "aggregations" : [ {
+        "type" : "longSum",
+        "name" : "a0",
+        "fieldName" : "cnt"
+      } ]
+    } ]
+  }, {
+    "dataSource" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "intervals" : {
+      "type" : "intervals",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    },
+    "granularity" : {
+      "type" : "all"
+    },
+    "aggregations" : [ {
+      "type" : "count",
+      "name" : "a0"
+    } ]
+  } ]
+}
+=== results
+[6]
+[6]
+==============================================================
+Converted from testUnionAllDifferentTablesWithMapping()
+=== case
+Union all different tables with mapping
+=== SQL
+SELECT dim1, dim2, SUM(m1), COUNT(*)
+FROM (
+  SELECT dim1, dim2, m1 FROM foo
+  UNION ALL
+  SELECT dim1, dim2, m1 FROM numfoo
+  )
+WHERE dim2 = 'a'
+   OR dim2 = 'def'
+GROUP BY 1, 2
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim1 VARCHAR
+dim2 VARCHAR
+EXPR$2 DOUBLE
+EXPR$3 BIGINT
+=== plan
+LogicalAggregate(group=[{0, 1}], EXPR$2=[SUM($2)], EXPR$3=[COUNT()])
+  LogicalFilter(condition=[OR(=($1, 'a'), =($1, 'def'))])
+    LogicalUnion(all=[true])
+      LogicalProject(dim1=[$2], dim2=[$3], m1=[$5])
+        LogicalTableScan(table=[[druid, foo]])
+      LogicalProject(dim1=[$4], dim2=[$5], m1=[$14])
+        LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "union",
+    "dataSources" : [ {
+      "type" : "table",
+      "name" : "foo"
+    }, {
+      "type" : "table",
+      "name" : "numfoo"
+    } ]
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "in",
+    "dimension" : "dim2",
+    "values" : [ "a", "def" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "dim2",
+    "outputName" : "d1",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "doubleSum",
+    "name" : "a0",
+    "fieldName" : "m1"
+  }, {
+    "type" : "count",
+    "name" : "a1"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== results
+["","a",2.0,2]
+["1","a",8.0,2]
+==============================================================
+Converted from testJoinUnionAllDifferentTablesWithMapping()
+=== case
+Join union all different tables with mapping
+=== SQL
+SELECT dim1, dim2, SUM(m1), COUNT(*)
+FROM (
+  SELECT dim1, dim2, m1
+  FROM foo
+  UNION ALL
+  SELECT dim1, dim2, m1
+  FROM numfoo
+  )
+WHERE dim2 = 'a'
+   OR dim2 = 'def'
+GROUP BY 1, 2
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim1 VARCHAR
+dim2 VARCHAR
+EXPR$2 DOUBLE
+EXPR$3 BIGINT
+=== plan
+LogicalAggregate(group=[{0, 1}], EXPR$2=[SUM($2)], EXPR$3=[COUNT()])
+  LogicalFilter(condition=[OR(=($1, 'a'), =($1, 'def'))])
+    LogicalUnion(all=[true])
+      LogicalProject(dim1=[$2], dim2=[$3], m1=[$5])
+        LogicalTableScan(table=[[druid, foo]])
+      LogicalProject(dim1=[$4], dim2=[$5], m1=[$14])
+        LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "union",
+    "dataSources" : [ {
+      "type" : "table",
+      "name" : "foo"
+    }, {
+      "type" : "table",
+      "name" : "numfoo"
+    } ]
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "in",
+    "dimension" : "dim2",
+    "values" : [ "a", "def" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "dim2",
+    "outputName" : "d1",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "doubleSum",
+    "name" : "a0",
+    "fieldName" : "m1"
+  }, {
+    "type" : "count",
+    "name" : "a1"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== results
+["","a",2.0,2]
+["1","a",8.0,2]
+==============================================================
+Converted from testUnionAllTablesColumnCountMismatch()
+=== case
+Union all tables column count mismatch
+=== SQL
+SELECT dim1, dim2, SUM(m1), COUNT(*)
+FROM (
+  SELECT *
+  FROM foo
+  UNION ALL
+  SELECT *
+  FROM numfoo
+  )
+WHERE dim2 = 'a'
+   OR dim2 = 'def'
+GROUP BY 1, 2
+=== exception
+ValidationException
+=== error
+!.*Column count mismatch in UNION ALL
+==============================================================
+Converted from testUnionAllTablesColumnTypeMismatchFloatLong()
+"m1" has a different type in foo and foo2 (float vs long), but
+this query is OK anyway because they can both be implicitly cast
+to double.
+=== case
+Union all tables column type mismatch float long
+=== SQL
+SELECT dim1, dim2, SUM(m1), COUNT(*)
+FROM (
+  SELECT dim1, dim2, m1
+  FROM foo2
+  UNION ALL
+  SELECT dim1, dim2, m1
+  FROM foo
+  )
+WHERE dim2 = 'a'
+   OR dim2 = 'en'
+GROUP BY 1, 2
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim1 VARCHAR
+dim2 VARCHAR
+EXPR$2 DOUBLE
+EXPR$3 BIGINT
+=== plan
+LogicalAggregate(group=[{0, 1}], EXPR$2=[SUM($2)], EXPR$3=[COUNT()])
+  LogicalFilter(condition=[OR(=($1, 'a'), =($1, 'en'))])
+    LogicalUnion(all=[true])
+      LogicalProject(dim1=[$2], dim2=[$3], m1=[$5])
+        LogicalTableScan(table=[[druid, foo2]])
+      LogicalProject(dim1=[$2], dim2=[$3], m1=[$5])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "union",
+    "dataSources" : [ {
+      "type" : "table",
+      "name" : "foo2"
+    }, {
+      "type" : "table",
+      "name" : "foo"
+    } ]
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "in",
+    "dimension" : "dim2",
+    "values" : [ "a", "en" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "dim2",
+    "outputName" : "d1",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "doubleSum",
+    "name" : "a0",
+    "fieldName" : "m1"
+  }, {
+    "type" : "count",
+    "name" : "a1"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== results
+["","a",1.0,1]
+["1","a",4.0,1]
+["druid","en",1.0,1]
+==============================================================
+Converted from testUnionAllTablesColumnTypeMismatchStringLong()
+"dim3" has a different type in foo and foo2 (string vs long),
+which requires a casting subquery, so this query cannot be planned.
+=== case
+Union all tables column type mismatch string long
+=== SQL
+SELECT dim3, dim2, SUM(m1), COUNT(*)
+FROM (
+  SELECT dim3, dim2, m1
+  FROM foo2
+  UNION ALL
+  SELECT dim3, dim2, m1
+  FROM foo
+  )
+WHERE dim2 = 'a'
+   OR dim2 = 'en'
+GROUP BY 1, 2
+=== exception
+UnsupportedSQLQueryException
+=== error
+!Cannot build plan for query: SELECT.*
+**
+!.*Possible error: SQL requires union between inputs that are not simple table scans and involve a filter or aliasing. Or column types of tables being unioned are not of same type.
+==============================================================
+Converted from testUnionAllTablesWhenMappingIsRequired()
+Cannot plan this UNION ALL operation, because the column swap
+would require generating a subquery.
+=== case
+Union all tables when mapping is required
+=== SQL
+SELECT c, COUNT(*)
+FROM (
+  SELECT dim1 AS c, m1
+  FROM foo
+  UNION ALL
+  SELECT dim2 AS c, m1
+  FROM numfoo
+  )
+WHERE c = 'a'
+   OR c = 'def'
+GROUP BY 1
+=== exception
+UnsupportedSQLQueryException
+=== error
+!Cannot build plan for query: SELECT.*
+**
+!.*Possible error: SQL requires union between two tables and column names queried for each table are different .*
+==============================================================
+Converted from testUnionIsUnplannable()
+Cannot plan this UNION operation
+=== case
+Union is unplannable
+=== SQL
+SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo
+=== exception
+UnsupportedSQLQueryException
+=== error
+!Cannot build plan for query: SELECT .* Possible error: SQL requires 'UNION' but only 'UNION ALL' is supported.

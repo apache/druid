@@ -1,0 +1,3397 @@
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+==============================================================
+Test cases from the CalciteArraysQueryTest file
+
+Tests for array functions and array types
+Sort of limited since no native array column
+types so either need to use constructor or array aggregator
+==============================================================
+Converted from testSelectConstantArrayExpressionFromTable()
+=== case
+SELECT constant array expression from table
+=== SQL
+SELECT ARRAY[1,2] as arr, dim1 FROM foo LIMIT 1
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+arr INTEGER ARRAY
+dim1 VARCHAR
+=== plan
+LogicalSort(fetch=[1])
+  LogicalProject(arr=[ARRAY(1, 2)], dim1=[$2])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array(1,2)",
+    "outputType" : "ARRAY<LONG>"
+  } ],
+  "resultFormat" : "compactedList",
+  "limit" : 1,
+  "columns" : [ "dim1", "v0" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+["[1,2]",""]
+==============================================================
+Converted from testGroupByArrayFromCase()
+=== case
+GROUP BY array from CASE
+=== SQL
+SELECT
+  CASE
+    WHEN dim4 = 'a' THEN ARRAY['foo','bar','baz']
+  END AS mv_value,
+  count(1)
+FROM numfoo
+GROUP BY 1
+=== context
+sqlStringifyArrays=false
+=== options
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+mv_value CHAR(3) ARRAY
+EXPR$1 BIGINT
+=== plan
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
+  LogicalProject(mv_value=[CASE(=($7, 'a'), ARRAY('foo', 'bar', 'baz'), null:CHAR(3) NOT NULL ARRAY)], $f1=[1])
+    LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "case_searched((\"dim4\" == 'a'),array('foo','bar','baz'),null)",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "context" : {
+    "sqlStringifyArrays" : false
+  }
+}
+=== results
+[null,3]
+[["foo","bar","baz"],3]
+==============================================================
+Converted from testSelectNonConstantArrayExpressionFromTable()
+=== case
+SELECT non-constant array expression from table
+=== SQL
+SELECT
+  ARRAY[CONCAT(dim1, 'word'),'up'] as arr,
+  dim1
+FROM foo
+LIMIT 5
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+arr VARCHAR ARRAY
+dim1 VARCHAR
+=== plan
+LogicalSort(fetch=[5])
+  LogicalProject(arr=[ARRAY(CONCAT($2, 'word'), 'up')], dim1=[$2])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array(concat(\"dim1\",'word'),'up')",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "resultFormat" : "compactedList",
+  "limit" : 5,
+  "columns" : [ "dim1", "v0" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+["[\"word\",\"up\"]",""]
+["[\"10.1word\",\"up\"]","10.1"]
+["[\"2word\",\"up\"]","2"]
+["[\"1word\",\"up\"]","1"]
+["[\"defword\",\"up\"]","def"]
+==============================================================
+Converted from testSelectNonConstantArrayExpressionFromTableForMultival()
+
+if nested arrays are allowed, dim3 is a multi-valued string column, so the
+automatic translation will turn this expression into
+
+    `map((dim3) -> array(concat(dim3,'word'),'up'), dim3)`
+
+this works, but we still translate the output into a string since
+that is the current output type in some future this might not
+auto-convert to a string type (when we support grouping on arrays maybe?)
+=== case
+SELECT non-constant array expression from table for mutival
+=== SQL
+SELECT
+  ARRAY[CONCAT(dim3, 'word'),'up'] as arr,
+  dim1
+FROM foo
+LIMIT 5
+=== options
+allowNestedArrays=true
+vectorize=true
+=== schema
+arr VARCHAR ARRAY
+dim1 VARCHAR
+=== plan
+LogicalSort(fetch=[5])
+  LogicalProject(arr=[ARRAY(CONCAT($4, 'word'), 'up')], dim1=[$2])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array(concat(\"dim3\",'word'),'up')",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "resultFormat" : "compactedList",
+  "limit" : 5,
+  "columns" : [ "dim1", "v0" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["[[\"aword\",\"up\"],[\"bword\",\"up\"]]",""]
+["[[\"bword\",\"up\"],[\"cword\",\"up\"]]","10.1"]
+["[[\"dword\",\"up\"]]","2"]
+["[[\"word\",\"up\"]]","1"]
+["[[\"word\",\"up\"]]","def"]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["[[\"aword\",\"up\"],[\"bword\",\"up\"]]",""]
+["[[\"bword\",\"up\"],[\"cword\",\"up\"]]","10.1"]
+["[[\"dword\",\"up\"]]","2"]
+["[[\"word\",\"up\"]]","1"]
+["[[null,\"up\"]]","def"]
+==============================================================
+Converted from testSelectNonConstantArrayExpressionFromTableForMultival()
+
+If nested arrays are not enabled, the above doesn't work
+=== case
+Select non constant array expression from table for multival
+=== SQL copy
+=== options
+allowNestedArrays=false
+vectorize=true
+=== run
+=== exception
+IAE
+=== error
+Cannot create a nested array type [ARRAY<ARRAY<STRING>>], 'druid.expressions.allowNestedArrays' must be set to true
+==============================================================
+Converted from testSomeArrayFunctionsWithScanQuery()
+
+Yes these outputs are strange sometimes, arrays are in a
+partial state of existence so end up a bit stringy for now
+this is because virtual column selectors are coercing values
+back to stringish so that multi-valued string dimensions
+can be grouped on.
+=== case
+some array functions with scan query
+=== SQL
+SELECT
+  dim1,
+  dim2,
+  dim3,
+  l1,
+  l2,
+  d1,
+  d2,
+  ARRAY['a', 'b', 'c'],
+  ARRAY[1,2,3],
+  ARRAY[1.9, 2.2, 4.3],
+  ARRAY_APPEND(dim3, 'foo'),
+  ARRAY_PREPEND('foo', ARRAY[dim2]),
+  ARRAY_APPEND(ARRAY[1,2], l1),
+  ARRAY_PREPEND(l2, ARRAY[1,2]),
+  ARRAY_APPEND(ARRAY[1.2,2.2], d1),
+  ARRAY_PREPEND(d2, ARRAY[1.1,2.2]),
+  ARRAY_CONCAT(dim2,dim3),
+  ARRAY_CONCAT(ARRAY[l1],ARRAY[l2]),
+  ARRAY_CONCAT(ARRAY[d1],ARRAY[d2]),
+  ARRAY_OFFSET(ARRAY[l1],0),
+  ARRAY_OFFSET(ARRAY[d1],0),
+  ARRAY_ORDINAL(ARRAY[l1],1),
+  ARRAY_ORDINAL(ARRAY[d1],1)
+FROM druid.numfoo
+LIMIT 1
+=== options
+vectorize=true
+=== schema
+dim1 VARCHAR
+dim2 VARCHAR
+dim3 VARCHAR
+l1 BIGINT
+l2 BIGINT
+d1 DOUBLE
+d2 DOUBLE
+EXPR$7 CHAR(1) ARRAY
+EXPR$8 INTEGER ARRAY
+EXPR$9 DECIMAL(2, 1) ARRAY
+EXPR$10 VARCHAR ARRAY
+EXPR$11 VARCHAR ARRAY
+EXPR$12 INTEGER ARRAY
+EXPR$13 INTEGER ARRAY
+EXPR$14 DECIMAL(2, 1) ARRAY
+EXPR$15 DECIMAL(2, 1) ARRAY
+EXPR$16 VARCHAR ARRAY
+EXPR$17 BIGINT ARRAY
+EXPR$18 DOUBLE ARRAY
+EXPR$19 BIGINT ARRAY
+EXPR$20 DOUBLE ARRAY
+EXPR$21 BIGINT ARRAY
+EXPR$22 DOUBLE ARRAY
+=== plan
+LogicalSort(fetch=[1])
+  LogicalProject(dim1=[$4], dim2=[$5], dim3=[$6], l1=[$12], l2=[$13], d1=[$2], d2=[$3], EXPR$7=[ARRAY('a', 'b', 'c')], EXPR$8=[ARRAY(1, 2, 3)], EXPR$9=[ARRAY(1.9:DECIMAL(2, 1), 2.2:DECIMAL(2, 1), 4.3:DECIMAL(2, 1))], EXPR$10=[ARRAY_APPEND($6, 'foo')], EXPR$11=[ARRAY_PREPEND('foo', ARRAY($5))], EXPR$12=[ARRAY_APPEND(ARRAY(1, 2), $12)], EXPR$13=[ARRAY_PREPEND($13, ARRAY(1, 2))], EXPR$14=[ARRAY_APPEND(ARRAY(1.2:DECIMAL(2, 1), 2.2:DECIMAL(2, 1)), $2)], EXPR$15=[ARRAY_PREPEND($3, ARRAY(1.1:DECIMAL(2, 1), 2.2:DECIMAL(2, 1)))], EXPR$16=[ARRAY_CONCAT($5, $6)], EXPR$17=[ARRAY_CONCAT(ARRAY($12), ARRAY($13))], EXPR$18=[ARRAY_CONCAT(ARRAY($2), ARRAY($3))], EXPR$19=[ARRAY_OFFSET(ARRAY($12), 0)], EXPR$20=[ARRAY_OFFSET(ARRAY($2), 0)], EXPR$21=[ARRAY_ORDINAL(ARRAY($12), 1)], EXPR$22=[ARRAY_ORDINAL(ARRAY($2), 1)])
+    LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array('a','b','c')",
+    "outputType" : "ARRAY<STRING>"
+  }, {
+    "type" : "expression",
+    "name" : "v1",
+    "expression" : "array(1,2,3)",
+    "outputType" : "ARRAY<LONG>"
+  }, {
+    "type" : "expression",
+    "name" : "v10",
+    "expression" : "array_concat(array(\"l1\"),array(\"l2\"))",
+    "outputType" : "ARRAY<LONG>"
+  }, {
+    "type" : "expression",
+    "name" : "v11",
+    "expression" : "array_concat(array(\"d1\"),array(\"d2\"))",
+    "outputType" : "ARRAY<DOUBLE>"
+  }, {
+    "type" : "expression",
+    "name" : "v12",
+    "expression" : "array_offset(array(\"l1\"),0)",
+    "outputType" : "ARRAY<LONG>"
+  }, {
+    "type" : "expression",
+    "name" : "v13",
+    "expression" : "array_offset(array(\"d1\"),0)",
+    "outputType" : "ARRAY<DOUBLE>"
+  }, {
+    "type" : "expression",
+    "name" : "v14",
+    "expression" : "array_ordinal(array(\"l1\"),1)",
+    "outputType" : "ARRAY<LONG>"
+  }, {
+    "type" : "expression",
+    "name" : "v15",
+    "expression" : "array_ordinal(array(\"d1\"),1)",
+    "outputType" : "ARRAY<DOUBLE>"
+  }, {
+    "type" : "expression",
+    "name" : "v2",
+    "expression" : "array(1.9,2.2,4.3)",
+    "outputType" : "ARRAY<DOUBLE>"
+  }, {
+    "type" : "expression",
+    "name" : "v3",
+    "expression" : "array_append(\"dim3\",'foo')",
+    "outputType" : "ARRAY<STRING>"
+  }, {
+    "type" : "expression",
+    "name" : "v4",
+    "expression" : "array_prepend('foo',array(\"dim2\"))",
+    "outputType" : "ARRAY<STRING>"
+  }, {
+    "type" : "expression",
+    "name" : "v5",
+    "expression" : "array_append(array(1,2),\"l1\")",
+    "outputType" : "ARRAY<LONG>"
+  }, {
+    "type" : "expression",
+    "name" : "v6",
+    "expression" : "array_prepend(\"l2\",array(1,2))",
+    "outputType" : "ARRAY<LONG>"
+  }, {
+    "type" : "expression",
+    "name" : "v7",
+    "expression" : "array_append(array(1.2,2.2),\"d1\")",
+    "outputType" : "ARRAY<DOUBLE>"
+  }, {
+    "type" : "expression",
+    "name" : "v8",
+    "expression" : "array_prepend(\"d2\",array(1.1,2.2))",
+    "outputType" : "ARRAY<DOUBLE>"
+  }, {
+    "type" : "expression",
+    "name" : "v9",
+    "expression" : "array_concat(\"dim2\",\"dim3\")",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "resultFormat" : "compactedList",
+  "limit" : 1,
+  "columns" : [ "d1", "d2", "dim1", "dim2", "dim3", "l1", "l2", "v0", "v1", "v10", "v11", "v12", "v13", "v14", "v15", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["","a","[\"a\",\"b\"]",7,0,1.0,0.0,"[\"a\",\"b\",\"c\"]","[1,2,3]","[1.9,2.2,4.3]","[\"a\",\"b\",\"foo\"]","[\"foo\",\"a\"]","[1,2,7]","[0,1,2]","[1.2,2.2,1.0]","[0.0,1.1,2.2]","[\"a\",\"a\",\"b\"]","[7,0]","[1.0,0.0]","7","1.0","7","1.0"]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["","a","[\"a\",\"b\"]",7,null,1.0,null,"[\"a\",\"b\",\"c\"]","[1,2,3]","[1.9,2.2,4.3]","[\"a\",\"b\",\"foo\"]","[\"foo\",\"a\"]","[1,2,7]","[null,1,2]","[1.2,2.2,1.0]","[null,1.1,2.2]","[\"a\",\"a\",\"b\"]","[7,null]","[1.0,null]","7","1.0","7","1.0"]
+==============================================================
+Converted from testSomeArrayFunctionsWithScanQueryNoStringify()
+
+When not stringifying arrays, some things are still stringified,
+because they are inferred to be typed as strings. The planner
+context which controls stringification of arrays does not apply
+to multi-valued string columns, which will still always be
+stringified to ultimately adhere to the varchar type as array
+support increases in the engine this will likely change since
+using explicit array functions should probably kick it into an
+array.
+=== case
+Some array functions with scan query no stringify
+=== SQL
+SELECT
+  dim1,
+  dim2,
+  dim3,
+  ARRAY['a', 'b', 'c'],
+  ARRAY[1,2,3],
+  ARRAY[1.9, 2.2, 4.3],
+  ARRAY_APPEND(dim3, 'foo'),
+  ARRAY_PREPEND('foo', ARRAY[dim2]),
+  ARRAY_APPEND(ARRAY[1,2], l1),
+  ARRAY_PREPEND(l2, ARRAY[1,2]),
+  ARRAY_APPEND(ARRAY[1.2,2.2], d1),
+  ARRAY_PREPEND(d2, ARRAY[1.1,2.2]),
+  ARRAY_CONCAT(dim2,dim3),
+  ARRAY_CONCAT(ARRAY[l1],ARRAY[l2]),
+  ARRAY_CONCAT(ARRAY[d1],ARRAY[d2])
+FROM druid.numfoo LIMIT 1
+=== context
+sqlStringifyArrays=false
+=== options
+vectorize=true
+=== schema
+dim1 VARCHAR
+dim2 VARCHAR
+dim3 VARCHAR
+EXPR$3 CHAR(1) ARRAY
+EXPR$4 INTEGER ARRAY
+EXPR$5 DECIMAL(2, 1) ARRAY
+EXPR$6 VARCHAR ARRAY
+EXPR$7 VARCHAR ARRAY
+EXPR$8 INTEGER ARRAY
+EXPR$9 INTEGER ARRAY
+EXPR$10 DECIMAL(2, 1) ARRAY
+EXPR$11 DECIMAL(2, 1) ARRAY
+EXPR$12 VARCHAR ARRAY
+EXPR$13 BIGINT ARRAY
+EXPR$14 DOUBLE ARRAY
+=== plan
+LogicalSort(fetch=[1])
+  LogicalProject(dim1=[$4], dim2=[$5], dim3=[$6], EXPR$3=[ARRAY('a', 'b', 'c')], EXPR$4=[ARRAY(1, 2, 3)], EXPR$5=[ARRAY(1.9:DECIMAL(2, 1), 2.2:DECIMAL(2, 1), 4.3:DECIMAL(2, 1))], EXPR$6=[ARRAY_APPEND($6, 'foo')], EXPR$7=[ARRAY_PREPEND('foo', ARRAY($5))], EXPR$8=[ARRAY_APPEND(ARRAY(1, 2), $12)], EXPR$9=[ARRAY_PREPEND($13, ARRAY(1, 2))], EXPR$10=[ARRAY_APPEND(ARRAY(1.2:DECIMAL(2, 1), 2.2:DECIMAL(2, 1)), $2)], EXPR$11=[ARRAY_PREPEND($3, ARRAY(1.1:DECIMAL(2, 1), 2.2:DECIMAL(2, 1)))], EXPR$12=[ARRAY_CONCAT($5, $6)], EXPR$13=[ARRAY_CONCAT(ARRAY($12), ARRAY($13))], EXPR$14=[ARRAY_CONCAT(ARRAY($2), ARRAY($3))])
+    LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array('a','b','c')",
+    "outputType" : "ARRAY<STRING>"
+  }, {
+    "type" : "expression",
+    "name" : "v1",
+    "expression" : "array(1,2,3)",
+    "outputType" : "ARRAY<LONG>"
+  }, {
+    "type" : "expression",
+    "name" : "v10",
+    "expression" : "array_concat(array(\"l1\"),array(\"l2\"))",
+    "outputType" : "ARRAY<LONG>"
+  }, {
+    "type" : "expression",
+    "name" : "v11",
+    "expression" : "array_concat(array(\"d1\"),array(\"d2\"))",
+    "outputType" : "ARRAY<DOUBLE>"
+  }, {
+    "type" : "expression",
+    "name" : "v2",
+    "expression" : "array(1.9,2.2,4.3)",
+    "outputType" : "ARRAY<DOUBLE>"
+  }, {
+    "type" : "expression",
+    "name" : "v3",
+    "expression" : "array_append(\"dim3\",'foo')",
+    "outputType" : "ARRAY<STRING>"
+  }, {
+    "type" : "expression",
+    "name" : "v4",
+    "expression" : "array_prepend('foo',array(\"dim2\"))",
+    "outputType" : "ARRAY<STRING>"
+  }, {
+    "type" : "expression",
+    "name" : "v5",
+    "expression" : "array_append(array(1,2),\"l1\")",
+    "outputType" : "ARRAY<LONG>"
+  }, {
+    "type" : "expression",
+    "name" : "v6",
+    "expression" : "array_prepend(\"l2\",array(1,2))",
+    "outputType" : "ARRAY<LONG>"
+  }, {
+    "type" : "expression",
+    "name" : "v7",
+    "expression" : "array_append(array(1.2,2.2),\"d1\")",
+    "outputType" : "ARRAY<DOUBLE>"
+  }, {
+    "type" : "expression",
+    "name" : "v8",
+    "expression" : "array_prepend(\"d2\",array(1.1,2.2))",
+    "outputType" : "ARRAY<DOUBLE>"
+  }, {
+    "type" : "expression",
+    "name" : "v9",
+    "expression" : "array_concat(\"dim2\",\"dim3\")",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "resultFormat" : "compactedList",
+  "limit" : 1,
+  "columns" : [ "dim1", "dim2", "dim3", "v0", "v1", "v10", "v11", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9" ],
+  "context" : {
+    "sqlStringifyArrays" : false
+  },
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["","a","[\"a\",\"b\"]",["a","b","c"],[1,2,3],[1.9,2.2,4.3],["a","b","foo"],["foo","a"],[1,2,7],[0,1,2],[1.2,2.2,1.0],[0.0,1.1,2.2],["a","a","b"],[7,0],[1.0,0.0]]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["","a","[\"a\",\"b\"]",["a","b","c"],[1,2,3],[1.9,2.2,4.3],["a","b","foo"],["foo","a"],[1,2,7],[null,1,2],[1.2,2.2,1.0],[null,1.1,2.2],["a","a","b"],[7,null],[1.0,null]]
+==============================================================
+Converted from testArrayOverlapFilter()
+=== case
+array overlap filter
+=== SQL
+SELECT dim3
+FROM druid.numfoo
+WHERE ARRAY_OVERLAP(dim3, ARRAY['a','b'])
+LIMIT 5
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim3 VARCHAR
+=== plan
+LogicalSort(fetch=[5])
+  LogicalProject(dim3=[$6])
+    LogicalFilter(condition=[ARRAY_OVERLAP($6, ARRAY('a', 'b'))])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "limit" : 5,
+  "filter" : {
+    "type" : "in",
+    "dimension" : "dim3",
+    "values" : [ "a", "b" ]
+  },
+  "columns" : [ "dim3" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+["[\"a\",\"b\"]"]
+["[\"b\",\"c\"]"]
+==============================================================
+Converted from testArrayOverlapFilterNonLiteral()
+=== case
+Array overlap filter non-literal
+=== SQL
+SELECT dim3
+FROM druid.numfoo
+WHERE ARRAY_OVERLAP(dim3, ARRAY[dim2])
+LIMIT 5
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim3 VARCHAR
+=== plan
+LogicalSort(fetch=[5])
+  LogicalProject(dim3=[$6])
+    LogicalFilter(condition=[ARRAY_OVERLAP($6, ARRAY($5))])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "limit" : 5,
+  "filter" : {
+    "type" : "expression",
+    "expression" : "array_overlap(\"dim3\",array(\"dim2\"))"
+  },
+  "columns" : [ "dim3" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+["[\"a\",\"b\"]"]
+==============================================================
+Converted from testArrayContainsFilter()
+=== case
+Array contains filter
+=== SQL
+SELECT dim3
+FROM druid.numfoo
+WHERE ARRAY_CONTAINS(dim3, ARRAY['a','b'])
+LIMIT 5
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim3 VARCHAR
+=== plan
+LogicalSort(fetch=[5])
+  LogicalProject(dim3=[$6])
+    LogicalFilter(condition=[ARRAY_CONTAINS($6, ARRAY('a', 'b'))])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "limit" : 5,
+  "filter" : {
+    "type" : "and",
+    "fields" : [ {
+      "type" : "selector",
+      "dimension" : "dim3",
+      "value" : "a"
+    }, {
+      "type" : "selector",
+      "dimension" : "dim3",
+      "value" : "b"
+    } ]
+  },
+  "columns" : [ "dim3" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+["[\"a\",\"b\"]"]
+==============================================================
+Converted from testArrayContainsArrayOfOneElement()
+=== case
+Array contains array of one element
+=== SQL
+SELECT dim3
+FROM druid.numfoo
+WHERE ARRAY_CONTAINS(dim3, ARRAY['a'])
+LIMIT 5
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim3 VARCHAR
+=== plan
+LogicalSort(fetch=[5])
+  LogicalProject(dim3=[$6])
+    LogicalFilter(condition=[ARRAY_CONTAINS($6, ARRAY('a'))])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "limit" : 5,
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "dim3",
+    "value" : "a"
+  },
+  "columns" : [ "dim3" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+["[\"a\",\"b\"]"]
+==============================================================
+Converted from testArrayContainsArrayOfNonLiteral()
+=== case
+test array contains array of non-literal
+=== SQL
+SELECT dim3
+FROM druid.numfoo
+WHERE ARRAY_CONTAINS(dim3, ARRAY[dim2])
+LIMIT 5
+=== context
+sqlStringifyArrays=false
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim3 VARCHAR
+=== plan
+LogicalSort(fetch=[5])
+  LogicalProject(dim3=[$6])
+    LogicalFilter(condition=[ARRAY_CONTAINS($6, ARRAY($5))])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "limit" : 5,
+  "filter" : {
+    "type" : "expression",
+    "expression" : "array_contains(\"dim3\",array(\"dim2\"))"
+  },
+  "columns" : [ "dim3" ],
+  "context" : {
+    "sqlStringifyArrays" : false
+  },
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+["[\"a\",\"b\"]"]
+==============================================================
+Converted from testArraySlice()
+=== case
+Array slice
+=== SQL
+SELECT ARRAY_SLICE(dim3, 1) FROM druid.numfoo
+=== context
+sqlStringifyArrays=false
+=== options
+vectorize=true
+=== schema
+EXPR$0 VARCHAR ARRAY
+=== plan
+LogicalProject(EXPR$0=[ARRAY_SLICE($6, 1)])
+  LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_slice(\"dim3\",1)",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "resultFormat" : "compactedList",
+  "columns" : [ "v0" ],
+  "context" : {
+    "sqlStringifyArrays" : false
+  },
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[["b"]]
+[["c"]]
+[[]]
+[null]
+[null]
+[null]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[["b"]]
+[["c"]]
+[[]]
+[[]]
+[null]
+[null]
+==============================================================
+Converted from testArrayLength()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Array length
+=== SQL
+SELECT
+  dim1,
+  ARRAY_LENGTH(dim3),
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1, 2
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+dim1 VARCHAR
+EXPR$1 INTEGER
+EXPR$2 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0, 1}], EXPR$2=[SUM($2)])
+    LogicalProject(dim1=[$4], EXPR$1=[ARRAY_LENGTH($6)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_length(\"dim3\")",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d1",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "_d1",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",2,1]
+["10.1",2,1]
+["2",1,1]
+["1",0,1]
+["abc",0,1]
+["def",0,1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["",2,1]
+["10.1",2,1]
+["1",1,1]
+["2",1,1]
+["abc",null,1]
+["def",null,1]
+==============================================================
+Converted from testArrayAppend()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Array append
+=== SQL
+SELECT
+  ARRAY_APPEND(dim3, 'foo'),
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== context
+sqlStringifyArrays=false
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR ARRAY
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[ARRAY_APPEND($6, 'foo')], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_append(\"dim3\",'foo')",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  },
+  "context" : {
+    "sqlStringifyArrays" : false
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[null,3]
+[["a","b","foo"],1]
+[["b","c","foo"],1]
+[["d","foo"],1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,2]
+[["","foo"],1]
+[["a","b","foo"],1]
+[["b","c","foo"],1]
+[["d","foo"],1]
+==============================================================
+Converted from testArrayPrepend()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Array prepend
+=== SQL
+SELECT
+  ARRAY_PREPEND('foo', dim3),
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== context
+sqlStringifyArrays=false
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR ARRAY
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[ARRAY_PREPEND('foo', $6)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_prepend('foo',\"dim3\")",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  },
+  "context" : {
+    "sqlStringifyArrays" : false
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[null,3]
+[["foo","a","b"],1]
+[["foo","b","c"],1]
+[["foo","d"],1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,2]
+[["foo",""],1]
+[["foo","a","b"],1]
+[["foo","b","c"],1]
+[["foo","d"],1]
+==============================================================
+Converted from testArrayPrependAppend()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Array prepend append
+=== SQL
+SELECT
+  ARRAY_TO_STRING(ARRAY_PREPEND('foo', dim3), ','),
+  ARRAY_TO_STRING(ARRAY_APPEND(dim3, 'foo'), ','),
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1,2
+ORDER BY 3 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 VARCHAR
+EXPR$2 BIGINT
+=== plan
+LogicalSort(sort0=[$2], dir0=[DESC])
+  LogicalAggregate(group=[{0, 1}], EXPR$2=[SUM($2)])
+    LogicalProject(EXPR$0=[ARRAY_TO_STRING(ARRAY_PREPEND('foo', $6), ',')], EXPR$1=[ARRAY_TO_STRING(ARRAY_APPEND($6, 'foo'), ',')], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_to_string(array_prepend('foo',\"dim3\"),',')",
+    "outputType" : "STRING"
+  }, {
+    "type" : "expression",
+    "name" : "v1",
+    "expression" : "array_to_string(array_append(\"dim3\",'foo'),',')",
+    "outputType" : "STRING"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "v1",
+    "outputName" : "_d1",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["","",3]
+["foo,a,b","a,b,foo",1]
+["foo,b,c","b,c,foo",1]
+["foo,d","d,foo",1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,null,2]
+["foo,",",foo",1]
+["foo,a,b","a,b,foo",1]
+["foo,b,c","b,c,foo",1]
+["foo,d","d,foo",1]
+==============================================================
+Converted from testArrayConcat()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Array concat
+=== SQL
+SELECT
+  ARRAY_CONCAT(dim3, dim3),
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== context
+sqlStringifyArrays=false
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR ARRAY
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[ARRAY_CONCAT($6, $6)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_concat(\"dim3\",\"dim3\")",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  },
+  "context" : {
+    "sqlStringifyArrays" : false
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[null,3]
+[["a","b","a","b"],1]
+[["b","c","b","c"],1]
+[["d","d"],1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,2]
+[["",""],1]
+[["a","b","a","b"],1]
+[["b","c","b","c"],1]
+[["d","d"],1]
+==============================================================
+Converted from testArrayOffset()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Array offset
+=== SQL
+SELECT
+  ARRAY_OFFSET(dim3, 1),
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[ARRAY_OFFSET($6, 1)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_offset(\"dim3\",1)",
+    "outputType" : "STRING"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",4]
+["b",1]
+["c",1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,4]
+["b",1]
+["c",1]
+==============================================================
+Converted from testArrayGroupAsLongArray()
+
+Cannot vectorize as we do not have support in native query
+subsystem for grouping on arrays.
+=== case
+Array group as long array
+=== SQL
+SELECT
+  ARRAY[l1],
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== context
+sqlStringifyArrays=false
+=== options
+vectorize=false
+=== schema
+EXPR$0 BIGINT ARRAY
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[ARRAY($12)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array(\"l1\")",
+    "outputType" : "ARRAY<LONG>"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "ARRAY<LONG>"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  },
+  "context" : {
+    "sqlStringifyArrays" : false
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[[0],4]
+[[7],1]
+[[325323],1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[[null],3]
+[[0],1]
+[[7],1]
+[[325323],1]
+==============================================================
+Converted from testArrayGroupAsDoubleArray()
+
+Cannot vectorize as we do not have support in native query
+subsystem for grouping on arrays.
+=== case
+Array group as double array
+=== SQL
+SELECT
+  ARRAY[d1],
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== context
+sqlStringifyArrays=false
+=== options
+vectorize=false
+=== schema
+EXPR$0 DOUBLE ARRAY
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[ARRAY($2)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array(\"d1\")",
+    "outputType" : "ARRAY<DOUBLE>"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "ARRAY<DOUBLE>"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  },
+  "context" : {
+    "sqlStringifyArrays" : false
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[[0.0],4]
+[[1.0],1]
+[[1.7],1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[[null],3]
+[[0.0],1]
+[[1.0],1]
+[[1.7],1]
+==============================================================
+Converted from testArrayGroupAsFloatArray()
+
+Cannot vectorize as we do not have support in native query
+subsystem for grouping on arrays.
+=== case
+Array group as float array
+=== SQL
+SELECT
+  ARRAY[f1],
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== context
+sqlStringifyArrays=false
+=== options
+typedCompare=true
+vectorize=false
+=== schema
+EXPR$0 FLOAT ARRAY
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[ARRAY($10)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array(\"f1\")",
+    "outputType" : "ARRAY<FLOAT>"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "ARRAY<FLOAT>"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  },
+  "context" : {
+    "sqlStringifyArrays" : false
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[[0.0],4]
+[[0.10000000149011612],1]
+[[1.0],1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[[null],3]
+[[0.0],1]
+[[0.10000000149011612],1]
+[[1.0],1]
+==============================================================
+Converted from testArrayGroupAsArrayWithFunction()
+
+Cannot vectorize due to usage of expressions.
+=== case
+Array group as array with function
+=== SQL
+SELECT
+  ARRAY[ARRAY_ORDINAL(dim3, 2)],
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== context
+sqlStringifyArrays=false
+=== options
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+EXPR$0 VARCHAR ARRAY
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[ARRAY(ARRAY_ORDINAL($6, 2))], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array(array_ordinal(\"dim3\",2))",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  },
+  "context" : {
+    "sqlStringifyArrays" : false
+  }
+}
+=== results
+[[null],4]
+[["b"],1]
+[["c"],1]
+==============================================================
+Converted from testArrayOrdinal()
+
+Cannot vectorize due to usage of expressions.
+=== case
+ARRAY_ORDINAL
+=== SQL
+SELECT
+  ARRAY_ORDINAL(dim3, 2),
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[ARRAY_ORDINAL($6, 2)], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_ordinal(\"dim3\",2)",
+    "outputType" : "STRING"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",4]
+["b",1]
+["c",1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,4]
+["b",1]
+["c",1]
+==============================================================
+Converted from testArrayOffsetOf()
+
+Cannot vectorize due to usage of expressions.
+=== case
+ARRAY_OFFSET_OF
+=== SQL
+SELECT
+  ARRAY_OFFSET_OF(dim3, 'b'),
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 INTEGER
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[ARRAY_OFFSET_OF($6, 'b')], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_offset_of(\"dim3\",'b')",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[0,4]
+[-1,1]
+[1,1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,4]
+[0,1]
+[1,1]
+==============================================================
+Converted from testArrayOrdinalOf()
+
+Cannot vectorize due to usage of expressions.
+=== case
+ARRAY_ORDINAL_OF
+=== SQL
+SELECT
+  ARRAY_ORDINAL_OF(dim3, 'b'),
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 INTEGER
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[ARRAY_ORDINAL_OF($6, 'b')], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_ordinal_of(\"dim3\",'b')",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[0,3]
+[-1,1]
+[1,1]
+[2,1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,4]
+[1,1]
+[2,1]
+==============================================================
+Converted from testArrayToString()
+
+Cannot vectorize due to usage of expressions.
+=== case
+ARRAY_TO_STRING
+=== SQL
+SELECT
+  ARRAY_TO_STRING(dim3, ','),
+  SUM(cnt)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2 DESC
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[ARRAY_TO_STRING($6, ',')], cnt=[$1])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_to_string(\"dim3\",',')",
+    "outputType" : "STRING"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",3]
+["a,b",1]
+["b,c",1]
+["d",1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,2]
+["",1]
+["a,b",1]
+["b,c",1]
+["d",1]
+==============================================================
+Converted from testArrayToStringToMultiValueString()
+
+Cannot vectorize due to usage of expressions.
+=== case
+STRING_TO_ARRAY to multi-value string
+=== SQL
+SELECT
+  STRING_TO_ARRAY(CONCAT(ARRAY_TO_STRING(dim3, ','), ',d'), ','),
+  SUM(cnt)
+FROM druid.numfoo
+WHERE ARRAY_LENGTH(dim3) > 0
+GROUP BY 1
+ORDER BY 2 DESC
+=== context
+sqlStringifyArrays=false
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR ARRAY
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
+    LogicalProject(EXPR$0=[STRING_TO_ARRAY(CONCAT(ARRAY_TO_STRING($6, ','), ',d'), ',')], cnt=[$1])
+      LogicalFilter(condition=[>(ARRAY_LENGTH($6), 0)])
+        LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_length(\"dim3\")",
+    "outputType" : "LONG"
+  }, {
+    "type" : "expression",
+    "name" : "v1",
+    "expression" : "string_to_array(concat(array_to_string(\"dim3\",','),',d'),',')",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "filter" : {
+    "type" : "bound",
+    "dimension" : "v0",
+    "lower" : "0",
+    "lowerStrict" : true,
+    "ordering" : {
+      "type" : "numeric"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v1",
+    "outputName" : "_d0",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "a0",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  },
+  "context" : {
+    "sqlStringifyArrays" : false
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[["a","b","d"],1]
+[["b","c","d"],1]
+[["d","d"],1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[["","d"],1]
+[["a","b","d"],1]
+[["b","c","d"],1]
+[["d","d"],1]
+==============================================================
+Converted from testArrayAgg()
+=== case
+ARRAY_AGG
+=== SQL
+SELECT
+  ARRAY_AGG(dim1),
+  ARRAY_AGG(DISTINCT dim1),
+  ARRAY_AGG(DISTINCT dim1) FILTER(WHERE dim1 = 'shazbot')
+FROM foo
+WHERE dim1 is not null
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR ARRAY
+EXPR$1 VARCHAR ARRAY
+EXPR$2 VARCHAR ARRAY
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[ARRAY_AGG($0)], EXPR$1=[ARRAY_AGG(DISTINCT $0)], EXPR$2=[ARRAY_AGG(DISTINCT $0) FILTER $1])
+  LogicalProject(dim1=[$2], $f1=[IS TRUE(=($2, 'shazbot'))])
+    LogicalFilter(condition=[IS NOT NULL($2)])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "not",
+    "field" : {
+      "type" : "selector",
+      "dimension" : "dim1"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "expression",
+    "name" : "a0",
+    "fields" : [ "dim1" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<STRING>[]",
+    "initialCombineValue" : "ARRAY<STRING>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_append(\"__acc\", \"dim1\")",
+    "combine" : "array_concat(\"__acc\", \"a0\")",
+    "maxSizeBytes" : 1024
+  }, {
+    "type" : "expression",
+    "name" : "a1",
+    "fields" : [ "dim1" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<STRING>[]",
+    "initialCombineValue" : "ARRAY<STRING>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_set_add(\"__acc\", \"dim1\")",
+    "combine" : "array_set_add_all(\"__acc\", \"a1\")",
+    "maxSizeBytes" : 1024
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "expression",
+      "name" : "a2",
+      "fields" : [ "dim1" ],
+      "accumulatorIdentifier" : "__acc",
+      "initialValue" : "ARRAY<STRING>[]",
+      "initialCombineValue" : "ARRAY<STRING>[]",
+      "isNullUnlessAggregated" : true,
+      "shouldAggregateNullInputs" : true,
+      "shouldCombineAggregateNullInputs" : false,
+      "fold" : "array_set_add(\"__acc\", \"dim1\")",
+      "combine" : "array_set_add_all(\"__acc\", \"a2\")",
+      "maxSizeBytes" : 1024
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "shazbot"
+    },
+    "name" : "a2"
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["[\"10.1\",\"2\",\"1\",\"def\",\"abc\"]","[\"1\",\"10.1\",\"2\",\"abc\",\"def\"]",null]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["[\"\",\"10.1\",\"2\",\"1\",\"def\",\"abc\"]","[\"\",\"1\",\"10.1\",\"2\",\"abc\",\"def\"]",null]
+==============================================================
+Converted from testArrayAggMultiValue()
+=== case
+ARRAY_AGG multi-value
+=== SQL
+SELECT
+  ARRAY_AGG(dim3),
+  ARRAY_AGG(DISTINCT dim3)
+FROM foo
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR ARRAY
+EXPR$1 VARCHAR ARRAY
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[ARRAY_AGG($0)], EXPR$1=[ARRAY_AGG(DISTINCT $0)])
+  LogicalProject(dim3=[$4])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "expression",
+    "name" : "a0",
+    "fields" : [ "dim3" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<STRING>[]",
+    "initialCombineValue" : "ARRAY<STRING>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_append(\"__acc\", \"dim3\")",
+    "combine" : "array_concat(\"__acc\", \"a0\")",
+    "maxSizeBytes" : 1024
+  }, {
+    "type" : "expression",
+    "name" : "a1",
+    "fields" : [ "dim3" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<STRING>[]",
+    "initialCombineValue" : "ARRAY<STRING>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_set_add(\"__acc\", \"dim3\")",
+    "combine" : "array_set_add_all(\"__acc\", \"a1\")",
+    "maxSizeBytes" : 1024
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["[\"a\",\"b\",\"b\",\"c\",\"d\",null,null,null]","[null,\"a\",\"b\",\"c\",\"d\"]"]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["[\"a\",\"b\",\"b\",\"c\",\"d\",\"\",null,null]","[null,\"\",\"a\",\"b\",\"c\",\"d\"]"]
+==============================================================
+Converted from testArrayAggNumeric()
+=== case
+ARRAY_AGG numeric
+=== SQL
+SELECT
+  ARRAY_AGG(l1),
+  ARRAY_AGG(DISTINCT l1),
+  ARRAY_AGG(d1),
+  ARRAY_AGG(DISTINCT d1),
+  ARRAY_AGG(f1),
+  ARRAY_AGG(DISTINCT f1)
+FROM numfoo
+=== options
+vectorize=false
+=== schema
+EXPR$0 BIGINT ARRAY
+EXPR$1 BIGINT ARRAY
+EXPR$2 DOUBLE ARRAY
+EXPR$3 DOUBLE ARRAY
+EXPR$4 FLOAT ARRAY
+EXPR$5 FLOAT ARRAY
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[ARRAY_AGG($0)], EXPR$1=[ARRAY_AGG(DISTINCT $0)], EXPR$2=[ARRAY_AGG($1)], EXPR$3=[ARRAY_AGG(DISTINCT $1)], EXPR$4=[ARRAY_AGG($2)], EXPR$5=[ARRAY_AGG(DISTINCT $2)])
+  LogicalProject(l1=[$12], d1=[$2], f1=[$10])
+    LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "expression",
+    "name" : "a0",
+    "fields" : [ "l1" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<LONG>[]",
+    "initialCombineValue" : "ARRAY<LONG>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_append(\"__acc\", \"l1\")",
+    "combine" : "array_concat(\"__acc\", \"a0\")",
+    "maxSizeBytes" : 1024
+  }, {
+    "type" : "expression",
+    "name" : "a1",
+    "fields" : [ "l1" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<LONG>[]",
+    "initialCombineValue" : "ARRAY<LONG>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_set_add(\"__acc\", \"l1\")",
+    "combine" : "array_set_add_all(\"__acc\", \"a1\")",
+    "maxSizeBytes" : 1024
+  }, {
+    "type" : "expression",
+    "name" : "a2",
+    "fields" : [ "d1" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<DOUBLE>[]",
+    "initialCombineValue" : "ARRAY<DOUBLE>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_append(\"__acc\", \"d1\")",
+    "combine" : "array_concat(\"__acc\", \"a2\")",
+    "maxSizeBytes" : 1024
+  }, {
+    "type" : "expression",
+    "name" : "a3",
+    "fields" : [ "d1" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<DOUBLE>[]",
+    "initialCombineValue" : "ARRAY<DOUBLE>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_set_add(\"__acc\", \"d1\")",
+    "combine" : "array_set_add_all(\"__acc\", \"a3\")",
+    "maxSizeBytes" : 1024
+  }, {
+    "type" : "expression",
+    "name" : "a4",
+    "fields" : [ "f1" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<DOUBLE>[]",
+    "initialCombineValue" : "ARRAY<DOUBLE>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_append(\"__acc\", \"f1\")",
+    "combine" : "array_concat(\"__acc\", \"a4\")",
+    "maxSizeBytes" : 1024
+  }, {
+    "type" : "expression",
+    "name" : "a5",
+    "fields" : [ "f1" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<DOUBLE>[]",
+    "initialCombineValue" : "ARRAY<DOUBLE>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_set_add(\"__acc\", \"f1\")",
+    "combine" : "array_set_add_all(\"__acc\", \"a5\")",
+    "maxSizeBytes" : 1024
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["[7,325323,0,0,0,0]","[0,7,325323]","[1.0,1.7,0.0,0.0,0.0,0.0]","[0.0,1.0,1.7]","[1.0,0.10000000149011612,0.0,0.0,0.0,0.0]","[0.0,0.10000000149011612,1.0]"]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["[7,325323,0,null,null,null]","[null,0,7,325323]","[1.0,1.7,0.0,null,null,null]","[null,0.0,1.0,1.7]","[1.0,0.10000000149011612,0.0,null,null,null]","[null,0.0,0.10000000149011612,1.0]"]
+==============================================================
+Converted from testArrayAggArrays()
+=== case
+ARRAY_AGG arrays
+=== SQL
+SELECT
+  ARRAY_AGG(ARRAY[l1, l2]),
+  ARRAY_AGG(DISTINCT ARRAY[l1, l2])
+FROM numfoo
+=== context
+sqlStringifyArrays=false
+=== options
+allowNestedArrays=true
+vectorize=false
+=== schema
+EXPR$0 BIGINT ARRAY ARRAY
+EXPR$1 BIGINT ARRAY ARRAY
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[ARRAY_AGG($0)], EXPR$1=[ARRAY_AGG(DISTINCT $0)])
+  LogicalProject($f0=[ARRAY($12, $13)])
+    LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array(\"l1\",\"l2\")",
+    "outputType" : "ARRAY<LONG>"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "expression",
+    "name" : "a0",
+    "fields" : [ "v0" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<ARRAY<LONG>>[]",
+    "initialCombineValue" : "ARRAY<ARRAY<LONG>>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_append(\"__acc\", \"v0\")",
+    "combine" : "array_concat(\"__acc\", \"a0\")",
+    "maxSizeBytes" : 1024
+  }, {
+    "type" : "expression",
+    "name" : "a1",
+    "fields" : [ "v0" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<ARRAY<LONG>>[]",
+    "initialCombineValue" : "ARRAY<ARRAY<LONG>>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_set_add(\"__acc\", \"v0\")",
+    "combine" : "array_set_add_all(\"__acc\", \"a1\")",
+    "maxSizeBytes" : 1024
+  } ],
+  "context" : {
+    "sqlStringifyArrays" : false
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[[[7,0],[325323,325323],[0,0],[0,0],[0,0],[0,0]],[[0,0],[7,0],[325323,325323]]]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[[[7,null],[325323,325323],[0,0],[null,null],[null,null],[null,null]],[[null,null],[0,0],[7,null],[325323,325323]]]
+==============================================================
+Converted from testArrayAggArraysNoNest()
+=== case
+ARRAY_AGG arrays no nest
+=== SQL
+SELECT
+  ARRAY_AGG(ARRAY[l1, l2]),
+  ARRAY_AGG(DISTINCT ARRAY[l1, l2])
+FROM numfoo
+=== context
+sqlStringifyArrays=false
+=== options
+vectorize=false
+=== schema
+EXPR$0 BIGINT ARRAY ARRAY
+EXPR$1 BIGINT ARRAY ARRAY
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[ARRAY_AGG($0)], EXPR$1=[ARRAY_AGG(DISTINCT $0)])
+  LogicalProject($f0=[ARRAY($12, $13)])
+    LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array(\"l1\",\"l2\")",
+    "outputType" : "ARRAY<LONG>"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "expression",
+    "name" : "a0",
+    "fields" : [ "v0" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<ARRAY<LONG>>[]",
+    "initialCombineValue" : "ARRAY<ARRAY<LONG>>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_append(\"__acc\", \"v0\")",
+    "combine" : "array_concat(\"__acc\", \"a0\")",
+    "maxSizeBytes" : 1024
+  }, {
+    "type" : "expression",
+    "name" : "a1",
+    "fields" : [ "v0" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<ARRAY<LONG>>[]",
+    "initialCombineValue" : "ARRAY<ARRAY<LONG>>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_set_add(\"__acc\", \"v0\")",
+    "combine" : "array_set_add_all(\"__acc\", \"a1\")",
+    "maxSizeBytes" : 1024
+  } ],
+  "context" : {
+    "sqlStringifyArrays" : false
+  }
+}
+=== run
+=== exception
+IAE
+=== error
+Cannot create a nested array type [ARRAY<ARRAY<LONG>>], 'druid.expressions.allowNestedArrays' must be set to true
+==============================================================
+Converted from testArrayConcatAggArrays()
+=== case
+ARRAY_CONCAT_AGG arrays
+=== SQL
+SELECT
+  ARRAY_CONCAT_AGG(ARRAY[l1, l2]),
+  ARRAY_CONCAT_AGG(DISTINCT ARRAY[l1, l2])
+FROM numfoo
+=== options
+vectorize=false
+=== schema
+EXPR$0 BIGINT ARRAY
+EXPR$1 BIGINT ARRAY
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[ARRAY_CONCAT_AGG($0)], EXPR$1=[ARRAY_CONCAT_AGG(DISTINCT $0)])
+  LogicalProject($f0=[ARRAY($12, $13)])
+    LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array(\"l1\",\"l2\")",
+    "outputType" : "ARRAY<LONG>"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "expression",
+    "name" : "a0",
+    "fields" : [ "v0" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<LONG>[]",
+    "initialCombineValue" : "ARRAY<LONG>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : false,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_concat(\"__acc\", \"v0\")",
+    "combine" : "array_concat(\"__acc\", \"a0\")",
+    "maxSizeBytes" : 1024
+  }, {
+    "type" : "expression",
+    "name" : "a1",
+    "fields" : [ "v0" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<LONG>[]",
+    "initialCombineValue" : "ARRAY<LONG>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : false,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_set_add_all(\"__acc\", \"v0\")",
+    "combine" : "array_set_add_all(\"__acc\", \"a1\")",
+    "maxSizeBytes" : 1024
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["[7,0,325323,325323,0,0,0,0,0,0,0,0]","[0,7,325323]"]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["[7,null,325323,325323,0,0,null,null,null,null,null,null]","[null,0,7,325323]"]
+==============================================================
+Converted from testArrayAggToString()
+=== case
+ARRAY_TO_STRING ARRAY_AGG
+=== SQL
+SELECT
+  ARRAY_TO_STRING(ARRAY_AGG(DISTINCT dim1), ',')
+FROM foo
+WHERE dim1 is not null
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+=== plan
+LogicalProject(EXPR$0=[ARRAY_TO_STRING($0, ',')])
+  LogicalAggregate(group=[{}], agg#0=[ARRAY_AGG(DISTINCT $0)])
+    LogicalProject(dim1=[$2])
+      LogicalFilter(condition=[IS NOT NULL($2)])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "not",
+    "field" : {
+      "type" : "selector",
+      "dimension" : "dim1"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "expression",
+    "name" : "a0",
+    "fields" : [ "dim1" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<STRING>[]",
+    "initialCombineValue" : "ARRAY<STRING>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_set_add(\"__acc\", \"dim1\")",
+    "combine" : "array_set_add_all(\"__acc\", \"a0\")",
+    "maxSizeBytes" : 1024
+  } ],
+  "postAggregations" : [ {
+    "type" : "expression",
+    "name" : "p0",
+    "expression" : "array_to_string(\"a0\",',')"
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["1,10.1,2,abc,def"]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[",1,10.1,2,abc,def"]
+==============================================================
+Converted from testArrayAggExpression()
+=== case
+ARRAY_TO_STRING expression
+=== SQL
+SELECT
+  ARRAY_TO_STRING(ARRAY_AGG(DISTINCT CONCAT(dim1, dim2)), ',')
+FROM foo
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+=== plan
+LogicalProject(EXPR$0=[ARRAY_TO_STRING($0, ',')])
+  LogicalAggregate(group=[{}], agg#0=[ARRAY_AGG(DISTINCT $0)])
+    LogicalProject($f0=[CONCAT($2, $3)])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "concat(\"dim1\",\"dim2\")",
+    "outputType" : "STRING"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "expression",
+    "name" : "a0",
+    "fields" : [ "v0" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<STRING>[]",
+    "initialCombineValue" : "ARRAY<STRING>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_set_add(\"__acc\", \"v0\")",
+    "combine" : "array_set_add_all(\"__acc\", \"a0\")",
+    "maxSizeBytes" : 1024
+  } ],
+  "postAggregations" : [ {
+    "type" : "expression",
+    "name" : "p0",
+    "expression" : "array_to_string(\"a0\",',')"
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["10.1,1a,2,a,abc,defabc"]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["null,1a,2,a,defabc"]
+==============================================================
+Converted from testArrayAggMaxBytes()
+=== case
+ARRAY_AGG max bytes
+=== SQL
+SELECT
+  ARRAY_AGG(l1, 128),
+  ARRAY_AGG(DISTINCT l1, 128)
+FROM numfoo
+=== options
+vectorize=false
+=== schema
+EXPR$0 BIGINT ARRAY
+EXPR$1 BIGINT ARRAY
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[ARRAY_AGG($0, $1)], EXPR$1=[ARRAY_AGG(DISTINCT $0, $1)])
+  LogicalProject(l1=[$12], $f1=[128])
+    LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "expression",
+    "name" : "a0",
+    "fields" : [ "l1" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<LONG>[]",
+    "initialCombineValue" : "ARRAY<LONG>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_append(\"__acc\", \"l1\")",
+    "combine" : "array_concat(\"__acc\", \"a0\")",
+    "maxSizeBytes" : 128
+  }, {
+    "type" : "expression",
+    "name" : "a1",
+    "fields" : [ "l1" ],
+    "accumulatorIdentifier" : "__acc",
+    "initialValue" : "ARRAY<LONG>[]",
+    "initialCombineValue" : "ARRAY<LONG>[]",
+    "isNullUnlessAggregated" : true,
+    "shouldAggregateNullInputs" : true,
+    "shouldCombineAggregateNullInputs" : false,
+    "fold" : "array_set_add(\"__acc\", \"l1\")",
+    "combine" : "array_set_add_all(\"__acc\", \"a1\")",
+    "maxSizeBytes" : 128
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["[7,325323,0,0,0,0]","[0,7,325323]"]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["[7,325323,0,null,null,null]","[null,0,7,325323]"]
+==============================================================
+Converted from testArrayAggAsArrayFromJoin()
+=== case
+ARRAY_TO_STRING as array from join
+=== SQL
+SELECT
+  numfoo.dim4,
+  j.arr,
+  ARRAY_TO_STRING(j.arr, ',')
+FROM numfoo
+  INNER JOIN (
+    SELECT
+      dim4,
+      ARRAY_AGG(DISTINCT dim1) as arr
+    FROM numfoo
+    WHERE dim1 is not null GROUP BY 1) as j
+  ON numfoo.dim4 = j.dim4
+=== options
+vectorize=false
+=== schema
+dim4 VARCHAR
+arr VARCHAR ARRAY
+EXPR$2 VARCHAR
+=== plan
+LogicalProject(dim4=[$7], arr=[$18], EXPR$2=[ARRAY_TO_STRING($18, ',')])
+  LogicalJoin(condition=[=($7, $17)], joinType=[inner])
+    LogicalTableScan(table=[[druid, numfoo]])
+    LogicalAggregate(group=[{0}], arr=[ARRAY_AGG(DISTINCT $1)])
+      LogicalProject(dim4=[$7], dim1=[$4])
+        LogicalFilter(condition=[IS NOT NULL($4)])
+          LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "numfoo"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "numfoo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "filter" : {
+          "type" : "not",
+          "field" : {
+            "type" : "selector",
+            "dimension" : "dim1"
+          }
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "dim4",
+          "outputName" : "_d0",
+          "outputType" : "STRING"
+        } ],
+        "aggregations" : [ {
+          "type" : "expression",
+          "name" : "a0",
+          "fields" : [ "dim1" ],
+          "accumulatorIdentifier" : "__acc",
+          "initialValue" : "ARRAY<STRING>[]",
+          "initialCombineValue" : "ARRAY<STRING>[]",
+          "isNullUnlessAggregated" : true,
+          "shouldAggregateNullInputs" : true,
+          "shouldCombineAggregateNullInputs" : false,
+          "fold" : "array_set_add(\"__acc\", \"dim1\")",
+          "combine" : "array_set_add_all(\"__acc\", \"a0\")",
+          "maxSizeBytes" : 1024
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim4\" == \"j0._d0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "array_to_string(\"j0.a0\",',')",
+    "outputType" : "STRING"
+  } ],
+  "resultFormat" : "compactedList",
+  "columns" : [ "dim4", "j0.a0", "v0" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["a","[\"10.1\",\"2\"]","10.1,2"]
+["a","[\"10.1\",\"2\"]","10.1,2"]
+["a","[\"10.1\",\"2\"]","10.1,2"]
+["b","[\"1\",\"abc\",\"def\"]","1,abc,def"]
+["b","[\"1\",\"abc\",\"def\"]","1,abc,def"]
+["b","[\"1\",\"abc\",\"def\"]","1,abc,def"]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["a","[\"\",\"10.1\",\"2\"]",",10.1,2"]
+["a","[\"\",\"10.1\",\"2\"]",",10.1,2"]
+["a","[\"\",\"10.1\",\"2\"]",",10.1,2"]
+["b","[\"1\",\"abc\",\"def\"]","1,abc,def"]
+["b","[\"1\",\"abc\",\"def\"]","1,abc,def"]
+["b","[\"1\",\"abc\",\"def\"]","1,abc,def"]
+==============================================================
+Converted from testArrayAggGroupByArrayAggFromSubquery()
+=== case
+ARRAY_AGG GROUP BY array arg from subquery
+=== SQL
+SELECT
+  dim2,
+  arr,
+  COUNT(*)
+FROM (
+  SELECT
+    dim2,
+    ARRAY_AGG(DISTINCT dim1) as arr
+  FROM foo
+  WHERE dim1 is not null
+  GROUP BY 1
+  LIMIT 5)
+GROUP BY 1,2
+=== context
+sqlStringifyArrays=false
+=== options
+vectorize=false
+=== schema
+dim2 VARCHAR
+arr VARCHAR ARRAY
+EXPR$2 BIGINT
+=== plan
+LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT()])
+  LogicalSort(fetch=[5])
+    LogicalAggregate(group=[{0}], arr=[ARRAY_AGG(DISTINCT $1)])
+      LogicalProject(dim2=[$3], dim1=[$2])
+        LogicalFilter(condition=[IS NOT NULL($2)])
+          LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "topN",
+      "dataSource" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "dimension" : {
+        "type" : "default",
+        "dimension" : "dim2",
+        "outputName" : "d0",
+        "outputType" : "STRING"
+      },
+      "metric" : {
+        "type" : "dimension",
+        "ordering" : {
+          "type" : "lexicographic"
+        }
+      },
+      "threshold" : 5,
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "filter" : {
+        "type" : "not",
+        "field" : {
+          "type" : "selector",
+          "dimension" : "dim1"
+        }
+      },
+      "granularity" : {
+        "type" : "all"
+      },
+      "aggregations" : [ {
+        "type" : "expression",
+        "name" : "a0",
+        "fields" : [ "dim1" ],
+        "accumulatorIdentifier" : "__acc",
+        "initialValue" : "ARRAY<STRING>[]",
+        "initialCombineValue" : "ARRAY<STRING>[]",
+        "isNullUnlessAggregated" : true,
+        "shouldAggregateNullInputs" : true,
+        "shouldCombineAggregateNullInputs" : false,
+        "fold" : "array_set_add(\"__acc\", \"dim1\")",
+        "combine" : "array_set_add_all(\"__acc\", \"a0\")",
+        "maxSizeBytes" : 1024
+      } ],
+      "context" : {
+        "sqlStringifyArrays" : false
+      }
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "d0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "a0",
+    "outputName" : "_d1",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "_a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "context" : {
+    "sqlStringifyArrays" : false
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",["10.1","2","abc"],1]
+["a",["1"],1]
+["abc",["def"],1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,["10.1","abc"],1]
+["",["2"],1]
+["a",["","1"],1]
+["abc",["def"],1]
+==============================================================
+Converted from testArrayAggArrayContainsSubquery()
+=== case
+foo
+=== SQL
+SELECT
+  dim1,
+  dim2
+FROM foo
+WHERE ARRAY_CONTAINS((
+  SELECT
+    ARRAY_AGG(DISTINCT dim1)
+  FROM foo
+  WHERE dim1 is not null), dim1)
+=== options
+vectorize=false
+=== schema
+dim1 VARCHAR
+dim2 VARCHAR
+=== plan
+LogicalProject(dim1=[$2], dim2=[$3])
+  LogicalFilter(condition=[ARRAY_CONTAINS($SCALAR_QUERY({
+LogicalAggregate(group=[{}], EXPR$0=[ARRAY_AGG(DISTINCT $0)])
+  LogicalProject(dim1=[$2])
+    LogicalFilter(condition=[IS NOT NULL($2)])
+      LogicalTableScan(table=[[druid, foo]])
+}), $2)])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "timeseries",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "filter" : {
+          "type" : "not",
+          "field" : {
+            "type" : "selector",
+            "dimension" : "dim1"
+          }
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "aggregations" : [ {
+          "type" : "expression",
+          "name" : "a0",
+          "fields" : [ "dim1" ],
+          "accumulatorIdentifier" : "__acc",
+          "initialValue" : "ARRAY<STRING>[]",
+          "initialCombineValue" : "ARRAY<STRING>[]",
+          "isNullUnlessAggregated" : true,
+          "shouldAggregateNullInputs" : true,
+          "shouldCombineAggregateNullInputs" : false,
+          "fold" : "array_set_add(\"__acc\", \"dim1\")",
+          "combine" : "array_set_add_all(\"__acc\", \"a0\")",
+          "maxSizeBytes" : 1024
+        } ]
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "1",
+    "joinType" : "LEFT"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "filter" : {
+    "type" : "expression",
+    "expression" : "array_contains(\"j0.a0\",\"dim1\")"
+  },
+  "columns" : [ "dim1", "dim2" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["10.1",""]
+["2",""]
+["1","a"]
+["def","abc"]
+["abc",""]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["","a"]
+["10.1",null]
+["2",""]
+["1","a"]
+["def","abc"]
+["abc",null]
+==============================================================
+Converted from testArrayAggGroupByArrayContainsSubquery()
+=== case
+ARRAY_AGG GROUP BY ARRAY_CONTAINS subquery
+=== SQL
+SELECT
+  dim2,
+  COUNT(*)
+FROM foo
+WHERE ARRAY_CONTAINS((
+  SELECT ARRAY_AGG(DISTINCT dim1)
+  FROM foo
+  WHERE dim1 is not null), dim1)
+GROUP BY 1
+=== options
+vectorize=false
+=== schema
+dim2 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
+  LogicalProject(dim2=[$3])
+    LogicalFilter(condition=[ARRAY_CONTAINS($SCALAR_QUERY({
+LogicalAggregate(group=[{}], EXPR$0=[ARRAY_AGG(DISTINCT $0)])
+  LogicalProject(dim1=[$2])
+    LogicalFilter(condition=[IS NOT NULL($2)])
+      LogicalTableScan(table=[[druid, foo]])
+}), $2)])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "timeseries",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "filter" : {
+          "type" : "not",
+          "field" : {
+            "type" : "selector",
+            "dimension" : "dim1"
+          }
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "aggregations" : [ {
+          "type" : "expression",
+          "name" : "a0",
+          "fields" : [ "dim1" ],
+          "accumulatorIdentifier" : "__acc",
+          "initialValue" : "ARRAY<STRING>[]",
+          "initialCombineValue" : "ARRAY<STRING>[]",
+          "isNullUnlessAggregated" : true,
+          "shouldAggregateNullInputs" : true,
+          "shouldCombineAggregateNullInputs" : false,
+          "fold" : "array_set_add(\"__acc\", \"dim1\")",
+          "combine" : "array_set_add_all(\"__acc\", \"a0\")",
+          "maxSizeBytes" : 1024
+        } ]
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "1",
+    "joinType" : "LEFT"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "expression",
+    "expression" : "array_contains(\"j0.a0\",\"dim1\")"
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim2",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",3]
+["a",1]
+["abc",1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,2]
+["",1]
+["a",2]
+["abc",1]

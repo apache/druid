@@ -1,0 +1,1572 @@
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+==============================================================
+Test cases from the CalciteJoinQueryTest file
+
+==============================================================
+Converted from testFilterAndGroupByLookupUsingJoinOperator()
+
+Cannot vectorize JOIN operator.
+=== case
+Filter and GROUP BY lookup using JOIN operator
+=== SQL
+SELECT lookyloo.k, COUNT(*)
+FROM foo LEFT JOIN lookup.lookyloo ON foo.dim2 = lookyloo.k
+WHERE lookyloo.v = 'xa'
+GROUP BY lookyloo.k
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+k VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
+  LogicalProject(k=[$8])
+    LogicalFilter(condition=[=($9, 'xa')])
+      LogicalJoin(condition=[=($3, $8)], joinType=[left])
+        LogicalTableScan(table=[[druid, foo]])
+        LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim2\" == \"j0.k\")",
+    "joinType" : "LEFT"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "j0.v",
+    "value" : "xa"
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "j0.k",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== results
+["a",2]
+==============================================================
+Converted from testFilterAndGroupByLookupUsingPostAggregationJoinOperator()
+=== case
+Filter adn GROUP BY lookup using post-aggregation JOIN operator
+=== SQL
+SELECT base.dim2, lookyloo.v, base.cnt
+FROM (
+  SELECT dim2, COUNT(*) cnt
+  FROM foo
+  GROUP BY dim2
+  ) base
+LEFT JOIN lookup.lookyloo ON base.dim2 = lookyloo.k
+WHERE lookyloo.v <> 'xa'
+   OR lookyloo.v IS NULL
+=== options
+provider=QueryContextForJoinProvider
+vectorize=true
+=== schema
+dim2 VARCHAR
+v VARCHAR
+cnt BIGINT
+=== plan
+LogicalProject(dim2=[$0], v=[$3], cnt=[$1])
+  LogicalFilter(condition=[OR(<>($3, 'xa'), IS NULL($3))])
+    LogicalJoin(condition=[=($0, $2)], joinType=[left])
+      LogicalAggregate(group=[{0}], cnt=[COUNT()])
+        LogicalProject(dim2=[$3])
+          LogicalTableScan(table=[[druid, foo]])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "dim2",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        } ],
+        "aggregations" : [ {
+          "type" : "count",
+          "name" : "a0"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"d0\" == \"j0.k\")",
+    "joinType" : "LEFT"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "filter" : {
+    "type" : "or",
+    "fields" : [ {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "j0.v",
+        "value" : "xa"
+      }
+    }, {
+      "type" : "selector",
+      "dimension" : "j0.v"
+    } ]
+  },
+  "columns" : [ "a0", "d0", "j0.v" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["","",3]
+["abc","xabc",1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,null,2]
+["",null,1]
+["abc","xabc",1]
+==============================================================
+Converted from testGroupByInnerJoinOnLookupUsingJoinOperator()
+
+Cannot vectorize JOIN operator.
+=== case
+GROUP BY INNER JOIN on lookup using JOIN operator
+=== SQL
+SELECT lookyloo.v, COUNT(*)
+FROM foo INNER JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k
+GROUP BY lookyloo.v
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+v VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
+  LogicalProject(v=[$9])
+    LogicalJoin(condition=[=($2, $8)], joinType=[inner])
+      LogicalTableScan(table=[[druid, foo]])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim1\" == \"j0.k\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "j0.v",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== results
+["xabc",1]
+==============================================================
+Converted from testSelectOnLookupUsingInnerJoinOperator()
+=== case
+SELECT on lookup using INNER JOIN operator
+=== SQL
+SELECT dim2, lookyloo.*
+FROM foo
+INNER JOIN lookup.lookyloo ON foo.dim2 = lookyloo.k
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim2 VARCHAR
+k VARCHAR
+v VARCHAR
+=== plan
+LogicalProject(dim2=[$3], k=[$8], v=[$9])
+  LogicalJoin(condition=[=($3, $8)], joinType=[inner])
+    LogicalTableScan(table=[[druid, foo]])
+    LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim2\" == \"j0.k\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "dim2", "j0.k", "j0.v" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+["a","a","xa"]
+["a","a","xa"]
+["abc","abc","xabc"]
+==============================================================
+Converted from testLeftJoinTwoLookupsUsingJoinOperator()
+=== case
+LEFT JOIN two lookups using JOIN operator
+=== SQL
+SELECT dim1, dim2, l1.v, l2.v
+FROM foo
+LEFT JOIN lookup.lookyloo l1 ON foo.dim1 = l1.k
+LEFT JOIN lookup.lookyloo l2 ON foo.dim2 = l2.k
+=== options
+provider=QueryContextForJoinProvider
+vectorize=true
+=== schema
+dim1 VARCHAR
+dim2 VARCHAR
+v VARCHAR
+v VARCHAR
+=== plan
+LogicalProject(dim1=[$2], dim2=[$3], v=[$9], v0=[$11])
+  LogicalJoin(condition=[=($3, $10)], joinType=[left])
+    LogicalJoin(condition=[=($2, $8)], joinType=[left])
+      LogicalTableScan(table=[[druid, foo]])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+    LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "right" : {
+        "type" : "lookup",
+        "lookup" : "lookyloo"
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "(\"dim1\" == \"j0.k\")",
+      "joinType" : "LEFT"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "_j0.",
+    "condition" : "(\"dim2\" == \"_j0.k\")",
+    "joinType" : "LEFT"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "_j0.v", "dim1", "dim2", "j0.v" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["","a","","xa"]
+["10.1","","",""]
+["2","","",""]
+["1","a","","xa"]
+["def","abc","","xabc"]
+["abc","","xabc",""]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["","a",null,"xa"]
+["10.1",null,null,null]
+["2","",null,null]
+["1","a",null,"xa"]
+["def","abc",null,"xabc"]
+["abc",null,"xabc",null]
+==============================================================
+Converted from testInnerJoinTableLookupLookupWithFilterWithOuterLimit()
+=== case
+INNER JOIN table lookup with filter with outer LIMIT
+=== SQL
+SELECT dim1
+FROM foo
+INNER JOIN lookup.lookyloo l ON foo.dim2 = l.k
+INNER JOIN lookup.lookyloo l2 ON foo.dim2 = l2.k
+WHERE l.v = 'xa'
+LIMIT 100
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim1 VARCHAR
+=== plan
+LogicalSort(fetch=[100])
+  LogicalProject(dim1=[$2])
+    LogicalFilter(condition=[=($9, 'xa')])
+      LogicalJoin(condition=[=($3, $10)], joinType=[inner])
+        LogicalJoin(condition=[=($3, $8)], joinType=[inner])
+          LogicalTableScan(table=[[druid, foo]])
+          LogicalTableScan(table=[[lookup, lookyloo]])
+        LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "right" : {
+        "type" : "lookup",
+        "lookup" : "lookyloo"
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "(\"dim2\" == \"j0.k\")",
+      "joinType" : "INNER"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "_j0.",
+    "condition" : "(\"dim2\" == \"_j0.k\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "limit" : 100,
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "j0.v",
+    "value" : "xa"
+  },
+  "columns" : [ "dim1" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+[""]
+["1"]
+==============================================================
+Converted from testInnerJoinTableLookupLookupWithFilterWithoutLimit()
+=== case
+INNER JOIN table lookup with filter without LIMIT
+=== SQL
+SELECT dim1
+FROM foo
+INNER JOIN lookup.lookyloo l ON foo.dim2 = l.k
+INNER JOIN lookup.lookyloo l2 ON foo.dim2 = l2.k
+WHERE l.v = 'xa'
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim1 VARCHAR
+=== plan
+LogicalProject(dim1=[$2])
+  LogicalFilter(condition=[=($9, 'xa')])
+    LogicalJoin(condition=[=($3, $10)], joinType=[inner])
+      LogicalJoin(condition=[=($3, $8)], joinType=[inner])
+        LogicalTableScan(table=[[druid, foo]])
+        LogicalTableScan(table=[[lookup, lookyloo]])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "right" : {
+        "type" : "lookup",
+        "lookup" : "lookyloo"
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "(\"dim2\" == \"j0.k\")",
+      "joinType" : "INNER"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "_j0.",
+    "condition" : "(\"dim2\" == \"_j0.k\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "j0.v",
+    "value" : "xa"
+  },
+  "columns" : [ "dim1" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+[""]
+["1"]
+==============================================================
+Converted from testInnerJoinTableLookupLookupWithFilterWithOuterLimitWithAllColumns()
+=== case
+INNER JOIN table lookup with filter with outer LIMIT with all columns
+=== SQL
+SELECT __time, cnt, dim1, dim2, dim3, m1, m2, unique_dim1
+FROM foo
+INNER JOIN lookup.lookyloo l ON foo.dim2 = l.k
+INNER JOIN lookup.lookyloo l2 ON foo.dim2 = l2.k
+WHERE l.v = 'xa'
+LIMIT 100
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+__time TIMESTAMP(3)
+cnt BIGINT
+dim1 VARCHAR
+dim2 VARCHAR
+dim3 VARCHAR
+m1 FLOAT
+m2 DOUBLE
+unique_dim1 COMPLEX<hyperUnique>
+=== plan
+LogicalSort(fetch=[100])
+  LogicalProject(__time=[$0], cnt=[$1], dim1=[$2], dim2=[$3], dim3=[$4], m1=[$5], m2=[$6], unique_dim1=[$7])
+    LogicalFilter(condition=[=($9, 'xa')])
+      LogicalJoin(condition=[=($3, $10)], joinType=[inner])
+        LogicalJoin(condition=[=($3, $8)], joinType=[inner])
+          LogicalTableScan(table=[[druid, foo]])
+          LogicalTableScan(table=[[lookup, lookyloo]])
+        LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "right" : {
+        "type" : "lookup",
+        "lookup" : "lookyloo"
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "(\"dim2\" == \"j0.k\")",
+      "joinType" : "INNER"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "_j0.",
+    "condition" : "(\"dim2\" == \"_j0.k\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "limit" : 100,
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "j0.v",
+    "value" : "xa"
+  },
+  "columns" : [ "__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+[946684800000,1,"","a","[\"a\",\"b\"]",1.0,1.0,"\"AQAAAEAAAA==\""]
+[978307200000,1,"1","a","",4.0,4.0,"\"AQAAAQAAAAFREA==\""]
+==============================================================
+Converted from testInnerJoinTableLookupLookupWithFilterWithoutLimitWithAllColumns()
+=== case
+INNER JOIN table lookup with filter without LIMIT with all columns
+=== SQL
+SELECT __time, cnt, dim1, dim2, dim3, m1, m2, unique_dim1
+FROM foo
+INNER JOIN lookup.lookyloo l ON foo.dim2 = l.k
+INNER JOIN lookup.lookyloo l2 ON foo.dim2 = l2.k
+WHERE l.v = 'xa'
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+__time TIMESTAMP(3)
+cnt BIGINT
+dim1 VARCHAR
+dim2 VARCHAR
+dim3 VARCHAR
+m1 FLOAT
+m2 DOUBLE
+unique_dim1 COMPLEX<hyperUnique>
+=== plan
+LogicalProject(__time=[$0], cnt=[$1], dim1=[$2], dim2=[$3], dim3=[$4], m1=[$5], m2=[$6], unique_dim1=[$7])
+  LogicalFilter(condition=[=($9, 'xa')])
+    LogicalJoin(condition=[=($3, $10)], joinType=[inner])
+      LogicalJoin(condition=[=($3, $8)], joinType=[inner])
+        LogicalTableScan(table=[[druid, foo]])
+        LogicalTableScan(table=[[lookup, lookyloo]])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "right" : {
+        "type" : "lookup",
+        "lookup" : "lookyloo"
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "(\"dim2\" == \"j0.k\")",
+      "joinType" : "INNER"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "_j0.",
+    "condition" : "(\"dim2\" == \"_j0.k\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "j0.v",
+    "value" : "xa"
+  },
+  "columns" : [ "__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+[946684800000,1,"","a","[\"a\",\"b\"]",1.0,1.0,"\"AQAAAEAAAA==\""]
+[978307200000,1,"1","a","",4.0,4.0,"\"AQAAAQAAAAFREA==\""]
+==============================================================
+Converted from testManyManyInnerJoinOnManyManyLookup()
+=== case
+Many INNER JOIN on many lookups
+=== SQL
+SELECT dim1
+FROM foo
+INNER JOIN lookup.lookyloo l ON foo.dim2 = l.k
+INNER JOIN lookup.lookyloo l2 ON foo.dim2 = l2.k
+INNER JOIN lookup.lookyloo l3 ON foo.dim2 = l3.k
+INNER JOIN lookup.lookyloo l4 ON foo.dim2 = l4.k
+INNER JOIN lookup.lookyloo l5 ON foo.dim2 = l5.k
+INNER JOIN lookup.lookyloo l6 ON foo.dim2 = l6.k
+INNER JOIN lookup.lookyloo l7 ON foo.dim2 = l7.k
+INNER JOIN lookup.lookyloo l8 ON foo.dim2 = l8.k
+INNER JOIN lookup.lookyloo l9 ON foo.dim2 = l9.k
+INNER JOIN lookup.lookyloo l10 ON foo.dim2 = l10.k
+INNER JOIN lookup.lookyloo l11 ON foo.dim2 = l11.k
+INNER JOIN lookup.lookyloo l12 ON foo.dim2 = l12.k
+INNER JOIN lookup.lookyloo l13 ON foo.dim2 = l13.k
+INNER JOIN lookup.lookyloo l14 ON foo.dim2 = l14.k
+INNER JOIN lookup.lookyloo l15 ON foo.dim2 = l15.k
+INNER JOIN lookup.lookyloo l16 ON foo.dim2 = l16.k
+INNER JOIN lookup.lookyloo l17 ON foo.dim2 = l17.k
+INNER JOIN lookup.lookyloo l18 ON foo.dim2 = l18.k
+INNER JOIN lookup.lookyloo l19 ON foo.dim2 = l19.k
+WHERE l.v = 'xa'
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim1 VARCHAR
+=== plan
+LogicalProject(dim1=[$2])
+  LogicalFilter(condition=[=($9, 'xa')])
+    LogicalJoin(condition=[=($3, $44)], joinType=[inner])
+      LogicalJoin(condition=[=($3, $42)], joinType=[inner])
+        LogicalJoin(condition=[=($3, $40)], joinType=[inner])
+          LogicalJoin(condition=[=($3, $38)], joinType=[inner])
+            LogicalJoin(condition=[=($3, $36)], joinType=[inner])
+              LogicalJoin(condition=[=($3, $34)], joinType=[inner])
+                LogicalJoin(condition=[=($3, $32)], joinType=[inner])
+                  LogicalJoin(condition=[=($3, $30)], joinType=[inner])
+                    LogicalJoin(condition=[=($3, $28)], joinType=[inner])
+                      LogicalJoin(condition=[=($3, $26)], joinType=[inner])
+                        LogicalJoin(condition=[=($3, $24)], joinType=[inner])
+                          LogicalJoin(condition=[=($3, $22)], joinType=[inner])
+                            LogicalJoin(condition=[=($3, $20)], joinType=[inner])
+                              LogicalJoin(condition=[=($3, $18)], joinType=[inner])
+                                LogicalJoin(condition=[=($3, $16)], joinType=[inner])
+                                  LogicalJoin(condition=[=($3, $14)], joinType=[inner])
+                                    LogicalJoin(condition=[=($3, $12)], joinType=[inner])
+                                      LogicalJoin(condition=[=($3, $10)], joinType=[inner])
+                                        LogicalJoin(condition=[=($3, $8)], joinType=[inner])
+                                          LogicalTableScan(table=[[druid, foo]])
+                                          LogicalTableScan(table=[[lookup, lookyloo]])
+                                        LogicalTableScan(table=[[lookup, lookyloo]])
+                                      LogicalTableScan(table=[[lookup, lookyloo]])
+                                    LogicalTableScan(table=[[lookup, lookyloo]])
+                                  LogicalTableScan(table=[[lookup, lookyloo]])
+                                LogicalTableScan(table=[[lookup, lookyloo]])
+                              LogicalTableScan(table=[[lookup, lookyloo]])
+                            LogicalTableScan(table=[[lookup, lookyloo]])
+                          LogicalTableScan(table=[[lookup, lookyloo]])
+                        LogicalTableScan(table=[[lookup, lookyloo]])
+                      LogicalTableScan(table=[[lookup, lookyloo]])
+                    LogicalTableScan(table=[[lookup, lookyloo]])
+                  LogicalTableScan(table=[[lookup, lookyloo]])
+                LogicalTableScan(table=[[lookup, lookyloo]])
+              LogicalTableScan(table=[[lookup, lookyloo]])
+            LogicalTableScan(table=[[lookup, lookyloo]])
+          LogicalTableScan(table=[[lookup, lookyloo]])
+        LogicalTableScan(table=[[lookup, lookyloo]])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "join",
+        "left" : {
+          "type" : "join",
+          "left" : {
+            "type" : "join",
+            "left" : {
+              "type" : "join",
+              "left" : {
+                "type" : "join",
+                "left" : {
+                  "type" : "join",
+                  "left" : {
+                    "type" : "join",
+                    "left" : {
+                      "type" : "join",
+                      "left" : {
+                        "type" : "join",
+                        "left" : {
+                          "type" : "join",
+                          "left" : {
+                            "type" : "join",
+                            "left" : {
+                              "type" : "join",
+                              "left" : {
+                                "type" : "join",
+                                "left" : {
+                                  "type" : "join",
+                                  "left" : {
+                                    "type" : "join",
+                                    "left" : {
+                                      "type" : "join",
+                                      "left" : {
+                                        "type" : "join",
+                                        "left" : {
+                                          "type" : "table",
+                                          "name" : "foo"
+                                        },
+                                        "right" : {
+                                          "type" : "lookup",
+                                          "lookup" : "lookyloo"
+                                        },
+                                        "rightPrefix" : "j0.",
+                                        "condition" : "(\"dim2\" == \"j0.k\")",
+                                        "joinType" : "INNER"
+                                      },
+                                      "right" : {
+                                        "type" : "lookup",
+                                        "lookup" : "lookyloo"
+                                      },
+                                      "rightPrefix" : "_j0.",
+                                      "condition" : "(\"dim2\" == \"_j0.k\")",
+                                      "joinType" : "INNER"
+                                    },
+                                    "right" : {
+                                      "type" : "lookup",
+                                      "lookup" : "lookyloo"
+                                    },
+                                    "rightPrefix" : "__j0.",
+                                    "condition" : "(\"dim2\" == \"__j0.k\")",
+                                    "joinType" : "INNER"
+                                  },
+                                  "right" : {
+                                    "type" : "lookup",
+                                    "lookup" : "lookyloo"
+                                  },
+                                  "rightPrefix" : "___j0.",
+                                  "condition" : "(\"dim2\" == \"___j0.k\")",
+                                  "joinType" : "INNER"
+                                },
+                                "right" : {
+                                  "type" : "lookup",
+                                  "lookup" : "lookyloo"
+                                },
+                                "rightPrefix" : "____j0.",
+                                "condition" : "(\"dim2\" == \"____j0.k\")",
+                                "joinType" : "INNER"
+                              },
+                              "right" : {
+                                "type" : "lookup",
+                                "lookup" : "lookyloo"
+                              },
+                              "rightPrefix" : "_____j0.",
+                              "condition" : "(\"dim2\" == \"_____j0.k\")",
+                              "joinType" : "INNER"
+                            },
+                            "right" : {
+                              "type" : "lookup",
+                              "lookup" : "lookyloo"
+                            },
+                            "rightPrefix" : "______j0.",
+                            "condition" : "(\"dim2\" == \"______j0.k\")",
+                            "joinType" : "INNER"
+                          },
+                          "right" : {
+                            "type" : "lookup",
+                            "lookup" : "lookyloo"
+                          },
+                          "rightPrefix" : "_______j0.",
+                          "condition" : "(\"dim2\" == \"_______j0.k\")",
+                          "joinType" : "INNER"
+                        },
+                        "right" : {
+                          "type" : "lookup",
+                          "lookup" : "lookyloo"
+                        },
+                        "rightPrefix" : "________j0.",
+                        "condition" : "(\"dim2\" == \"________j0.k\")",
+                        "joinType" : "INNER"
+                      },
+                      "right" : {
+                        "type" : "lookup",
+                        "lookup" : "lookyloo"
+                      },
+                      "rightPrefix" : "_________j0.",
+                      "condition" : "(\"dim2\" == \"_________j0.k\")",
+                      "joinType" : "INNER"
+                    },
+                    "right" : {
+                      "type" : "lookup",
+                      "lookup" : "lookyloo"
+                    },
+                    "rightPrefix" : "__________j0.",
+                    "condition" : "(\"dim2\" == \"__________j0.k\")",
+                    "joinType" : "INNER"
+                  },
+                  "right" : {
+                    "type" : "lookup",
+                    "lookup" : "lookyloo"
+                  },
+                  "rightPrefix" : "___________j0.",
+                  "condition" : "(\"dim2\" == \"___________j0.k\")",
+                  "joinType" : "INNER"
+                },
+                "right" : {
+                  "type" : "lookup",
+                  "lookup" : "lookyloo"
+                },
+                "rightPrefix" : "____________j0.",
+                "condition" : "(\"dim2\" == \"____________j0.k\")",
+                "joinType" : "INNER"
+              },
+              "right" : {
+                "type" : "lookup",
+                "lookup" : "lookyloo"
+              },
+              "rightPrefix" : "_____________j0.",
+              "condition" : "(\"dim2\" == \"_____________j0.k\")",
+              "joinType" : "INNER"
+            },
+            "right" : {
+              "type" : "lookup",
+              "lookup" : "lookyloo"
+            },
+            "rightPrefix" : "______________j0.",
+            "condition" : "(\"dim2\" == \"______________j0.k\")",
+            "joinType" : "INNER"
+          },
+          "right" : {
+            "type" : "lookup",
+            "lookup" : "lookyloo"
+          },
+          "rightPrefix" : "_______________j0.",
+          "condition" : "(\"dim2\" == \"_______________j0.k\")",
+          "joinType" : "INNER"
+        },
+        "right" : {
+          "type" : "lookup",
+          "lookup" : "lookyloo"
+        },
+        "rightPrefix" : "________________j0.",
+        "condition" : "(\"dim2\" == \"________________j0.k\")",
+        "joinType" : "INNER"
+      },
+      "right" : {
+        "type" : "lookup",
+        "lookup" : "lookyloo"
+      },
+      "rightPrefix" : "_________________j0.",
+      "condition" : "(\"dim2\" == \"_________________j0.k\")",
+      "joinType" : "INNER"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "__________________j0.",
+    "condition" : "(\"dim2\" == \"__________________j0.k\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "j0.v",
+    "value" : "xa"
+  },
+  "columns" : [ "dim1" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+[""]
+["1"]
+==============================================================
+Converted from testInnerJoinQueryOfLookup()
+
+Cannot vectorize JOIN operator.
+=== case
+INNER JOIN query of lookup
+=== SQL
+SELECT dim1, dim2, t1.v, t1.v
+FROM foo
+INNER JOIN
+  (
+    SELECT
+      SUBSTRING(k, 1, 1) k,
+      LATEST(v, 10) v
+    FROM lookup.lookyloo
+    GROUP BY 1
+  ) t1
+ON foo.dim2 = t1.k
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+dim1 VARCHAR
+dim2 VARCHAR
+v VARCHAR
+v VARCHAR
+=== plan
+LogicalProject(dim1=[$2], dim2=[$3], v=[$9], v0=[$9])
+  LogicalJoin(condition=[=($3, $8)], joinType=[inner])
+    LogicalTableScan(table=[[druid, foo]])
+    LogicalAggregate(group=[{0}], v=[LATEST($1, $2)])
+      LogicalProject(k=[SUBSTRING($0, 1, 1)], v=[$1], $f2=[10])
+        LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "lookup",
+          "lookup" : "lookyloo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "extraction",
+          "dimension" : "k",
+          "outputName" : "d0",
+          "outputType" : "STRING",
+          "extractionFn" : {
+            "type" : "substring",
+            "index" : 0,
+            "length" : 1
+          }
+        } ],
+        "aggregations" : [ {
+          "type" : "stringLast",
+          "name" : "a0",
+          "fieldName" : "v",
+          "timeColumn" : "__time",
+          "maxStringBytes" : 10
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim2\" == \"j0.d0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "dim1", "dim2", "j0.a0" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+["","a","xabc","xabc"]
+["1","a","xabc","xabc"]
+==============================================================
+Converted from testInnerJoinQueryOfLookupRemovable()
+
+Like "testInnerJoinQueryOfLookup", but the subquery is removable.
+=== case
+INNER JOIN query of lookup removable
+=== SQL
+SELECT dim1, dim2, t1.sk
+FROM foo
+INNER JOIN
+  (
+    SELECT k, SUBSTRING(v, 1, 3) sk
+    FROM lookup.lookyloo
+  ) t1
+ON foo.dim2 = t1.k
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim1 VARCHAR
+dim2 VARCHAR
+sk VARCHAR
+=== plan
+LogicalProject(dim1=[$2], dim2=[$3], sk=[$9])
+  LogicalJoin(condition=[=($3, $8)], joinType=[inner])
+    LogicalTableScan(table=[[druid, foo]])
+    LogicalProject(k=[$0], sk=[SUBSTRING($1, 1, 3)])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim2\" == \"j0.k\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "substring(\"j0.v\", 0, 3)",
+    "outputType" : "STRING"
+  } ],
+  "resultFormat" : "compactedList",
+  "columns" : [ "dim1", "dim2", "v0" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+["","a","xa"]
+["1","a","xa"]
+["def","abc","xab"]
+==============================================================
+Converted from testInnerJoinTwoLookupsToTableUsingNumericColumn()
+
+Regression test for https://github.com/apache/druid/issues/9646
+Cannot vectorize JOIN operator.
+=== case
+INNER JOIN two lookups to table using a numeric column
+=== SQL
+SELECT COUNT(*)
+FROM foo
+INNER JOIN lookup.lookyloo l1 ON l1.k = foo.m1
+INNER JOIN lookup.lookyloo l2 ON l2.k = l1.k
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalJoin(condition=[=($10, $8)], joinType=[inner])
+      LogicalProject(__time=[$0], cnt=[$1], dim1=[$2], dim2=[$3], dim3=[$4], m1=[$5], m2=[$6], unique_dim1=[$7], k=[$8], v=[$9])
+        LogicalJoin(condition=[=($10, $5)], joinType=[inner])
+          LogicalTableScan(table=[[druid, foo]])
+          LogicalProject(k=[$0], v=[$1], k0=[CAST($0):FLOAT])
+            LogicalTableScan(table=[[lookup, lookyloo]])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "right" : {
+        "type" : "query",
+        "query" : {
+          "queryType" : "scan",
+          "dataSource" : {
+            "type" : "lookup",
+            "lookup" : "lookyloo"
+          },
+          "intervals" : {
+            "type" : "intervals",
+            "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+          },
+          "virtualColumns" : [ {
+            "type" : "expression",
+            "name" : "v0",
+            "expression" : "CAST(\"k\", 'DOUBLE')",
+            "outputType" : "FLOAT"
+          } ],
+          "resultFormat" : "compactedList",
+          "columns" : [ "k", "v0" ],
+          "granularity" : {
+            "type" : "all"
+          }
+        }
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "(\"m1\" == \"j0.v0\")",
+      "joinType" : "INNER"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "_j0.",
+    "condition" : "(\"j0.k\" == \"_j0.k\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[1]
+==============================================================
+Converted from testInnerJoinTwoLookupsToTableUsingNumericColumnInReverse()
+
+Like testInnerJoinTwoLookupsToTableUsingNumericColumn,
+but the tables are specified backwards.
+=== case
+INNER JOIN with two lookups to table using a numeric column
+=== SQL
+SELECT COUNT(*)
+FROM lookup.lookyloo l1
+INNER JOIN lookup.lookyloo l2 ON l1.k = l2.k
+INNER JOIN foo on l2.k = foo.m1
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalJoin(condition=[=($4, $10)], joinType=[inner])
+      LogicalProject(k=[$0], v=[$1], k0=[$2], v0=[$3], k00=[CAST($2):FLOAT])
+        LogicalJoin(condition=[=($0, $2)], joinType=[inner])
+          LogicalTableScan(table=[[lookup, lookyloo]])
+          LogicalTableScan(table=[[lookup, lookyloo]])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "lookup",
+        "lookup" : "lookyloo"
+      },
+      "right" : {
+        "type" : "lookup",
+        "lookup" : "lookyloo"
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "(\"k\" == \"j0.k\")",
+      "joinType" : "INNER"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "m1" ],
+        "granularity" : {
+          "type" : "all"
+        }
+      }
+    },
+    "rightPrefix" : "_j0.",
+    "condition" : "(CAST(\"j0.k\", 'DOUBLE') == \"_j0.m1\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[1]
+==============================================================
+Converted from testInnerJoinLookupTableTable()
+
+Regression test for https://github.com/apache/druid/issues/9646
+Cannot vectorize JOIN operator.
+=== case
+INNER JOIN lookup table
+=== SQL
+SELECT l.k, l.v, SUM(f.m1), SUM(nf.m1)
+FROM lookup.lookyloo l
+INNER JOIN druid.foo f on f.dim1 = l.k
+INNER JOIN druid.numfoo nf on nf.dim1 = l.k
+GROUP BY 1, 2 ORDER BY 2
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+k VARCHAR
+v VARCHAR
+EXPR$2 DOUBLE
+EXPR$3 DOUBLE
+=== plan
+LogicalSort(sort0=[$1], dir0=[ASC])
+  LogicalAggregate(group=[{0, 1}], EXPR$2=[SUM($2)], EXPR$3=[SUM($3)])
+    LogicalProject(k=[$0], v=[$1], m1=[$7], m10=[$24])
+      LogicalJoin(condition=[=($14, $0)], joinType=[inner])
+        LogicalJoin(condition=[=($4, $0)], joinType=[inner])
+          LogicalTableScan(table=[[lookup, lookyloo]])
+          LogicalTableScan(table=[[druid, foo]])
+        LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "lookup",
+        "lookup" : "lookyloo"
+      },
+      "right" : {
+        "type" : "query",
+        "query" : {
+          "queryType" : "scan",
+          "dataSource" : {
+            "type" : "table",
+            "name" : "foo"
+          },
+          "intervals" : {
+            "type" : "intervals",
+            "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+          },
+          "resultFormat" : "compactedList",
+          "columns" : [ "dim1", "m1" ],
+          "granularity" : {
+            "type" : "all"
+          }
+        }
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "(\"k\" == \"j0.dim1\")",
+      "joinType" : "INNER"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "numfoo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "dim1", "m1" ],
+        "granularity" : {
+          "type" : "all"
+        }
+      }
+    },
+    "rightPrefix" : "_j0.",
+    "condition" : "(\"k\" == \"_j0.dim1\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "k",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "v",
+    "outputName" : "d1",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "doubleSum",
+    "name" : "a0",
+    "fieldName" : "j0.m1"
+  }, {
+    "type" : "doubleSum",
+    "name" : "a1",
+    "fieldName" : "_j0.m1"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "d1",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "lexicographic"
+      }
+    } ]
+  }
+}
+=== results
+["abc","xabc",6.0,6.0]
+==============================================================
+Converted from testInnerJoinLookupTableTableChained()
+
+Cannot vectorize JOIN operator.
+=== case
+INNER JOIN lookup table chained
+=== SQL
+SELECT l.k, l.v, SUM(f.m1), SUM(nf.m1)
+FROM lookup.lookyloo l
+INNER JOIN druid.foo f on f.dim1 = l.k
+INNER JOIN druid.numfoo nf on nf.dim1 = f.dim1
+GROUP BY 1, 2 ORDER BY 2
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+k VARCHAR
+v VARCHAR
+EXPR$2 DOUBLE
+EXPR$3 DOUBLE
+=== plan
+LogicalSort(sort0=[$1], dir0=[ASC])
+  LogicalAggregate(group=[{0, 1}], EXPR$2=[SUM($2)], EXPR$3=[SUM($3)])
+    LogicalProject(k=[$0], v=[$1], m1=[$7], m10=[$24])
+      LogicalJoin(condition=[=($14, $4)], joinType=[inner])
+        LogicalJoin(condition=[=($4, $0)], joinType=[inner])
+          LogicalTableScan(table=[[lookup, lookyloo]])
+          LogicalTableScan(table=[[druid, foo]])
+        LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "lookup",
+        "lookup" : "lookyloo"
+      },
+      "right" : {
+        "type" : "query",
+        "query" : {
+          "queryType" : "scan",
+          "dataSource" : {
+            "type" : "table",
+            "name" : "foo"
+          },
+          "intervals" : {
+            "type" : "intervals",
+            "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+          },
+          "resultFormat" : "compactedList",
+          "columns" : [ "dim1", "m1" ],
+          "granularity" : {
+            "type" : "all"
+          }
+        }
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "(\"k\" == \"j0.dim1\")",
+      "joinType" : "INNER"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "numfoo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "dim1", "m1" ],
+        "granularity" : {
+          "type" : "all"
+        }
+      }
+    },
+    "rightPrefix" : "_j0.",
+    "condition" : "(\"j0.dim1\" == \"_j0.dim1\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "k",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "v",
+    "outputName" : "d1",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "doubleSum",
+    "name" : "a0",
+    "fieldName" : "j0.m1"
+  }, {
+    "type" : "doubleSum",
+    "name" : "a1",
+    "fieldName" : "_j0.m1"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "d1",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "lexicographic"
+      }
+    } ]
+  }
+}
+=== results
+["abc","xabc",6.0,6.0]

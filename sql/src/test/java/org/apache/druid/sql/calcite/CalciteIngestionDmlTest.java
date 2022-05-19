@@ -300,7 +300,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
         throw new ISE("Test must have expectedResources");
       }
 
-      final List<Query> expectedQueries =
+      final List<Query<?>> expectedQueries =
           expectedQuery == null
           ? Collections.emptyList()
           : Collections.singletonList(recursivelyOverrideContext(expectedQuery, queryContext));
@@ -311,7 +311,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
       );
 
       final List<Object[]> results =
-          getResults(plannerConfig, queryContext, Collections.emptyList(), sql, authenticationResult);
+          getResults(plannerConfig, queryContext, Collections.emptyList(), sql, authenticationResult, null);
 
       verifyResults(
           sql,

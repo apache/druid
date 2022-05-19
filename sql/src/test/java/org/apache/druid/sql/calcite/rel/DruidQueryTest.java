@@ -43,7 +43,6 @@ import java.util.Collections;
 
 public class DruidQueryTest
 {
-
   static {
     NullHandling.initializeForTests();
   }

@@ -39,7 +39,6 @@ public class ExpressionProcessing
   @Inject
   private static ExpressionProcessingConfig INSTANCE;
 
-
   /**
    * Many unit tests do not setup modules for this value to be injected, this method provides a manual way to initialize
    * {@link #INSTANCE}
@@ -61,6 +60,24 @@ public class ExpressionProcessing
   public static void initializeForHomogenizeNullMultiValueStrings()
   {
     INSTANCE = new ExpressionProcessingConfig(null, null, null, true);
+  }
+
+  /**
+   * Get the current configuration when tests want to change it dynamically.
+   */
+  @VisibleForTesting
+  public static ExpressionProcessingConfig currentConfig()
+  {
+    return INSTANCE;
+  }
+
+  /**
+   * Restore a previous config after tests change it.
+   */
+  @VisibleForTesting
+  public static void restoreConfig(ExpressionProcessingConfig config)
+  {
+    INSTANCE = config;
   }
 
   /**

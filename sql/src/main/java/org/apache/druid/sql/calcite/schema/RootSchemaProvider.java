@@ -32,9 +32,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Provides the RootSchema for calcite with
+ * Provides the RootSchema for Calcite with
  * - metadata schema disabled because it's not needed
- * - caching disabled because druid's caching is better.
+ * - caching disabled because Druid's caching is better.
  *
  * All the provided schema are added to the rootSchema.
  */

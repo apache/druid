@@ -135,7 +135,32 @@ public class Calcites
     }
     builder.append("'");
     return isPlainAscii ? builder.toString() : "U&" + builder;
+  }
 
+  /**
+   * Relaxed form of the above. Only escapes those characters that are
+   * absolutely necessary: single quotes and non-ASCII characters. SQL is
+   * perfectly happy with newlines and punctuation inside a quote. This
+   * form is more readable.
+   */
+  public static String escapeStringLiteralLenient(final String s)
+  {
+    Preconditions.checkNotNull(s);
+    boolean isPlainAscii = true;
+    final StringBuilder builder = new StringBuilder("'");
+    for (int i = 0; i < s.length(); i++) {
+      final char c = s.charAt(i);
+      if (c == '\'') {
+        builder.append("''");
+      } else if (c > 127) {
+        builder.append("\\").append(BaseEncoding.base16().encode(Chars.toByteArray(c)));
+        isPlainAscii = false;
+      } else {
+        builder.append(c);
+      }
+    }
+    builder.append("'");
+    return isPlainAscii ? builder.toString() : "U&" + builder;
   }
 
   /**
@@ -264,8 +289,6 @@ public class Calcites
       final boolean nullable
   )
   {
-
-
     final RelDataType dataType = typeFactory.createArrayType(
         createSqlTypeWithNullability(typeFactory, elementTypeName, nullable),
         -1

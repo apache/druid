@@ -122,6 +122,7 @@ public class SelectorDimFilter extends AbstractOptimizableDimFilter implements D
    */
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getValue()
   {
     return value;

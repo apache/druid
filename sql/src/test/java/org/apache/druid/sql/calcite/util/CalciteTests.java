@@ -31,8 +31,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import org.apache.calcite.jdbc.CalciteSchema;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.DruidServer;
@@ -129,17 +127,10 @@ import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
-import org.apache.druid.sql.calcite.schema.InformationSchema;
 import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
-import org.apache.druid.sql.calcite.schema.NamedDruidSchema;
-import org.apache.druid.sql.calcite.schema.NamedLookupSchema;
-import org.apache.druid.sql.calcite.schema.NamedSchema;
-import org.apache.druid.sql.calcite.schema.NamedSystemSchema;
-import org.apache.druid.sql.calcite.schema.NamedViewSchema;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
-import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.sql.guice.SqlBindings;
@@ -151,6 +142,7 @@ import org.joda.time.Duration;
 import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -262,7 +254,23 @@ public class CalciteTests
 
   private static final String TIMESTAMP_COLUMN = "t";
 
-  public static final Injector INJECTOR = Guice.createInjector(
+  /**
+   * Injector for the test knick-knacks. Somehow the injector holds onto the null
+   * handling state. It must be cleared and rebuilt when changing the global
+   * null handling state or CalciteParameterQueryTest.testWrongTypeParameter()
+   * will produce the wrong plan. Not sure how, just recording this oddness
+   * for posterity.
+   */
+  public static Injector INJECTOR = makeInjector();
+
+  public static void reset()
+  {
+    INJECTOR = makeInjector();
+  }
+
+  private static Injector makeInjector()
+  {
+    return Guice.createInjector(
       binder -> {
         final LookupExtractorFactoryContainerProvider lookupProvider =
             LookupEnabledTestExprMacroTable.createTestLookupProvider(
@@ -296,7 +304,8 @@ public class CalciteTests
         SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
       },
       new SqlAggregationModule()
-  );
+    );
+  }
 
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
@@ -760,6 +769,7 @@ public class CalciteTests
 
   private static final Set<String> KEY_COLUMNS = ImmutableSet.of("dim4");
 
+  @SuppressWarnings("unchecked")
   private static final RowBasedIndexedTable JOINABLE_TABLE = new RowBasedIndexedTable(
       JOINABLE_BACKING_DATA.getRowsAsList(),
       JOINABLE_BACKING_DATA.rowAdapter(),
@@ -1090,11 +1100,13 @@ public class CalciteTests
     }
   }
 
+  @SuppressWarnings("unchecked")
   public static InputRow createRow(final ImmutableMap<String, ?> map)
   {
     return PARSER.parseBatch((Map<String, Object>) map).get(0);
   }
 
+  @SuppressWarnings("unchecked")
   public static InputRow createRow(final ImmutableMap<String, ?> map, InputRowParser<Map<String, Object>> parser)
   {
     return parser.parseBatch((Map<String, Object>) map).get(0);
@@ -1124,7 +1136,6 @@ public class CalciteTests
       final AuthorizerMapper authorizerMapper
   )
   {
-
     final DruidNode coordinatorNode = new DruidNode("test-coordinator", "dummy", false, 8081, null, true, false);
     FakeDruidNodeDiscoveryProvider provider = new FakeDruidNodeDiscoveryProvider(
         ImmutableMap.of(
@@ -1202,45 +1213,19 @@ public class CalciteTests
       final AuthorizerMapper authorizerMapper
   )
   {
-    DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig, druidSchemaManager);
-    SystemSchema systemSchema =
-        CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
-
-    LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
-    ViewSchema viewSchema = viewManager != null ? new ViewSchema(viewManager) : null;
-
-    SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
-    Set<NamedSchema> namedSchemas = new HashSet<>();
-    namedSchemas.add(new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME));
-    namedSchemas.add(new NamedSystemSchema(plannerConfig, systemSchema));
-    namedSchemas.add(new NamedLookupSchema(lookupSchema));
-
-    if (viewSchema != null) {
-      namedSchemas.add(new NamedViewSchema(viewSchema));
-    }
-
-    DruidSchemaCatalog catalog = new DruidSchemaCatalog(
-        rootSchema,
-        namedSchemas.stream().collect(Collectors.toMap(NamedSchema::getSchemaName, x -> x))
-    );
-    InformationSchema informationSchema =
-        new InformationSchema(
-            catalog,
-            authorizerMapper
-        );
-    rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
-    rootSchema.add(CalciteTests.INFORMATION_SCHEMA_NAME, informationSchema);
-    rootSchema.add(NamedSystemSchema.NAME, systemSchema);
-    rootSchema.add(NamedLookupSchema.NAME, lookupSchema);
-
-    if (viewSchema != null) {
-      rootSchema.add(NamedViewSchema.NAME, viewSchema);
-    }
-
-    return catalog;
+    return new RootSchemaBuilder(
+            plannerConfig,
+            authorizerMapper)
+        .congolomerate(conglomerate)
+        .walker(walker)
+        .schemaManager(druidSchemaManager)
+        .viewManager(viewManager)
+        .withLookupSchema(true)
+        .build()
+        .catalog;
   }
 
-  private static DruidSchema createMockSchema(
+  protected static DruidSchema createMockSchema(
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig,
@@ -1363,10 +1348,8 @@ public class CalciteTests
     @Override
     public void registerListener(Listener listener)
     {
-
     }
   }
-
 
   /**
    * A fake {@link ServerInventoryView} for {@link #createMockSystemSchema}.

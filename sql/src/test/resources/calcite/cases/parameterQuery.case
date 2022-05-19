@@ -1,0 +1,1354 @@
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+==============================================================
+Test cases from the CalciteParameterQueryTest file
+
+==============================================================
+Converted from testSelectConstantParamGetsConstant()
+=== case
+Select constant param gets constant
+=== SQL
+SELECT 1 + ?
+=== parameters
+integer: 1
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 INTEGER
+=== plan
+LogicalProject(EXPR$0=[+(1, 1)])
+  LogicalValues(type=[RecordType(INTEGER ZERO)], tuples=[[{ 0 }]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "inline",
+    "columnNames" : [ "EXPR$0" ],
+    "columnTypes" : [ "LONG" ],
+    "rows" : [ [ 2 ] ]
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "EXPR$0" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+[2]
+==============================================================
+Converted from testParamsGetOptimizedIntoConstant()
+=== case
+Params get optimized into constant
+=== SQL
+SELECT 1 + ?, dim1
+FROM foo
+LIMIT ?
+=== parameters
+integer: 1
+integer: 1
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 INTEGER
+dim1 VARCHAR
+=== plan
+LogicalSort(fetch=[1])
+  LogicalProject(EXPR$0=[+(1, 1)], dim1=[$2])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "2",
+    "outputType" : "LONG"
+  } ],
+  "resultFormat" : "compactedList",
+  "limit" : 1,
+  "columns" : [ "dim1", "v0" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+[2,""]
+==============================================================
+Converted from testParametersInSelectAndFilter()
+=== case
+Parameters in SELECT and filter
+=== SQL
+SELECT
+  exp(count(*)) + ?,
+  sum(m2)
+FROM druid.foo
+WHERE  dim2 = ?
+=== parameters
+integer: 10
+integer: 0
+=== options
+vectorize=true
+=== schema
+EXPR$0 DOUBLE
+EXPR$1 DOUBLE
+=== plan
+LogicalProject(EXPR$0=[+(EXP($0), 10)], EXPR$1=[$1])
+  LogicalAggregate(group=[{}], agg#0=[COUNT()], EXPR$1=[SUM($0)])
+    LogicalProject(m2=[$6])
+      LogicalFilter(condition=[=(CAST($3):INTEGER, 0)])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "bound",
+    "dimension" : "dim2",
+    "lower" : "0",
+    "upper" : "0",
+    "ordering" : {
+      "type" : "numeric"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  }, {
+    "type" : "doubleSum",
+    "name" : "a1",
+    "fieldName" : "m2"
+  } ],
+  "postAggregations" : [ {
+    "type" : "expression",
+    "name" : "p0",
+    "expression" : "(exp(\"a0\") + 10)"
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[11.0,0.0]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[11.0,null]
+==============================================================
+Converted from testSelectTrimFamilyWithParameters()
+TRIM has some whacky parsing. Abuse this to test a bunch of parameters
+=== case
+Test select trim family with parameters
+=== SQL
+SELECT
+  TRIM(BOTH ? FROM ?),
+  TRIM(TRAILING ? FROM ?),
+  TRIM(? FROM ?),
+  TRIM(TRAILING FROM ?),
+  TRIM(?),
+  BTRIM(?),
+  BTRIM(?, ?),
+  LTRIM(?),
+  LTRIM(?, ?),
+  RTRIM(?),
+  RTRIM(?, ?),
+  COUNT(*)
+FROM foo
+=== parameters
+varchar: "x"
+varchar: "xfoox"
+varchar: "x"
+varchar: "xfoox"
+varchar: " "
+varchar: " foo "
+varchar: " foo "
+varchar: " foo "
+varchar: " foo "
+varchar: "xfoox"
+varchar: "x"
+varchar: " foo "
+varchar: "xfoox"
+varchar: "x"
+varchar: " foo "
+varchar: "xfoox"
+varchar: "x"
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 VARCHAR(5)
+EXPR$1 VARCHAR(5)
+EXPR$2 VARCHAR(5)
+EXPR$3 VARCHAR(5)
+EXPR$4 VARCHAR(5)
+EXPR$5 VARCHAR
+EXPR$6 VARCHAR
+EXPR$7 VARCHAR
+EXPR$8 VARCHAR
+EXPR$9 VARCHAR
+EXPR$10 VARCHAR
+EXPR$11 BIGINT
+=== plan
+LogicalProject(EXPR$0=[TRIM(FLAG(BOTH), 'x', 'xfoox')], EXPR$1=[TRIM(FLAG(TRAILING), 'x', 'xfoox')], EXPR$2=[TRIM(FLAG(BOTH), ' ', ' foo ')], EXPR$3=[TRIM(FLAG(TRAILING), ' ', ' foo ')], EXPR$4=[TRIM(FLAG(BOTH), ' ', ' foo ')], EXPR$5=[BTRIM(' foo ')], EXPR$6=[BTRIM('xfoox', 'x')], EXPR$7=[LTRIM(' foo ')], EXPR$8=[LTRIM('xfoox', 'x')], EXPR$9=[RTRIM(' foo ')], EXPR$10=[RTRIM('xfoox', 'x')], EXPR$11=[$0])
+  LogicalAggregate(group=[{}], EXPR$11=[COUNT()])
+    LogicalProject($f0=[0])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "postAggregations" : [ {
+    "type" : "expression",
+    "name" : "p0",
+    "expression" : "'foo'"
+  }, {
+    "type" : "expression",
+    "name" : "p1",
+    "expression" : "'xfoo'"
+  }, {
+    "type" : "expression",
+    "name" : "p2",
+    "expression" : "'foo'"
+  }, {
+    "type" : "expression",
+    "name" : "p3",
+    "expression" : "' foo'"
+  }, {
+    "type" : "expression",
+    "name" : "p4",
+    "expression" : "'foo'"
+  }, {
+    "type" : "expression",
+    "name" : "p5",
+    "expression" : "'foo'"
+  }, {
+    "type" : "expression",
+    "name" : "p6",
+    "expression" : "'foo'"
+  }, {
+    "type" : "expression",
+    "name" : "p7",
+    "expression" : "'foo '"
+  }, {
+    "type" : "expression",
+    "name" : "p8",
+    "expression" : "'foox'"
+  }, {
+    "type" : "expression",
+    "name" : "p9",
+    "expression" : "' foo'"
+  }, {
+    "type" : "expression",
+    "name" : "p10",
+    "expression" : "'xfoo'"
+  } ]
+}
+=== results
+["foo","xfoo","foo"," foo","foo","foo","foo","foo ","foox"," foo","xfoo",6]
+==============================================================
+Converted from testParamsInInformationSchema()
+Not including COUNT DISTINCT, since it isn't supported by
+BindableAggregate, and so it can't work.
+Query uses the Calcite engine, so produces no native query.
+=== case
+Params in information schema
+=== SQL
+SELECT
+  COUNT(JDBC_TYPE),
+  SUM(JDBC_TYPE),
+  AVG(JDBC_TYPE),
+  MIN(JDBC_TYPE),
+  MAX(JDBC_TYPE)
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = ?
+  AND TABLE_NAME = ?
+=== parameters
+varchar: "druid"
+varchar: "foo"
+=== options
+sqlCompatibleNulls=false
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+EXPR$1 BIGINT
+EXPR$2 BIGINT
+EXPR$3 BIGINT
+EXPR$4 BIGINT
+=== plan
+BindableProject(EXPR$0=[$0], EXPR$1=[CASE(=($0, 0), null:BIGINT, $1)], EXPR$2=[/(CASE(=($0, 0), null:BIGINT, $1), $0)], EXPR$3=[$2], EXPR$4=[$3])
+  BindableAggregate(group=[{}], EXPR$0=[COUNT()], EXPR$1=[$SUM0($16)], EXPR$3=[MIN($16)], EXPR$4=[MAX($16)])
+    BindableFilter(condition=[AND(=($1, 'druid'), =($2, 'foo'))])
+      BindableTableScan(table=[[INFORMATION_SCHEMA, COLUMNS]])
+=== results
+[8,1249,156,-5,1111]
+==============================================================
+Converted from testParamsInInformationSchema()
+=== case
+Params in information schema
+=== SQL copy
+=== parameters copy
+=== options
+sqlCompatibleNulls=true
+vectorize=true
+=== plan
+BindableProject(EXPR$0=[$0], EXPR$1=[CASE(=($0, 0), null:BIGINT, $1)], EXPR$2=[/(CASE(=($0, 0), null:BIGINT, $1), $0)], EXPR$3=[$2], EXPR$4=[$3])
+  BindableAggregate(group=[{}], EXPR$0=[COUNT($16)], EXPR$1=[$SUM0($16)], EXPR$3=[MIN($16)], EXPR$4=[MAX($16)])
+    BindableFilter(condition=[AND(=($1, 'druid'), =($2, 'foo'))])
+      BindableTableScan(table=[[INFORMATION_SCHEMA, COLUMNS]])
+=== results copy
+==============================================================
+Converted from testParamsInSelectExpressionAndLimit()
+=== case
+Params in select expression and limit
+=== SQL
+SELECT SUBSTRING(dim2, ?, ?)
+FROM druid.foo
+LIMIT ?
+=== parameters
+integer: 1
+integer: 1
+integer: 2
+=== options
+vectorize=true
+=== schema
+EXPR$0 VARCHAR
+=== plan
+LogicalSort(fetch=[2])
+  LogicalProject(EXPR$0=[SUBSTRING($3, 1, 1)])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "substring(\"dim2\", 0, 1)",
+    "outputType" : "STRING"
+  } ],
+  "resultFormat" : "compactedList",
+  "limit" : 2,
+  "columns" : [ "v0" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["a"]
+[""]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["a"]
+[null]
+==============================================================
+Converted from testParamsTuckedInACast()
+=== case
+Params tucked in a cast
+=== SQL
+SELECT dim1, m1, COUNT(*)
+FROM druid.foo
+WHERE m1 - CAST(? as INT) = dim1
+GROUP BY dim1, m1
+=== parameters
+integer: 1
+=== options
+vectorize=true
+=== schema
+dim1 VARCHAR
+m1 FLOAT
+EXPR$2 BIGINT
+=== plan
+LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT()])
+  LogicalProject(dim1=[$2], m1=[$5])
+    LogicalFilter(condition=[=(-($5, 1), CAST($2):FLOAT)])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "expression",
+    "expression" : "((\"m1\" - 1) == CAST(\"dim1\", 'DOUBLE'))"
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "m1",
+    "outputName" : "d1",
+    "outputType" : "FLOAT"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",1.0,1]
+["2",3.0,1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["2",3.0,1]
+==============================================================
+Converted from testParametersInStrangePlaces()
+=== case
+Parameters in strange places
+=== SQL
+SELECT
+  dim1,
+  COUNT(*) FILTER(WHERE dim2 <> ?)/COUNT(*) as ratio
+FROM druid.foo
+GROUP BY dim1
+HAVING COUNT(*) FILTER(WHERE dim2 <> ?)/COUNT(*) = ?
+=== parameters
+varchar: "a"
+varchar: "a"
+integer: 1
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim1 VARCHAR
+ratio BIGINT
+=== plan
+LogicalProject(dim1=[$0], ratio=[/($1, $2)])
+  LogicalFilter(condition=[=(/($1, $2), 1)])
+    LogicalAggregate(group=[{0}], agg#0=[COUNT() FILTER $1], agg#1=[COUNT()])
+      LogicalProject(dim1=[$2], $f1=[IS TRUE(<>($3, 'a'))])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "a0"
+    },
+    "filter" : {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "dim2",
+        "value" : "a"
+      }
+    },
+    "name" : "a0"
+  }, {
+    "type" : "count",
+    "name" : "a1"
+  } ],
+  "postAggregations" : [ {
+    "type" : "expression",
+    "name" : "p0",
+    "expression" : "(\"a0\" / \"a1\")"
+  } ],
+  "having" : {
+    "type" : "filter",
+    "filter" : {
+      "type" : "expression",
+      "expression" : "((\"a0\" / \"a1\") == 1)"
+    },
+    "finalize" : true
+  },
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== results
+["10.1",1]
+["2",1]
+["abc",1]
+["def",1]
+==============================================================
+Converted from testParametersInCases()
+=== case
+Parameters in cases
+=== SQL
+SELECT
+  CASE 'foo'
+  WHEN ? THEN SUM(cnt) / CAST(? as INT)
+  WHEN ? THEN SUM(m1) / CAST(? as INT)
+  WHEN ? THEN SUM(m2) / CAST(? as INT)
+  END
+FROM foo
+=== parameters
+varchar: "bar"
+integer: 10
+varchar: "foo"
+integer: 10
+varchar: "baz"
+integer: 10
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 DOUBLE
+=== plan
+LogicalProject(EXPR$0=[/($1, 10)])
+  LogicalAggregate(group=[{}], agg#0=[SUM($0)], agg#1=[SUM($1)], agg#2=[SUM($2)])
+    LogicalProject(cnt=[$1], m1=[$5], m2=[$6])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "doubleSum",
+    "name" : "a0",
+    "fieldName" : "m1"
+  } ],
+  "postAggregations" : [ {
+    "type" : "expression",
+    "name" : "p0",
+    "expression" : "(\"a0\" / 10)"
+  } ]
+}
+=== results
+[2.1]
+==============================================================
+Converted from testTimestamp()
+With millis
+=== case
+Timestamp
+=== SQL
+SELECT exp(count(*)) + ?, sum(m2)
+FROM druid.foo
+WHERE  __time >= ?
+=== parameters
+integer: 10
+timestamp: 32472144000000
+=== options
+vectorize=true
+=== schema
+EXPR$0 DOUBLE
+EXPR$1 DOUBLE
+=== plan
+LogicalProject(EXPR$0=[+(EXP($0), 10)], EXPR$1=[$1])
+  LogicalAggregate(group=[{}], agg#0=[COUNT()], EXPR$1=[SUM($0)])
+    LogicalProject(m2=[$6])
+      LogicalFilter(condition=[>=($0, 2999-01-01 00:00:00)])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "2999-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  }, {
+    "type" : "doubleSum",
+    "name" : "a1",
+    "fieldName" : "m2"
+  } ],
+  "postAggregations" : [ {
+    "type" : "expression",
+    "name" : "p0",
+    "expression" : "(exp(\"a0\") + 10)"
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[11.0,0.0]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[11.0,null]
+==============================================================
+Converted from testTimestampString()
+With timestamp string
+=== case
+Timestamp string
+=== SQL
+SELECT exp(count(*)) + ?, sum(m2)
+FROM druid.foo
+WHERE  __time >= ?
+=== parameters
+integer: 10
+timestamp: "2999-01-01 00:00:00"
+=== options
+vectorize=true
+=== schema
+EXPR$0 DOUBLE
+EXPR$1 DOUBLE
+=== plan
+LogicalProject(EXPR$0=[+(EXP($0), 10)], EXPR$1=[$1])
+  LogicalAggregate(group=[{}], agg#0=[COUNT()], EXPR$1=[SUM($0)])
+    LogicalProject(m2=[$6])
+      LogicalFilter(condition=[>=($0, 2999-01-01 00:00:00)])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "2999-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  }, {
+    "type" : "doubleSum",
+    "name" : "a1",
+    "fieldName" : "m2"
+  } ],
+  "postAggregations" : [ {
+    "type" : "expression",
+    "name" : "p0",
+    "expression" : "(exp(\"a0\") + 10)"
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[11.0,0.0]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[11.0,null]
+==============================================================
+Converted from testDate()
+With date from millis
+=== case
+Date
+=== SQL
+SELECT exp(count(*)) + ?, sum(m2)
+FROM druid.foo
+WHERE  __time >= ?
+=== parameters
+integer: 10
+date: "2999-01-01"
+=== options
+vectorize=true
+=== schema
+EXPR$0 DOUBLE
+EXPR$1 DOUBLE
+=== plan
+LogicalProject(EXPR$0=[+(EXP($0), 10)], EXPR$1=[$1])
+  LogicalAggregate(group=[{}], agg#0=[COUNT()], EXPR$1=[SUM($0)])
+    LogicalProject(m2=[$6])
+      LogicalFilter(condition=[>=($0, 2999-01-01)])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "2999-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  }, {
+    "type" : "doubleSum",
+    "name" : "a1",
+    "fieldName" : "m2"
+  } ],
+  "postAggregations" : [ {
+    "type" : "expression",
+    "name" : "p0",
+    "expression" : "(exp(\"a0\") + 10)"
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[11.0,0.0]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[11.0,null]
+==============================================================
+Converted from testDoubles()
+=== case
+Doubles
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE cnt > ? and cnt < ?
+=== parameters
+double: 1.1
+float: 1.0E8
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[AND(>($1, 1.1E0:DOUBLE), <($1, 1.0E8:DOUBLE))])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "bound",
+    "dimension" : "cnt",
+    "lower" : "1.1",
+    "upper" : "1.0E+8",
+    "lowerStrict" : true,
+    "upperStrict" : true,
+    "ordering" : {
+      "type" : "numeric"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[0]
+==============================================================
+Converted from testDoubles()
+=== case
+Doubles
+=== SQL
+SELECT COUNT(*) FROM druid.foo WHERE cnt = ? or cnt = ?
+=== parameters
+double: 1.0
+float: 1.0E8
+=== options
+sqlCompatibleNulls=false
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[OR(=(CAST($1):DOUBLE NOT NULL, 1.0E0), =(CAST($1):DOUBLE NOT NULL, 1.0E8))])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "in",
+    "dimension" : "cnt",
+    "values" : [ "1.0", "1.0E+8" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[6]
+==============================================================
+Converted from testDoubles()
+=== case
+Doubles
+=== SQL copy
+=== parameters copy
+=== options
+sqlCompatibleNulls=true
+vectorize=true
+=== schema copy
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[OR(=(CAST($1):DOUBLE, 1.0E0), =(CAST($1):DOUBLE, 1.0E8))])
+      LogicalTableScan(table=[[druid, foo]])
+=== native copy
+=== results copy
+==============================================================
+Converted from testFloats()
+=== case
+Floats
+=== SQL
+SELECT COUNT(*) FROM druid.foo WHERE cnt = ?
+=== parameters
+real: 1.0
+=== options
+sqlCompatibleNulls=false
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[=(CAST($1):DOUBLE NOT NULL, 1.0E0)])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "cnt",
+    "value" : "1.0"
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[6]
+==============================================================
+Converted from testFloats()
+=== case
+Floats
+=== SQL copy
+=== parameters
+real: 1.0
+=== options
+sqlCompatibleNulls=true
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[=(CAST($1):DOUBLE, 1.0E0)])
+      LogicalTableScan(table=[[druid, foo]])
+=== native copy
+=== results copy
+==============================================================
+Converted from testLongs()
+=== case
+Longs
+=== SQL
+SELECT COUNT(*)
+FROM druid.numfoo
+WHERE l1 > ?
+=== parameters
+bigint: 3
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[>($12, 3)])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "bound",
+    "dimension" : "l1",
+    "lower" : "3",
+    "lowerStrict" : true,
+    "ordering" : {
+      "type" : "numeric"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[2]
+==============================================================
+Converted from testMissingParameter()
+=== case
+Missing parameter
+=== SQL
+SELECT COUNT(*)
+FROM druid.numfoo
+WHERE l1 > ?
+=== exception
+SqlPlanningException
+=== error
+Parameter at position[0] is not bound
+==============================================================
+Converted from testPartiallyMissingParameter()
+Why are the exception forms different here and above?
+=== case
+Partially missing parameter
+=== SQL
+SELECT COUNT(*)
+FROM druid.numfoo
+WHERE l1 > ? AND f1 = ?
+=== parameters
+bigint: 3
+=== error
+!.* Parameter at position\[1\] is not bound
+==============================================================
+Converted from testPartiallyMissingParameterInTheMiddle()
+=== case
+Partially missing parameter in the middle
+=== SQL
+SELECT 1 + ?, dim1 FROM foo LIMIT ?
+=== parameters
+null
+integer: 1
+=== error
+!.* Parameter at position\[0\] is not bound
+==============================================================
+Converted from testWrongTypeParameter()
+
+Cannot vectorize inline datasource
+=== case
+Wrong type parameter
+=== SQL
+SELECT COUNT(*)
+FROM druid.numfoo
+WHERE l1 > ?
+  AND f1 = ?
+=== parameters
+bigint: 3
+varchar: "wat"
+=== options
+sqlCompatibleNulls=false
+vectorize=false
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[AND(>($12, 3), =($10, CAST('wat'):FLOAT NOT NULL))])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "and",
+    "fields" : [ {
+      "type" : "bound",
+      "dimension" : "l1",
+      "lower" : "3",
+      "lowerStrict" : true,
+      "ordering" : {
+        "type" : "numeric"
+      }
+    }, {
+      "type" : "selector",
+      "dimension" : "f1",
+      "value" : "0.0"
+    } ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[0]
+==============================================================
+Converted from testWrongTypeParameter()
+
+Cannot vectorize inline datasource
+=== case
+Wrong type parameter
+=== SQL copy
+=== parameters copy
+=== options
+sqlCompatibleNulls=true
+vectorize=false
+=== schema copy
+=== plan copy
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "inline",
+    "columnNames" : [ "f1", "l1" ],
+    "columnTypes" : [ "FLOAT", "LONG" ],
+    "rows" : [ ]
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results copy
+==============================================================
+Converted from testWrongTypeParameter()
+Cannot vectorize inline datasource
+=== case
+Wrong type parameter
+=== SQL
+SELECT COUNT(*)
+FROM druid.numfoo
+WHERE l1 > ? AND f1 = ?
+=== parameters
+bigint: 3
+varchar: "wat"
+=== options
+sqlCompatibleNulls=true
+vectorize=false
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[AND(>($12, 3), =($10, CAST('wat'):FLOAT NOT NULL))])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "inline",
+    "columnNames" : [ "f1", "l1" ],
+    "columnTypes" : [ "FLOAT", "LONG" ],
+    "rows" : [ ]
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[0]
+==============================================================
+Converted from testNullParameter()
+Contrived example of using null as an SQL parameter to at least
+test the code path because lots of things don't actually work as
+null and things like 'IS NULL' fail to parse in Calcite if
+expressed as 'IS ?'.
+
+This will optimize out the 3rd argument because 2nd argument will
+be constant and not null
+=== case
+Null parameter
+=== SQL
+SELECT COALESCE(dim2, ?, ?), COUNT(*)
+FROM druid.foo
+GROUP BY 1
+=== parameters
+varchar: "parameter"
+varchar: \N
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
+  LogicalProject(EXPR$0=[CASE(IS NOT NULL($3), $3, 'parameter':VARCHAR)])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "case_searched(notnull(\"dim2\"),\"dim2\",'parameter')",
+    "outputType" : "STRING"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["a",2]
+["abc",1]
+["parameter",3]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["",1]
+["a",2]
+["abc",1]
+["parameter",2]
+==============================================================
+Converted from testNullParameter()
+When converting to rel expression, this will optimize out 2nd
+argument to coalesce which is null
+=== case
+Null parameter
+=== SQL
+SELECT COALESCE(dim2, ?, ?), COUNT(*)
+FROM druid.foo
+GROUP BY 1
+=== parameters
+varchar: \N
+varchar: "parameter"
+=== options
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
+  LogicalProject(EXPR$0=[CASE(IS NOT NULL($3), $3, 'parameter':VARCHAR)])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "case_searched(notnull(\"dim2\"),\"dim2\",'parameter')",
+    "outputType" : "STRING"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["a",2]
+["abc",1]
+["parameter",3]
+=== options
+sqlCompatibleNulls=true
+=== results
+["",1]
+["a",2]
+["abc",1]
+["parameter",2]

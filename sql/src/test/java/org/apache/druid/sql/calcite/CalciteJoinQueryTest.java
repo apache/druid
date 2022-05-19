@@ -162,7 +162,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-
   @Test
   public void testExactTopNOnInnerJoinWithLimit() throws Exception
   {
@@ -592,7 +591,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
-  public void testFilterAndGroupByLookupUsingJoinOperatorWithValueFilterPushdownMatchesNothig(Map<String, Object> queryContext)
+  public void testFilterAndGroupByLookupUsingJoinOperatorWithValueFilterPushdownMatchesNothing(Map<String, Object> queryContext)
       throws Exception
   {
     // Cannot vectorize JOIN operator.
@@ -716,7 +715,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
-  public void testFilterAndGroupByLookupUsingJoinOperatorWithNotFilter(Map<String, Object> queryContext)
+  public void testFilterAndGroupByLookupUsingJoinOperatorWithoutFilter(Map<String, Object> queryContext)
       throws Exception
   {
     // Cannot vectorize JOIN operator.
@@ -999,8 +998,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-
-
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
@@ -2524,7 +2521,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
     testQuery(
         "SELECT dim2, COUNT(*) FROM druid.foo "
-            + "WHERE substring(dim2, 1, 1) IN (SELECT substring(dim1, 1, 1) FROM druid.foo WHERE dim1 <> '')"
+            + "WHERE substring(dim2, 1, 1) IN (SELECT substring(dim1, 1, 1) FROM druid.foo WHERE dim1 <> '')\n"
             + "group by dim2",
         queryContext,
         ImmutableList.of(

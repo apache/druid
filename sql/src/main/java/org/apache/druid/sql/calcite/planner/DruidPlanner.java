@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -110,11 +111,18 @@ public class DruidPlanner implements Closeable
 {
   private static final EmittingLogger log = new EmittingLogger(DruidPlanner.class);
   private static final Pattern UNNAMED_COLUMN_PATTERN = Pattern.compile("^EXPR\\$\\d+$", Pattern.CASE_INSENSITIVE);
+  @VisibleForTesting
+  public static final String UNNAMED_INGESTION_COLUMN_ERROR =
+      "Cannot ingest expressions that do not have an alias "
+          + "or columns with names like EXPR$[digit].\n"
+          + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
+          + "\"func(X) as myColumn\"";
 
   private final FrameworkConfig frameworkConfig;
   private final Planner planner;
   private final PlannerContext plannerContext;
   private final QueryMakerFactory queryMakerFactory;
+  private PlannerStateCapture stateCapture;
 
   private RexBuilder rexBuilder;
 
@@ -128,6 +136,23 @@ public class DruidPlanner implements Closeable
     this.planner = Frameworks.getPlanner(frameworkConfig);
     this.plannerContext = plannerContext;
     this.queryMakerFactory = queryMakerFactory;
+    this.stateCapture = new NoOpCapture();
+  }
+
+  public void captureState(PlannerStateCapture capture)
+  {
+    this.stateCapture = capture;
+    this.stateCapture.capturePlannerContext(plannerContext);
+  }
+
+  private ParsedNodes parse() throws SqlParseException, ValidationException
+  {
+    resetPlanner();
+    SqlNode root = planner.parse(plannerContext.getSql());
+    stateCapture.captureSql(plannerContext.getSql());
+    final ParsedNodes parsed = ParsedNodes.create(root, plannerContext.getTimeZone());
+    stateCapture.captureParse(root);
+    return parsed;
   }
 
   /**
@@ -137,8 +162,7 @@ public class DruidPlanner implements Closeable
    */
   public ValidationResult validate(boolean authorizeContextParams) throws SqlParseException, ValidationException
   {
-    resetPlanner();
-    final ParsedNodes parsed = ParsedNodes.create(planner.parse(plannerContext.getSql()), plannerContext.getTimeZone());
+    final ParsedNodes parsed = parse();
     final SqlValidator validator = getValidator();
     final SqlNode validatedQueryNode;
 
@@ -165,7 +189,9 @@ public class DruidPlanner implements Closeable
     }
 
     plannerContext.setResourceActions(resourceActions);
-    return new ValidationResult(resourceActions);
+    ValidationResult validationResult = new ValidationResult(resourceActions);
+    stateCapture.captureValidationResult(validationResult);
+    return validationResult;
   }
 
   /**
@@ -177,15 +203,16 @@ public class DruidPlanner implements Closeable
    */
   public PrepareResult prepare() throws SqlParseException, ValidationException, RelConversionException
   {
-    resetPlanner();
-
-    final ParsedNodes parsed = ParsedNodes.create(planner.parse(plannerContext.getSql()), plannerContext.getTimeZone());
+    final ParsedNodes parsed = parse();
     final SqlNode validatedQueryNode = planner.validate(parsed.getQueryNode());
+    stateCapture.captureQuery(validatedQueryNode);
     final RelRoot rootQueryRel = planner.rel(validatedQueryNode);
+    stateCapture.captureQueryRel(rootQueryRel);
 
     final SqlValidator validator = getValidator();
     final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
     final RelDataType parameterTypes = validator.getParameterRowType(validator.validate(validatedQueryNode));
+    stateCapture.captureParameterTypes(parameterTypes);
     final RelDataType returnedRowType;
 
     if (parsed.getExplainNode() != null) {
@@ -208,9 +235,7 @@ public class DruidPlanner implements Closeable
    */
   public PlannerResult plan() throws SqlParseException, ValidationException, RelConversionException
   {
-    resetPlanner();
-
-    final ParsedNodes parsed = ParsedNodes.create(planner.parse(plannerContext.getSql()), plannerContext.getTimeZone());
+    final ParsedNodes parsed = parse();
 
     try {
       if (parsed.getIngestionGranularity() != null) {
@@ -235,6 +260,8 @@ public class DruidPlanner implements Closeable
     this.rexBuilder = new RexBuilder(planner.getTypeFactory());
     final SqlNode parameterizedQueryNode = rewriteDynamicParameters(parsed.getQueryNode());
     final SqlNode validatedQueryNode = planner.validate(parameterizedQueryNode);
+    stateCapture.captureQuery(validatedQueryNode);
+    stateCapture.captureInsert(parsed.getInsertOrReplace());
     final RelRoot rootQueryRel = planner.rel(validatedQueryNode);
 
     try {
@@ -243,7 +270,7 @@ public class DruidPlanner implements Closeable
     catch (Exception e) {
       Throwable cannotPlanException = Throwables.getCauseOfType(e, RelOptPlanner.CannotPlanException.class);
       if (null == cannotPlanException) {
-        // Not a CannotPlanningException, rethrow without trying with bindable
+        // Not a CannotPlanException, rethrow without trying with bindable
         throw e;
       }
 
@@ -310,7 +337,9 @@ public class DruidPlanner implements Closeable
   ) throws ValidationException, RelConversionException
   {
     final RelRoot possiblyLimitedRoot = possiblyWrapRootWithOuterLimitFromContext(root);
-    final QueryMaker queryMaker = buildQueryMaker(root, insertOrReplace);
+    stateCapture.captureQueryRel(possiblyLimitedRoot);
+
+    final QueryMaker queryMaker = buildQueryMaker(possiblyLimitedRoot, insertOrReplace);
     plannerContext.setQueryMaker(queryMaker);
 
     RelNode parameterized = rewriteRelDynamicParameters(possiblyLimitedRoot.rel);
@@ -321,6 +350,7 @@ public class DruidPlanner implements Closeable
                .plus(root.collation),
         parameterized
     );
+    stateCapture.captureDruidRel(druidRel);
 
     if (explain != null) {
       return planExplanation(druidRel, explain, true);
@@ -333,6 +363,9 @@ public class DruidPlanner implements Closeable
                           .filter(action -> action.getAction() == Action.READ)
                           .collect(Collectors.toSet());
 
+        // TODO: This is not really a state check since there is a race condition.
+        // This can be seen as verifying that a check was done, or as redoing the
+        // check with the latest info (if the permissions are updated in between.)
         Preconditions.checkState(
             readResourceActions.isEmpty() == druidRel.getDataSourceNames().isEmpty()
             // The resources found in the plannerContext can be less than the datasources in
@@ -366,6 +399,7 @@ public class DruidPlanner implements Closeable
         planner.getEmptyTraitSet().replace(BindableConvention.INSTANCE).plus(root.collation),
         root.rel
     );
+    stateCapture.captureBindableRel(bindableRel);
 
     if (!root.isRefTrivial()) {
       // Add a projection on top to accommodate root.fields.
@@ -469,7 +503,7 @@ public class DruidPlanner implements Closeable
   /**
    * This method doesn't utilize the Calcite's internal {@link RelOptUtil#dumpPlan} since that tends to be verbose
    * and not indicative of the native Druid Queries which will get executed
-   * This method assumes that the Planner has converted the RelNodes to DruidRels, and thereby we can implictly cast it
+   * This method assumes that the Planner has converted the RelNodes to DruidRels, and thereby we can implicitly cast it
    *
    * @param rel Instance of the root {@link DruidRel} which is formed by running the planner transformations on it
    * @return A string representing an array of native queries that correspond to the given SQL query, in JSON format
@@ -736,10 +770,7 @@ public class DruidPlanner implements Closeable
     // Check that there are no unnamed columns in the insert.
     for (Pair<Integer, String> field : rootQueryRel.fields) {
       if (UNNAMED_COLUMN_PATTERN.matcher(field.right).matches()) {
-        throw new ValidationException("Cannot ingest expressions that do not have an alias "
-                                      + "or columns with names like EXPR$[digit]."
-                                      + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
-                                      + "\"func(X) as myColumn\"");
+        throw new ValidationException(UNNAMED_INGESTION_COLUMN_ERROR);
       }
     }
   }

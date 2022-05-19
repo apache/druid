@@ -1,0 +1,1636 @@
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+==============================================================
+Test cases from the CalciteJoinQueryTest file
+
+==============================================================
+Converted from testWhereInSelectNullFromLookup()
+
+Regression test for https://github.com/apache/druid/issues/9646
+=== case
+WHERE in SELECT NULL from lookup
+=== SQL
+SELECT *
+FROM foo
+where dim1 IN (SELECT NULL FROM lookup.lookyloo)
+=== options
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+__time TIMESTAMP(3)
+cnt BIGINT
+dim1 VARCHAR
+dim2 VARCHAR
+dim3 VARCHAR
+m1 FLOAT
+m2 DOUBLE
+unique_dim1 COMPLEX<hyperUnique>
+=== plan
+LogicalProject(__time=[$0], cnt=[$1], dim1=[$2], dim2=[$3], dim3=[$4], m1=[$5], m2=[$6], unique_dim1=[$7])
+  LogicalFilter(condition=[IN($2, {
+LogicalProject(EXPR$0=[null:VARCHAR])
+  LogicalTableScan(table=[[lookup, lookyloo]])
+})])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "lookup",
+          "lookup" : "lookyloo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "null",
+          "outputType" : "STRING"
+        } ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "v0",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim1\" == \"j0.d0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "null",
+    "outputType" : "STRING"
+  } ],
+  "resultFormat" : "compactedList",
+  "columns" : [ "__time", "cnt", "dim2", "dim3", "m1", "m2", "unique_dim1", "v0" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+==============================================================
+Converted from testCommaJoinLeftFunction()
+=== case
+Comma join left function
+=== SQL
+SELECT foo.dim1, foo.dim2, l.k, l.v
+FROM foo, lookup.lookyloo l
+WHERE SUBSTRING(foo.dim2, 1, 1) = l.k
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim1 VARCHAR
+dim2 VARCHAR
+k VARCHAR
+v VARCHAR
+=== plan
+LogicalProject(dim1=[$2], dim2=[$3], k=[$8], v=[$9])
+  LogicalFilter(condition=[=(SUBSTRING($3, 1, 1), $8)])
+    LogicalJoin(condition=[true], joinType=[inner])
+      LogicalTableScan(table=[[druid, foo]])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(substring(\"dim2\", 0, 1) == \"j0.k\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "dim1", "dim2", "j0.k", "j0.v" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+["","a","a","xa"]
+["1","a","a","xa"]
+["def","abc","a","xa"]
+==============================================================
+Converted from testCommaJoinTableLookupTableMismatchedTypes()
+
+This SQL currently does not result in an optimum plan.
+Unfortunately, we have disabled pushing down predicates (conditions and filters)
+due to https://github.com/apache/druid/pull/9773
+Hence, comma join will result in a cross join with filter on outermost
+Regression test for https://github.com/apache/druid/issues/9646
+=== case
+Comma join table lookup with mismatched types
+=== SQL
+SELECT COUNT(*)
+FROM foo, lookup.lookyloo l, numfoo
+WHERE foo.cnt = l.k
+  AND l.k = numfoo.cnt
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[AND(=($1, CAST($8):BIGINT), =(CAST($8):BIGINT, $11))])
+      LogicalJoin(condition=[true], joinType=[inner])
+        LogicalJoin(condition=[true], joinType=[inner])
+          LogicalTableScan(table=[[druid, foo]])
+          LogicalTableScan(table=[[lookup, lookyloo]])
+        LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "right" : {
+        "type" : "lookup",
+        "lookup" : "lookyloo"
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "1",
+      "joinType" : "INNER"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "numfoo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "cnt" ],
+        "granularity" : {
+          "type" : "all"
+        }
+      }
+    },
+    "rightPrefix" : "_j0.",
+    "condition" : "1",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "and",
+    "fields" : [ {
+      "type" : "expression",
+      "expression" : "(\"cnt\" == CAST(\"j0.k\", 'LONG'))"
+    }, {
+      "type" : "expression",
+      "expression" : "(CAST(\"j0.k\", 'LONG') == \"_j0.cnt\")"
+    } ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[0]
+==============================================================
+Converted from testJoinTableLookupTableMismatchedTypesWithoutComma()
+=== case
+JOIN table lookup to table with mismatched types without comma
+=== SQL
+SELECT COUNT(*)
+FROM foo
+INNER JOIN lookup.lookyloo l ON foo.cnt = l.k
+INNER JOIN numfoo ON l.k = numfoo.cnt
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalJoin(condition=[=($10, $12)], joinType=[inner])
+      LogicalProject(__time=[$0], cnt=[$1], dim1=[$2], dim2=[$3], dim3=[$4], m1=[$5], m2=[$6], unique_dim1=[$7], k=[$8], v=[$9], k0=[CAST($8):BIGINT])
+        LogicalJoin(condition=[=($1, $10)], joinType=[inner])
+          LogicalTableScan(table=[[druid, foo]])
+          LogicalProject(k=[$0], v=[$1], k0=[CAST($0):BIGINT])
+            LogicalTableScan(table=[[lookup, lookyloo]])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "right" : {
+        "type" : "query",
+        "query" : {
+          "queryType" : "scan",
+          "dataSource" : {
+            "type" : "lookup",
+            "lookup" : "lookyloo"
+          },
+          "intervals" : {
+            "type" : "intervals",
+            "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+          },
+          "virtualColumns" : [ {
+            "type" : "expression",
+            "name" : "v0",
+            "expression" : "CAST(\"k\", 'LONG')",
+            "outputType" : "LONG"
+          } ],
+          "resultFormat" : "compactedList",
+          "columns" : [ "k", "v0" ],
+          "granularity" : {
+            "type" : "all"
+          }
+        }
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "(\"cnt\" == \"j0.v0\")",
+      "joinType" : "INNER"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "numfoo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "cnt" ],
+        "granularity" : {
+          "type" : "all"
+        }
+      }
+    },
+    "rightPrefix" : "_j0.",
+    "condition" : "(CAST(\"j0.k\", 'LONG') == \"_j0.cnt\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[0]
+==============================================================
+Converted from testInnerJoinCastLeft()
+
+foo.m1 is FLOAT, l.k is STRING
+=== case
+INNER JOIN with CAST on left
+=== SQL
+SELECT foo.m1, l.k, l.v
+FROM foo
+INNER JOIN lookup.lookyloo l ON CAST(foo.m1 AS VARCHAR) = l.k
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+m1 FLOAT
+k VARCHAR
+v VARCHAR
+=== plan
+LogicalProject(m1=[$5], k=[$9], v=[$10])
+  LogicalJoin(condition=[=($8, $9)], joinType=[inner])
+!    \QLogicalProject(__time=[$0], cnt=[$1], dim1=[$2], dim2=[$3], dim3=[$4], m1=[$5], m2=[$6], unique_dim1=[$7], m10=[CAST($5):VARCHAR\E( NOT NULL)?\]\)
+      LogicalTableScan(table=[[druid, foo]])
+    LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(CAST(\"m1\", 'STRING') == \"j0.k\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "j0.k", "j0.v", "m1" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+==============================================================
+Converted from testInnerJoinCastRight()
+=== case
+INNER JOIN with CAST on right
+=== SQL
+SELECT foo.m1, l.k, l.v
+FROM foo
+INNER JOIN lookup.lookyloo l ON foo.m1 = CAST(l.k AS FLOAT)
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+m1 FLOAT
+k VARCHAR
+v VARCHAR
+=== plan
+LogicalProject(m1=[$5], k=[$8], v=[$9])
+  LogicalJoin(condition=[=($5, $10)], joinType=[inner])
+    LogicalTableScan(table=[[druid, foo]])
+    LogicalProject(k=[$0], v=[$1], k0=[CAST($0):FLOAT])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "lookup",
+          "lookup" : "lookyloo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "CAST(\"k\", 'DOUBLE')",
+          "outputType" : "FLOAT"
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "k", "v", "v0" ],
+        "granularity" : {
+          "type" : "all"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"m1\" == \"j0.v0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "j0.k", "j0.v", "m1" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+[6.0,"6","x6"]
+==============================================================
+Converted from testInnerJoinMismatchedTypes()
+
+foo.m1 is FLOAT, l.k is STRING. Comparing them generates a CAST
+=== case
+INNER JOIN on mismatched types
+=== SQL
+SELECT foo.m1, l.k, l.v
+FROM foo
+INNER JOIN lookup.lookyloo l
+ON foo.m1 = l.k
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+m1 FLOAT
+k VARCHAR
+v VARCHAR
+=== plan
+LogicalProject(m1=[$5], k=[$8], v=[$9])
+  LogicalJoin(condition=[=($5, $10)], joinType=[inner])
+    LogicalTableScan(table=[[druid, foo]])
+    LogicalProject(k=[$0], v=[$1], k0=[CAST($0):FLOAT])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "lookup",
+          "lookup" : "lookyloo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "CAST(\"k\", 'DOUBLE')",
+          "outputType" : "FLOAT"
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "k", "v", "v0" ],
+        "granularity" : {
+          "type" : "all"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"m1\" == \"j0.v0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "j0.k", "j0.v", "m1" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+[6.0,"6","x6"]
+==============================================================
+Converted from testInnerJoinLeftFunction()
+=== case
+INNER JOIN with function on left
+=== SQL
+SELECT foo.dim1, foo.dim2, l.k, l.v
+FROM foo
+INNER JOIN lookup.lookyloo l
+ON SUBSTRING(foo.dim2, 1, 1) = l.k
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim1 VARCHAR
+dim2 VARCHAR
+k VARCHAR
+v VARCHAR
+=== plan
+LogicalProject(dim1=[$2], dim2=[$3], k=[$9], v=[$10])
+  LogicalJoin(condition=[=($8, $9)], joinType=[inner])
+    LogicalProject(__time=[$0], cnt=[$1], dim1=[$2], dim2=[$3], dim3=[$4], m1=[$5], m2=[$6], unique_dim1=[$7], $f8=[SUBSTRING($3, 1, 1)])
+      LogicalTableScan(table=[[druid, foo]])
+    LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(substring(\"dim2\", 0, 1) == \"j0.k\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "dim1", "dim2", "j0.k", "j0.v" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+["","a","a","xa"]
+["1","a","a","xa"]
+["def","abc","a","xa"]
+==============================================================
+Converted from testInnerJoinRightFunction()
+=== case
+INNER JOIN with function on right
+=== SQL
+SELECT foo.dim1, foo.dim2, l.k, l.v
+FROM foo
+INNER JOIN lookup.lookyloo l
+ON foo.dim2 = SUBSTRING(l.k, 1, 2)
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+dim1 VARCHAR
+dim2 VARCHAR
+k VARCHAR
+v VARCHAR
+=== plan
+LogicalProject(dim1=[$2], dim2=[$3], k=[$8], v=[$9])
+  LogicalJoin(condition=[=($3, $10)], joinType=[inner])
+    LogicalTableScan(table=[[druid, foo]])
+    LogicalProject(k=[$0], v=[$1], $f2=[SUBSTRING($0, 1, 2)])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "lookup",
+          "lookup" : "lookyloo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "substring(\"k\", 0, 2)",
+          "outputType" : "STRING"
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "k", "v", "v0" ],
+        "granularity" : {
+          "type" : "all"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim2\" == \"j0.v0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "dim1", "dim2", "j0.k", "j0.v" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== results
+["","a","a","xa"]
+["1","a","a","xa"]
+==============================================================
+Converted from testLeftJoinLookupOntoLookupUsingJoinOperator()
+=== case
+LEFT JOIN lookup onto lookup using JOIN operator
+=== SQL
+SELECT dim2, l1.v, l2.v
+FROM foo
+LEFT JOIN lookup.lookyloo l1 ON foo.dim2 = l1.k
+LEFT JOIN lookup.lookyloo l2 ON l1.k = l2.k
+=== options
+provider=QueryContextForJoinProvider
+vectorize=true
+=== schema
+dim2 VARCHAR
+v VARCHAR
+v VARCHAR
+=== plan
+LogicalProject(dim2=[$3], v=[$9], v0=[$11])
+  LogicalJoin(condition=[=($8, $10)], joinType=[left])
+    LogicalJoin(condition=[=($3, $8)], joinType=[left])
+      LogicalTableScan(table=[[druid, foo]])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+    LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "right" : {
+        "type" : "lookup",
+        "lookup" : "lookyloo"
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "(\"dim2\" == \"j0.k\")",
+      "joinType" : "LEFT"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "_j0.",
+    "condition" : "(\"j0.k\" == \"_j0.k\")",
+    "joinType" : "LEFT"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "_j0.v", "dim2", "j0.v" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["a","xa","xa"]
+["","",""]
+["","",""]
+["a","xa","xa"]
+["abc","xabc","xabc"]
+["","",""]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["a","xa","xa"]
+[null,null,null]
+["",null,null]
+["a","xa","xa"]
+["abc","xabc","xabc"]
+[null,null,null]
+==============================================================
+Converted from testSelectOnLookupUsingLeftJoinOperator()
+=== case
+SELECT on lookups using LEFT JOIN operator
+=== SQL
+SELECT dim1, lookyloo.*
+FROM foo
+LEFT JOIN lookup.lookyloo
+ON foo.dim1 = lookyloo.k
+WHERE lookyloo.v <> 'xxx'
+   OR lookyloo.v IS NULL
+=== options
+provider=QueryContextForJoinProvider
+vectorize=true
+=== schema
+dim1 VARCHAR
+k VARCHAR
+v VARCHAR
+=== plan
+LogicalProject(dim1=[$2], k=[$8], v=[$9])
+  LogicalFilter(condition=[OR(<>($9, 'xxx'), IS NULL($9))])
+    LogicalJoin(condition=[=($2, $8)], joinType=[left])
+      LogicalTableScan(table=[[druid, foo]])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim1\" == \"j0.k\")",
+    "joinType" : "LEFT"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "filter" : {
+    "type" : "or",
+    "fields" : [ {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "j0.v",
+        "value" : "xxx"
+      }
+    }, {
+      "type" : "selector",
+      "dimension" : "j0.v"
+    } ]
+  },
+  "columns" : [ "dim1", "j0.k", "j0.v" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["","",""]
+["10.1","",""]
+["2","",""]
+["1","",""]
+["def","",""]
+["abc","abc","xabc"]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["",null,null]
+["10.1",null,null]
+["2",null,null]
+["1",null,null]
+["def",null,null]
+["abc","abc","xabc"]
+==============================================================
+Converted from testLeftJoinThreeLookupsUsingJoinOperator()
+=== case
+LEFT JOIN with three lookups using the JOIN operator
+=== SQL
+SELECT dim1, dim2, l1.v, l2.v, l3.v
+FROM foo
+LEFT JOIN lookup.lookyloo l1 ON foo.dim1 = l1.k
+LEFT JOIN lookup.lookyloo l2 ON foo.dim2 = l2.k
+LEFT JOIN lookup.lookyloo l3 ON l2.k = l3.k
+=== options
+provider=QueryContextForJoinProvider
+vectorize=true
+=== schema
+dim1 VARCHAR
+dim2 VARCHAR
+v VARCHAR
+v VARCHAR
+v VARCHAR
+=== plan
+LogicalProject(dim1=[$2], dim2=[$3], v=[$9], v0=[$11], v1=[$13])
+  LogicalJoin(condition=[=($10, $12)], joinType=[left])
+    LogicalJoin(condition=[=($3, $10)], joinType=[left])
+      LogicalJoin(condition=[=($2, $8)], joinType=[left])
+        LogicalTableScan(table=[[druid, foo]])
+        LogicalTableScan(table=[[lookup, lookyloo]])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+    LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "join",
+        "left" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "right" : {
+          "type" : "lookup",
+          "lookup" : "lookyloo"
+        },
+        "rightPrefix" : "j0.",
+        "condition" : "(\"dim1\" == \"j0.k\")",
+        "joinType" : "LEFT"
+      },
+      "right" : {
+        "type" : "lookup",
+        "lookup" : "lookyloo"
+      },
+      "rightPrefix" : "_j0.",
+      "condition" : "(\"dim2\" == \"_j0.k\")",
+      "joinType" : "LEFT"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "__j0.",
+    "condition" : "(\"_j0.k\" == \"__j0.k\")",
+    "joinType" : "LEFT"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "__j0.v", "_j0.v", "dim1", "dim2", "j0.v" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["","a","","xa","xa"]
+["10.1","","","",""]
+["2","","","",""]
+["1","a","","xa","xa"]
+["def","abc","","xabc","xabc"]
+["abc","","xabc","",""]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["","a",null,"xa","xa"]
+["10.1",null,null,null,null]
+["2","",null,null,null]
+["1","a",null,"xa","xa"]
+["def","abc",null,"xabc","xabc"]
+["abc",null,"xabc",null,null]
+==============================================================
+Converted from testSelectOnLookupUsingLeftJoinOperator()
+=== case
+SELECT on lookups using LEFT JOIN operator
+=== SQL
+SELECT dim1, lookyloo.*
+FROM foo
+LEFT JOIN lookup.lookyloo
+ON foo.dim1 = lookyloo.k
+WHERE lookyloo.v <> 'xxx'
+   OR lookyloo.v IS NULL
+=== options
+provider=QueryContextForJoinProvider
+vectorize=true
+=== schema
+dim1 VARCHAR
+k VARCHAR
+v VARCHAR
+=== plan
+LogicalProject(dim1=[$2], k=[$8], v=[$9])
+  LogicalFilter(condition=[OR(<>($9, 'xxx'), IS NULL($9))])
+    LogicalJoin(condition=[=($2, $8)], joinType=[left])
+      LogicalTableScan(table=[[druid, foo]])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim1\" == \"j0.k\")",
+    "joinType" : "LEFT"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "filter" : {
+    "type" : "or",
+    "fields" : [ {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "j0.v",
+        "value" : "xxx"
+      }
+    }, {
+      "type" : "selector",
+      "dimension" : "j0.v"
+    } ]
+  },
+  "columns" : [ "dim1", "j0.k", "j0.v" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["","",""]
+["10.1","",""]
+["2","",""]
+["1","",""]
+["def","",""]
+["abc","abc","xabc"]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["",null,null]
+["10.1",null,null]
+["2",null,null]
+["1",null,null]
+["def",null,null]
+["abc","abc","xabc"]
+==============================================================
+Converted from testSelectOnLookupUsingRightJoinOperator()
+=== case
+SELECT on lookups using RIGHT JOIN operator
+=== SQL
+SELECT dim1, lookyloo.*
+FROM foo
+RIGHT JOIN lookup.lookyloo
+ON foo.dim1 = lookyloo.k
+WHERE lookyloo.v <> 'xxx'
+   OR lookyloo.v IS NULL
+=== options
+provider=QueryContextForJoinProvider
+vectorize=true
+=== schema
+dim1 VARCHAR
+k VARCHAR
+v VARCHAR
+=== plan
+LogicalProject(dim1=[$2], k=[$8], v=[$9])
+  LogicalFilter(condition=[OR(<>($9, 'xxx'), IS NULL($9))])
+    LogicalJoin(condition=[=($2, $8)], joinType=[right])
+      LogicalTableScan(table=[[druid, foo]])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim1\" == \"j0.k\")",
+    "joinType" : "RIGHT"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "filter" : {
+    "type" : "or",
+    "fields" : [ {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "j0.v",
+        "value" : "xxx"
+      }
+    }, {
+      "type" : "selector",
+      "dimension" : "j0.v"
+    } ]
+  },
+  "columns" : [ "dim1", "j0.k", "j0.v" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["abc","abc","xabc"]
+["","a","xa"]
+["","nosuchkey","mysteryvalue"]
+["","6","x6"]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["abc","abc","xabc"]
+[null,"a","xa"]
+[null,"nosuchkey","mysteryvalue"]
+[null,"6","x6"]
+==============================================================
+Converted from testSelectOnLookupUsingFullJoinOperator()
+=== case
+SELECT on lookups using FULL JOIN operator
+=== SQL
+SELECT dim1, m1, cnt, lookyloo.*
+FROM foo
+FULL JOIN lookup.lookyloo
+ON foo.dim1 = lookyloo.k
+WHERE lookyloo.v <> 'xxx'
+   OR lookyloo.v IS NULL
+=== options
+provider=QueryContextForJoinProvider
+vectorize=true
+=== schema
+dim1 VARCHAR
+m1 FLOAT
+cnt BIGINT
+k VARCHAR
+v VARCHAR
+=== plan
+LogicalProject(dim1=[$2], m1=[$5], cnt=[$1], k=[$8], v=[$9])
+  LogicalFilter(condition=[OR(<>($9, 'xxx'), IS NULL($9))])
+    LogicalJoin(condition=[=($2, $8)], joinType=[full])
+      LogicalTableScan(table=[[druid, foo]])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+=== native
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim1\" == \"j0.k\")",
+    "joinType" : "FULL"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "filter" : {
+    "type" : "or",
+    "fields" : [ {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "j0.v",
+        "value" : "xxx"
+      }
+    }, {
+      "type" : "selector",
+      "dimension" : "j0.v"
+    } ]
+  },
+  "columns" : [ "cnt", "dim1", "j0.k", "j0.v", "m1" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",1.0,1,"",""]
+["10.1",2.0,1,"",""]
+["2",3.0,1,"",""]
+["1",4.0,1,"",""]
+["def",5.0,1,"",""]
+["abc",6.0,1,"abc","xabc"]
+["",0.0,0,"a","xa"]
+["",0.0,0,"nosuchkey","mysteryvalue"]
+["",0.0,0,"6","x6"]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["",1.0,1,null,null]
+["10.1",2.0,1,null,null]
+["2",3.0,1,null,null]
+["1",4.0,1,null,null]
+["def",5.0,1,null,null]
+["abc",6.0,1,"abc","xabc"]
+[null,null,null,"a","xa"]
+[null,null,null,"nosuchkey","mysteryvalue"]
+[null,null,null,"6","x6"]
+==============================================================
+Converted from testInAggregationSubquery()
+
+Fully removing the join allows this query to vectorize.
+=== case
+IN aggregation subquery
+=== SQL
+SELECT DISTINCT __time
+FROM druid.foo
+WHERE __time IN (SELECT MAX(__time) FROM druid.foo)
+=== context
+enableTimeBoundaryPlanning=true
+maxTimeArrayOutputName=a0
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+__time TIMESTAMP(3)
+=== plan
+LogicalAggregate(group=[{0}])
+  LogicalProject(__time=[$0])
+    LogicalFilter(condition=[IN($0, {
+LogicalAggregate(group=[{}], EXPR$0=[MAX($0)])
+  LogicalProject(__time=[$0])
+    LogicalTableScan(table=[[druid, foo]])
+})])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "timeBoundary",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "bound" : "maxTime",
+        "context" : {
+          "enableTimeBoundaryPlanning" : true,
+          "maxTimeArrayOutputName" : "a0"
+        },
+        "granularity" : {
+          "type" : "all"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"__time\" == \"j0.a0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "__time",
+    "outputName" : "d0",
+    "outputType" : "LONG"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "context" : {
+    "enableTimeBoundaryPlanning" : true,
+    "maxTimeArrayOutputName" : "a0"
+  }
+}
+=== results
+[978480000000]
+==============================================================
+Converted from testNotInAggregationSubquery()
+
+Cannot vectorize JOIN operator.
+=== case
+NOT IN aggregation subquery
+=== SQL
+SELECT DISTINCT __time
+FROM druid.foo
+WHERE __time NOT IN (SELECT MAX(__time) FROM druid.foo)
+=== context
+enableTimeBoundaryPlanning=true
+maxTimeArrayOutputName=a0
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=false
+vectorize=false
+=== schema
+__time TIMESTAMP(3)
+=== plan
+LogicalAggregate(group=[{0}])
+  LogicalProject(__time=[$0])
+    LogicalFilter(condition=[NOT(IN($0, {
+LogicalAggregate(group=[{}], EXPR$0=[MAX($0)])
+  LogicalProject(__time=[$0])
+    LogicalTableScan(table=[[druid, foo]])
+}))])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "right" : {
+        "type" : "query",
+        "query" : {
+          "queryType" : "groupBy",
+          "dataSource" : {
+            "type" : "query",
+            "query" : {
+              "queryType" : "timeBoundary",
+              "dataSource" : {
+                "type" : "table",
+                "name" : "foo"
+              },
+              "intervals" : {
+                "type" : "intervals",
+                "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+              },
+              "bound" : "maxTime",
+              "context" : {
+                "enableTimeBoundaryPlanning" : true,
+                "maxTimeArrayOutputName" : "a0"
+              },
+              "granularity" : {
+                "type" : "all"
+              }
+            }
+          },
+          "intervals" : {
+            "type" : "intervals",
+            "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+          },
+          "granularity" : {
+            "type" : "all"
+          },
+          "dimensions" : [ ],
+          "aggregations" : [ {
+            "type" : "count",
+            "name" : "_a0"
+          }, {
+            "type" : "count",
+            "name" : "_a1"
+          } ],
+          "limitSpec" : {
+            "type" : "NoopLimitSpec"
+          },
+          "context" : {
+            "enableTimeBoundaryPlanning" : true,
+            "maxTimeArrayOutputName" : "a0"
+          }
+        }
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "1",
+      "joinType" : "INNER"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "timeseries",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "aggregations" : [ {
+          "type" : "longMax",
+          "name" : "a0",
+          "fieldName" : "__time"
+        } ],
+        "postAggregations" : [ {
+          "type" : "expression",
+          "name" : "p0",
+          "expression" : "1"
+        } ],
+        "context" : {
+          "enableTimeBoundaryPlanning" : true,
+          "maxTimeArrayOutputName" : "a0"
+        }
+      }
+    },
+    "rightPrefix" : "_j0.",
+    "condition" : "(\"__time\" == \"_j0.a0\")",
+    "joinType" : "LEFT"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "or",
+    "fields" : [ {
+      "type" : "selector",
+      "dimension" : "j0._a0",
+      "value" : "0"
+    }, {
+      "type" : "and",
+      "fields" : [ {
+        "type" : "selector",
+        "dimension" : "_j0.p0"
+      }, {
+        "type" : "expression",
+        "expression" : "(\"j0._a1\" >= \"j0._a0\")"
+      } ]
+    } ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "__time",
+    "outputName" : "d0",
+    "outputType" : "LONG"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "context" : {
+    "enableTimeBoundaryPlanning" : true,
+    "maxTimeArrayOutputName" : "a0"
+  }
+}
+=== results
+[946684800000]
+[946771200000]
+[946857600000]
+[978307200000]
+[978393600000]
+==============================================================
+Converted from testNotInAggregationSubquery()
+
+Cannot vectorize JOIN operator.
+=== case
+NOT IN aggregation subquery
+=== SQL copy
+=== context copy
+=== options
+provider=QueryContextForJoinProvider
+sqlCompatibleNulls=true
+vectorize=false
+=== schema copy
+=== plan copy
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "right" : {
+        "type" : "query",
+        "query" : {
+          "queryType" : "groupBy",
+          "dataSource" : {
+            "type" : "query",
+            "query" : {
+              "queryType" : "timeBoundary",
+              "dataSource" : {
+                "type" : "table",
+                "name" : "foo"
+              },
+              "intervals" : {
+                "type" : "intervals",
+                "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+              },
+              "bound" : "maxTime",
+              "context" : {
+                "enableTimeBoundaryPlanning" : true,
+                "maxTimeArrayOutputName" : "a0"
+              },
+              "granularity" : {
+                "type" : "all"
+              }
+            }
+          },
+          "intervals" : {
+            "type" : "intervals",
+            "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+          },
+          "granularity" : {
+            "type" : "all"
+          },
+          "dimensions" : [ ],
+          "aggregations" : [ {
+            "type" : "count",
+            "name" : "_a0"
+          }, {
+            "type" : "filtered",
+            "aggregator" : {
+              "type" : "count",
+              "name" : "_a1"
+            },
+            "filter" : {
+              "type" : "not",
+              "field" : {
+                "type" : "selector",
+                "dimension" : "a0"
+              }
+            },
+            "name" : "_a1"
+          } ],
+          "limitSpec" : {
+            "type" : "NoopLimitSpec"
+          },
+          "context" : {
+            "enableTimeBoundaryPlanning" : true,
+            "maxTimeArrayOutputName" : "a0"
+          }
+        }
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "1",
+      "joinType" : "INNER"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "timeseries",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "aggregations" : [ {
+          "type" : "longMax",
+          "name" : "a0",
+          "fieldName" : "__time"
+        } ],
+        "postAggregations" : [ {
+          "type" : "expression",
+          "name" : "p0",
+          "expression" : "1"
+        } ],
+        "context" : {
+          "enableTimeBoundaryPlanning" : true,
+          "maxTimeArrayOutputName" : "a0"
+        }
+      }
+    },
+    "rightPrefix" : "_j0.",
+    "condition" : "(\"__time\" == \"_j0.a0\")",
+    "joinType" : "LEFT"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "or",
+    "fields" : [ {
+      "type" : "selector",
+      "dimension" : "j0._a0",
+      "value" : "0"
+    }, {
+      "type" : "and",
+      "fields" : [ {
+        "type" : "selector",
+        "dimension" : "_j0.p0"
+      }, {
+        "type" : "expression",
+        "expression" : "(\"j0._a1\" >= \"j0._a0\")"
+      } ]
+    } ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "__time",
+    "outputName" : "d0",
+    "outputType" : "LONG"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  },
+  "context" : {
+    "enableTimeBoundaryPlanning" : true,
+    "maxTimeArrayOutputName" : "a0"
+  }
+}
+=== results
+[946684800000]
+[946771200000]
+[946857600000]
+[978307200000]
+[978393600000]

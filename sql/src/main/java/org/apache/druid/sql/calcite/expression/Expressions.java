@@ -497,7 +497,7 @@ public class Expressions
                || kind == SqlKind.LESS_THAN
                || kind == SqlKind.LESS_THAN_OR_EQUAL) {
       final List<RexNode> operands = ((RexCall) rexNode).getOperands();
-      Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got[%,d]", operands.size());
+      Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got [%,d]", operands.size());
       boolean flip = false;
       RexNode lhs = operands.get(0);
       RexNode rhs = operands.get(1);
@@ -532,7 +532,7 @@ public class Expressions
             flippedKind = SqlKind.GREATER_THAN_OR_EQUAL;
             break;
           default:
-            throw new ISE("Kind[%s] not expected here", kind);
+            throw new ISE("Kind [%s] not expected here", kind);
         }
       } else {
         flippedKind = kind;

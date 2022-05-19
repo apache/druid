@@ -1,0 +1,2036 @@
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+==============================================================
+Converted from testPrimitiveLatestInSubqueryGroupBy()
+=== case
+Primitive latest in subquery group by
+=== SQL
+SELECT dim2, LATEST(m1) AS val1
+FROM foo
+GROUP BY dim2
+=== options
+vectorize=true
+=== schema
+dim2 VARCHAR
+val1 FLOAT
+=== plan
+LogicalAggregate(group=[{0}], val1=[LATEST($1)])
+  LogicalProject(dim2=[$3], m1=[$5])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim2",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "floatLast",
+    "name" : "a0",
+    "fieldName" : "m1",
+    "timeColumn" : "__time"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["",6.0]
+["a",4.0]
+["abc",5.0]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,6.0]
+["",3.0]
+["a",4.0]
+["abc",5.0]
+==============================================================
+Converted from testPrimitiveEarliestInSubquery()
+This test the off-heap (buffer) version of the EarliestAggregator
+(Double/Float/Long)
+Cannot vectorize EARLIEST aggregator.
+=== case
+Primitive earliest in subquery
+=== SQL
+SELECT SUM(val1), SUM(val2), SUM(val3)
+FROM (
+  SELECT
+    dim2,
+    EARLIEST(m1) AS val1,
+    EARLIEST(cnt) AS val2,
+    EARLIEST(m2) AS val3
+  FROM foo
+  GROUP BY dim2
+)
+=== options
+vectorize=true
+=== schema
+EXPR$0 DOUBLE
+EXPR$1 BIGINT
+EXPR$2 DOUBLE
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[SUM($0)], EXPR$1=[SUM($1)], EXPR$2=[SUM($2)])
+  LogicalProject(val1=[$1], val2=[$2], val3=[$3])
+    LogicalAggregate(group=[{0}], val1=[EARLIEST($1)], val2=[EARLIEST($2)], val3=[EARLIEST($3)])
+      LogicalProject(dim2=[$3], m1=[$5], cnt=[$1], m2=[$6])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "groupBy",
+      "dataSource" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "granularity" : {
+        "type" : "all"
+      },
+      "dimensions" : [ {
+        "type" : "default",
+        "dimension" : "dim2",
+        "outputName" : "d0",
+        "outputType" : "STRING"
+      } ],
+      "aggregations" : [ {
+        "type" : "floatFirst",
+        "name" : "a0:a",
+        "fieldName" : "m1",
+        "timeColumn" : "__time"
+      }, {
+        "type" : "longFirst",
+        "name" : "a1:a",
+        "fieldName" : "cnt",
+        "timeColumn" : "__time"
+      }, {
+        "type" : "doubleFirst",
+        "name" : "a2:a",
+        "fieldName" : "m2",
+        "timeColumn" : "__time"
+      } ],
+      "postAggregations" : [ {
+        "type" : "finalizingFieldAccess",
+        "name" : "a0",
+        "fieldName" : "a0:a"
+      }, {
+        "type" : "finalizingFieldAccess",
+        "name" : "a1",
+        "fieldName" : "a1:a"
+      }, {
+        "type" : "finalizingFieldAccess",
+        "name" : "a2",
+        "fieldName" : "a2:a"
+      } ],
+      "limitSpec" : {
+        "type" : "NoopLimitSpec"
+      }
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ ],
+  "aggregations" : [ {
+    "type" : "doubleSum",
+    "name" : "_a0",
+    "fieldName" : "a0"
+  }, {
+    "type" : "longSum",
+    "name" : "_a1",
+    "fieldName" : "a1"
+  }, {
+    "type" : "doubleSum",
+    "name" : "_a2",
+    "fieldName" : "a2"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[8.0,3,8.0]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[11.0,4,11.0]
+==============================================================
+Converted from testStringLatestInSubquery()
+This test the off-heap (buffer) version of the LatestAggregator (String)
+Cannot vectorize LATEST aggregator for Strings
+=== case
+String latest in subquery
+=== SQL
+SELECT SUM(val)
+FROM (
+  SELECT dim2, LATEST(dim1, 10) AS val
+  FROM foo
+  GROUP BY dim2
+  )
+=== options
+vectorize=true
+=== schema
+EXPR$0 DOUBLE
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[SUM($0)])
+  LogicalProject($f0=[CAST($1):DECIMAL(19, 19)])
+    LogicalAggregate(group=[{0}], val=[LATEST($1, $2)])
+      LogicalProject(dim2=[$3], dim1=[$2], $f2=[10])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "groupBy",
+      "dataSource" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "granularity" : {
+        "type" : "all"
+      },
+      "dimensions" : [ {
+        "type" : "default",
+        "dimension" : "dim2",
+        "outputName" : "d0",
+        "outputType" : "STRING"
+      } ],
+      "aggregations" : [ {
+        "type" : "stringLast",
+        "name" : "a0:a",
+        "fieldName" : "dim1",
+        "timeColumn" : "__time",
+        "maxStringBytes" : 10
+      } ],
+      "postAggregations" : [ {
+        "type" : "finalizingFieldAccess",
+        "name" : "a0",
+        "fieldName" : "a0:a"
+      } ],
+      "limitSpec" : {
+        "type" : "NoopLimitSpec"
+      }
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "CAST(\"a0\", 'DOUBLE')",
+    "outputType" : "DOUBLE"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ ],
+  "aggregations" : [ {
+    "type" : "doubleSum",
+    "name" : "_a0",
+    "fieldName" : "v0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[1.0]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[3.0]
+==============================================================
+Converted from testStringEarliestInSubquery()
+This test the off-heap (buffer) version of the EarliestAggregator (String)
+Cannot vectorize EARLIEST aggregator.
+
+default mode subquery results:
+[, 10.1]
+[a, ]
+[abc, def]
+SQL compatible mode subquery results:
+[null, 10.1]
+[, 2]
+[a, ]
+[abc, def]
+=== case
+String earliest in subquery
+=== SQL
+SELECT SUM(val)
+FROM (
+  SELECT dim2, EARLIEST(dim1, 10) AS val
+  FROM foo
+  GROUP BY dim2
+  )
+=== options
+vectorize=true
+=== schema
+EXPR$0 DOUBLE
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[SUM($0)])
+  LogicalProject($f0=[CAST($1):DECIMAL(19, 19)])
+    LogicalAggregate(group=[{0}], val=[EARLIEST($1, $2)])
+      LogicalProject(dim2=[$3], dim1=[$2], $f2=[10])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "groupBy",
+      "dataSource" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "granularity" : {
+        "type" : "all"
+      },
+      "dimensions" : [ {
+        "type" : "default",
+        "dimension" : "dim2",
+        "outputName" : "d0",
+        "outputType" : "STRING"
+      } ],
+      "aggregations" : [ {
+        "type" : "stringFirst",
+        "name" : "a0:a",
+        "fieldName" : "dim1",
+        "timeColumn" : "__time",
+        "maxStringBytes" : 10
+      } ],
+      "postAggregations" : [ {
+        "type" : "finalizingFieldAccess",
+        "name" : "a0",
+        "fieldName" : "a0:a"
+      } ],
+      "limitSpec" : {
+        "type" : "NoopLimitSpec"
+      }
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "CAST(\"a0\", 'DOUBLE')",
+    "outputType" : "DOUBLE"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ ],
+  "aggregations" : [ {
+    "type" : "doubleSum",
+    "name" : "_a0",
+    "fieldName" : "v0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[10.1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[12.1]
+==============================================================
+Converted from testPrimitiveAnyInSubquery()
+This test the off-heap (buffer) version of the AnyAggregator
+(Double/Float/Long)
+
+The grouping works like this
+dim2 ->    m1   |   m2
+a    -> [1,4]   | [1,4]
+null -> [2,3,6] | [2,3,6]
+abc  -> [5]     | [5]
+So the acceptable response can be any combination of these values
+=== case
+Primitive any in subquery
+=== SQL
+SELECT
+  SUM(val1),
+  SUM(val2),
+  SUM(val3)
+FROM (
+  SELECT
+    dim2,
+    ANY_VALUE(m1) AS val1,
+    ANY_VALUE(cnt) AS val2,
+    ANY_VALUE(m2) AS val3
+  FROM foo
+  GROUP BY dim2
+  )
+=== options
+vectorize=true
+=== schema
+EXPR$0 DOUBLE
+EXPR$1 BIGINT
+EXPR$2 DOUBLE
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[SUM($0)], EXPR$1=[SUM($1)], EXPR$2=[SUM($2)])
+  LogicalProject(val1=[$1], val2=[$2], val3=[$3])
+    LogicalAggregate(group=[{0}], val1=[ANY_VALUE($1)], val2=[ANY_VALUE($2)], val3=[ANY_VALUE($3)])
+      LogicalProject(dim2=[$3], m1=[$5], cnt=[$1], m2=[$6])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "groupBy",
+      "dataSource" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "granularity" : {
+        "type" : "all"
+      },
+      "dimensions" : [ {
+        "type" : "default",
+        "dimension" : "dim2",
+        "outputName" : "d0",
+        "outputType" : "STRING"
+      } ],
+      "aggregations" : [ {
+        "type" : "floatAny",
+        "name" : "a0:a",
+        "fieldName" : "m1"
+      }, {
+        "type" : "longAny",
+        "name" : "a1:a",
+        "fieldName" : "cnt"
+      }, {
+        "type" : "doubleAny",
+        "name" : "a2:a",
+        "fieldName" : "m2"
+      } ],
+      "postAggregations" : [ {
+        "type" : "finalizingFieldAccess",
+        "name" : "a0",
+        "fieldName" : "a0:a"
+      }, {
+        "type" : "finalizingFieldAccess",
+        "name" : "a1",
+        "fieldName" : "a1:a"
+      }, {
+        "type" : "finalizingFieldAccess",
+        "name" : "a2",
+        "fieldName" : "a2:a"
+      } ],
+      "limitSpec" : {
+        "type" : "NoopLimitSpec"
+      }
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ ],
+  "aggregations" : [ {
+    "type" : "doubleSum",
+    "name" : "_a0",
+    "fieldName" : "a0"
+  }, {
+    "type" : "longSum",
+    "name" : "_a1",
+    "fieldName" : "a1"
+  }, {
+    "type" : "doubleSum",
+    "name" : "_a2",
+    "fieldName" : "a2"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[8.0,3,8.0]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[11.0,4,11.0]
+==============================================================
+Converted from testStringAnyInSubquery()
+This test the off-heap (buffer) version of the AnyAggregator (String)
+=== case
+String any in subquery
+=== SQL
+SELECT SUM(val)
+FROM (
+  SELECT dim2, ANY_VALUE(dim1, 10) AS val
+  FROM foo
+  GROUP BY dim2
+  )
+=== options
+vectorize=true
+=== schema
+EXPR$0 DOUBLE
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[SUM($0)])
+  LogicalProject($f0=[CAST($1):DECIMAL(19, 19)])
+    LogicalAggregate(group=[{0}], val=[ANY_VALUE($1, $2)])
+      LogicalProject(dim2=[$3], dim1=[$2], $f2=[10])
+        LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "groupBy",
+      "dataSource" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "granularity" : {
+        "type" : "all"
+      },
+      "dimensions" : [ {
+        "type" : "default",
+        "dimension" : "dim2",
+        "outputName" : "d0",
+        "outputType" : "STRING"
+      } ],
+      "aggregations" : [ {
+        "type" : "stringAny",
+        "name" : "a0:a",
+        "fieldName" : "dim1",
+        "maxStringBytes" : 10
+      } ],
+      "postAggregations" : [ {
+        "type" : "finalizingFieldAccess",
+        "name" : "a0",
+        "fieldName" : "a0:a"
+      } ],
+      "limitSpec" : {
+        "type" : "NoopLimitSpec"
+      }
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "CAST(\"a0\", 'DOUBLE')",
+    "outputType" : "DOUBLE"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ ],
+  "aggregations" : [ {
+    "type" : "doubleSum",
+    "name" : "_a0",
+    "fieldName" : "v0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[10.1]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[12.1]
+==============================================================
+Converted from testEarliestAggregatorsNumericNulls()
+Cannot vectorize EARLIEST aggregator.
+=== case
+Earliest aggregators numeric nulls
+=== SQL
+SELECT EARLIEST(l1), EARLIEST(d1), EARLIEST(f1)
+FROM druid.numfoo
+=== options
+sqlCompatibleNulls=both
+vectorize=false
+=== schema
+EXPR$0 BIGINT
+EXPR$1 DOUBLE
+EXPR$2 FLOAT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[EARLIEST($0)], EXPR$1=[EARLIEST($1)], EXPR$2=[EARLIEST($2)])
+  LogicalProject(l1=[$12], d1=[$2], f1=[$10])
+    LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "longFirst",
+    "name" : "a0",
+    "fieldName" : "l1",
+    "timeColumn" : "__time"
+  }, {
+    "type" : "doubleFirst",
+    "name" : "a1",
+    "fieldName" : "d1",
+    "timeColumn" : "__time"
+  }, {
+    "type" : "floatFirst",
+    "name" : "a2",
+    "fieldName" : "f1",
+    "timeColumn" : "__time"
+  } ]
+}
+=== results
+[7,1.0,1.0]
+==============================================================
+Converted from testLatestAggregatorsNumericNull()
+=== case
+Latest aggregators numeric null
+=== SQL
+SELECT LATEST(l1), LATEST(d1), LATEST(f1)
+FROM druid.numfoo
+=== options
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+EXPR$1 DOUBLE
+EXPR$2 FLOAT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[LATEST($0)], EXPR$1=[LATEST($1)], EXPR$2=[LATEST($2)])
+  LogicalProject(l1=[$12], d1=[$2], f1=[$10])
+    LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "longLast",
+    "name" : "a0",
+    "fieldName" : "l1",
+    "timeColumn" : "__time"
+  }, {
+    "type" : "doubleLast",
+    "name" : "a1",
+    "fieldName" : "d1",
+    "timeColumn" : "__time"
+  }, {
+    "type" : "floatLast",
+    "name" : "a2",
+    "fieldName" : "f1",
+    "timeColumn" : "__time"
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+[0,0.0,0.0]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+[null,null,null]
+==============================================================
+Converted from testFirstLatestAggregatorsSkipNulls()
+Cannot vectorize EARLIEST aggregator.
+first row of dim1 is empty string, which is null in default mode,
+last non-null numeric rows are zeros
+=== case
+First latest aggregators skip nulls
+=== SQL
+SELECT
+  EARLIEST(dim1, 32),
+  LATEST(l1), LATEST(d1),
+  LATEST(f1)
+FROM druid.numfoo
+WHERE dim1 IS NOT NULL
+  AND l1 IS NOT NULL
+  AND d1 IS NOT NULL
+  AND f1 is NOT NULL
+=== options
+sqlCompatibleNulls=false
+vectorize=false
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+EXPR$2 DOUBLE
+EXPR$3 FLOAT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[EARLIEST($0, $1)], EXPR$1=[LATEST($2)], EXPR$2=[LATEST($3)], EXPR$3=[LATEST($4)])
+  LogicalProject(dim1=[$4], $f1=[32], l1=[$12], d1=[$2], f1=[$10])
+    LogicalFilter(condition=[AND(IS NOT NULL($4), IS NOT NULL($12), IS NOT NULL($2), IS NOT NULL($10))])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "not",
+    "field" : {
+      "type" : "selector",
+      "dimension" : "dim1"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "stringFirst",
+    "name" : "a0",
+    "fieldName" : "dim1",
+    "timeColumn" : "__time",
+    "maxStringBytes" : 32
+  }, {
+    "type" : "longLast",
+    "name" : "a1",
+    "fieldName" : "l1",
+    "timeColumn" : "__time"
+  }, {
+    "type" : "doubleLast",
+    "name" : "a2",
+    "fieldName" : "d1",
+    "timeColumn" : "__time"
+  }, {
+    "type" : "floatLast",
+    "name" : "a3",
+    "fieldName" : "f1",
+    "timeColumn" : "__time"
+  } ]
+}
+=== results
+["10.1",0,0.0,0.0]
+==============================================================
+Converted from testFirstLatestAggregatorsSkipNulls()
+Cannot vectorize EARLIEST aggregator.
+first row of dim1 is empty string, which is null in default mode,
+last non-null numeric rows are zeros
+=== case
+First latest aggregators skip nulls
+=== SQL copy
+=== options
+sqlCompatibleNulls=true
+vectorize=false
+=== schema copy
+=== plan copy
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "and",
+    "fields" : [ {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "dim1"
+      }
+    }, {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "l1"
+      }
+    }, {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "d1"
+      }
+    }, {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "f1"
+      }
+    } ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "stringFirst",
+    "name" : "a0",
+    "fieldName" : "dim1",
+    "timeColumn" : "__time",
+    "maxStringBytes" : 32
+  }, {
+    "type" : "longLast",
+    "name" : "a1",
+    "fieldName" : "l1",
+    "timeColumn" : "__time"
+  }, {
+    "type" : "doubleLast",
+    "name" : "a2",
+    "fieldName" : "d1",
+    "timeColumn" : "__time"
+  }, {
+    "type" : "floatLast",
+    "name" : "a3",
+    "fieldName" : "f1",
+    "timeColumn" : "__time"
+  } ],
+  "context" : {
+    "defaultTimeout" : 300000,
+    "maxScatterGatherBytes" : 9223372036854775807,
+    "sqlCurrentTimestamp" : "2000-01-01T00:00:00Z",
+    "sqlQueryId" : "dummy"
+  }
+}
+=== results
+["",0,0.0,0.0]
+==============================================================
+Converted from testAnyAggregatorsDoesNotSkipNulls()
+=== case
+Any aggregators does not skip nulls
+=== SQL
+SELECT ANY_VALUE(dim1, 32), ANY_VALUE(l2), ANY_VALUE(d2), ANY_VALUE(f2)
+FROM druid.numfoo
+=== options
+sqlCompatibleNulls=true
+vectorize=true
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+EXPR$2 DOUBLE
+EXPR$3 FLOAT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[ANY_VALUE($0, $1)], EXPR$1=[ANY_VALUE($2)], EXPR$2=[ANY_VALUE($3)], EXPR$3=[ANY_VALUE($4)])
+  LogicalProject(dim1=[$4], $f1=[32], l2=[$13], d2=[$3], f2=[$11])
+    LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "stringAny",
+    "name" : "a0",
+    "fieldName" : "dim1",
+    "maxStringBytes" : 32
+  }, {
+    "type" : "longAny",
+    "name" : "a1",
+    "fieldName" : "l2"
+  }, {
+    "type" : "doubleAny",
+    "name" : "a2",
+    "fieldName" : "d2"
+  }, {
+    "type" : "floatAny",
+    "name" : "a3",
+    "fieldName" : "f2"
+  } ],
+  "context" : {
+    "defaultTimeout" : 300000,
+    "maxScatterGatherBytes" : 9223372036854775807,
+    "sqlCurrentTimestamp" : "2000-01-01T00:00:00Z",
+    "sqlQueryId" : "dummy"
+  }
+}
+=== results
+["",null,null,null]
+==============================================================
+Converted from testAnyAggregatorsSkipNullsWithFilter()
+first row of dim1 is empty string, which is null in default mode
+=== case
+Any aggregators skip nulls with filter
+=== SQL
+SELECT ANY_VALUE(dim1, 32), ANY_VALUE(l2), ANY_VALUE(d2), ANY_VALUE(f2)
+FROM druid.numfoo
+WHERE dim1 IS NOT NULL
+  AND l2 IS NOT NULL
+  AND d2 IS NOT NULL
+  AND f2 is NOT NULL
+=== options
+sqlCompatibleNulls=false
+vectorize=true
+=== schema
+EXPR$0 VARCHAR
+EXPR$1 BIGINT
+EXPR$2 DOUBLE
+EXPR$3 FLOAT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[ANY_VALUE($0, $1)], EXPR$1=[ANY_VALUE($2)], EXPR$2=[ANY_VALUE($3)], EXPR$3=[ANY_VALUE($4)])
+  LogicalProject(dim1=[$4], $f1=[32], l2=[$13], d2=[$3], f2=[$11])
+    LogicalFilter(condition=[AND(IS NOT NULL($4), IS NOT NULL($13), IS NOT NULL($3), IS NOT NULL($11))])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "not",
+    "field" : {
+      "type" : "selector",
+      "dimension" : "dim1"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "stringAny",
+    "name" : "a0",
+    "fieldName" : "dim1",
+    "maxStringBytes" : 32
+  }, {
+    "type" : "longAny",
+    "name" : "a1",
+    "fieldName" : "l2"
+  }, {
+    "type" : "doubleAny",
+    "name" : "a2",
+    "fieldName" : "d2"
+  }, {
+    "type" : "floatAny",
+    "name" : "a3",
+    "fieldName" : "f2"
+  } ]
+}
+=== results
+["10.1",325323,1.7,0.1]
+==============================================================
+Converted from testAnyAggregatorsSkipNullsWithFilter()
+first row of dim1 is empty string, which is null in default mode
+=== case
+Any aggregators skip nulls with filter
+=== SQL copy
+=== options
+sqlCompatibleNulls=true
+vectorize=true
+=== schema copy
+=== plan copy
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "and",
+    "fields" : [ {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "dim1"
+      }
+    }, {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "l2"
+      }
+    }, {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "d2"
+      }
+    }, {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "f2"
+      }
+    } ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "stringAny",
+    "name" : "a0",
+    "fieldName" : "dim1",
+    "maxStringBytes" : 32
+  }, {
+    "type" : "longAny",
+    "name" : "a1",
+    "fieldName" : "l2"
+  }, {
+    "type" : "doubleAny",
+    "name" : "a2",
+    "fieldName" : "d2"
+  }, {
+    "type" : "floatAny",
+    "name" : "a3",
+    "fieldName" : "f2"
+  } ]
+}
+=== results
+["10.1",325323,1.7,0.1]
+==============================================================
+Converted from testOrderByEarliestFloat()
+Cannot vectorize EARLIEST aggregator.
+=== case
+Order by earliest float
+=== SQL
+SELECT dim1, EARLIEST(f1)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2
+LIMIT 10
+=== options
+vectorize=true
+=== schema
+dim1 VARCHAR
+EXPR$1 FLOAT
+=== plan
+LogicalSort(sort0=[$1], dir0=[ASC], fetch=[10])
+  LogicalAggregate(group=[{0}], EXPR$1=[EARLIEST($1)])
+    LogicalProject(dim1=[$4], f1=[$10])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "topN",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "dimension" : {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  },
+  "metric" : {
+    "type" : "inverted",
+    "metric" : {
+      "type" : "numeric",
+      "metric" : "a0"
+    }
+  },
+  "threshold" : 10,
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "floatFirst",
+    "name" : "a0",
+    "fieldName" : "f1",
+    "timeColumn" : "__time"
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["1",0.0]
+["2",0.0]
+["abc",0.0]
+["def",0.0]
+["10.1",0.1]
+["",1.0]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["1",null]
+["abc",null]
+["def",null]
+["2",0.0]
+["10.1",0.1]
+["",1.0]
+==============================================================
+Converted from testOrderByEarliestDouble()
+Cannot vectorize EARLIEST aggregator.
+=== case
+Order by earliest double
+=== SQL
+SELECT dim1, EARLIEST(d1)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2
+LIMIT 10
+=== options
+vectorize=true
+=== schema
+dim1 VARCHAR
+EXPR$1 DOUBLE
+=== plan
+LogicalSort(sort0=[$1], dir0=[ASC], fetch=[10])
+  LogicalAggregate(group=[{0}], EXPR$1=[EARLIEST($1)])
+    LogicalProject(dim1=[$4], d1=[$2])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "topN",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "dimension" : {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  },
+  "metric" : {
+    "type" : "inverted",
+    "metric" : {
+      "type" : "numeric",
+      "metric" : "a0"
+    }
+  },
+  "threshold" : 10,
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "doubleFirst",
+    "name" : "a0",
+    "fieldName" : "d1",
+    "timeColumn" : "__time"
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["1",0.0]
+["2",0.0]
+["abc",0.0]
+["def",0.0]
+["",1.0]
+["10.1",1.7]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["1",null]
+["abc",null]
+["def",null]
+["2",0.0]
+["",1.0]
+["10.1",1.7]
+==============================================================
+Converted from testOrderByEarliestLong()
+Cannot vectorize EARLIEST aggregator.
+=== case
+Order by earliest long
+=== SQL
+SELECT dim1, EARLIEST(l1)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2
+LIMIT 10
+=== options
+vectorize=true
+=== schema
+dim1 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[ASC], fetch=[10])
+  LogicalAggregate(group=[{0}], EXPR$1=[EARLIEST($1)])
+    LogicalProject(dim1=[$4], l1=[$12])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "topN",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "dimension" : {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  },
+  "metric" : {
+    "type" : "inverted",
+    "metric" : {
+      "type" : "numeric",
+      "metric" : "a0"
+    }
+  },
+  "threshold" : 10,
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "longFirst",
+    "name" : "a0",
+    "fieldName" : "l1",
+    "timeColumn" : "__time"
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["1",0]
+["2",0]
+["abc",0]
+["def",0]
+["",7]
+["10.1",325323]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["1",null]
+["abc",null]
+["def",null]
+["2",0]
+["",7]
+["10.1",325323]
+==============================================================
+Converted from testOrderByLatestFloat()
+=== case
+Order by latest float
+=== SQL
+SELECT dim1, LATEST(f1)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2
+LIMIT 10
+=== options
+vectorize=true
+=== schema
+dim1 VARCHAR
+EXPR$1 FLOAT
+=== plan
+LogicalSort(sort0=[$1], dir0=[ASC], fetch=[10])
+  LogicalAggregate(group=[{0}], EXPR$1=[LATEST($1)])
+    LogicalProject(dim1=[$4], f1=[$10])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "topN",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "dimension" : {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  },
+  "metric" : {
+    "type" : "inverted",
+    "metric" : {
+      "type" : "numeric",
+      "metric" : "a0"
+    }
+  },
+  "threshold" : 10,
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "floatLast",
+    "name" : "a0",
+    "fieldName" : "f1",
+    "timeColumn" : "__time"
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["1",0.0]
+["2",0.0]
+["abc",0.0]
+["def",0.0]
+["10.1",0.1]
+["",1.0]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["1",null]
+["abc",null]
+["def",null]
+["2",0.0]
+["10.1",0.1]
+["",1.0]
+==============================================================
+Converted from testOrderByLatestDouble()
+=== case
+Order by latest double
+=== SQL
+SELECT dim1, LATEST(d1)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2
+LIMIT 10
+=== options
+vectorize=true
+=== schema
+dim1 VARCHAR
+EXPR$1 DOUBLE
+=== plan
+LogicalSort(sort0=[$1], dir0=[ASC], fetch=[10])
+  LogicalAggregate(group=[{0}], EXPR$1=[LATEST($1)])
+    LogicalProject(dim1=[$4], d1=[$2])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "topN",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "dimension" : {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  },
+  "metric" : {
+    "type" : "inverted",
+    "metric" : {
+      "type" : "numeric",
+      "metric" : "a0"
+    }
+  },
+  "threshold" : 10,
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "doubleLast",
+    "name" : "a0",
+    "fieldName" : "d1",
+    "timeColumn" : "__time"
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["1",0.0]
+["2",0.0]
+["abc",0.0]
+["def",0.0]
+["",1.0]
+["10.1",1.7]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["1",null]
+["abc",null]
+["def",null]
+["2",0.0]
+["",1.0]
+["10.1",1.7]
+==============================================================
+Converted from testOrderByLatestLong()
+=== case
+Order by latest long
+=== SQL
+SELECT dim1, LATEST(l1)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2
+LIMIT 10
+=== options
+vectorize=true
+=== schema
+dim1 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[ASC], fetch=[10])
+  LogicalAggregate(group=[{0}], EXPR$1=[LATEST($1)])
+    LogicalProject(dim1=[$4], l1=[$12])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "topN",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "dimension" : {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  },
+  "metric" : {
+    "type" : "inverted",
+    "metric" : {
+      "type" : "numeric",
+      "metric" : "a0"
+    }
+  },
+  "threshold" : 10,
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "longLast",
+    "name" : "a0",
+    "fieldName" : "l1",
+    "timeColumn" : "__time"
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["1",0]
+["2",0]
+["abc",0]
+["def",0]
+["",7]
+["10.1",325323]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["1",null]
+["abc",null]
+["def",null]
+["2",0]
+["",7]
+["10.1",325323]
+==============================================================
+Converted from testOrderByAnyFloat()
+Nulls are last because of the null first wrapped Comparator in
+InvertedTopNMetricSpec which is then reversed by
+TopNNumericResultBuilder.build()
+=== case
+Order by any float
+=== SQL
+SELECT dim1, ANY_VALUE(f1)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2
+LIMIT 10
+=== options
+vectorize=true
+=== schema
+dim1 VARCHAR
+EXPR$1 FLOAT
+=== plan
+LogicalSort(sort0=[$1], dir0=[ASC], fetch=[10])
+  LogicalAggregate(group=[{0}], EXPR$1=[ANY_VALUE($1)])
+    LogicalProject(dim1=[$4], f1=[$10])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "topN",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "dimension" : {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  },
+  "metric" : {
+    "type" : "inverted",
+    "metric" : {
+      "type" : "numeric",
+      "metric" : "a0"
+    }
+  },
+  "threshold" : 10,
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "floatAny",
+    "name" : "a0",
+    "fieldName" : "f1"
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["1",0.0]
+["2",0.0]
+["abc",0.0]
+["def",0.0]
+["10.1",0.1]
+["",1.0]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["2",0.0]
+["10.1",0.1]
+["",1.0]
+["1",null]
+["abc",null]
+["def",null]
+==============================================================
+Converted from testOrderByAnyDouble()
+Nulls are last because of the null first wrapped Comparator in
+InvertedTopNMetricSpec which is then reversed by
+TopNNumericResultBuilder.build()
+=== case
+Order by any double
+=== SQL
+SELECT dim1, ANY_VALUE(d1)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2
+LIMIT 10
+=== options
+vectorize=true
+=== schema
+dim1 VARCHAR
+EXPR$1 DOUBLE
+=== plan
+LogicalSort(sort0=[$1], dir0=[ASC], fetch=[10])
+  LogicalAggregate(group=[{0}], EXPR$1=[ANY_VALUE($1)])
+    LogicalProject(dim1=[$4], d1=[$2])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "topN",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "dimension" : {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  },
+  "metric" : {
+    "type" : "inverted",
+    "metric" : {
+      "type" : "numeric",
+      "metric" : "a0"
+    }
+  },
+  "threshold" : 10,
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "doubleAny",
+    "name" : "a0",
+    "fieldName" : "d1"
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["1",0.0]
+["2",0.0]
+["abc",0.0]
+["def",0.0]
+["",1.0]
+["10.1",1.7]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["2",0.0]
+["",1.0]
+["10.1",1.7]
+["1",null]
+["abc",null]
+["def",null]
+==============================================================
+Converted from testOrderByAnyLong()
+Nulls are last because of the null first wrapped Comparator in
+InvertedTopNMetricSpec which is then reversed by
+TopNNumericResultBuilder.build()
+=== case
+Order by any long
+=== SQL
+SELECT dim1, ANY_VALUE(l1)
+FROM druid.numfoo
+GROUP BY 1
+ORDER BY 2
+LIMIT 10
+=== options
+vectorize=true
+=== schema
+dim1 VARCHAR
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$1], dir0=[ASC], fetch=[10])
+  LogicalAggregate(group=[{0}], EXPR$1=[ANY_VALUE($1)])
+    LogicalProject(dim1=[$4], l1=[$12])
+      LogicalTableScan(table=[[druid, numfoo]])
+=== native
+{
+  "queryType" : "topN",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "dimension" : {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  },
+  "metric" : {
+    "type" : "inverted",
+    "metric" : {
+      "type" : "numeric",
+      "metric" : "a0"
+    }
+  },
+  "threshold" : 10,
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "longAny",
+    "name" : "a0",
+    "fieldName" : "l1"
+  } ]
+}
+=== run
+=== options
+sqlCompatibleNulls=false
+=== results
+["1",0]
+["2",0]
+["abc",0]
+["def",0]
+["",7]
+["10.1",325323]
+=== run
+=== options
+sqlCompatibleNulls=true
+=== results
+["2",0]
+["",7]
+["10.1",325323]
+["1",null]
+["abc",null]
+["def",null]
+==============================================================
+Converted from testGroupByLong()
+=== case
+Group by long
+=== SQL
+SELECT cnt, COUNT(*)
+FROM druid.foo
+GROUP BY cnt
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+cnt BIGINT
+EXPR$1 BIGINT
+=== plan
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
+  LogicalProject(cnt=[$1])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "cnt",
+    "outputName" : "d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== results
+[1,6]
+==============================================================
+Converted from testGroupByOrdinal()
+=== case
+Group by ordinal
+=== SQL
+SELECT cnt, COUNT(*)
+FROM druid.foo
+GROUP BY 1
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+cnt BIGINT
+EXPR$1 BIGINT
+=== plan
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
+  LogicalProject(cnt=[$1])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "cnt",
+    "outputName" : "d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== results
+[1,6]
+==============================================================
+Converted from testGroupByExpressionAliasedAsOriginalColumnName()
+=== case
+Group by expression aliased as original column name
+=== SQL
+SELECT
+  FLOOR(__time TO MONTH) AS __time,
+  COUNT(*)
+FROM druid.foo
+GROUP BY FLOOR(__time TO MONTH)
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+__time TIMESTAMP(3)
+EXPR$1 BIGINT
+=== plan
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
+  LogicalProject(__time=[FLOOR($0, FLAG(MONTH))])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : "MONTH",
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "context" : {
+    "skipEmptyBuckets" : true,
+    "timestampResultField" : "d0"
+  }
+}
+=== results
+[946684800000,3]
+[978307200000,3]
+==============================================================
+Converted from testGroupByAndOrderByOrdinalOfAlias()
+=== case
+Group by and order by ordinal of alias
+=== SQL
+SELECT cnt as theCnt, COUNT(*)
+FROM druid.foo
+GROUP BY 1
+ORDER BY 1 ASC
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+theCnt BIGINT
+EXPR$1 BIGINT
+=== plan
+LogicalSort(sort0=[$0], dir0=[ASC])
+  LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
+    LogicalProject(theCnt=[$1])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "cnt",
+    "outputName" : "d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "d0",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+=== results
+[1,6]
+==============================================================
+Converted from testGroupByFloat()
+=== case
+Group by float (1)
+=== SQL
+SELECT m1, COUNT(*)
+FROM druid.foo
+GROUP BY m1
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+m1 FLOAT
+EXPR$1 BIGINT
+=== plan
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
+  LogicalProject(m1=[$5])
+    LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "m1",
+    "outputName" : "d0",
+    "outputType" : "FLOAT"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+=== results
+[1.0,1]
+[2.0,1]
+[3.0,1]
+[4.0,1]
+[5.0,1]
+[6.0,1]

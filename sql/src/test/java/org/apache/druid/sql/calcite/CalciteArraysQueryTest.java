@@ -67,8 +67,8 @@ import java.util.List;
  */
 public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 {
-  // test some query stuffs, sort of limited since no native array column types so either need to use constructor or
-  // array aggregator
+  // test some query stuff, sort of limited since no native array column
+  // types so either need to use constructor or array aggregator
   @Test
   public void testSelectConstantArrayExpressionFromTable() throws Exception
   {
@@ -361,7 +361,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     // when not stringifying arrays, some things are still stringified, because they are inferred to be typed as strings
     // the planner context which controls stringification of arrays does not apply to multi-valued string columns,
     // which will still always be stringified to ultimately adhere to the varchar type
-    // as array support increases in the engine this will likely change since using explict array functions should
+    // as array support increases in the engine this will likely change since using explicit array functions should
     // probably kick it into an array
     List<Object[]> expectedResults;
     if (useDefault) {
@@ -938,7 +938,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayGroupAsLongArray() throws Exception
   {
-    // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays
+    // Cannot vectorize as we do not have support in native query subsystem for grouping on arrays
     cannotVectorize();
     testQuery(
         "SELECT ARRAY[l1], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
@@ -987,7 +987,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayGroupAsDoubleArray() throws Exception
   {
-    // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
+    // Cannot vectorize as we do not have support in native query subsystem for grouping on arrays as keys
     cannotVectorize();
     testQuery(
         "SELECT ARRAY[d1], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
@@ -1036,7 +1036,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayGroupAsFloatArray() throws Exception
   {
-    // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
+    // Cannot vectorize as we do not have support in native query subsystem for grouping on arrays as keys
     cannotVectorize();
     testQuery(
         "SELECT ARRAY[f1], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
@@ -2407,7 +2407,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
       );
     }
     testQuery(
-        "SELECT dim1,dim2 FROM foo WHERE ARRAY_CONTAINS((SELECT ARRAY_AGG(DISTINCT dim1) FROM foo WHERE dim1 is not null), dim1)",
+        "SELECT dim1, dim2 FROM foo WHERE ARRAY_CONTAINS((SELECT ARRAY_AGG(DISTINCT dim1) FROM foo WHERE dim1 is not null), dim1)",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(
@@ -2560,8 +2560,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   public static void assertDeepEquals(String path, Object expected, Object actual)
   {
     if (expected instanceof List && actual instanceof List) {
-      List expectedList = (List) expected;
-      List actualList = (List) actual;
+      List<?> expectedList = (List<?>) expected;
+      List<?> actualList = (List<?>) actual;
       Assert.assertEquals(path + " arrays length mismatch", expectedList.size(), actualList.size());
       for (int i = 0; i < expectedList.size(); i++) {
         assertDeepEquals(path + "[" + i + "]", expectedList.get(i), actualList.get(i));

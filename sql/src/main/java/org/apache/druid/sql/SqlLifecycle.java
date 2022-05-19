@@ -106,7 +106,7 @@ public class SqlLifecycle
   @GuardedBy("stateLock")
   private State state = State.NEW;
 
-  // init during intialize
+  // init during initialize
   private String sql;
   private QueryContext queryContext;
   private List<TypedValue> parameters;
@@ -170,7 +170,7 @@ public class SqlLifecycle
   }
 
   /**
-   * Assign dynamic parameters to be used to substitute values during query exection. This can be performed at any
+   * Assign dynamic parameters to be used to substitute values during query execution. This can be performed at any
    * part of the lifecycle.
    */
   public void setParameters(List<TypedValue> parameters)
@@ -232,11 +232,11 @@ public class SqlLifecycle
   {
     try (DruidPlanner planner = plannerFactory.createPlanner(sql, queryContext)) {
       // set planner context for logs/metrics in case something explodes early
-      this.plannerContext = planner.getPlannerContext();
-      this.plannerContext.setAuthenticationResult(authenticationResult);
+      plannerContext = planner.getPlannerContext();
+      plannerContext.setAuthenticationResult(authenticationResult);
       // set parameters on planner context, if parameters have already been set
-      this.plannerContext.setParameters(parameters);
-      this.validationResult = planner.validate(authConfig.authorizeQueryContextParams());
+      plannerContext.setParameters(parameters);
+      validationResult = planner.validate(authConfig.authorizeQueryContextParams());
       return validationResult;
     }
     // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
@@ -269,14 +269,14 @@ public class SqlLifecycle
 
   /**
    * Prepare the query lifecycle for execution, without completely planning into something that is executable, but
-   * including some initial parsing and validation and any dyanmic parameter type resolution, to support prepared
+   * including some initial parsing and validation and any dynamic parameter type resolution, to support prepared
    * statements via JDBC.
    */
   public PrepareResult prepare() throws RelConversionException
   {
     synchronized (stateLock) {
       if (state != State.AUTHORIZED) {
-        throw new ISE("Cannot prepare because current state[%s] is not [%s].", state, State.AUTHORIZED);
+        throw new ISE("Cannot prepare because current state [%s] is not [%s].", state, State.AUTHORIZED);
       }
     }
     Preconditions.checkNotNull(plannerContext, "Cannot prepare, plannerContext is null");
@@ -312,6 +312,12 @@ public class SqlLifecycle
     catch (ValidationException e) {
       throw new SqlPlanningException(e);
     }
+  }
+
+  @VisibleForTesting
+  public PlannerResult plannerResult()
+  {
+    return plannerResult;
   }
 
   /**
@@ -375,7 +381,6 @@ public class SqlLifecycle
       }
     });
   }
-
 
   @VisibleForTesting
   public ValidationResult runAnalyzeResources(AuthenticationResult authenticationResult)

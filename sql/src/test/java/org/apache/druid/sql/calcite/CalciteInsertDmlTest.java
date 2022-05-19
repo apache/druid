@@ -38,6 +38,7 @@ import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
+import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
@@ -699,10 +700,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO t SELECT dim1, dim2 || '-lol' FROM foo PARTITIONED BY ALL")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot ingest expressions that do not have an alias "
-            + "or columns with names like EXPR$[digit]."
-            + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
-            + "\"func(X) as myColumn\""
+            DruidPlanner.UNNAMED_INGESTION_COLUMN_ERROR
         )
         .verify();
   }
@@ -714,10 +712,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO t SELECT __time, dim1 AS EXPR$0 FROM foo PARTITIONED BY ALL")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot ingest expressions that do not have an alias "
-            + "or columns with names like EXPR$[digit]."
-            + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
-            + "\"func(X) as myColumn\""
+            DruidPlanner.UNNAMED_INGESTION_COLUMN_ERROR
         )
         .verify();
   }
@@ -731,10 +726,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
              + "(SELECT __time, LOWER(dim1) FROM foo) PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot ingest expressions that do not have an alias "
-            + "or columns with names like EXPR$[digit]."
-            + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
-            + "\"func(X) as myColumn\""
+            DruidPlanner.UNNAMED_INGESTION_COLUMN_ERROR
         )
         .verify();
   }

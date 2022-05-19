@@ -65,7 +65,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   }
 
   /**
-   * Create a DruidQueryRel representing a full scan of a builtin table or lookup.
+   * Create a DruidQueryRel representing a full scan of a built in table or lookup.
    */
   public static DruidQueryRel scanTable(
       final LogicalTableScan scanRel,
@@ -103,7 +103,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   }
 
   /**
-   * Create a DruidQueryRel representing a full scan of inline, literal values.
+   * Create a DruidQueryRel representing a full scan of in-line, literal values.
    */
   public static DruidQueryRel scanValues(
       final LogicalValues valuesRel,

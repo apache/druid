@@ -134,6 +134,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Massive set of query tests.
+ * <p>
+ * The tests use a system property,
+ * {@code druid.generic.useDefaultValueForNull} set external to
+ * the tests. They run with "replace with default" by default. Set
+ * this flag in your IDE to run the tests manually with a
+ * different value.
+ * <p>
+ * Note that these tests may not run individually as the tests here
+ * are not stable. Some tests set the merge buffer count, which is
+ * a static. Later tests use that count: it is not reset. Test order
+ * is undefined: it is whatever order that the compiler happens to
+ * list the methods. As a result, random later methods benefit from
+ * the merge buffer count set in earlier tests. The result is that
+ * if you try to run some tests from the debugger, they'll fail
+ * because of not enough buffers, even though they run fine when
+ * run as part of the entire class.
+ */
 public class CalciteQueryTest extends BaseCalciteQueryTest
 {
   @Test

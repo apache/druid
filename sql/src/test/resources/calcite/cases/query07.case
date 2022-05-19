@@ -1,0 +1,995 @@
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+==============================================================
+The next group of these queries are unplannable because they
+rely on features Druid doesn't support. This test is here to
+confirm that we don't fall back to Calcite's interpreter or
+enumerable implementation. It's also here so when we do support
+these features, we can have "real" tests for these queries.
+==============================================================
+Converted from testUnplannableQueries()
+=== case
+Unplannable queries (1)
+=== SQL
+SELECT dim1 FROM druid.foo ORDER BY dim1
+=== exception
+UnsupportedSQLQueryException
+=== error
+Cannot build plan for query: SELECT dim1 FROM druid.foo ORDER BY dim1. Possible error: SQL query requires order by non-time column [dim1 ASC] that is not supported.
+==============================================================
+Converted from testUnplannableQueries()
+=== case
+Unplannable queries (2)
+=== SQL
+SELECT foo.dim1, foo.dim2, l.k, l.v
+FROM foo INNER JOIN lookup.lookyloo l ON foo.dim2 <> l.k
+=== exception
+UnsupportedSQLQueryException
+=== error
+!Cannot build plan for query: SELECT .*
+!.* Possible error: SQL requires a join with 'NOT_EQUALS' condition that is not supported.
+==============================================================
+Converted from testUnplannableQueries()
+=== case
+Unplannable queries (3)
+=== SQL
+SELECT foo.dim1, foo.dim2, l.k, l.v
+FROM foo INNER JOIN lookup.lookyloo l ON CHARACTER_LENGTH(foo.dim2 || l.k) > 3
+=== exception
+UnsupportedSQLQueryException
+=== error
+!Cannot build plan for query: SELECT .*
+**
+!.*Possible error: SQL requires a join with 'GREATER_THAN' condition that is not supported.
+==============================================================
+Converted from testCountStarWithBoundFilterSimplifyOnMetric()
+=== case
+Count star with bound filter simplify on metric
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE 2.5 < m1 AND m1 < 3.5
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[AND(<(2.5:DECIMAL(2, 1), $5), <($5, 3.5:DECIMAL(2, 1)))])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "bound",
+    "dimension" : "m1",
+    "lower" : "2.5",
+    "upper" : "3.5",
+    "lowerStrict" : true,
+    "upperStrict" : true,
+    "ordering" : {
+      "type" : "numeric"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[1]
+==============================================================
+Converted from testCountStarWithBoundFilterSimplifyOr()
+=== case
+Count star with bound filter simplify or
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE (dim1 >= 'a' and dim1 < 'b')
+   OR dim1 = 'ab'
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[OR(AND(>=($2, 'a'), <($2, 'b')), =($2, 'ab'))])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "bound",
+    "dimension" : "dim1",
+    "lower" : "a",
+    "upper" : "b",
+    "upperStrict" : true,
+    "ordering" : {
+      "type" : "lexicographic"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[1]
+==============================================================
+Converted from testUnplannableTwoExactCountDistincts()
+Requires GROUPING SETS + GROUPING to be translated by
+AggregateExpandDistinctAggregatesRule.
+=== case
+Unplannable two exact count distincts
+=== SQL
+SELECT
+  dim2,
+  COUNT(distinct dim1),
+  COUNT(distinct dim2)
+FROM druid.foo
+GROUP BY dim2
+=== options
+planner.useApproximateCountDistinct=false
+=== exception
+UnsupportedSQLQueryException
+=== error
+Cannot build plan for query: SELECT
+**
+!.* Possible error: SQL requires a join with 'IS_NOT_DISTINCT_FROM' condition that is not supported.
+==============================================================
+Converted from testUnplannableExactCountDistinctOnSketch()
+COUNT DISTINCT on a sketch cannot be exact.
+=== case
+Unplannable exact count distinct on sketch
+=== SQL
+SELECT COUNT(distinct unique_dim1)
+FROM druid.foo
+=== options
+planner.useApproximateCountDistinct=false
+=== exception
+UnsupportedSQLQueryException
+=== error
+!Cannot build plan for query: .*
+!.* Possible error: SQL requires a group-by on a column of type COMPLEX<hyperUnique> that is unsupported.
+==============================================================
+Converted from testArrayAggQueryOnComplexDatatypes()
+=== case
+Array agg query on complex datatypes
+=== SQL
+SELECT ARRAY_AGG(unique_dim1)
+FROM druid.foo
+=== error
+!.*Cannot use ARRAY_AGG on complex inputs COMPLEX<hyperUnique>
+==============================================================
+Converted from testStringAggQueryOnComplexDatatypes()
+=== case
+String agg query on complex datatypes
+=== SQL
+SELECT STRING_AGG(unique_dim1, ',')
+FROM druid.foo
+=== error
+!.*Cannot use STRING_AGG on complex inputs COMPLEX<hyperUnique>
+==============================================================
+Converted from testCountStarWithBoundFilterSimplifyAnd()
+=== case
+Count star with bound filter simplify and
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE (dim1 >= 'a' and dim1 < 'b')
+  and dim1 = 'abc'
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[AND(>=($2, 'a'), <($2, 'b'), =($2, 'abc'))])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "selector",
+    "dimension" : "dim1",
+    "value" : "abc"
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[1]
+==============================================================
+Converted from testCountStarWithFilterOnCastedString()
+=== case
+Count star with filter on casted string
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE CAST(dim1 AS bigint) = 2
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[=(CAST($2):BIGINT, 2)])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "bound",
+    "dimension" : "dim1",
+    "lower" : "2",
+    "upper" : "2",
+    "ordering" : {
+      "type" : "numeric"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[1]
+==============================================================
+Converted from testCountStarWithTimeFilter()
+=== case
+Count star with time filter
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE __time >= TIMESTAMP '2000-01-01 00:00:00'
+  AND __time < TIMESTAMP '2001-01-01 00:00:00'
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[AND(>=($0, 2000-01-01 00:00:00), <($0, 2001-01-01 00:00:00))])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "2000-01-01T00:00:00.000Z/2001-01-01T00:00:00.000Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[3]
+==============================================================
+Converted from testCountStarWithBetweenTimeFilterUsingMilliseconds()
+=== case
+Count star with between time filter using milliseconds
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE __time BETWEEN TIMESTAMP '2000-01-01 00:00:00'
+  AND TIMESTAMP '2000-12-31 23:59:59.999'
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[AND(>=($0, 2000-01-01 00:00:00), <=($0, 2000-12-31 23:59:59.999))])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "2000-01-01T00:00:00.000Z/2001-01-01T00:00:00.000Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[3]
+==============================================================
+Converted from testCountStarWithBetweenTimeFilterUsingMillisecondsInStringLiterals()
+=== case
+Count star with between time filter using milliseconds in string literals
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE __time BETWEEN '2000-01-01 00:00:00'
+  AND '2000-12-31 23:59:59.999'
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[AND(>=($0, CAST('2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL), <=($0, CAST('2000-12-31 23:59:59.999'):TIMESTAMP(3) NOT NULL))])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "2000-01-01T00:00:00.000Z/2001-01-01T00:00:00.000Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[3]
+==============================================================
+Converted from testRemoveUselessCaseWhen()
+=== case
+Remove useless case when
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE
+  CASE
+    WHEN __time >= TIME_PARSE('2000-01-01 00:00:00', 'yyyy-MM-dd HH:mm:ss') AND
+         __time < TIMESTAMP '2001-01-01 00:00:00'
+    THEN true
+    ELSE false
+  END
+   OR __time >= TIMESTAMP '2010-01-01 00:00:00' AND
+      __time < TIMESTAMP '2011-01-01 00:00:00'
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[OR(CASE(AND(>=($0, TIME_PARSE('2000-01-01 00:00:00', 'yyyy-MM-dd HH:mm:ss')), <($0, 2001-01-01 00:00:00)), true, false), AND(>=($0, 2010-01-01 00:00:00), <($0, 2011-01-01 00:00:00)))])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "2000-01-01T00:00:00.000Z/2001-01-01T00:00:00.000Z", "2010-01-01T00:00:00.000Z/2011-01-01T00:00:00.000Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[3]
+==============================================================
+Converted from testCountStarWithTimeMillisecondFilters()
+=== case
+Count star with time millisecond filters
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE __time = TIMESTAMP '2000-01-01 00:00:00.111'
+   OR (__time >= TIMESTAMP '2000-01-01 00:00:00.888' AND
+       __time < TIMESTAMP '2000-01-02 00:00:00.222')
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[OR(=($0, 2000-01-01 00:00:00.111), AND(>=($0, 2000-01-01 00:00:00.888), <($0, 2000-01-02 00:00:00.222)))])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "2000-01-01T00:00:00.111Z/2000-01-01T00:00:00.112Z", "2000-01-01T00:00:00.888Z/2000-01-02T00:00:00.222Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[1]
+==============================================================
+Converted from testCountStarWithTimeFilterUsingStringLiterals()
+Strings are implicitly cast to timestamps.
+Test a few different forms.
+=== case
+Count star with time filter using string literals
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE __time >= '2000-01-01 00:00:00'
+  AND __time < '2001-01-01T00:00:00'
+   OR __time >= '2001-02-01'
+  AND __time < '2001-02-02'
+   OR __time BETWEEN '2001-03-01'
+  AND '2001-03-02'
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[OR(AND(>=($0, CAST('2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL), <($0, CAST('2001-01-01T00:00:00'):TIMESTAMP(3) NOT NULL)), AND(>=($0, CAST('2001-02-01'):TIMESTAMP(3) NOT NULL), <($0, CAST('2001-02-02'):TIMESTAMP(3) NOT NULL)), AND(>=($0, CAST('2001-03-01'):TIMESTAMP(3) NOT NULL), <=($0, CAST('2001-03-02'):TIMESTAMP(3) NOT NULL)))])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "2000-01-01T00:00:00.000Z/2001-01-01T00:00:00.000Z", "2001-02-01T00:00:00.000Z/2001-02-02T00:00:00.000Z", "2001-03-01T00:00:00.000Z/2001-03-02T00:00:00.001Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[3]
+==============================================================
+Converted from testCountStarWithTimeFilterUsingStringLiteralsInvalid_isUnplannable()
+Strings are implicitly cast to timestamps. Test an invalid string.
+This error message isn't ideal but it is at least better than silently
+ignoring the problem.
+=== case
+Count star with time filter using string literals invalid_is unplannable
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE __time >= 'z2000-01-01 00:00:00'
+  AND __time < '2001-01-01 00:00:00'
+=== exception
+UnsupportedSQLQueryException
+=== error
+!Cannot build plan for query: SELECT .*
+**
+!.*Possible error: Illegal TIMESTAMP constant: CAST\('z2000-01-01 00:00:00'\):TIMESTAMP\(3\) NOT NULL
+==============================================================
+Converted from testCountStarWithSinglePointInTime()
+=== case
+Count star with single point in time
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE __time = TIMESTAMP '2000-01-01 00:00:00'
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[=($0, 2000-01-01 00:00:00)])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "2000-01-01T00:00:00.000Z/2000-01-01T00:00:00.001Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[1]
+==============================================================
+Converted from testCountStarWithTwoPointsInTime()
+=== case
+Count star with two points in time
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE __time = TIMESTAMP '2000-01-01 00:00:00'
+   OR __time = TIMESTAMP '2000-01-01 00:00:00' + INTERVAL '1' DAY
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[OR(=($0, 2000-01-01 00:00:00), =($0, CAST(+(2000-01-01 00:00:00, 86400000:INTERVAL DAY)):TIMESTAMP(3) NOT NULL))])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "2000-01-01T00:00:00.000Z/2000-01-01T00:00:00.001Z", "2000-01-02T00:00:00.000Z/2000-01-02T00:00:00.001Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[2]
+==============================================================
+Converted from testCountStarWithComplexDisjointTimeFilter()
+=== case
+Count star with complex disjoint time filter
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE dim2 = 'a'
+  and ((__time >= TIMESTAMP '2000-01-01 00:00:00' AND
+        __time < TIMESTAMP '2001-01-01 00:00:00')  OR
+       ((__time >= TIMESTAMP '2002-01-01 00:00:00' AND
+         __time < TIMESTAMP '2003-05-01 00:00:00') and
+        (__time >= TIMESTAMP '2002-05-01 00:00:00' AND
+         __time < TIMESTAMP '2004-01-01 00:00:00') and
+         dim1 = 'abc'
+        )
+       )
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[AND(=($3, 'a'), OR(AND(>=($0, 2000-01-01 00:00:00), <($0, 2001-01-01 00:00:00)), AND(>=($0, 2002-01-01 00:00:00), <($0, 2003-05-01 00:00:00), >=($0, 2002-05-01 00:00:00), <($0, 2004-01-01 00:00:00), =($2, 'abc'))))])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "2000-01-01T00:00:00.000Z/2001-01-01T00:00:00.000Z", "2002-05-01T00:00:00.000Z/2003-05-01T00:00:00.000Z" ]
+  },
+  "filter" : {
+    "type" : "and",
+    "fields" : [ {
+      "type" : "selector",
+      "dimension" : "dim2",
+      "value" : "a"
+    }, {
+      "type" : "or",
+      "fields" : [ {
+        "type" : "bound",
+        "dimension" : "__time",
+        "lower" : "946684800000",
+        "upper" : "978307200000",
+        "upperStrict" : true,
+        "ordering" : {
+          "type" : "numeric"
+        }
+      }, {
+        "type" : "and",
+        "fields" : [ {
+          "type" : "selector",
+          "dimension" : "dim1",
+          "value" : "abc"
+        }, {
+          "type" : "bound",
+          "dimension" : "__time",
+          "lower" : "1020211200000",
+          "upper" : "1051747200000",
+          "upperStrict" : true,
+          "ordering" : {
+            "type" : "numeric"
+          }
+        } ]
+      } ]
+    } ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[1]
+==============================================================
+Converted from testCountStarWithNotOfComplexDisjointTimeFilter()
+=== case
+Count star with not of complex disjoint time filter
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE not (    dim2 = 'a'
+           and (   (    __time >= TIMESTAMP '2000-01-01 00:00:00'
+                    AND __time < TIMESTAMP '2001-01-01 00:00:00')
+                OR (    (    __time >= TIMESTAMP '2002-01-01 00:00:00'
+                          AND __time < TIMESTAMP '2004-01-01 00:00:00')
+                     and (    __time >= TIMESTAMP '2002-05-01 00:00:00'
+                          AND __time < TIMESTAMP '2003-05-01 00:00:00')
+                     and dim1 = 'abc'
+                    )
+                 )
+           )
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[NOT(AND(=($3, 'a'), OR(AND(>=($0, 2000-01-01 00:00:00), <($0, 2001-01-01 00:00:00)), AND(>=($0, 2002-01-01 00:00:00), <($0, 2004-01-01 00:00:00), >=($0, 2002-05-01 00:00:00), <($0, 2003-05-01 00:00:00), =($2, 'abc')))))])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "or",
+    "fields" : [ {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "dim2",
+        "value" : "a"
+      }
+    }, {
+      "type" : "and",
+      "fields" : [ {
+        "type" : "not",
+        "field" : {
+          "type" : "bound",
+          "dimension" : "__time",
+          "lower" : "946684800000",
+          "upper" : "978307200000",
+          "upperStrict" : true,
+          "ordering" : {
+            "type" : "numeric"
+          }
+        }
+      }, {
+        "type" : "not",
+        "field" : {
+          "type" : "and",
+          "fields" : [ {
+            "type" : "selector",
+            "dimension" : "dim1",
+            "value" : "abc"
+          }, {
+            "type" : "bound",
+            "dimension" : "__time",
+            "lower" : "1020211200000",
+            "upper" : "1051747200000",
+            "upperStrict" : true,
+            "ordering" : {
+              "type" : "numeric"
+            }
+          } ]
+        }
+      } ]
+    } ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[5]
+==============================================================
+Converted from testCountStarWithNotTimeFilter()
+=== case
+Count star with not time filter
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE dim1 <> 'xxx'
+  and not (
+             (    __time >= TIMESTAMP '2000-01-01 00:00:00'
+              AND __time < TIMESTAMP '2001-01-01 00:00:00')
+           OR (    __time >= TIMESTAMP '2003-01-01 00:00:00'
+               AND __time < TIMESTAMP '2004-01-01 00:00:00')
+           )
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[AND(<>($2, 'xxx'), NOT(OR(AND(>=($0, 2000-01-01 00:00:00), <($0, 2001-01-01 00:00:00)), AND(>=($0, 2003-01-01 00:00:00), <($0, 2004-01-01 00:00:00)))))])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/2000-01-01T00:00:00.000Z", "2001-01-01T00:00:00.000Z/2003-01-01T00:00:00.000Z", "2004-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "not",
+    "field" : {
+      "type" : "selector",
+      "dimension" : "dim1",
+      "value" : "xxx"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[3]
+==============================================================
+Converted from testCountStarWithTimeAndDimFilter()
+=== case
+Count star with time and dim filter
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE dim2 <> 'a'
+  and __time BETWEEN TIMESTAMP '2000-01-01 00:00:00'
+  AND TIMESTAMP '2000-12-31 23:59:59.999'
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[AND(<>($3, 'a'), >=($0, 2000-01-01 00:00:00), <=($0, 2000-12-31 23:59:59.999))])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "2000-01-01T00:00:00.000Z/2001-01-01T00:00:00.000Z" ]
+  },
+  "filter" : {
+    "type" : "not",
+    "field" : {
+      "type" : "selector",
+      "dimension" : "dim2",
+      "value" : "a"
+    }
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[2]
+==============================================================
+Converted from testCountStarWithTimeOrDimFilter()
+=== case
+Count star with time or dim filter
+=== SQL
+SELECT COUNT(*)
+FROM druid.foo
+WHERE dim2 <> 'a'
+   or __time BETWEEN TIMESTAMP '2000-01-01 00:00:00'
+  AND TIMESTAMP '2000-12-31 23:59:59.999'
+=== options
+sqlCompatibleNulls=both
+vectorize=true
+=== schema
+EXPR$0 BIGINT
+=== plan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalProject($f0=[0])
+    LogicalFilter(condition=[OR(<>($3, 'a'), AND(>=($0, 2000-01-01 00:00:00), <=($0, 2000-12-31 23:59:59.999)))])
+      LogicalTableScan(table=[[druid, foo]])
+=== native
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "or",
+    "fields" : [ {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "dim2",
+        "value" : "a"
+      }
+    }, {
+      "type" : "bound",
+      "dimension" : "__time",
+      "lower" : "946684800000",
+      "upper" : "978307199999",
+      "ordering" : {
+        "type" : "numeric"
+      }
+    } ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+=== results
+[5]

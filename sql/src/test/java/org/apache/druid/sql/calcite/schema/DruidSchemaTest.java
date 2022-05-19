@@ -212,7 +212,6 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         null
     )
     {
-
       boolean throwException = true;
 
       @Override
@@ -273,7 +272,6 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
     Assert.assertTrue(tableMap.containsKey("foo2"));
     schema2.stop();
   }
-
 
   @Test
   public void testGetTableMapFoo()
