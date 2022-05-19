@@ -1166,6 +1166,14 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
           Object exValue = ex.getValue();
           if (exValue instanceof Double || exValue instanceof Float) {
             final double expectedDoubleValue = ((Number) exValue).doubleValue();
+            Assert.assertNotNull(
+                StringUtils.format(
+                    "invalid null value for %s (expected %f)",
+                    ex.getKey(),
+                    expectedDoubleValue
+                ),
+                actVal
+            );
             Assert.assertEquals(
                 "invalid value for " + ex.getKey(),
                 expectedDoubleValue,

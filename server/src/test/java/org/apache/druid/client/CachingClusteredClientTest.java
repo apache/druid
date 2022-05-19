@@ -262,8 +262,8 @@ public class CachingClusteredClientTest
   private static final DateTimeZone TIMEZONE = DateTimes.inferTzFromString("America/Los_Angeles");
   private static final Granularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";
-  private static final Pair<QueryToolChestWarehouse, Closer> WAREHOUSE_AND_CLOSER = CachingClusteredClientTestUtils
-      .createWarehouse(JSON_MAPPER);
+  private static final Pair<QueryToolChestWarehouse, Closer> WAREHOUSE_AND_CLOSER =
+      CachingClusteredClientTestUtils.createWarehouse();
   private static final QueryToolChestWarehouse WAREHOUSE = WAREHOUSE_AND_CLOSER.lhs;
   private static final Closer RESOURCE_CLOSER = WAREHOUSE_AND_CLOSER.rhs;
 

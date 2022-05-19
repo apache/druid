@@ -23,9 +23,12 @@ title: "Logging"
   -->
 
 
-Apache Druid processes will emit logs that are useful for debugging to the console. Druid processes also emit periodic metrics about their state. For more about metrics, see [Configuration](../configuration/index.md#enabling-metrics). Metric logs are printed to the console by default, and can be disabled with `-Ddruid.emitter.logging.logLevel=debug`.
+Apache Druid processes will emit logs that are useful for debugging to log files. 
+These processes also emit periodic [metrics](../configuration/index.md#enabling-metrics) about their state.
+Metric info logs can be disabled with `-Ddruid.emitter.logging.logLevel=debug`.
 
-Druid uses [log4j2](http://logging.apache.org/log4j/2.x/) for logging. The default configuration file log4j2.xml ships with Druid under conf/druid/{config}/_common/log4j2.xml .
+Druid uses [log4j2](http://logging.apache.org/log4j/2.x/) for logging. 
+The default configuration file log4j2.xml ships with Druid under conf/druid/{config}/_common/log4j2.xml .
 
 By default, Druid uses `RollingRandomAccessFile` for rollover daily, and keeps log files up to 7 days. 
 If that's not suitable in your case, you could modify the log4j2.xml to meet your need.
@@ -66,6 +69,15 @@ An example log4j2.xml file is shown below:
   </Loggers>
 </Configuration>
 ```
+
+> NOTE:
+> Although the log4j configuration file is shared with Druid's peon processes, 
+> the appenders in this file DO NOT take effect for peon processes for they always output logs to console.
+> And middle managers are responsible to redirect the console output to task log files.
+>
+> But the logging levels settings take effect for these peon processes 
+> which means you can still configure loggers at different logging level for peon processes in this file.
+> 
 
 ## How to change log directory
 By default, Druid outputs the logs to a directory `log` under the directory where Druid is launched from.

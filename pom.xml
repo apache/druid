@@ -84,7 +84,7 @@
         <!-- sql/src/main/codegen/config.fmpp is based on a file from calcite-core, and needs to be
           updated when upgrading Calcite. Refer to the top-level comments in that file for details. -->
         <calcite.version>1.21.0</calcite.version>
-        <datasketches.version>3.1.0</datasketches.version>
+        <datasketches.version>3.2.0</datasketches.version>
         <datasketches.memory.version>2.0.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
@@ -1502,6 +1502,8 @@
                             @{jacocoArgLine}
                             -Xmx1500m
                             -XX:MaxDirectMemorySize=512m
+                            -XX:+ExitOnOutOfMemoryError
+                            -XX:+HeapDumpOnOutOfMemoryError
                             -Duser.language=en
                             -Duser.GroupByQueryRunnerTest.javacountry=US
                             -Dfile.encoding=UTF-8
@@ -1514,6 +1516,7 @@
                         <trimStackTrace>false</trimStackTrace>
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                        <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -1734,6 +1737,8 @@
                             <argLine>
                                 ${jdk.surefire.argLine}
                                 -Xmx768m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
+                                -XX:+ExitOnOutOfMemoryError
+                                -XX:+HeapDumpOnOutOfMemoryError
                                 -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                                 -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
                                 <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->

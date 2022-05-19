@@ -65,7 +65,23 @@
       "ingestion/faq"
     ],
     "Querying": [
-      "querying/sql",
+      {
+        "type": "subcategory",
+        "label": "Druid SQL",
+        "ids": [
+          "querying/sql",
+          "querying/sql-data-types",
+          "querying/sql-operators",
+          "querying/sql-scalar",
+          "querying/sql-aggregations",
+          "querying/sql-multivalue-string-functions",
+          "querying/sql-api",
+          "querying/sql-jdbc",
+          "querying/sql-query-context",
+          "querying/sql-metadata-tables",
+          "querying/sql-translation"
+        ]
+      },
       "querying/querying",
       "querying/query-execution",
       "querying/troubleshooting",
@@ -83,35 +99,7 @@
           "querying/query-context"
         ]
       },
-      {
-        "type": "subcategory",
-        "label": "Druid SQL",
-        "ids": [
-          "querying/sql-syntax",
-          "querying/sql-data-types",
-          "querying/sql-metadata-tables",
-          "querying/sql-translation"
-        ]
-      },
-      {
-        "type": "subcategory",
-        "label": "Druid SQL Functions",
-        "ids": [
-          "querying/sql-operators",
-          "querying/sql-scalar",
-          "querying/sql-aggregations",
-          "querying/sql-multivalue-string-functions"
-        ]
-      },
-      {
-        "type": "subcategory",
-        "label": "Druid SQL APIs",
-        "ids": [
-          "querying/sql-api",
-          "querying/sql-jdbc",
-          "querying/sql-query-context"
-        ]
-      },
+      
       {
         "type": "subcategory",
         "label": "Native query types",

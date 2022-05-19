@@ -45,9 +45,30 @@ public abstract class ExprEval<T>
   /**
    * Deserialize an expression stored in a bytebuffer, e.g. for an agg.
    *
-   * This should be refactored to be consolidated with some of the standard type handling of aggregators probably
+   * This method is not thread-safe with respect to the provided {@link ByteBuffer}, because the position of the
+   * buffer may be changed transiently during execution of this method. However, it will be restored to its original
+   * position prior to the method completing. Therefore, if the provided buffer is being used by a single thread, then
+   * this method does not change the position of the buffer.
+   *
+   * The {@code canRetainBufferReference} parameter determines
+   *
+   * @param buffer                   source buffer
+   * @param offset                   position to start reading from
+   * @param maxSize                  maximum number of bytes from "offset" that may be required. This is used as advice,
+   *                                 but is not strictly enforced in all cases. It is possible that type strategies may
+   *                                 attempt reads past this limit.
+   * @param type                     data type to read
+   * @param canRetainBufferReference whether the returned {@link ExprEval} may retain a reference to the provided
+   *                                 {@link ByteBuffer}. Certain types are deserialized more efficiently if allowed
+   *                                 to retain references to the provided buffer.
    */
-  public static ExprEval deserialize(ByteBuffer buffer, int offset, ExpressionType type)
+  public static ExprEval deserialize(
+      final ByteBuffer buffer,
+      final int offset,
+      final int maxSize,
+      final ExpressionType type,
+      final boolean canRetainBufferReference
+  )
   {
     switch (type.getType()) {
       case LONG:
@@ -61,7 +82,19 @@ public abstract class ExprEval<T>
         }
         return of(TypeStrategies.readNotNullNullableDouble(buffer, offset));
       default:
-        return ofType(type, type.getNullableStrategy().read(buffer, offset));
+        final NullableTypeStrategy<Object> strategy = type.getNullableStrategy();
+
+        if (!canRetainBufferReference && strategy.readRetainsBufferReference()) {
+          final ByteBuffer dataCopyBuffer = ByteBuffer.allocate(maxSize);
+          final ByteBuffer mutationBuffer = buffer.duplicate();
+          mutationBuffer.limit(offset + maxSize);
+          mutationBuffer.position(offset);
+          dataCopyBuffer.put(mutationBuffer);
+          dataCopyBuffer.rewind();
+          return ofType(type, strategy.read(dataCopyBuffer, 0));
+        } else {
+          return ofType(type, strategy.read(buffer, offset));
+        }
     }
   }
 

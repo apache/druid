@@ -19,6 +19,8 @@
 
 package org.apache.druid.java.util.common;
 
+import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.JvmUtils;
 
 import java.lang.invoke.MethodHandle;
@@ -28,11 +30,15 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
+ *
  */
 public class ByteBufferUtils
 {
+  private static final Logger log = new Logger(ByteBufferUtils.class);
+
   // the following MethodHandle lookup code is adapted from Apache Kafka
   // https://github.com/apache/kafka/blob/e554dc518eaaa0747899e708160275f95c4e525f/clients/src/main/java/org/apache/kafka/common/utils/MappedByteBuffers.java
 
@@ -136,6 +142,52 @@ public class ByteBufferUtils
         MethodType.methodType(void.class, ByteBuffer.class)
     );
     return unmapper.bindTo(UnsafeUtils.theUnsafe());
+  }
+
+  /**
+   * Same as {@link ByteBuffer#allocateDirect(int)}, but returns a closeable {@link ResourceHolder} that
+   * frees the buffer upon close.
+   *
+   * Direct (off-heap) buffers are an alternative to on-heap buffers that allow memory to be managed
+   * outside the purview of the garbage collector. It's most useful when allocating big chunks of memory,
+   * like processing buffers.
+   *
+   * Holders cannot be closed more than once. Attempting to close a holder twice will earn you an
+   * {@link IllegalStateException}.
+   */
+  public static ResourceHolder<ByteBuffer> allocateDirect(final int size)
+  {
+    class DirectByteBufferHolder implements ResourceHolder<ByteBuffer>
+    {
+      private final AtomicBoolean closed = new AtomicBoolean(false);
+      private volatile ByteBuffer buf = ByteBuffer.allocateDirect(size);
+
+      @Override
+      public ByteBuffer get()
+      {
+        final ByteBuffer theBuf = buf;
+
+        if (theBuf == null) {
+          throw new ISE("Closed");
+        } else {
+          return theBuf;
+        }
+      }
+
+      @Override
+      public void close()
+      {
+        if (closed.compareAndSet(false, true)) {
+          final ByteBuffer theBuf = buf;
+          buf = null;
+          free(theBuf);
+        } else {
+          throw new ISE("Already closed");
+        }
+      }
+    }
+
+    return new DirectByteBufferHolder();
   }
 
   /**

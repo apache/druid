@@ -309,24 +309,29 @@ public class ParserTest extends InitializedNullHandlingTest
   public void testLiteralExplicitTypedArrays()
   {
     ExpressionProcessing.initializeForTests(true);
-    validateConstantExpression("ARRAY<DOUBLE>[1.0, 2.0, null, 3.0]", new Object[]{1.0, 2.0, null, 3.0});
-    validateConstantExpression("ARRAY<LONG>[1, 2, null, 3]", new Object[]{1L, 2L, null, 3L});
-    validateConstantExpression("ARRAY<STRING>['1', '2', null, '3.0']", new Object[]{"1", "2", null, "3.0"});
 
-    // mixed type tests
-    validateConstantExpression("ARRAY<DOUBLE>[3, null, 4, 2.345]", new Object[]{3.0, null, 4.0, 2.345});
-    validateConstantExpression("ARRAY<LONG>[1.0, null, 2000.0]", new Object[]{1L, null, 2000L});
+    try {
+      validateConstantExpression("ARRAY<DOUBLE>[1.0, 2.0, null, 3.0]", new Object[]{1.0, 2.0, null, 3.0});
+      validateConstantExpression("ARRAY<LONG>[1, 2, null, 3]", new Object[]{1L, 2L, null, 3L});
+      validateConstantExpression("ARRAY<STRING>['1', '2', null, '3.0']", new Object[]{"1", "2", null, "3.0"});
 
-    // explicit typed string arrays should accept any literal and convert
-    validateConstantExpression("ARRAY<STRING>['1', null, 2000, 1.1]", new Object[]{"1", null, "2000", "1.1"});
-    validateConstantExpression("ARRAY<LONG>['1', null, 2000, 1.1]", new Object[]{1L, null, 2000L, 1L});
-    validateConstantExpression("ARRAY<DOUBLE>['1', null, 2000, 1.1]", new Object[]{1.0, null, 2000.0, 1.1});
+      // mixed type tests
+      validateConstantExpression("ARRAY<DOUBLE>[3, null, 4, 2.345]", new Object[]{3.0, null, 4.0, 2.345});
+      validateConstantExpression("ARRAY<LONG>[1.0, null, 2000.0]", new Object[]{1L, null, 2000L});
 
-    // the gramar isn't cool enough yet to parse populated nested-arrays or complex arrays..., but empty ones can
-    // be defined...
-    validateConstantExpression("ARRAY<COMPLEX<nullableLongPair>>[]", new Object[]{});
-    validateConstantExpression("ARRAY<ARRAY<LONG>>[]", new Object[]{});
-    ExpressionProcessing.initializeForTests(null);
+      // explicit typed string arrays should accept any literal and convert
+      validateConstantExpression("ARRAY<STRING>['1', null, 2000, 1.1]", new Object[]{"1", null, "2000", "1.1"});
+      validateConstantExpression("ARRAY<LONG>['1', null, 2000, 1.1]", new Object[]{1L, null, 2000L, 1L});
+      validateConstantExpression("ARRAY<DOUBLE>['1', null, 2000, 1.1]", new Object[]{1.0, null, 2000.0, 1.1});
+
+      // the gramar isn't cool enough yet to parse populated nested-arrays or complex arrays..., but empty ones can
+      // be defined...
+      validateConstantExpression("ARRAY<COMPLEX<nullableLongPair>>[]", new Object[]{});
+      validateConstantExpression("ARRAY<ARRAY<LONG>>[]", new Object[]{});
+    }
+    finally {
+      ExpressionProcessing.initializeForTests(null);
+    }
   }
 
   @Test
