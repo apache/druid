@@ -288,7 +288,7 @@ public class ClientCompactionTaskQuerySerdeTest
                 null,
                 null,
                 null,
-                null,
+                2,
                 null,
                 null
             )
