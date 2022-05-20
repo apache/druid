@@ -2178,6 +2178,212 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testArrayAggGroupByArrayAggOfLongsFromSubquery() throws Exception
+  {
+    requireMergeBuffers(3);
+    cannotVectorize();
+    testQuery(
+        "select cntarray, count(*) from ( select dim1, dim2, ARRAY_AGG(cnt) as cntarray from ( select dim1, dim2, dim3, count(*) as cnt from foo group by 1, 2, 3 ) group by 1, 2 ) group by 1",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(new QueryDataSource(
+                                            GroupByQuery.builder()
+                                                        .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                                        .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
+                                                        .setGranularity(Granularities.ALL)
+                                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                                        .setDimensions(
+                                                            new DefaultDimensionSpec("dim1", "d0"),
+                                                            new DefaultDimensionSpec("dim2", "d1"),
+                                                            new DefaultDimensionSpec("dim3", "d2"
+                                                            )
+                                                        )
+                                                        .setAggregatorSpecs(
+                                                            new CountAggregatorFactory("a0"))
+                                                        .build()))
+                                        .setQuerySegmentSpec(
+                                            querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(
+                                            new DefaultDimensionSpec(
+                                                "d0",
+                                                "_d0"
+                                            ),
+                                            new DefaultDimensionSpec(
+                                                "d1",
+                                                "_d1"
+                                            )
+                                        )
+                                        .setAggregatorSpecs(new ExpressionLambdaAggregatorFactory(
+                                            "_a0",
+                                            ImmutableSet.of("a0"),
+                                            "__acc",
+                                            "ARRAY<LONG>[]",
+                                            "ARRAY<LONG>[]",
+                                            true,
+                                            true,
+                                            false,
+                                            "array_append(\"__acc\", \"a0\")",
+                                            "array_concat(\"__acc\", \"_a0\")",
+                                            null,
+                                            null,
+                                            new HumanReadableBytes(1024),
+                                            ExprMacroTable.nil()
+                                        ))
+                                        .build()))
+                        .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setDimensions(new DefaultDimensionSpec("_a0", "d0", ColumnType.LONG_ARRAY))
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{ImmutableList.of(1L), 4L},
+            new Object[]{ImmutableList.of(1L, 1L), 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testArrayAggGroupByArrayAggOfStringsFromSubquery() throws Exception
+  {
+    requireMergeBuffers(3);
+    cannotVectorize();
+    testQuery(
+        "select cntarray, count(*) from ( select dim1, dim2, ARRAY_AGG(cnt) as cntarray from ( select dim1, dim2, dim3, cast( count(*) as VARCHAR ) as cnt from foo group by 1, 2, 3 ) group by 1, 2 ) group by 1",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(new QueryDataSource(
+                                            GroupByQuery.builder()
+                                                        .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                                        .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
+                                                        .setGranularity(Granularities.ALL)
+                                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                                        .setDimensions(
+                                                            new DefaultDimensionSpec("dim1", "d0"),
+                                                            new DefaultDimensionSpec("dim2", "d1"),
+                                                            new DefaultDimensionSpec("dim3", "d2"
+                                                            )
+                                                        )
+                                                        .setAggregatorSpecs(
+                                                            new CountAggregatorFactory("a0"))
+                                                        .build()))
+                                        .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(
+                                            new DefaultDimensionSpec("d0", "_d0"),
+                                            new DefaultDimensionSpec("d1", "_d1")
+                                        )
+                                        .setAggregatorSpecs(new ExpressionLambdaAggregatorFactory(
+                                            "_a0",
+                                            ImmutableSet.of("a0"),
+                                            "__acc",
+                                            "ARRAY<STRING>[]",
+                                            "ARRAY<STRING>[]",
+                                            true,
+                                            true,
+                                            false,
+                                            "array_append(\"__acc\", \"a0\")",
+                                            "array_concat(\"__acc\", \"_a0\")",
+                                            null,
+                                            null,
+                                            new HumanReadableBytes(1024),
+                                            ExprMacroTable.nil()
+                                        ))
+                                        .build()))
+                        .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setDimensions(new DefaultDimensionSpec("_a0", "d0", ColumnType.STRING_ARRAY))
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{ImmutableList.of("1"), 4L},
+            new Object[]{ImmutableList.of("1", "1"), 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testArrayAggGroupByArrayAggOfDoubleFromSubquery() throws Exception
+  {
+    requireMergeBuffers(3);
+    cannotVectorize();
+    testQuery(
+        "select cntarray, count(*) from ( select dim1, dim2, ARRAY_AGG(cnt) as cntarray from ( select dim1, dim2, dim3, cast( count(*) as VARCHAR ) as cnt from foo group by 1, 2, 3 ) group by 1, 2 ) group by 1",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery
+                .builder()
+                .setDataSource(new QueryDataSource(
+                    GroupByQuery.builder()
+                                .setDataSource(new QueryDataSource(
+                                    GroupByQuery.builder()
+                                                .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                                .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
+                                                .setGranularity(Granularities.ALL)
+                                                .setInterval(querySegmentSpec(Filtration.eternity()))
+                                                .setContext(QUERY_CONTEXT_DEFAULT)
+                                                .setDimensions(
+                                                    new DefaultDimensionSpec("dim1", "d0"),
+                                                    new DefaultDimensionSpec("dim2", "d1"),
+                                                    new DefaultDimensionSpec("dim3", "d2"
+                                                    )
+                                                )
+                                                .setAggregatorSpecs(
+                                                    new CountAggregatorFactory("a0"))
+                                                .build()))
+                                .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
+                                .setGranularity(Granularities.ALL)
+                                .setDimensions(
+                                    new DefaultDimensionSpec("d0", "_d0"),
+                                    new DefaultDimensionSpec("d1", "_d1")
+                                )
+                                .setAggregatorSpecs(new ExpressionLambdaAggregatorFactory(
+                                    "_a0",
+                                    ImmutableSet.of("a0"),
+                                    "__acc",
+                                    "ARRAY<DOUBLE>[]",
+                                    "ARRAY<DOUBLE>[]",
+                                    true,
+                                    true,
+                                    false,
+                                    "array_append(\"__acc\", \"a0\")",
+                                    "array_concat(\"__acc\", \"_a0\")",
+                                    null,
+                                    null,
+                                    new HumanReadableBytes(1024),
+                                    ExprMacroTable.nil()
+                                ))
+                                .build()))
+                .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setContext(QUERY_CONTEXT_DEFAULT)
+                .setDimensions(new DefaultDimensionSpec("_a0", "d0", ColumnType.DOUBLE_ARRAY))
+                .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{ImmutableList.of(1.0), 4L},
+            new Object[]{ImmutableList.of(1.0, 1.0), 2L}
+        )
+    );
+  }
+
+  @Test
   public void testArrayAggArrayContainsSubquery() throws Exception
   {
     cannotVectorize();

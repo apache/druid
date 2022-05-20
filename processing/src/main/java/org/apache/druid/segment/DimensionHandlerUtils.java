@@ -68,6 +68,10 @@ public final class DimensionHandlerUtils
 
   public static final ConcurrentHashMap<String, DimensionHandlerProvider> DIMENSION_HANDLER_PROVIDERS = new ConcurrentHashMap<>();
 
+  private static final Function<Object, Long> CONVERT_OBJECT_TO_LONG_FUNCTION = o -> convertObjectToLong(o);
+  private static final Function<Object, Double> CONVERT_OBJECT_TO_DOUBLE_FUNCTION = o -> convertObjectToDouble(o);
+  private static final Function<Object, Float> CONVERT_OBJECT_TO_FLOAT_FUNCTION = o -> convertObjectToFloat(o);
+
   public static void registerDimensionHandlerProvider(String type, DimensionHandlerProvider provider)
   {
     DIMENSION_HANDLER_PROVIDERS.compute(type, (key, value) -> {
@@ -381,8 +385,12 @@ public final class DimensionHandlerUtils
         switch (type.getElementType().getType()) {
           case STRING:
             return convertToComparableStringArray(obj);
-          default:
-            return convertToList(obj);
+          case LONG:
+            return convertToListWithObjectFunction(obj, CONVERT_OBJECT_TO_LONG_FUNCTION);
+          case FLOAT:
+            return convertToListWithObjectFunction(obj, CONVERT_OBJECT_TO_FLOAT_FUNCTION);
+          case DOUBLE:
+            return convertToListWithObjectFunction(obj, CONVERT_OBJECT_TO_DOUBLE_FUNCTION);
         }
 
       default:
@@ -391,7 +399,21 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
-  public static ComparableList convertToList(Object obj)
+  public static ComparableList convertToList(Object obj, ValueType elementType)
+  {
+    switch (elementType) {
+      case LONG:
+        return convertToListWithObjectFunction(obj, CONVERT_OBJECT_TO_LONG_FUNCTION);
+      case FLOAT:
+        return convertToListWithObjectFunction(obj, CONVERT_OBJECT_TO_FLOAT_FUNCTION);
+      case DOUBLE:
+        return convertToListWithObjectFunction(obj, CONVERT_OBJECT_TO_DOUBLE_FUNCTION);
+    }
+    throw new IAE("Unable to convert element of type[%s] to comparable list", elementType);
+  }
+
+
+  private static <T> ComparableList convertToListWithObjectFunction(Object obj, Function<Object, T> convertFunction)
   {
     if (obj == null) {
       return null;
@@ -401,6 +423,13 @@ public final class DimensionHandlerUtils
     }
     if (obj instanceof ComparableList) {
       return (ComparableList) obj;
+    }
+    if (obj instanceof Object[]) {
+      List<T> delegateList = new ArrayList<T>();
+      for (Object eachObj : (Object[]) obj) {
+        delegateList.add(convertFunction.apply(eachObj));
+      }
+      return new ComparableList(delegateList);
     }
     throw new ISE("Unable to convert type %s to %s", obj.getClass().getName(), ComparableList.class.getName());
   }
@@ -422,7 +451,7 @@ public final class DimensionHandlerUtils
     if (obj instanceof List) {
       return ComparableStringArray.of((String[]) ((List) obj).toArray(new String[0]));
     }
-    Objects[] objects = (Objects[]) obj;
+    Object[] objects = (Object[]) obj;
     String[] delegate = new String[objects.length];
     for (int i = 0; i < objects.length; i++) {
       delegate[i] = convertObjectToString(objects[i]);

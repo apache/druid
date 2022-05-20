@@ -787,8 +787,8 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         dimCompare = Comparators.<Comparable>naturalNullsFirst().compare(lhsArr, rhsArr);
       } else if (dimensionType.equals(ColumnType.LONG_ARRAY)
                  || dimensionType.equals(ColumnType.DOUBLE_ARRAY)) {
-        final ComparableList lhsArr = DimensionHandlerUtils.convertToList(lhsObj);
-        final ComparableList rhsArr = DimensionHandlerUtils.convertToList(rhsObj);
+        final ComparableList lhsArr = DimensionHandlerUtils.convertToList(lhsObj, dimensionType.getType());
+        final ComparableList rhsArr = DimensionHandlerUtils.convertToList(rhsObj, dimensionType.getType());
         dimCompare = Comparators.<Comparable>naturalNullsFirst().compare(lhsArr, rhsArr);
       } else {
         dimCompare = comparator.compare((String) lhsObj, (String) rhsObj);
