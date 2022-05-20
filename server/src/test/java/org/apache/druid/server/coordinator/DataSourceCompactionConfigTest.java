@@ -141,6 +141,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
             null,
             null,
             null,
+            null,
             null
         ),
         null,
@@ -176,6 +177,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
             null,
             null,
             10000L,
+            null,
             null,
             null,
             null,
@@ -242,7 +244,8 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         new Duration(3000L),
         7,
         1000,
-        100
+        100,
+        2
     );
 
     final String json = OBJECT_MAPPER.writeValueAsString(tuningConfig);
@@ -282,7 +285,8 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         new Duration(3000L),
         7,
         1000,
-        100
+        100,
+        2
     );
 
     final String json = OBJECT_MAPPER.writeValueAsString(tuningConfig);
