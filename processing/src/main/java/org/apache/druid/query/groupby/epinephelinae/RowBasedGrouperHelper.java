@@ -1051,9 +1051,9 @@ public class RowBasedGrouperHelper
         } else if (fieldTypes.get(i - dimStart).equals(ColumnType.LONG_ARRAY)
                    || fieldTypes.get(i - dimStart).equals(ColumnType.DOUBLE_ARRAY)) {
           final ComparableList lhs = DimensionHandlerUtils.convertToList(key1.getKey()[i],
-                                                                         fieldTypes.get(i - dimStart).getType());
+                                                                         fieldTypes.get(i - dimStart).getElementType().getType());
           final ComparableList rhs = DimensionHandlerUtils.convertToList(key2.getKey()[i],
-                                                                         fieldTypes.get(i - dimStart).getType());
+                                                                         fieldTypes.get(i - dimStart).getElementType().getType());
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhs, rhs);
         } else {
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(
@@ -1131,8 +1131,8 @@ public class RowBasedGrouperHelper
 
           cmp = ComparableList.compareWithComparator(
               comparator,
-              DimensionHandlerUtils.convertToList(lhs, fieldType.getType()),
-              DimensionHandlerUtils.convertToList(rhs, fieldType.getType())
+              DimensionHandlerUtils.convertToList(lhs, fieldType.getElementType().getType()),
+              DimensionHandlerUtils.convertToList(rhs, fieldType.getElementType().getType())
           );
 
         } else {

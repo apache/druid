@@ -409,7 +409,7 @@ public final class DimensionHandlerUtils
       case DOUBLE:
         return convertToListWithObjectFunction(obj, CONVERT_OBJECT_TO_DOUBLE_FUNCTION);
     }
-    throw new IAE("Unable to convert element of type[%s] to comparable list", elementType);
+    throw new ISE("Unable to convert object of type[%s] to [%s]", obj.getClass().getName(), ComparableList.class.getName());
   }
 
 
@@ -431,7 +431,7 @@ public final class DimensionHandlerUtils
       }
       return new ComparableList(delegateList);
     }
-    throw new ISE("Unable to convert type %s to %s", obj.getClass().getName(), ComparableList.class.getName());
+    throw new ISE("Unable to convert object of type[%s] to [%s]", obj.getClass().getName(), ComparableList.class.getName());
   }
 
 
@@ -444,19 +444,19 @@ public final class DimensionHandlerUtils
     if (obj instanceof ComparableStringArray) {
       return (ComparableStringArray) obj;
     }
-    if (obj instanceof String[]) {
-      return ComparableStringArray.of((String[]) obj);
-    }
     // Jackson converts the serialized array into a list. Converting it back to a string array
     if (obj instanceof List) {
       return ComparableStringArray.of((String[]) ((List) obj).toArray(new String[0]));
     }
-    Object[] objects = (Object[]) obj;
-    String[] delegate = new String[objects.length];
-    for (int i = 0; i < objects.length; i++) {
-      delegate[i] = convertObjectToString(objects[i]);
+    if(obj instanceof Object[]) {
+      Object[] objects = (Object[]) obj;
+      String[] delegate = new String[objects.length];
+      for (int i = 0; i < objects.length; i++) {
+        delegate[i] = convertObjectToString(objects[i]);
+      }
+      return ComparableStringArray.of(delegate);
     }
-    return ComparableStringArray.of(delegate);
+    throw new ISE("Unable to convert object of type[%s] to [%s]", obj.getClass().getName(), ComparableStringArray.class.getName());
   }
 
   public static int compareObjectsAsType(
