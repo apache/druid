@@ -533,6 +533,7 @@ error_msg
 exprs
 group_id
 interval_expr
+is_active
 is_available
 is_leader
 is_overshadowed
