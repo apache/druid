@@ -1538,6 +1538,7 @@ public class NewestSegmentFirstPolicyTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             null
@@ -1562,6 +1563,7 @@ public class NewestSegmentFirstPolicyTest
                 null,
                 partitionsSpec,
                 new IndexSpec(),
+                null,
                 null,
                 null,
                 null,
