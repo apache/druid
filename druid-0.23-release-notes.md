@@ -140,6 +140,11 @@ This release includes several improvements for ingestion in general:
 - You can now use `JsonPath` functions in `JsonPath` expressions during ingestion (#11722)
 - Druid no longer creates a materialized list of segment files and elimited looping over the files to reduce OOM issues (#11903)
 - Added an intermediate-persist `IndexSpec` to the main "merge" method in `IndexMerger` (#11940) 
+- `Granularity.granularitiesFinerThan` now returns ALL if you pass in ALL (#12003)
+- Added a configuation parameter for appending tasks to allow them to use a SHARED lock (#12041)
+- `SchemaRegistryBasedAvroBytesDecoder` now throws a `ParseException` instead of RE when it fails to retrieve a schema (#12080)
+- Add `includeAllDimensions` to `dimensionsSpec` to put all explicit dimensions first in `InputRow` and subsequently any other dimensions found in input data (#12276)
+
 
 ## Compaction
 
@@ -161,13 +166,16 @@ Users can now cancel SQL queries just like native queries can be cancelled. A ne
 
 (#11643)
 (#11738)
+(#11710)
 
 ### Improvements to SQL user experience
 
 This release includes several additional improvements for SQL:
 
 - You no longer need to include a trailing slash `/` for JDBC connections to druid (#11737)
-
+- You can now use scans to as outer queries (#11831)
+- Added a class to sanitize JDBC exceptions and to log them (#11843)
+- Added type headers to response format to make it easier for clients to interpret the results of SQL queries (#11914)
 
 ## Coordinator/Overlord
 
@@ -206,6 +214,16 @@ This release includes several additional improvements for SQL:
 
 [12352](https://github.com/apache/druid/pull/12352) 
 
+This release includes several additional improvements for metrics:
+- Druid includes the Prometheus emitter by defult (#11812)
+- Fixed the missing `conversionFactor` in Prometheus emitter (12338)
+- Fixed an issue with the `ingest/events/messageGap` metric (#12337)
+- Added metrics for Shenandoah GC (#12369)
+- Added metrics as follows: `Cpu` and `CpuSet` to `java.util.metrics.cgroups`, `ProcFsUtil` for `procfs` info, and `CgroupCpuMonitor` and `CgroupCpuSetMonitor` (#11763)
+- Added support to route data through an HTTP proxy (#11891)
+- Added more metrics for Jetty server thread pool usage (#11113)
+- Added worker category as a dimension TaskSlot metrics of the indexing service (#11554)
+
 ## Cloud integrations
 
 ### Allow authenticating via Shared access resource for azure storage
@@ -214,25 +232,29 @@ This release includes several additional improvements for SQL:
 
 ## Other changes
 
+- Druid now processes lookup load failures more quickly (#12397)
+- `BalanceSegments#balanceServers` now exits early when there is no balancing work to do (#11768)
+- `DimensionHandler` now allows you to define a `DimensionSpec` appropriate for the type of dimension to handle (#11873)
+- Added an interface for external schema providers to Druid SQL (#12043)
+- Added support for a SQL INSERT planner (#11959)
+
 # Security fixes
 
 ## Support for access control on setting query contexts
 
 Today, any context params are allowed to users. This can cause 1) a bad UX if the context param is not matured yet or 2) even query failure or system fault in the worst case if a sensitive param is abused, ex) maxSubqueryRows. Druid now has an ability to limit context params per user role. That means, a query will fail if you have a context param set in the query that is not allowed to you. 
 
-The context param authorization can be enabled using druid.auth.authorizeQueryContextParams. This is disabled by default to avoid any hassle when performing an upgrade.
+The context parameter authorization can be enabled using druid.`auth.authorizeQueryContextParam`s. This is disabled by default to avoid any hassle when performing an upgrade.
 
-[12396](https://github.com/apache/druid/pull/12396)
+(#12396)
 
-## 
-
-# Performance improvements
+## Performance improvements
 
 ### General performance
 
 ### Ingestion
 
-- More accurate memory estimations while building an on-heap incremental index. Rather than using the max possible size of an aggregated row, Druid can now use (based on a task context flag) a closer estimate of the actual heap footprint of an aggregated row. This enables the indexer to fit more rows in memory before doing an intermediate persist. [12073](https://github.com/apache/druid/pull/12073)
+- More accurate memory estimations while building an on-heap incremental index. Rather than using the max possible size of an aggregated row, Druid can now use (based on a task context flag) a closer estimate of the actual heap footprint of an aggregated row. This enables the indexer to fit more rows in memory before doing an intermediate persist. (#12073)
 
 ### SQL
 
