@@ -1180,7 +1180,7 @@ This strategy is a variant of `Equal Distribution`, which support `workerCategor
 |`workerCategorySpec`|[Worker Category Spec](#workercategoryspec) object|null (no worker category spec)|
 
 Example: specify tasks default to run on **c1** whose task
-type is `index_kafka`, while dataSource "ds1" run on **c2**.
+type is `index_kafka`, while dataSource `ds1` run on **c2**.
 
 ```json
 {
