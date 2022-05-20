@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
@@ -29,6 +30,7 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.Query;
@@ -48,6 +50,23 @@ public abstract class AbstractTask implements Task
 
   // This is mainly to avoid using combinations of IOConfig flags to figure out the ingestion mode and
   // also to use the mode as dimension in metrics
+  public enum IngestionMode
+  {
+    REPLACE, // replace with tombstones
+    APPEND, // append to existing segments
+    REPLACE_LEGACY, // original replace, it does not replace existing data for empty time chunks in input intervals
+    HADOOP, // non-native batch, hadoop ingestion
+    NONE; // not an ingestion task (i.e. a kill task)
+
+    @JsonCreator
+    public static IngestionMode fromString(String name)
+    {
+      if (name == null) {
+        return null;
+      }
+      return valueOf(StringUtils.toUpperCase(name));
+    }
+  }
   private final IngestionMode ingestionMode;
 
   @JsonIgnore
@@ -256,7 +275,6 @@ public abstract class AbstractTask implements Task
     return metricBuilder;
   }
 
-  @Override
   public IngestionMode getIngestionMode()
   {
     return ingestionMode;

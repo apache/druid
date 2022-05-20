@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -35,7 +34,6 @@ import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmen
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialRangeSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 
@@ -243,32 +241,4 @@ public interface Task
     final ContextValueType value = getContextValue(key);
     return value == null ? defaultValue : value;
   }
-
-  /** This is here mainly to support adding a dimension to a metric to indicate the flavor of the task
-   *
-   */
-  enum IngestionMode
-  {
-    REPLACE, // replace with tombstones
-    APPEND, // append to existing segments
-    REPLACE_LEGACY, // original replace, it does not replace existing data for empty time chunks in input intervals
-    HADOOP, // non-native batch, hadoop ingestion
-    NONE; // not an ingestion task (i.e. a kill task)
-
-    @JsonCreator
-    public static IngestionMode fromString(String name)
-    {
-      if (name == null) {
-        return null;
-      }
-      return valueOf(StringUtils.toUpperCase(name));
-    }
-  }
-
-  /**
-   * For tasks that are for native ingestion this is used for metrics and also to facilitate internal
-   * code to decide which type of ingestion the task is for (i.e. append, replace, etc.)
-   * @return The ingestion mode of the task or {@link IngestionMode#NONE} if the task is not ingestioon
-   */
-  IngestionMode getIngestionMode();
 }

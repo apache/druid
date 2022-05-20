@@ -28,36 +28,36 @@ public class AbstractTaskTest
   @Test
   public void testBatchIOConfigAppend()
   {
-    Task.IngestionMode ingestionMode = Task.IngestionMode.fromString("APPEND");
-    Assert.assertEquals(Task.IngestionMode.APPEND, ingestionMode);
+    AbstractTask.IngestionMode ingestionMode = AbstractTask.IngestionMode.fromString("APPEND");
+    Assert.assertEquals(AbstractTask.IngestionMode.APPEND, ingestionMode);
   }
 
   @Test
   public void testBatchIOConfigReplace()
   {
-    Task.IngestionMode ingestionMode = Task.IngestionMode.fromString("REPLACE");
-    Assert.assertEquals(Task.IngestionMode.REPLACE, ingestionMode);
+    AbstractTask.IngestionMode ingestionMode = AbstractTask.IngestionMode.fromString("REPLACE");
+    Assert.assertEquals(AbstractTask.IngestionMode.REPLACE, ingestionMode);
   }
 
   @Test
   public void testBatchIOConfigOverwrite()
   {
-    Task.IngestionMode ingestionMode = Task.IngestionMode.fromString("REPLACE_LEGACY");
-    Assert.assertEquals(Task.IngestionMode.REPLACE_LEGACY, ingestionMode);
+    AbstractTask.IngestionMode ingestionMode = AbstractTask.IngestionMode.fromString("REPLACE_LEGACY");
+    Assert.assertEquals(AbstractTask.IngestionMode.REPLACE_LEGACY, ingestionMode);
   }
 
   @Test
   public void testBatchIOConfigHadoop()
   {
-    Task.IngestionMode ingestionMode = Task.IngestionMode.fromString("HADOOP");
-    Assert.assertEquals(Task.IngestionMode.HADOOP, ingestionMode);
+    AbstractTask.IngestionMode ingestionMode = AbstractTask.IngestionMode.fromString("HADOOP");
+    Assert.assertEquals(AbstractTask.IngestionMode.HADOOP, ingestionMode);
   }
 
   @Test
   public void testBatchIOConfigNone()
   {
-    Task.IngestionMode ingestionMode = Task.IngestionMode.fromString("NONE");
-    Assert.assertEquals(Task.IngestionMode.NONE, ingestionMode);
+    AbstractTask.IngestionMode ingestionMode = AbstractTask.IngestionMode.fromString("NONE");
+    Assert.assertEquals(AbstractTask.IngestionMode.NONE, ingestionMode);
   }
 
 }
