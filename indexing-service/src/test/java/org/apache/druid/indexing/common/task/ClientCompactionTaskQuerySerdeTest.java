@@ -122,7 +122,8 @@ public class ClientCompactionTaskQuerySerdeTest
             new Duration(3000L),
             7,
             1000,
-            100
+            100,
+            2
         ),
         new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
         new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
@@ -342,7 +343,8 @@ public class ClientCompactionTaskQuerySerdeTest
             new Duration(3000L),
             7,
             1000,
-            100
+            100,
+            2
         ),
         new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
         new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
