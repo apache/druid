@@ -196,7 +196,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         id,
         makeGroupId(
             ingestionSchema,
-            computeIngestionMode(ingestionSchema.getIOConfig())
+            computeBatchIngestionMode(ingestionSchema.getIOConfig())
         ),
         taskResource,
         ingestionSchema.dataSchema.getDataSource(),
@@ -225,7 +225,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         dataSource,
         context,
         maxAllowedLockCount,
-        computeIngestionMode(ingestionSchema.getIOConfig())
+        computeBatchIngestionMode(ingestionSchema.getIOConfig())
     );
     this.baseSequenceName = baseSequenceName == null ? getId() : baseSequenceName;
     this.ingestionSchema = ingestionSchema;
@@ -1085,7 +1085,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         throw new IAE("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
       }
 
-      IngestionMode ingestionMode = AbstractTask.computeIngestionMode(ioConfig);
+      IngestionMode ingestionMode = AbstractTask.computeBatchIngestionMode(ioConfig);
 
       if (ingestionMode == IngestionMode.REPLACE && dataSchema.getGranularitySpec()
                                                               .inputIntervals()

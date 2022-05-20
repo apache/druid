@@ -280,40 +280,25 @@ public abstract class AbstractTask implements Task
     return ingestionMode;
   }
 
-  protected static IngestionMode computeIngestionMode(@Nullable CompactionIOConfig ioConfig)
+  protected static IngestionMode computeCompactionIngestionMode(@Nullable CompactionIOConfig ioConfig)
   {
-    final boolean isAppendToExisting;
-    final boolean isDropExisting;
-
-    if (ioConfig == null) {
-      isAppendToExisting = BatchIOConfig.DEFAULT_APPEND_EXISTING;
-      isDropExisting = BatchIOConfig.DEFAULT_DROP_EXISTING;
-    } else {
-      isAppendToExisting = BatchIOConfig.DEFAULT_APPEND_EXISTING;
-      isDropExisting = ioConfig.isDropExisting();
-    }
-
+    // CompactionIOConfig does not have an isAppendToExisting method, so use default (for batch since compaction
+    // is basically batch ingestion)
+    final boolean isAppendToExisting = BatchIOConfig.DEFAULT_APPEND_EXISTING;
+    final boolean isDropExisting = ioConfig == null ? BatchIOConfig.DEFAULT_DROP_EXISTING : ioConfig.isDropExisting();
     return computeIngestionMode(isAppendToExisting, isDropExisting);
   }
 
-  protected static IngestionMode computeIngestionMode(@Nullable BatchIOConfig ioConfig)
+  protected static IngestionMode computeBatchIngestionMode(@Nullable BatchIOConfig ioConfig)
   {
-    final boolean isAppendToExisting;
-    final boolean isDropExisting;
-
-    if (ioConfig == null) {
-      isAppendToExisting = BatchIOConfig.DEFAULT_APPEND_EXISTING;
-      isDropExisting = BatchIOConfig.DEFAULT_DROP_EXISTING;
-    } else {
-      isAppendToExisting = ioConfig.isAppendToExisting();
-      isDropExisting = ioConfig.isDropExisting();
-    }
-
+    final boolean isAppendToExisting = ioConfig == null
+                                       ? BatchIOConfig.DEFAULT_APPEND_EXISTING
+                                       : ioConfig.isAppendToExisting();
+    final boolean isDropExisting = ioConfig == null ? BatchIOConfig.DEFAULT_DROP_EXISTING : ioConfig.isDropExisting();
     return computeIngestionMode(isAppendToExisting, isDropExisting);
-
   }
 
-  protected static IngestionMode computeIngestionMode(boolean isAppendToExisting, boolean isDropExisting)
+  private static IngestionMode computeIngestionMode(boolean isAppendToExisting, boolean isDropExisting)
   {
     if (!isAppendToExisting && isDropExisting) {
       return IngestionMode.REPLACE;

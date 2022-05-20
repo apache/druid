@@ -204,7 +204,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         dataSource,
         context,
         -1,
-        computeIngestionMode(ioConfig)
+        computeCompactionIngestionMode(ioConfig)
     );
     Checks.checkOneNotNullOrEmpty(
         ImmutableList.of(
