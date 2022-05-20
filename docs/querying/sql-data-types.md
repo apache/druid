@@ -62,6 +62,7 @@ converted to zeroes).
 |BIGINT|LONG|`0`|Druid LONG columns (except `__time`) are reported as BIGINT|
 |TIMESTAMP|LONG|`0`, meaning 1970-01-01 00:00:00 UTC|Druid's `__time` column is reported as TIMESTAMP. Casts between string and timestamp types assume standard SQL formatting, e.g. `2000-01-02 03:04:05`, _not_ ISO8601 formatting. For handling other formats, use one of the [time functions](sql-scalar.md#date-and-time-functions).|
 |DATE|LONG|`0`, meaning 1970-01-01|Casting TIMESTAMP to DATE rounds down the timestamp to the nearest day. Casts between string and date types assume standard SQL formatting, e.g. `2000-01-02`. For handling other formats, use one of the [time functions](sql-scalar.md#date-and-time-functions).|
+|ARRAY|ARRAY|Druid native array types work as SQL arrays, and multi-value strings can be converted to arrays. See the [`ARRAY` details](#arrays) for more details.|
 |OTHER|COMPLEX|none|May represent various Druid column types such as hyperUnique, approxHistogram, etc.|
 
 ## Multi-value strings
@@ -70,7 +71,8 @@ Druid's native type system allows strings to potentially have multiple values. T
 [multi-value string dimensions](multi-value-dimensions.md) will be reported in SQL as `VARCHAR` typed, and can be
 syntactically used like any other VARCHAR. Regular string functions that refer to multi-value string dimensions will be
 applied to all values for each row individually. Multi-value string dimensions can also be treated as arrays via special
-[multi-value string functions](sql-multivalue-string-functions.md), which can perform powerful array-aware operations.
+[multi-value string functions](sql-multivalue-string-functions.md), which can perform powerful array-aware operations, but retain
+their `VARCHAR` typing and behavior.
 
 Grouping by a multi-value expression will observe the native Druid multi-value aggregation behavior, which is similar to
 the `UNNEST` functionality available in some other SQL dialects. Refer to the documentation on
@@ -80,8 +82,42 @@ the `UNNEST` functionality available in some other SQL dialects. Refer to the do
 > they are handled in Druid SQL and in native queries. For example, expressions involving multi-value dimensions may be
 > incorrectly optimized by the Druid SQL planner: `multi_val_dim = 'a' AND multi_val_dim = 'b'` will be optimized to
 > `false`, even though it is possible for a single row to have both "a" and "b" as values for `multi_val_dim`. The
-> SQL behavior of multi-value dimensions will change in a future release to more closely align with their behavior
-> in native queries.
+> SQL behavior of multi-value dimensions may change in a future release to more closely align with their behavior
+> in native queries, but the [multi-value string functions](./sql-multivalue-string-functions.md) should be able to provide
+> nearly all possible native functionality.
+
+## Arrays
+Multi-value dimensions may also be converted to standard SQL arrays, either by explicitly converting them with `MV_TO_ARRAY`,
+or implicitly when used within the [array functions](./sql-array-functions.md). `ARRAY` types behave as standard SQL arrays, where
+grouping on them will group on the entire array of values instead of the implicit `UNNEST` that occurs when grouping on
+multi-value dimensions directly or when used with the multi-value functions. Arrays may also be constructed from multiple
+columns using the array functions.
+
+## Multi-value strings behavior
+The behavior of Druid [multi-value string dimensions](multi-value-dimensions.md) varies depending on the context of their usage.
+
+When used as `VARCHAR` functions, which are not "aware" that their inputs which claim to be `VARCHAR` might actually have multiple
+values such as `CONCAT`, Druid will map the function across all values in the row. If the row is null or empty, the function will
+recieve `NULL` as its input, otherwise it will be applied to every row value and continue its life as a multi-value VARCHAR.
+
+When used with the explicit [multi-value string functions](./sql-multivalue-string-functions.md), the column is acknowledged to be multi-valued,
+and during processing the values are operated on as if they were `ARRAY` typed, so any operations which produce null and empty rows are
+distinguished as separate values (unlike implicit mapping behavior), but retain their `VARCHAR` type after the computation is complete.
+Note that Druid multi-value columns do _not_ distinguish between empty and null rows, so an empty row will never appear natively as input
+to a multi-valued function, but any multi-value function which manipulates the array form of the value may produce an empty array, which
+will be handled separately while processing.
+
+> Do not mix the usage of multi-value functions and normal scalar functions within the same expression, as the planner will be unable
+> to determine how to properly process the value given its ambiguous usage. A multi-value string must be treated consistently within
+> an expression.
+
+Finally, when converted to `ARRAY` or used with [array functions](./sql-array-functions.md), they behave as standard SQL arrays and can no longer
+be manipulated with non-array functions.
+
+When `VARCHAR` typed, multi-value results produced by non-aggregating selection of values will be serialized into a JSON string of the array.
+`ARRAY` typed results will be serialized into stringified JSON arrays if the context parameter `sqlStringifyArrays` is set, otherwise they
+will remain in their array format.
+
 
 ## NULL values
 

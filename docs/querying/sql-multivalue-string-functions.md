@@ -36,10 +36,10 @@ sidebar_label: "Multi-value string functions"
 
 Druid supports string dimensions containing multiple values.
 This page describes the operations you can perform on multi-value string dimensions using [Druid SQL](./sql.md).
-See [Multi-value dimensions](multi-value-dimensions.md) for more information.
+See [SQL multi-value string](./sql-data-types.md#multi-value-strings) and native [Multi-value dimensions](multi-value-dimensions.md) for more information.
 
 All "array" references in the multi-value string function documentation can refer to multi-value string columns or
-`ARRAY` literals.
+`ARRAY` types. Multi-value strings can also be converted to `ARRAY` types using `MV_TO_ARRAY` (See [Multi-value string functions](sql-multivalue-string-functions.md) for more details.)
 
 |Function|Notes|
 |--------|-----|
@@ -59,3 +59,4 @@ All "array" references in the multi-value string function documentation can refe
 |`MV_SLICE(arr, start, end)`|Returns the subarray of `arr` from the 0 based index start(inclusive) to end(exclusive), or `null`, if start is less than 0, greater than length of arr or less than end.|
 |`MV_TO_STRING(arr, str)`|Joins all elements of `arr` by the delimiter specified by `str`.|
 |`STRING_TO_MV(str1, str2)`|Splits `str1` into an array on the delimiter specified by `str2`.|
+|`MV_TO_ARRAY(str)`|Converts a multi-value string from being processed as a `VARCHAR` to an `ARRAY` instead.|
