@@ -124,6 +124,31 @@ Multi-dimension range partitioning allows users to partition their data on the r
 In previous versions of Druid, if ingested data with `dropExisting` flag to replace data, Druid would retain the existing data for a time chunk if there was no new data to replace it. Now, if you set `dropExisting` to `true` in your `ioSpec` and ingest data for a time range that includes a time chunk with no data, Druid uses a tombstone to overshadow the existing data in the empty time chunk.
 (#12137)
 
+This release includes several improvements for native batch ingestion:
+- Druid now emits a new metric when a batch task finishes waiting for segment availability. (#11090)
+- Added `segmentAvailabilityWaitTimeMs`, the time in milliseconds the milliseconds that a task waited for its segments to be handed off to Historical nodes, to `IngestionStatsAndErrorsTaskReportData` (#11090)
+- Added functionality to preserve existing metrics during ingestion (#12185)
+- Parallel native batch task can now provide task reports for the sequential and single phase mode (e.g., used with dynamic partitioning) as well as single phase mode subtasks (#11688)
+- Added support for `RowStats` in `druid/indexer/v1/task/{task_id}/reports` API for multi-phase parallel indexing task (#12280)
+- Fixed the OOM failures in dimension distribution phase of parallel indexing (#12331)
+- Added support to handle null dimension values while creating partition boundaries (#11973)
+
+## Ingestion general
+
+This release includes several improvements for ingestion in general:
+- Removed the template modifier from `IncrementalIndex<AggregatorType>` because it is no longer required
+- You can now use `JsonPath` functions in `JsonPath` expressions during ingestion (#11722)
+- Druid no longer creates a materialized list of segment files and elimited looping over the files to reduce OOM issues (#11903)
+- Added an intermediate-persist `IndexSpec` to the main "merge" method in `IndexMerger` (#11940) 
+
+## Compaction
+
+This release includes several improvements for compaction:
+-  Automatic compaction now supports complex dimensions (#11924)
+-  Automatic compaction now supports overlapping segment intervals (#12062)
+- You can now configure automatic compaction to calculate ratio of slots available for compaction tasks from maximum slots including autoscaler maximum worker nodes  (#12263)
+- You can configure the Coordinator auto compaction duty period separately from other indexing duties (#12263)
+
 ## SQL
 
 ### Human-readable and actionable SQL error messages
@@ -141,7 +166,7 @@ Users can now cancel SQL queries just like native queries can be cancelled. A ne
 
 This release includes several additional improvements for SQL:
 
-- You no longer need to include a trailing slash `/` for JDBC connections to druid(#11737)
+- You no longer need to include a trailing slash `/` for JDBC connections to druid (#11737)
 
 
 ## Coordinator/Overlord
