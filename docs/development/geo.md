@@ -23,13 +23,14 @@ title: "Spatial filters"
   -->
 
 > Apache Druid supports two query languages: [Druid SQL](../querying/sql.md) and [native queries](../querying/querying.md).
-> This document describes functionality that is only available in the native language.
+> This document describes the feature that is only available in the native language.
 
 Apache Druid supports filtering specially spatially indexed columns based on an origin and a bound.
 
 ## Spatial indexing
 
-In any of the data specs, there is the option of providing spatial dimensions. For example, for a JSON data spec, spatial dimensions can be specified as follows:
+In any of the data specs, there is the option of providing spatial dimensions.
+For example, you can specify spatial dimensions for a JSON data spec as follows:
 
 ```json
 {
@@ -48,7 +49,7 @@ In any of the data specs, there is the option of providing spatial dimensions. F
 					"dimensions": [],
 					"spatialDimensions": [{
 						"dimName": "coordinates",
-						"dims": ["lat", "long"]
+						"dims": ["x", "y"]
 					}]
 				}
 			}
@@ -59,10 +60,10 @@ In any of the data specs, there is the option of providing spatial dimensions. F
 
 ## Spatial filters
 
-|property|description|required?|
-|--------|-----------|---------|
-|dimName|The name of the spatial dimension. A spatial dimension may be constructed from multiple other dimensions or it may already exist as part of an event. If a spatial dimension already exists, it must be an array of coordinate values.|yes|
-|dims|A list of dimension names that comprise a spatial dimension.|no|
+|Property|Description|Required|
+|--------|-----------|--------|
+|`dimName`|The name of the spatial dimension. A spatial dimension may be constructed from multiple other dimensions or it may already exist as part of an event. If a spatial dimension already exists, it must be an array of coordinate values.|yes|
+|`dims`|A list of dimension names that comprise a spatial dimension.|no|
 
 The grammar for a spatial filter is as follows:
 
@@ -82,21 +83,21 @@ The grammar for a spatial filter is as follows:
 
 #### `rectangular`
 
-|property|description|required?|
-|--------|-----------|---------|
-|minCoords|List of minimum dimension coordinates for coordinates [x, y, z, …]|yes|
-|maxCoords|List of maximum dimension coordinates for coordinates [x, y, z, …]|yes|
+|Property|Description|Required|
+|--------|-----------|--------|
+|`minCoords`|List of minimum dimension coordinates for coordinates [x, y, z, …]|yes|
+|`maxCoords`|List of maximum dimension coordinates for coordinates [x, y, z, …]|yes|
 
 #### `radius`
 
-|property|description|required?|
-|--------|-----------|---------|
-|coords|Origin coordinates in the form [x, y, z, …]|yes|
-|radius|The float radius value|yes|
+|Property|Description|Required|
+|--------|-----------|--------|
+|`coords`|Origin coordinates in the form [x, y, z, …]|yes|
+|`radius`|The float radius value|yes|
 
 #### `polygon`
 
-|property|description|required?|
-|--------|-----------|---------|
-|abscissa|Horizontal coordinate for corners of the polygon|yes|
-|ordinate|Vertical coordinate for corners of the polygon|yes|
+|Property|Description|Required|
+|--------|-----------|--------|
+|`abscissa`|Horizontal coordinate for corners of the polygon|yes|
+|`ordinate`|Vertical coordinate for corners of the polygon|yes|
