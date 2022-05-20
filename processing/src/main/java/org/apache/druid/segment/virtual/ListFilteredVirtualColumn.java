@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.BitmapResultFactory;
@@ -60,6 +61,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
+import java.util.SortedSet;
 
 /**
  * {@link VirtualColumn} form of {@link ListFilteredDimensionSpec}, powered by
@@ -397,7 +399,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     }
 
     @Override
-    public BitmapColumnIndex forValues(Set<String> values)
+    public BitmapColumnIndex forSortedValues(SortedSet<String> values)
     {
       return new BaseVirtualIndex()
       {
@@ -503,6 +505,17 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     )
     {
       super(delegate, idMapping);
+    }
+
+    @Override
+    public BitmapColumnIndex forRange(
+        @Nullable String startValue,
+        boolean startStrict,
+        @Nullable String endValue,
+        boolean endStrict
+    )
+    {
+      return forRange(startValue, startStrict, endValue, endStrict, Predicates.alwaysTrue());
     }
 
     @Override

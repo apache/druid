@@ -26,13 +26,8 @@ import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
-import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.filter.LikeDimFilter;
-import org.apache.druid.query.filter.RegexDimFilter;
-import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
@@ -52,76 +47,43 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
-public class LikeFilterBenchmark
+public class InFilterBenchmark
 {
   static {
     NullHandling.initializeForTests();
   }
 
-  private static final int START_INT = 1_000_000;
-  private static final int END_INT = 9_999_999;
+  private static final int START_INT = 10_000_000;
 
-  private static final Filter SELECTOR_EQUALS = new SelectorDimFilter(
-      "foo",
-      "1000000",
-      null
-  ).toFilter();
+  private InDimFilter inFilter;
 
-  private static final Filter LIKE_EQUALS = new LikeDimFilter(
-      "foo",
-      "1000000",
-      null,
-      null
-  ).toFilter();
+  // cardinality of the dictionary. it will contain this many ints (as strings, of course), starting at START_INT,
+  // even numbers only.
+  @Param({"1000000"})
+  int dictionarySize;
 
-  private static final Filter BOUND_PREFIX = new BoundDimFilter(
-      "foo",
-      "50",
-      "50\uffff",
-      false,
-      false,
-      null,
-      null,
-      StringComparators.LEXICOGRAPHIC
-  ).toFilter();
+  // cardinality of the "in" filter. half of its values will be in the dictionary, half will not.
+  @Param({"10000"})
+  int filterSize;
 
-  private static final Filter REGEX_PREFIX = new RegexDimFilter(
-      "foo",
-      "^50.*",
-      null
-  ).toFilter();
-
-  private static final Filter LIKE_PREFIX = new LikeDimFilter(
-      "foo",
-      "50%",
-      null,
-      null
-  ).toFilter();
-
-  // cardinality, the dictionary will contain evenly spaced integers
-  @Param({"1000", "100000", "1000000"})
-  int cardinality;
-
-  int step;
-
-  // selector will contain a cardinality number of bitmaps; each one contains a single int: 0
+  // selector will contain a "dictionarySize" number of bitmaps; each one contains a single int.
+  // this benchmark is not about bitmap union speed, so no need for that part to be realistic.
   ColumnIndexSelector selector;
 
   @Setup
   public void setup()
   {
-    step = (END_INT - START_INT) / cardinality;
     final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
     final BitmapSerdeFactory serdeFactory = new RoaringBitmapSerdeFactory(null);
-    final List<Integer> ints = generateInts();
+    final Iterable<Integer> ints = intGenerator();
     final GenericIndexed<String> dictionary = GenericIndexed.fromIterable(
         FluentIterable.from(ints)
                       .transform(Object::toString),
@@ -133,75 +95,39 @@ public class LikeFilterBenchmark
         GenericIndexed.BYTE_BUFFER_STRATEGY
     );
     final GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.fromIterable(
-        FluentIterable.from(ints)
-                      .transform(
-                          i -> {
-                            final MutableBitmap mutableBitmap = bitmapFactory.makeEmptyMutableBitmap();
-                            mutableBitmap.add((i - START_INT) / step);
-                            return bitmapFactory.makeImmutableBitmap(mutableBitmap);
-                          }
-                      ),
+        () -> IntStream.range(0, dictionarySize)
+                       .mapToObj(
+                           i -> {
+                             final MutableBitmap mutableBitmap = bitmapFactory.makeEmptyMutableBitmap();
+                             mutableBitmap.add(i);
+                             return bitmapFactory.makeImmutableBitmap(mutableBitmap);
+                           }
+                       )
+                       .iterator(),
         serdeFactory.getObjectStrategy()
     );
     selector = new MockColumnIndexSelector(
         bitmapFactory,
         new DictionaryEncodedStringIndexSupplier(bitmapFactory, dictionary, dictionaryUtf8, bitmaps, null)
     );
+    inFilter = new InDimFilter(
+        "dummy",
+        IntStream.range(START_INT, START_INT + filterSize).mapToObj(String::valueOf).collect(Collectors.toSet())
+    );
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void matchLikeEquals(Blackhole blackhole)
+  public void doFilter(Blackhole blackhole)
   {
-    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(LIKE_EQUALS, selector);
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(inFilter, selector);
     blackhole.consume(bitmapIndex);
   }
 
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void matchSelectorEquals(Blackhole blackhole)
+  private Iterable<Integer> intGenerator()
   {
-    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(SELECTOR_EQUALS, selector);
-    blackhole.consume(bitmapIndex);
-  }
-
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void matchLikePrefix(Blackhole blackhole)
-  {
-    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(LIKE_PREFIX, selector);
-    blackhole.consume(bitmapIndex);
-  }
-
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void matchBoundPrefix(Blackhole blackhole)
-  {
-    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(BOUND_PREFIX, selector);
-    blackhole.consume(bitmapIndex);
-  }
-
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void matchRegexPrefix(Blackhole blackhole)
-  {
-    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(REGEX_PREFIX, selector);
-    blackhole.consume(bitmapIndex);
-  }
-
-  private List<Integer> generateInts()
-  {
-    final List<Integer> ints = new ArrayList<>(cardinality);
-
-    for (int i = 0; i < cardinality; i++) {
-      ints.add(START_INT + step * i);
-    }
-
-    return ints;
+    // i * 2 => half of these values will be present in the inFilter, half won't.
+    return () -> IntStream.range(0, dictionarySize).map(i -> START_INT + i * 2).boxed().iterator();
   }
 }

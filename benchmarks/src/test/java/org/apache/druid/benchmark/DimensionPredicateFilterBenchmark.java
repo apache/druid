@@ -19,7 +19,6 @@
 
 package org.apache.druid.benchmark;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
@@ -28,6 +27,7 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
@@ -51,6 +51,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -123,17 +124,13 @@ public class DimensionPredicateFilterBenchmark
     final List<Integer> ints = generateInts();
     final GenericIndexed<String> dictionary = GenericIndexed.fromIterable(
         FluentIterable.from(ints)
-                      .transform(
-                          new Function<Integer, String>()
-                          {
-                            @Override
-                            public String apply(Integer i)
-                            {
-                              return i.toString();
-                            }
-                          }
-                      ),
+                      .transform(Object::toString),
         GenericIndexed.STRING_STRATEGY
+    );
+    final GenericIndexed<ByteBuffer> dictionaryUtf8 = GenericIndexed.fromIterable(
+        FluentIterable.from(ints)
+                      .transform(i -> ByteBuffer.wrap(StringUtils.toUtf8(String.valueOf(i)))),
+        GenericIndexed.BYTE_BUFFER_STRATEGY
     );
     final GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.fromIterable(
         FluentIterable.from(ints)
@@ -148,7 +145,7 @@ public class DimensionPredicateFilterBenchmark
     );
     selector = new MockColumnIndexSelector(
         bitmapFactory,
-        new DictionaryEncodedStringIndexSupplier(bitmapFactory, dictionary, bitmaps, null)
+        new DictionaryEncodedStringIndexSupplier(bitmapFactory, dictionary, dictionaryUtf8, bitmaps, null)
     );
   }
 

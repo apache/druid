@@ -21,23 +21,15 @@ package org.apache.druid.segment.column;
 
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 
-import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.SortedSet;
 
-/**
- * Index on individual values, and provides bitmaps for the rows which contain these values
- */
-public interface StringValueSetIndex
+public interface Utf8ValueSetIndex
 {
-  /**
-   * Get the {@link ImmutableBitmap} corresponding to the supplied value
-   */
-  BitmapColumnIndex forValue(@Nullable String value);
-
   /**
    * Get an {@link Iterable} of {@link ImmutableBitmap} corresponding to the specified set of values (if they are
    * contained in the underlying column). The set must be sorted using
-   * {@link org.apache.druid.java.util.common.guava.Comparators#naturalNullsFirst()}.
+   * {@link org.apache.druid.java.util.common.ByteBufferUtils#unsignedComparator()}.
    */
-  BitmapColumnIndex forSortedValues(SortedSet<String> values);
+  BitmapColumnIndex forSortedValuesUtf8(SortedSet<ByteBuffer> valuesUtf8);
 }
