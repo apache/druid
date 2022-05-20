@@ -34,7 +34,6 @@ import org.apache.druid.segment.filter.DimensionPredicateFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
 
@@ -96,7 +95,9 @@ public class SelectorDimFilter extends AbstractOptimizableDimFilter implements D
   @Override
   public DimFilter optimize()
   {
-    return new InDimFilter(dimension, Collections.singleton(value), extractionFn, filterTuning).optimize();
+    final InDimFilter.ValuesSet valuesSet = new InDimFilter.ValuesSet();
+    valuesSet.add(value);
+    return new InDimFilter(dimension, valuesSet, extractionFn, filterTuning).optimize();
   }
 
   @Override
