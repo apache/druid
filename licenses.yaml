@@ -2363,7 +2363,7 @@ name: LZ4 Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.7.1
+version: 1.8.0
 libraries:
   - org.lz4: lz4-java
 
