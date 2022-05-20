@@ -25,9 +25,9 @@ import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 
@@ -45,7 +45,13 @@ public class K8sDruidLeaderSelector implements DruidLeaderSelector
   @SuppressFBWarnings(value = "VO_VOLATILE_INCREMENT", justification = "incremented but in single thread")
   private volatile int term = 0;
 
-  public K8sDruidLeaderSelector(@Self DruidNode self, String lockResourceName, String lockResourceNamespace, K8sDiscoveryConfig discoveryConfig, K8sLeaderElectorFactory k8sLeaderElectorFactory)
+  public K8sDruidLeaderSelector(
+      @Self DruidNode self,
+      String lockResourceName,
+      String lockResourceNamespace,
+      K8sDiscoveryConfig discoveryConfig,
+      K8sLeaderElectorFactory k8sLeaderElectorFactory
+  )
   {
     this.leaderLatch = new LeaderElectorAsyncWrapper(
         self.getServiceScheme() + "://" + self.getHostAndPortToUse(),
@@ -72,8 +78,7 @@ public class K8sDruidLeaderSelector implements DruidLeaderSelector
           }
           catch (Throwable ex) {
             LOGGER.makeAlert(ex, "listener becomeLeader() failed. Unable to become leader").emit();
-
-            CloseQuietly.close(leaderLatch);
+            closeLeaderLatchQuietly();
             leader = false;
             //Exit and Kubernetes would simply create a new replacement pod.
             System.exit(1);
@@ -147,6 +152,15 @@ public class K8sDruidLeaderSelector implements DruidLeaderSelector
     if (!lifecycleLock.canStop()) {
       throw new ISE("can't stop.");
     }
-    CloseQuietly.close(leaderLatch);
+
+    closeLeaderLatchQuietly();
+  }
+
+  private void closeLeaderLatchQuietly()
+  {
+    CloseableUtils.closeAndSuppressExceptions(
+        leaderLatch,
+        e -> LOGGER.warn("Exception caught while cleaning up leader latch")
+    );
   }
 }

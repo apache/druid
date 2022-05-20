@@ -90,7 +90,7 @@ We have included a compaction task spec for this tutorial datasource at `quickst
 
 This will compact all segments for the interval `2015-09-12/2015-09-13` in the `compaction-tutorial` datasource.
 
-The parameters in the `tuningConfig` control how many segments will be present in the compacted set of segments.
+The parameters in the `tuningConfig` control the maximum number of rows present in each compacted segment and thus affect the number of segments in the compacted set.
 
 In this tutorial example, only one compacted segment will be created per hour, as each hour has less rows than the 5000000 `maxRowsPerSegment` (note that the total number of rows is 39244).
 

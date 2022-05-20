@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
+import org.apache.druid.metadata.storage.mysql.MySQLConnectorDriverConfig;
 import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.apache.druid.utils.ConnectionUriUtils;
 import org.skife.jdbi.v2.DBI;
@@ -47,7 +48,8 @@ public class MySQLFirehoseDatabaseConnector extends SQLFirehoseDatabaseConnector
   public MySQLFirehoseDatabaseConnector(
       @JsonProperty("connectorConfig") MetadataStorageConnectorConfig connectorConfig,
       @JsonProperty("driverClassName") @Nullable String driverClassName,
-      @JacksonInject JdbcAccessSecurityConfig securityConfig
+      @JacksonInject JdbcAccessSecurityConfig securityConfig,
+      @JacksonInject MySQLConnectorDriverConfig mySQLConnectorDriverConfig
   )
   {
     this.connectorConfig = connectorConfig;
@@ -56,10 +58,8 @@ public class MySQLFirehoseDatabaseConnector extends SQLFirehoseDatabaseConnector
     datasource.setDriverClassLoader(getClass().getClassLoader());
     if (driverClassName != null) {
       datasource.setDriverClassName(driverClassName);
-    } else if (connectorConfig.getConnectURI().startsWith(ConnectionUriUtils.MARIADB_PREFIX)) {
-      datasource.setDriverClassName(ConnectionUriUtils.MARIADB_DRIVER);
     } else {
-      datasource.setDriverClassName(ConnectionUriUtils.MYSQL_DRIVER);
+      datasource.setDriverClassName(mySQLConnectorDriverConfig.getDriverClassName());
     }
     this.dbi = new DBI(datasource);
   }

@@ -53,7 +53,6 @@ import java.util.Objects;
  */
 public class NumberedOverwriteShardSpec implements OverwriteShardSpec
 {
-  public static final String TYPE = "numbered_overwrite";
   private final int partitionId;
 
   private final short startRootPartitionId;
@@ -197,6 +196,12 @@ public class NumberedOverwriteShardSpec implements OverwriteShardSpec
   public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
   {
     return true;
+  }
+
+  @Override
+  public String getType()
+  {
+    return Type.NUMBERED_OVERWRITE;
   }
 
   @Override

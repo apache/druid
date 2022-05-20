@@ -84,6 +84,12 @@ public class NoneShardSpec implements ShardSpec
   }
 
   @Override
+  public String getType()
+  {
+    return Type.NONE;
+  }
+
+  @Override
   public boolean equals(Object obj)
   {
     return obj instanceof NoneShardSpec;

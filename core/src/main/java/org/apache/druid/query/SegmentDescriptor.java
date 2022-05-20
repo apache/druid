@@ -29,7 +29,7 @@ import org.joda.time.Interval;
  * number. It's used where the data source, another essential part of {@link org.apache.druid.timeline.SegmentId}
  * is determined by the context (e. g. in org.apache.druid.client.CachingClusteredClient, where SegmentDescriptor is
  * used when Brokers tell data servers which segments to include for a particular query) and where having lean JSON
- * representations is important, because it's actively transferred detween Druid nodes. It's also for this reason that
+ * representations is important, because it's actively transferred between Druid nodes. It's also for this reason that
  * the JSON field names of SegmentDescriptor are abbreviated.
  */
 public class SegmentDescriptor

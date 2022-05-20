@@ -21,6 +21,7 @@ package org.apache.druid.server.lookup.namespace;
 
 import org.apache.druid.query.lookup.namespace.CacheGenerator;
 import org.apache.druid.query.lookup.namespace.StaticMapExtractionNamespace;
+import org.apache.druid.server.lookup.namespace.cache.CacheHandler;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 
 import javax.annotation.Nullable;
@@ -32,11 +33,11 @@ public final class StaticMapCacheGenerator implements CacheGenerator<StaticMapEx
 
   @Override
   @Nullable
-  public CacheScheduler.VersionedCache generateCache(
+  public String generateCache(
       final StaticMapExtractionNamespace namespace,
       final CacheScheduler.EntryImpl<StaticMapExtractionNamespace> id,
       final String lastVersion,
-      final CacheScheduler scheduler
+      final CacheHandler cache
   )
   {
     if (lastVersion != null) {
@@ -46,14 +47,13 @@ public final class StaticMapCacheGenerator implements CacheGenerator<StaticMapEx
           "StaticMapCacheGenerator could only be configured for a namespace which is scheduled "
           + "to be updated once, not periodically. Last version: `" + lastVersion + "`");
     }
-    CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(id, version);
     try {
-      versionedCache.getCache().putAll(namespace.getMap());
-      return versionedCache;
+      cache.getCache().putAll(namespace.getMap());
+      return version;
     }
     catch (Throwable t) {
       try {
-        versionedCache.close();
+        cache.close();
       }
       catch (Exception e) {
         t.addSuppressed(e);

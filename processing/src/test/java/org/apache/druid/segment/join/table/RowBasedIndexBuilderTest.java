@@ -21,7 +21,7 @@ package org.apache.druid.segment.join.table;
 
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -37,7 +37,7 @@ public class RowBasedIndexBuilderTest
   public void test_stringKey_uniqueKeys()
   {
     final RowBasedIndexBuilder builder =
-        new RowBasedIndexBuilder(ValueType.STRING)
+        new RowBasedIndexBuilder(ColumnType.STRING)
             .add("abc")
             .add("")
             .add(null)
@@ -47,7 +47,7 @@ public class RowBasedIndexBuilderTest
     final IndexedTable.Index index = builder.build();
 
     Assert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
-    Assert.assertEquals(ValueType.STRING, index.keyType());
+    Assert.assertEquals(ColumnType.STRING, index.keyType());
     Assert.assertTrue(index.areKeysUnique());
 
     Assert.assertEquals(intList(0), index.find("abc"));
@@ -66,7 +66,7 @@ public class RowBasedIndexBuilderTest
   public void test_stringKey_duplicateKeys()
   {
     final RowBasedIndexBuilder builder =
-        new RowBasedIndexBuilder(ValueType.STRING)
+        new RowBasedIndexBuilder(ColumnType.STRING)
             .add("abc")
             .add("")
             .add(null)
@@ -77,7 +77,7 @@ public class RowBasedIndexBuilderTest
     final IndexedTable.Index index = builder.build();
 
     Assert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
-    Assert.assertEquals(ValueType.STRING, index.keyType());
+    Assert.assertEquals(ColumnType.STRING, index.keyType());
     Assert.assertFalse(index.areKeysUnique());
 
     Assert.assertEquals(intList(0, 3), index.find("abc"));
@@ -96,7 +96,7 @@ public class RowBasedIndexBuilderTest
   public void test_longKey_uniqueKeys()
   {
     final RowBasedIndexBuilder builder =
-        new RowBasedIndexBuilder(ValueType.LONG)
+        new RowBasedIndexBuilder(ColumnType.LONG)
             .add(1)
             .add(5)
             .add(2);
@@ -104,7 +104,7 @@ public class RowBasedIndexBuilderTest
     final IndexedTable.Index index = builder.build();
 
     Assert.assertThat(index, CoreMatchers.instanceOf(UniqueLongArrayIndex.class));
-    Assert.assertEquals(ValueType.LONG, index.keyType());
+    Assert.assertEquals(ColumnType.LONG, index.keyType());
     Assert.assertTrue(index.areKeysUnique());
 
     Assert.assertEquals(intList(0), index.find(1L));
@@ -122,7 +122,7 @@ public class RowBasedIndexBuilderTest
   public void test_longKey_uniqueKeys_farApart()
   {
     final RowBasedIndexBuilder builder =
-        new RowBasedIndexBuilder(ValueType.LONG)
+        new RowBasedIndexBuilder(ColumnType.LONG)
             .add(1)
             .add(10_000_000)
             .add(2);
@@ -130,7 +130,7 @@ public class RowBasedIndexBuilderTest
     final IndexedTable.Index index = builder.build();
 
     Assert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
-    Assert.assertEquals(ValueType.LONG, index.keyType());
+    Assert.assertEquals(ColumnType.LONG, index.keyType());
     Assert.assertTrue(index.areKeysUnique());
 
     Assert.assertEquals(intList(0), index.find(1L));
@@ -148,7 +148,7 @@ public class RowBasedIndexBuilderTest
   public void test_longKey_duplicateKeys()
   {
     final RowBasedIndexBuilder builder =
-        new RowBasedIndexBuilder(ValueType.LONG)
+        new RowBasedIndexBuilder(ColumnType.LONG)
             .add(1)
             .add(5)
             .add(1)
@@ -157,7 +157,7 @@ public class RowBasedIndexBuilderTest
     final IndexedTable.Index index = builder.build();
 
     Assert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
-    Assert.assertEquals(ValueType.LONG, index.keyType());
+    Assert.assertEquals(ColumnType.LONG, index.keyType());
     Assert.assertFalse(index.areKeysUnique());
 
     Assert.assertEquals(intList(0, 2), index.find("1"));

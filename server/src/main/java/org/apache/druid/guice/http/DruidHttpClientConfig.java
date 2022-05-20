@@ -67,6 +67,9 @@ public class DruidHttpClientConfig
   @JsonProperty
   private HumanReadableBytes maxQueuedBytes = HumanReadableBytes.ZERO;
 
+  @JsonProperty
+  private boolean eagerInitialization = true;
+
   public int getNumConnections()
   {
     return numConnections;
@@ -114,5 +117,10 @@ public class DruidHttpClientConfig
   public long getMaxQueuedBytes()
   {
     return maxQueuedBytes.getBytes();
+  }
+
+  public boolean isEagerInitialization()
+  {
+    return eagerInitialization;
   }
 }

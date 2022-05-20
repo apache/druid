@@ -76,25 +76,22 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
     this.metadata = metadata;
 
     if (lazy) {
-      this.dimensionHandlers = Suppliers.memoize(() -> {
-            Map<String, DimensionHandler> dimensionHandlerMap = Maps.newLinkedHashMap();
-            for (String dim : availableDimensions) {
-              ColumnCapabilities capabilities = getColumnHolder(dim).getCapabilities();
-              DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
-              dimensionHandlerMap.put(dim, handler);
-            }
-            return dimensionHandlerMap;
-          }
-      );
+      this.dimensionHandlers = Suppliers.memoize(() -> initDimensionHandlers(availableDimensions));
     } else {
-      Map<String, DimensionHandler> dimensionHandlerMap = Maps.newLinkedHashMap();
-      for (String dim : availableDimensions) {
-        ColumnCapabilities capabilities = getColumnHolder(dim).getCapabilities();
-        DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
-        dimensionHandlerMap.put(dim, handler);
-      }
-      this.dimensionHandlers = () -> dimensionHandlerMap;
+      this.dimensionHandlers = () -> initDimensionHandlers(availableDimensions);
     }
+  }
+
+  private Map<String, DimensionHandler> initDimensionHandlers(Indexed<String> availableDimensions)
+  {
+    Map<String, DimensionHandler> dimensionHandlerMap = Maps.newLinkedHashMap();
+    for (String dim : availableDimensions) {
+      final ColumnHolder columnHolder = getColumnHolder(dim);
+      ColumnCapabilities capabilities = columnHolder.getCapabilities();
+      DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
+      dimensionHandlerMap.put(dim, handler);
+    }
+    return dimensionHandlerMap;
   }
 
   @VisibleForTesting

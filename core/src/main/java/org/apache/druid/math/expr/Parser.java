@@ -153,27 +153,32 @@ public class Parser
       if (childExpr instanceof BinaryOpExprBase) {
         BinaryOpExprBase binary = (BinaryOpExprBase) childExpr;
         if (Evals.isAllConstants(binary.left, binary.right)) {
-          return childExpr.eval(null).toExpr();
+          return childExpr.eval(InputBindings.nilBindings()).toExpr();
         }
       } else if (childExpr instanceof UnaryExpr) {
         UnaryExpr unary = (UnaryExpr) childExpr;
 
         if (unary.expr instanceof ConstantExpr) {
-          return childExpr.eval(null).toExpr();
+          return childExpr.eval(InputBindings.nilBindings()).toExpr();
         }
       } else if (childExpr instanceof FunctionExpr) {
         FunctionExpr functionExpr = (FunctionExpr) childExpr;
         List<Expr> args = functionExpr.args;
         if (Evals.isAllConstants(args)) {
-          return childExpr.eval(null).toExpr();
+          return childExpr.eval(InputBindings.nilBindings()).toExpr();
         }
       } else if (childExpr instanceof ApplyFunctionExpr) {
         ApplyFunctionExpr applyFunctionExpr = (ApplyFunctionExpr) childExpr;
         List<Expr> args = applyFunctionExpr.argsExpr;
         if (Evals.isAllConstants(args)) {
           if (applyFunctionExpr.analyzeInputs().getFreeVariables().size() == 0) {
-            return childExpr.eval(null).toExpr();
+            return childExpr.eval(InputBindings.nilBindings()).toExpr();
           }
+        }
+      } else if (childExpr instanceof ExprMacroTable.ExprMacroFunctionExpr) {
+        ExprMacroTable.ExprMacroFunctionExpr macroFn = (ExprMacroTable.ExprMacroFunctionExpr) childExpr;
+        if (Evals.isAllConstants(macroFn.getArgs())) {
+          return childExpr.eval(InputBindings.nilBindings()).toExpr();
         }
       }
       return childExpr;

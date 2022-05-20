@@ -39,8 +39,9 @@ public class GroupByQueryConfigTest
       .put("maxIntermediateRows", "2")
       .put("maxResults", "3")
       .put("maxOnDiskStorage", "4")
-      .put("maxMergingDictionarySize", "5")
-      .put("bufferGrouperMaxLoadFactor", "6")
+      .put("maxSelectorDictionarySize", "5")
+      .put("maxMergingDictionarySize", "6")
+      .put("bufferGrouperMaxLoadFactor", "7")
       .build();
 
   @Test
@@ -54,8 +55,9 @@ public class GroupByQueryConfigTest
     Assert.assertEquals(2, config.getMaxIntermediateRows());
     Assert.assertEquals(3, config.getMaxResults());
     Assert.assertEquals(4, config.getMaxOnDiskStorage());
-    Assert.assertEquals(5, config.getMaxMergingDictionarySize());
-    Assert.assertEquals(6.0, config.getBufferGrouperMaxLoadFactor(), 0.0);
+    Assert.assertEquals(5, config.getMaxSelectorDictionarySize());
+    Assert.assertEquals(6, config.getMaxMergingDictionarySize());
+    Assert.assertEquals(7.0, config.getBufferGrouperMaxLoadFactor(), 0.0);
     Assert.assertFalse(config.isApplyLimitPushDownToSegment());
   }
 
@@ -77,8 +79,9 @@ public class GroupByQueryConfigTest
     Assert.assertEquals(2, config2.getMaxIntermediateRows());
     Assert.assertEquals(3, config2.getMaxResults());
     Assert.assertEquals(4, config2.getMaxOnDiskStorage());
-    Assert.assertEquals(5, config2.getMaxMergingDictionarySize());
-    Assert.assertEquals(6.0, config2.getBufferGrouperMaxLoadFactor(), 0.0);
+    Assert.assertEquals(5, config2.getMaxSelectorDictionarySize());
+    Assert.assertEquals(6, config2.getMaxMergingDictionarySize());
+    Assert.assertEquals(7.0, config2.getBufferGrouperMaxLoadFactor(), 0.0);
     Assert.assertFalse(config2.isApplyLimitPushDownToSegment());
   }
 
@@ -92,13 +95,14 @@ public class GroupByQueryConfigTest
                     .setInterval(Intervals.of("2000/P1D"))
                     .setGranularity(Granularities.ALL)
                     .setContext(
-                        ImmutableMap.of(
-                            "groupByStrategy", "v1",
-                            "maxOnDiskStorage", 0,
-                            "maxResults", 2,
-                            "maxMergingDictionarySize", 3,
-                            "applyLimitPushDownToSegment", true
-                        )
+                        ImmutableMap.<String, Object>builder()
+                                    .put("groupByStrategy", "v1")
+                                    .put("maxOnDiskStorage", 0)
+                                    .put("maxResults", 2)
+                                    .put("maxSelectorDictionarySize", 3)
+                                    .put("maxMergingDictionarySize", 4)
+                                    .put("applyLimitPushDownToSegment", true)
+                                    .build()
                     )
                     .build()
     );
@@ -109,8 +113,9 @@ public class GroupByQueryConfigTest
     Assert.assertEquals(2, config2.getMaxIntermediateRows());
     Assert.assertEquals(2, config2.getMaxResults());
     Assert.assertEquals(0, config2.getMaxOnDiskStorage());
-    Assert.assertEquals(3, config2.getMaxMergingDictionarySize());
-    Assert.assertEquals(6.0, config2.getBufferGrouperMaxLoadFactor(), 0.0);
+    Assert.assertEquals(3, config2.getMaxSelectorDictionarySize());
+    Assert.assertEquals(4, config2.getMaxMergingDictionarySize());
+    Assert.assertEquals(7.0, config2.getBufferGrouperMaxLoadFactor(), 0.0);
     Assert.assertTrue(config2.isApplyLimitPushDownToSegment());
   }
 }

@@ -32,7 +32,7 @@ import org.apache.druid.query.expressions.SleepExprMacro;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -79,7 +79,7 @@ public class SleepSqlTest extends BaseCalciteQueryTest
                       new ExpressionVirtualColumn(
                           "v0",
                           "sleep(\"m1\")",
-                          ValueType.STRING,
+                          ColumnType.STRING,
                           createMacroTable()
                       )
                   )

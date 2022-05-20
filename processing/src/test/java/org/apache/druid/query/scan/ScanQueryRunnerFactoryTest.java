@@ -152,7 +152,7 @@ public class ScanQueryRunnerFactoryTest
         } else if (o1 < o2) {
           retVal = -1;
         }
-        if (query.getOrder().equals(ScanQuery.Order.DESCENDING)) {
+        if (query.getTimeOrder().equals(ScanQuery.Order.DESCENDING)) {
           return retVal * -1;
         }
         return retVal;
@@ -205,7 +205,7 @@ public class ScanQueryRunnerFactoryTest
         scanResultValues3.add(ScanQueryTestHelper.generateScanResultValue(timestamp, resultFormat, 1));
       }
 
-      if (query.getOrder() == ScanQuery.Order.DESCENDING) {
+      if (query.getTimeOrder() == ScanQuery.Order.DESCENDING) {
         Collections.reverse(scanResultValues1);
         Collections.reverse(scanResultValues2);
         Collections.reverse(scanResultValues3);
@@ -226,7 +226,7 @@ public class ScanQueryRunnerFactoryTest
 
       List<List<QueryRunner<ScanResultValue>>> groupedRunners = new ArrayList<>(2);
 
-      if (query.getOrder() == ScanQuery.Order.DESCENDING) {
+      if (query.getTimeOrder() == ScanQuery.Order.DESCENDING) {
         groupedRunners.add(Arrays.asList(runnerSegment2Partition1, runnerSegment2Partition2));
         groupedRunners.add(Arrays.asList(runnerSegment1Partition1, runnerSegment1Partition2));
       } else {
@@ -241,7 +241,7 @@ public class ScanQueryRunnerFactoryTest
         } else if (o1 < o2) {
           retVal = -1;
         }
-        if (query.getOrder().equals(ScanQuery.Order.DESCENDING)) {
+        if (query.getTimeOrder().equals(ScanQuery.Order.DESCENDING)) {
           return retVal * -1;
         }
         return retVal;
@@ -273,7 +273,7 @@ public class ScanQueryRunnerFactoryTest
 
       // check ordering is correct
       for (int i = 1; i < output.size(); i++) {
-        if (query.getOrder().equals(ScanQuery.Order.DESCENDING)) {
+        if (query.getTimeOrder().equals(ScanQuery.Order.DESCENDING)) {
           Assert.assertTrue(output.get(i).getFirstEventTimestamp(resultFormat) <
                             output.get(i - 1).getFirstEventTimestamp(resultFormat));
         } else {

@@ -21,6 +21,8 @@ package org.apache.druid.java.util.common.parsers;
 
 import org.apache.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
+
 /**
  * ParseException can be thrown on both ingestion side and query side.
  *
@@ -37,27 +39,56 @@ import org.apache.druid.java.util.common.StringUtils;
  */
 public class ParseException extends RuntimeException
 {
+  /**
+   * If true, the row was partially parseable, but some columns could not be parsed
+   * (e.g., non-numeric values for a numeric column)
+   */
   private final boolean fromPartiallyValidRow;
 
-  public ParseException(String formatText, Object... arguments)
+  /**
+   * The timestamp in millis when the parse exception occurred.
+   */
+  private final long timeOfExceptionMillis;
+
+  /**
+   * A string representation of the input data that had a parse exception.
+   */
+  private final String input;
+
+  public ParseException(@Nullable String input, String formatText, Object... arguments)
   {
     super(StringUtils.nonStrictFormat(formatText, arguments));
+    this.input = input;
     this.fromPartiallyValidRow = false;
+    this.timeOfExceptionMillis = System.currentTimeMillis();
   }
 
-  public ParseException(boolean fromPartiallyValidRow, String formatText, Object... arguments)
+  public ParseException(@Nullable String input, boolean fromPartiallyValidRow, String formatText, Object... arguments)
   {
     super(StringUtils.nonStrictFormat(formatText, arguments));
+    this.input = input;
     this.fromPartiallyValidRow = fromPartiallyValidRow;
+    this.timeOfExceptionMillis = System.currentTimeMillis();
   }
 
-  public ParseException(Throwable cause, String formatText, Object... arguments)
+  public ParseException(@Nullable String input, Throwable cause, String formatText, Object... arguments)
   {
-    this(false, StringUtils.nonStrictFormat(formatText, arguments), cause);
+    this(input, false, StringUtils.nonStrictFormat(formatText, arguments), cause);
   }
 
   public boolean isFromPartiallyValidRow()
   {
     return fromPartiallyValidRow;
+  }
+
+  public long getTimeOfExceptionMillis()
+  {
+    return timeOfExceptionMillis;
+  }
+
+  @Nullable
+  public String getInput()
+  {
+    return input;
   }
 }

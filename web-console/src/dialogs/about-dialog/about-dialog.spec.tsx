@@ -21,7 +21,7 @@ import React from 'react';
 
 import { AboutDialog } from './about-dialog';
 
-describe('about dialog', () => {
+describe('AboutDialog', () => {
   it('matches snapshot', () => {
     const aboutDialog = <AboutDialog onClose={() => {}} />;
     render(aboutDialog);

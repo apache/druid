@@ -52,6 +52,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.Metadata;
@@ -202,7 +203,13 @@ public class RealtimePlumber implements Plumber
   @Override
   public Object startJob()
   {
-    computeBaseDir(schema).mkdirs();
+    try {
+      FileUtils.mkdirp(computeBaseDir(schema));
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
     initializeExecutors();
     handoffNotifier.start();
     Object retVal = bootstrapSinksFromDisk();
@@ -264,6 +271,7 @@ public class RealtimePlumber implements Plumber
           config.getAppendableIndexSpec(),
           config.getMaxRowsInMemory(),
           config.getMaxBytesInMemoryOrDefault(),
+          true,
           config.getDedupColumn()
       );
       addSink(retVal);
@@ -437,8 +445,11 @@ public class RealtimePlumber implements Plumber
                     indexes,
                     schema.getGranularitySpec().isRollup(),
                     schema.getAggregators(),
+                    null,
                     mergedTarget,
                     config.getIndexSpec(),
+                    config.getIndexSpecForIntermediatePersists(),
+                    new BaseProgressIndicator(),
                     config.getSegmentWriteOutMediumFactory(),
                     -1
                 );
@@ -729,6 +740,7 @@ public class RealtimePlumber implements Plumber
           config.getAppendableIndexSpec(),
           config.getMaxRowsInMemory(),
           config.getMaxBytesInMemoryOrDefault(),
+          true,
           config.getDedupColumn(),
           hydrants
       );

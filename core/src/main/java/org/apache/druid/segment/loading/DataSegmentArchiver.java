@@ -24,6 +24,13 @@ import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 
+/**
+ * DataSegmentArchiver knows how to archive segments.
+ * Since any implementation of DataSegmentArchiver is initialized when an ingestion job starts
+ * if a deep storage extension is loaded even when that deep storage is actually not used,
+ * implementations should avoid initializing the deep storage client immediately
+ * but defer it until the deep storage client is actually used.
+ */
 @ExtensionPoint
 public interface DataSegmentArchiver
 {

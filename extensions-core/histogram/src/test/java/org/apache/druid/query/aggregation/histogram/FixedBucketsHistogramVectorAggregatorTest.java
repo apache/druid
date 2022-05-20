@@ -23,7 +23,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.easymock.EasyMock;
@@ -58,7 +58,7 @@ public class FixedBucketsHistogramVectorAggregatorTest
     EasyMock.replay(vectorValueSelector_2);
 
     ColumnCapabilities columnCapabilities
-        = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.DOUBLE);
+        = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE);
     vectorColumnSelectorFactory = createMock(VectorColumnSelectorFactory.class);
     expect(vectorColumnSelectorFactory.getColumnCapabilities("field_1")).andReturn(columnCapabilities).anyTimes();
     expect(vectorColumnSelectorFactory.makeValueSelector("field_1"))

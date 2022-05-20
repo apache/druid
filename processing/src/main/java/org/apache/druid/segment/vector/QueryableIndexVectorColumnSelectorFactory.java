@@ -23,7 +23,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -99,7 +98,7 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
       final ColumnHolder holder = index.getColumnHolder(spec.getDimension());
       if (holder == null
           || holder.getCapabilities().isDictionaryEncoded().isFalse()
-          || holder.getCapabilities().getType() != ValueType.STRING
+          || !holder.getCapabilities().is(ValueType.STRING)
           || holder.getCapabilities().hasMultipleValues().isFalse()) {
         throw new ISE(
             "Column[%s] is not a multi-value string column, do not ask for a multi-value selector",
@@ -155,7 +154,7 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
       final ColumnHolder holder = index.getColumnHolder(spec.getDimension());
       if (holder == null
           || !holder.getCapabilities().isDictionaryEncoded().isTrue()
-          || holder.getCapabilities().getType() != ValueType.STRING) {
+          || !holder.getCapabilities().is(ValueType.STRING)) {
         // Asking for a single-value dimension selector on a non-string column gets you a bunch of nulls.
         return NilVectorSelector.create(offset);
       }
@@ -266,11 +265,8 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
   public ColumnCapabilities getColumnCapabilities(final String columnName)
   {
     if (virtualColumns.exists(columnName)) {
-      return virtualColumns.getColumnCapabilities(
-          QueryableIndexStorageAdapter.getColumnInspectorForIndex(index),
-          columnName
-      );
+      return virtualColumns.getColumnCapabilities(index, columnName);
     }
-    return QueryableIndexStorageAdapter.getColumnCapabilities(index, columnName);
+    return index.getColumnCapabilities(columnName);
   }
 }

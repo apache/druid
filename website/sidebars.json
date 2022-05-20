@@ -44,6 +44,8 @@
         "label": "Stream ingestion",
         "ids": [
           "development/extensions-core/kafka-ingestion",
+          "development/extensions-core/kafka-supervisor-reference",
+          "development/extensions-core/kafka-supervisor-operations",
           "development/extensions-core/kinesis-ingestion",
           "ingestion/standalone-realtime"
         ]
@@ -53,6 +55,9 @@
         "label": "Batch ingestion",
         "ids": [
           "ingestion/native-batch",
+          "ingestion/native-batch-simple-task",
+          "ingestion/native-batch-input-sources",
+          "ingestion/native-batch-firehose",
           "ingestion/hadoop"
         ]
       },
@@ -60,9 +65,26 @@
       "ingestion/faq"
     ],
     "Querying": [
-      "querying/sql",
+      {
+        "type": "subcategory",
+        "label": "Druid SQL",
+        "ids": [
+          "querying/sql",
+          "querying/sql-data-types",
+          "querying/sql-operators",
+          "querying/sql-scalar",
+          "querying/sql-aggregations",
+          "querying/sql-multivalue-string-functions",
+          "querying/sql-api",
+          "querying/sql-jdbc",
+          "querying/sql-query-context",
+          "querying/sql-metadata-tables",
+          "querying/sql-translation"
+        ]
+      },
       "querying/querying",
       "querying/query-execution",
+      "querying/troubleshooting",
       {
         "type": "subcategory",
         "label": "Concepts",
@@ -77,6 +99,7 @@
           "querying/query-context"
         ]
       },
+      
       {
         "type": "subcategory",
         "label": "Native query types",
@@ -138,16 +161,24 @@
         "ids": [
           "operations/basic-cluster-tuning",
           "operations/segment-optimization",
+          "operations/mixed-workloads",
           "operations/http-compression",
           "operations/clean-metadata-store"
+        ]
+      },       
+      {
+        "type": "subcategory",
+        "label": "Monitoring",
+        "ids": [
+          "operations/request-logging",
+          "operations/metrics",
+          "operations/alerts"
         ]
       },       
       "operations/api-reference",
       "operations/high-availability",
       "operations/rolling-updates",
       "operations/rule-configuration",
-      "operations/metrics",
-      "operations/alerts",
       "operations/other-hadoop",
       {
         "type": "subcategory",

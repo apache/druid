@@ -28,6 +28,8 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.NilVectorSelector;
@@ -51,7 +53,7 @@ public class ColumnProcessors
    * Capabilites that are used when we return a nil selector for a nonexistent column.
    */
   public static final ColumnCapabilities NIL_COLUMN_CAPABILITIES =
-      new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+      new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
                                   .setDictionaryEncoded(true)
                                   .setDictionaryValuesUnique(true)
                                   .setDictionaryValuesSorted(true)
@@ -120,7 +122,7 @@ public class ColumnProcessors
    */
   public static <T> T makeProcessor(
       final Expr expr,
-      final ValueType exprTypeHint,
+      final ColumnType exprTypeHint,
       final ColumnProcessorFactory<T> processorFactory,
       final ColumnSelectorFactory selectorFactory
   )
@@ -215,7 +217,7 @@ public class ColumnProcessors
   {
     if (dimensionSpec.mustDecorate()) {
       // Decorating DimensionSpecs could do anything. We can't pass along any useful info other than the type.
-      return new ColumnCapabilitiesImpl().setType(ValueType.STRING);
+      return new ColumnCapabilitiesImpl().setType(ColumnType.STRING);
     } else if (dimensionSpec.getExtractionFn() != null) {
       // DimensionSpec is applying an extractionFn but *not* decorating. We have some insight into how the
       // extractionFn will behave, so let's use it.
@@ -233,7 +235,7 @@ public class ColumnProcessors
       }
 
       return new ColumnCapabilitiesImpl()
-          .setType(ValueType.STRING)
+          .setType(ColumnType.STRING)
           .setDictionaryEncoded(dictionaryEncoded)
           .setDictionaryValuesSorted(sorted && dimensionSpec.getExtractionFn().preservesOrdering())
           .setDictionaryValuesUnique(
@@ -270,9 +272,9 @@ public class ColumnProcessors
   )
   {
     final ColumnCapabilities capabilities = inputCapabilitiesFn.apply(selectorFactory);
-    final ValueType effectiveType = capabilities != null ? capabilities.getType() : processorFactory.defaultType();
+    final TypeSignature<ValueType> effectiveType = capabilities != null ? capabilities : processorFactory.defaultType();
 
-    switch (effectiveType) {
+    switch (effectiveType.getType()) {
       case STRING:
         return processorFactory.makeDimensionProcessor(
             dimensionSelectorFn.apply(selectorFactory),
@@ -287,7 +289,7 @@ public class ColumnProcessors
       case COMPLEX:
         return processorFactory.makeComplexProcessor(valueSelectorFunction.apply(selectorFactory));
       default:
-        throw new ISE("Unsupported type[%s]", effectiveType);
+        throw new ISE("Unsupported type[%s]", effectiveType.asTypeString());
     }
   }
 
@@ -340,7 +342,7 @@ public class ColumnProcessors
           );
         }
 
-        if (mayBeMultiValue(capabilities)) {
+        if (capabilities.hasMultipleValues().isMaybeTrue()) {
           return processorFactory.makeMultiValueDimensionProcessor(
               capabilities,
               multiValueDimensionSelectorFn.apply(selectorFactory)
@@ -365,8 +367,13 @@ public class ColumnProcessors
   }
 
   /**
-   * Returns true if a given set of capabilities might indicate an underlying multi-value column. Errs on the side
-   * of returning true if unknown; i.e. if this returns false, there are _definitely not_ mul.
+   * Returns true if a given set of {@link ColumnCapabilities} indicate that a processor should handle the column as a
+   * multi-value column. If capabilities are null, or if {@link ColumnCapabilities#hasMultipleValues()} is unknown,
+   * this method errs on the side of returning true. If this method returns false, the column is _definitely not_
+   * multi-value.
+   *
+   * Note, this method is not suitable for use with vector engines because null capabilities are indicative of a column
+   * that does not exist, rather than unknown capabilities.
    */
   private static boolean mayBeMultiValue(@Nullable final ColumnCapabilities capabilities)
   {

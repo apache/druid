@@ -19,7 +19,7 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 import java.util.Arrays;
 
@@ -31,9 +31,9 @@ public final class ExprEvalDoubleVector extends ExprEvalVector<double[]>
   }
 
   @Override
-  public ExprType getType()
+  public ExpressionType getType()
   {
-    return ExprType.DOUBLE;
+    return ExpressionType.DOUBLE;
   }
 
   @Override

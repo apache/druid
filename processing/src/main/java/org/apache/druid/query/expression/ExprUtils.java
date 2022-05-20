@@ -35,13 +35,6 @@ import javax.annotation.Nullable;
 
 public class ExprUtils
 {
-  private static final Expr.ObjectBinding NIL_BINDINGS = name -> null;
-
-  public static Expr.ObjectBinding nilBindings()
-  {
-    return NIL_BINDINGS;
-  }
-
   static DateTimeZone toTimeZone(final Expr timeZoneArg)
   {
     if (!timeZoneArg.isLiteral()) {
@@ -110,19 +103,6 @@ public class ExprUtils
   static boolean isStringLiteral(final Expr expr)
   {
     return (expr.isLiteral() && expr.getLiteralValue() instanceof String)
-           || (NullHandling.replaceWithDefault() && isNullLiteral(expr));
-  }
-
-  /**
-   * True if Expr is a null literal.
-   *
-   * In non-SQL-compliant null handling mode, this method will return true for either a null literal or an empty string
-   * literal (they are treated equivalently and we cannot tell the difference).
-   *
-   * In SQL-compliant null handling mode, this method will only return true for an actual null literal.
-   */
-  static boolean isNullLiteral(final Expr expr)
-  {
-    return expr.isLiteral() && expr.getLiteralValue() == null;
+           || (NullHandling.replaceWithDefault() && expr.isNullLiteral());
   }
 }

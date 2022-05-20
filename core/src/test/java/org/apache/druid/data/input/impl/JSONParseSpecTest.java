@@ -46,7 +46,7 @@ public class JSONParseSpecTest
   {
     final JSONParseSpec parseSpec = new JSONParseSpec(
         new TimestampSpec("timestamp", "iso", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo")), null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
         new JSONPathSpec(
             true,
             ImmutableList.of(
@@ -88,7 +88,7 @@ public class JSONParseSpecTest
   {
     final JSONParseSpec parseSpec = new JSONParseSpec(
         new TimestampSpec("timestamp", "iso", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo")), null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))),
         new JSONPathSpec(
             true,
             ImmutableList.of(
@@ -120,7 +120,7 @@ public class JSONParseSpecTest
     feature.put("ALLOW_UNQUOTED_CONTROL_CHARS", true);
     JSONParseSpec spec = new JSONParseSpec(
         new TimestampSpec("timestamp", "iso", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo")), null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
         null,
         feature,
         false
@@ -144,8 +144,8 @@ public class JSONParseSpecTest
               .usingGetClass()
               .withPrefabValues(
                 DimensionsSpec.class,
-                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo")), null, null),
-                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("baz", "buzz")), null, null)
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("baz", "buzz")))
               )
               .withPrefabValues(
               ObjectMapper.class,

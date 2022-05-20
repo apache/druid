@@ -132,9 +132,9 @@ public class SketchHolder
   public void updateUnion(Union union)
   {
     if (obj instanceof Memory) {
-      union.update((Memory) obj);
+      union.union((Memory) obj);
     } else {
-      union.update(getSketch());
+      union.union(getSketch());
     }
   }
 
@@ -267,12 +267,12 @@ public class SketchHolder
       case INTERSECT:
         Intersection intersection = (Intersection) SetOperation.builder().setNominalEntries(sketchSize).build(Family.INTERSECTION);
         for (Object o : holders) {
-          intersection.update(((SketchHolder) o).getSketch());
+          intersection.intersect(((SketchHolder) o).getSketch());
         }
         return SketchHolder.of(intersection.getResult(false, null));
       case NOT:
         if (holders.length < 1) {
-          throw new IllegalArgumentException("A-Not-B requires atleast 1 sketch");
+          throw new IllegalArgumentException("A-Not-B requires at least 1 sketch");
         }
 
         if (holders.length == 1) {
@@ -282,8 +282,7 @@ public class SketchHolder
         Sketch result = ((SketchHolder) holders[0]).getSketch();
         for (int i = 1; i < holders.length; i++) {
           AnotB anotb = (AnotB) SetOperation.builder().setNominalEntries(sketchSize).build(Family.A_NOT_B);
-          anotb.update(result, ((SketchHolder) holders[i]).getSketch());
-          result = anotb.getResult(false, null);
+          result = anotb.aNotB(result, ((SketchHolder) holders[i]).getSketch());
         }
         return SketchHolder.of(result);
       default:

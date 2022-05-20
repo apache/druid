@@ -27,7 +27,6 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.GenericQueryMetricsFactory;
@@ -37,8 +36,9 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -66,13 +66,11 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   public QueryRunner<ScanResultValue> mergeResults(final QueryRunner<ScanResultValue> runner)
   {
     return (queryPlus, responseContext) -> {
-      // Ensure "legacy" is a non-null value, such that all other nodes this query is forwarded to will treat it
-      // the same way, even if they have different default legacy values.
-      //
-      // Also, remove "offset" and add it to the "limit" (we won't push the offset down, just apply it here, at the
-      // merge at the top of the stack).
       final ScanQuery originalQuery = ((ScanQuery) (queryPlus.getQuery()));
+      ScanQuery.verifyOrderByForNativeExecution(originalQuery);
 
+      // Remove "offset" and add it to the "limit" (we won't push the offset down, just apply it here, at the
+      // merge at the top of the stack).
       final long newLimit;
       if (!originalQuery.isLimited()) {
         // Unlimited stays unlimited.
@@ -87,6 +85,8 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         newLimit = originalQuery.getScanRowsLimit() + originalQuery.getScanRowsOffset();
       }
 
+      // Ensure "legacy" is a non-null value, such that all other nodes this query is forwarded to will treat it
+      // the same way, even if they have different default legacy values.
       final ScanQuery queryToRun = originalQuery.withNonNullLegacy(scanQueryConfig)
                                                 .withOffset(0)
                                                 .withLimit(newLimit);
@@ -108,7 +108,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
               @Override
               public void cleanup(ScanQueryLimitRowIterator iterFromMake)
               {
-                CloseQuietly.close(iterFromMake);
+                CloseableUtils.closeAndWrapExceptions(iterFromMake);
               }
             });
       }
@@ -168,11 +168,11 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
 
       for (String columnName : query.getColumns()) {
         // With the Scan query we only know the columnType for virtual columns. Let's report those, at least.
-        final ValueType columnType;
+        final ColumnType columnType;
 
         final VirtualColumn virtualColumn = query.getVirtualColumns().getVirtualColumn(columnName);
         if (virtualColumn != null) {
-          columnType = virtualColumn.capabilities(columnName).getType();
+          columnType = virtualColumn.capabilities(columnName).toColumnType();
         } else {
           // Unknown type. In the future, it would be nice to have a way to fill these in.
           columnType = null;
