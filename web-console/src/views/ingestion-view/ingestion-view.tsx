@@ -219,11 +219,12 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     super(props, context);
 
     const taskFilter: Filter[] = [];
-    if (props.taskGroupId) taskFilter.push({ id: 'group_id', value: props.taskGroupId });
-    if (props.datasourceId) taskFilter.push({ id: 'datasource', value: props.datasourceId });
+    if (props.taskGroupId) taskFilter.push({ id: 'group_id', value: `=${props.taskGroupId}` });
+    if (props.datasourceId) taskFilter.push({ id: 'datasource', value: `=${props.datasourceId}` });
 
     const supervisorFilter: Filter[] = [];
-    if (props.datasourceId) supervisorFilter.push({ id: 'datasource', value: props.datasourceId });
+    if (props.datasourceId)
+      supervisorFilter.push({ id: 'datasource', value: `=${props.datasourceId}` });
 
     this.state = {
       supervisorsState: QueryState.INIT,
