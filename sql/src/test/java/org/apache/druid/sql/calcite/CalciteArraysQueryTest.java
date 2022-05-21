@@ -2195,7 +2195,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                                         .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
                                                         .setGranularity(Granularities.ALL)
                                                         .setInterval(querySegmentSpec(Filtration.eternity()))
-                                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                                                         .setDimensions(
                                                             new DefaultDimensionSpec("dim1", "d0"),
                                                             new DefaultDimensionSpec("dim2", "d1"),
@@ -2238,7 +2238,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                         .setDimensions(new DefaultDimensionSpec("_a0", "d0", ColumnType.LONG_ARRAY))
                         .setAggregatorSpecs(new CountAggregatorFactory("a0"))
                         .build()
@@ -2268,7 +2268,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                                         .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
                                                         .setGranularity(Granularities.ALL)
                                                         .setInterval(querySegmentSpec(Filtration.eternity()))
-                                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                                                         .setDimensions(
                                                             new DefaultDimensionSpec("dim1", "d0"),
                                                             new DefaultDimensionSpec("dim2", "d1"),
@@ -2304,7 +2304,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                         .setDimensions(new DefaultDimensionSpec("_a0", "d0", ColumnType.STRING_ARRAY))
                         .setAggregatorSpecs(new CountAggregatorFactory("a0"))
                         .build()
@@ -2322,7 +2322,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     requireMergeBuffers(3);
     cannotVectorize();
     testQuery(
-        "select cntarray, count(*) from ( select dim1, dim2, ARRAY_AGG(cnt) as cntarray from ( select dim1, dim2, dim3, cast( count(*) as VARCHAR ) as cnt from foo group by 1, 2, 3 ) group by 1, 2 ) group by 1",
+        "select cntarray, count(*) from ( select dim1, dim2, ARRAY_AGG(cnt) as cntarray from ( select dim1, dim2, dim3, cast( count(*) as DOUBLE ) as cnt from foo group by 1, 2, 3 ) group by 1, 2 ) group by 1",
         QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
         ImmutableList.of(
             GroupByQuery
@@ -2335,7 +2335,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                                 .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
                                                 .setGranularity(Granularities.ALL)
                                                 .setInterval(querySegmentSpec(Filtration.eternity()))
-                                                .setContext(QUERY_CONTEXT_DEFAULT)
+                                                .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                                                 .setDimensions(
                                                     new DefaultDimensionSpec("dim1", "d0"),
                                                     new DefaultDimensionSpec("dim2", "d1"),
@@ -2371,7 +2371,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
                 .setGranularity(Granularities.ALL)
                 .setInterval(querySegmentSpec(Filtration.eternity()))
-                .setContext(QUERY_CONTEXT_DEFAULT)
+                .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                 .setDimensions(new DefaultDimensionSpec("_a0", "d0", ColumnType.DOUBLE_ARRAY))
                 .setAggregatorSpecs(new CountAggregatorFactory("a0"))
                 .build()

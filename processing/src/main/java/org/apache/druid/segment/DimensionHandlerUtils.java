@@ -448,7 +448,7 @@ public final class DimensionHandlerUtils
     if (obj instanceof List) {
       return ComparableStringArray.of((String[]) ((List) obj).toArray(new String[0]));
     }
-    if(obj instanceof Object[]) {
+    if (obj instanceof Object[]) {
       Object[] objects = (Object[]) obj;
       String[] delegate = new String[objects.length];
       for (int i = 0; i < objects.length; i++) {
@@ -456,7 +456,11 @@ public final class DimensionHandlerUtils
       }
       return ComparableStringArray.of(delegate);
     }
-    throw new ISE("Unable to convert object of type[%s] to [%s]", obj.getClass().getName(), ComparableStringArray.class.getName());
+    throw new ISE(
+        "Unable to convert object of type[%s] to [%s]",
+        obj.getClass().getName(),
+        ComparableStringArray.class.getName()
+    );
   }
 
   public static int compareObjectsAsType(
