@@ -23,12 +23,14 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.JvmUtils;
 
+import javax.annotation.Nullable;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
+import java.util.Comparator;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -47,6 +49,8 @@ public class ByteBufferUtils
 
   // null if unmap is supported
   private static final RuntimeException UNMAP_NOT_SUPPORTED_EXCEPTION;
+
+  private static final Comparator<ByteBuffer> COMPARATOR_UNSIGNED = new UnsignedByteBufferComparator();
 
   static {
     Object unmap = null;
@@ -210,5 +214,80 @@ public class ByteBufferUtils
   public static void unmap(MappedByteBuffer buffer)
   {
     free(buffer);
+  }
+
+  /**
+   * Compares two ByteBuffer ranges using unsigned byte ordering.
+   *
+   * Different from {@link ByteBuffer#compareTo}, which uses signed ordering.
+   */
+  public static int compareByteBuffers(
+      final ByteBuffer buf1,
+      final int position1,
+      final int length1,
+      final ByteBuffer buf2,
+      final int position2,
+      final int length2
+  )
+  {
+    final int commonLength = Math.min(length1, length2);
+
+    for (int i = 0; i < commonLength; i++) {
+      final byte byte1 = buf1.get(position1 + i);
+      final byte byte2 = buf2.get(position2 + i);
+      final int cmp = (byte1 & 0xFF) - (byte2 & 0xFF); // Unsigned comparison
+      if (cmp != 0) {
+        return cmp;
+      }
+    }
+
+    return Integer.compare(length1, length2);
+  }
+
+  /**
+   * Compares two ByteBuffers from their positions to their limits using unsigned byte ordering. Accepts null
+   * buffers, which are ordered earlier than any nonnull buffer.
+   *
+   * Different from {@link ByteBuffer#compareTo}, which uses signed ordering.
+   */
+  public static int compareByteBuffers(
+      @Nullable final ByteBuffer buf1,
+      @Nullable final ByteBuffer buf2
+  )
+  {
+    if (buf1 == null) {
+      return buf2 == null ? 0 : -1;
+    }
+
+    if (buf2 == null) {
+      return 1;
+    }
+
+    return ByteBufferUtils.compareByteBuffers(
+        buf1,
+        buf1.position(),
+        buf1.remaining(),
+        buf2,
+        buf2.position(),
+        buf2.remaining()
+    );
+  }
+
+  /**
+   * Comparator that compares two {@link ByteBuffer} using unsigned ordering. Null buffers are accepted, and
+   * are ordered earlier than any nonnull buffer.
+   */
+  public static Comparator<ByteBuffer> unsignedComparator()
+  {
+    return COMPARATOR_UNSIGNED;
+  }
+
+  private static class UnsignedByteBufferComparator implements Comparator<ByteBuffer>
+  {
+    @Override
+    public int compare(@Nullable ByteBuffer o1, @Nullable ByteBuffer o2)
+    {
+      return ByteBufferUtils.compareByteBuffers(o1, o2);
+    }
   }
 }

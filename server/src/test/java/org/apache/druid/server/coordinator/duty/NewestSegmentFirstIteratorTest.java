@@ -133,6 +133,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null,
             null,
+            null,
             null
         ),
         null,
@@ -166,6 +167,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null,
             new DynamicPartitionsSpec(null, 1000L),
+            null,
             null,
             null,
             null,
@@ -221,6 +223,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null,
             null,
+            null,
             null
         ),
         null,
@@ -252,6 +255,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null,
             1000L,
+            null,
             null,
             null,
             null,
@@ -309,6 +313,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null,
             null,
+            null,
             null
         ),
         null,
@@ -342,6 +347,7 @@ public class NewestSegmentFirstIteratorTest
             1000L,
             null,
             new DynamicPartitionsSpec(null, null),
+            null,
             null,
             null,
             null,
@@ -397,6 +403,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null,
             null,
+            null,
             null
         ),
         null,
@@ -430,6 +437,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null,
             new SingleDimensionPartitionsSpec(10000, null, "dim", false),
+            null,
             null,
             null,
             null,

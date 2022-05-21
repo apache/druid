@@ -83,6 +83,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -128,6 +129,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private static final Logger LOG = new Logger(ParallelIndexSupervisorTask.class);
 
   private static final String TASK_PHASE_FAILURE_MSG = "Failed in phase[%s]. See task logs for details.";
+
+  // Sometimes Druid estimates one shard for hash partitioning despite conditions
+  // indicating that there ought to be more than one. We have not been able to
+  // reproduce but looking at the code around where the following constant is used one
+  // possibility is that the sketch's estimate is negative. If that case happens
+  // code has been added to log it and to set the estimate to the value of the
+  // following constant. It is not necessary to parametize this value since if this
+  // happens it is a bug and the new logging may now provide some evidence to reproduce
+  // and fix
+  private static final long DEFAULT_NUM_SHARDS_WHEN_ESTIMATE_GOES_NEGATIVE = 7L;
 
   private final ParallelIndexIngestionSpec ingestionSchema;
   /**
@@ -703,6 +714,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             cardinalityRunner.getReports().values(),
             effectiveMaxRowsPerSegment
         );
+
+        // This is for potential debugging in case we suspect bad estimation of cardinalities etc,
+        LOG.debug("intervalToNumShards: %s", intervalToNumShards.toString());
+
       } else {
         intervalToNumShards = CollectionUtils.mapValues(
             mergeCardinalityReports(cardinalityRunner.getReports().values()),
@@ -901,13 +916,40 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     // aggregate all the sub-reports
     Map<Interval, Union> finalCollectors = mergeCardinalityReports(reports);
+    return computeIntervalToNumShards(maxRowsPerSegment, finalCollectors);
+  }
 
+  @Nonnull
+  @VisibleForTesting
+  static Map<Interval, Integer> computeIntervalToNumShards(
+      int maxRowsPerSegment,
+      Map<Interval, Union> finalCollectors
+  )
+  {
     return CollectionUtils.mapValues(
         finalCollectors,
         union -> {
           final double estimatedCardinality = union.getEstimate();
-          // determine numShards based on maxRowsPerSegment and the cardinality
-          final long estimatedNumShards = Math.round(estimatedCardinality / maxRowsPerSegment);
+          final long estimatedNumShards;
+          if (estimatedCardinality <= 0) {
+            estimatedNumShards = DEFAULT_NUM_SHARDS_WHEN_ESTIMATE_GOES_NEGATIVE;
+            LOG.warn("Estimated cardinality for union of estimates is zero or less: %.2f, setting num shards to %d",
+                     estimatedCardinality, estimatedNumShards
+            );
+          } else {
+            // determine numShards based on maxRowsPerSegment and the cardinality
+            estimatedNumShards = Math.round(estimatedCardinality / maxRowsPerSegment);
+          }
+          LOG.info("estimatedNumShards %d given estimated cardinality %.2f and maxRowsPerSegment %d",
+                    estimatedNumShards, estimatedCardinality, maxRowsPerSegment
+          );
+          // We have seen this before in the wild in situations where more shards should have been created,
+          // log it if it happens with some information & context
+          if (estimatedNumShards == 1) {
+            LOG.info("estimatedNumShards is ONE (%d) given estimated cardinality %.2f and maxRowsPerSegment %d",
+                      estimatedNumShards, estimatedCardinality, maxRowsPerSegment
+            );
+          }
           try {
             return Math.max(Math.toIntExact(estimatedNumShards), 1);
           }
