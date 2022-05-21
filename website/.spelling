@@ -1580,6 +1580,7 @@ pre-existing
 pushdown
 row1
 subtotalsSpec
+tradeoff
 unnested
 unnesting
  - ../docs/querying/having.md

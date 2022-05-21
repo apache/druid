@@ -241,6 +241,11 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     return new ArrayList<>(mergedDictionary);
   }
 
+  public boolean isSpillingAllowed()
+  {
+    return spillingAllowed;
+  }
+
   public void setSpillingAllowed(final boolean spillingAllowed)
   {
     this.spillingAllowed = spillingAllowed;
