@@ -99,8 +99,8 @@ This release includes several improvements for querying:
 - Added the ability to authorize the usage of query context parameters (#12396)
 - Improved query IDs to make it easier to link queryies and sub-queries for end-to-end visibility of a query (#11809)
 - Added a safe divide function to protect against division by 0 (#11904)
-- You can now add a query context to internally generated SegmentMetadata Querie (#11429)
-- Added support for Druid complex types to the native expression processing system to make all Druid data to be usable within expressions (#11853)
+- You can now add a query context to internally generated `SegmentMetadata` Query (#11429)
+- Added support for Druid complex types to the native expression processing system to make all Druid data usable within expressions (#11853, #12016)
 
 ## Streaming Ingestion
 
@@ -133,7 +133,7 @@ This release includes several improvements for native batch ingestion:
 - Fixed the OOM failures in dimension distribution phase of parallel indexing (#12331)
 - Added support to handle null dimension values while creating partition boundaries (#11973)
 
-## Ingestion general
+## Improvements to ingestion in general
 
 This release includes several improvements for ingestion in general:
 - Removed the template modifier from `IncrementalIndex<AggregatorType>` because it is no longer required
@@ -143,26 +143,26 @@ This release includes several improvements for ingestion in general:
 - `Granularity.granularitiesFinerThan` now returns ALL if you pass in ALL (#12003)
 - Added a configuation parameter for appending tasks to allow them to use a SHARED lock (#12041)
 - `SchemaRegistryBasedAvroBytesDecoder` now throws a `ParseException` instead of RE when it fails to retrieve a schema (#12080)
-- Add `includeAllDimensions` to `dimensionsSpec` to put all explicit dimensions first in `InputRow` and subsequently any other dimensions found in input data (#12276)
-
+- Added `includeAllDimensions` to `dimensionsSpec` to put all explicit dimensions first in `InputRow` and subsequently any other dimensions found in input data (#12276)
+- Added the ability to store null columns in the Segments (#12279)
 
 ## Compaction
 
 This release includes several improvements for compaction:
 -  Automatic compaction now supports complex dimensions (#11924)
 -  Automatic compaction now supports overlapping segment intervals (#12062)
-- You can now configure automatic compaction to calculate ratio of slots available for compaction tasks from maximum slots including autoscaler maximum worker nodes  (#12263)
+- You can now configure automatic compaction to calculate ratio of slots available for compaction tasks from maximum slots including autoscaler maximum worker nodes (#12263)
 - You can configure the Coordinator auto compaction duty period separately from other indexing duties (#12263)
 
 ## SQL
 
 ### Human-readable and actionable SQL error messages
-Till 0.22.1, if a SQL query is not supported, users get a very cryptic and unhelpful error message. With this change, error message will include exactly what part of their SQL query is not supported by druid. One such example is executing a scan query that is ordered on a dimension other than time column. 
+Until version 0.22.1, if you issued an unsupported SQL query, Druid would throw very cryptic and unhelpful error messages. With this change, error messages include exactly the part of the SQL query that is not supported in Druid. For example, if you run a scan query that is ordered on a dimension other than time column. 
 
 (#11911)
 
 ### Cancel API for SQL queries
-Users can now cancel SQL queries just like native queries can be cancelled. A new API has been added for cancelling SQL queries. Web-console now users this API to cancel SQL queries. Earlier, it only used to close the client connection while sql query keeps running in druid. 
+We've added a new API to cancel SQL queries, so you can now cancel SQL queries just like you can cancel native queries. You can use the API from the Web-console. In previous versions, cancellation from the console only closed the client connection while the SQL query kept running on Druid. 
 
 (#11643)
 (#11738)
@@ -176,6 +176,12 @@ This release includes several additional improvements for SQL:
 - You can now use scans to as outer queries (#11831)
 - Added a class to sanitize JDBC exceptions and to log them (#11843)
 - Added type headers to response format to make it easier for clients to interpret the results of SQL queries (#11914)
+- Improved the way the `DruidRexExecutor` handles numeric arrays (#11968)
+- Druid now returns an empty result after optimizing a group by query to a time series query (#12065)
+- As an administrator, you can now configure the implementation for
+APPROX_COUNT_DISTINCT and COUNT(DISTINCT expr) in approximate mode (#11181)
+- 
+
 
 ## Coordinator/Overlord
 
@@ -247,6 +253,11 @@ Today, any context params are allowed to users. This can cause 1) a bad UX if th
 The context parameter authorization can be enabled using druid.`auth.authorizeQueryContextParam`s. This is disabled by default to avoid any hassle when performing an upgrade.
 
 (#12396)
+
+## Other security improvements
+
+This release includes several additional improvements for security:
+- You can now optionally enable auhorization on Druid system tables (#11720)
 
 ## Performance improvements
 
