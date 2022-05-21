@@ -393,6 +393,24 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testReplaceWithoutPartitionedBy()
+  {
+    testIngestionQuery()
+        .sql("REPLACE INTO dst OVERWRITE ALL SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo")
+        .expectValidationError(SqlPlanningException.class, "REPLACE statements must specify PARTITIONED BY clause explicitly")
+        .verify();
+  }
+
+  @Test
+  public void testReplaceWithoutPartitionedByWithClusteredBy()
+  {
+    testIngestionQuery()
+        .sql("REPLACE INTO dst OVERWRITE ALL SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo CLUSTERED BY dim1")
+        .expectValidationError(SqlPlanningException.class, "CLUSTERED BY clause found before PARTITIONED BY, the PARITITIONED BY clause has to be specified first before the CLUSTERED BY clause.")
+        .verify();
+  }
+
+  @Test
   public void testReplaceWithoutOverwriteClause()
   {
     testIngestionQuery()
