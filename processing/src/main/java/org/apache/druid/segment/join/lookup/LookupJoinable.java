@@ -117,14 +117,14 @@ public class LookupJoinable implements Joinable
       }
 
       if (nonNullKeys > maxNumValues) {
-        return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), true);
+        return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
       } else if (nonNullKeys == keys.size()) {
         return new ColumnValuesWithUniqueFlag(keys, true);
       } else {
         return new ColumnValuesWithUniqueFlag(Sets.difference(keys, nullEquivalentValues), true);
       }
     } else {
-      return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), true);
+      return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
     }
   }
 

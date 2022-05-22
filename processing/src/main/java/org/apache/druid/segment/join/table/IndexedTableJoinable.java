@@ -99,7 +99,7 @@ public class IndexedTableJoinable implements Joinable
     final int columnPosition = table.rowSignature().indexOf(columnName);
 
     if (columnPosition < 0) {
-      return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), true);
+      return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
     }
 
     try (final IndexedTable.Reader reader = table.columnReader(columnPosition)) {
@@ -116,12 +116,12 @@ public class IndexedTableJoinable implements Joinable
 
         if (!NullHandling.isNullOrEquivalent(s)) {
           if (!allValues.add(s)) {
-            // Duplicate found. Since the values are not all unique, we must return an empty Optional.
+            // Duplicate found
             allUnique = false;
           }
 
           if (allValues.size() > maxNumValues) {
-            return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), true);
+            return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
           }
         }
       }
