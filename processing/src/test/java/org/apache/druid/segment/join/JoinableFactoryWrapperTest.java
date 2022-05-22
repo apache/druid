@@ -49,6 +49,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
@@ -100,11 +101,26 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
       RowSignature.builder().add("country", ColumnType.STRING).build()
   );
 
+  private static final InlineDataSource NULL_INDEXED_TABLE_DS = InlineDataSource.fromIterable(
+      ImmutableList.of(
+          new Object[]{null}
+      ),
+      RowSignature.builder().add("nullCol", ColumnType.STRING).build()
+  );
+
   private static final IndexedTable TEST_INDEXED_TABLE = new RowBasedIndexedTable<>(
       INDEXED_TABLE_DS.getRowsAsList(),
       INDEXED_TABLE_DS.rowAdapter(),
       INDEXED_TABLE_DS.getRowSignature(),
       ImmutableSet.of("country"),
+      DateTimes.nowUtc().toString()
+  );
+
+  private static final IndexedTable TEST_NULL_INDEXED_TABLE = new RowBasedIndexedTable<>(
+      NULL_INDEXED_TABLE_DS.getRowsAsList(),
+      NULL_INDEXED_TABLE_DS.rowAdapter(),
+      NULL_INDEXED_TABLE_DS.getRowSignature(),
+      ImmutableSet.of("nullCol"),
       DateTimes.nowUtc().toString()
   );
 
@@ -677,6 +693,31 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
         Pair.of(
             ImmutableList.of(),
             ImmutableList.of(clause)
+        ),
+        conversion
+    );
+  }
+
+  @Test
+  public void test_convertJoinsToFilters_convertToFalseFilterWhenOnlyNullValues()
+  {
+    final JoinableClause clause = new JoinableClause(
+        "j.",
+        new IndexedTableJoinable(TEST_NULL_INDEXED_TABLE),
+        JoinType.INNER,
+        JoinConditionAnalysis.forExpression("x == \"j.nullCol\"", "j.", ExprMacroTable.nil())
+    );
+
+    final Pair<List<Filter>, List<JoinableClause>> conversion = JoinableFactoryWrapper.convertJoinsToFilters(
+        ImmutableList.of(clause),
+        ImmutableSet.of("x"),
+        Integer.MAX_VALUE
+    );
+
+    Assert.assertEquals(
+        Pair.of(
+            ImmutableList.of(FalseFilter.instance()),
+            ImmutableList.of()
         ),
         conversion
     );
