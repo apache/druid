@@ -253,6 +253,7 @@
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/com\.google\.oauth-client/google\-oauth\-client@.*$</packageUrl>
     <cve>CVE-2020-7692</cve>
+    <cve>CVE-2021-22573</cve>
   </suppress>
   <suppress>
     <!--
@@ -286,6 +287,11 @@
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/log4j/log4j@1.2.17$</packageUrl>
     <cve>CVE-2019-17571</cve>
+    <cve>CVE-2021-4104</cve>
+    <cve>CVE-2020-9493</cve>
+    <cve>CVE-2022-23307</cve>
+    <cve>CVE-2022-23305</cve>
+    <cve>CVE-2022-23302</cve>
   </suppress>
   <suppress>
     <!--
@@ -511,6 +517,14 @@
    ]]></notes>
     <cve>CVE-2021-32626</cve>
     <cve>CVE-2022-24735</cve>
+  </suppress>
+
+  <suppress>
+    <!-- pac4j-core-3.8.3 -->
+    <notes><![CDATA[
+   file name: pac4j-core-3.8.3.jar
+   ]]></notes>
+    <cve>CVE-2021-44878</cve>
   </suppress>
 
 </suppressions>
