@@ -193,6 +193,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private IngestionState ingestionState;
 
+
   @JsonCreator
   public ParallelIndexSupervisorTask(
       @JsonProperty("id") String id,
@@ -220,25 +221,26 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         taskResource,
         ingestionSchema.getDataSchema().getDataSource(),
         context,
-        ingestionSchema.getTuningConfig().getMaxAllowedLockCount()
+        ingestionSchema.getTuningConfig().getMaxAllowedLockCount(),
+        computeBatchIngestionMode(ingestionSchema.getIOConfig())
     );
 
     this.ingestionSchema = ingestionSchema;
     this.baseSubtaskSpecName = baseSubtaskSpecName == null ? getId() : baseSubtaskSpecName;
-
-    if (ingestionSchema.getIOConfig().isDropExisting() &&
+    if (getIngestionMode() == IngestionMode.REPLACE &&
         ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals().isEmpty()) {
-      throw new ISE("GranularitySpec's intervals cannot be empty when setting dropExisting to true.");
+      throw new ISE("GranularitySpec's intervals cannot be empty when using replace.");
     }
 
-    if (isGuaranteedRollup(ingestionSchema.getIOConfig(), ingestionSchema.getTuningConfig())) {
+    if (isGuaranteedRollup(getIngestionMode(), ingestionSchema.getTuningConfig())) {
       checkPartitionsSpecForForceGuaranteedRollup(ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec());
     }
 
     this.baseInputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
         ingestionSchema.getDataSchema().getParser()
     );
-    this.missingIntervalsInOverwriteMode = !ingestionSchema.getIOConfig().isAppendToExisting()
+    this.missingIntervalsInOverwriteMode = (getIngestionMode()
+                                            != IngestionMode.APPEND)
                                            && ingestionSchema.getDataSchema()
                                                              .getGranularitySpec()
                                                              .inputIntervals()
@@ -427,13 +429,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Override
   public boolean requireLockExistingSegments()
   {
-    return !ingestionSchema.getIOConfig().isAppendToExisting();
+    return getIngestionMode() != IngestionMode.APPEND;
   }
 
   @Override
   public boolean isPerfectRollup()
   {
-    return isGuaranteedRollup(getIngestionSchema().getIOConfig(), getIngestionSchema().getTuningConfig());
+    return isGuaranteedRollup(
+        getIngestionMode(),
+        getIngestionSchema().getTuningConfig()
+    );
   }
 
   @Nullable
@@ -451,6 +456,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
+
     if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
         != TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS) {
       LOG.warn("maxSavedParseExceptions is not supported yet");
@@ -489,8 +495,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       initializeSubTaskCleaner();
 
       if (isParallelMode()) {
+        // emit metric for parallel batch ingestion mode:
+        emitMetric(toolbox.getEmitter(), "ingest/count", 1);
+
         this.toolbox = toolbox;
-        if (isGuaranteedRollup(ingestionSchema.getIOConfig(), ingestionSchema.getTuningConfig())) {
+        if (isGuaranteedRollup(
+            getIngestionMode(),
+            ingestionSchema.getTuningConfig()
+        )) {
           return runMultiPhaseParallel(toolbox);
         } else {
           return runSinglePhaseParallel(toolbox);
@@ -1108,8 +1120,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         ingestionSchema
     );
 
-    Set<DataSegment> tombStones;
-    if (ingestionSchema.getIOConfig().isDropExisting()) {
+
+    Set<DataSegment> tombStones = Collections.emptySet();
+    if (getIngestionMode() == IngestionMode.REPLACE) {
       TombstoneHelper tombstoneHelper = new TombstoneHelper(
           newSegments,
           ingestionSchema.getDataSchema(),
@@ -1127,8 +1140,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           );
           tombstonesAnShards.put(interval, segmentIdWithShardSpec);
         }
+
         tombStones = tombstoneHelper.computeTombstones(tombstonesAnShards);
+        // add tombstones
         newSegments.addAll(tombStones);
+
         LOG.debugSegments(tombStones, "To publish tombstones");
       }
     }
@@ -1146,6 +1162,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     if (published) {
       LOG.info("Published [%d] segments", newSegments.size());
+
+      // segment metrics:
+      emitMetric(toolbox.getEmitter(), "ingest/tombstones/count", tombStones.size());
+      emitMetric(toolbox.getEmitter(), "ingest/segments/count", newSegments.size());
+
     } else {
       throw new ISE("Failed to publish segments");
     }
@@ -1675,7 +1696,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
 
     if (isParallelMode()) {
-      if (isGuaranteedRollup(ingestionSchema.getIOConfig(), ingestionSchema.getTuningConfig())) {
+      if (isGuaranteedRollup(
+          getIngestionMode(),
+          ingestionSchema.getTuningConfig()
+      )) {
         return doGetRowStatsAndUnparseableEventsParallelMultiPhase(
             (ParallelIndexTaskRunner<?, ?>) currentRunner,
             includeUnparseable

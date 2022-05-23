@@ -144,6 +144,31 @@ If SQL is enabled, the Broker will emit the following metrics for SQL.
 
 ## Ingestion metrics
 
+## General native ingestion metrics
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`ingest/count`|Count of `1` every time an ingestion job runs (includes compaction jobs). Aggregate using dimensions. |dataSource, taskId, taskType, taskIngestionMode|Always `1`.|
+|`ingest/segments/count`|Count of final segments created by job (includes tombstones). |dataSource, taskId, taskType, taskIngestionMode|At least `1`.|
+|`ingest/tombstones/count`|Count of tombstones created by job |dataSource, taskId, taskType, taskIngestionMode|Zero or more for replace. Always zero for non-replace tasks (always zero for legacy replace, see below).|
+
+The `taskIngestionMode` dimension includes the following modes: 
+`APPEND`, `REPLACE_LEGACY`, and `REPLACE`. The `APPEND` mode indicates a native
+ingestion job that is appending to existing segments; `REPLACE` a native ingestion
+job replacing existing segments using tombstones; 
+and `REPLACE_LEGACY` the original replace before tombstones.
+
+The mode is decided using the values
+of the `isAppendToExisting` and `isDropExisting` flags in the
+task's `IOConfig` as follows:
+
+|`isAppendToExisting` | `isDropExisting` | mode |
+|---------------------|-------------------|------|
+`true` | `false` | `APPEND`|
+`true` | `true  ` | Invalid combination, exception thrown. |
+`false` | `false` | `REPLACE_LEGACY` (this is the default for native batch ingestion). |
+`false` | `true` | `REPLACE`|
+
 ### Ingestion metrics for Kafka
 
 These metrics apply to the [Kafka indexing service](../development/extensions-core/kafka-ingestion.md).
@@ -221,6 +246,8 @@ Note: If the JVM does not support CPU time measurement for the current thread, i
 |`worker/taskSlot/total/count`|Number of total task slots on the reporting worker per emission period. This metric is only available if the WorkerTaskCountStatsMonitor module is included.|category, version.|Varies.|
 |`worker/taskSlot/used/count`|Number of busy task slots on the reporting worker per emission period. This metric is only available if the WorkerTaskCountStatsMonitor module is included.|category, version.|Varies.|
 
+
+
 ## Shuffle metrics (Native parallel task)
 
 The shuffle metrics can be enabled by adding `org.apache.druid.indexing.worker.shuffle.ShuffleMonitor` in `druid.monitoring.monitors`
@@ -230,6 +257,7 @@ See [Enabling Metrics](../configuration/index.md#enabling-metrics) for more deta
 |------|-----------|----------|------------|
 |`ingest/shuffle/bytes`|Number of bytes shuffled per emission period.|supervisorTaskId|Varies|
 |`ingest/shuffle/requests`|Number of shuffle requests per emission period.|supervisorTaskId|Varies|
+
 
 ## Coordination
 
