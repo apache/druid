@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
+import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.junit.After;
 import org.junit.Assert;
@@ -36,7 +36,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Random;
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 @RunWith(Parameterized.class)
 public class CompressionStrategyTest
@@ -88,14 +92,20 @@ public class CompressionStrategyTest
   {
     ByteBuffer compressionOut = compressionStrategy.getCompressor().allocateOutBuffer(originalData.length, closer);
     ByteBuffer compressionIn = compressionStrategy.getCompressor().allocateInBuffer(originalData.length, closer);
-    compressionIn.put(originalData);
-    compressionIn.rewind();
-    ByteBuffer compressed = compressionStrategy.getCompressor().compress(compressionIn, compressionOut);
-    ByteBuffer output = ByteBuffer.allocateDirect(originalData.length);
-    compressionStrategy.getDecompressor().decompress(compressed, compressed.remaining(), output);
-    byte[] checkArray = new byte[DATA_SIZER];
-    output.get(checkArray);
-    Assert.assertArrayEquals("Uncompressed data does not match", originalData, checkArray);
+    try {
+      compressionIn.put(originalData);
+      compressionIn.rewind();
+      ByteBuffer compressed = compressionStrategy.getCompressor().compress(compressionIn, compressionOut);
+      ByteBuffer output = ByteBuffer.allocateDirect(originalData.length);
+      compressionStrategy.getDecompressor().decompress(compressed, compressed.remaining(), output);
+      byte[] checkArray = new byte[DATA_SIZER];
+      output.get(checkArray);
+      Assert.assertArrayEquals("Uncompressed data does not match", originalData, checkArray);
+    }
+    finally {
+      ByteBufferUtils.free(compressionIn);
+      ByteBufferUtils.free(compressionOut);
+    }
   }
 
   @Test(timeout = 60_000L)
@@ -119,15 +129,21 @@ public class CompressionStrategyTest
                                                                .allocateOutBuffer(originalData.length, closer);
                 ByteBuffer compressionIn = compressionStrategy.getCompressor()
                                                               .allocateInBuffer(originalData.length, closer);
-                compressionIn.put(originalData);
-                compressionIn.position(0);
-                ByteBuffer compressed = compressionStrategy.getCompressor().compress(compressionIn, compressionOut);
-                ByteBuffer output = compressionStrategy.getCompressor().allocateOutBuffer(originalData.length, closer);
-                compressionStrategy.getDecompressor().decompress(compressed, compressed.remaining(), output);
-                byte[] checkArray = new byte[DATA_SIZER];
-                output.get(checkArray);
-                Assert.assertArrayEquals("Uncompressed data does not match", originalData, checkArray);
-                return true;
+                try {
+                  compressionIn.put(originalData);
+                  compressionIn.position(0);
+                  ByteBuffer compressed = compressionStrategy.getCompressor().compress(compressionIn, compressionOut);
+                  ByteBuffer output = compressionStrategy.getCompressor().allocateOutBuffer(originalData.length, closer);
+                  compressionStrategy.getDecompressor().decompress(compressed, compressed.remaining(), output);
+                  byte[] checkArray = new byte[DATA_SIZER];
+                  output.get(checkArray);
+                  Assert.assertArrayEquals("Uncompressed data does not match", originalData, checkArray);
+                  return true;
+                }
+                finally {
+                  ByteBufferUtils.free(compressionIn);
+                  ByteBufferUtils.free(compressionOut);
+                }
               }
           )
       );

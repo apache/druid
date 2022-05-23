@@ -187,7 +187,7 @@ public enum CompressionStrategy
     /**
      * Allocates a buffer that should be passed to {@link #compress} method as input buffer. Different Compressors
      * require (or work more efficiently with) different kinds of buffers.
-     *
+     * <p>
      * If the allocated buffer is a direct buffer, it should be registered to be freed with the given Closer.
      */
     ByteBuffer allocateInBuffer(int inputSize, Closer closer)
@@ -198,9 +198,9 @@ public enum CompressionStrategy
     /**
      * Allocates a buffer that should be passed to {@link #compress} method as output buffer. Different Compressors
      * require (or work more efficiently with) different kinds of buffers.
-     *
+     * <p>
      * Allocates a buffer that is always enough to compress a byte sequence of the given size.
-     *
+     * <p>
      * If the allocated buffer is a direct buffer, it should be registered to be freed with the given Closer.
      */
     abstract ByteBuffer allocateOutBuffer(int inputSize, Closer closer);
@@ -404,34 +404,34 @@ public enum CompressionStrategy
     public void decompress(ByteBuffer in, int numBytes, ByteBuffer out)
     {
       out.clear();
-      // some tests don't use dbb's and zstd jni doesn't allow for non-dbb byte buffers.
-      if (!in.isDirect()) {
-        in = cloneBuffer(in);
+      if (!in.isDirect() || !out.isDirect()) {
+        // fall back to heap byte arrays if both buffers are not direct
+        final byte[] inputBytes = new byte[numBytes];
+        in.get(inputBytes);
+        try (final ResourceHolder<byte[]> outputBytesHolder = CompressedPools.getOutputBytes()) {
+          final byte[] outputBytes = outputBytesHolder.get();
+          int decompressedBytes = (int) Zstd.decompressByteArray(
+              outputBytes,
+              0,
+              outputBytes.length,
+              inputBytes,
+              0,
+              numBytes
+          );
+          out.put(outputBytes, 0, decompressedBytes);
+          out.flip();
+        }
+      } else {
+        int decompressedBytes = (int) Zstd.decompressDirectByteBuffer(
+            out,
+            out.position(),
+            out.remaining(),
+            in,
+            in.position(),
+            numBytes
+        );
+        out.limit(out.position() + decompressedBytes);
       }
-      if (!out.isDirect()) {
-        out = cloneBuffer(out);
-      }
-      int decompressedBytes = (int) Zstd.decompressDirectByteBuffer(
-          out,
-          out.position(),
-          out.remaining(),
-          in,
-          in.position(),
-          numBytes
-      );
-      out.limit(out.position() + decompressedBytes);
-    }
-
-    /*
-    ZStandard library requires a direct byte buffer to work, some tests use a heap byte buffer, this allows those tests to pass.
-    Please don't use this library if you are not using a direct byte buffer, as cloning is an expensive operation.
-     */
-    private ByteBuffer cloneBuffer(ByteBuffer buffer)
-    {
-      ByteBuffer copy = ByteBuffer.allocateDirect(buffer.remaining());
-      copy.put(buffer);
-      copy.flip();
-      return copy;
     }
   }
 
