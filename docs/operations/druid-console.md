@@ -31,7 +31,7 @@ The following cluster settings must be enabled, as they are by default:
 - the Router's [management proxy](../design/router.md#enabling-the-management-proxy) must be enabled.
 - the Broker processes in the cluster must have [Druid SQL](../querying/sql.md) enabled.
 
-The Druid console can be accessed at:
+You can access the Druid console at:
 
 ```
 http://<ROUTER_IP>:<ROUTER_PORT>
@@ -68,7 +68,7 @@ Navigating with the top navigation will leave the underlying spec unmodified whi
 ## Datasources
 
 The datasources view shows all the currently enabled datasources.
-From this view you can see the sizes and availability of the different datasources.
+From this view, you can see the sizes and availability of the different datasources.
 You can edit the retention rules, configure automatic compaction, and drop data.
 Like any view that is powered by a DruidSQL query you can click `View SQL query for table` from the `...` menu to run the underlying SQL query directly.
 
@@ -81,14 +81,14 @@ You can view and edit retention rules to determine the general availability of a
 ## Segments
 
 The segment view shows all the segments in the cluster.
-Each segment can be has a detail view that provides more information.
+Each segment has a detail view that provides more information.
 The Segment ID is also conveniently broken down into Datasource, Start, End, Version, and Partition columns for ease of filtering and sorting.
 
 ![segments](../assets/web-console-06-segments.png)
 
 ## Tasks and supervisors
 
-From this view you can check the status of existing supervisors as well as suspend, resume, and reset them.
+From this view, you can check the status of existing supervisors as well as suspend, resume, and reset them.
 The tasks table allows you see the currently running and recently completed tasks.
 To make managing a lot of tasks more accessible, you can group the tasks by their `Type`, `Datasource`, or `Status` to make navigation easier.
 

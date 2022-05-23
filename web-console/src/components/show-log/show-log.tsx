@@ -184,7 +184,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
             <Loader />
           ) : (
             <textarea
-              className="bp3-input"
+              className="bp4-input"
               readOnly
               value={logState.data || logState.getErrorMessage()}
               ref={this.log}

@@ -21,8 +21,9 @@ import React from 'react';
 import ReactTable, { CellInfo, Column } from 'react-table';
 
 import { useQueryManager } from '../../hooks';
+import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, UrlBaser } from '../../singletons';
-import { deepGet, SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../utils';
+import { deepGet } from '../../utils';
 import { Loader } from '../loader/loader';
 
 import './supervisor-statistics-table.scss';
@@ -86,11 +87,15 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
       {
         Header: 'Task ID',
         id: 'task_id',
+        className: 'padded',
         accessor: d => d.taskId,
+        width: 400,
       },
       {
         Header: 'Totals',
         id: 'total',
+        className: 'padded',
+        width: 200,
         accessor: d => {
           return deepGet(d, 'summary.totals.buildSegments') as StatsEntry;
         },
@@ -110,6 +115,8 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
             return {
               Header: interval,
               id: interval,
+              className: 'padded',
+              width: 200,
               accessor: d => {
                 return deepGet(d, `summary.movingAverages.buildSegments.${interval}`);
               },

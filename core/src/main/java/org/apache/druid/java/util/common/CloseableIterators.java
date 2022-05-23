@@ -21,6 +21,7 @@ package org.apache.druid.java.util.common;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
+import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
@@ -52,7 +53,7 @@ public class CloseableIterators
     final Closer closer = Closer.create();
     iterators.forEach(closer::register);
 
-    final Iterator<T> innerIterator = Iterators.mergeSorted(iterators, comparator);
+    final Iterator<T> innerIterator = Utils.mergeSorted(iterators, comparator);
     return wrap(innerIterator, closer);
   }
 

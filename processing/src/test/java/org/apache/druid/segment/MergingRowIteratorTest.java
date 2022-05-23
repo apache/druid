@@ -19,10 +19,10 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.Iterators;
-import com.google.common.collect.UnmodifiableIterator;
 import com.google.common.primitives.Longs;
+import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.segment.selector.settable.SettableLongColumnValueSelector;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class MergingRowIteratorTest
+public class MergingRowIteratorTest extends InitializedNullHandlingTest
 {
   @Test
   public void testEmpty()
@@ -117,7 +117,7 @@ public class MergingRowIteratorTest
     MergingRowIterator mergingRowIterator = new MergingRowIterator(
         Stream.of(timestampSequences).map(TestRowIterator::new).collect(Collectors.toList())
     );
-    UnmodifiableIterator<Long> mergedTimestamps = Iterators.mergeSorted(
+    Iterator<Long> mergedTimestamps = Utils.mergeSorted(
         Stream.of(timestampSequences).map(List::iterator).collect(Collectors.toList()),
         Comparator.naturalOrder()
     );

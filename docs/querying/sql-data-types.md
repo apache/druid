@@ -27,7 +27,7 @@ sidebar_label: "SQL data types"
 > This document describes the SQL language.
 
 
-Columns in Druid are associated with a specific data type. This topic describes supported data types in Druid SQL. 
+Columns in Druid are associated with a specific data type. This topic describes supported data types in [Druid SQL](./sql.md). 
 
 ## Standard types
 

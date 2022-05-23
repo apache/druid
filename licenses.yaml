@@ -596,6 +596,16 @@ libraries:
 
 ---
 
+name: IPAddress
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 5.3.4
+libraries:
+  - com.github.seancfoley: ipaddress
+
+---
+
 name: Apache Commons Collections
 license_category: binary
 module: java-core
@@ -864,7 +874,7 @@ name: kubernetes official java client
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 11.0.1
 libraries:
   - io.kubernetes: client-java
 
@@ -874,7 +884,7 @@ name: kubernetes official java client api
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 11.0.1
 libraries:
   - io.kubernetes: client-java-api
 
@@ -884,7 +894,7 @@ name: kubernetes official java client extended
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 11.0.1
 libraries:
   - io.kubernetes: client-java-extended
 
@@ -934,7 +944,7 @@ name: io.gsonfire gson-fire
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.8.4
+version: 1.8.5
 libraries:
   - io.gsonfire: gson-fire
 
@@ -964,7 +974,7 @@ name: org.bitbucket.b_c jose4j
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 0.7.2
+version: 0.7.3
 libraries:
   - org.bitbucket.b_c: jose4j
 
@@ -1004,7 +1014,7 @@ name: io.kubernetes client-java-proto
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 11.0.1
 libraries:
   - io.kubernetes: client-java-proto
 
@@ -2353,7 +2363,7 @@ name: LZ4 Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.7.1
+version: 1.8.0
 libraries:
   - org.lz4: lz4-java
 
@@ -3781,7 +3791,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 3.1.0
+version: 3.2.0
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -4142,7 +4152,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-single
 license_name: BSD-2-Clause License
-version: 42.2.14
+version: 42.3.3
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4154,7 +4164,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-global
 license_name: BSD-2-Clause License
-version: 42.2.14
+version: 42.3.3
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4166,7 +4176,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
-version: 42.2.14
+version: 42.3.3
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4690,7 +4700,7 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 3.1.0
+version: 3.2.0
 libraries:
   - org.apache.kafka: kafka-clients
 notices:
@@ -5656,7 +5666,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.14.6
+version: 0.14.10
 
 ---
 

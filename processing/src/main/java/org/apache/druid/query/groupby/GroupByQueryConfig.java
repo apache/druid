@@ -48,6 +48,7 @@ public class GroupByQueryConfig
   private static final String CTX_KEY_FORCE_HASH_AGGREGATION = "forceHashAggregation";
   private static final String CTX_KEY_INTERMEDIATE_COMBINE_DEGREE = "intermediateCombineDegree";
   private static final String CTX_KEY_NUM_PARALLEL_COMBINE_THREADS = "numParallelCombineThreads";
+  private static final String CTX_KEY_MERGE_THREAD_LOCAL = "mergeThreadLocal";
 
   @JsonProperty
   private String defaultStrategy = GroupByStrategySelector.STRATEGY_V2;
@@ -103,7 +104,13 @@ public class GroupByQueryConfig
   private int numParallelCombineThreads = 1;
 
   @JsonProperty
+  private boolean mergeThreadLocal = false;
+
+  @JsonProperty
   private boolean vectorize = true;
+
+  @JsonProperty
+  private boolean intermediateResultAsMapCompat = false;
 
   @JsonProperty
   private boolean enableMultiValueUnnesting = true;
@@ -198,9 +205,19 @@ public class GroupByQueryConfig
     return numParallelCombineThreads;
   }
 
+  public boolean isMergeThreadLocal()
+  {
+    return mergeThreadLocal;
+  }
+
   public boolean isVectorize()
   {
     return vectorize;
+  }
+
+  public boolean isIntermediateResultAsMapCompat()
+  {
+    return intermediateResultAsMapCompat;
   }
 
   public boolean isForcePushDownNestedQuery()
@@ -274,6 +291,7 @@ public class GroupByQueryConfig
         CTX_KEY_NUM_PARALLEL_COMBINE_THREADS,
         getNumParallelCombineThreads()
     );
+    newConfig.mergeThreadLocal = query.getContextBoolean(CTX_KEY_MERGE_THREAD_LOCAL, isMergeThreadLocal());
     newConfig.vectorize = query.getContextBoolean(QueryContexts.VECTORIZE_KEY, isVectorize());
     newConfig.enableMultiValueUnnesting = query.getContextBoolean(
         CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,

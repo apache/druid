@@ -251,7 +251,7 @@ If we were not using rollup, all columns would be specified in the `dimensionsSp
 At this point, we are done defining the `parser` and `metricsSpec` within the `dataSchema` and we are almost done writing the ingestion spec.
 
 There are some additional properties we need to set in the `granularitySpec`:
-* Type of granularitySpec: `uniform` and `arbitrary` are the two supported types. For this tutorial, we will use a `uniform` granularity spec, where all segments have uniform interval sizes (for example, all segments cover an hour's worth of data).
+* Type of granularitySpec: the `uniform` granularity spec defines segments with uniform interval sizes. For example, all segments cover an hour's worth of data.
 * The segment granularity: what size of time interval should a single segment contain data for? e.g., `DAY`, `WEEK`
 * The bucketing granularity of the timestamps in the time column (referred to as `queryGranularity`)
 

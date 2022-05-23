@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.indexing;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 
@@ -27,11 +28,17 @@ import org.apache.druid.data.input.InputSource;
  */
 public interface BatchIOConfig extends IOConfig
 {
+  boolean DEFAULT_DROP_EXISTING = false;
+  boolean DEFAULT_APPEND_EXISTING = false;
+
   InputSource getInputSource();
 
   InputFormat getInputFormat();
 
+  @JsonProperty
   boolean isAppendToExisting();
 
+  @JsonProperty
   boolean isDropExisting();
 }
+

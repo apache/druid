@@ -29,9 +29,7 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
-import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
@@ -40,13 +38,9 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
-import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.scan.ScanResultValue;
-import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -385,122 +379,6 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
           Assert.assertTrue(rangeShardSpec.getPartitionNum() < numberedShardSpec.getPartitionNum());
         }
       }
-    }
-  }
-
-  @Test
-  public void testIngestNullColumn()
-  {
-    // storeEmptyColumns flag should do nothing with using inputFormat or multiValueDim
-    if (!isUseInputFormatApi() || useMultivalueDim) {
-      return;
-    }
-    int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
-    final List<DimensionSchema> dimensionSchemas = DimensionsSpec.getDefaultSchemas(
-        Arrays.asList("ts", "unknownDim")
-    );
-    ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTask(
-        null,
-        null,
-        null,
-        new ParallelIndexIngestionSpec(
-            new DataSchema(
-                DATASOURCE,
-                TIMESTAMP_SPEC,
-                DIMENSIONS_SPEC.withDimensions(dimensionSchemas),
-                DEFAULT_METRICS_SPEC,
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    Granularities.MINUTE,
-                    intervalToIndex == null ? null : Collections.singletonList(intervalToIndex)
-                ),
-                null
-            ),
-            new ParallelIndexIOConfig(
-                null,
-                new LocalInputSource(inputDir, TEST_FILE_NAME_PREFIX + "*"),
-                DEFAULT_INPUT_FORMAT,
-                false,
-                null
-            ),
-            newTuningConfig(
-                new DimensionRangePartitionsSpec(
-                    targetRowsPerSegment,
-                    null,
-                    Collections.singletonList("unknownDim"),
-                    false
-                ),
-                maxNumConcurrentSubTasks,
-                true
-            )
-        ),
-        null
-    );
-
-    Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
-
-    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
-    for (DataSegment segment : segments) {
-      for (int i = 0; i < dimensionSchemas.size(); i++) {
-        Assert.assertEquals(dimensionSchemas.get(i).getName(), segment.getDimensions().get(i));
-      }
-    }
-  }
-
-  @Test
-  public void testIngestNullColumn_storeEmptyColumnsOff_shouldNotStoreEmptyColumns()
-  {
-    // storeEmptyColumns flag should do nothing with using inputFormat or multiValueDim
-    if (!isUseInputFormatApi() || useMultivalueDim) {
-      return;
-    }
-    int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
-    ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTask(
-        null,
-        null,
-        null,
-        new ParallelIndexIngestionSpec(
-            new DataSchema(
-                DATASOURCE,
-                TIMESTAMP_SPEC,
-                DIMENSIONS_SPEC.withDimensions(
-                    DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "unknownDim"))
-                ),
-                DEFAULT_METRICS_SPEC,
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    Granularities.MINUTE,
-                    intervalToIndex == null ? null : Collections.singletonList(intervalToIndex)
-                ),
-                null
-            ),
-            new ParallelIndexIOConfig(
-                null,
-                new LocalInputSource(inputDir, TEST_FILE_NAME_PREFIX + "*"),
-                DEFAULT_INPUT_FORMAT,
-                false,
-                null
-            ),
-            newTuningConfig(
-                new DimensionRangePartitionsSpec(
-                    targetRowsPerSegment,
-                    null,
-                    Collections.singletonList("unknownDim"),
-                    false
-                ),
-                maxNumConcurrentSubTasks,
-                true
-            )
-        ),
-        null
-    );
-
-    task.addToContext(Tasks.STORE_EMPTY_COLUMNS_KEY, false);
-    Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
-
-    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
-    for (DataSegment segment : segments) {
-      Assert.assertFalse(segment.getDimensions().contains("unknownDim"));
     }
   }
 

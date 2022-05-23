@@ -19,6 +19,7 @@
 
 package org.apache.druid.timeline.partition;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
@@ -26,6 +27,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.DateTimes;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -43,261 +45,95 @@ public class DimensionRangeShardSpecTest
   private final List<String> dimensions = new ArrayList<>();
 
   @Test
-  public void testIsInChunk()
+  public void testShardSpecLookup()
   {
-    setDimensions("d1", "d2");
+    setDimensions("dim1", "dim2");
 
-    final DimensionRangeShardSpec shardSpec = new DimensionRangeShardSpec(
-        dimensions,
-        StringTuple.create("India", "Delhi"),
-        StringTuple.create("Spain", "Valencia"),
-        10,
-        null
+    final List<ShardSpec> shardSpecs = ImmutableList.of(
+        new DimensionRangeShardSpec(dimensions, null, StringTuple.create("India", "Delhi"), 1, 1),
+        new DimensionRangeShardSpec(
+            dimensions,
+            StringTuple.create("India", "Delhi"),
+            StringTuple.create("Spain", "Valencia"),
+            2,
+            1
+        ),
+        new DimensionRangeShardSpec(dimensions, StringTuple.create("Spain", "Valencia"), null, 3, 1)
+    );
+    final ShardSpecLookup lookup = shardSpecs.get(0).getLookup(shardSpecs);
+    final long currentTime = DateTimes.nowUtc().getMillis();
+
+    Assert.assertEquals(
+        shardSpecs.get(0),
+        lookup.getShardSpec(
+            currentTime,
+            createRow("France", "Paris")
+        )
     );
 
-    // Verify that entries starting from (India, Delhi) until (Spain, Valencia) are in chunk
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("India", "Delhi")
-    ));
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("India", "Kolkata")
-    ));
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("Japan", "Tokyo")
-    ));
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("Spain", "Barcelona")
-    ));
-
-    assertFalse(isInChunk(
-        shardSpec,
-        createRow("India", "Bengaluru")
-    ));
-    assertFalse(isInChunk(
-        shardSpec,
-        createRow("Spain", "Valencia")
-    ));
-    assertFalse(isInChunk(
-        shardSpec,
-        createRow("United Kingdom", "London")
-    ));
-  }
-
-  @Test
-  public void testIsInChunk_withNullStart()
-  {
-    setDimensions("d1", "d2");
-
-    final DimensionRangeShardSpec shardSpec = new DimensionRangeShardSpec(
-        dimensions,
-        null,
-        StringTuple.create("Spain", "Valencia"),
-        10,
-        null
+    Assert.assertEquals(
+        shardSpecs.get(0),
+        lookup.getShardSpec(
+            currentTime,
+            createRow("India", null)
+        )
     );
 
-    // Verify that anything before (Spain, Valencia) is in chunk
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow(null, null)
-    ));
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow(null, "Lyon")
-    ));
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("India", null)
-    ));
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("India", "Kolkata")
-    ));
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("Japan", "Tokyo")
-    ));
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("Spain", "Barcelona")
-    ));
-
-    assertFalse(isInChunk(
-        shardSpec,
-        createRow("Spain", "Valencia")
-    ));
-    assertFalse(isInChunk(
-        shardSpec,
-        createRow("United Kingdom", "London")
-    ));
-  }
-
-  @Test
-  public void testIsInChunk_withNullEnd()
-  {
-    setDimensions("d1", "d2");
-
-    final DimensionRangeShardSpec shardSpec = new DimensionRangeShardSpec(
-        dimensions,
-        StringTuple.create("France", "Lyon"),
-        null,
-        10,
-        null
+    Assert.assertEquals(
+        shardSpecs.get(0),
+        lookup.getShardSpec(
+            currentTime,
+            createRow(null, null)
+        )
     );
 
-    // Verify that anything starting from (France, Lyon) is in chunk
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("France", "Paris")
-    ));
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("Japan", "Tokyo")
-    ));
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("Spain", null)
-    ));
-
-    assertFalse(isInChunk(
-        shardSpec,
-        createRow(null, null)
-    ));
-    assertFalse(isInChunk(
-        shardSpec,
-        createRow("France", null)
-    ));
-    assertFalse(isInChunk(
-        shardSpec,
-        createRow("France", "Bordeaux")
-    ));
-  }
-
-  @Test
-  public void testIsInChunk_withFirstDimEqual()
-  {
-    setDimensions("d1", "d2");
-
-    final DimensionRangeShardSpec shardSpec = new DimensionRangeShardSpec(
-        dimensions,
-        StringTuple.create("France", "Bordeaux"),
-        StringTuple.create("France", "Paris"),
-        10,
-        null
+    Assert.assertEquals(
+        shardSpecs.get(1),
+        lookup.getShardSpec(
+            currentTime,
+            createRow("India", "Delhi")
+        )
     );
 
-    // Verify that entries starting from (India, Bengaluru) until (India, Patna) are in chunk
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("France", "Bordeaux")
-    ));
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("France", "Lyon")
-    ));
-
-    assertFalse(isInChunk(
-        shardSpec,
-        createRow("France", "Paris")
-    ));
-    assertFalse(isInChunk(
-        shardSpec,
-        createRow("France", "Avignon")
-    ));
-    assertFalse(isInChunk(
-        shardSpec,
-        createRow("France", "Toulouse")
-    ));
-  }
-
-  @Test
-  public void testIsInChunk_withSingleDimension()
-  {
-    setDimensions("d1");
-
-    final DimensionRangeShardSpec shardSpec = new DimensionRangeShardSpec(
-        dimensions,
-        StringTuple.create("India"),
-        StringTuple.create("Spain"),
-        10,
-        null
+    Assert.assertEquals(
+        shardSpecs.get(1),
+        lookup.getShardSpec(
+            currentTime,
+            createRow("India", "Kolkata")
+        )
     );
 
-    // Verify that entries starting from (India) until (Spain) are in chunk
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("India")
-    ));
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("Japan")
-    ));
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("Malaysia")
-    ));
-
-    assertFalse(isInChunk(
-        shardSpec,
-        createRow("Belgium")
-    ));
-    assertFalse(isInChunk(
-        shardSpec,
-        createRow("Spain")
-    ));
-    assertFalse(isInChunk(
-        shardSpec,
-        createRow("United Kingdom")
-    ));
-  }
-
-  @Test
-  public void testIsInChunk_withMultiValues()
-  {
-    setDimensions("d1", "d2");
-
-    final DimensionRangeShardSpec shardSpec = new DimensionRangeShardSpec(
-        dimensions,
-        StringTuple.create("India", "Delhi"),
-        StringTuple.create("Spain", "Valencia"),
-        10,
-        null
+    Assert.assertEquals(
+        shardSpecs.get(1),
+        lookup.getShardSpec(
+            currentTime,
+            createRow("Spain", null)
+        )
     );
 
-    // Verify that entries starting from (India, Delhi) until (Spain, Valencia) are in chunk
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("India", "Delhi")
-    ));
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("India", "Kolkata")
-    ));
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("Japan", "Tokyo")
-    ));
-    assertTrue(isInChunk(
-        shardSpec,
-        createRow("Spain", "Barcelona")
-    ));
+    Assert.assertEquals(
+        shardSpecs.get(2),
+        lookup.getShardSpec(
+            currentTime,
+            createRow("Spain", "Valencia")
+        )
+    );
 
-    assertFalse(isInChunk(
-        shardSpec,
-        createRow("India", "Bengaluru")
-    ));
-    assertFalse(isInChunk(
-        shardSpec,
-        createRow("Spain", "Valencia")
-    ));
-    assertFalse(isInChunk(
-        shardSpec,
-        createRow("United Kingdom", "London")
-    ));
+    Assert.assertEquals(
+        shardSpecs.get(2),
+        lookup.getShardSpec(
+            currentTime,
+            createRow("United Kingdom", "London")
+        )
+    );
+
+    Assert.assertEquals(
+        shardSpecs.get(2),
+        lookup.getShardSpec(
+            currentTime,
+            createRow("United Kingdom", null)
+        )
+    );
   }
 
   @Test
@@ -579,6 +415,34 @@ public class DimensionRangeShardSpecTest
     );
     assertFalse(shard.possibleInDomain(domain));
   }
+  @Test
+  public void testPossibleInDomain_falsePruning()
+  {
+    setDimensions("planet", "country", "city");
+
+    final StringTuple start = StringTuple.create("Earth", "France", "Paris");
+    final StringTuple end = StringTuple.create("Mars", "USA", "New York");
+
+    final RangeSet<String> universalSet = TreeRangeSet.create();
+    universalSet.add(Range.all());
+
+    ShardSpec shard = new DimensionRangeShardSpec(dimensions, start, end, 0, null);
+    Map<String, RangeSet<String>> domain = new HashMap<>();
+
+    // {Earth} U {Mars} * (USA, INF) * (-INF, INF)
+    populateDomain(
+        domain,
+        getUnion(
+            getRangeSet(Range.singleton("Earth")),
+            getRangeSet(Range.singleton("Mars"))
+        ),
+        getUnion(
+            getRangeSet(Range.greaterThan("USA"))
+        ),
+        universalSet
+    );
+    assertTrue(shard.possibleInDomain(domain));
+  }
 
   private RangeSet<String> getRangeSet(Range range)
   {
@@ -607,18 +471,6 @@ public class DimensionRangeShardSpecTest
     domain.put("city", citySet);
   }
 
-  /**
-   * Checks if the given InputRow is in the chunk represented by the given shard spec.
-   */
-  private boolean isInChunk(DimensionRangeShardSpec shardSpec, InputRow row)
-  {
-    return DimensionRangeShardSpec.isInChunk(
-        shardSpec.getDimensions(),
-        shardSpec.getStartTuple(),
-        shardSpec.getEndTuple(),
-        row
-    );
-  }
 
   private void setDimensions(String... dimensionNames)
   {
