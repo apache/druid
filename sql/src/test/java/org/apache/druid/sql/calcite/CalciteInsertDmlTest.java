@@ -349,6 +349,19 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testInsertWithoutPartitionedByWithClusteredBy()
+  {
+    testIngestionQuery()
+        .sql(
+            "INSERT INTO druid.dst "
+            + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
+            + "CLUSTERED BY 2, dim1 DESC, CEIL(m2)"
+        )
+        .expectValidationError(SqlPlanningException.class, "CLUSTERED BY found before PARTITIONED BY. In druid, the CLUSTERED BY clause has to be specified after the PARTITIONED BY clause")
+        .verify();
+  }
+
+  @Test
   public void testInsertWithPartitionedByAndClusteredBy()
   {
     // Test correctness of the query when both PARTITIONED BY and CLUSTERED BY clause is present

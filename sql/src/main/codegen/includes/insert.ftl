@@ -36,6 +36,11 @@ SqlNode DruidSqlInsertEof() :
     <CLUSTERED> <BY>
     clusteredBy = ClusterItems()
   ]
+  {
+      if (clusteredBy != null && partitionedBy.lhs == null) {
+        throw new ParseException("CLUSTERED BY found before PARTITIONED BY. In druid, the CLUSTERED BY clause has to be specified after the PARTITIONED BY clause");
+      }
+  }
   // EOF is also present in SqlStmtEof but EOF is a special case and a single EOF can be consumed multiple times.
   // The reason for adding EOF here is to ensure that we create a DruidSqlInsert node after the syntax has been
   // validated and throw SQL syntax errors before performing validations in the DruidSqlInsert which can overshadow the
