@@ -406,7 +406,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo CLUSTERED BY dim1")
-        .expectValidationError(SqlPlanningException.class, "CLUSTERED BY clause found before PARTITIONED BY, the PARITITIONED BY clause has to be specified first before the CLUSTERED BY clause.")
+        .expectValidationError(SqlPlanningException.class, "CLUSTERED BY found before PARTITIONED BY. In druid, the CLUSTERED BY clause has to be specified after the PARTITIONED BY clause")
         .verify();
   }
 

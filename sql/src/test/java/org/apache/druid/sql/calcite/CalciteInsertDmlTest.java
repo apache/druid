@@ -357,7 +357,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
             + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
             + "CLUSTERED BY 2, dim1 DESC, CEIL(m2)"
         )
-        .expectValidationError(SqlPlanningException.class, "CLUSTERED BY clause found before PARTITIONED BY, the PARITITIONED BY clause has to be specified first before the CLUSTERED BY clause.")
+        .expectValidationError(SqlPlanningException.class, "CLUSTERED BY found before PARTITIONED BY. In druid, the CLUSTERED BY clause has to be specified after the PARTITIONED BY clause")
         .verify();
   }
 
