@@ -1069,15 +1069,15 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         useDefault ? ImmutableList.of(
-            new Object[]{ImmutableList.of(0.0), 4L},
-            new Object[]{ImmutableList.of(0.10000000149011612), 1L},
-            new Object[]{ImmutableList.of(1.0), 1L}
+            new Object[]{ImmutableList.of(0.0F), 4L},
+            new Object[]{ImmutableList.of(0.10000000149011612F), 1L},
+            new Object[]{ImmutableList.of(1.0F), 1L}
         ) :
         ImmutableList.of(
             new Object[]{Collections.singletonList(null), 3L},
-            new Object[]{ImmutableList.of(0.0), 1L},
-            new Object[]{ImmutableList.of(0.10000000149011612), 1L},
-            new Object[]{ImmutableList.of(1.0), 1L}
+            new Object[]{ImmutableList.of(0.0F), 1L},
+            new Object[]{ImmutableList.of(0.10000000149011612F), 1L},
+            new Object[]{ImmutableList.of(1.0F), 1L}
         )
     );
   }
