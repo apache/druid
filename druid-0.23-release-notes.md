@@ -91,15 +91,15 @@ You can pass time column in `*first`/`*last` aggregators and LATEST / EARLIEST S
 ### Improvements to querying user experience
 
 This release includes several improvements for querying:
-- Added the SQL query id to response header for failed SQL query to aid in location the error messages (#11756)
+- Added the SQL query ID to response header for failed SQL query to aid in locating the error messages (#11756)
 - Added input type validation for DataSketches HLL (#12131)
 - Improved JDBC logging (#11676)
 - Added SQL functions MV_FILTER_ONLY and MV_FILTER_NONE to filter rows of multi-value string dimensions to include only the  supplied list of values or none of them respectively (#11650)
-- Added ARRAY_CONCAT_AGG to aggregate array inputs together into a single array(#12226)
+- Added ARRAY_CONCAT_AGG to aggregate array inputs together into a single array (#12226)
 - Added the ability to authorize the usage of query context parameters (#12396)
-- Improved query IDs to make it easier to link queryies and sub-queries for end-to-end visibility of a query (#11809)
+- Improved query IDs to make it easier to link queries and sub-queries for end-to-end query visibility (#11809)
 - Added a safe divide function to protect against division by 0 (#11904)
-- You can now add a query context to internally generated `SegmentMetadata` Query (#11429)
+- You can now add a query context to internally generated `SegmentMetadata` query (#11429)
 - Added support for Druid complex types to the native expression processing system to make all Druid data usable within expressions (#11853, #12016)
 
 ## Streaming Ingestion
@@ -116,7 +116,7 @@ We've introduced a Kafka input format so you can ingest header data in addition 
 ## Native Batch Ingestion
 
 ### Multi-dimension range partitioning
-Multi-dimension range partitioning allows users to partition their data on the ranges of any number of dimensions. It develops further on the concepts behind "single-dim" partitioning and is now arguably the most preferable secondary partitioning both for query performance and storage efficiency.
+Multi-dimension range partitioning allows users to partition their data on the ranges of any number of dimensions. It develops further on the concepts behind "single-dim" partitioning and is now arguably the most preferable secondary partitioning, both for query performance and storage efficiency.
 (#11848)
 (#11973)
 
@@ -126,11 +126,11 @@ In previous versions of Druid, if ingested data with `dropExisting` flag to repl
 
 This release includes several improvements for native batch ingestion:
 - Druid now emits a new metric when a batch task finishes waiting for segment availability. (#11090)
-- Added `segmentAvailabilityWaitTimeMs`, the time in milliseconds the milliseconds that a task waited for its segments to be handed off to Historical nodes, to `IngestionStatsAndErrorsTaskReportData` (#11090)
+- Added `segmentAvailabilityWaitTimeMs`, the duration in milliseconds that a task waited for its segments to be handed off to Historical nodes, to `IngestionStatsAndErrorsTaskReportData` (#11090)
 - Added functionality to preserve existing metrics during ingestion (#12185)
 - Parallel native batch task can now provide task reports for the sequential and single phase mode (e.g., used with dynamic partitioning) as well as single phase mode subtasks (#11688)
 - Added support for `RowStats` in `druid/indexer/v1/task/{task_id}/reports` API for multi-phase parallel indexing task (#12280)
-- Fixed the OOM failures in dimension distribution phase of parallel indexing (#12331)
+- Fixed the OOM failures in the dimension distribution phase of parallel indexing (#12331)
 - Added support to handle null dimension values while creating partition boundaries (#11973)
 
 ## Improvements to ingestion in general
@@ -144,25 +144,25 @@ This release includes several improvements for ingestion in general:
 - Added a configuation parameter for appending tasks to allow them to use a SHARED lock (#12041)
 - `SchemaRegistryBasedAvroBytesDecoder` now throws a `ParseException` instead of RE when it fails to retrieve a schema (#12080)
 - Added `includeAllDimensions` to `dimensionsSpec` to put all explicit dimensions first in `InputRow` and subsequently any other dimensions found in input data (#12276)
-- Added the ability to store null columns in the Segments (#12279)
+- Added the ability to store null columns in segments (#12279)
 
 ## Compaction
 
 This release includes several improvements for compaction:
 -  Automatic compaction now supports complex dimensions (#11924)
 -  Automatic compaction now supports overlapping segment intervals (#12062)
-- You can now configure automatic compaction to calculate ratio of slots available for compaction tasks from maximum slots including autoscaler maximum worker nodes (#12263)
-- You can configure the Coordinator auto compaction duty period separately from other indexing duties (#12263)
+- You can now configure automatic compaction to calculate the ratio of slots available for compaction tasks from maximum slots, including autoscaler maximum worker nodes (#12263)
+- You can now configure the Coordinator auto compaction duty period separately from other indexing duties (#12263)
 
 ## SQL
 
 ### Human-readable and actionable SQL error messages
-Until version 0.22.1, if you issued an unsupported SQL query, Druid would throw very cryptic and unhelpful error messages. With this change, error messages include exactly the part of the SQL query that is not supported in Druid. For example, if you run a scan query that is ordered on a dimension other than time column. 
+Until version 0.22.1, if you issued an unsupported SQL query, Druid would throw very cryptic and unhelpful error messages. With this change, error messages include exactly the part of the SQL query that is not supported in Druid. For example, if you run a scan query that is ordered on a dimension other than the time column. 
 
 (#11911)
 
 ### Cancel API for SQL queries
-We've added a new API to cancel SQL queries, so you can now cancel SQL queries just like you can cancel native queries. You can use the API from the Web-console. In previous versions, cancellation from the console only closed the client connection while the SQL query kept running on Druid. 
+We've added a new API to cancel SQL queries, so you can now cancel SQL queries just like you can cancel native queries. You can use the API from the web console. In previous versions, cancellation from the console only closed the client connection while the SQL query kept running on Druid. 
 
 (#11643)
 (#11738)
@@ -172,14 +172,13 @@ We've added a new API to cancel SQL queries, so you can now cancel SQL queries j
 
 This release includes several additional improvements for SQL:
 
-- You no longer need to include a trailing slash `/` for JDBC connections to druid (#11737)
-- You can now use scans to as outer queries (#11831)
+- You no longer need to include a trailing slash `/` for JDBC connections to Druid (#11737)
+- You can now use scans as outer queries (#11831)
 - Added a class to sanitize JDBC exceptions and to log them (#11843)
 - Added type headers to response format to make it easier for clients to interpret the results of SQL queries (#11914)
 - Improved the way the `DruidRexExecutor` handles numeric arrays (#11968)
-- Druid now returns an empty result after optimizing a group by query to a time series query (#12065)
-- As an administrator, you can now configure the implementation for
-APPROX_COUNT_DISTINCT and COUNT(DISTINCT expr) in approximate mode (#11181)
+- Druid now returns an empty result after optimizing a GROUP BY query to a time series query (#12065)
+- As an administrator, you can now configure the implementation for APPROX_COUNT_DISTINCT and COUNT(DISTINCT expr) in approximate mode (#11181)
 - 
 
 
@@ -228,7 +227,7 @@ This release includes several additional improvements for metrics:
 - Added metrics as follows: `Cpu` and `CpuSet` to `java.util.metrics.cgroups`, `ProcFsUtil` for `procfs` info, and `CgroupCpuMonitor` and `CgroupCpuSetMonitor` (#11763)
 - Added support to route data through an HTTP proxy (#11891)
 - Added more metrics for Jetty server thread pool usage (#11113)
-- Added worker category as a dimension TaskSlot metrics of the indexing service (#11554)
+- Added worker category as a dimension TaskSlot metric of the indexing service (#11554)
 
 ## Cloud integrations
 
@@ -250,7 +249,7 @@ This release includes several additional improvements for metrics:
 
 Today, any context params are allowed to users. This can cause 1) a bad UX if the context param is not matured yet or 2) even query failure or system fault in the worst case if a sensitive param is abused, ex) maxSubqueryRows. Druid now has an ability to limit context params per user role. That means, a query will fail if you have a context param set in the query that is not allowed to you. 
 
-The context parameter authorization can be enabled using druid.`auth.authorizeQueryContextParam`s. This is disabled by default to avoid any hassle when performing an upgrade.
+The context parameter authorization can be enabled using Druid.`auth.authorizeQueryContextParam`s. This is disabled by default to enable a smoother upgrade experience.
 
 (#12396)
 
@@ -265,7 +264,7 @@ This release includes several additional improvements for security:
 
 ### Ingestion
 
-- More accurate memory estimations while building an on-heap incremental index. Rather than using the max possible size of an aggregated row, Druid can now use (based on a task context flag) a closer estimate of the actual heap footprint of an aggregated row. This enables the indexer to fit more rows in memory before doing an intermediate persist. (#12073)
+- More accurate memory estimations while building an on-heap incremental index. Rather than using the maximum possible aggregated row size, Druid can now use (based on a task context flag) a closer estimate of the actual heap footprint of an aggregated row. This enables the indexer to fit more rows in memory before performing an intermediate persist. (#12073)
 
 ### SQL
 
