@@ -64,6 +64,7 @@ import java.util.UUID;
 })
 public interface Query<T>
 {
+  QueryContext IS_LEGACY_CONTEXT = new QueryContext();
   String TIMESERIES = "timeseries";
   String SEARCH = "search";
   String TIME_BOUNDARY = "timeBoundary";
@@ -110,7 +111,16 @@ public interface Query<T>
    * after it is deserialized. This is because {@link BaseQuery#getContext()} uses
    * {@link QueryContext#getMergedParams()} for serialization, and queries accept a map for deserialization.
    */
-  QueryContext getQueryContext();
+  default QueryContext getQueryContext()
+  {
+    return IS_LEGACY_CONTEXT;
+  }
+
+  default boolean isLegacyContext()
+  {
+    //noinspection ObjectEquality
+    return getQueryContext() == Query.IS_LEGACY_CONTEXT;
+  }
 
   <ContextType> ContextType getContextValue(String key);
 

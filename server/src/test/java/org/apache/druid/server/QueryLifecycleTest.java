@@ -21,19 +21,29 @@ package org.apache.druid.server;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
+import org.apache.druid.query.NoopQueryRunner;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
@@ -45,6 +55,9 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
 import org.easymock.EasyMock;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Duration;
+import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -52,7 +65,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 public class QueryLifecycleTest
 {
@@ -244,6 +261,39 @@ public class QueryLifecycleTest
     Assert.assertFalse(lifecycle.authorize(mockRequest()).isAllowed());
   }
 
+  @Test
+  public void testAuthorizeLegacyQueryContext_authorized()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authConfig.authorizeQueryContextParams()).andReturn(true).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("fake", ResourceType.DATASOURCE), Action.READ))
+            .andReturn(Access.OK);
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("foo", ResourceType.QUERY_CONTEXT), Action.WRITE))
+            .andReturn(Access.OK);
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("baz", ResourceType.QUERY_CONTEXT), Action.WRITE)).andReturn(Access.OK);
+    // to use legacy query context with context authorization, even system generated things like queryId need to be explicitly added
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("queryId", ResourceType.QUERY_CONTEXT), Action.WRITE))
+            .andReturn(Access.OK);
+
+    EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
+            .andReturn(toolChest)
+            .once();
+
+    replayAll();
+
+    final LegacyContextQuery query = new LegacyContextQuery(ImmutableMap.of("foo", "bar", "baz", "qux"));
+
+    lifecycle.initialize(query);
+
+    Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("foo"));
+    Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("baz"));
+    Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("queryId"));
+
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
+  }
+
   private HttpServletRequest mockRequest()
   {
     HttpServletRequest request = EasyMock.createNiceMock(HttpServletRequest.class);
@@ -273,5 +323,157 @@ public class QueryLifecycleTest
         authenticationResult,
         authorizer
     );
+  }
+
+  private static class LegacyContextQuery implements Query
+  {
+    private final Map<String, Object> context;
+
+    private LegacyContextQuery(Map<String, Object> context)
+    {
+      this.context = context;
+    }
+
+    @Override
+    public DataSource getDataSource()
+    {
+      return new TableDataSource("fake");
+    }
+
+    @Override
+    public boolean hasFilters()
+    {
+      return false;
+    }
+
+    @Override
+    public DimFilter getFilter()
+    {
+      return null;
+    }
+
+    @Override
+    public String getType()
+    {
+      return "legacy-context-query";
+    }
+
+    @Override
+    public QueryRunner getRunner(QuerySegmentWalker walker)
+    {
+      return new NoopQueryRunner();
+    }
+
+    @Override
+    public List<Interval> getIntervals()
+    {
+      return Collections.singletonList(Intervals.ETERNITY);
+    }
+
+    @Override
+    public Duration getDuration()
+    {
+      return getIntervals().get(0).toDuration();
+    }
+
+    @Override
+    public Granularity getGranularity()
+    {
+      return Granularities.ALL;
+    }
+
+    @Override
+    public DateTimeZone getTimezone()
+    {
+      return DateTimeZone.UTC;
+    }
+
+    @Override
+    public Map<String, Object> getContext()
+    {
+      return context;
+    }
+
+    @Override
+    public boolean getContextBoolean(String key, boolean defaultValue)
+    {
+      if (context == null || !context.containsKey(key)) {
+        return defaultValue;
+      }
+      return (boolean) context.get(key);
+    }
+
+    @Override
+    public boolean isDescending()
+    {
+      return false;
+    }
+
+    @Override
+    public Ordering getResultOrdering()
+    {
+      return Ordering.natural();
+    }
+
+    @Override
+    public Query withQuerySegmentSpec(QuerySegmentSpec spec)
+    {
+      return new LegacyContextQuery(context);
+    }
+
+    @Override
+    public Query withId(String id)
+    {
+      context.put(BaseQuery.QUERY_ID, id);
+      return this;
+    }
+
+    @Nullable
+    @Override
+    public String getId()
+    {
+      return (String) context.get(BaseQuery.QUERY_ID);
+    }
+
+    @Override
+    public Query withSubQueryId(String subQueryId)
+    {
+      context.put(BaseQuery.SUB_QUERY_ID, subQueryId);
+      return this;
+    }
+
+    @Nullable
+    @Override
+    public String getSubQueryId()
+    {
+      return (String) context.get(BaseQuery.SUB_QUERY_ID);
+    }
+
+    @Override
+    public Query withDataSource(DataSource dataSource)
+    {
+      return this;
+    }
+
+    @Override
+    public Query withOverriddenContext(Map contextOverride)
+    {
+      return new LegacyContextQuery(contextOverride);
+    }
+
+    @Override
+    public Object getContextValue(String key, Object defaultValue)
+    {
+      if (!context.containsKey(key)) {
+        return defaultValue;
+      }
+      return context.get(key);
+    }
+
+    @Override
+    public Object getContextValue(String key)
+    {
+      return context.get(key);
+    }
   }
 }
