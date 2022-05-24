@@ -102,7 +102,13 @@ public interface Query<T>
   Map<String, Object> getContext();
 
   /**
-   * Returns QueryContext for this query.
+   * Returns QueryContext for this query. This type distinguishes between user provided, system default, and system
+   * generated query context keys so that authorization may be employed directly against the user supplied context
+   * values.
+   *
+   * Callers should first check {@link #isLegacyContext()} first to determine if the {@link Query} has implemented
+   * this method. If not, callers should fall back to using {@link #getContext()} and
+   * {@link #withOverriddenContext(Map)} as needed to manipulate the query.
    *
    * Note for query context serialization and deserialization.
    * Currently, once a query is serialized, its queryContext can be different from the original queryContext
@@ -116,6 +122,14 @@ public interface Query<T>
     return IS_LEGACY_CONTEXT;
   }
 
+  /**
+   * Checks if this {@link Query} implementation has implemented {@link #getQueryContext()}, which was added in
+   * Druid 0.23. If this method returns true, then callers should use {@link #getContext()} and
+   * {@link #withOverriddenContext(Map)} to manipulate the query context, and, if query context authorization is used
+   * (also added in 0.23), then permissions to system generated and system default context keys must also be added.
+   * It is recommended to not use query context authorization unless all queries implement {@link #getQueryContext()}.
+   */
+  @Deprecated
   default boolean isLegacyContext()
   {
     //noinspection ObjectEquality
