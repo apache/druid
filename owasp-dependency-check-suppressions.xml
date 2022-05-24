@@ -27,6 +27,7 @@
     <cve>CVE-2012-4449</cve>
     <cve>CVE-2017-3162</cve>
     <cve>CVE-2018-8009</cve>
+    <cve>CVE-2022-26612</cve>
   </suppress>
   <suppress>
     <!-- druid-processing.jar is mistaken for org.processing:processing -->
