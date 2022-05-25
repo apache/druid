@@ -69,10 +69,6 @@ public final class DimensionHandlerUtils
 
   public static final ConcurrentHashMap<String, DimensionHandlerProvider> DIMENSION_HANDLER_PROVIDERS = new ConcurrentHashMap<>();
 
-  private static final Function<Object, Long> CONVERT_OBJECT_TO_LONG_FUNCTION = o -> convertObjectToLong(o);
-  private static final Function<Object, Double> CONVERT_OBJECT_TO_DOUBLE_FUNCTION = o -> convertObjectToDouble(o);
-  private static final Function<Object, Float> CONVERT_OBJECT_TO_FLOAT_FUNCTION = o -> convertObjectToFloat(o);
-
   public static void registerDimensionHandlerProvider(String type, DimensionHandlerProvider provider)
   {
     DIMENSION_HANDLER_PROVIDERS.compute(type, (key, value) -> {
@@ -387,11 +383,11 @@ public final class DimensionHandlerUtils
           case STRING:
             return convertToComparableStringArray(obj);
           case LONG:
-            return convertToListWithObjectFunction(obj, CONVERT_OBJECT_TO_LONG_FUNCTION);
+            return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToLong);
           case FLOAT:
-            return convertToListWithObjectFunction(obj, CONVERT_OBJECT_TO_FLOAT_FUNCTION);
+            return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToFloat);
           case DOUBLE:
-            return convertToListWithObjectFunction(obj, CONVERT_OBJECT_TO_DOUBLE_FUNCTION);
+            return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToDouble);
         }
 
       default:
@@ -404,11 +400,11 @@ public final class DimensionHandlerUtils
   {
     switch (elementType) {
       case LONG:
-        return convertToListWithObjectFunction(obj, CONVERT_OBJECT_TO_LONG_FUNCTION);
+        return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToLong);
       case FLOAT:
-        return convertToListWithObjectFunction(obj, CONVERT_OBJECT_TO_FLOAT_FUNCTION);
+        return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToFloat);
       case DOUBLE:
-        return convertToListWithObjectFunction(obj, CONVERT_OBJECT_TO_DOUBLE_FUNCTION);
+        return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToDouble);
     }
     throw new ISE(
         "Unable to convert object of type[%s] to [%s]",
