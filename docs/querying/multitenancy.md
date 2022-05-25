@@ -75,10 +75,7 @@ stored on this tier.
 
 ## Supporting high query concurrency
 
-Druid's fundamental unit of computation is a [segment](../design/segments.md). Processes scan segments in parallel and a
-given process can scan `druid.processing.numThreads` concurrently. To
-process more data in parallel and increase performance, more cores can be added to a cluster. Druid segments
-should be sized such that any computation over any given segment should complete in at most 500ms.
+Druid's fundamental unit of computation is a [segment](../design/segments.md). Processes scan segments in parallel and a given process can scan `druid.processing.numThreads` concurrently. To process more data in parallel and increase performance, more cores can be added to a cluster. Druid segments should be sized such that any computation over any given segment should complete in at most 500ms. The metric you need to check for this is [`query/segment/time`](../operations/metrics.md#historical).
 
 Druid internally stores requests to scan segments in a priority queue. If a given query requires scanning
 more segments than the total number of available processors in a cluster, and many similarly expensive queries are concurrently
