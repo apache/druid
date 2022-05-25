@@ -29,7 +29,7 @@ The default indexing period is 30 minutes, meaning that the Coordinator first ch
 Note this time period affects other Coordinator duties including merge and conversion tasks.
 To configure the frequency of compaction tasks, [create a new duty group for the Coordinator](#set-frequency-of-compaction-runs).
 
-At every indexing period, the Coordinator initiates a [segment search](../design/coordinator.md#segment-search-policy) to determine eligible segments to compact.
+At every indexing period, the Coordinator initiates a [segment search](../design/coordinator.md#segment-search-policy-in-automatic-compaction) to determine eligible segments to compact.
 When there are eligible segments to compact, the Coordinator issues compaction tasks based on available worker capacity.
 If a compaction task takes longer than the indexing period, the Coordinator waits for it to finish before resuming the period for segment search.
 
@@ -139,7 +139,7 @@ druid.coordinator.compaction.period=PT60S
 
 ## View automatic compaction statistics
 
-After the Coordinator has initiated auto-compaction, you can view compaction statistics for the datasource, including the number of bytes, segments, and intervals already compacted and those awaiting compaction. The Coordinator also reports the total bytes, segments, and intervals not eligible for compaction in accordance with its [segment search policy](../design/coordinator.md#segment-search-policy).
+After the Coordinator has initiated auto-compaction, you can view compaction statistics for the datasource, including the number of bytes, segments, and intervals already compacted and those awaiting compaction. The Coordinator also reports the total bytes, segments, and intervals not eligible for compaction in accordance with its [segment search policy](../design/coordinator.md#segment-search-policy-in-automatic-compaction).
 
 In the Druid console, the Datasources view displays auto-compaction statistics. The Tasks view shows the task information for compaction tasks that were triggered by the automatic compaction system.
 
@@ -192,5 +192,5 @@ The following auto-compaction configuration compacts updates the `wikipedia` seg
 See the following topics for more information:
 * [Compaction](compaction.md) for an overview of compaction and how to set up manual compaction in Druid.
 * [Segment optimization](../operations/segment-optimization.md) for guidance on evaluating and optimizing Druid segment size.
-* [Compacting segments](../design/coordinator.md/#compacting-segments) for details on how the Coordinator plans compaction tasks.
+* [Compacting segments](../design/coordinator.md#compacting-segments) for details on how the Coordinator plans compaction tasks.
 
