@@ -107,7 +107,7 @@ public class TestColumnCompression
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown() 
   {
     ByteBufferUtils.free(buffer);
   }
