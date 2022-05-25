@@ -271,6 +271,7 @@ public class QueryLifecycleTest
 
     lifecycle.initialize(query);
 
+    Assert.assertNull(lifecycle.getQuery().getQueryContext());
     Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("foo"));
     Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("baz"));
     Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("queryId"));

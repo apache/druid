@@ -374,7 +374,7 @@ public class QueryResource implements QueryCountStatsProvider
     String prevEtag = getPreviousEtag(req);
 
     if (prevEtag != null) {
-      if (baseQuery.isLegacyContext()) {
+      if (baseQuery.getQueryContext() == null) {
         QueryContext context = new QueryContext(baseQuery.getContext());
         context.addSystemParam(HEADER_IF_NONE_MATCH, prevEtag);
 

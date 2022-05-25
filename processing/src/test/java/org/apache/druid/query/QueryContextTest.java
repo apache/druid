@@ -252,7 +252,7 @@ public class QueryContextTest
   public void testLegacyReturnsLegacy()
   {
     Query legacy = new LegacyContextQuery(ImmutableMap.of("foo", "bar"));
-    Assert.assertTrue(legacy.isLegacyContext());
+    Assert.assertNull(legacy.getQueryContext());
   }
 
   @Test
@@ -265,7 +265,7 @@ public class QueryContextTest
                              .aggregators(Collections.singletonList(new CountAggregatorFactory("theCount")))
                              .context(ImmutableMap.of("foo", "bar"))
                              .build();
-    Assert.assertFalse(timeseries.isLegacyContext());
+    Assert.assertNotNull(timeseries.getQueryContext());
   }
 
   public static class LegacyContextQuery implements Query

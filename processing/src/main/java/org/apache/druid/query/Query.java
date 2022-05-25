@@ -64,7 +64,6 @@ import java.util.UUID;
 })
 public interface Query<T>
 {
-  QueryContext IS_LEGACY_CONTEXT = new QueryContext();
   String TIMESERIES = "timeseries";
   String SEARCH = "search";
   String TIME_BOUNDARY = "timeBoundary";
@@ -106,9 +105,10 @@ public interface Query<T>
    * generated query context keys so that authorization may be employed directly against the user supplied context
    * values.
    *
-   * Callers should first check {@link #isLegacyContext()} first to determine if the {@link Query} has implemented
-   * this method. If not, callers should fall back to using {@link #getContext()} and
-   * {@link #withOverriddenContext(Map)} as needed to manipulate the query.
+   * This method is marked @Nullable, but is only so for backwards compatibility with Druid versions older than 0.23.
+   * Callers should check if the result of this method is null, and if so, they are dealing with a legacy query
+   * implementation, and should fall back to using {@link #getContext()} and {@link #withOverriddenContext(Map)} to
+   * manipulate the query context.
    *
    * Note for query context serialization and deserialization.
    * Currently, once a query is serialized, its queryContext can be different from the original queryContext
@@ -117,23 +117,10 @@ public interface Query<T>
    * after it is deserialized. This is because {@link BaseQuery#getContext()} uses
    * {@link QueryContext#getMergedParams()} for serialization, and queries accept a map for deserialization.
    */
+  @Nullable
   default QueryContext getQueryContext()
   {
-    return IS_LEGACY_CONTEXT;
-  }
-
-  /**
-   * Checks if this {@link Query} implementation has implemented {@link #getQueryContext()}, which was added in
-   * Druid 0.23. If this method returns true, then callers should use {@link #getContext()} and
-   * {@link #withOverriddenContext(Map)} to manipulate the query context, and, if query context authorization is used
-   * (also added in 0.23), then permissions to system generated and system default context keys must also be added.
-   * It is recommended to not use query context authorization unless all queries implement {@link #getQueryContext()}.
-   */
-  @Deprecated
-  default boolean isLegacyContext()
-  {
-    //noinspection ObjectEquality
-    return getQueryContext() == Query.IS_LEGACY_CONTEXT;
+    return null;
   }
 
   <ContextType> ContextType getContextValue(String key);

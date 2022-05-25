@@ -188,7 +188,7 @@ public class QueryLifecycle
   {
     transition(State.NEW, State.INITIALIZED);
 
-    if (baseQuery.isLegacyContext()) {
+    if (baseQuery.getQueryContext() == null) {
       QueryContext context = new QueryContext(baseQuery.getContext());
       context.addDefaultParam(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
       context.addDefaultParams(defaultQueryConfig.getContext());
@@ -214,7 +214,7 @@ public class QueryLifecycle
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
     final Set<String> contextKeys;
-    if (baseQuery.isLegacyContext()) {
+    if (baseQuery.getQueryContext() == null) {
       contextKeys = baseQuery.getContext().keySet();
     } else {
       contextKeys = baseQuery.getQueryContext().getUserParams().keySet();
