@@ -184,6 +184,23 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
     Assert.assertFalse(eval(ExprEval.of("192.168.1.240").toExpr(), ExprEval.of("192.168.1.251/31").toExpr()));
     Assert.assertFalse(eval(ExprEval.of("192.168.1.250").toExpr(), ExprEval.of("192.168.1.251/32").toExpr()));
     Assert.assertTrue(eval(ExprEval.of("192.168.1.251").toExpr(), ExprEval.of("192.168.1.251/32").toExpr()));
+
+    Assert.assertTrue(eval(
+        ExprEval.of(IPv4AddressExprUtils.parse("192.168.1.250").longValue()).toExpr(),
+        ExprEval.of("192.168.1.251/31").toExpr()
+    ));
+    Assert.assertFalse(eval(
+        ExprEval.of(IPv4AddressExprUtils.parse("192.168.1.240").longValue()).toExpr(),
+        ExprEval.of("192.168.1.251/31").toExpr()
+    ));
+    Assert.assertFalse(eval(
+        ExprEval.of(IPv4AddressExprUtils.parse("192.168.1.250").longValue()).toExpr(),
+        ExprEval.of("192.168.1.251/32").toExpr()
+    ));
+    Assert.assertTrue(eval(
+        ExprEval.of(IPv4AddressExprUtils.parse("192.168.1.251").longValue()).toExpr(),
+        ExprEval.of("192.168.1.251/32").toExpr()
+    ));
   }
 
   private boolean eval(Expr... args)

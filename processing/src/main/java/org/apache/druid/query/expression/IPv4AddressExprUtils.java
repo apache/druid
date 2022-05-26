@@ -68,6 +68,16 @@ public class IPv4AddressExprUtils
     return null;
   }
 
+  @Nullable
+  public static IPAddressString parseString(@Nullable String string)
+  {
+    IPAddressString ipAddressString = new IPAddressString(string, IPV4_ADDRESS_PARAMS);
+    if (ipAddressString.isIPv4()) {
+      return ipAddressString;
+    }
+    return null;
+  }
+
   /**
    * @return IPv4 address if the supplied integer is a valid IPv4 integer number.
    */
