@@ -192,5 +192,5 @@ The following auto-compaction configuration compacts updates the `wikipedia` seg
 See the following topics for more information:
 * [Compaction](compaction.md) for an overview of compaction and how to set up manual compaction in Druid.
 * [Segment optimization](../operations/segment-optimization.md) for guidance on evaluating and optimizing Druid segment size.
-* [Compacting segments](../design/coordinator.md#compacting-segments) for details on how the Coordinator plans compaction tasks.
+* [Coordinator process](../design/coordinator.md#automatic-compaction) for details on how the Coordinator plans compaction tasks.
 
