@@ -5028,7 +5028,7 @@ libraries:
 name: DNS Java
 license_category: binary
 module: java-core
-license_name: BSD 2-Clause license
+license_name: BSD-2-Clause License
 version: 2.1.7
 libraries:
   - dnsjava: dnsjava
