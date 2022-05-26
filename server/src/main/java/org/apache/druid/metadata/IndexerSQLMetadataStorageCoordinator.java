@@ -1006,8 +1006,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       PreparedBatch preparedBatch = handle.prepareBatch(
           StringUtils.format(
-              "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
-                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+              "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, last_used) "
+                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :last_used)",
               dbTables.getSegmentsTable(),
               connector.getQuoteString()
           )
@@ -1024,7 +1024,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
               .bind("version", segment.getVersion())
               .bind("used", usedSegments.contains(segment))
-              .bind("payload", jsonMapper.writeValueAsBytes(segment));
+              .bind("payload", jsonMapper.writeValueAsBytes(segment))
+              .bind("last_used", DateTimes.nowUtc().toString());
         }
         final int[] affectedRows = preparedBatch.execute();
         final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);

@@ -37,6 +37,8 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.After;
@@ -102,6 +104,11 @@ public class SqlSegmentsMetadataManagerTest
 
   private void publish(DataSegment segment, boolean used) throws IOException
   {
+    publish(segment, used, DateTimes.nowUtc());
+  }
+
+  private void publish(DataSegment segment, boolean used, DateTime lastUsed) throws IOException
+  {
     boolean partitioned = !(segment.getShardSpec() instanceof NoneShardSpec);
     publisher.publishSegment(
         segment.getId().toString(),
@@ -112,7 +119,8 @@ public class SqlSegmentsMetadataManagerTest
         partitioned,
         segment.getVersion(),
         used,
-        jsonMapper.writeValueAsBytes(segment)
+        jsonMapper.writeValueAsBytes(segment),
+        lastUsed.toString()
     );
   }
 
@@ -350,7 +358,8 @@ public class SqlSegmentsMetadataManagerTest
         true,
         "corrupt-version",
         true,
-        StringUtils.toUtf8("corrupt-payload")
+        StringUtils.toUtf8("corrupt-payload"),
+        "corrupt-last-used-date"
     );
 
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
@@ -363,8 +372,9 @@ public class SqlSegmentsMetadataManagerTest
     );
   }
 
+  // TODO
   @Test
-  public void testGetUnusedSegmentIntervals()
+  public void testGetUnusedSegmentIntervals() throws IOException
   {
     sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
     sqlSegmentsMetadataManager.poll();
@@ -372,20 +382,50 @@ public class SqlSegmentsMetadataManagerTest
     int numChangedSegments = sqlSegmentsMetadataManager.markAsUnusedAllSegmentsInDataSource("wikipedia");
     Assert.assertEquals(2, numChangedSegments);
 
+    String newDs = "newDataSource";
+    final DataSegment newSegment = createSegment(
+        newDs,
+        "2017-10-15T00:00:00.000/2017-10-16T00:00:00.000",
+        "2017-10-15T20:19:12.565Z",
+        "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        0
+    );
+    publish(newSegment, false, DateTimes.nowUtc().minus(Duration.parse("PT7200S").getMillis()));
+
+    final DataSegment newSegment2 = createSegment(
+        newDs,
+        "2017-10-16T00:00:00.000/2017-10-17T00:00:00.000",
+        "2017-10-15T20:19:12.565Z",
+        "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        0
+    );
+    publish(newSegment2, false, DateTimes.nowUtc().minus(Duration.parse("PT172800S").getMillis()));
+
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval()),
-        sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.of("3000"), 1)
+        sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.of("3000"), 1, DateTimes.COMPARE_DATE_AS_STRING_MAX)
     );
 
     // Test the DateTime maxEndTime argument of getUnusedSegmentIntervals
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval()),
-        sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.of(2012, 1, 7, 0, 0), 1)
+        sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.of(2012, 1, 7, 0, 0), 1, DateTimes.COMPARE_DATE_AS_STRING_MAX)
     );
 
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval(), segment1.getInterval()),
-        sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.of("3000"), 5)
+        sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.of("3000"), 5, DateTimes.COMPARE_DATE_AS_STRING_MAX)
+    );
+
+    // Test a buffer period that should exclude some segments
+    Assert.assertEquals(
+        ImmutableList.of(),
+        sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.of("3000"), 5, DateTimes.nowUtc().minus(Duration.parse("PT86400S")))
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(newSegment2.getInterval()),
+        sqlSegmentsMetadataManager.getUnusedSegmentIntervals(newDs, DateTimes.of("3000"), 5, DateTimes.nowUtc().minus(Duration.parse("PT86400S")))
     );
   }
 

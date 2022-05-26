@@ -73,7 +73,8 @@ public class KillSupervisorsTest
         null,
         10,
         null,
-        false
+        false,
+        null
     );
     killSupervisors = new KillSupervisors(druidCoordinatorConfig, mockMetadataSupervisorManager);
     killSupervisors.run(mockDruidCoordinatorRuntimeParams);
@@ -103,7 +104,8 @@ public class KillSupervisorsTest
         null,
         10,
         null,
-        false
+        false,
+        null
     );
     killSupervisors = new KillSupervisors(druidCoordinatorConfig, mockMetadataSupervisorManager);
     killSupervisors.run(mockDruidCoordinatorRuntimeParams);
@@ -133,7 +135,8 @@ public class KillSupervisorsTest
         null,
         10,
         null,
-        false
+        false,
+        null
     );
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage("Coordinator supervisor kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod");
@@ -162,7 +165,8 @@ public class KillSupervisorsTest
         null,
         10,
         null,
-        false
+        false,
+        null
     );
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage("Coordinator supervisor kill retainDuration must be >= 0");

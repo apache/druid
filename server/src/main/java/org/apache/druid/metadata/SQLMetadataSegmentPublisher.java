@@ -55,8 +55,8 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
     this.config = config;
     this.connector = connector;
     this.statement = StringUtils.format(
-        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
-        + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, last_used) "
+        + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :last_used)",
         config.getSegmentsTable(), connector.getQuoteString()
     );
   }
@@ -73,7 +73,8 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
         (segment.getShardSpec() instanceof NoneShardSpec) ? false : true,
         segment.getVersion(),
         true,
-        jsonMapper.writeValueAsBytes(segment)
+        jsonMapper.writeValueAsBytes(segment),
+        DateTimes.nowUtc().toString()
     );
   }
 
@@ -87,7 +88,8 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
       final boolean partitioned,
       final String version,
       final boolean used,
-      final byte[] payload
+      final byte[] payload,
+      final String lastUsed
   )
   {
     try {
@@ -128,6 +130,7 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
                     .bind("version", version)
                     .bind("used", used)
                     .bind("payload", payload)
+                    .bind("last_used", lastUsed)
                     .execute();
 
               return null;

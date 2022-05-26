@@ -520,7 +520,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     try {
       int numUpdatedDatabaseEntries = connector.getDBI().withHandle(
           (Handle handle) -> handle
-              .createStatement(StringUtils.format("UPDATE %s SET used=true WHERE id = :id", getSegmentsTable()))
+              .createStatement(StringUtils.format("UPDATE %s SET used=true, last_used = CURRENT_TIMESTAMP WHERE id = :id", getSegmentsTable()))
               .bind("id", segmentId)
               .execute()
       );
@@ -981,7 +981,12 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public List<Interval> getUnusedSegmentIntervals(final String dataSource, final DateTime maxEndTime, final int limit)
+  public List<Interval> getUnusedSegmentIntervals(
+      final String dataSource,
+      final DateTime maxEndTime,
+      final int limit,
+      DateTime maxLastUsedTime
+  )
   {
     return connector.inReadOnlyTransaction(
         new TransactionCallback<List<Interval>>()
@@ -993,7 +998,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                 .createQuery(
                     StringUtils.format(
                         "SELECT start, %2$send%2$s FROM %1$s WHERE dataSource = :dataSource AND "
-                        + "%2$send%2$s <= :end AND used = false ORDER BY start, %2$send%2$s",
+                        + "%2$send%2$s <= :end AND used = false AND last_used <= :last_used ORDER BY start, %2$send%2$s",
                         getSegmentsTable(),
                         connector.getQuoteString()
                     )
@@ -1002,6 +1007,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                 .setMaxRows(limit)
                 .bind("dataSource", dataSource)
                 .bind("end", maxEndTime.toString())
+                .bind("last_used", maxLastUsedTime.toString())
                 .map(
                     new BaseResultSetMapper<Interval>()
                     {

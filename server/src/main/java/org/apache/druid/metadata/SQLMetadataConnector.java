@@ -25,6 +25,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.dbcp2.BasicDataSourceFactory;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -208,6 +209,35 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
   }
 
+  public void alterTable(final String tableName, final Iterable<String> sql)
+  {
+    try {
+      retryWithHandle(
+          new HandleCallback<Void>()
+          {
+            @Override
+            public Void withHandle(Handle handle)
+            {
+              if (tableExists(handle, tableName)) {
+                log.info("Altering table[%s]", tableName);
+                final Batch batch = handle.createBatch();
+                for (String s : sql) {
+                  batch.add(s);
+                }
+                batch.execute();
+              } else {
+                log.info("Table[%s] doesn't exists", tableName);
+              }
+              return null;
+            }
+          }
+      );
+    }
+    catch (Exception e) {
+      log.warn(e, "Exception creating table");
+    }
+  }
+
   public void createPendingSegmentsTable(final String tableName)
   {
     createTable(
@@ -277,6 +307,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  version VARCHAR(255) NOT NULL,\n"
                 + "  used BOOLEAN NOT NULL,\n"
                 + "  payload %2$s NOT NULL,\n"
+                + "  last_used VARCHAR(255) NOT NULL,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
                 tableName, getPayloadType(), getQuoteString(), getCollation()
@@ -404,6 +435,24 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 tableName, getSerialType(), getPayloadType()
             ),
             StringUtils.format("CREATE INDEX idx_%1$s_spec_id ON %1$s(spec_id)", tableName)
+        )
+    );
+  }
+
+  @Override
+  public void updateSegmentsTableAddLastUsed()
+  {
+    String tableName = tablesConfigSupplier.get().getSegmentsTable();
+    alterTable(
+        tableName,
+        ImmutableList.of(
+            StringUtils.format(
+                "ALTER TABLE %1$s (\n"
+                + "ADD last_used varchar(255) NOT NULL DEFAULT \"%2$s\""
+                + ")",
+                tableName,
+                DateTimes.nowUtc().toString()
+            )
         )
     );
   }

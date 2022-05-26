@@ -43,6 +43,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final int coordinatorKillMaxSegments;
   private final boolean compactionSkipLockedIntervals;
   private final boolean coordinatorKillIgnoreDurationToRetain;
+  private final Duration coordinatorKillBufferPeriod;
 
   public TestDruidCoordinatorConfig(
       Duration coordinatorStartDelay,
@@ -63,7 +64,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration coordinatorDatasourceKillDurationToRetain,
       int coordinatorKillMaxSegments,
       Duration getLoadQueuePeonRepeatDelay,
-      boolean coordinatorKillIgnoreDurationToRetain
+      boolean coordinatorKillIgnoreDurationToRetain,
+      Duration coordinatorKillBufferPeriod
   )
   {
     this.coordinatorStartDelay = coordinatorStartDelay;
@@ -86,6 +88,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.getLoadQueuePeonRepeatDelay = getLoadQueuePeonRepeatDelay;
     this.compactionSkipLockedIntervals = true;
     this.coordinatorKillIgnoreDurationToRetain = coordinatorKillIgnoreDurationToRetain;
+    this.coordinatorKillBufferPeriod = coordinatorKillBufferPeriod;
   }
 
   public TestDruidCoordinatorConfig(
@@ -108,7 +111,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       int coordinatorKillMaxSegments,
       Duration getLoadQueuePeonRepeatDelay,
       boolean compactionSkipLockedIntervals,
-      boolean coordinatorKillIgnoreDurationToRetain
+      boolean coordinatorKillIgnoreDurationToRetain,
+      Duration coordinatorKillBufferPeriod
   )
   {
     this.coordinatorStartDelay = coordinatorStartDelay;
@@ -131,6 +135,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.getLoadQueuePeonRepeatDelay = getLoadQueuePeonRepeatDelay;
     this.compactionSkipLockedIntervals = compactionSkipLockedIntervals;
     this.coordinatorKillIgnoreDurationToRetain = coordinatorKillIgnoreDurationToRetain;
+    this.coordinatorKillBufferPeriod = coordinatorKillBufferPeriod;
   }
 
   @Override
@@ -251,5 +256,11 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   public boolean getCoordinatorKillIgnoreDurationToRetain()
   {
     return coordinatorKillIgnoreDurationToRetain;
+  }
+
+  @Override
+  public Duration getCoordinatorKillBufferPeriod()
+  {
+    return coordinatorKillBufferPeriod;
   }
 }

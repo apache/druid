@@ -90,6 +90,7 @@ public class KillUnusedSegmentsTest
       Mockito.doReturn(DURATION_TO_RETAIN).when(config).getCoordinatorKillDurationToRetain();
       Mockito.doReturn(INDEXING_PERIOD).when(config).getCoordinatorIndexingPeriod();
       Mockito.doReturn(MAX_SEGMENTS_TO_KILL).when(config).getCoordinatorKillMaxSegments();
+      Mockito.doReturn(Duration.parse("PT3154000000S")).when(config).getCoordinatorKillBufferPeriod();
       target = new KillUnusedSegments(segmentsMetadataManager, indexingServiceClient, config);
     }
     @Test
@@ -167,7 +168,9 @@ public class KillUnusedSegmentsTest
           segmentsMetadataManager.getUnusedSegmentIntervals(
               EasyMock.anyString(),
               EasyMock.anyObject(DateTime.class),
-              EasyMock.anyInt()
+              EasyMock.anyInt(),
+              EasyMock.anyObject(DateTime.class)
+
           )
       ).andReturn(segmentIntervals);
       EasyMock.replay(segmentsMetadataManager);
@@ -195,7 +198,8 @@ public class KillUnusedSegmentsTest
               null,
               1000,
               Duration.ZERO,
-              false
+              false,
+              Duration.parse("PT3154000000S")
           )
       );
 
@@ -236,7 +240,8 @@ public class KillUnusedSegmentsTest
               null,
               1000,
               Duration.ZERO,
-              false
+              false,
+              Duration.parse("PT3154000000S")
           )
       );
       Assert.assertEquals((Long) Duration.parse("PT86400S").getMillis(), unusedSegmentsKiller.getRetainDuration());
@@ -264,7 +269,8 @@ public class KillUnusedSegmentsTest
               null,
               1000,
               Duration.ZERO,
-              false
+              false,
+              Duration.parse("PT3154000000S")
           )
       );
       Assert.assertEquals((Long) Duration.parse("PT-86400S").getMillis(), unusedSegmentsKiller.getRetainDuration());
@@ -301,7 +307,8 @@ public class KillUnusedSegmentsTest
               null,
               1000,
               Duration.ZERO,
-              true
+              true,
+              Duration.parse("PT3154000000S")
           )
       );
       Assert.assertEquals(
@@ -332,7 +339,8 @@ public class KillUnusedSegmentsTest
               null,
               1000,
               Duration.ZERO,
-              false
+              false,
+              Duration.parse("PT3154000000S")
           )
       );
 
@@ -362,7 +370,8 @@ public class KillUnusedSegmentsTest
               null,
               1000,
               Duration.ZERO,
-              false
+              false,
+              Duration.parse("PT3154000000S")
           )
       );
       expectedTime = DateTimes.nowUtc().minus(Duration.parse("PT86400S").getMillis());

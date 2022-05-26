@@ -55,6 +55,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   private final boolean ignoreRetainDuration;
   private final int maxSegmentsToKill;
   private long lastKillTime = 0;
+  private final long bufferPeriod;
 
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final IndexingServiceClient indexingServiceClient;
@@ -81,6 +82,7 @@ public class KillUnusedSegments implements CoordinatorDuty
           this.retainDuration
       );
     }
+    this.bufferPeriod = config.getCoordinatorKillBufferPeriod().getMillis();
 
     this.maxSegmentsToKill = config.getCoordinatorKillMaxSegments();
     Preconditions.checkArgument(this.maxSegmentsToKill > 0, "coordinator kill maxSegments must be > 0");
@@ -143,7 +145,12 @@ public class KillUnusedSegments implements CoordinatorDuty
   Interval findIntervalForKill(String dataSource, int limit)
   {
     List<Interval> unusedSegmentIntervals =
-        segmentsMetadataManager.getUnusedSegmentIntervals(dataSource, getEndTimeUpperLimit(), limit);
+        segmentsMetadataManager.getUnusedSegmentIntervals(
+            dataSource,
+            getEndTimeUpperLimit(),
+            limit,
+            DateTimes.nowUtc().minus(bufferPeriod)
+        );
 
     if (unusedSegmentIntervals != null && unusedSegmentIntervals.size() > 0) {
       return JodaUtils.umbrellaInterval(unusedSegmentIntervals);
