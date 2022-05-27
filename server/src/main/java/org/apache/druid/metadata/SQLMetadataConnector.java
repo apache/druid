@@ -447,9 +447,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         tableName,
         ImmutableList.of(
             StringUtils.format(
-                "ALTER TABLE %1$s (\n"
-                + "ADD last_used varchar(255) NOT NULL DEFAULT \"%2$s\""
-                + ")",
+                "ALTER TABLE %1$s \n"
+                + "ADD last_used varchar(255) NOT NULL DEFAULT '%2$s'",
                 tableName,
                 DateTimes.nowUtc().toString()
             )

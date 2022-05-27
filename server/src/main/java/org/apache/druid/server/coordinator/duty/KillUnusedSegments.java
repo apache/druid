@@ -88,9 +88,10 @@ public class KillUnusedSegments implements CoordinatorDuty
     Preconditions.checkArgument(this.maxSegmentsToKill > 0, "coordinator kill maxSegments must be > 0");
 
     log.info(
-        "Kill Task scheduling enabled with period [%s], retainDuration [%s], maxSegmentsToKill [%s]",
+        "Kill Task scheduling enabled with period [%s], retainDuration [%s], bufferPeriod [%s], maxSegmentsToKill [%s]",
         this.period,
         this.ignoreRetainDuration ? "IGNORING" : this.retainDuration,
+        this.bufferPeriod,
         this.maxSegmentsToKill
     );
 
