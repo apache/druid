@@ -21,12 +21,7 @@ import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import { ExternalLink } from '../../components';
-import {
-  DRUID_COMMUNITY,
-  DRUID_DEVELOPER_GROUP,
-  DRUID_USER_GROUP,
-  DRUID_WEBSITE,
-} from '../../variables';
+import { getLink } from '../../links';
 
 export interface AboutDialogProps {
   onClose: () => void;
@@ -50,19 +45,19 @@ export const AboutDialog = React.memo(function AboutDialog(props: AboutDialogPro
         </p>
         <p>
           For help and support with Druid, please refer to the{' '}
-          <ExternalLink href={DRUID_COMMUNITY}>community page</ExternalLink> and the{' '}
-          <ExternalLink href={DRUID_USER_GROUP}>user groups</ExternalLink>.
+          <ExternalLink href={getLink('COMMUNITY')}>community page</ExternalLink> and the{' '}
+          <ExternalLink href={getLink('USER_GROUP')}>user groups</ExternalLink>.
         </p>
         <p>
           Druid is made with ❤️ by a community of passionate developers. To contribute, join in the
           discussion on the{' '}
-          <ExternalLink href={DRUID_DEVELOPER_GROUP}>developer group</ExternalLink>.
+          <ExternalLink href={getLink('DEVELOPER_GROUP')}>developer group</ExternalLink>.
         </p>
       </div>
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
           <Button onClick={onClose}>Close</Button>
-          <AnchorButton intent={Intent.PRIMARY} href={DRUID_WEBSITE} target="_blank">
+          <AnchorButton intent={Intent.PRIMARY} href={getLink('WEBSITE')} target="_blank">
             Visit Druid
           </AnchorButton>
         </div>

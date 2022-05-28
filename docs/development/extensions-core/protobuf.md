@@ -23,7 +23,7 @@ title: "Protobuf"
   -->
 
 
-This Apache Druid extension enables Druid to ingest and understand the Protobuf data format. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-protobuf-extensions` as an extension.
+This Apache Druid extension enables Druid to ingest and understand the Protobuf data format. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-protobuf-extensions` in the extensions load list.
 
 The `druid-protobuf-extensions` provides the [Protobuf Parser](../../ingestion/data-formats.md#protobuf-parser)
 for [stream ingestion](../../ingestion/index.md#streaming). See corresponding docs for details.
@@ -56,8 +56,7 @@ Here is a JSON example of the 'metrics' data schema used in the example.
 
 ### Proto file
 
-The corresponding proto file for our 'metrics' dataset looks like this.
-
+The corresponding proto file for our 'metrics' dataset looks like this. You can use Protobuf `inputFormat` with a proto file or [Confluent Schema Registry](https://docs.confluent.io/platform/current/schema-registry/index.html).
 ```
 syntax = "proto3";
 message Metrics {
@@ -72,7 +71,7 @@ message Metrics {
 }
 ```
 
-### Descriptor file
+### When using a descriptor file
 
 Next, we use the `protoc` Protobuf compiler to generate the descriptor file and save it as `metrics.desc`. The descriptor file must be either in the classpath or reachable by URL.  In this example the descriptor file was saved at `/tmp/metrics.desc`, however this file is also available in the example files. From your Druid install directory:
 
@@ -80,86 +79,169 @@ Next, we use the `protoc` Protobuf compiler to generate the descriptor file and 
 protoc -o /tmp/metrics.desc ./quickstart/protobuf/metrics.proto
 ```
 
+### When using Schema Registry
+
+Make sure your Schema Registry version is later than 5.5. Next, we can post a schema to add it to the registry:
+
+```
+POST /subjects/test/versions HTTP/1.1
+Host: schemaregistry.example1.com
+Accept: application/vnd.schemaregistry.v1+json, application/vnd.schemaregistry+json, application/json
+
+{
+    "schemaType": "PROTOBUF",
+    "schema": "syntax = \"proto3\";\nmessage Metrics {\n  string unit = 1;\n  string http_method = 2;\n  int32 value = 3;\n string timestamp = 4;\n string http_code = 5;\n string page = 6;\n string metricType = 7;\n string server = 8;\n}\n"
+}
+```
+
+This feature uses Confluent's Protobuf provider which is not included in the Druid distribution and must be installed separately. You can fetch it and its dependencies from the Confluent repository and Maven Central at: 
+- https://packages.confluent.io/maven/io/confluent/kafka-protobuf-provider/6.0.1/kafka-protobuf-provider-6.0.1.jar
+- https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/1.4.0/kotlin-stdlib-1.4.0.jar
+- https://repo1.maven.org/maven2/com/squareup/wire/wire-schema/3.2.2/wire-schema-3.2.2.jar
+
+Copy or symlink those files inside the folder `extensions/protobuf-extensions` under the distribution root directory.
+
 ## Create Kafka Supervisor
 
 Below is the complete Supervisor spec JSON to be submitted to the Overlord.
 Make sure these keys are properly configured for successful ingestion.
 
+### When using a descriptor file
+
 Important supervisor properties
-- `descriptor` for the descriptor file URL
-- `protoMessageType` from the proto definition
-- `parser` should have `type` set to `protobuf`, but note that the `format` of the `parseSpec` must be `json`
+- `protoBytesDecoder.descriptor` for the descriptor file URL
+- `protoBytesDecoder.protoMessageType` from the proto definition
+- `protoBytesDecoder.type` set to `file`, indicate use descriptor file to decode Protobuf file
+- `inputFormat` should have `type` set to `protobuf`
 
 ```json
 {
-  "type": "kafka",
-  "dataSchema": {
-    "dataSource": "metrics-protobuf",
-    "parser": {
-      "type": "protobuf",
-      "descriptor": "file:///tmp/metrics.desc",
-      "protoMessageType": "Metrics",
-      "parseSpec": {
-        "format": "json",
+"type": "kafka",
+"spec": {
+    "dataSchema": {
+        "dataSource": "metrics-protobuf",
         "timestampSpec": {
-          "column": "timestamp",
-          "format": "auto"
+            "column": "timestamp",
+            "format": "auto"
         },
         "dimensionsSpec": {
-          "dimensions": [
-            "unit",
-            "http_method",
-            "http_code",
-            "page",
-            "metricType",
-            "server"
-          ],
-          "dimensionExclusions": [
-            "timestamp",
-            "value"
-          ]
+            "dimensions": [
+                "unit",
+                "http_method",
+                "http_code",
+                "page",
+                "metricType",
+                "server"
+            ],
+            "dimensionExclusions": [
+                "timestamp",
+                "value"
+            ]
+        },
+        "metricsSpec": [
+            {
+                "name": "count",
+                "type": "count"
+            },
+            {
+                "name": "value_sum",
+                "fieldName": "value",
+                "type": "doubleSum"
+            },
+            {
+                "name": "value_min",
+                "fieldName": "value",
+                "type": "doubleMin"
+            },
+            {
+                "name": "value_max",
+                "fieldName": "value",
+                "type": "doubleMax"
+            }
+        ],
+        "granularitySpec": {
+            "type": "uniform",
+            "segmentGranularity": "HOUR",
+            "queryGranularity": "NONE"
         }
-      }
     },
-    "metricsSpec": [
-      {
-        "name": "count",
-        "type": "count"
-      },
-      {
-        "name": "value_sum",
-        "fieldName": "value",
-        "type": "doubleSum"
-      },
-      {
-        "name": "value_min",
-        "fieldName": "value",
-        "type": "doubleMin"
-      },
-      {
-        "name": "value_max",
-        "fieldName": "value",
-        "type": "doubleMax"
-      }
-    ],
-    "granularitySpec": {
-      "type": "uniform",
-      "segmentGranularity": "HOUR",
-      "queryGranularity": "NONE"
+    "tuningConfig": {
+        "type": "kafka",
+        "maxRowsPerSegment": 5000000
+    },
+    "ioConfig": {
+        "topic": "metrics_pb",
+        "consumerProperties": {
+            "bootstrap.servers": "localhost:9092"
+        },
+        "inputFormat": {
+            "type": "protobuf",
+            "protoBytesDecoder": {
+                "type": "file",
+                "descriptor": "file:///tmp/metrics.desc",
+                "protoMessageType": "Metrics"
+            },
+            "flattenSpec": {
+                "useFieldDiscovery": true
+            },
+            "binaryAsString": false
+        },
+        "taskCount": 1,
+        "replicas": 1,
+        "taskDuration": "PT1H",
+        "type": "kafka"
     }
-  },
-  "tuningConfig": {
-    "type": "kafka",
-    "maxRowsPerSegment": 5000000
-  },
-  "ioConfig": {
-    "topic": "metrics_pb",
-    "consumerProperties": {
-      "bootstrap.servers": "localhost:9092"
-    },
-    "taskCount": 1,
-    "replicas": 1,
-    "taskDuration": "PT1H"
+}
+}
+```
+
+To adopt to old version. You can use old parser style, which also works.
+
+```json
+{
+  "parser": {
+    "type": "protobuf",
+    "descriptor": "file:///tmp/metrics.desc",
+    "protoMessageType": "Metrics"
+  }
+}
+```
+
+### When using Schema Registry
+
+Important supervisor properties
+- `protoBytesDecoder.url` for the schema registry URL with single instance.
+- `protoBytesDecoder.urls` for the schema registry URLs with multi instances.
+- `protoBytesDecoder.capacity` capacity for schema registry cached schemas.
+- `protoBytesDecoder.config` to send additional configurations, configured for Schema Registry.
+- `protoBytesDecoder.headers` to send headers to the Schema Registry.
+- `protoBytesDecoder.type` set to `schema_registry`, indicate use schema registry to decode Protobuf file.
+- `parser` should have `type` set to `protobuf`, but note that the `format` of the `parseSpec` must be `json`.
+
+```json
+{
+  "parser": {
+    "type": "protobuf",
+    "protoBytesDecoder": {
+      "urls": ["http://schemaregistry.example1.com:8081","http://schemaregistry.example2.com:8081"],
+      "type": "schema_registry",
+      "capacity": 100,
+      "config" : {
+           "basic.auth.credentials.source": "USER_INFO",
+           "basic.auth.user.info": "fred:letmein",
+           "schema.registry.ssl.truststore.location": "/some/secrets/kafka.client.truststore.jks",
+           "schema.registry.ssl.truststore.password": "<password>",
+           "schema.registry.ssl.keystore.location": "/some/secrets/kafka.client.keystore.jks",
+           "schema.registry.ssl.keystore.password": "<password>",
+           "schema.registry.ssl.key.password": "<password>",
+             ... 
+      },
+      "headers": {
+          "traceID" : "b29c5de2-0db4-490b-b421",
+          "timeStamp" : "1577191871865",
+          ...
+      }
+    }
   }
 }
 ```
@@ -175,7 +257,7 @@ If necessary, from your Kafka installation directory run the following command t
 This example script requires `protobuf` and `kafka-python` modules. With the topic in place, messages can be inserted running the following command from your Druid installation directory
 
 ```
-./bin/generate-example-metrics | ./quickstart/protobuf/pb_publisher.py
+./bin/generate-example-metrics | python /quickstart/protobuf/pb_publisher.py
 ```
 
 You can confirm that data has been inserted to your Kafka topic using the following command from your Kafka installation directory

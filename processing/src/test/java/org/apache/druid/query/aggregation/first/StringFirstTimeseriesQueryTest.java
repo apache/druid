@@ -31,6 +31,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.SerializablePairLongStringSerde;
+import org.apache.druid.query.timeseries.DefaultTimeseriesQueryMetrics;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
@@ -42,6 +43,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
@@ -69,16 +71,16 @@ public class StringFirstTimeseriesQueryTest extends InitializedNullHandlingTest
     final SerializablePairLongStringSerde serde = new SerializablePairLongStringSerde();
     ComplexMetrics.registerSerde(serde.getTypeName(), serde);
 
-    incrementalIndex = new IncrementalIndex.Builder()
+    incrementalIndex = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.SECOND)
                 .withMetrics(new CountAggregatorFactory("cnt"))
-                .withMetrics(new StringFirstAggregatorFactory(FIRST_CLIENT_TYPE, CLIENT_TYPE, 1024))
+                .withMetrics(new StringFirstAggregatorFactory(FIRST_CLIENT_TYPE, CLIENT_TYPE, null, 1024))
                 .build()
         )
         .setMaxRowCount(1000)
-        .buildOnheap();
+        .build();
 
     incrementalIndex.add(
         new MapBasedInputRow(
@@ -117,10 +119,10 @@ public class StringFirstTimeseriesQueryTest extends InitializedNullHandlingTest
                                   .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                                   .aggregators(
                                       ImmutableList.of(
-                                          new StringFirstAggregatorFactory("nonfolding", CLIENT_TYPE, 1024),
-                                          new StringFirstAggregatorFactory("folding", FIRST_CLIENT_TYPE, 1024),
-                                          new StringFirstAggregatorFactory("nonexistent", "nonexistent", 1024),
-                                          new StringFirstAggregatorFactory("numeric", "cnt", 1024)
+                                          new StringFirstAggregatorFactory("nonfolding", CLIENT_TYPE, null, 1024),
+                                          new StringFirstAggregatorFactory("folding", FIRST_CLIENT_TYPE, null, 1024),
+                                          new StringFirstAggregatorFactory("nonexistent", "nonexistent", null, 1024),
+                                          new StringFirstAggregatorFactory("numeric", "cnt", null, 1024)
                                       )
                                   )
                                   .build();
@@ -139,11 +141,12 @@ public class StringFirstTimeseriesQueryTest extends InitializedNullHandlingTest
         )
     );
 
+    final DefaultTimeseriesQueryMetrics defaultTimeseriesQueryMetrics = new DefaultTimeseriesQueryMetrics();
     final Iterable<Result<TimeseriesResultValue>> iiResults =
-        engine.process(query, new IncrementalIndexStorageAdapter(incrementalIndex)).toList();
+        engine.process(query, new IncrementalIndexStorageAdapter(incrementalIndex), defaultTimeseriesQueryMetrics).toList();
 
     final Iterable<Result<TimeseriesResultValue>> qiResults =
-        engine.process(query, new QueryableIndexStorageAdapter(queryableIndex)).toList();
+        engine.process(query, new QueryableIndexStorageAdapter(queryableIndex), defaultTimeseriesQueryMetrics).toList();
 
     TestHelper.assertExpectedResults(expectedResults, iiResults, "incremental index");
     TestHelper.assertExpectedResults(expectedResults, qiResults, "queryable index");

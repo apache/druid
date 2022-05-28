@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -35,6 +34,7 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.segment.IncrementalIndexSegment;
@@ -42,6 +42,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Before;
@@ -62,11 +63,11 @@ public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
   {
     final GroupByQueryConfig config = new GroupByQueryConfig();
     config.setMaxIntermediateRows(10000);
-    final Pair<GroupByQueryRunnerFactory, Closer> factoryCloserPair = GroupByQueryRunnerTest.makeQueryRunnerFactory(
-        config
+    this.resourceCloser = Closer.create();
+    this.factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+        config,
+        this.resourceCloser.register(TestGroupByBuffers.createDefault())
     );
-    factory = factoryCloserPair.lhs;
-    resourceCloser = factoryCloserPair.rhs;
   }
 
   @After
@@ -78,7 +79,7 @@ public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByWithDistinctCountAgg() throws Exception
   {
-    IncrementalIndex index = new IncrementalIndex.Builder()
+    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.SECOND)
@@ -87,7 +88,7 @@ public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
         )
         .setConcurrentEventAdd(true)
         .setMaxRowCount(1000)
-        .buildOnheap();
+        .build();
 
     String visitor_id = "visitor_id";
     String client_type = "client_type";

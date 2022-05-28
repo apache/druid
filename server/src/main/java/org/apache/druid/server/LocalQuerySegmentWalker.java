@@ -20,16 +20,13 @@
 package org.apache.druid.server;
 
 import com.google.inject.Inject;
-import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -37,15 +34,13 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.Joinables;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.joda.time.Interval;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.StreamSupport;
@@ -63,7 +58,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
 {
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final SegmentWrangler segmentWrangler;
-  private final JoinableFactory joinableFactory;
+  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final QueryScheduler scheduler;
   private final ServiceEmitter emitter;
 
@@ -78,7 +73,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
   {
     this.conglomerate = conglomerate;
     this.segmentWrangler = segmentWrangler;
-    this.joinableFactory = joinableFactory;
+    this.joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
     this.scheduler = scheduler;
     this.emitter = emitter;
   }
@@ -97,24 +92,19 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
     final Iterable<ReferenceCountingSegment> segments =
         FunctionalIterable.create(segmentWrangler.getSegmentsForIntervals(analysis.getBaseDataSource(), intervals))
                           .transform(ReferenceCountingSegment::wrapRootGenerationSegment);
-    final Query<T> prioritizedAndLaned = prioritizeAndLaneQuery(query, segments);
 
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
-    final Function<SegmentReference, SegmentReference> segmentMapFn = Joinables.createSegmentMapFn(
+
+    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
+        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
         analysis.getPreJoinableClauses(),
-        joinableFactory,
         cpuAccumulator,
-        QueryContexts.getEnableJoinFilterPushDown(prioritizedAndLaned),
-        QueryContexts.getEnableJoinFilterRewrite(prioritizedAndLaned),
-        QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(prioritizedAndLaned),
-        QueryContexts.getJoinFilterRewriteMaxSize(prioritizedAndLaned),
-        prioritizedAndLaned.getFilter() == null ? null : prioritizedAndLaned.getFilter().toFilter(),
-        prioritizedAndLaned.getVirtualColumns()
+        analysis.getBaseQuery().orElse(query)
     );
 
-    final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(prioritizedAndLaned);
+    final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(query);
     final QueryRunner<T> baseRunner = queryRunnerFactory.mergeRunners(
-        Execs.directExecutor(),
+        DirectQueryProcessingPool.INSTANCE,
         () -> StreamSupport.stream(segments.spliterator(), false)
                            .map(segmentMapFn)
                            .map(queryRunnerFactory::createRunner).iterator()
@@ -135,14 +125,5 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
   {
     // SegmentWranglers only work based on intervals and cannot run with specific segments.
     throw new ISE("Cannot run with specific segments");
-  }
-
-  private <T> Query<T> prioritizeAndLaneQuery(Query<T> query, Iterable<? extends Segment> segments)
-  {
-    Set<SegmentServerSelector> segmentServerSelectors = new HashSet<>();
-    for (Segment s : segments) {
-      segmentServerSelectors.add(new SegmentServerSelector(s.getId().toDescriptor()));
-    }
-    return scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(query), segmentServerSelectors);
   }
 }

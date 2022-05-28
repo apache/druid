@@ -18,8 +18,7 @@
 
 .segment-timeline {
   display: grid;
-  grid-template-columns: 85% 15%;
-  height: 100%;
+  grid-template-columns: 1fr 200px;
 
   .loader {
     width: 85%;
@@ -33,15 +32,6 @@
     transform: translate(-50%, -50%);
   }
 
-  .bar-chart-tooltip {
-    margin-left: 53px;
-
-    div {
-      display: inline-block;
-      width: 230px;
-    }
-  }
-
   .no-data-text {
     position: absolute;
     left: 30vw;
@@ -50,7 +40,6 @@
   }
 
   .side-control {
-    padding-left: 1vw;
-    padding-top: 5vh;
+    padding-top: 20px;
   }
 }

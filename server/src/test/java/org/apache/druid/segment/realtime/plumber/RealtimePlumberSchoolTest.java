@@ -37,18 +37,19 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
-import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -60,6 +61,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -83,7 +85,7 @@ import java.util.concurrent.TimeUnit;
  *
  */
 @RunWith(Parameterized.class)
-public class RealtimePlumberSchoolTest
+public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
 {
   @Parameterized.Parameters(name = "rejectionPolicy = {0}, segmentWriteOutMediumFactory = {1}")
   public static Collection<?> constructorFeeder()
@@ -139,7 +141,7 @@ public class RealtimePlumberSchoolTest
             new StringInputRowParser(
                 new JSONParseSpec(
                     new TimestampSpec("timestamp", "auto", null),
-                    new DimensionsSpec(null, null, null),
+                    DimensionsSpec.EMPTY,
                     null,
                     null,
                     null
@@ -160,7 +162,7 @@ public class RealtimePlumberSchoolTest
             new StringInputRowParser(
                 new JSONParseSpec(
                     new TimestampSpec("timestamp", "auto", null),
-                    new DimensionsSpec(null, null, null),
+                    DimensionsSpec.EMPTY,
                     null,
                     null,
                     null
@@ -199,7 +201,9 @@ public class RealtimePlumberSchoolTest
     EasyMock.replay(announcer, segmentPublisher, dataSegmentPusher, handoffNotifierFactory, handoffNotifier, emitter);
 
     tuningConfig = new RealtimeTuningConfig(
+        null,
         1,
+        null,
         null,
         null,
         null,
@@ -210,7 +214,6 @@ public class RealtimePlumberSchoolTest
         null,
         null,
         null,
-        true,
         0,
         0,
         false,
@@ -227,7 +230,7 @@ public class RealtimePlumberSchoolTest
         announcer,
         segmentPublisher,
         handoffNotifierFactory,
-        Execs.directExecutor(),
+        DirectQueryProcessingPool.INSTANCE,
         NoopJoinableFactory.INSTANCE,
         TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory),
         TestHelper.getTestIndexIO(),
@@ -277,9 +280,10 @@ public class RealtimePlumberSchoolTest
         schema,
         tuningConfig.getShardSpec(),
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
+        tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
-        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getMaxBytesInMemoryOrDefault(),
+        true,
         tuningConfig.getDedupColumn()
     );
     plumber.getSinks().put(0L, sink);
@@ -323,9 +327,10 @@ public class RealtimePlumberSchoolTest
         schema,
         tuningConfig.getShardSpec(),
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
+        tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
-        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getMaxBytesInMemoryOrDefault(),
+        true,
         tuningConfig.getDedupColumn()
     );
     plumber.getSinks().put(0L, sink);
@@ -374,9 +379,10 @@ public class RealtimePlumberSchoolTest
         schema2,
         tuningConfig.getShardSpec(),
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
+        tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
-        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getMaxBytesInMemoryOrDefault(),
+        true,
         tuningConfig.getDedupColumn()
     );
     plumber2.getSinks().put(0L, sink);

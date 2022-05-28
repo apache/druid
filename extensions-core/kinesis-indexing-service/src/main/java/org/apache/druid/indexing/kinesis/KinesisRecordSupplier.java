@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.kinesis;
 
-import com.amazonaws.AmazonServiceException;
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
@@ -27,11 +27,12 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
 import com.amazonaws.services.kinesis.model.DescribeStreamRequest;
-import com.amazonaws.services.kinesis.model.DescribeStreamResult;
 import com.amazonaws.services.kinesis.model.ExpiredIteratorException;
 import com.amazonaws.services.kinesis.model.GetRecordsRequest;
 import com.amazonaws.services.kinesis.model.GetRecordsResult;
 import com.amazonaws.services.kinesis.model.InvalidArgumentException;
+import com.amazonaws.services.kinesis.model.ListShardsRequest;
+import com.amazonaws.services.kinesis.model.ListShardsResult;
 import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
@@ -46,8 +47,10 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
+import org.apache.druid.common.aws.AWSClientUtil;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisor;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -61,7 +64,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
@@ -69,7 +71,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -92,7 +93,7 @@ import java.util.stream.Collectors;
  * This class implements a local buffer for storing fetched Kinesis records. Fetching is done
  * in background threads.
  */
-public class KinesisRecordSupplier implements RecordSupplier<String, String>
+public class KinesisRecordSupplier implements RecordSupplier<String, String, ByteEntity>
 {
   private static final EmittingLogger log = new EmittingLogger(KinesisRecordSupplier.class);
   private static final long PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS = 3000;
@@ -105,31 +106,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
    */
   private static final int GET_SEQUENCE_NUMBER_RECORD_COUNT = 1000;
   private static final int GET_SEQUENCE_NUMBER_RETRY_COUNT = 10;
-
-  private static boolean isServiceExceptionRecoverable(AmazonServiceException ex)
-  {
-    final boolean isIOException = ex.getCause() instanceof IOException;
-    final boolean isTimeout = "RequestTimeout".equals(ex.getErrorCode());
-    return isIOException || isTimeout;
-  }
-
-  /**
-   * Returns an array with the content between the position and limit of "buffer". This may be the buffer's backing
-   * array itself. Does not modify position or limit of the buffer.
-   */
-  private static byte[] toByteArray(final ByteBuffer buffer)
-  {
-    if (buffer.hasArray()
-        && buffer.arrayOffset() == 0
-        && buffer.position() == 0
-        && buffer.array().length == buffer.limit()) {
-      return buffer.array();
-    } else {
-      final byte[] retVal = new byte[buffer.remaining()];
-      buffer.duplicate().get(retVal);
-      return retVal;
-    }
-  }
 
   /**
    * Catch any exception and wrap it in a {@link StreamException}
@@ -233,7 +209,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
         // used for retrying on InterruptedException
         GetRecordsResult recordsResult = null;
-        OrderedPartitionableRecord<String, String> currRecord;
+        OrderedPartitionableRecord<String, String, ByteEntity> currRecord;
 
         try {
 
@@ -266,7 +242,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           // list will come back empty if there are no records
           for (Record kinesisRecord : recordsResult.getRecords()) {
 
-            final List<byte[]> data;
+            final List<ByteEntity> data;
 
 
             if (deaggregate) {
@@ -281,10 +257,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
               );
 
               for (Object userRecord : userRecords) {
-                data.add(toByteArray((ByteBuffer) getDataHandle.invoke(userRecord)));
+                data.add(new ByteEntity((ByteBuffer) getDataHandle.invoke(userRecord)));
               }
             } else {
-              data = Collections.singletonList(toByteArray(kinesisRecord.getData()));
+              data = Collections.singletonList(new ByteEntity(kinesisRecord.getData()));
             }
 
             currRecord = new OrderedPartitionableRecord<>(
@@ -295,14 +271,22 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
             );
 
 
-            log.trace(
-                "Stream[%s] / partition[%s] / sequenceNum[%s] / bufferRemainingCapacity[%d]: %s",
-                currRecord.getStream(),
-                currRecord.getPartitionId(),
-                currRecord.getSequenceNumber(),
-                records.remainingCapacity(),
-                currRecord.getData().stream().map(StringUtils::fromUtf8).collect(Collectors.toList())
-            );
+            if (log.isTraceEnabled()) {
+              log.trace(
+                  "Stream[%s] / partition[%s] / sequenceNum[%s] / bufferRemainingCapacity[%d]: %s",
+                  currRecord.getStream(),
+                  currRecord.getPartitionId(),
+                  currRecord.getSequenceNumber(),
+                  records.remainingCapacity(),
+                  currRecord.getData()
+                            .stream()
+                            .map(b -> StringUtils.fromUtf8(
+                                // duplicate buffer to avoid changing its position when logging
+                                b.getBuffer().duplicate())
+                            )
+                            .collect(Collectors.toList())
+              );
+            }
 
             // If the buffer was full and we weren't able to add the message, grab a new stream iterator starting
             // from this message and back off for a bit to let the buffer drain before retrying.
@@ -365,8 +349,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           log.error(e, "encounted AWS error while attempting to fetch records, will not retry");
           throw e;
         }
-        catch (AmazonServiceException e) {
-          if (isServiceExceptionRecoverable(e)) {
+        catch (AmazonClientException e) {
+          if (AWSClientUtil.isClientExceptionRecoverable(e)) {
             log.warn(e, "encounted unknown recoverable AWS exception, retrying in [%,dms]", EXCEPTION_RETRY_DELAY_MS);
             scheduleBackgroundFetch(EXCEPTION_RETRY_DELAY_MS);
           } else {
@@ -421,12 +405,13 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   private final int fetchThreads;
   private final int recordBufferSize;
   private final boolean useEarliestSequenceNumber;
+  private final boolean useListShards;
 
   private ScheduledExecutorService scheduledExec;
 
   private final ConcurrentMap<StreamPartition<String>, PartitionResource> partitionResources =
       new ConcurrentHashMap<>();
-  private BlockingQueue<OrderedPartitionableRecord<String, String>> records;
+  private BlockingQueue<OrderedPartitionableRecord<String, String, ByteEntity>> records;
 
   private final boolean backgroundFetchEnabled;
   private volatile boolean closed = false;
@@ -443,7 +428,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       int recordBufferFullWait,
       int fetchSequenceNumberTimeout,
       int maxRecordsPerPoll,
-      boolean useEarliestSequenceNumber
+      boolean useEarliestSequenceNumber,
+      boolean useListShards
   )
   {
     Preconditions.checkNotNull(amazonKinesis);
@@ -458,6 +444,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     this.fetchThreads = fetchThreads;
     this.recordBufferSize = recordBufferSize;
     this.useEarliestSequenceNumber = useEarliestSequenceNumber;
+    this.useListShards = useListShards;
     this.backgroundFetchEnabled = fetchThreads > 0;
 
     // the deaggregate function is implemented by the amazon-kinesis-client, whose license is not compatible with Apache.
@@ -635,14 +622,14 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
   @Nonnull
   @Override
-  public List<OrderedPartitionableRecord<String, String>> poll(long timeout)
+  public List<OrderedPartitionableRecord<String, String, ByteEntity>> poll(long timeout)
   {
     start();
 
     try {
       int expectedSize = Math.min(Math.max(records.size(), 1), maxRecordsPerPoll);
 
-      List<OrderedPartitionableRecord<String, String>> polledRecords = new ArrayList<>(expectedSize);
+      List<OrderedPartitionableRecord<String, String, ByteEntity>> polledRecords = new ArrayList<>(expectedSize);
 
       Queues.drain(
           records,
@@ -679,34 +666,73 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     return getSequenceNumber(partition, ShardIteratorType.TRIM_HORIZON);
   }
 
+  public Set<Shard> getShards(String stream)
+  {
+    if (useListShards) {
+      return getShardsUsingListShards(stream);
+    }
+    return getShardsUsingDescribeStream(stream);
+  }
+
+  /**
+   * Default method to avoid incompatibility when user doesn't have sufficient IAM permissions on AWS
+   * Not advised. getShardsUsingListShards is recommended instead if sufficient permissions are present.
+   *
+   * @param stream name of stream
+   * @return Immutable set of shards
+   */
+  private Set<Shard> getShardsUsingDescribeStream(String stream)
+  {
+    ImmutableSet.Builder<Shard> shards = ImmutableSet.builder();
+    DescribeStreamRequest describeRequest = new DescribeStreamRequest();
+    describeRequest.setStreamName(stream);
+    while (describeRequest != null) {
+      StreamDescription description = kinesis.describeStream(describeRequest).getStreamDescription();
+      List<Shard> shardResult = description.getShards();
+      shards.addAll(shardResult);
+      if (description.isHasMoreShards()) {
+        describeRequest.setExclusiveStartShardId(Iterables.getLast(shardResult).getShardId());
+      } else {
+        describeRequest = null;
+      }
+    }
+    return shards.build();
+  }
+
+  /**
+   * If the user has the IAM policy for listShards, and useListShards is true:
+   * Use the API listShards which is the recommended way instead of describeStream
+   * listShards can return 1000 shards per call and has a limit of 100TPS
+   * This makes the method resilient to LimitExceeded exceptions (compared to 100 shards, 10 TPS of describeStream)
+   *
+   * @param stream name of stream
+   * @return Immutable set of shards
+   */
+  private Set<Shard> getShardsUsingListShards(String stream)
+  {
+    ImmutableSet.Builder<Shard> shards = ImmutableSet.builder();
+    ListShardsRequest request = new ListShardsRequest().withStreamName(stream);
+    while (true) {
+      ListShardsResult result = kinesis.listShards(request);
+      shards.addAll(result.getShards());
+      String nextToken = result.getNextToken();
+      if (nextToken == null) {
+        return shards.build();
+      }
+      request = new ListShardsRequest().withNextToken(nextToken);
+    }
+  }
+
   @Override
   public Set<String> getPartitionIds(String stream)
   {
-    return wrapExceptions(
-        () -> {
-          final Set<String> retVal = new HashSet<>();
-          DescribeStreamRequest request = new DescribeStreamRequest();
-          request.setStreamName(stream);
-
-          while (request != null) {
-            final DescribeStreamResult result = kinesis.describeStream(request);
-            final StreamDescription streamDescription = result.getStreamDescription();
-            final List<Shard> shards = streamDescription.getShards();
-
-            for (Shard shard : shards) {
-              retVal.add(shard.getShardId());
-            }
-
-            if (streamDescription.isHasMoreShards()) {
-              request.setExclusiveStartShardId(Iterables.getLast(shards).getShardId());
-            } else {
-              request = null;
-            }
-          }
-
-          return retVal;
-        }
-    );
+    return wrapExceptions(() -> {
+      ImmutableSet.Builder<String> partitionIds = ImmutableSet.builder();
+      for (Shard shard : getShards(stream)) {
+        partitionIds.add(shard.getShardId());
+      }
+      return partitionIds.build();
+    });
   }
 
   /**
@@ -717,9 +743,11 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   {
     Map<String, Long> partitionLag = Maps.newHashMapWithExpectedSize(currentOffsets.size());
     for (Map.Entry<String, String> partitionOffset : currentOffsets.entrySet()) {
-      StreamPartition<String> partition = new StreamPartition<>(stream, partitionOffset.getKey());
-      long currentLag = getPartitionTimeLag(partition, partitionOffset.getValue());
-      partitionLag.put(partitionOffset.getKey(), currentLag);
+      if (KinesisSequenceNumber.isValidAWSKinesisSequence(partitionOffset.getValue())) {
+        StreamPartition<String> partition = new StreamPartition<>(stream, partitionOffset.getKey());
+        long currentLag = getPartitionTimeLag(partition, partitionOffset.getValue());
+        partitionLag.put(partitionOffset.getKey(), currentLag);
+      }
     }
     return partitionLag;
   }
@@ -754,6 +782,34 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   public boolean isBackgroundFetchRunning()
   {
     return partitionsFetchStarted.get();
+  }
+
+  @VisibleForTesting
+  public boolean isAnyFetchActive()
+  {
+    return partitionResources.values()
+                             .stream()
+                             .map(pr -> pr.currentFetch)
+                             .anyMatch(fetch -> (fetch != null && !fetch.isDone()));
+  }
+
+  /**
+   * Fetches records from the specified shard to determine if it is empty.
+   * @param stream to which shard belongs
+   * @param shardId of the closed shard
+   * @return true if the closed shard is empty, false otherwise.
+   */
+  public boolean isClosedShardEmpty(String stream, String shardId)
+  {
+    String shardIterator = kinesis.getShardIterator(stream,
+                                                    shardId,
+                                                    ShardIteratorType.TRIM_HORIZON.toString())
+                                  .getShardIterator();
+    GetRecordsRequest request = new GetRecordsRequest().withShardIterator(shardIterator)
+                                                       .withLimit(1);
+    GetRecordsResult shardData = kinesis.getRecords(request);
+
+    return shardData.getRecords().isEmpty() && shardData.getNextShardIterator() == null;
   }
 
   /**
@@ -808,6 +864,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
                     + "the number of shards to increase throughput."
                 );
                 return true;
+              }
+              if (throwable instanceof AmazonClientException) {
+                AmazonClientException ase = (AmazonClientException) throwable;
+                return AWSClientUtil.isClientExceptionRecoverable(ase);
               }
               return false;
             },
@@ -864,19 +924,34 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         iteratorType = ShardIteratorType.AT_SEQUENCE_NUMBER.toString();
         offsetToUse = offset;
       }
-      String shardIterator = kinesis.getShardIterator(
-          partition.getStream(),
-          partition.getPartitionId(),
-          iteratorType,
-          offsetToUse
-      ).getShardIterator();
 
-      GetRecordsResult recordsResult = kinesis.getRecords(
-          new GetRecordsRequest().withShardIterator(shardIterator).withLimit(1)
-      );
+      GetRecordsResult recordsResult = getRecordsForLag(ShardIteratorType.AFTER_SEQUENCE_NUMBER.toString(), offsetToUse, partition);
+
+      // If no more new data after offsetToUse, it means there is no lag for now.
+      // So report lag points as 0L.
+      if (recordsResult.getRecords().size() == 0) {
+        return 0L;
+      } else {
+        recordsResult = getRecordsForLag(iteratorType, offsetToUse, partition);
+      }
 
       return recordsResult.getMillisBehindLatest();
     });
+  }
+
+  private GetRecordsResult getRecordsForLag(String iteratorType, String offsetToUse, StreamPartition<String> partition)
+  {
+    String shardIterator = kinesis.getShardIterator(
+            partition.getStream(),
+            partition.getPartitionId(),
+            iteratorType,
+            offsetToUse
+    ).getShardIterator();
+
+    GetRecordsResult recordsResult = kinesis.getRecords(
+            new GetRecordsRequest().withShardIterator(shardIterator).withLimit(1)
+    );
+    return recordsResult;
   }
 
   /**
@@ -921,7 +996,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     }
 
     // filter records in buffer and only retain ones whose partition was not seeked
-    BlockingQueue<OrderedPartitionableRecord<String, String>> newQ = new LinkedBlockingQueue<>(recordBufferSize);
+    BlockingQueue<OrderedPartitionableRecord<String, String, ByteEntity>> newQ = new LinkedBlockingQueue<>(recordBufferSize);
 
     records.stream()
            .filter(x -> !partitions.contains(x.getStreamPartition()))

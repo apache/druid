@@ -19,61 +19,75 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 public class ArrayOfDoublesSketchToEstimateAndBoundsPostAggregatorTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
-  public void equalsAndHashCode()
+  public void testSerde() throws JsonProcessingException
   {
-    final PostAggregator postAgg1 = new ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator(
+    final PostAggregator there = new ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator(
         "a",
         new ConstantPostAggregator("", 0),
         null
     );
-    @SuppressWarnings("ObjectEqualsNull")
-    final boolean equalsNull = postAgg1.equals(null);
-    Assert.assertFalse(equalsNull);
-    @SuppressWarnings({"EqualsWithItself", "SelfEquals"})
-    final boolean equalsSelf = postAgg1.equals(postAgg1); 
-    Assert.assertTrue(equalsSelf);
-    Assert.assertEquals(postAgg1.hashCode(), postAgg1.hashCode());
-
-    // equals
-    final PostAggregator postAgg2 = new ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator(
-        "a",
-        new ConstantPostAggregator("", 0),
-        null
+    DefaultObjectMapper mapper = new DefaultObjectMapper();
+    ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator andBackAgain = mapper.readValue(
+        mapper.writeValueAsString(there),
+        ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator.class
     );
-    Assert.assertTrue(postAgg1.equals(postAgg2));
-    Assert.assertEquals(postAgg1.hashCode(), postAgg2.hashCode());
 
-    // same class, different field
-    final PostAggregator postAgg3 = new ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator(
-        "a",
-        new ConstantPostAggregator("", 1),
-        null
-    );
-    Assert.assertFalse(postAgg1.equals(postAgg3));
-
-    // same class, different numStdDevs
-    final PostAggregator postAgg4 = new ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator(
-        "a",
-        new ConstantPostAggregator("", 0),
-        2
-    );
-    Assert.assertFalse(postAgg1.equals(postAgg4));
-
-    // different class, same parent
-    final PostAggregator postAgg5 = new ArrayOfDoublesSketchToEstimatePostAggregator(
-        "a",
-        new ConstantPostAggregator("", 0)
-    );
-    Assert.assertFalse(postAgg1.equals(postAgg5));
+    Assert.assertEquals(there, andBackAgain);
+    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
   }
 
+  @Test
+  public void testToString()
+  {
+    PostAggregator postAgg = new ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator(
+        "a",
+        new ConstantPostAggregator("", 0),
+        null
+    );
+
+    Assert.assertEquals(
+        "ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator{name='a', field=ConstantPostAggregator{name='', constantValue=0}, numStdDevs=1}",
+        postAgg.toString()
+    );
+  }
+
+  @Test
+  public void testComparator()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Comparing arrays of estimates and error bounds is not supported");
+    final PostAggregator postAgg = new ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator(
+        "a",
+        new ConstantPostAggregator("", 0),
+        null
+    );
+    postAgg.getComparator();
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator.class)
+                  .withNonnullFields("name", "field")
+                  .withIgnoredFields("dependentFields")
+                  .usingGetClass()
+                  .verify();
+  }
 }

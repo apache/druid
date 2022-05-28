@@ -29,6 +29,7 @@ import com.google.common.base.Strings;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Objects;
 
@@ -51,37 +52,6 @@ public abstract class DimensionSchema
   public static final String SPATIAL_TYPE_NAME = "spatial";
   public static final String DOUBLE_TYPE_NAME = "double";
   private static final EmittingLogger log = new EmittingLogger(DimensionSchema.class);
-
-
-  // main druid and druid-api should really use the same ValueType enum.
-  // merge them when druid-api is merged back into the main repo
-
-  /**
-   * Should be the same as {@code org.apache.druid.segment.column.ValueType}.
-   * TODO merge them when druid-api is merged back into the main repo
-   */
-  public enum ValueType
-  {
-    FLOAT,
-    LONG,
-    STRING,
-    DOUBLE,
-    @SuppressWarnings("unused") // used in org.apache.druid.segment.column.ValueType
-    COMPLEX;
-
-    @JsonValue
-    @Override
-    public String toString()
-    {
-      return StringUtils.toUpperCase(this.name());
-    }
-
-    @JsonCreator
-    public static ValueType fromString(String name)
-    {
-      return valueOf(StringUtils.toUpperCase(name));
-    }
-  }
 
   public enum MultiValueHandling
   {
@@ -156,7 +126,7 @@ public abstract class DimensionSchema
   public abstract String getTypeName();
 
   @JsonIgnore
-  public abstract ValueType getValueType();
+  public abstract ColumnType getColumnType();
 
   @Override
   public boolean equals(final Object o)
@@ -171,14 +141,14 @@ public abstract class DimensionSchema
     return createBitmapIndex == that.createBitmapIndex &&
            Objects.equals(name, that.name) &&
            Objects.equals(getTypeName(), that.getTypeName()) &&
-           Objects.equals(getValueType(), that.getValueType()) &&
+           Objects.equals(getColumnType(), that.getColumnType()) &&
            multiValueHandling == that.multiValueHandling;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, multiValueHandling, createBitmapIndex, getTypeName(), getValueType());
+    return Objects.hash(name, multiValueHandling, createBitmapIndex, getTypeName(), getColumnType());
   }
 
   @Override
@@ -186,7 +156,7 @@ public abstract class DimensionSchema
   {
     return "DimensionSchema{" +
            "name='" + name + '\'' +
-           ", valueType=" + getValueType() +
+           ", valueType=" + getColumnType() +
            ", typeName=" + getTypeName() +
            ", multiValueHandling=" + multiValueHandling +
            ", createBitmapIndex=" + createBitmapIndex +

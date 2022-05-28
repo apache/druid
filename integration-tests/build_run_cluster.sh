@@ -14,10 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -e
+
 echo $DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH
 
 export DIR=$(cd $(dirname $0) && pwd)
 export HADOOP_DOCKER_DIR=$DIR/../examples/quickstart/tutorial/hadoop/docker
+
+if [ -n "${HADOOP_VERSION}" ] && [ "${HADOOP_VERSION:0:1}" == "3" ]; then
+   export HADOOP_DOCKER_DIR=$DIR/../examples/quickstart/tutorial/hadoop3/docker
+fi
+
+
 export DOCKERDIR=$DIR/docker
 export SHARED_DIR=${HOME}/shared
 
@@ -25,7 +33,7 @@ export SHARED_DIR=${HOME}/shared
 echo ${DOCKER_IP:=127.0.0.1} > $DOCKERDIR/docker_ip
 
 if !($DRUID_INTEGRATION_TEST_SKIP_BUILD_DOCKER); then
-  bash ./script/copy_resources.sh
+  bash ./gen-scripts/copy_resources.sh
   bash ./script/docker_build_containers.sh
 fi
 

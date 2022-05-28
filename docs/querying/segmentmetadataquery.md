@@ -26,19 +26,22 @@ sidebar_label: "SegmentMetadata"
 > Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 > This document describes a query
 > type that is only available in the native language. However, Druid SQL contains similar functionality in
-> its [metadata tables](sql.md#metadata-tables).
+> its [metadata tables](sql-metadata-tables.md).
 
 Segment metadata queries return per-segment information about:
 
-* Cardinality of all columns in the segment
-* Min/max values of string type columns in the segment
-* Estimated byte size for the segment columns if they were stored in a flat format
 * Number of rows stored inside the segment
 * Interval the segment covers
-* Column type of all the columns in the segment
-* Estimated total segment byte size in if it was stored in a flat format
-* Is the segment rolled up
+* Estimated total segment byte size in if it was stored in a 'flat format' (e.g. a csv file)
 * Segment id
+* Is the segment rolled up
+* Detailed per column information such as:
+  - type
+  - cardinality
+  - min/max values
+  - presence of null values
+  - estimated 'flat format' byte size
+
 
 ```json
 {
@@ -68,10 +71,10 @@ The format of the result is:
   "id" : "some_id",
   "intervals" : [ "2013-05-13T00:00:00.000Z/2013-05-14T00:00:00.000Z" ],
   "columns" : {
-    "__time" : { "type" : "LONG", "hasMultipleValues" : false, "size" : 407240380, "cardinality" : null, "errorMessage" : null },
-    "dim1" : { "type" : "STRING", "hasMultipleValues" : false, "size" : 100000, "cardinality" : 1944, "errorMessage" : null },
-    "dim2" : { "type" : "STRING", "hasMultipleValues" : true, "size" : 100000, "cardinality" : 1504, "errorMessage" : null },
-    "metric1" : { "type" : "FLOAT", "hasMultipleValues" : false, "size" : 100000, "cardinality" : null, "errorMessage" : null }
+    "__time" : { "type" : "LONG", "hasMultipleValues" : false, "hasNulls": false, "size" : 407240380, "cardinality" : null, "errorMessage" : null },
+    "dim1" : { "type" : "STRING", "hasMultipleValues" : false, "hasNulls": false, "size" : 100000, "cardinality" : 1944, "errorMessage" : null },
+    "dim2" : { "type" : "STRING", "hasMultipleValues" : true, "hasNulls": true, "size" : 100000, "cardinality" : 1504, "errorMessage" : null },
+    "metric1" : { "type" : "FLOAT", "hasMultipleValues" : false, "hasNulls": false, "size" : 100000, "cardinality" : null, "errorMessage" : null }
   },
   "aggregators" : {
     "metric1" : { "type" : "longSum", "name" : "metric1", "fieldName" : "metric1" }
@@ -84,14 +87,16 @@ The format of the result is:
 } ]
 ```
 
-Dimension columns will have type `STRING`.
-Metric columns will have type `FLOAT` or `LONG` or name of the underlying complex type such as `hyperUnique` in case of COMPLEX metric.
-Timestamp column will have type `LONG`.
+All columns contain a `typeSignature` that Druid uses to represent the column type information internally. The `typeSignature` is typically the same value used to identify the JSON type information at query or ingest time. One of: `STRING`, `FLOAT`, `DOUBLE`, `LONG`, or `COMPLEX<typeName>`, e.g. `COMPLEX<hyperUnique>`.
+
+Columns also have a legacy `type` name. For some column types, the value may match the `typeSignature`  (`STRING`, `FLOAT`, `DOUBLE`, or `LONG`). For `COMPLEX` columns, the `type` only contains the name of the underlying complex type such as `hyperUnique`.
+
+New applications should use `typeSignature`, not `type`.
 
 If the `errorMessage` field is non-null, you should not trust the other fields in the response. Their contents are
 undefined.
 
-Only columns which are dimensions (i.e., have type `STRING`) will have any cardinality. Rest of the columns (timestamp and metric columns) will show cardinality as `null`.
+Only columns which are dictionary encoded (i.e., have type `STRING`) will have any cardinality. Rest of the columns (timestamp and metric columns) will show cardinality as `null`.
 
 ## intervals
 
@@ -141,16 +146,27 @@ Types of column analyses are described below:
 
 ### cardinality
 
-* `cardinality` in the result will return the estimated floor of cardinality for each column. Only relevant for
-dimension columns.
+* `cardinality` is the number of unique values present in string columns. It is null for other column types.
+
+Druid examines the size of string column dictionaries to compute the cardinality value. There is one dictionary per column per
+segment. If `merge` is off (false), this reports the cardinality of each column of each segment individually. If
+`merge` is on (true), this reports the highest cardinality encountered for a particular column across all relevant
+segments.
 
 ### minmax
 
-* Estimated min/max values for each column. Only relevant for dimension columns.
+* Estimated min/max values for each column. Only reported for string columns.
 
 ### size
 
-* `size` in the result will contain the estimated total segment byte size as if the data were stored in text format
+* `size` is the estimated total byte size as if the data were stored in text format. This is _not_ the actual storage
+size of the column in Druid. If you want the actual storage size in bytes of a segment, look elsewhere. Some pointers:
+
+- To get the storage size in bytes of an entire segment, check the `size` field in the
+[`sys.segments` table](sql-metadata-tables.md#segments-table). This is the size of the memory-mappable content.
+- To get the storage size in bytes of a particular column in a particular segment, unpack the segment and look at the
+`meta.smoosh` file inside the archive. The difference between the third and fourth columns is the size in bytes.
+Currently, there is no API for retrieving this information.
 
 ### interval
 

@@ -19,17 +19,22 @@
 
 package org.apache.druid.sql.guice;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.PolyBind;
 import org.apache.druid.sql.avatica.AvaticaModule;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
 import org.apache.druid.sql.calcite.planner.CalcitePlannerModule;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.schema.DruidCalciteSchemaModule;
+import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
+import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.view.DruidViewModule;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
@@ -39,15 +44,27 @@ import java.util.Properties;
 
 public class SqlModule implements Module
 {
-  private static final String PROPERTY_SQL_ENABLE = "druid.sql.enable";
-  private static final String PROPERTY_SQL_ENABLE_JSON_OVER_HTTP = "druid.sql.http.enable";
-  private static final String PROPERTY_SQL_ENABLE_AVATICA = "druid.sql.avatica.enable";
+  public static final String PROPERTY_SQL_ENABLE = "druid.sql.enable";
+  public static final String PROPERTY_SQL_ENABLE_JSON_OVER_HTTP = "druid.sql.http.enable";
+  public static final String PROPERTY_SQL_ENABLE_AVATICA = "druid.sql.avatica.enable";
+  public static final String PROPERTY_SQL_VIEW_MANAGER_TYPE = "druid.sql.viewmanager.type";
+  public static final String PROPERTY_SQL_SCHEMA_MANAGER_TYPE = "druid.sql.schemamanager.type";
+  public static final String PROPERTY_SQL_APPROX_COUNT_DISTINCT_CHOICE = "druid.sql.approxCountDistinct.function";
 
   @Inject
   private Properties props;
 
   public SqlModule()
   {
+
+  }
+
+  @VisibleForTesting
+  public SqlModule(
+      Properties props
+  )
+  {
+    this.props = props;
   }
 
   @Override
@@ -56,7 +73,29 @@ public class SqlModule implements Module
     if (isEnabled()) {
       Calcites.setSystemProperties();
 
-      binder.bind(ViewManager.class).to(NoopViewManager.class).in(LazySingleton.class);
+      PolyBind.optionBinder(binder, Key.get(ViewManager.class))
+              .addBinding(NoopViewManager.TYPE)
+              .to(NoopViewManager.class)
+              .in(LazySingleton.class);
+
+      PolyBind.createChoiceWithDefault(
+          binder,
+          PROPERTY_SQL_VIEW_MANAGER_TYPE,
+          Key.get(ViewManager.class),
+          NoopViewManager.TYPE
+      );
+
+      PolyBind.optionBinder(binder, Key.get(DruidSchemaManager.class))
+              .addBinding(NoopDruidSchemaManager.TYPE)
+              .to(NoopDruidSchemaManager.class)
+              .in(LazySingleton.class);
+
+      PolyBind.createChoiceWithDefault(
+          binder,
+          PROPERTY_SQL_SCHEMA_MANAGER_TYPE,
+          Key.get(DruidSchemaManager.class),
+          NoopDruidSchemaManager.TYPE
+      );
 
       binder.install(new DruidCalciteSchemaModule());
       binder.install(new CalcitePlannerModule());

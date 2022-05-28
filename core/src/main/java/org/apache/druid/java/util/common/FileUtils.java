@@ -25,7 +25,6 @@ import com.google.common.io.ByteSource;
 import io.netty.util.SuppressForbidden;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
-import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -53,19 +52,10 @@ import java.util.UUID;
 
 public class FileUtils
 {
-  private static final Logger log = new Logger(FileUtils.class);
-
   /**
    * Useful for retry functionality that doesn't want to stop Throwables, but does want to retry on Exceptions
    */
-  public static final Predicate<Throwable> IS_EXCEPTION = new Predicate<Throwable>()
-  {
-    @Override
-    public boolean apply(Throwable input)
-    {
-      return input instanceof Exception;
-    }
-  };
+  public static final Predicate<Throwable> IS_EXCEPTION = input -> input instanceof Exception;
 
   /**
    * Copy input byte source to outFile. If outFile exists, it is attempted to be deleted.
@@ -293,27 +283,21 @@ public class FileUtils
       String messageOnRetry
   ) throws IOException
   {
-    try {
-      return RetryUtils.retry(
-          () -> {
-            try (InputStream inputStream = objectOpenFunction.open(object);
-                 OutputStream out = new FileOutputStream(outFile)) {
-              return IOUtils.copyLarge(inputStream, out, fetchBuffer);
-            }
-          },
-          retryCondition,
-          outFile::delete,
-          numTries,
-          messageOnRetry
-      );
-    }
-    catch (Exception e) {
-      throw new IOException(e);
-    }
+    return copyLarge(
+        () -> objectOpenFunction.open(object),
+        outFile,
+        fetchBuffer,
+        retryCondition,
+        numTries,
+        messageOnRetry
+    );
   }
 
+  /**
+   * Copy a potentially large amount of data from an input source to a file.
+   */
   public static long copyLarge(
-      InputStream inputStream,
+      InputStreamSupplier inputSource,
       File outFile,
       byte[] fetchBuffer,
       Predicate<Throwable> retryCondition,
@@ -324,8 +308,9 @@ public class FileUtils
     try {
       return RetryUtils.retry(
           () -> {
-            try (OutputStream out = new FileOutputStream(outFile)) {
-              return IOUtils.copyLarge(inputStream, out, fetchBuffer);
+            try (InputStream in = inputSource.openStream();
+                 OutputStream out = new FileOutputStream(outFile)) {
+              return IOUtils.copyLarge(in, out, fetchBuffer);
             }
           },
           retryCondition,
@@ -390,6 +375,25 @@ public class FileUtils
   }
 
   /**
+   * Create "directory" and all intermediate directories as needed. If the directory is successfully created, or already
+   * exists, returns quietly. Otherwise, throws an IOException.
+   *
+   * Simpler to use than {@link File#mkdirs()}, and more reliable since it is safe from races where two threads try
+   * to create the same directory at the same time.
+   *
+   * The name is inspired by UNIX {@code mkdir -p}, which has the same behavior.
+   */
+  @SuppressForbidden(reason = "File#mkdirs")
+  public static void mkdirp(final File directory) throws IOException
+  {
+    // isDirectory check after mkdirs is necessary in case of concurrent calls to mkdirp, because two concurrent
+    // calls to mkdirs cannot both succeed.
+    if (!directory.mkdirs() && !directory.isDirectory()) {
+      throw new IOE("Cannot create directory [%s]", directory);
+    }
+  }
+
+  /**
    * Equivalent to {@link org.apache.commons.io.FileUtils#deleteDirectory(File)}. Exists here mostly so callers
    * can avoid dealing with our FileUtils and the Commons FileUtils having the same name.
    */
@@ -402,5 +406,13 @@ public class FileUtils
   public interface OutputStreamConsumer<T>
   {
     T apply(OutputStream outputStream) throws IOException;
+  }
+
+  /**
+   * Like {@link ByteSource}, but this is an interface, which allows use of lambdas.
+   */
+  public interface InputStreamSupplier
+  {
+    InputStream openStream() throws IOException;
   }
 }

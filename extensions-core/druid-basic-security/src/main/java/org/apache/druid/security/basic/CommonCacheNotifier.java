@@ -88,7 +88,9 @@ public class CommonCacheNotifier
       String callerName
   )
   {
-    this.exec = Execs.singleThreaded(StringUtils.format("%s-notifierThread-", callerName) + "%d");
+    this.exec = Execs.singleThreaded(
+        StringUtils.format("%s-notifierThread-", StringUtils.encodeForFormat(callerName)) + "%d"
+    );
     this.callerName = callerName;
     this.updateQueue = new LinkedBlockingQueue<>();
     this.itemConfigMap = itemConfigMap;
@@ -137,6 +139,9 @@ public class CommonCacheNotifier
               }
 
               LOG.debug(callerName + ":Received responses for cache update notifications.");
+            }
+            catch (InterruptedException e) {
+              LOG.noStackTrace().info(e, "%s: Interrupted while handling updates for cachedUserMaps.", callerName);
             }
             catch (Throwable t) {
               LOG.makeAlert(t, callerName + ":Error occured while handling updates for cachedUserMaps.").emit();

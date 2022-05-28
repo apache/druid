@@ -22,9 +22,11 @@ package org.apache.druid.client.selector;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
+import org.apache.druid.query.Query;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -41,12 +43,36 @@ public interface TierSelectorStrategy
 {
   Comparator<Integer> getComparator();
 
+  @Deprecated
   @Nullable
-  QueryableDruidServer pick(Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers, DataSegment segment);
+  default QueryableDruidServer pick(Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers, DataSegment segment)
+  {
+    return pick(null, prioritizedServers, segment);
+  }
 
-  List<QueryableDruidServer> pick(
+  @Deprecated
+  default List<QueryableDruidServer> pick(
       Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
       DataSegment segment,
-      int numServersToPick
-  );
+      int numServersToPick)
+  {
+    return pick(null, prioritizedServers, segment, numServersToPick);
+  }
+
+  @Nullable
+  default <T> QueryableDruidServer pick(@Nullable Query<T> query,
+      Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
+      DataSegment segment)
+  {
+    return pick(prioritizedServers, segment);
+  }
+
+  default <T> List<QueryableDruidServer> pick(
+      @Nullable Query<T> query,
+      Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
+      DataSegment segment,
+      int numServersToPick)
+  {
+    return pick(prioritizedServers, segment, numServersToPick);
+  }
 }

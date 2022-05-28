@@ -25,9 +25,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import org.apache.druid.benchmark.datagen.SegmentGenerator;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
@@ -62,7 +62,6 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -104,8 +103,11 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
+import org.apache.druid.segment.generator.SegmentGenerator;
+import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.SegmentId;
@@ -147,7 +149,7 @@ import java.util.concurrent.TimeUnit;
 public class CachingClusteredClientBenchmark
 {
   private static final Logger LOG = new Logger(CachingClusteredClientBenchmark.class);
-  private static final int PROCESSING_BUFFER_SIZE = 10 * 1024 * 1024; // ~10MB
+  private static final int PROCESSING_BUFFER_SIZE = 10 * 1024 * 1024; // ~10MiB
   private static final String DATA_SOURCE = "ds";
 
   public static final ObjectMapper JSON_MAPPER;
@@ -340,7 +342,9 @@ public class CachingClusteredClientBenchmark
         new DruidHttpClientConfig(),
         processingConfig,
         forkJoinPool,
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+        new NoopServiceEmitter()
     );
   }
 
@@ -367,13 +371,11 @@ public class CachingClusteredClientBenchmark
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, bufferPool),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-            bufferPool
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             processingConfig,
             configSupplier,
-            QueryConfig::new,
             bufferPool,
             mergeBufferPool,
             mapper,

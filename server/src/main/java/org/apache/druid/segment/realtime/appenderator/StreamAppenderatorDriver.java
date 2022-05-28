@@ -36,11 +36,11 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -167,8 +167,10 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
    * @param sequenceName             sequenceName for this row's segment
    * @param committerSupplier        supplier of a committer associated with all data that has been added, including this row
    *                                 if {@param allowIncrementalPersists} is set to false then this will not be used
-   * @param skipSegmentLineageCheck  if true, perform lineage validation using previousSegmentId for this sequence.
-   *                                 Should be set to false if replica tasks would index events in same order
+   * @param skipSegmentLineageCheck  Should be set {@code false} to perform lineage validation using previousSegmentId for this sequence.
+   *                                 Note that for Kafka Streams we should disable this check and set this parameter to
+   *                                 {@code true}.
+   *                                 if {@code true}, skips, does not enforce, lineage validation.
    * @param allowIncrementalPersists whether to allow persist to happen when maxRowsInMemory or intermediate persist period
    *                                 threshold is hit
    *
@@ -197,7 +199,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
     synchronized (segments) {
       final SegmentsForSequence activeSegmentsForSequence = segments.get(sequenceName);
       if (activeSegmentsForSequence == null) {
-        throw new ISE("WTF?! Asked to remove segments for sequenceName[%s] which doesn't exist...", sequenceName);
+        throw new ISE("Asked to remove segments for sequenceName[%s], which doesn't exist", sequenceName);
       }
 
       for (final SegmentIdWithShardSpec identifier : identifiers) {
@@ -207,7 +209,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         if (segmentsOfInterval == null ||
             segmentsOfInterval.getAppendingSegment() == null ||
             !segmentsOfInterval.getAppendingSegment().getSegmentIdentifier().equals(identifier)) {
-          throw new ISE("WTF?! Asked to remove segment[%s] that didn't exist...", identifier);
+          throw new ISE("Asked to remove segment[%s], which doesn't exist", identifier);
         }
         segmentsOfInterval.finishAppendingToCurrentActiveSegment(SegmentWithState::finishAppending);
       }
@@ -279,8 +281,11 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         pushInBackground(wrapCommitter(committer), theSegments, true),
         (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) sam -> publishInBackground(
             null,
+            null,
+            null,
             sam,
-            publisher
+            publisher,
+            java.util.function.Function.identity()
         )
     );
     return Futures.transform(
@@ -423,7 +428,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       if (segmentWithState.getState() == SegmentState.APPENDING) {
         if (pair != null && pair.lhs != null) {
           throw new ISE(
-              "WTF?! there was already an appendingSegment[%s] before adding an appendingSegment[%s]",
+              "appendingSegment[%s] existed before adding an appendingSegment[%s]",
               pair.lhs,
               segmentWithState
           );

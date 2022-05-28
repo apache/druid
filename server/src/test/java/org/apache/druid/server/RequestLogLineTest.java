@@ -20,8 +20,8 @@
 package org.apache.druid.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.TableDataSource;
@@ -78,14 +78,14 @@ public class RequestLogLineTest
         new QueryStats(ImmutableMap.of())
     );
     Assert.assertEquals("", requestLogLine.getRemoteAddr());
-    requestLogLine.getNativeQueryLine(new ObjectMapper()); // call should not throw exception
+    requestLogLine.getNativeQueryLine(new DefaultObjectMapper()); // call should not throw exception
 
     requestLogLine = RequestLogLine.forSql(
         "", null, DateTimes.nowUtc(), null, new QueryStats(ImmutableMap.of())
     );
     Assert.assertEquals("", requestLogLine.getRemoteAddr());
     Assert.assertEquals(ImmutableMap.<String, Object>of(), requestLogLine.getSqlQueryContext());
-    requestLogLine.getSqlQueryLine(new ObjectMapper()); // call should not throw exception
+    requestLogLine.getSqlQueryLine(new DefaultObjectMapper()); // call should not throw exception
   }
 
 }

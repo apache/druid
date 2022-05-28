@@ -19,6 +19,9 @@
 
 package org.apache.druid.segment.loading;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -33,7 +36,8 @@ public class RandomStorageLocationSelectorStrategy implements StorageLocationSel
 
   private final List<StorageLocation> storageLocations;
 
-  public RandomStorageLocationSelectorStrategy(List<StorageLocation> storageLocations)
+  @JsonCreator
+  public RandomStorageLocationSelectorStrategy(@JacksonInject final List<StorageLocation> storageLocations)
   {
     this.storageLocations = storageLocations;
   }
@@ -45,5 +49,4 @@ public class RandomStorageLocationSelectorStrategy implements StorageLocationSel
     Collections.shuffle(copyLocation);
     return copyLocation.iterator();
   }
-
 }

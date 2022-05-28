@@ -25,8 +25,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -93,8 +95,14 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new RegexpExtractExpr(newArg));
+        return shuttle.visit(apply(shuttle.visitAll(args)));
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getOutputType(InputBindingInspector inspector)
+      {
+        return ExpressionType.STRING;
       }
 
       @Override

@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -100,7 +99,6 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
               }
             },
             GroupByQueryConfig::new,
-            QueryConfig::new,
             new StupidPool<>("map-virtual-column-groupby-test", () -> ByteBuffer.allocate(1024)),
             new DefaultBlockingPool<>(() -> ByteBuffer.allocate(1024), 1),
             new DefaultObjectMapper(),

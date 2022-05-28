@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.parquet;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -38,8 +39,6 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.Collections;
 import java.util.Objects;
 
 public class ParquetReaderResourceLeakTest extends BaseParquetReaderTest
@@ -55,7 +54,7 @@ public class ParquetReaderResourceLeakTest extends BaseParquetReaderTest
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(ImmutableList.of("page", "language", "user", "unpatrolled"))
         ),
-        Collections.emptyList()
+        ColumnsFilter.all()
     );
     FetchingFileEntity entity = new FetchingFileEntity(new File("example/wiki/wiki.parquet"));
     ParquetInputFormat parquet = new ParquetInputFormat(JSONPathSpec.DEFAULT, false, new Configuration());
@@ -84,16 +83,14 @@ public class ParquetReaderResourceLeakTest extends BaseParquetReaderTest
       // Copied from InputEntity
       try {
         final File tempFile = File.createTempFile("druid-input-entity", ".tmp", temporaryDirectory);
-        try (InputStream is = open()) {
-          FileUtils.copyLarge(
-              is,
-              tempFile,
-              fetchBuffer,
-              getRetryCondition(),
-              DEFAULT_MAX_NUM_FETCH_TRIES,
-              StringUtils.format("Failed to fetch into [%s]", tempFile.getAbsolutePath())
-          );
-        }
+        FileUtils.copyLarge(
+            this::open,
+            tempFile,
+            fetchBuffer,
+            getRetryCondition(),
+            DEFAULT_MAX_NUM_FETCH_TRIES,
+            StringUtils.format("Failed to fetch into [%s]", tempFile.getAbsolutePath())
+        );
 
         return new CleanableFile()
         {

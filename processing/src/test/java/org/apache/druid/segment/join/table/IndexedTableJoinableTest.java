@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -32,6 +33,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantDimensionSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -49,6 +51,7 @@ public class IndexedTableJoinableTest
   private static final String PREFIX = "j.";
   private static final String KEY_COLUMN = "str";
   private static final String VALUE_COLUMN = "long";
+  private static final String ALL_SAME_COLUMN = "allsame";
   private static final String UNKNOWN_COLUMN = "unknown";
   private static final String SEARCH_KEY_NULL_VALUE = "baz";
   private static final String SEARCH_KEY_VALUE = "foo";
@@ -83,13 +86,14 @@ public class IndexedTableJoinableTest
 
   private final InlineDataSource inlineDataSource = InlineDataSource.fromIterable(
       ImmutableList.of(
-          new Object[]{"foo", 1L},
-          new Object[]{"bar", 2L},
-          new Object[]{"baz", null}
+          new Object[]{"foo", 1L, 1L},
+          new Object[]{"bar", 2L, 1L},
+          new Object[]{"baz", null, 1L}
       ),
       RowSignature.builder()
-                  .add("str", ValueType.STRING)
-                  .add("long", ValueType.LONG)
+                  .add(KEY_COLUMN, ColumnType.STRING)
+                  .add(VALUE_COLUMN, ColumnType.LONG)
+                  .add(ALL_SAME_COLUMN, ColumnType.LONG)
                   .build()
   );
 
@@ -108,10 +112,11 @@ public class IndexedTableJoinableTest
   {
     target = new IndexedTableJoinable(indexedTable);
   }
+
   @Test
   public void getAvailableColumns()
   {
-    Assert.assertEquals(ImmutableList.of("str", "long"), target.getAvailableColumns());
+    Assert.assertEquals(ImmutableList.of(KEY_COLUMN, VALUE_COLUMN, ALL_SAME_COLUMN), target.getAvailableColumns());
   }
 
   @Test
@@ -137,7 +142,7 @@ public class IndexedTableJoinableTest
   {
     final ColumnCapabilities capabilities = target.getColumnCapabilities("str");
     Assert.assertEquals(ValueType.STRING, capabilities.getType());
-    Assert.assertTrue(capabilities.isDictionaryEncoded());
+    Assert.assertTrue(capabilities.isDictionaryEncoded().isTrue());
     Assert.assertFalse(capabilities.hasBitmapIndexes());
     Assert.assertFalse(capabilities.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(capabilities.hasSpatialIndexes());
@@ -148,7 +153,7 @@ public class IndexedTableJoinableTest
   {
     final ColumnCapabilities capabilities = target.getColumnCapabilities("long");
     Assert.assertEquals(ValueType.LONG, capabilities.getType());
-    Assert.assertFalse(capabilities.isDictionaryEncoded());
+    Assert.assertFalse(capabilities.isDictionaryEncoded().isTrue());
     Assert.assertFalse(capabilities.hasBitmapIndexes());
     Assert.assertFalse(capabilities.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(capabilities.hasSpatialIndexes());
@@ -169,7 +174,13 @@ public class IndexedTableJoinableTest
         PREFIX,
         ExprMacroTable.nil()
     );
-    final JoinMatcher joinMatcher = target.makeJoinMatcher(dummyColumnSelectorFactory, condition, false);
+    final JoinMatcher joinMatcher = target.makeJoinMatcher(
+        dummyColumnSelectorFactory,
+        condition,
+        false,
+        false,
+        Closer.create()
+    );
 
     final DimensionSelector selector = joinMatcher.getColumnSelectorFactory()
                                                   .makeDimensionSelector(DefaultDimensionSpec.of("str"));
@@ -331,5 +342,51 @@ public class IndexedTableJoinableTest
         10,
         true);
     Assert.assertEquals(Optional.of(ImmutableSet.of()), correlatedValues);
+  }
+
+  @Test
+  public void getNonNullColumnValuesIfAllUniqueForValueColumnShouldReturnValues()
+  {
+    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(VALUE_COLUMN, Integer.MAX_VALUE);
+
+    Assert.assertEquals(Optional.of(ImmutableSet.of("1", "2")), values);
+  }
+
+  @Test
+  public void getNonNullColumnValuesIfAllUniqueForNonexistentColumnShouldReturnEmpty()
+  {
+    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique("nonexistent", Integer.MAX_VALUE);
+
+    Assert.assertEquals(Optional.empty(), values);
+  }
+
+  @Test
+  public void getNonNullColumnValuesIfAllUniqueForKeyColumnShouldReturnValues()
+  {
+    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(KEY_COLUMN, Integer.MAX_VALUE);
+
+    Assert.assertEquals(
+        Optional.of(ImmutableSet.of("foo", "bar", "baz")),
+        values
+    );
+  }
+
+  @Test
+  public void getNonNullColumnValuesIfAllUniqueForAllSameColumnShouldReturnEmpty()
+  {
+    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(ALL_SAME_COLUMN, Integer.MAX_VALUE);
+
+    Assert.assertEquals(
+        Optional.empty(),
+        values
+    );
+  }
+
+  @Test
+  public void getNonNullColumnValuesIfAllUniqueForKeyColumnWithLowMaxValuesShouldReturnEmpty()
+  {
+    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(KEY_COLUMN, 1);
+
+    Assert.assertEquals(Optional.empty(), values);
   }
 }

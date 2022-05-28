@@ -145,7 +145,11 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     Files.write(DATA, tmp);
 
     String azurePath = pusher.getAzurePath(SEGMENT_TO_PUSH, useUniquePath);
-    azureStorage.uploadBlob(EasyMock.anyObject(File.class), EasyMock.eq(CONTAINER_NAME), EasyMock.eq(azurePath));
+    azureStorage.uploadBlob(
+        EasyMock.anyObject(File.class),
+        EasyMock.eq(CONTAINER_NAME),
+        EasyMock.eq(PREFIX + "/" + azurePath)
+    );
     EasyMock.expectLastCall();
 
     replayAll();

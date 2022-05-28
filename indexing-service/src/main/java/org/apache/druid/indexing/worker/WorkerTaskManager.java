@@ -76,7 +76,7 @@ import java.util.stream.Collectors;
  * starts running and completed task on disk is deleted based on a periodic schedule where overlord is asked for
  * active tasks to see which completed tasks are safe to delete.
  */
-public abstract class WorkerTaskManager
+public class WorkerTaskManager
 {
   private static final EmittingLogger log = new EmittingLogger(WorkerTaskManager.class);
 
@@ -251,7 +251,15 @@ public abstract class WorkerTaskManager
           @Override
           public void onFailure(Throwable t)
           {
-            submitNoticeToExec(new StatusNotice(task, TaskStatus.failure(task.getId())));
+            submitNoticeToExec(
+                new StatusNotice(
+                    task,
+                    TaskStatus.failure(
+                        task.getId(),
+                        "Failed to run task with an exception. See middleManager or indexer logs for more details."
+                    )
+                )
+            );
           }
         }
     );
@@ -304,10 +312,10 @@ public abstract class WorkerTaskManager
     return new File(taskConfig.getBaseTaskDir(), "workerTaskManagerTmp");
   }
 
-  private void cleanupAndMakeTmpTaskDir()
+  private void cleanupAndMakeTmpTaskDir() throws IOException
   {
     File tmpDir = getTmpTaskDir();
-    tmpDir.mkdirs();
+    FileUtils.mkdirp(tmpDir);
     if (!tmpDir.isDirectory()) {
       throw new ISE("Tmp Tasks Dir [%s] does not exist/not-a-directory.", tmpDir);
     }
@@ -326,17 +334,13 @@ public abstract class WorkerTaskManager
     return new File(taskConfig.getBaseTaskDir(), "assignedTasks");
   }
 
-  private void initAssignedTasks()
+  private void initAssignedTasks() throws IOException
   {
     File assignedTaskDir = getAssignedTaskDir();
 
     log.debug("Looking for any previously assigned tasks on disk[%s].", assignedTaskDir);
 
-    assignedTaskDir.mkdirs();
-
-    if (!assignedTaskDir.isDirectory()) {
-      throw new ISE("Assigned Tasks Dir [%s] does not exist/not-a-directory.", assignedTaskDir);
-    }
+    FileUtils.mkdirp(assignedTaskDir);
 
     for (File taskFile : assignedTaskDir.listFiles()) {
       try {
@@ -345,7 +349,7 @@ public abstract class WorkerTaskManager
         if (taskId.equals(task.getId())) {
           assignedTasks.put(taskId, task);
         } else {
-          throw new ISE("WTF! Corrupted assigned task on disk[%s].", taskFile.getAbsoluteFile());
+          throw new ISE("Corrupted assigned task on disk[%s].", taskFile.getAbsoluteFile());
         }
       }
       catch (IOException ex) {
@@ -453,16 +457,12 @@ public abstract class WorkerTaskManager
     }
   }
 
-  private void initCompletedTasks()
+  private void initCompletedTasks() throws IOException
   {
     File completedTaskDir = getCompletedTaskDir();
     log.debug("Looking for any previously completed tasks on disk[%s].", completedTaskDir);
 
-    completedTaskDir.mkdirs();
-
-    if (!completedTaskDir.isDirectory()) {
-      throw new ISE("Completed Tasks Dir [%s] does not exist/not-a-directory.", completedTaskDir);
-    }
+    FileUtils.mkdirp(completedTaskDir);
 
     for (File taskFile : completedTaskDir.listFiles()) {
       try {
@@ -471,7 +471,7 @@ public abstract class WorkerTaskManager
         if (taskId.equals(taskAnnouncement.getTaskId())) {
           completedTasks.put(taskId, taskAnnouncement);
         } else {
-          throw new ISE("WTF! Corrupted completed task on disk[%s].", taskFile.getAbsoluteFile());
+          throw new ISE("Corrupted completed task on disk[%s].", taskFile.getAbsoluteFile());
         }
       }
       catch (IOException ex) {
@@ -596,6 +596,12 @@ public abstract class WorkerTaskManager
     }
   }
 
+  public boolean isWorkerEnabled()
+  {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.SECONDS), "not started");
+    return !disabled.get();
+  }
+
   private static class TaskDetails
   {
     private final Task task;
@@ -699,7 +705,7 @@ public abstract class WorkerTaskManager
 
         if (!status.isComplete()) {
           log.warn(
-              "WTF?! Got status notice for task [%s] that isn't complete (status = [%s])...",
+              "Got status notice for task [%s] that isn't complete (status = [%s])...",
               task.getId(),
               status.getStatusCode()
           );
@@ -776,7 +782,13 @@ public abstract class WorkerTaskManager
   //watches task assignments and updates task statuses inside Zookeeper. When the transition to HTTP is complete
   //in Overlord as well as MiddleManagers then WorkerTaskMonitor should be deleted, this class should no longer be abstract
   //and the methods below should be removed.
-  protected abstract void taskStarted(String taskId);
+  protected void taskStarted(String taskId)
+  {
 
-  protected abstract void taskAnnouncementChanged(TaskAnnouncement announcement);
+  }
+
+  protected void taskAnnouncementChanged(TaskAnnouncement announcement)
+  {
+
+  }
 }

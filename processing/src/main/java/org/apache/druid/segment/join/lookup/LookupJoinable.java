@@ -21,11 +21,14 @@ package org.apache.druid.segment.join.lookup;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinMatcher;
 import org.apache.druid.segment.join.Joinable;
@@ -33,6 +36,7 @@ import org.apache.druid.segment.join.Joinable;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -73,7 +77,7 @@ public class LookupJoinable implements Joinable
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     if (ALL_COLUMNS.contains(columnName)) {
-      return new ColumnCapabilitiesImpl().setType(ValueType.STRING);
+      return new ColumnCapabilitiesImpl().setType(ColumnType.STRING);
     } else {
       return null;
     }
@@ -83,10 +87,45 @@ public class LookupJoinable implements Joinable
   public JoinMatcher makeJoinMatcher(
       final ColumnSelectorFactory leftSelectorFactory,
       final JoinConditionAnalysis condition,
-      final boolean remainderNeeded
+      final boolean remainderNeeded,
+      boolean descending,
+      Closer closer
   )
   {
     return LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, remainderNeeded);
+  }
+
+  @Override
+  public Optional<Set<String>> getNonNullColumnValuesIfAllUnique(String columnName, int maxNumValues)
+  {
+    if (LookupColumnSelectorFactory.KEY_COLUMN.equals(columnName) && extractor.canGetKeySet()) {
+      final Set<String> keys = extractor.keySet();
+
+      final Set<String> nullEquivalentValues = new HashSet<>();
+      nullEquivalentValues.add(null);
+      if (NullHandling.replaceWithDefault()) {
+        nullEquivalentValues.add(NullHandling.defaultStringValue());
+      }
+
+      // size() of Sets.difference is slow; avoid it.
+      int nonNullKeys = keys.size();
+
+      for (String value : nullEquivalentValues) {
+        if (keys.contains(value)) {
+          nonNullKeys--;
+        }
+      }
+
+      if (nonNullKeys > maxNumValues) {
+        return Optional.empty();
+      } else if (nonNullKeys == keys.size()) {
+        return Optional.of(keys);
+      } else {
+        return Optional.of(Sets.difference(keys, nullEquivalentValues));
+      }
+    } else {
+      return Optional.empty();
+    }
   }
 
   @Override

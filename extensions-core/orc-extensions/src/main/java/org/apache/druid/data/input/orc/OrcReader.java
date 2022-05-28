@@ -41,6 +41,7 @@ import org.apache.orc.TypeDescription;
 import org.apache.orc.mapred.OrcMapredRecordReader;
 import org.apache.orc.mapred.OrcStruct;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -61,7 +62,7 @@ public class OrcReader extends IntermediateRowParsingReader<OrcStruct>
       InputRowSchema inputRowSchema,
       InputEntity source,
       File temporaryDirectory,
-      JSONPathSpec flattenSpec,
+      @Nullable JSONPathSpec flattenSpec,
       boolean binaryAsString
   )
   {
@@ -143,20 +144,25 @@ public class OrcReader extends IntermediateRowParsingReader<OrcStruct>
   }
 
   @Override
+  protected InputEntity source()
+  {
+    return source;
+  }
+
+  @Override
   protected List<InputRow> parseInputRows(OrcStruct intermediateRow) throws ParseException
   {
     return Collections.singletonList(
         MapInputRowParser.parse(
-            inputRowSchema.getTimestampSpec(),
-            inputRowSchema.getDimensionsSpec(),
+            inputRowSchema,
             orcStructFlattener.flatten(intermediateRow)
         )
     );
   }
 
   @Override
-  protected Map<String, Object> toMap(OrcStruct intermediateRow)
+  protected List<Map<String, Object>> toMap(OrcStruct intermediateRow)
   {
-    return orcStructFlattener.toMap(intermediateRow);
+    return Collections.singletonList(orcStructFlattener.toMap(intermediateRow));
   }
 }

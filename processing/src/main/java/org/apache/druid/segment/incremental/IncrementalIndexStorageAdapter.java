@@ -52,9 +52,77 @@ import java.util.Iterator;
  */
 public class IncrementalIndexStorageAdapter implements StorageAdapter
 {
-  final IncrementalIndex<?> index;
+  private static final ColumnCapabilities.CoercionLogic STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC =
+      new ColumnCapabilities.CoercionLogic()
+      {
+        @Override
+        public boolean dictionaryEncoded()
+        {
+          return false;
+        }
 
-  public IncrementalIndexStorageAdapter(IncrementalIndex<?> index)
+        @Override
+        public boolean dictionaryValuesSorted()
+        {
+          return false;
+        }
+
+        @Override
+        public boolean dictionaryValuesUnique()
+        {
+          return true;
+        }
+
+        @Override
+        public boolean multipleValues()
+        {
+          return true;
+        }
+
+        @Override
+        public boolean hasNulls()
+        {
+          return true;
+        }
+      };
+
+  private static final ColumnCapabilities.CoercionLogic SNAPSHOT_STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC =
+      new ColumnCapabilities.CoercionLogic()
+      {
+        @Override
+        public boolean dictionaryEncoded()
+        {
+          return true;
+        }
+
+        @Override
+        public boolean dictionaryValuesSorted()
+        {
+          return true;
+        }
+
+        @Override
+        public boolean dictionaryValuesUnique()
+        {
+          return true;
+        }
+
+        @Override
+        public boolean multipleValues()
+        {
+          return false;
+        }
+
+        @Override
+        public boolean hasNulls()
+        {
+          return false;
+        }
+      };
+
+  final IncrementalIndex index;
+
+  public IncrementalIndexStorageAdapter(IncrementalIndex index)
   {
     this.index = index;
   }
@@ -141,7 +209,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    // Different from index.getCapabilities because, in a way, IncrementalIndex's string-typed dimensions
+    // Different from index.getColumnCapabilities because, in a way, IncrementalIndex's string-typed dimensions
     // are always potentially multi-valued at query time. (Missing / null values for a row can potentially be
     // represented by an empty array; see StringDimensionIndexer.IndexerDimensionSelector's getRow method.)
     //
@@ -154,33 +222,24 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     // to the StringDimensionIndexer so the selector built on top of it can produce values from the snapshot state of
     // multi-valuedness at cursor creation time, instead of the latest state, and getSnapshotColumnCapabilities could
     // be removed.
-    return ColumnCapabilitiesImpl.snapshot(index.getCapabilities(column), true);
+    return ColumnCapabilitiesImpl.snapshot(
+        index.getColumnCapabilities(column),
+        STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC
+    );
   }
 
   /**
    * Sad workaround for {@link org.apache.druid.query.metadata.SegmentAnalyzer} to deal with the fact that the
    * response from {@link #getColumnCapabilities} is not accurate for string columns, in that it reports all string
-   * string columns as having multiple values. This method returns the actual capabilities of the underlying
-   * {@link IncrementalIndex}at the time this method is called.
+   * columns as having multiple values. This method returns the actual capabilities of the underlying
+   * {@link IncrementalIndex} at the time this method is called.
    */
   public ColumnCapabilities getSnapshotColumnCapabilities(String column)
   {
-    return ColumnCapabilitiesImpl.snapshot(index.getCapabilities(column));
-  }
-
-  @Override
-  public String getColumnTypeName(String column)
-  {
-    final String metricType = index.getMetricType(column);
-    if (metricType != null) {
-      return metricType;
-    }
-    ColumnCapabilities columnCapabilities = getColumnCapabilities(column);
-    if (columnCapabilities != null) {
-      return columnCapabilities.getType().toString();
-    } else {
-      return null;
-    }
+    return ColumnCapabilitiesImpl.snapshot(
+        index.getColumnCapabilities(column),
+        SNAPSHOT_STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC
+    );
   }
 
   @Override
@@ -201,6 +260,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   {
     if (index.isEmpty()) {
       return Sequences.empty();
+    }
+
+    if (queryMetrics != null) {
+      queryMetrics.vectorized(false);
     }
 
     final Interval dataInterval = new Interval(getMinTime(), gran.bucketEnd(getMaxTime()));
@@ -262,7 +325,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       cursorIterable = index.getFacts().timeRangeIterable(
           descending,
           timeStart,
-          Math.min(actualInterval.getEndMillis(), gran.increment(interval.getStart()).getMillis())
+          Math.min(actualInterval.getEndMillis(), gran.increment(interval.getStartMillis()))
       );
       emptyRange = !cursorIterable.iterator().hasNext();
       time = gran.toDateTime(interval.getStartMillis());

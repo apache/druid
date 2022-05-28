@@ -27,41 +27,54 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 
 public class ExpressionVirtualColumn implements VirtualColumn
 {
+  private static final Logger log = new Logger(ExpressionVirtualColumn.class);
+
   private final String name;
   private final String expression;
-  private final ValueType outputType;
+  @Nullable
+  private final ColumnType outputType;
   private final Supplier<Expr> parsedExpression;
+  private final Supplier<byte[]> cacheKey;
 
   @JsonCreator
   public ExpressionVirtualColumn(
       @JsonProperty("name") String name,
       @JsonProperty("expression") String expression,
-      @JsonProperty("outputType") ValueType outputType,
+      @JsonProperty("outputType") @Nullable ColumnType outputType,
       @JacksonInject ExprMacroTable macroTable
   )
   {
     this.name = Preconditions.checkNotNull(name, "name");
     this.expression = Preconditions.checkNotNull(expression, "expression");
-    this.outputType = outputType != null ? outputType : ValueType.FLOAT;
-    this.parsedExpression = Suppliers.memoize(() -> Parser.parse(expression, macroTable));
+    this.outputType = outputType;
+    this.parsedExpression = Parser.lazyParse(expression, macroTable);
+    this.cacheKey = makeCacheKeySupplier();
   }
 
   /**
@@ -70,15 +83,16 @@ public class ExpressionVirtualColumn implements VirtualColumn
   public ExpressionVirtualColumn(
       String name,
       Expr parsedExpression,
-      ValueType outputType
+      ColumnType outputType
   )
   {
     this.name = Preconditions.checkNotNull(name, "name");
     // Unfortunately this string representation can't be reparsed into the same expression, might be useful
     // if the expression system supported that
     this.expression = parsedExpression.toString();
-    this.outputType = outputType != null ? outputType : ValueType.FLOAT;
+    this.outputType = outputType;
     this.parsedExpression = Suppliers.ofInstance(parsedExpression);
+    this.cacheKey = makeCacheKeySupplier();
   }
 
   @JsonProperty("name")
@@ -94,8 +108,9 @@ public class ExpressionVirtualColumn implements VirtualColumn
     return expression;
   }
 
+  @Nullable
   @JsonProperty
-  public ValueType getOutputType()
+  public ColumnType getOutputType()
   {
     return outputType;
   }
@@ -129,12 +144,80 @@ public class ExpressionVirtualColumn implements VirtualColumn
   }
 
   @Override
+  public boolean canVectorize(ColumnInspector inspector)
+  {
+    final ExpressionPlan plan = ExpressionPlanner.plan(inspector, parsedExpression.get());
+    return plan.is(ExpressionPlan.Trait.VECTORIZABLE);
+  }
+
+  @Override
+  public SingleValueDimensionVectorSelector makeSingleValueVectorDimensionSelector(
+      DimensionSpec dimensionSpec,
+      VectorColumnSelectorFactory factory
+  )
+  {
+    return ExpressionVectorSelectors.makeSingleValueDimensionVectorSelector(factory, parsedExpression.get());
+  }
+
+  @Override
+  public VectorValueSelector makeVectorValueSelector(String columnName, VectorColumnSelectorFactory factory)
+  {
+    return ExpressionVectorSelectors.makeVectorValueSelector(factory, parsedExpression.get());
+  }
+
+  @Override
+  public VectorObjectSelector makeVectorObjectSelector(String columnName, VectorColumnSelectorFactory factory)
+  {
+    return ExpressionVectorSelectors.makeVectorObjectSelector(factory, parsedExpression.get());
+  }
+
+  @Override
   public ColumnCapabilities capabilities(String columnName)
   {
-    // Note: Ideally we would fill out additional information instead of leaving capabilities as 'unknown', e.g. examine
-    // if the expression in question could potentially return multiple values and anything else. However, we don't
-    // currently have a good way of determining this, so fill this out more once we do
-    return new ColumnCapabilitiesImpl().setType(outputType);
+    // If possible, this should only be used as a fallback method for when capabilities are truly 'unknown', because we
+    // are unable to compute the output type of the expression, either due to incomplete type information of the
+    // inputs or because of unimplemented methods on expression implementations themselves, or, because a
+    // ColumnInspector is not available
+
+    if (ExpressionProcessing.processArraysAsMultiValueStrings() && outputType != null && outputType.isArray()) {
+      return new ColumnCapabilitiesImpl().setType(ColumnType.STRING).setHasMultipleValues(true);
+    }
+
+    return new ColumnCapabilitiesImpl().setType(outputType == null ? ColumnType.FLOAT : outputType);
+  }
+
+  @Override
+  public ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
+  {
+    final ExpressionPlan plan = ExpressionPlanner.plan(inspector, parsedExpression.get());
+    final ColumnCapabilities inferred = plan.inferColumnCapabilities(outputType);
+    // if we can infer the column capabilities from the expression plan, then use that
+    if (inferred != null) {
+      // explicit outputType is used as a hint, how did it compare to the planners inferred output type?
+      if (outputType != null && inferred.getType() != outputType.getType()) {
+        // if both sides are numeric, let it slide and log at debug level
+        // but mismatches involving strings and arrays might be worth knowing about so warn
+        if (!inferred.isNumeric() && !outputType.isNumeric()) {
+          log.warn(
+              "Projected output type %s of expression %s does not match provided type %s",
+              inferred.asTypeString(),
+              expression,
+              outputType
+          );
+        } else {
+          log.debug(
+              "Projected output type %s of expression %s does not match provided type %s",
+              inferred.asTypeString(),
+              expression,
+              outputType
+          );
+        }
+      }
+      return inferred;
+    }
+
+    // fallback to default capabilities
+    return capabilities(columnName);
   }
 
   @Override
@@ -152,11 +235,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(VirtualColumnCacheHelper.CACHE_TYPE_ID_EXPRESSION)
-        .appendString(name)
-        .appendString(expression)
-        .appendString(outputType.toString())
-        .build();
+    return cacheKey.get();
   }
 
   @Override
@@ -171,7 +250,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
     final ExpressionVirtualColumn that = (ExpressionVirtualColumn) o;
     return Objects.equals(name, that.name) &&
            Objects.equals(expression, that.expression) &&
-           outputType == that.outputType;
+           Objects.equals(outputType, that.outputType);
   }
 
   @Override
@@ -188,5 +267,19 @@ public class ExpressionVirtualColumn implements VirtualColumn
            ", expression='" + expression + '\'' +
            ", outputType=" + outputType +
            '}';
+  }
+
+  private Supplier<byte[]> makeCacheKeySupplier()
+  {
+    return Suppliers.memoize(() -> {
+      CacheKeyBuilder builder = new CacheKeyBuilder(VirtualColumnCacheHelper.CACHE_TYPE_ID_EXPRESSION)
+          .appendString(name)
+          .appendCacheable(parsedExpression.get());
+
+      if (outputType != null) {
+        builder.appendString(outputType.toString());
+      }
+      return builder.build();
+    });
   }
 }

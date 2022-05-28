@@ -59,6 +59,18 @@ public interface DimFilter extends Cacheable
   DimFilter optimize();
 
   /**
+   * @return Return a Filter that implements this DimFilter, after applying optimizations to this DimFilter.
+   * A typical implementation will return the result of `optimize().toFilter()`
+   * See abstract base class {@link AbstractOptimizableDimFilter} for a common implementation shared by
+   * current DimFilters.
+   *
+   * The Filter returned by this method across multiple calls must be the same object: parts of the query stack
+   * compare Filters, and returning the same object allows these checks to avoid deep comparisons.
+   * (see {@link org.apache.druid.segment.join.HashJoinSegmentStorageAdapter#makeCursors for an example}
+   */
+  Filter toOptimizedFilter();
+
+  /**
    * Returns a Filter that implements this DimFilter. This does not generally involve optimizing the DimFilter,
    * so it does make sense to optimize first and then call toFilter on the resulting DimFilter.
    *

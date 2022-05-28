@@ -76,20 +76,25 @@ public class SqlReader extends IntermediateRowParsingReader<Map<String, Object>>
   }
 
   @Override
+  protected InputEntity source()
+  {
+    return source;
+  }
+
+  @Override
   protected List<InputRow> parseInputRows(Map<String, Object> intermediateRow) throws ParseException
   {
     return Collections.singletonList(
         MapInputRowParser.parse(
-            inputRowSchema.getTimestampSpec(),
-            inputRowSchema.getDimensionsSpec(),
+            inputRowSchema,
             intermediateRow
         )
     );
   }
 
   @Override
-  protected Map<String, Object> toMap(Map<String, Object> intermediateRow)
+  protected List<Map<String, Object>> toMap(Map<String, Object> intermediateRow)
   {
-    return intermediateRow;
+    return Collections.singletonList(intermediateRow);
   }
 }

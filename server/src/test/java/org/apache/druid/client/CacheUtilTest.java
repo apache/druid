@@ -27,6 +27,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -111,14 +112,27 @@ public class CacheUtilTest
   }
 
   @Test
-  public void test_isQueryCacheable_unCacheableDataSource()
+  public void test_isQueryCacheable_unCacheableDataSourceOnBroker()
+  {
+    Assert.assertFalse(
+        CacheUtil.isQueryCacheable(
+            timeseriesQuery.withDataSource(new GlobalTableDataSource("global")),
+            new DummyCacheStrategy<>(true, true),
+            makeCacheConfig(ImmutableMap.of()),
+            CacheUtil.ServerType.BROKER
+        )
+    );
+  }
+
+  @Test
+  public void test_isQueryCacheable_unCacheableDataSourceOnDataServer()
   {
     Assert.assertFalse(
         CacheUtil.isQueryCacheable(
             timeseriesQuery.withDataSource(new LookupDataSource("lookyloo")),
             new DummyCacheStrategy<>(true, true),
             makeCacheConfig(ImmutableMap.of()),
-            CacheUtil.ServerType.BROKER
+            CacheUtil.ServerType.DATA
         )
     );
   }

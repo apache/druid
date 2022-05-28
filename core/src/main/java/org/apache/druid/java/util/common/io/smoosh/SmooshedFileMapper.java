@@ -19,6 +19,8 @@
 
 package org.apache.druid.java.util.common.io.smoosh;
 
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
@@ -46,6 +48,8 @@ import java.util.TreeMap;
  */
 public class SmooshedFileMapper implements Closeable
 {
+  private static final Interner<String> STRING_INTERNER = Interners.newWeakInterner();
+
   public static SmooshedFileMapper load(File baseDir) throws IOException
   {
     File metaFile = FileSmoosher.metaFile(baseDir);
@@ -81,7 +85,7 @@ public class SmooshedFileMapper implements Closeable
           throw new ISE("Wrong number of splits[%d] in line[%s]", splits.length, line);
         }
         internalFiles.put(
-            splits[0],
+            STRING_INTERNER.intern(splits[0]),
             new Metadata(Integer.parseInt(splits[1]), Integer.parseInt(splits[2]), Integer.parseInt(splits[3]))
         );
       }

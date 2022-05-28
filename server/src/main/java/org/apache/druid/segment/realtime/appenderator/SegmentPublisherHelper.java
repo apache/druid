@@ -20,8 +20,10 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.BuildingNumberedShardSpec;
+import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
+import org.apache.druid.timeline.partition.BuildingShardSpec;
 import org.apache.druid.timeline.partition.OverwriteShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
@@ -38,11 +40,13 @@ import java.util.stream.Collectors;
 
 public final class SegmentPublisherHelper
 {
+  private static final Logger LOG = new Logger(SegmentPublisherHelper.class);
+
   /**
    * This method fills missing information in the shard spec if necessary when publishing segments.
    *
    * - When time chunk lock is used, the non-appending task should set the proper size of the core partitions for
-   *   dynamically-partitioned segments. See {@link #annotateNumberedShardSpecFn}.
+   *   dynamically-partitioned segments. See {@link #annotateCorePartitionSetSizeFn}.
    * - When segment lock is used, the overwriting task should set the proper size of the atomic update group.
    *   See {@link #annotateAtomicUpdateGroupFn}.
    */
@@ -70,8 +74,32 @@ public final class SegmentPublisherHelper
       final Function<DataSegment, DataSegment> annotateFn;
       if (firstShardSpec instanceof OverwriteShardSpec) {
         annotateFn = annotateAtomicUpdateGroupFn(segmentsPerInterval.size());
-      } else if (firstShardSpec instanceof BuildingNumberedShardSpec) {
-        annotateFn = annotateNumberedShardSpecFn(segmentsPerInterval.size());
+      } else if (firstShardSpec instanceof BuildingShardSpec) {
+        // sanity check
+        // BuildingShardSpec is used in non-appending mode. In this mode,
+        // the segments in each interval should have contiguous partitionIds,
+        // so that they can be queryable (see PartitionHolder.isComplete()).
+        int expectedCorePartitionSetSize = segmentsPerInterval.size();
+        int actualCorePartitionSetSize = Math.toIntExact(
+            segmentsPerInterval
+                .stream()
+                .filter(segment -> segment.getShardSpec().getPartitionNum() < expectedCorePartitionSetSize)
+                .count()
+        );
+        if (expectedCorePartitionSetSize != actualCorePartitionSetSize) {
+          LOG.errorSegments(segmentsPerInterval, "Cannot publish segments due to incomplete time chunk");
+          throw new ISE(
+              "Cannot publish segments due to incomplete time chunk for interval[%s]. "
+              + "Expected [%s] segments in the core partition, but only [%] segments are found. "
+              + "See task logs for more details about these segments.",
+              interval,
+              expectedCorePartitionSetSize,
+              actualCorePartitionSetSize
+          );
+        }
+        annotateFn = annotateCorePartitionSetSizeFn(expectedCorePartitionSetSize);
+      } else if (firstShardSpec instanceof BucketNumberedShardSpec) {
+        throw new ISE("Cannot publish segments with shardSpec[%s]", firstShardSpec);
       } else {
         annotateFn = null;
       }
@@ -93,11 +121,11 @@ public final class SegmentPublisherHelper
     };
   }
 
-  private static Function<DataSegment, DataSegment> annotateNumberedShardSpecFn(int corePartitionSetSize)
+  private static Function<DataSegment, DataSegment> annotateCorePartitionSetSizeFn(int corePartitionSetSize)
   {
     return segment -> {
-      final BuildingNumberedShardSpec shardSpec = (BuildingNumberedShardSpec) segment.getShardSpec();
-      return segment.withShardSpec(shardSpec.toNumberedShardSpec(corePartitionSetSize));
+      final BuildingShardSpec<?> shardSpec = (BuildingShardSpec<?>) segment.getShardSpec();
+      return segment.withShardSpec(shardSpec.convert(corePartitionSetSize));
     };
   }
 

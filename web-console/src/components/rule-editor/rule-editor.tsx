@@ -30,29 +30,32 @@ import {
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
+import { durationSanitizer } from '../../utils';
 import { Rule, RuleUtil } from '../../utils/load-rule';
+import { SuggestibleInput } from '../suggestible-input/suggestible-input';
 
 import './rule-editor.scss';
+
+const PERIOD_SUGGESTIONS: string[] = ['P1D', 'P7D', 'P1M', 'P1Y', 'P1000Y'];
 
 export interface RuleEditorProps {
   rule: Rule;
   tiers: any[];
   onChange: (newRule: Rule) => void;
   onDelete: () => void;
-  moveUp: (() => void) | null;
-  moveDown: (() => void) | null;
+  moveUp: (() => void) | undefined;
+  moveDown: (() => void) | undefined;
 }
 
 export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps) {
   const { rule, onChange, tiers, onDelete, moveUp, moveDown } = props;
   const [isOpen, setIsOpen] = useState(true);
-  if (!rule) return null;
 
   function removeTier(key: string) {
-    const newTierReplicants = Object.assign({}, rule.tieredReplicants);
+    const newTierReplicants = { ...rule.tieredReplicants };
     delete newTierReplicants[key];
 
-    const newRule = Object.assign({}, rule, { tieredReplicants: newTierReplicants });
+    const newRule = { ...rule, tieredReplicants: newTierReplicants };
     onChange(newRule);
   }
 
@@ -155,14 +158,12 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
       </div>
 
       <Collapse isOpen={isOpen}>
-        <Card>
+        <Card elevation={2}>
           <FormGroup>
             <ControlGroup>
               <HTMLSelect
                 value={rule.type}
-                onChange={(e: any) =>
-                  onChange(RuleUtil.changeRuleType(rule, e.target.value as any))
-                }
+                onChange={(e: any) => onChange(RuleUtil.changeRuleType(rule, e.target.value))}
               >
                 {RuleUtil.TYPES.map(type => {
                   return (
@@ -173,12 +174,15 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
                 })}
               </HTMLSelect>
               {RuleUtil.hasPeriod(rule) && (
-                <InputGroup
+                <SuggestibleInput
                   value={rule.period || ''}
-                  onChange={(e: any) =>
-                    onChange(RuleUtil.changePeriod(rule, e.target.value as any))
-                  }
-                  placeholder="P1D"
+                  sanitizer={durationSanitizer}
+                  onValueChange={period => {
+                    if (typeof period === 'undefined') return;
+                    onChange(RuleUtil.changePeriod(rule, period));
+                  }}
+                  placeholder={PERIOD_SUGGESTIONS[0]}
+                  suggestions={PERIOD_SUGGESTIONS}
                 />
               )}
               {RuleUtil.hasIncludeFuture(rule) && (
@@ -194,9 +198,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
               {RuleUtil.hasInterval(rule) && (
                 <InputGroup
                   value={rule.interval || ''}
-                  onChange={(e: any) =>
-                    onChange(RuleUtil.changeInterval(rule, e.target.value as any))
-                  }
+                  onChange={(e: any) => onChange(RuleUtil.changeInterval(rule, e.target.value))}
                   placeholder="2010-01-01/2020-01-01"
                 />
               )}

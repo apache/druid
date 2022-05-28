@@ -21,10 +21,20 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -220,6 +230,78 @@ public class HllSketchAggregatorFactoryTest
     }
   }
 
+  @Test
+  public void testResultArraySignature()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .granularity(Granularities.HOUR)
+              .aggregators(
+                  new CountAggregatorFactory("count"),
+                  new HllSketchBuildAggregatorFactory(
+                      "hllBuild",
+                      "col",
+                      null,
+                      null,
+                      false
+                  ),
+                  new HllSketchBuildAggregatorFactory(
+                      "hllBuildRound",
+                      "col",
+                      null,
+                      null,
+                      true
+                  ),
+                  new HllSketchMergeAggregatorFactory(
+                      "hllMerge",
+                      "col",
+                      null,
+                      null,
+                      false
+                  ),
+                  new HllSketchMergeAggregatorFactory(
+                      "hllMergeRound",
+                      "col",
+                      null,
+                      null,
+                      true
+                  )
+              )
+              .postAggregators(
+                  new FieldAccessPostAggregator("hllBuild-access", "hllBuild"),
+                  new FinalizingFieldAccessPostAggregator("hllBuild-finalize", "hllBuild"),
+                  new FieldAccessPostAggregator("hllBuildRound-access", "hllBuildRound"),
+                  new FinalizingFieldAccessPostAggregator("hllBuildRound-finalize", "hllBuildRound"),
+                  new FieldAccessPostAggregator("hllMerge-access", "hllMerge"),
+                  new FinalizingFieldAccessPostAggregator("hllMerge-finalize", "hllMerge"),
+                  new FieldAccessPostAggregator("hllMergeRound-access", "hllMergeRound"),
+                  new FinalizingFieldAccessPostAggregator("hllMergeRound-finalize", "hllMergeRound")
+              )
+              .build();
+
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("count", ColumnType.LONG)
+                    .add("hllBuild", null)
+                    .add("hllBuildRound", null)
+                    .add("hllMerge", null)
+                    .add("hllMergeRound", null)
+                    .add("hllBuild-access", HllSketchBuildAggregatorFactory.TYPE)
+                    .add("hllBuild-finalize", ColumnType.DOUBLE)
+                    .add("hllBuildRound-access", HllSketchBuildAggregatorFactory.TYPE)
+                    .add("hllBuildRound-finalize", ColumnType.LONG)
+                    .add("hllMerge-access", HllSketchMergeAggregatorFactory.TYPE)
+                    .add("hllMerge-finalize", ColumnType.DOUBLE)
+                    .add("hllMergeRound-access", HllSketchMergeAggregatorFactory.TYPE)
+                    .add("hllMergeRound-finalize", ColumnType.LONG)
+                    .build(),
+        new TimeseriesQueryQueryToolChest().resultArraySignature(query)
+    );
+  }
+
   private static boolean isToStringField(Field field)
   {
     int modfiers = field.getModifiers();
@@ -270,9 +352,9 @@ public class HllSketchAggregatorFactoryTest
     }
 
     @Override
-    public String getTypeName()
+    public ColumnType getIntermediateType()
     {
-      return DUMMY_TYPE_NAME;
+      return new ColumnType(ValueType.COMPLEX, DUMMY_TYPE_NAME, null);
     }
 
     @Override

@@ -59,6 +59,7 @@ import org.joda.time.Interval;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
@@ -171,7 +172,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
         executorService.shutdown();
       }
       catch (SecurityException ex) {
-        log.wtf(ex, "I can't control my own threads!");
+        log.error(ex, "I can't control my own threads!");
       }
     }
 
@@ -208,10 +209,31 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
              .emit();
           log.warn(e, "Graceful shutdown of task[%s] aborted with exception.", task.getId());
           error = true;
-          TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(task.getId()));
+          // Creating a new status to only feed listeners seems quite strange.
+          // This is currently OK because we have no listeners yet registered in peon.
+          // However, we should fix this in the near future by always retrieving task status
+          // from one single source of truth that is also propagated to the overlord.
+          // See https://github.com/apache/druid/issues/11445.
+          TaskRunnerUtils.notifyStatusChanged(
+              listeners,
+              task.getId(),
+              TaskStatus.failure(
+                  task.getId(),
+                  "Failed to stop gracefully with exception. See task logs for more details."
+              )
+          );
         }
       } else {
-        TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(task.getId()));
+        // Creating a new status to only feed listeners seems quite strange.
+        // This is currently OK because we have no listeners yet registered in peon.
+        // However, we should fix this in the near future by always retrieving task status
+        // from one single source of truth that is also propagated to the overlord.
+        // See https://github.com/apache/druid/issues/11445.
+        TaskRunnerUtils.notifyStatusChanged(
+            listeners,
+            task.getId(),
+            TaskStatus.failure(task.getId(), "Canceled as task execution process stopped")
+        );
       }
 
       elapsed = System.currentTimeMillis() - start;
@@ -233,7 +255,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
         executorService.shutdownNow();
       }
       catch (SecurityException ex) {
-        log.wtf(ex, "I can't control my own threads!");
+        log.error(ex, "I can't control my own threads!");
       }
     }
   }
@@ -313,6 +335,41 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
     return Optional.absent();
   }
 
+  /* This method should be never called in peons */
+  @Override
+  public Map<String, Long> getTotalTaskSlotCount()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  /* This method should be never called in peons */
+  @Override
+  public Map<String, Long> getIdleTaskSlotCount()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  /* This method should be never called in peons */
+  @Override
+  public Map<String, Long> getUsedTaskSlotCount()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  /* This method should be never called in peons */
+  @Override
+  public Map<String, Long> getLazyTaskSlotCount()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  /* This method should be never called in peons */
+  @Override
+  public Map<String, Long> getBlacklistedTaskSlotCount()
+  {
+    throw new UnsupportedOperationException();
+  }
+
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
@@ -387,7 +444,6 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
     {
       return task.getDataSource();
     }
-
   }
 
   private class SingleTaskBackgroundRunnerCallable implements Callable<TaskStatus>

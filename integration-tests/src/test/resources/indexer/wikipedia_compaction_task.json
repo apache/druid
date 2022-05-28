@@ -1,5 +1,14 @@
 {
   "type" : "compact",
   "dataSource" : "%%DATASOURCE%%",
-  "interval" : "2013-08-31/2013-09-02"
+  "ioConfig" : {
+    "type": "compact",
+    "inputSpec": {
+      "type": "interval",
+      "interval": "2013-08-31/2013-09-02"
+    }
+  },
+  "context" : {
+    "storeCompactionState" : true
+  }
 }

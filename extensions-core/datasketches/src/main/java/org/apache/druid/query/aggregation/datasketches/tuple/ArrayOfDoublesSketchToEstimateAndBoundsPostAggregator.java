@@ -21,11 +21,13 @@ package org.apache.druid.query.aggregation.datasketches.tuple;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.datasketches.tuple.ArrayOfDoublesSketch;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketch;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -66,6 +68,12 @@ public class ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator extends Array
   {
     final ArrayOfDoublesSketch sketch = (ArrayOfDoublesSketch) getField().compute(combinedAggregators);
     return new double[] {sketch.getEstimate(), sketch.getLowerBound(numStdDevs), sketch.getUpperBound(numStdDevs)};
+  }
+
+  @Override
+  public ColumnType getType(ColumnInspector signature)
+  {
+    return ColumnType.DOUBLE_ARRAY;
   }
 
   @Override

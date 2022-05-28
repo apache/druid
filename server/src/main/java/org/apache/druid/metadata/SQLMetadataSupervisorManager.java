@@ -24,10 +24,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.VersionedSupervisorSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -35,10 +37,12 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.joda.time.DateTime;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
+import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
@@ -50,6 +54,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 @ManageLifecycle
 public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
@@ -129,26 +134,9 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                       public Pair<String, VersionedSupervisorSpec> map(int index, ResultSet r, StatementContext ctx)
                           throws SQLException
                       {
-                        SupervisorSpec payload;
-                        try {
-                          payload = jsonMapper.readValue(
-                              r.getBytes("payload"),
-                              new TypeReference<SupervisorSpec>()
-                              {
-                              }
-                          );
-                        }
-                        catch (JsonParseException | JsonMappingException e) {
-                          log.warn("Failed to deserialize payload for spec_id[%s]", r.getString("spec_id"));
-                          payload = null;
-                        }
-                        catch (IOException e) {
-                          throw new RuntimeException(e);
-                        }
-
                         return Pair.of(
                             r.getString("spec_id"),
-                            new VersionedSupervisorSpec(payload, r.getString("created_date"))
+                            createVersionSupervisorSpecFromResponse(r)
                         );
                       }
                     }
@@ -179,6 +167,60 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
             }
         )
     );
+  }
+
+  @Override
+  public List<VersionedSupervisorSpec> getAllForId(String id)
+  {
+    return ImmutableList.copyOf(
+        dbi.withHandle(
+            new HandleCallback<List<VersionedSupervisorSpec>>()
+            {
+              @Override
+              public List<VersionedSupervisorSpec> withHandle(Handle handle)
+              {
+                return handle.createQuery(
+                    StringUtils.format(
+                        "SELECT id, spec_id, created_date, payload FROM %1$s WHERE spec_id = :spec_id ORDER BY id DESC",
+                        getSupervisorsTable()
+                    )
+                ).bind("spec_id", id
+                ).map(
+                    new ResultSetMapper<VersionedSupervisorSpec>()
+                    {
+                      @Override
+                      public VersionedSupervisorSpec map(int index, ResultSet r, StatementContext ctx)
+                          throws SQLException
+                      {
+                        return createVersionSupervisorSpecFromResponse(r);
+                      }
+                    }
+                ).list();
+              }
+            }
+        )
+    );
+  }
+
+  private VersionedSupervisorSpec createVersionSupervisorSpecFromResponse(ResultSet r) throws SQLException
+  {
+    SupervisorSpec payload;
+    try {
+      payload = jsonMapper.readValue(
+          r.getBytes("payload"),
+          new TypeReference<SupervisorSpec>()
+          {
+          }
+      );
+    }
+    catch (JsonParseException | JsonMappingException e) {
+      log.warn("Failed to deserialize payload for spec_id[%s]", r.getString("spec_id"));
+      payload = null;
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return new VersionedSupervisorSpec(payload, r.getString("created_date"));
   }
 
   @Override
@@ -246,6 +288,59 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
               }
             }
         )
+    );
+  }
+
+  @Override
+  public Map<String, SupervisorSpec> getLatestActiveOnly()
+  {
+    Map<String, SupervisorSpec> supervisors = getLatest();
+    Map<String, SupervisorSpec> activeSupervisors = new HashMap<>();
+    for (Map.Entry<String, SupervisorSpec> entry : supervisors.entrySet()) {
+      // Terminated supervisor will have it's latest supervisorSpec as NoopSupervisorSpec
+      // (NoopSupervisorSpec is used as a tombstone marker)
+      if (!(entry.getValue() instanceof NoopSupervisorSpec)) {
+        activeSupervisors.put(entry.getKey(), entry.getValue());
+      }
+    }
+    return ImmutableMap.copyOf(activeSupervisors);
+  }
+
+  @Override
+  public Map<String, SupervisorSpec> getLatestTerminatedOnly()
+  {
+    Map<String, SupervisorSpec> supervisors = getLatest();
+    Map<String, SupervisorSpec> activeSupervisors = new HashMap<>();
+    for (Map.Entry<String, SupervisorSpec> entry : supervisors.entrySet()) {
+      // Terminated supervisor will have it's latest supervisorSpec as NoopSupervisorSpec
+      // (NoopSupervisorSpec is used as a tombstone marker)
+      if (entry.getValue() instanceof NoopSupervisorSpec) {
+        activeSupervisors.put(entry.getKey(), entry.getValue());
+      }
+    }
+    return ImmutableMap.copyOf(activeSupervisors);
+  }
+
+  @Override
+  public int removeTerminatedSupervisorsOlderThan(long timestamp)
+  {
+    DateTime dateTime = DateTimes.utc(timestamp);
+    Map<String, SupervisorSpec> terminatedSupervisors = getLatestTerminatedOnly();
+    return dbi.withHandle(
+        handle -> {
+          final PreparedBatch batch = handle.prepareBatch(
+              StringUtils.format(
+                  "DELETE FROM %1$s WHERE spec_id = :spec_id AND created_date < '%2$s'",
+                  getSupervisorsTable(),
+                  dateTime.toString()
+              )
+          );
+          for (Map.Entry<String, SupervisorSpec> supervisor : terminatedSupervisors.entrySet()) {
+            batch.bind("spec_id", supervisor.getKey()).add();
+          }
+          int[] result = batch.execute();
+          return IntStream.of(result).sum();
+        }
     );
   }
 

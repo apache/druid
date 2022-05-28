@@ -30,9 +30,9 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.impl.NoopInputFormat;
 import org.apache.druid.data.input.impl.NoopInputSource;
+import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.NoopIndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
@@ -44,6 +44,9 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMergerV9Factory;
+import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
@@ -69,7 +72,7 @@ public class TestUtils
   private static final Logger log = new Logger(TestUtils.class);
 
   private final ObjectMapper jsonMapper;
-  private final IndexMergerV9 indexMergerV9;
+  private final IndexMergerV9Factory indexMergerV9Factory;
   private final IndexIO indexIO;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
 
@@ -80,7 +83,11 @@ public class TestUtils
         jsonMapper,
         () -> 0
     );
-    indexMergerV9 = new IndexMergerV9(jsonMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
+    indexMergerV9Factory = new IndexMergerV9Factory(
+        jsonMapper,
+        indexIO,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance()
+    );
 
     this.rowIngestionMetersFactory = new DropwizardRowIngestionMetersFactory();
 
@@ -115,6 +122,7 @@ public class TestUtils
           }
         }
     );
+    DruidSecondaryModule.setupAnnotationIntrospector(jsonMapper, TestHelper.makeAnnotationIntrospector());
 
     List<? extends Module> firehoseModules = new FirehoseModule().getJacksonModules();
     firehoseModules.forEach(jsonMapper::registerModule);
@@ -127,7 +135,12 @@ public class TestUtils
 
   public IndexMergerV9 getTestIndexMergerV9()
   {
-    return indexMergerV9;
+    return indexMergerV9Factory.create(true);
+  }
+
+  public IndexMergerV9Factory getIndexMergerV9Factory()
+  {
+    return indexMergerV9Factory;
   }
 
   public IndexIO getTestIndexIO()

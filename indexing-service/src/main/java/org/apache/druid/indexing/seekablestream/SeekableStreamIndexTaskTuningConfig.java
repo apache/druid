@@ -22,6 +22,7 @@ package org.apache.druid.indexing.seekablestream;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
@@ -32,13 +33,15 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Objects;
 
-public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfig, AppenderatorConfig
+public abstract class SeekableStreamIndexTaskTuningConfig implements AppenderatorConfig
 {
   private static final boolean DEFAULT_RESET_OFFSET_AUTOMATICALLY = false;
   private static final boolean DEFAULT_SKIP_SEQUENCE_NUMBER_AVAILABILITY_CHECK = false;
 
+  private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
+  private final boolean skipBytesInMemoryOverheadCheck;
   private final DynamicPartitionsSpec partitionsSpec;
   private final Period intermediatePersistPeriod;
   private final File basePersistDirectory;
@@ -59,8 +62,10 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   private final int maxSavedParseExceptions;
 
   public SeekableStreamIndexTaskTuningConfig(
+      @Nullable AppendableIndexSpec appendableIndexSpec,
       @Nullable Integer maxRowsInMemory,
       @Nullable Long maxBytesInMemory,
+      @Nullable Boolean skipBytesInMemoryOverheadCheck,
       @Nullable Integer maxRowsPerSegment,
       @Nullable Long maxTotalRows,
       @Nullable Period intermediatePersistPeriod,
@@ -68,8 +73,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
       @Nullable Integer maxPendingPersists,
       @Nullable IndexSpec indexSpec,
       @Nullable IndexSpec indexSpecForIntermediatePersists,
-      // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
-      @Deprecated @JsonProperty("buildV9Directly") @Nullable Boolean buildV9Directly,
       @Deprecated @Nullable Boolean reportParseExceptions,
       @Nullable Long handoffConditionTimeout,
       @Nullable Boolean resetOffsetAutomatically,
@@ -84,11 +87,14 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     // Cannot be a static because default basePersistDirectory is unique per-instance
     final RealtimeTuningConfig defaults = RealtimeTuningConfig.makeDefaultTuningConfig(basePersistDirectory);
 
+    this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
     this.maxRowsInMemory = maxRowsInMemory == null ? defaults.getMaxRowsInMemory() : maxRowsInMemory;
     this.partitionsSpec = new DynamicPartitionsSpec(maxRowsPerSegment, maxTotalRows);
     // initializing this to 0, it will be lazily initialized to a value
-    // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
+    // @see #getMaxBytesInMemoryOrDefault()
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
+    this.skipBytesInMemoryOverheadCheck = skipBytesInMemoryOverheadCheck == null ?
+                                          DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK : skipBytesInMemoryOverheadCheck;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaults.getIntermediatePersistPeriod()
                                      : intermediatePersistPeriod;
@@ -132,6 +138,13 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
 
   @Override
   @JsonProperty
+  public AppendableIndexSpec getAppendableIndexSpec()
+  {
+    return appendableIndexSpec;
+  }
+
+  @Override
+  @JsonProperty
   public int getMaxRowsInMemory()
   {
     return maxRowsInMemory;
@@ -142,6 +155,13 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   public long getMaxBytesInMemory()
   {
     return maxBytesInMemory;
+  }
+
+  @JsonProperty
+  @Override
+  public boolean isSkipBytesInMemoryOverheadCheck()
+  {
+    return skipBytesInMemoryOverheadCheck;
   }
 
   @Override
@@ -199,16 +219,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   public IndexSpec getIndexSpecForIntermediatePersists()
   {
     return indexSpecForIntermediatePersists;
-  }
-
-  /**
-   * Always returns true, doesn't affect the version being built.
-   */
-  @Deprecated
-  @JsonProperty
-  public boolean getBuildV9Directly()
-  {
-    return true;
   }
 
   @Override
@@ -281,8 +291,10 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
       return false;
     }
     SeekableStreamIndexTaskTuningConfig that = (SeekableStreamIndexTaskTuningConfig) o;
-    return maxRowsInMemory == that.maxRowsInMemory &&
+    return Objects.equals(appendableIndexSpec, that.appendableIndexSpec) &&
+           maxRowsInMemory == that.maxRowsInMemory &&
            maxBytesInMemory == that.maxBytesInMemory &&
+           skipBytesInMemoryOverheadCheck == that.skipBytesInMemoryOverheadCheck &&
            maxPendingPersists == that.maxPendingPersists &&
            reportParseExceptions == that.reportParseExceptions &&
            handoffConditionTimeout == that.handoffConditionTimeout &&
@@ -304,8 +316,10 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   public int hashCode()
   {
     return Objects.hash(
+        appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
+        skipBytesInMemoryOverheadCheck,
         partitionsSpec,
         intermediatePersistPeriod,
         basePersistDirectory,

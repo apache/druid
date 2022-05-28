@@ -16,10 +16,19 @@
  * limitations under the License.
  */
 
+import * as playwright from 'playwright-chromium';
+
+import { clickButton } from '../../../util/playwright';
+
 /**
  * Connector for data loader input data.
  */
 export interface DataConnector {
   readonly name: string;
+  readonly needParse: boolean;
   connect(): Promise<void>;
+}
+
+export async function clickApplyButton(page: playwright.Page): Promise<void> {
+  await clickButton(page, 'Apply');
 }

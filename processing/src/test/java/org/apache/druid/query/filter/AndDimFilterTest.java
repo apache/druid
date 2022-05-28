@@ -21,7 +21,9 @@ package org.apache.druid.query.filter;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.FilterTestUtils;
+import org.apache.druid.segment.filter.TrueFilter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -67,37 +69,37 @@ public class AndDimFilterTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testOptimieShortCircuitWithFalseFilter()
+  public void testToFilterShortCircuitWithFalseFilter()
   {
     DimFilter filter = DimFilterTestUtils.and(
         DimFilterTestUtils.selector("col1", "1"),
         FalseDimFilter.instance()
     );
-    Assert.assertTrue(filter.optimize() instanceof FalseDimFilter);
+    Assert.assertTrue(filter.toFilter() instanceof FalseFilter);
   }
 
   @Test
-  public void testOptimizeOringTrueFilters()
+  public void testToFilterOringTrueFilters()
   {
     DimFilter filter = DimFilterTestUtils.and(TrueDimFilter.instance(), TrueDimFilter.instance());
-    Assert.assertSame(TrueDimFilter.instance(), filter.optimize());
+    Assert.assertSame(TrueFilter.instance(), filter.toFilter());
   }
 
   @Test
-  public void testOptimizeAndOfSingleFilterUnwrapAnd()
+  public void testToFilterAndOfSingleFilterUnwrapAnd()
   {
     DimFilter expected = DimFilterTestUtils.selector("col1", "1");
     DimFilter filter = DimFilterTestUtils.and(expected);
-    Assert.assertEquals(expected, filter.optimize());
+    Assert.assertEquals(expected.toFilter(), filter.toFilter());
   }
 
   @Test
-  public void testOptimizeAndOfMultipleFiltersReturningAsItIs()
+  public void testToFilterAndOfMultipleFiltersReturningAsItIs()
   {
     DimFilter filter = DimFilterTestUtils.and(
         DimFilterTestUtils.selector("col1", "1"),
         DimFilterTestUtils.selector("col1", "2")
     );
-    Assert.assertEquals(filter, filter.optimize());
+    Assert.assertEquals(filter.toFilter(), filter.toFilter());
   }
 }

@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
@@ -48,7 +48,7 @@ public class InlineJoinableFactoryTest
           new Object[]{"foo", 1L},
           new Object[]{"bar", 2L}
       ),
-      RowSignature.builder().add("str", ValueType.STRING).add("long", ValueType.LONG).build()
+      RowSignature.builder().add("str", ColumnType.STRING).add("long", ColumnType.LONG).build()
   );
 
   @Test
@@ -78,6 +78,13 @@ public class InlineJoinableFactoryTest
     Assert.assertEquals(ImmutableList.of("str", "long"), joinable.getAvailableColumns());
     Assert.assertEquals(3, joinable.getCardinality("str"));
     Assert.assertEquals(3, joinable.getCardinality("long"));
+  }
+
+  @Test
+  public void testIsDirectlyJoinable()
+  {
+    Assert.assertTrue(factory.isDirectlyJoinable(inlineDataSource));
+    Assert.assertFalse(factory.isDirectlyJoinable(new TableDataSource("foo")));
   }
 
   private static JoinConditionAnalysis makeCondition(final String condition)

@@ -27,6 +27,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 
 import java.io.IOException;
@@ -47,7 +48,7 @@ public class MapVirtualColumnTestBase extends InitializedNullHandlingTest
     final StringInputRowParser parser = new StringInputRowParser(
         new DelimitedParseSpec(
             new TimestampSpec("ts", "auto", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim", "keys", "values")), null, null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim", "keys", "values"))),
             "\t",
             ",",
             Arrays.asList("ts", "dim", "keys", "values"),
@@ -62,10 +63,10 @@ public class MapVirtualColumnTestBase extends InitializedNullHandlingTest
         .build();
 
     return TestIndex.loadIncrementalIndex(
-        () -> new IncrementalIndex.Builder()
+        () -> new OnheapIncrementalIndex.Builder()
             .setIndexSchema(schema)
             .setMaxRowCount(10000)
-            .buildOnheap(),
+            .build(),
         input,
         parser
     );

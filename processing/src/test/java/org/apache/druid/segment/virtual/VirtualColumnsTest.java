@@ -34,6 +34,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
@@ -46,6 +47,7 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ZeroIndexedInts;
@@ -61,6 +63,8 @@ import java.util.List;
 
 public class VirtualColumnsTest extends InitializedNullHandlingTest
 {
+  private static final String REAL_COLUMN_NAME = "real_column";
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -73,6 +77,116 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     Assert.assertTrue(virtualColumns.exists("foo"));
     Assert.assertTrue(virtualColumns.exists("foo.5"));
     Assert.assertFalse(virtualColumns.exists("bar"));
+  }
+
+  @Test
+  public void testGetColumnCapabilitiesNilBase()
+  {
+    final VirtualColumns virtualColumns = makeVirtualColumns();
+    final ColumnInspector baseInspector = column -> null;
+    Assert.assertEquals(ValueType.FLOAT, virtualColumns.getColumnCapabilities(baseInspector, "expr").getType());
+    Assert.assertEquals(ValueType.LONG, virtualColumns.getColumnCapabilities(baseInspector, "expr2").getType());
+    Assert.assertNull(virtualColumns.getColumnCapabilities(baseInspector, REAL_COLUMN_NAME));
+  }
+
+  @Test
+  public void testGetColumnCapabilitiesDoubleBase()
+  {
+    final VirtualColumns virtualColumns = makeVirtualColumns();
+    final ColumnInspector baseInspector = column -> {
+      if (REAL_COLUMN_NAME.equals(column)) {
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE);
+      } else {
+        return null;
+      }
+    };
+    Assert.assertEquals(ValueType.FLOAT, virtualColumns.getColumnCapabilities(baseInspector, "expr").getType());
+    Assert.assertEquals(ValueType.DOUBLE, virtualColumns.getColumnCapabilities(baseInspector, "expr2").getType());
+    Assert.assertNull(virtualColumns.getColumnCapabilities(baseInspector, REAL_COLUMN_NAME));
+  }
+
+  @Test
+  public void testGetColumnCapabilitiesWithFallbackNilBase()
+  {
+    final VirtualColumns virtualColumns = makeVirtualColumns();
+    final ColumnInspector baseInspector = column -> null;
+    Assert.assertEquals(
+        ValueType.FLOAT,
+        virtualColumns.getColumnCapabilitiesWithFallback(baseInspector, "expr").getType()
+    );
+    Assert.assertEquals(
+        ValueType.LONG,
+        virtualColumns.getColumnCapabilitiesWithFallback(baseInspector, "expr2").getType()
+    );
+    Assert.assertNull(virtualColumns.getColumnCapabilitiesWithFallback(baseInspector, REAL_COLUMN_NAME));
+  }
+
+  @Test
+  public void testGetColumnCapabilitiesWithFallbackDoubleBase()
+  {
+    final VirtualColumns virtualColumns = makeVirtualColumns();
+    final ColumnInspector baseInspector = column -> {
+      if (REAL_COLUMN_NAME.equals(column)) {
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE);
+      } else {
+        return null;
+      }
+    };
+    Assert.assertEquals(
+        ValueType.FLOAT,
+        virtualColumns.getColumnCapabilitiesWithFallback(baseInspector, "expr").getType()
+    );
+    Assert.assertEquals(
+        ValueType.DOUBLE,
+        virtualColumns.getColumnCapabilitiesWithFallback(baseInspector, "expr2").getType()
+    );
+    Assert.assertEquals(
+        ValueType.DOUBLE,
+        virtualColumns.getColumnCapabilitiesWithFallback(baseInspector, REAL_COLUMN_NAME).getType()
+    );
+  }
+
+  @Test
+  public void testWrapInspectorNilBase()
+  {
+    final VirtualColumns virtualColumns = makeVirtualColumns();
+    final ColumnInspector baseInspector = column -> null;
+    final ColumnInspector wrappedInspector = virtualColumns.wrapInspector(baseInspector);
+    Assert.assertEquals(
+        ValueType.FLOAT,
+        wrappedInspector.getColumnCapabilities("expr").getType()
+    );
+    Assert.assertEquals(
+        ValueType.LONG,
+        wrappedInspector.getColumnCapabilities("expr2").getType()
+    );
+    Assert.assertNull(wrappedInspector.getColumnCapabilities(REAL_COLUMN_NAME));
+  }
+
+  @Test
+  public void testWrapInspectorDoubleBase()
+  {
+    final VirtualColumns virtualColumns = makeVirtualColumns();
+    final ColumnInspector baseInspector = column -> {
+      if (REAL_COLUMN_NAME.equals(column)) {
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE);
+      } else {
+        return null;
+      }
+    };
+    final ColumnInspector wrappedInspector = virtualColumns.wrapInspector(baseInspector);
+    Assert.assertEquals(
+        ValueType.FLOAT,
+        wrappedInspector.getColumnCapabilities("expr").getType()
+    );
+    Assert.assertEquals(
+        ValueType.DOUBLE,
+        wrappedInspector.getColumnCapabilities("expr2").getType()
+    );
+    Assert.assertEquals(
+        ValueType.DOUBLE,
+        wrappedInspector.getColumnCapabilities(REAL_COLUMN_NAME).getType()
+    );
   }
 
   @Test
@@ -151,7 +265,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final ExpressionVirtualColumn expr = new ExpressionVirtualColumn(
         "__time",
         "x + y",
-        ValueType.FLOAT,
+        ColumnType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
 
@@ -167,14 +281,14 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final ExpressionVirtualColumn expr = new ExpressionVirtualColumn(
         "expr",
         "x + y",
-        ValueType.FLOAT,
+        ColumnType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
 
     final ExpressionVirtualColumn expr2 = new ExpressionVirtualColumn(
         "expr",
         "x * 2",
-        ValueType.FLOAT,
+        ColumnType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
 
@@ -190,14 +304,14 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final ExpressionVirtualColumn expr = new ExpressionVirtualColumn(
         "expr",
         "x + expr2",
-        ValueType.FLOAT,
+        ColumnType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
 
     final ExpressionVirtualColumn expr2 = new ExpressionVirtualColumn(
         "expr2",
         "expr * 2",
-        ValueType.FLOAT,
+        ColumnType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
 
@@ -212,13 +326,13 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
   {
     final VirtualColumns virtualColumns = VirtualColumns.create(
         ImmutableList.of(
-            new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn("expr", "x + y", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
 
     final VirtualColumns virtualColumns2 = VirtualColumns.create(
         ImmutableList.of(
-            new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn("expr", "x + y", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
 
@@ -231,13 +345,13 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
   {
     final VirtualColumns virtualColumns = VirtualColumns.create(
         ImmutableList.of(
-            new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn("expr", "x + y", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
 
     final VirtualColumns virtualColumns2 = VirtualColumns.create(
         ImmutableList.of(
-            new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn("expr", "x + y", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
 
@@ -256,8 +370,8 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
     final ImmutableList<VirtualColumn> theColumns = ImmutableList.of(
-        new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE),
-        new ExpressionVirtualColumn("expr2", "x + z", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
+        new ExpressionVirtualColumn("expr", "x + y", ColumnType.FLOAT, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("expr2", "x + z", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
     );
     final VirtualColumns virtualColumns = VirtualColumns.create(theColumns);
 
@@ -283,11 +397,28 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final ExpressionVirtualColumn expr = new ExpressionVirtualColumn(
         "expr",
         "1",
-        ValueType.FLOAT,
+        ColumnType.FLOAT,
+        TestExprMacroTable.INSTANCE
+    );
+    // expr2i is an input to expr2, and is used to verify that capabilities of inputs are checked properly.
+    final ExpressionVirtualColumn expr2i = new ExpressionVirtualColumn(
+        "expr2i",
+        "2",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    // expr2 will think it is:
+    // 1) FLOAT if it has no type info;
+    // 2) LONG if it only knows about expr2i;
+    // 3) DOUBLE if it knows about both inputs.
+    final ExpressionVirtualColumn expr2 = new ExpressionVirtualColumn(
+        "expr2",
+        "expr2i + " + REAL_COLUMN_NAME,
+        null,
         TestExprMacroTable.INSTANCE
     );
     final DottyVirtualColumn dotty = new DottyVirtualColumn("foo");
-    return VirtualColumns.create(ImmutableList.of(expr, dotty));
+    return VirtualColumns.create(ImmutableList.of(expr, expr2i, expr2, dotty));
   }
 
   static class DottyVirtualColumn implements VirtualColumn
@@ -417,7 +548,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     @Override
     public ColumnCapabilities capabilities(String columnName)
     {
-      return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
+      return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG);
     }
 
     @Override

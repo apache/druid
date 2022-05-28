@@ -25,11 +25,11 @@ title: "Broker"
 
 ### Configuration
 
-For Apache Druid Broker Process Configuration, see [Broker Configuration](../configuration/index.html#broker).
+For Apache Druid Broker Process Configuration, see [Broker Configuration](../configuration/index.md#broker).
 
 ### HTTP endpoints
 
-For a list of API endpoints supported by the Broker, see [Broker API](../operations/api-reference.html#broker).
+For a list of API endpoints supported by the Broker, see [Broker API](../operations/api-reference.md#broker).
 
 ### Overview
 

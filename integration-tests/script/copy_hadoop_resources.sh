@@ -14,15 +14,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 # wait for hadoop namenode to be up
 echo "Waiting for hadoop namenode to be up"
+MAX_ITERATIONS=15
+i=1
 docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -mkdir -p /druid"
-while [ $? -ne 0 ]
+while [ $? -ne 0 ] && [ $i -lt $MAX_ITERATIONS ]
 do
    sleep 2
+   i=$((i+1))
    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -mkdir -p /druid"
 done
-echo "Finished waiting for Hadoop namenode"
+
+if [ $i -lt $MAX_ITERATIONS ]; then
+  echo "Hadoop namenode is up after $i iterations"
+else
+  echo "Exhausted all runs while waiting for namenode to be up. Exiting"
+  exit 1
+fi
+
+set -e
+if [ -n "${HADOOP_VERSION}" ] && [ "${HADOOP_VERSION:0:1}" == "3" ]; then
+  docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -mkdir -p /user/root"
+  docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -put /usr/local/hadoop/etc/hadoop/ input"
+fi
 
 # Setup hadoop druid dirs
 echo "Setting up druid hadoop dirs"

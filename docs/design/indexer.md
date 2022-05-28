@@ -22,7 +22,7 @@ title: "Indexer Process"
   ~ under the License.
   -->
 
-> The Indexer is an optional and <a href="../development/experimental.html">experimental</a> feature.
+> The Indexer is an optional and [experimental](../development/experimental.md) feature.
 > Its memory management system is still under development and will be significantly enhanced in later releases. 
 
 The Apache Druid Indexer process is an alternative to the MiddleManager + Peon task execution system. Instead of forking a separate JVM process per-task, the Indexer runs tasks as separate threads within a single JVM process.
@@ -31,11 +31,11 @@ The Indexer is designed to be easier to configure and deploy compared to the Mid
 
 ### Configuration
 
-For Apache Druid Indexer Process Configuration, see [Indexer Configuration](../configuration/index.html#indexer).
+For Apache Druid Indexer Process Configuration, see [Indexer Configuration](../configuration/index.md#indexer).
 
 ### HTTP endpoints
 
-The Indexer process shares the same HTTP endpoints as the [MiddleManager](../operations/api-reference.html#middlemanager).
+The Indexer process shares the same HTTP endpoints as the [MiddleManager](../operations/api-reference.md#middlemanager).
 
 ### Running
 
@@ -51,7 +51,7 @@ The following resources are shared across all tasks running inside an Indexer pr
 
 The query processing threads and buffers are shared across all tasks. The Indexer will serve queries from a single endpoint shared by all tasks.
 
-If [query caching](../configuration/index.html#indexer-caching) is enabled, the query cache is also shared across all tasks.
+If [query caching](../configuration/index.md#indexer-caching) is enabled, the query cache is also shared across all tasks.
 
 #### Server HTTP threads
 
@@ -89,6 +89,8 @@ By default, the number of concurrent persist/merge operations is limited to (`dr
 
 Separate task logs are not currently supported when using the Indexer; all task log messages will instead be logged in the Indexer process log.
 
-The Indexer currently imposes an identical memory limit on each task. In later releases, the per-task memory limit will be removed and only the global limit will apply. The limit on concurrent merges will also be removed. 
+The Indexer currently imposes an identical memory limit on each task. In later releases, the per-task memory limit will be removed and only the global limit will apply. The limit on concurrent merges will also be removed.
+
+The Indexer does not work properly with [`index_realtime`](../ingestion/tasks.md#index_realtime) task types. Therefore, it is not compatible with [Tranquility](../ingestion/tranquility.md). If you are using Tranquility, consider migrating to Druid's builtin [Apache Kafka](../development/extensions-core/kafka-ingestion.md) or [Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md) ingestion options.
 
 In later releases, per-task memory usage will be dynamically managed. Please see https://github.com/apache/druid/issues/7900 for details on future enhancements to the Indexer.

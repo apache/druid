@@ -20,6 +20,7 @@
 package org.apache.druid.segment.serde;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.segment.column.TypeStrategies;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -62,9 +63,22 @@ public class ComplexMetrics
               value.getClass().getName()
           );
         } else {
+          TypeStrategies.registerComplex(type, serde.getTypeStrategy());
           return value;
         }
       }
     });
+  }
+
+  /**
+   * Unregister a serde name -> ComplexMetricSerde mapping.
+   *
+   * If the specified serde key string is not in use, does nothing.
+   *
+   * Only expected to be used in tests.
+   */
+  public static void unregisterSerde(String type)
+  {
+    COMPLEX_SERIALIZERS.remove(type);
   }
 }

@@ -108,7 +108,7 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   @Override
   public void context(SearchQuery query)
   {
-    delegateQueryMetrics.context(query);
+    throw new ISE("Unsupported method in default query metrics implementation.");
   }
 
   @Override
@@ -289,6 +289,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   public QueryMetrics reportParallelMergeTotalCpuTime(long timeNs)
   {
     return delegateQueryMetrics.reportParallelMergeTotalCpuTime(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportQueriedSegmentCount(long segmentCount)
+  {
+    return delegateQueryMetrics.reportQueriedSegmentCount(segmentCount);
   }
 
   @Override

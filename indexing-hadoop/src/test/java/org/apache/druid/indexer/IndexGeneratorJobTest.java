@@ -43,6 +43,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
@@ -144,7 +145,7 @@ public class IndexGeneratorJobTest
             new StringInputRowParser(
                 new CSVParseSpec(
                     new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
+                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
                     null,
                     ImmutableList.of("timestamp", "host", "visited_num"),
                     false,
@@ -193,7 +194,7 @@ public class IndexGeneratorJobTest
             new HadoopyStringInputRowParser(
                 new CSVParseSpec(
                     new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
+                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
                     null,
                     ImmutableList.of("timestamp", "host", "visited_num"),
                     false,
@@ -241,7 +242,7 @@ public class IndexGeneratorJobTest
             new StringInputRowParser(
                 new CSVParseSpec(
                     new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
+                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
                     null,
                     ImmutableList.of("timestamp", "host", "visited_num"),
                     false,
@@ -300,7 +301,7 @@ public class IndexGeneratorJobTest
             new HadoopyStringInputRowParser(
                 new CSVParseSpec(
                     new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
+                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
                     null,
                     ImmutableList.of("timestamp", "host", "visited_num"),
                     false,
@@ -334,7 +335,7 @@ public class IndexGeneratorJobTest
             new StringInputRowParser(
                 new JSONParseSpec(
                     new TimestampSpec("ts", "yyyyMMddHH", null),
-                    new DimensionsSpec(null, null, null),
+                    DimensionsSpec.EMPTY,
                     null,
                     null,
                     null
@@ -375,7 +376,7 @@ public class IndexGeneratorJobTest
                         "Q",
                         "X",
                         "Y"
-                    )), null, null),
+                    ))),
                     null,
                     null,
                     null
@@ -528,6 +529,7 @@ public class IndexGeneratorJobTest
                 null,
                 null,
                 null,
+                null,
                 maxRowsInMemory,
                 maxBytesInMemory,
                 true,
@@ -538,10 +540,10 @@ public class IndexGeneratorJobTest
                 false,
                 useCombiner,
                 null,
-                true,
                 null,
                 forceExtendableShardSpecs,
                 false,
+                null,
                 null,
                 null,
                 null,
@@ -559,12 +561,17 @@ public class IndexGeneratorJobTest
     List<ShardSpec> specs = new ArrayList<>();
     if ("hashed".equals(partitionType)) {
       for (Integer[] shardInfo : (Integer[][]) shardInfoForEachShard) {
-        specs.add(new HashBasedNumberedShardSpec(
-            shardInfo[0],
-            shardInfo[1],
-            null,
-            HadoopDruidIndexerConfig.JSON_MAPPER
-        ));
+        specs.add(
+            new HashBasedNumberedShardSpec(
+                shardInfo[0],
+                shardInfo[1],
+                shardInfo[0],
+                shardInfo[1],
+                null,
+                HashPartitionFunction.MURMUR3_32_ABS,
+                HadoopDruidIndexerConfig.JSON_MAPPER
+            )
+        );
       }
     } else if ("single".equals(partitionType)) {
       int partitionNum = 0;
@@ -573,7 +580,8 @@ public class IndexGeneratorJobTest
             "host",
             shardInfo[0],
             shardInfo[1],
-            partitionNum++
+            partitionNum++,
+            shardInfoForEachShard.length
         ));
       }
     } else {
@@ -591,7 +599,7 @@ public class IndexGeneratorJobTest
     Map<Long, List<HadoopyShardSpec>> shardSpecs = new TreeMap<>(DateTimeComparator.getInstance());
     int shardCount = 0;
     int segmentNum = 0;
-    for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
+    for (Interval segmentGranularity : config.getSegmentGranularIntervals()) {
       List<ShardSpec> specs = constructShardSpecFromShardInfo(partitionType, shardInfoForEachShard[segmentNum++]);
       List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(specs.size());
       for (ShardSpec spec : specs) {
@@ -612,13 +620,21 @@ public class IndexGeneratorJobTest
 
   private void verifyJob(IndexGeneratorJob job) throws IOException
   {
-    Assert.assertTrue(JobHelper.runJobs(ImmutableList.of(job), config));
+    Assert.assertTrue(JobHelper.runJobs(ImmutableList.of(job)));
 
     final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
     IndexGeneratorJob
-        .getPublishedSegments(config)
-        .forEach(segment -> intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>())
-                                              .add(segment));
+        .getPublishedSegmentAndIndexZipFilePaths(config)
+        .forEach(segmentAndIndexZipFilePath -> intervalToSegments.computeIfAbsent(segmentAndIndexZipFilePath.getSegment().getInterval(), k -> new ArrayList<>())
+                                              .add(segmentAndIndexZipFilePath.getSegment()));
+
+    List<DataSegmentAndIndexZipFilePath> dataSegmentAndIndexZipFilePaths =
+        IndexGeneratorJob.getPublishedSegmentAndIndexZipFilePaths(config);
+    JobHelper.renameIndexFilesForSegments(config.getSchema(), dataSegmentAndIndexZipFilePaths);
+
+    JobHelper.maybeDeleteIntermediatePath(true, config.getSchema());
+    File workingPath = new File(config.makeIntermediatePath().toUri().getPath());
+    Assert.assertTrue(workingPath.exists());
 
     final Map<Interval, List<File>> intervalToIndexFiles = new HashMap<>();
     int segmentNum = 0;
@@ -693,12 +709,12 @@ public class IndexGeneratorJobTest
         if (forceExtendableShardSpecs) {
           NumberedShardSpec spec = (NumberedShardSpec) dataSegment.getShardSpec();
           Assert.assertEquals(i, spec.getPartitionNum());
-          Assert.assertEquals(shardInfo.length, spec.getPartitions());
+          Assert.assertEquals(shardInfo.length, spec.getNumCorePartitions());
         } else if ("hashed".equals(partitionType)) {
           Integer[] hashShardInfo = (Integer[]) shardInfo[i];
           HashBasedNumberedShardSpec spec = (HashBasedNumberedShardSpec) dataSegment.getShardSpec();
           Assert.assertEquals((int) hashShardInfo[0], spec.getPartitionNum());
-          Assert.assertEquals((int) hashShardInfo[1], spec.getPartitions());
+          Assert.assertEquals((int) hashShardInfo[1], spec.getNumCorePartitions());
         } else if ("single".equals(partitionType)) {
           String[] singleDimensionShardInfo = (String[]) shardInfo[i];
           SingleDimensionShardSpec spec = (SingleDimensionShardSpec) dataSegment.getShardSpec();

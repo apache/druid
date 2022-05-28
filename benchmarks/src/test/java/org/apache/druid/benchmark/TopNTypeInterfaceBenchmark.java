@@ -67,6 +67,7 @@ import org.apache.druid.segment.generator.DataGenerator;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
@@ -165,7 +166,7 @@ public class TopNTypeInterfaceBenchmark
       queryAggs.add(new DoubleMinAggregatorFactory("minFloatZipf", "minFloatZipf"));
       queryAggs.add(new HyperUniquesAggregatorFactory("hyperUniquesMet", "hyper"));
 
-      // Use an IdentityExtractionFn to force usage of DimExtractionTopNAlgorithm
+      // Use an IdentityExtractionFn to force usage of HeapBasedTopNAlgorithm
       TopNQueryBuilder queryBuilderString = new TopNQueryBuilder()
           .dataSource("blah")
           .granularity(Granularities.ALL)
@@ -174,7 +175,7 @@ public class TopNTypeInterfaceBenchmark
           .intervals(intervalSpec)
           .aggregators(queryAggs);
 
-      // DimExtractionTopNAlgorithm is always used for numeric columns
+      // HeapBasedTopNAlgorithm is always used for numeric columns
       TopNQueryBuilder queryBuilderLong = new TopNQueryBuilder()
           .dataSource("blah")
           .granularity(Granularities.ALL)
@@ -308,11 +309,10 @@ public class TopNTypeInterfaceBenchmark
 
   private IncrementalIndex makeIncIndex()
   {
-    return new IncrementalIndex.Builder()
+    return new OnheapIncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())
-        .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
+        .build();
   }
 
   private static <T> List<T> runQuery(QueryRunnerFactory factory, QueryRunner runner, Query<T> query)

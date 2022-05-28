@@ -68,7 +68,10 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractITB
     };
   }
 
-  void doTest(Pair<String, List> s3InputSource) throws Exception
+  void doTest(
+      Pair<String, List> s3InputSource,
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
+  ) throws Exception
   {
     final String indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
     try (
@@ -125,7 +128,8 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractITB
           INDEX_QUERIES_RESOURCE,
           false,
           true,
-          true
+          true,
+          segmentAvailabilityConfirmationPair
       );
     }
   }

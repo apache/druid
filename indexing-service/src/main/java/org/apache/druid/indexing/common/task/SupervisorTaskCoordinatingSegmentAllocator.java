@@ -21,7 +21,7 @@ package org.apache.druid.indexing.common.task;
 
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
-import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
+import org.apache.druid.indexing.common.task.batch.parallel.SupervisorTaskAccess;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
 import java.io.IOException;
@@ -29,18 +29,23 @@ import java.io.IOException;
 /**
  * Segment allocator that allocates new segments using the supervisor task per request.
  */
-public class SupervisorTaskCoordinatingSegmentAllocator implements SegmentAllocator
+public class SupervisorTaskCoordinatingSegmentAllocator implements SegmentAllocatorForBatch
 {
   private final String supervisorTaskId;
   private final ParallelIndexSupervisorTaskClient taskClient;
+  private final SequenceNameFunction sequenceNameFunction;
+  private final boolean useLineageBasedSegmentAllocation;
 
   SupervisorTaskCoordinatingSegmentAllocator(
-      String supervisorTaskId,
-      ParallelIndexSupervisorTaskClient taskClient
+      String taskId,
+      SupervisorTaskAccess supervisorTaskAccess,
+      boolean useLineageBasedSegmentAllocation
   )
   {
-    this.supervisorTaskId = supervisorTaskId;
-    this.taskClient = taskClient;
+    this.supervisorTaskId = supervisorTaskAccess.getSupervisorTaskId();
+    this.taskClient = supervisorTaskAccess.getTaskClient();
+    this.sequenceNameFunction = new LinearlyPartitionedSequenceNameFunction(taskId);
+    this.useLineageBasedSegmentAllocation = useLineageBasedSegmentAllocation;
   }
 
   @Override
@@ -51,6 +56,16 @@ public class SupervisorTaskCoordinatingSegmentAllocator implements SegmentAlloca
       boolean skipSegmentLineageCheck
   ) throws IOException
   {
-    return taskClient.allocateSegment(supervisorTaskId, row.getTimestamp());
+    if (useLineageBasedSegmentAllocation) {
+      return taskClient.allocateSegment(supervisorTaskId, row.getTimestamp(), sequenceName, previousSegmentId);
+    } else {
+      return taskClient.allocateSegment(supervisorTaskId, row.getTimestamp());
+    }
+  }
+
+  @Override
+  public SequenceNameFunction getSequenceNameFunction()
+  {
+    return sequenceNameFunction;
   }
 }

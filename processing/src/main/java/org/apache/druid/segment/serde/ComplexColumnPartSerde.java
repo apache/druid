@@ -21,7 +21,8 @@ package org.apache.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.segment.GenericColumnSerializer;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
 
@@ -32,12 +33,19 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
   private final String typeName;
   @Nullable
   private final ComplexMetricSerde serde;
+  @Nullable
   private final Serializer serializer;
+  private static final Logger log = new Logger(ComplexColumnPartSerde.class);
 
-  private ComplexColumnPartSerde(String typeName, Serializer serializer)
+  private ComplexColumnPartSerde(String typeName, @Nullable Serializer serializer)
   {
     this.typeName = typeName;
     this.serde = ComplexMetrics.getSerdeForType(typeName);
+    if (this.serde == null) {
+      // Not choosing to fail here since this gets handled as
+      // an UnknownTypeComplexColumn. See SimpleColumnHolder#getColumn.
+      log.warn("Unknown complex column of type %s detected", typeName);
+    }
     this.serializer = serializer;
   }
 
@@ -70,8 +78,15 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
   public Deserializer getDeserializer()
   {
     return (buffer, builder, columnConfig) -> {
+      // we don't currently know if complex column can have nulls (or can be multi-valued, but not making that change
+      // since it isn't supported anywhere in the query engines)
+      // longer term this needs to be captured by making the serde provide this information, and then this should
+      // no longer be set to true but rather the actual values
+      builder.setHasNulls(ColumnCapabilities.Capable.TRUE);
+      builder.setComplexTypeName(typeName);
+
       if (serde != null) {
-        serde.deserializeColumn(buffer, builder);
+        serde.deserializeColumn(buffer, builder, columnConfig);
       }
     };
   }
@@ -81,7 +96,7 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
     @Nullable
     private String typeName = null;
     @Nullable
-    private GenericColumnSerializer delegate = null;
+    private Serializer delegate = null;
 
     public SerializerBuilder withTypeName(final String typeName)
     {
@@ -89,7 +104,7 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
       return this;
     }
 
-    public SerializerBuilder withDelegate(final GenericColumnSerializer delegate)
+    public SerializerBuilder withDelegate(final Serializer delegate)
     {
       this.delegate = delegate;
       return this;

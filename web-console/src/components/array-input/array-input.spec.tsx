@@ -21,14 +21,15 @@ import React from 'react';
 
 import { ArrayInput } from './array-input';
 
-describe('array input', () => {
+describe('ArrayInput', () => {
   it('matches snapshot', () => {
     const arrayInput = (
       <ArrayInput
         values={['apple', 'banana', 'pear']}
-        className={'test'}
-        placeholder={'test'}
+        className="test"
+        placeholder="test"
         onChange={() => {}}
+        suggestions={['dog', 'cat', 'skunk']}
       />
     );
 

@@ -55,6 +55,7 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -371,7 +372,15 @@ public class BatchDeltaIngestionTest
   ) throws Exception
   {
     IndexGeneratorJob job = new IndexGeneratorJob(config);
-    Assert.assertTrue(JobHelper.runJobs(ImmutableList.of(job), config));
+    Assert.assertTrue(JobHelper.runJobs(ImmutableList.of(job)));
+
+    List<DataSegmentAndIndexZipFilePath> dataSegmentAndIndexZipFilePaths =
+        IndexGeneratorJob.getPublishedSegmentAndIndexZipFilePaths(config);
+    JobHelper.renameIndexFilesForSegments(config.getSchema(), dataSegmentAndIndexZipFilePaths);
+
+    JobHelper.maybeDeleteIntermediatePath(true, config.getSchema());
+    File workingPath = new File(config.makeIntermediatePath().toUri().getPath());
+    Assert.assertFalse(workingPath.exists());
 
     File segmentFolder = new File(
         StringUtils.format(
@@ -432,7 +441,7 @@ public class BatchDeltaIngestionTest
                     new StringInputRowParser(
                         new CSVParseSpec(
                             new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
+                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
                             null,
                             ImmutableList.of("timestamp", "host", "host2", "visited_num"),
                             false,
@@ -464,6 +473,7 @@ public class BatchDeltaIngestionTest
                 null,
                 null,
                 null,
+                null,
                 false,
                 false,
                 false,
@@ -473,9 +483,9 @@ public class BatchDeltaIngestionTest
                 false,
                 null,
                 null,
+                false,
+                false,
                 null,
-                false,
-                false,
                 null,
                 null,
                 null,
@@ -489,7 +499,15 @@ public class BatchDeltaIngestionTest
             INTERVAL_FULL.getStartMillis(),
             ImmutableList.of(
                 new HadoopyShardSpec(
-                    new HashBasedNumberedShardSpec(0, 1, null, HadoopDruidIndexerConfig.JSON_MAPPER),
+                    new HashBasedNumberedShardSpec(
+                        0,
+                        1,
+                        0,
+                        1,
+                        null,
+                        HashPartitionFunction.MURMUR3_32_ABS,
+                        HadoopDruidIndexerConfig.JSON_MAPPER
+                    ),
                     0
                 )
             )

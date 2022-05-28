@@ -37,6 +37,7 @@ import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
+import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -99,7 +100,7 @@ public class RunRulesTest
       start = start.plusHours(1);
     }
 
-    ruleRunner = new RunRules(new ReplicationThrottler(24, 1), coordinator);
+    ruleRunner = new RunRules(new ReplicationThrottler(24, 1, false), coordinator);
   }
 
   @After
@@ -107,6 +108,134 @@ public class RunRulesTest
   {
     EasyMock.verify(coordinator);
     EasyMock.verify(databaseRuleManager);
+  }
+
+  /**
+   * Nodes:
+   * normal - 2 replicants
+   * maxNonPrimaryReplicantsToLoad - 10
+   * Expect only 34 segments to be loaded despite there being 48 primary + non-primary replicants to load!
+   */
+  @Test
+  public void testOneTierTwoReplicantsWithStrictReplicantLimit()
+  {
+    mockCoordinator();
+    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+    mockEmptyPeon();
+
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Collections.singletonList(
+            new IntervalLoadRule(
+                Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
+                ImmutableMap.of("normal", 2)
+            )
+        )).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
+            "normal",
+            new ServerHolder(
+                new DruidServer("serverNorm", "hostNorm", null, 1000, ServerType.HISTORICAL, "normal", 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            ),
+            new ServerHolder(
+                new DruidServer("serverNorm2", "hostNorm2", null, 1000, ServerType.HISTORICAL, "normal", 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            )
+        )
+        .build();
+
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).withMaxNonPrimaryReplicantsToLoad(10).build())
+        .build();
+
+    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
+    CoordinatorStats stats = afterParams.getCoordinatorStats();
+
+    Assert.assertEquals(34L, stats.getTieredStat("assignedCount", "normal"));
+    Assert.assertEquals(10L, stats.getGlobalStat("totalNonPrimaryReplicantsLoaded"));
+
+    exec.shutdown();
+    EasyMock.verify(mockPeon);
+  }
+
+  /**
+   * Nodes:
+   * normal - 2 replicants
+   * hot - 2 replicants
+   * maxNonPrimaryReplicantsToLoad - 48
+   * Expect only 72 segments to be loaded despite there being 96 primary + non-primary replicants to load!
+   */
+  @Test
+  public void testTwoTiersTwoReplicantsWithStrictReplicantLimit()
+  {
+    mockCoordinator();
+    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+    mockEmptyPeon();
+
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Collections.singletonList(
+            new IntervalLoadRule(
+                Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
+                ImmutableMap.of("hot", 2, "normal", 2)
+            )
+        )).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
+            "hot",
+            new ServerHolder(
+                new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "hot", 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            ),
+            new ServerHolder(
+                new DruidServer("serverHot2", "hostHot2", null, 1000, ServerType.HISTORICAL, "hot", 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            )
+        )
+        .addTier(
+            "normal",
+            new ServerHolder(
+                new DruidServer("serverNorm", "hostNorm", null, 1000, ServerType.HISTORICAL, "normal", 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            ),
+            new ServerHolder(
+                new DruidServer("serverNorm2", "hostNorm2", null, 1000, ServerType.HISTORICAL, "normal", 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            )
+        )
+        .build();
+
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).withMaxNonPrimaryReplicantsToLoad(48).build())
+        .build();
+
+    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
+    CoordinatorStats stats = afterParams.getCoordinatorStats();
+
+    Assert.assertEquals(72L, stats.getTieredStat("assignedCount", "hot") + stats.getTieredStat("assignedCount", "normal"));
+    Assert.assertEquals(48L, stats.getGlobalStat("totalNonPrimaryReplicantsLoaded"));
+
+    exec.shutdown();
+    EasyMock.verify(mockPeon);
   }
 
   /**
@@ -193,17 +322,31 @@ public class RunRulesTest
       BalancerStrategy balancerStrategy
   )
   {
-    return createCoordinatorRuntimeParams(druidCluster)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+    return makeCoordinatorRuntimeParams(druidCluster, balancerStrategy, usedSegments);
+  }
+
+  private DruidCoordinatorRuntimeParams.Builder makeCoordinatorRuntimeParams(
+      DruidCluster druidCluster,
+      BalancerStrategy balancerStrategy,
+      List<DataSegment> dataSegments
+  )
+  {
+    return createCoordinatorRuntimeParams(druidCluster, dataSegments)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, false))
         .withBalancerStrategy(balancerStrategy);
   }
 
   private DruidCoordinatorRuntimeParams.Builder createCoordinatorRuntimeParams(DruidCluster druidCluster)
   {
+    return createCoordinatorRuntimeParams(druidCluster, usedSegments);
+  }
+
+  private DruidCoordinatorRuntimeParams.Builder createCoordinatorRuntimeParams(DruidCluster druidCluster, List<DataSegment> dataSegments)
+  {
     return CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(druidCluster)
-        .withUsedSegmentsInTest(usedSegments)
+        .withUsedSegmentsInTest(dataSegments)
         .withDatabaseRuleManager(databaseRuleManager);
   }
 
@@ -321,7 +464,7 @@ public class RunRulesTest
         .addTier("normal", new ServerHolder(normServer.toImmutableDruidServer(), mockPeon))
         .build();
 
-    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
+    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
@@ -431,7 +574,7 @@ public class RunRulesTest
         .build();
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster(), false))
         .withEmitter(emitter)
         .build();
 
@@ -473,7 +616,7 @@ public class RunRulesTest
         .addTier("normal", new ServerHolder(server.toImmutableDruidServer(), mockPeon))
         .build();
 
-    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
+    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
@@ -529,7 +672,7 @@ public class RunRulesTest
         )
         .build();
 
-    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
+    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
@@ -589,7 +732,7 @@ public class RunRulesTest
         .addTier("normal", new ServerHolder(server2.toImmutableDruidServer(), mockPeon))
         .build();
 
-    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
+    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
@@ -641,7 +784,7 @@ public class RunRulesTest
         .addTier("normal", new ServerHolder(server2.toImmutableDruidServer(), mockPeon))
         .build();
 
-    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
+    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
@@ -707,7 +850,7 @@ public class RunRulesTest
         )
         .build();
 
-    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
+    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
@@ -806,7 +949,7 @@ public class RunRulesTest
             .withUsedSegmentsInTest(overFlowSegment)
             .withDatabaseRuleManager(databaseRuleManager)
             .withBalancerStrategy(balancerStrategy)
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster(), false))
             .build()
     );
     stats = afterParams.getCoordinatorStats();
@@ -891,7 +1034,7 @@ public class RunRulesTest
 
     DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy).build();
 
-    RunRules runner = new RunRules(new ReplicationThrottler(7, 1), coordinator);
+    RunRules runner = new RunRules(new ReplicationThrottler(7, 1, false), coordinator);
     DruidCoordinatorRuntimeParams afterParams = runner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
@@ -956,7 +1099,7 @@ public class RunRulesTest
         )
         .build();
 
-    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
+    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
@@ -1045,9 +1188,8 @@ public class RunRulesTest
         .withDruidCluster(druidCluster)
         .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster(), false))
         .withBalancerStrategy(balancerStrategy)
-        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
         .build();
 
@@ -1065,6 +1207,255 @@ public class RunRulesTest
 
     EasyMock.verify(mockPeon);
     exec.shutdown();
+  }
+
+  /**
+   * Tier - __default_tier
+   * Nodes - 2
+   * Replicants - 3
+   * Random balancer strategy should not assign anything and not get into loop as there are not enough nodes for replication
+   */
+  @Test(timeout = 5000L)
+  public void testTwoNodesOneTierThreeReplicantsRandomStrategyNotEnoughNodes()
+  {
+    mockCoordinator();
+    mockEmptyPeon();
+
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Collections.singletonList(
+            new ForeverLoadRule(
+                ImmutableMap.of(DruidServer.DEFAULT_TIER, 3)
+            )
+        )).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
+    DataSegment dataSegment = new DataSegment(
+        "test",
+        Intervals.utc(0, 1),
+        DateTimes.nowUtc().toString(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        NoneShardSpec.instance(),
+        IndexIO.CURRENT_VERSION_ID,
+        1
+    );
+
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
+            DruidServer.DEFAULT_TIER,
+            new ServerHolder(
+                new DruidServer("server1", "host1", null, 1000, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0).addDataSegment(dataSegment)
+                                                                                                                   .toImmutableDruidServer(),
+                mockPeon
+            ),
+            new ServerHolder(
+                new DruidServer("server2", "host2", null, 1000, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0).addDataSegment(dataSegment)
+                                                                                                                   .toImmutableDruidServer(),
+                mockPeon
+            )
+        )
+        .build();
+
+    RandomBalancerStrategy balancerStrategy = new RandomBalancerStrategy();
+
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy, Collections.singletonList(dataSegment))
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
+        .build();
+
+    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
+    CoordinatorStats stats = afterParams.getCoordinatorStats();
+
+    Assert.assertEquals(0L, stats.getTieredStat("assignedCount", DruidServer.DEFAULT_TIER));
+    Assert.assertTrue(stats.getTiers("unassignedCount").isEmpty());
+    Assert.assertTrue(stats.getTiers("unassignedSize").isEmpty());
+
+    EasyMock.verify(mockPeon);
+  }
+
+
+  /**
+   * Tier - __default_tier
+   * Nodes - 1
+   * Replicants - 1
+   * Random balancer strategy should select the only node
+   */
+  @Test(timeout = 5000L)
+  public void testOneNodesOneTierOneReplicantRandomStrategyEnoughSpace()
+  {
+    mockCoordinator();
+    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+    mockEmptyPeon();
+
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Collections.singletonList(
+            new ForeverLoadRule(
+                ImmutableMap.of(DruidServer.DEFAULT_TIER, 1)
+            )
+        )).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
+    DataSegment dataSegment = new DataSegment(
+        "test",
+        Intervals.utc(0, 1),
+        DateTimes.nowUtc().toString(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        NoneShardSpec.instance(),
+        IndexIO.CURRENT_VERSION_ID,
+        1
+    );
+
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
+            DruidServer.DEFAULT_TIER,
+            new ServerHolder(
+                new DruidServer("server1", "host1", null, 1000, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            )
+        )
+        .build();
+
+    RandomBalancerStrategy balancerStrategy = new RandomBalancerStrategy();
+
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy, Collections.singletonList(dataSegment))
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
+        .build();
+
+    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
+    CoordinatorStats stats = afterParams.getCoordinatorStats();
+    Assert.assertEquals(1L, stats.getTieredStat("assignedCount", DruidServer.DEFAULT_TIER));
+    Assert.assertTrue(stats.getTiers("unassignedCount").isEmpty());
+    Assert.assertTrue(stats.getTiers("unassignedSize").isEmpty());
+
+    EasyMock.verify(mockPeon);
+  }
+
+  /**
+   * Tier - __default_tier
+   * Nodes - 1
+   * Replicants - 1
+   * Random balancer strategy should not assign anything as there is not enough space
+   */
+  @Test(timeout = 5000L)
+  public void testOneNodesOneTierOneReplicantRandomStrategyNotEnoughSpace()
+  {
+    mockCoordinator();
+    mockEmptyPeon();
+    int numReplicants = 1;
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Collections.singletonList(
+            new ForeverLoadRule(
+                ImmutableMap.of(DruidServer.DEFAULT_TIER, numReplicants)
+            )
+        )).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
+    DataSegment dataSegment = new DataSegment(
+        "test",
+        Intervals.utc(0, 1),
+        DateTimes.nowUtc().toString(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        NoneShardSpec.instance(),
+        IndexIO.CURRENT_VERSION_ID,
+        11
+    );
+
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
+            DruidServer.DEFAULT_TIER,
+            new ServerHolder(
+                new DruidServer("server1", "host1", null, 10, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            )
+        )
+        .build();
+
+    RandomBalancerStrategy balancerStrategy = new RandomBalancerStrategy();
+
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy, Collections.singletonList(dataSegment))
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
+        .build();
+
+    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
+    CoordinatorStats stats = afterParams.getCoordinatorStats();
+    Assert.assertEquals(dataSegment.getSize() * numReplicants, stats.getTieredStat(LoadRule.REQUIRED_CAPACITY, DruidServer.DEFAULT_TIER));
+    Assert.assertTrue(stats.getTiers("assignedCount").isEmpty()); // since primary assignment failed
+    Assert.assertTrue(stats.getTiers("unassignedCount").isEmpty());
+    Assert.assertTrue(stats.getTiers("unassignedSize").isEmpty());
+
+    EasyMock.verify(mockPeon);
+  }
+
+  /**
+   * Tier - __default_tier
+   * Nodes - 1
+   * Replicants - 1
+   * Cost balancer strategy should not assign anything as there is not enough space
+   */
+  @Test
+  public void testOneNodesOneTierOneReplicantCostBalancerStrategyNotEnoughSpace()
+  {
+    mockCoordinator();
+    mockEmptyPeon();
+    int numReplicants = 1;
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Collections.singletonList(
+            new ForeverLoadRule(
+                ImmutableMap.of(DruidServer.DEFAULT_TIER, numReplicants)
+            )
+        )).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
+    DataSegment dataSegment = new DataSegment(
+        "test",
+        Intervals.utc(0, 1),
+        DateTimes.nowUtc().toString(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        NoneShardSpec.instance(),
+        IndexIO.CURRENT_VERSION_ID,
+        11
+    );
+
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
+            DruidServer.DEFAULT_TIER,
+            new ServerHolder(
+                new DruidServer("server1", "host1", null, 10, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
+                    .toImmutableDruidServer(),
+                mockPeon
+            )
+        )
+        .build();
+
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    CostBalancerStrategy balancerStrategy = new CostBalancerStrategy(exec);
+
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy, Collections.singletonList(dataSegment))
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
+        .build();
+
+    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
+    CoordinatorStats stats = afterParams.getCoordinatorStats();
+    Assert.assertEquals(dataSegment.getSize() * numReplicants, stats.getTieredStat(LoadRule.REQUIRED_CAPACITY, DruidServer.DEFAULT_TIER));
+    Assert.assertTrue(stats.getTiers("assignedCount").isEmpty()); // since primary assignment should fail
+    Assert.assertTrue(stats.getTiers("unassignedCount").isEmpty());
+    Assert.assertTrue(stats.getTiers("unassignedSize").isEmpty());
+
+    exec.shutdown();
+    EasyMock.verify(mockPeon);
   }
 
   private void mockCoordinator()
@@ -1096,7 +1487,6 @@ public class RunRulesTest
                                    .withBalancerComputeThreads(0)
                                    .withEmitBalancingStats(false)
                                    .withSpecificDataSourcesToKillUnusedSegmentsIn(null)
-                                   .withKillUnusedSegmentsInAllDataSources(false)
                                    .withMaxSegmentsInNodeLoadingQueue(1000)
                                    .withPauseCoordination(false)
                                    .build();

@@ -20,7 +20,9 @@
 package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.rvesse.airline.annotations.Command;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -32,7 +34,6 @@ import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
-import io.airlift.airline.Command;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingService;
@@ -60,7 +61,6 @@ import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
@@ -82,6 +82,7 @@ import org.apache.druid.indexing.overlord.autoscaling.ProvisioningSchedulerConfi
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningStrategy;
+import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.helpers.OverlordHelper;
@@ -100,9 +101,11 @@ import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.lookup.LookupSerdeModule;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
+import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.audit.AuditManagerProvider;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.http.RedirectFilter;
@@ -112,6 +115,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.TaskCountStatsProvider;
+import org.apache.druid.server.metrics.TaskSlotCountStatsProvider;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationUtils;
 import org.apache.druid.server.security.Authenticator;
@@ -127,6 +131,8 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
 import java.util.List;
+import java.util.Properties;
+import java.util.Set;
 
 /**
  */
@@ -146,6 +152,12 @@ public class CliOverlord extends ServerRunnable
   public CliOverlord()
   {
     super(log);
+  }
+
+  @Override
+  protected Set<NodeRole> getNodeRoles(Properties properties)
+  {
+    return ImmutableSet.of(NodeRole.OVERLORD);
   }
 
   @Override
@@ -174,10 +186,12 @@ public class CliOverlord extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.tasklock", TaskLockConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
+            JsonConfigProvider.bind(binder, "druid.indexer.task.default", DefaultTaskConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.auditlog", TaskAuditLogConfig.class);
 
             binder.bind(TaskMaster.class).in(ManageLifecycle.class);
             binder.bind(TaskCountStatsProvider.class).to(TaskMaster.class);
+            binder.bind(TaskSlotCountStatsProvider.class).to(TaskMaster.class);
 
             binder.bind(TaskLogStreamer.class).to(SwitchingTaskLogStreamer.class).in(LazySingleton.class);
             binder.bind(
@@ -204,7 +218,7 @@ public class CliOverlord extends ServerRunnable
             {
             }).toProvider(Providers.of(null));
             binder.bind(ShuffleClient.class).toProvider(Providers.of(null));
-            binder.bind(ChatHandlerProvider.class).toProvider(Providers.of(null));
+            binder.bind(ChatHandlerProvider.class).toProvider(Providers.of(new NoopChatHandlerProvider()));
 
             PolyBind.createChoice(
                 binder,
@@ -250,10 +264,10 @@ public class CliOverlord extends ServerRunnable
               LifecycleModule.register(binder, Server.class);
             }
 
-            bindNodeRoleAndAnnouncer(
+            bindAnnouncer(
                 binder,
                 IndexingService.class,
-                DiscoverySideEffectsProvider.builder(NodeRole.OVERLORD).build()
+                DiscoverySideEffectsProvider.create()
             );
 
             Jerseys.addResource(binder, SelfDiscoveryResource.class);
@@ -393,6 +407,7 @@ public class CliOverlord extends ServerRunnable
       AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
       AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());
+      JettyServerInitUtils.addAllowHttpMethodsFilter(root, serverConfig.getAllowedHttpMethods());
 
       JettyServerInitUtils.addExtensionFilters(root, injector);
 

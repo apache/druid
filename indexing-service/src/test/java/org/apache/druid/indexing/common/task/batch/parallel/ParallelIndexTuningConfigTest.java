@@ -21,7 +21,10 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
@@ -67,8 +70,10 @@ public class ParallelIndexTuningConfigTest
     final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
         null,
         null,
+        null,
         10,
         1000L,
+        null,
         null,
         null,
         null,
@@ -95,6 +100,9 @@ public class ParallelIndexTuningConfigTest
         null,
         false,
         null,
+        null,
+        null,
+        null,
         null
     );
     final byte[] json = mapper.writeValueAsBytes(tuningConfig);
@@ -109,8 +117,10 @@ public class ParallelIndexTuningConfigTest
     final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
         null,
         null,
+        null,
         10,
         1000L,
+        null,
         null,
         null,
         null,
@@ -137,6 +147,9 @@ public class ParallelIndexTuningConfigTest
         null,
         false,
         null,
+        null,
+        null,
+        null,
         null
     );
     final byte[] json = mapper.writeValueAsBytes(tuningConfig);
@@ -151,8 +164,10 @@ public class ParallelIndexTuningConfigTest
     final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
         null,
         null,
+        null,
         10,
         1000L,
+        null,
         null,
         null,
         null,
@@ -178,6 +193,9 @@ public class ParallelIndexTuningConfigTest
         null,
         null,
         false,
+        null,
+        null,
+        null,
         null,
         null
     );
@@ -195,8 +213,10 @@ public class ParallelIndexTuningConfigTest
     final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
         null,
         null,
+        null,
         10,
         1000L,
+        null,
         null,
         null,
         null,
@@ -223,7 +243,156 @@ public class ParallelIndexTuningConfigTest
         null,
         false,
         null,
+        null,
+        null,
+        null,
         null
     );
+  }
+
+  @Test
+  public void testConstructorWithHashedPartitionsSpecAndNonForceGuaranteedRollupFailToCreate()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("DynamicPartitionsSpec must be used for best-effort rollup");
+    final boolean forceGuaranteedRollup = false;
+    new ParallelIndexTuningConfig(
+        null,
+        null,
+        null,
+        10,
+        1000L,
+        null,
+        null,
+        null,
+        null,
+        new HashedPartitionsSpec(null, 10, null),
+        new IndexSpec(
+            new RoaringBitmapSerdeFactory(true),
+            CompressionStrategy.UNCOMPRESSED,
+            CompressionStrategy.LZF,
+            LongEncodingStrategy.LONGS
+        ),
+        new IndexSpec(),
+        1,
+        forceGuaranteedRollup,
+        true,
+        10000L,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+        null,
+        10,
+        100,
+        20L,
+        new Duration(3600),
+        128,
+        null,
+        null,
+        false,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+  }
+
+  @Test
+  public void testConstructorWithSingleDimensionPartitionsSpecAndNonForceGuaranteedRollupFailToCreate()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("DynamicPartitionsSpec must be used for best-effort rollup");
+    final boolean forceGuaranteedRollup = false;
+    new ParallelIndexTuningConfig(
+        null,
+        null,
+        null,
+        10,
+        1000L,
+        null,
+        null,
+        null,
+        null,
+        new SingleDimensionPartitionsSpec(100, null, "dim", false),
+        new IndexSpec(
+            new RoaringBitmapSerdeFactory(true),
+            CompressionStrategy.UNCOMPRESSED,
+            CompressionStrategy.LZF,
+            LongEncodingStrategy.LONGS
+        ),
+        new IndexSpec(),
+        1,
+        forceGuaranteedRollup,
+        true,
+        10000L,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+        null,
+        10,
+        100,
+        20L,
+        new Duration(3600),
+        128,
+        null,
+        null,
+        false,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+  }
+
+  @Test
+  public void testConstructorWithDynamicPartitionsSpecAndForceGuaranteedRollupFailToCreate()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("cannot be used for perfect rollup");
+    final boolean forceGuaranteedRollup = true;
+    new ParallelIndexTuningConfig(
+        null,
+        null,
+        null,
+        10,
+        1000L,
+        null,
+        null,
+        null,
+        null,
+        new DynamicPartitionsSpec(100, null),
+        new IndexSpec(
+            new RoaringBitmapSerdeFactory(true),
+            CompressionStrategy.UNCOMPRESSED,
+            CompressionStrategy.LZF,
+            LongEncodingStrategy.LONGS
+        ),
+        new IndexSpec(),
+        1,
+        forceGuaranteedRollup,
+        true,
+        10000L,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+        null,
+        10,
+        100,
+        20L,
+        new Duration(3600),
+        128,
+        null,
+        null,
+        false,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(ParallelIndexTuningConfig.class)
+        .usingGetClass()
+        .verify();
   }
 }

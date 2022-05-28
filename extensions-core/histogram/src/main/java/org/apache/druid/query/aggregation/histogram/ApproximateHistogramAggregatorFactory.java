@@ -31,10 +31,16 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.HistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -46,6 +52,7 @@ import java.util.Objects;
 @JsonTypeName("approxHistogram")
 public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
 {
+  public static final ColumnType TYPE = ColumnType.ofComplex("approximateHistogram");
   protected final String name;
   protected final String fieldName;
 
@@ -100,6 +107,24 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
         metricFactory.makeColumnValueSelector(fieldName),
         resolution
     );
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory metricVectorFactory)
+  {
+    return new ApproximateHistogramVectorAggregator(
+        metricVectorFactory.makeValueSelector(fieldName),
+        resolution
+    );
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    /* skip vectorization for string types which may be parseable to numbers. There is no vector equivalent of
+     string value selector*/
+    ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
+    return capabilities != null && capabilities.isNumeric();
   }
 
   @Override
@@ -298,10 +323,22 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
     return builder.build();
   }
 
+  /**
+   * actual type is {@link ApproximateHistogram}
+   */
   @Override
-  public String getTypeName()
+  public ColumnType getIntermediateType()
   {
-    return "approximateHistogram";
+    return TYPE;
+  }
+
+  /**
+   * actual type is {@link ApproximateHistogram} if {@link #finalizeAsBase64Binary} is set, else {@link Histogram}
+   */
+  @Override
+  public ColumnType getResultType()
+  {
+    return finalizeAsBase64Binary ? TYPE : HistogramAggregatorFactory.TYPE;
   }
 
   @Override

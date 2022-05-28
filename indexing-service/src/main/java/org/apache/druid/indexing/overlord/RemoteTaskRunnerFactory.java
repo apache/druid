@@ -30,6 +30,7 @@ import org.apache.druid.indexing.overlord.autoscaling.ProvisioningSchedulerConfi
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 
@@ -46,6 +47,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
   private final Supplier<WorkerBehaviorConfig> workerConfigRef;
   private final ProvisioningSchedulerConfig provisioningSchedulerConfig;
   private final ProvisioningStrategy provisioningStrategy;
+  private final ServiceEmitter emitter;
 
   @Inject
   public RemoteTaskRunnerFactory(
@@ -56,7 +58,8 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
       @EscalatedGlobal final HttpClient httpClient,
       final Supplier<WorkerBehaviorConfig> workerConfigRef,
       final ProvisioningSchedulerConfig provisioningSchedulerConfig,
-      final ProvisioningStrategy provisioningStrategy
+      final ProvisioningStrategy provisioningStrategy,
+      final ServiceEmitter emitter
   )
   {
     this.curator = curator;
@@ -67,6 +70,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
     this.workerConfigRef = workerConfigRef;
     this.provisioningSchedulerConfig = provisioningSchedulerConfig;
     this.provisioningStrategy = provisioningStrategy;
+    this.emitter = emitter;
   }
 
   @Override
@@ -80,7 +84,8 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
         new PathChildrenCacheFactory.Builder().withCompressed(true),
         httpClient,
         workerConfigRef,
-        provisioningSchedulerConfig.isDoAutoscale() ? provisioningStrategy : new NoopProvisioningStrategy<>()
+        provisioningSchedulerConfig.isDoAutoscale() ? provisioningStrategy : new NoopProvisioningStrategy<>(),
+        emitter
     );
   }
 }

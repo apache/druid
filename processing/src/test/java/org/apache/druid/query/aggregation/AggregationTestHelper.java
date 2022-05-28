@@ -33,18 +33,19 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
@@ -57,6 +58,11 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.TestGroupByBuffers;
+import org.apache.druid.query.scan.ScanQueryConfig;
+import org.apache.druid.query.scan.ScanQueryEngine;
+import org.apache.druid.query.scan.ScanQueryQueryToolChest;
+import org.apache.druid.query.scan.ScanQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
@@ -75,8 +81,10 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CloseableUtils;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.Closeable;
@@ -88,8 +96,10 @@ import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * This class provides general utility to test any druid aggregation implementation given raw data,
@@ -108,6 +118,8 @@ public class AggregationTestHelper implements Closeable
   private final TemporaryFolder tempFolder;
   private final Closer resourceCloser;
 
+  private final Map<String, Object> queryContext;
+
   private AggregationTestHelper(
       ObjectMapper mapper,
       IndexMerger indexMerger,
@@ -116,7 +128,8 @@ public class AggregationTestHelper implements Closeable
       QueryRunnerFactory factory,
       TemporaryFolder tempFolder,
       List<? extends Module> jsonModulesToRegister,
-      Closer resourceCloser
+      Closer resourceCloser,
+      Map<String, Object> queryContext
   )
   {
     this.mapper = mapper;
@@ -126,6 +139,7 @@ public class AggregationTestHelper implements Closeable
     this.factory = factory;
     this.tempFolder = tempFolder;
     this.resourceCloser = resourceCloser;
+    this.queryContext = queryContext;
 
     for (Module mod : jsonModulesToRegister) {
       mapper.registerModule(mod);
@@ -138,13 +152,14 @@ public class AggregationTestHelper implements Closeable
       TemporaryFolder tempFolder
   )
   {
+    final Closer closer = Closer.create();
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
-    final Pair<GroupByQueryRunnerFactory, Closer> factoryAndCloser = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+    final TestGroupByBuffers groupByBuffers = closer.register(TestGroupByBuffers.createDefault());
+    final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
         mapper,
-        config
+        config,
+        groupByBuffers
     );
-    final GroupByQueryRunnerFactory factory = factoryAndCloser.lhs;
-    final Closer closer = factoryAndCloser.rhs;
 
     IndexIO indexIO = new IndexIO(
         mapper,
@@ -166,7 +181,8 @@ public class AggregationTestHelper implements Closeable
         factory,
         tempFolder,
         jsonModulesToRegister,
-        closer
+        closer,
+        Collections.emptyMap()
     );
   }
 
@@ -205,7 +221,8 @@ public class AggregationTestHelper implements Closeable
         factory,
         tempFolder,
         jsonModulesToRegister,
-        Closer.create()
+        Closer.create(),
+        Collections.emptyMap()
     );
   }
 
@@ -256,26 +273,103 @@ public class AggregationTestHelper implements Closeable
         factory,
         tempFolder,
         jsonModulesToRegister,
-        resourceCloser
+        resourceCloser,
+        Collections.emptyMap()
     );
   }
 
-  public Sequence<ResultRow> createIndexAndRunQueryOnSegment(
+  public static AggregationTestHelper createScanQueryAggregationTestHelper(
+      List<? extends Module> jsonModulesToRegister,
+      TemporaryFolder tempFolder
+  )
+  {
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+
+    ScanQueryQueryToolChest toolchest = new ScanQueryQueryToolChest(
+        new ScanQueryConfig(),
+        DefaultGenericQueryMetricsFactory.instance()
+    );
+
+    final Closer resourceCloser = Closer.create();
+    ScanQueryRunnerFactory factory = new ScanQueryRunnerFactory(
+        toolchest,
+        new ScanQueryEngine(),
+        new ScanQueryConfig()
+    );
+
+    IndexIO indexIO = new IndexIO(
+        mapper,
+        new ColumnConfig()
+        {
+          @Override
+          public int columnCacheSizeBytes()
+          {
+            return 0;
+          }
+        }
+    );
+
+    return new AggregationTestHelper(
+        mapper,
+        new IndexMergerV9(mapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance()),
+        indexIO,
+        toolchest,
+        factory,
+        tempFolder,
+        jsonModulesToRegister,
+        resourceCloser,
+        Collections.emptyMap()
+    );
+  }
+
+  public AggregationTestHelper withQueryContext(final Map<String, Object> queryContext)
+  {
+    final Map<String, Object> newContext = new HashMap<>(this.queryContext);
+    newContext.putAll(queryContext);
+    return new AggregationTestHelper(
+        mapper,
+        indexMerger,
+        indexIO,
+        toolChest,
+        factory,
+        tempFolder,
+        Collections.emptyList(),
+        resourceCloser,
+        newContext
+    );
+  }
+
+  public <T> Sequence<T> createIndexAndRunQueryOnSegment(
       File inputDataFile,
       String parserJson,
       String aggregators,
       long minTimestamp,
       Granularity gran,
       int maxRowCount,
-      String groupByQueryJson
+      String queryJson
   ) throws Exception
   {
     File segmentDir = tempFolder.newFolder();
     createIndex(inputDataFile, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount, true);
-    return runQueryOnSegments(Collections.singletonList(segmentDir), groupByQueryJson);
+    return runQueryOnSegments(Collections.singletonList(segmentDir), queryJson);
   }
 
-  public Sequence<ResultRow> createIndexAndRunQueryOnSegment(
+  public <T> Sequence<T> createIndexAndRunQueryOnSegment(
+      File inputDataFile,
+      String parserJson,
+      String aggregators,
+      long minTimestamp,
+      Granularity gran,
+      int maxRowCount,
+      Query<T> query
+  ) throws Exception
+  {
+    File segmentDir = tempFolder.newFolder();
+    createIndex(inputDataFile, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount, true);
+    return runQueryOnSegments(Collections.singletonList(segmentDir), query);
+  }
+
+  public <T> Sequence<T> createIndexAndRunQueryOnSegment(
       File inputDataFile,
       String parserJson,
       String aggregators,
@@ -283,22 +377,22 @@ public class AggregationTestHelper implements Closeable
       Granularity gran,
       int maxRowCount,
       boolean rollup,
-      String groupByQueryJson
+      String queryJson
   ) throws Exception
   {
     File segmentDir = tempFolder.newFolder();
     createIndex(inputDataFile, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount, rollup);
-    return runQueryOnSegments(Collections.singletonList(segmentDir), groupByQueryJson);
+    return runQueryOnSegments(Collections.singletonList(segmentDir), queryJson);
   }
 
-  public Sequence<ResultRow> createIndexAndRunQueryOnSegment(
+  public <T> Sequence<T> createIndexAndRunQueryOnSegment(
       InputStream inputDataStream,
       String parserJson,
       String aggregators,
       long minTimestamp,
       Granularity gran,
       int maxRowCount,
-      String groupByQueryJson
+      String queryJson
   ) throws Exception
   {
     return createIndexAndRunQueryOnSegment(
@@ -309,11 +403,11 @@ public class AggregationTestHelper implements Closeable
         gran,
         maxRowCount,
         true,
-        groupByQueryJson
+        queryJson
     );
   }
 
-  public Sequence<ResultRow> createIndexAndRunQueryOnSegment(
+  public <T> Sequence<T> createIndexAndRunQueryOnSegment(
       InputStream inputDataStream,
       String parserJson,
       String aggregators,
@@ -321,12 +415,12 @@ public class AggregationTestHelper implements Closeable
       Granularity gran,
       int maxRowCount,
       boolean rollup,
-      String groupByQueryJson
+      String queryJson
   ) throws Exception
   {
     File segmentDir = tempFolder.newFolder();
     createIndex(inputDataStream, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount, rollup);
-    return runQueryOnSegments(Collections.singletonList(segmentDir), groupByQueryJson);
+    return runQueryOnSegments(Collections.singletonList(segmentDir), queryJson);
   }
 
   public void createIndex(
@@ -429,7 +523,7 @@ public class AggregationTestHelper implements Closeable
     List<File> toMerge = new ArrayList<>();
 
     try {
-      index = new IncrementalIndex.Builder()
+      index = new OnheapIncrementalIndex.Builder()
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(minTimestamp)
@@ -441,7 +535,7 @@ public class AggregationTestHelper implements Closeable
           )
           .setDeserializeComplexMetrics(deserializeComplexMetrics)
           .setMaxRowCount(maxRowCount)
-          .buildOnheap();
+          .build();
 
       while (rows.hasNext()) {
         Object row = rows.next();
@@ -450,7 +544,7 @@ public class AggregationTestHelper implements Closeable
           toMerge.add(tmp);
           indexMerger.persist(index, tmp, new IndexSpec(), null);
           index.close();
-          index = new IncrementalIndex.Builder()
+          index = new OnheapIncrementalIndex.Builder()
               .setIndexSchema(
                   new IncrementalIndexSchema.Builder()
                       .withMinTimestamp(minTimestamp)
@@ -462,7 +556,7 @@ public class AggregationTestHelper implements Closeable
               )
               .setDeserializeComplexMetrics(deserializeComplexMetrics)
               .setMaxRowCount(maxRowCount)
-              .buildOnheap();
+              .build();
         }
         if (row instanceof String && parser instanceof StringInputRowParser) {
           //Note: this is required because StringInputRowParser is InputRowParser<ByteBuffer> as opposed to
@@ -482,7 +576,7 @@ public class AggregationTestHelper implements Closeable
         for (File file : toMerge) {
           indexes.add(indexIO.loadIndex(file));
         }
-        indexMerger.mergeQueryableIndex(indexes, rollup, metrics, outDir, new IndexSpec(), null);
+        indexMerger.mergeQueryableIndex(indexes, rollup, metrics, outDir, new IndexSpec(), null, -1);
 
         for (QueryableIndex qi : indexes) {
           qi.close();
@@ -511,6 +605,7 @@ public class AggregationTestHelper implements Closeable
   public static IncrementalIndex createIncrementalIndex(
       Iterator rows,
       InputRowParser parser,
+      List<DimensionSchema> dimensions,
       final AggregatorFactory[] metrics,
       long minTimestamp,
       Granularity gran,
@@ -519,18 +614,19 @@ public class AggregationTestHelper implements Closeable
       boolean rollup
   ) throws Exception
   {
-    IncrementalIndex index = new IncrementalIndex.Builder()
+    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(minTimestamp)
                 .withQueryGranularity(gran)
+                .withDimensionsSpec(new DimensionsSpec(dimensions))
                 .withMetrics(metrics)
                 .withRollup(rollup)
                 .build()
         )
         .setDeserializeComplexMetrics(deserializeComplexMetrics)
         .setMaxRowCount(maxRowCount)
-        .buildOnheap();
+        .build();
 
     while (rows.hasNext()) {
       Object row = rows.next();
@@ -549,6 +645,30 @@ public class AggregationTestHelper implements Closeable
     return index;
   }
 
+  public static IncrementalIndex createIncrementalIndex(
+      Iterator rows,
+      InputRowParser parser,
+      final AggregatorFactory[] metrics,
+      long minTimestamp,
+      Granularity gran,
+      boolean deserializeComplexMetrics,
+      int maxRowCount,
+      boolean rollup
+  ) throws Exception
+  {
+    return createIncrementalIndex(
+        rows,
+        parser,
+        null,
+        metrics,
+        minTimestamp,
+        gran,
+        deserializeComplexMetrics,
+        maxRowCount,
+        rollup
+    );
+  }
+
   public Segment persistIncrementalIndex(
       IncrementalIndex index,
       File outDir
@@ -564,12 +684,12 @@ public class AggregationTestHelper implements Closeable
 
   //Simulates running group-by query on individual segments as historicals would do, json serialize the results
   //from each segment, later deserialize and merge and finally return the results
-  public Sequence<ResultRow> runQueryOnSegments(final List<File> segmentDirs, final String queryJson)
+  public <T> Sequence<T> runQueryOnSegments(final List<File> segmentDirs, final String queryJson)
   {
-    return runQueryOnSegments(segmentDirs, readQuery(queryJson));
+    return runQueryOnSegments(segmentDirs, readQuery(queryJson).withOverriddenContext(queryContext));
   }
 
-  public Sequence<ResultRow> runQueryOnSegments(final List<File> segmentDirs, final Query query)
+  public <T> Sequence<T> runQueryOnSegments(final List<File> segmentDirs, final Query<T> query)
   {
     final List<Segment> segments = Lists.transform(
         segmentDirs,
@@ -593,12 +713,12 @@ public class AggregationTestHelper implements Closeable
     }
     finally {
       for (Segment segment : segments) {
-        CloseQuietly.close(segment);
+        CloseableUtils.closeAndWrapExceptions(segment);
       }
     }
   }
 
-  public Sequence<ResultRow> runQueryOnSegmentsObjs(final List<Segment> segments, final Query query)
+  public <T> Sequence<T> runQueryOnSegmentsObjs(final List<Segment> segments, final Query<T> query)
   {
     final FinalizeResultsQueryRunner baseRunner = new FinalizeResultsQueryRunner(
         toolChest.postMergeQueryDecoration(

@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord.sampler;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;

@@ -66,7 +66,7 @@ public class InFilterTest extends BaseFilterTest
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
           new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
-          new DimensionsSpec(null, null, null)
+          DimensionsSpec.EMPTY
       )
   );
 
@@ -337,11 +337,13 @@ public class InFilterTest extends BaseFilterTest
     assertFilterMatches(toInFilterWithFn("dim1", lookupFn, "N/A"), ImmutableList.of());
     assertFilterMatches(toInFilterWithFn("dim2", lookupFn, "a"), ImmutableList.of());
     assertFilterMatches(toInFilterWithFn("dim2", lookupFn, "HELLO"), ImmutableList.of("a", "d"));
-    assertFilterMatches(toInFilterWithFn("dim2", lookupFn, "HELLO", "BYE", "UNKNOWN"),
-            ImmutableList.of("a", "b", "c", "d", "e", "f"));
+    assertFilterMatches(
+        toInFilterWithFn("dim2", lookupFn, "HELLO", "BYE", "UNKNOWN"),
+        ImmutableList.of("a", "b", "c", "d", "e", "f")
+    );
 
     final Map<String, String> stringMap2 = ImmutableMap.of(
-            "a", "e"
+        "a", "e"
     );
     LookupExtractor mapExtractor2 = new MapLookupExtractor(stringMap2, false);
     LookupExtractionFn lookupFn2 = new LookupExtractionFn(mapExtractor2, true, null, false, true);
@@ -350,8 +352,8 @@ public class InFilterTest extends BaseFilterTest
     assertFilterMatches(toInFilterWithFn("dim0", lookupFn2, "a"), ImmutableList.of());
 
     final Map<String, String> stringMap3 = ImmutableMap.of(
-            "c", "500",
-            "100", "e"
+        "c", "500",
+        "100", "e"
     );
     LookupExtractor mapExtractor3 = new MapLookupExtractor(stringMap3, false);
     LookupExtractionFn lookupFn3 = new LookupExtractionFn(mapExtractor3, false, null, false, true);
@@ -364,8 +366,8 @@ public class InFilterTest extends BaseFilterTest
   @Test
   public void testRequiredColumnRewrite()
   {
-    InFilter filter = (InFilter) toInFilter("dim0", "a", "c").toFilter();
-    InFilter filter2 = (InFilter) toInFilter("dim1", "a", "c").toFilter();
+    InDimFilter filter = (InDimFilter) toInFilter("dim0", "a", "c").toFilter();
+    InDimFilter filter2 = (InDimFilter) toInFilter("dim1", "a", "c").toFilter();
 
     Assert.assertTrue(filter.supportsRequiredColumnRewrite());
     Assert.assertTrue(filter2.supportsRequiredColumnRewrite());
@@ -381,20 +383,25 @@ public class InFilterTest extends BaseFilterTest
   @Test
   public void test_equals()
   {
-    EqualsVerifier.forClass(InFilter.class)
+    EqualsVerifier.forClass(InDimFilter.class)
                   .usingGetClass()
                   .withNonnullFields("dimension", "values")
-                  .withIgnoredFields("longPredicateSupplier", "floatPredicateSupplier", "doublePredicateSupplier")
+                  .withIgnoredFields("cacheKeySupplier", "predicateFactory", "cachedOptimizedFilter", "valuesUtf8")
                   .verify();
   }
 
   @Test
   public void test_equals_forInFilterDruidPredicateFactory()
   {
-    EqualsVerifier.forClass(InFilter.InFilterDruidPredicateFactory.class)
+    EqualsVerifier.forClass(InDimFilter.InFilterDruidPredicateFactory.class)
                   .usingGetClass()
                   .withNonnullFields("values")
-                  .withIgnoredFields("longPredicateSupplier", "floatPredicateSupplier", "doublePredicateSupplier")
+                  .withIgnoredFields(
+                      "longPredicateSupplier",
+                      "floatPredicateSupplier",
+                      "doublePredicateSupplier",
+                      "stringPredicateSupplier"
+                  )
                   .verify();
   }
 

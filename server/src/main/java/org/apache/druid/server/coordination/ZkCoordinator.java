@@ -38,7 +38,10 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
 /**
- * Use {@link org.apache.druid.server.coordinator.HttpLoadQueuePeon} for segment load/drops.
+ * We are gradually migrating to {@link org.apache.druid.server.http.SegmentListerResource} for driving segment
+ * loads/drops on data server processes.
+ *
+ * However, this class is still the default mechanism as of this writing (2020-12-03).
  */
 @Deprecated
 public class ZkCoordinator

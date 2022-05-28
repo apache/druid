@@ -16,16 +16,15 @@
  * limitations under the License.
  */
 
-import { Intent } from '@blueprintjs/core';
+import { HotkeysProvider, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import React from 'react';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
 import { HeaderActiveTab, HeaderBar, Loader } from './components';
-import { AppToaster } from './singletons/toaster';
-import { QueryManager } from './utils';
-import { Capabilities } from './utils/capabilities';
+import { AppToaster } from './singletons';
+import { Capabilities, QueryManager } from './utils';
 import {
   DatasourcesView,
   HomeView,
@@ -54,9 +53,9 @@ export class ConsoleApplication extends React.PureComponent<
   ConsoleApplicationProps,
   ConsoleApplicationState
 > {
-  private capabilitiesQueryManager: QueryManager<null, Capabilities>;
+  private readonly capabilitiesQueryManager: QueryManager<null, Capabilities>;
 
-  static shownNotifications() {
+  static shownServiceNotification() {
     AppToaster.show({
       icon: IconNames.ERROR,
       intent: Intent.DANGER,
@@ -77,7 +76,6 @@ export class ConsoleApplication extends React.PureComponent<
   private datasource?: string;
   private onlyUnavailable?: boolean;
   private initQuery?: string;
-  private middleManager?: string;
 
   constructor(props: ConsoleApplicationProps, context: any) {
     super(props, context);
@@ -89,12 +87,12 @@ export class ConsoleApplication extends React.PureComponent<
     this.capabilitiesQueryManager = new QueryManager({
       processQuery: async () => {
         const capabilities = await Capabilities.detectCapabilities();
-        if (!capabilities) ConsoleApplication.shownNotifications();
+        if (!capabilities) ConsoleApplication.shownServiceNotification();
         return capabilities || Capabilities.FULL;
       },
-      onStateChange: ({ result, loading }) => {
+      onStateChange: ({ data, loading }) => {
         this.setState({
-          capabilities: result || Capabilities.FULL,
+          capabilities: data || Capabilities.FULL,
           capabilitiesLoading: loading,
         });
       },
@@ -109,6 +107,10 @@ export class ConsoleApplication extends React.PureComponent<
     this.capabilitiesQueryManager.terminate();
   }
 
+  private readonly handleUnrestrict = (capabilities: Capabilities) => {
+    this.setState({ capabilities });
+  };
+
   private resetInitialsWithDelay() {
     setTimeout(() => {
       this.taskId = undefined;
@@ -118,77 +120,74 @@ export class ConsoleApplication extends React.PureComponent<
       this.datasource = undefined;
       this.onlyUnavailable = undefined;
       this.initQuery = undefined;
-      this.middleManager = undefined;
     }, 50);
   }
 
-  private goToLoadData = (supervisorId?: string, taskId?: string) => {
+  private readonly goToLoadData = (supervisorId?: string, taskId?: string) => {
     if (taskId) this.taskId = taskId;
     if (supervisorId) this.supervisorId = supervisorId;
     window.location.hash = 'load-data';
     this.resetInitialsWithDelay();
   };
 
-  private goToDatasources = (datasource: string) => {
+  private readonly goToDatasources = (datasource: string) => {
     this.datasource = datasource;
     window.location.hash = 'datasources';
     this.resetInitialsWithDelay();
   };
 
-  private goToSegments = (datasource: string, onlyUnavailable = false) => {
+  private readonly goToSegments = (datasource: string, onlyUnavailable = false) => {
     this.datasource = datasource;
     this.onlyUnavailable = onlyUnavailable;
     window.location.hash = 'segments';
     this.resetInitialsWithDelay();
   };
 
-  private goToIngestionWithTaskGroupId = (taskGroupId?: string, openDialog?: string) => {
+  private readonly goToIngestionWithTaskGroupId = (taskGroupId?: string, openDialog?: string) => {
     this.taskGroupId = taskGroupId;
     if (openDialog) this.openDialog = openDialog;
     window.location.hash = 'ingestion';
     this.resetInitialsWithDelay();
   };
 
-  private goToIngestionWithDatasource = (datasource?: string, openDialog?: string) => {
+  private readonly goToIngestionWithDatasource = (datasource?: string, openDialog?: string) => {
     this.datasource = datasource;
     if (openDialog) this.openDialog = openDialog;
     window.location.hash = 'ingestion';
     this.resetInitialsWithDelay();
   };
 
-  private goToMiddleManager = (middleManager: string) => {
-    this.middleManager = middleManager;
-    window.location.hash = 'services';
-    this.resetInitialsWithDelay();
-  };
-
-  private goToQuery = (initQuery: string) => {
+  private readonly goToQuery = (initQuery: string) => {
     this.initQuery = initQuery;
     window.location.hash = 'query';
     this.resetInitialsWithDelay();
   };
 
-  private wrapInViewContainer = (
+  private readonly wrapInViewContainer = (
     active: HeaderActiveTab,
     el: JSX.Element,
-    classType: 'normal' | 'narrow-pad' = 'normal',
+    classType: 'normal' | 'narrow-pad' | 'thin' = 'normal',
   ) => {
     const { capabilities } = this.state;
 
     return (
       <>
-        <HeaderBar active={active} capabilities={capabilities} />
+        <HeaderBar
+          active={active}
+          capabilities={capabilities}
+          onUnrestrict={this.handleUnrestrict}
+        />
         <div className={classNames('view-container', classType)}>{el}</div>
       </>
     );
   };
 
-  private wrappedHomeView = () => {
+  private readonly wrappedHomeView = () => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(null, <HomeView capabilities={capabilities} />);
   };
 
-  private wrappedLoadDataView = () => {
+  private readonly wrappedLoadDataView = () => {
     const { exampleManifestsUrl } = this.props;
 
     return this.wrapInViewContainer(
@@ -203,7 +202,7 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private wrappedQueryView = () => {
+  private readonly wrappedQueryView = () => {
     const { defaultQueryContext, mandatoryQueryContext } = this.props;
 
     return this.wrapInViewContainer(
@@ -213,10 +212,11 @@ export class ConsoleApplication extends React.PureComponent<
         defaultQueryContext={defaultQueryContext}
         mandatoryQueryContext={mandatoryQueryContext}
       />,
+      'thin',
     );
   };
 
-  private wrappedDatasourcesView = () => {
+  private readonly wrappedDatasourcesView = () => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'datasources',
@@ -230,7 +230,7 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private wrappedSegmentsView = () => {
+  private readonly wrappedSegmentsView = () => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'segments',
@@ -243,7 +243,7 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private wrappedIngestionView = () => {
+  private readonly wrappedIngestionView = () => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'ingestion',
@@ -253,19 +253,17 @@ export class ConsoleApplication extends React.PureComponent<
         openDialog={this.openDialog}
         goToDatasource={this.goToDatasources}
         goToQuery={this.goToQuery}
-        goToMiddleManager={this.goToMiddleManager}
         goToLoadData={this.goToLoadData}
         capabilities={capabilities}
       />,
     );
   };
 
-  private wrappedServicesView = () => {
+  private readonly wrappedServicesView = () => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'services',
       <ServicesView
-        middleManager={this.middleManager}
         goToQuery={this.goToQuery}
         goToTask={this.goToIngestionWithTaskGroupId}
         capabilities={capabilities}
@@ -273,7 +271,7 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private wrappedLookupsView = () => {
+  private readonly wrappedLookupsView = () => {
     return this.wrapInViewContainer('lookups', <LookupsView />);
   };
 
@@ -283,29 +281,31 @@ export class ConsoleApplication extends React.PureComponent<
     if (capabilitiesLoading) {
       return (
         <div className="loading-capabilities">
-          <Loader loadingText="" loading />
+          <Loader />
         </div>
       );
     }
 
     return (
-      <HashRouter hashType="noslash">
-        <div className="console-application">
-          <Switch>
-            <Route path="/load-data" component={this.wrappedLoadDataView} />
+      <HotkeysProvider>
+        <HashRouter hashType="noslash">
+          <div className="console-application">
+            <Switch>
+              <Route path="/load-data" component={this.wrappedLoadDataView} />
 
-            <Route path="/ingestion" component={this.wrappedIngestionView} />
-            <Route path="/datasources" component={this.wrappedDatasourcesView} />
-            <Route path="/segments" component={this.wrappedSegmentsView} />
-            <Route path="/services" component={this.wrappedServicesView} />
+              <Route path="/ingestion" component={this.wrappedIngestionView} />
+              <Route path="/datasources" component={this.wrappedDatasourcesView} />
+              <Route path="/segments" component={this.wrappedSegmentsView} />
+              <Route path="/services" component={this.wrappedServicesView} />
 
-            <Route path="/query" component={this.wrappedQueryView} />
+              <Route path="/query" component={this.wrappedQueryView} />
 
-            <Route path="/lookups" component={this.wrappedLookupsView} />
-            <Route component={this.wrappedHomeView} />
-          </Switch>
-        </div>
-      </HashRouter>
+              <Route path="/lookups" component={this.wrappedLookupsView} />
+              <Route component={this.wrappedHomeView} />
+            </Switch>
+          </div>
+        </HashRouter>
+      </HotkeysProvider>
     );
   }
 }

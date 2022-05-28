@@ -34,6 +34,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -106,6 +107,12 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
+  public int markSegmentsAsUnusedWithinInterval(String dataSource, Interval interval)
+  {
+    return 0;
+  }
+
+  @Override
   public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments)
   {
     Set<DataSegment> added = new HashSet<>();
@@ -120,6 +127,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public SegmentPublishResult announceHistoricalSegments(
       Set<DataSegment> segments,
+      Set<DataSegment> segmentsToDrop,
       DataSourceMetadata oldCommitMetadata,
       DataSourceMetadata newCommitMetadata
   )
@@ -139,6 +147,13 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
+  public int removeDataSourceMetadataOlderThan(long timestamp, @Nullable Set<String> excludeDatasources)
+  {
+    throw new UnsupportedOperationException("Not implemented, no test uses this currently.");
+  }
+
+
+  @Override
   public SegmentIdWithShardSpec allocatePendingSegment(
       String dataSource,
       String sequenceName,
@@ -153,7 +168,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
         dataSource,
         interval,
         maxVersion,
-        partialShardSpec.complete(objectMapper, 0)
+        partialShardSpec.complete(objectMapper, 0, 0)
     );
   }
 

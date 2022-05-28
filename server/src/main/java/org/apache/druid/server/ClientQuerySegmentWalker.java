@@ -23,15 +23,19 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.client.CachingClusteredClient;
+import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FluentQueryRunnerBuilder;
+import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.PostProcessingOperator;
 import org.apache.druid.query.Query;
@@ -47,18 +51,23 @@ import org.apache.druid.query.ResultLevelCachingQueryRunner;
 import org.apache.druid.query.RetryQueryRunner;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Queue;
 import java.util.Stack;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -77,6 +86,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final QuerySegmentWalker clusterClient;
   private final QuerySegmentWalker localClient;
   private final QueryToolChestWarehouse warehouse;
+  private final JoinableFactory joinableFactory;
   private final RetryQueryRunnerConfig retryConfig;
   private final ObjectMapper objectMapper;
   private final ServerConfig serverConfig;
@@ -88,6 +98,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       QuerySegmentWalker clusterClient,
       QuerySegmentWalker localClient,
       QueryToolChestWarehouse warehouse,
+      JoinableFactory joinableFactory,
       RetryQueryRunnerConfig retryConfig,
       ObjectMapper objectMapper,
       ServerConfig serverConfig,
@@ -99,6 +110,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     this.clusterClient = clusterClient;
     this.localClient = localClient;
     this.warehouse = warehouse;
+    this.joinableFactory = joinableFactory;
     this.retryConfig = retryConfig;
     this.objectMapper = objectMapper;
     this.serverConfig = serverConfig;
@@ -112,6 +124,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       CachingClusteredClient clusterClient,
       LocalQuerySegmentWalker localClient,
       QueryToolChestWarehouse warehouse,
+      JoinableFactory joinableFactory,
       RetryQueryRunnerConfig retryConfig,
       ObjectMapper objectMapper,
       ServerConfig serverConfig,
@@ -124,6 +137,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         (QuerySegmentWalker) clusterClient,
         (QuerySegmentWalker) localClient,
         warehouse,
+        joinableFactory,
         retryConfig,
         objectMapper,
         serverConfig,
@@ -137,10 +151,22 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   {
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
-    // First, do an inlining dry run to see if any inlining is necessary, without actually running the queries.
-    final int maxSubqueryRows = QueryContexts.getMaxSubqueryRows(query, serverConfig.getMaxSubqueryRows());
-    final DataSource inlineDryRun = inlineIfNecessary(
+    // transform TableDataSource to GlobalTableDataSource when eligible
+    // before further transformation to potentially inline
+
+    // Populate the subquery ids of the subquery id present in the main query
+    Query<T> newQuery = query.withDataSource(generateSubqueryIds(
         query.getDataSource(),
+        query.getId(),
+        query.getSqlQueryId()
+    ));
+
+    final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
+    // do an inlining dry run to see if any inlining is necessary, without actually running the queries.
+    final int maxSubqueryRows = QueryContexts.getMaxSubqueryRows(query, serverConfig.getMaxSubqueryRows());
+
+    final DataSource inlineDryRun = inlineIfNecessary(
+        freeTradeDataSource,
         toolChest,
         new AtomicInteger(),
         maxSubqueryRows,
@@ -154,9 +180,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     }
 
     // Now that we know the structure is workable, actually do the inlining (if necessary).
-    final Query<T> newQuery = query.withDataSource(
+    newQuery = newQuery.withDataSource(
         inlineIfNecessary(
-            query.getDataSource(),
+            freeTradeDataSource,
             toolChest,
             new AtomicInteger(),
             maxSubqueryRows,
@@ -172,6 +198,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           newQuery
       );
     } else if (canRunQueryUsingClusterWalker(newQuery)) {
+      // Note: clusterClient.getQueryRunnerForIntervals() can return an empty sequence if there is no segment
+      // to query, but this is not correct when there's a right or full outer join going on.
+      // See https://github.com/apache/druid/issues/9229 for details.
       return new QuerySwappingQueryRunner<>(
           decorateClusterRunner(newQuery, clusterClient.getQueryRunnerForIntervals(newQuery, intervals)),
           query,
@@ -187,10 +216,15 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
   {
-    // Inlining isn't done for segments-based queries.
+    // Inlining isn't done for segments-based queries, but we still globalify the table datasources if possible
+    final Query<T> freeTradeQuery = query.withDataSource(globalizeIfPossible(query.getDataSource()));
 
     if (canRunQueryUsingClusterWalker(query)) {
-      return decorateClusterRunner(query, clusterClient.getQueryRunnerForSegments(query, specs));
+      return new QuerySwappingQueryRunner<>(
+          decorateClusterRunner(freeTradeQuery, clusterClient.getQueryRunnerForSegments(freeTradeQuery, specs)),
+          query,
+          freeTradeQuery
+      );
     } else {
       // We don't expect end-users to see this message, since it only happens when specific segments are requested;
       // this is not typical end-user behavior.
@@ -235,6 +269,27 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                || toolChest.canPerformSubquery(((QueryDataSource) analysis.getDataSource()).getQuery()));
   }
 
+
+  private DataSource globalizeIfPossible(
+      final DataSource dataSource
+  )
+  {
+    if (dataSource instanceof TableDataSource) {
+      GlobalTableDataSource maybeGlobal = new GlobalTableDataSource(((TableDataSource) dataSource).getName());
+      if (joinableFactory.isDirectlyJoinable(maybeGlobal)) {
+        return maybeGlobal;
+      }
+      return dataSource;
+    } else {
+      List<DataSource> currentChildren = dataSource.getChildren();
+      List<DataSource> newChildren = new ArrayList<>(currentChildren.size());
+      for (DataSource child : currentChildren) {
+        newChildren.add(globalizeIfPossible(child));
+      }
+      return dataSource.withChildren(newChildren);
+    }
+  }
+
   /**
    * Replace QueryDataSources with InlineDataSources when necessary and possible. "Necessary" is defined as:
    *
@@ -247,6 +302,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    *                             {@link QueryToolChest#canPerformSubquery}. If the toolchest can handle it, then it will
    *                             not be inlined. See {@link org.apache.druid.query.groupby.GroupByQueryQueryToolChest}
    *                             for an example of a toolchest that can handle subqueries.
+   * @param subqueryRowLimitAccumulator an accumulator for tracking the number of accumulated rows in all subqueries
+   *                                    for a particular master query
+   * @param maxSubqueryRows      Max rows that all the subqueries generated by a master query can have, combined
    * @param dryRun               if true, does not actually execute any subqueries, but will inline empty result sets.
    */
   @SuppressWarnings({"rawtypes", "unchecked"}) // Subquery, toolchest, runner handling all use raw types
@@ -292,21 +350,23 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         }
       } else if (canRunQueryUsingLocalWalker(subQuery) || canRunQueryUsingClusterWalker(subQuery)) {
         // Subquery needs to be inlined. Assign it a subquery id and run it.
-        final Query subQueryWithId = subQuery.withSubQueryId(UUID.randomUUID().toString());
 
         final Sequence<?> queryResults;
 
         if (dryRun) {
           queryResults = Sequences.empty();
         } else {
-          final QueryRunner subqueryRunner = subQueryWithId.getRunner(this);
-          queryResults = subqueryRunner.run(QueryPlus.wrap(subQueryWithId));
+          final QueryRunner subqueryRunner = subQuery.getRunner(this);
+          queryResults = subqueryRunner.run(
+              QueryPlus.wrap(subQuery),
+              DirectDruidClient.makeResponseContextForQuery()
+          );
         }
 
         return toInlineDataSource(
-            subQueryWithId,
+            subQuery,
             queryResults,
-            warehouse.getToolChest(subQueryWithId),
+            warehouse.getToolChest(subQuery),
             subqueryRowLimitAccumulator,
             maxSubqueryRows
         );
@@ -359,6 +419,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                 serverConfig,
                 new RetryQueryRunner<>(
                     baseClusterRunner,
+                    clusterClient::getQueryRunnerForSegments,
                     retryConfig,
                     objectMapper
                 )
@@ -388,6 +449,100 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   }
 
   /**
+   * This method returns the datasource by populating all the {@link QueryDataSource} with correct nesting level and
+   * sibling order of all the subqueries that are present.
+   * It also plumbs parent query's id and sql id in case the subqueries don't have it set by default
+   *
+   * @param rootDataSource   Datasource whose subqueries need to be populated
+   * @param parentQueryId    Parent Query's ID, can be null if do not need to update this in the subqueries
+   * @param parentSqlQueryId Parent Query's SQL Query ID, can be null if do not need to update this in the subqueries
+   * @return DataSource populated with the subqueries
+   */
+  private DataSource generateSubqueryIds(
+      DataSource rootDataSource,
+      @Nullable final String parentQueryId,
+      @Nullable final String parentSqlQueryId
+  )
+  {
+    Queue<DataSource> queue = new ArrayDeque<>();
+    queue.add(rootDataSource);
+
+    // Performs BFS on the datasource tree to find the nesting level, and the sibling order of the query datasource
+    Map<QueryDataSource, Pair<Integer, Integer>> queryDataSourceToSubqueryIds = new HashMap<>();
+    int level = 1;
+    while (!queue.isEmpty()) {
+      int size = queue.size();
+      int siblingOrder = 1;
+      for (int i = 0; i < size; ++i) {
+        DataSource currentDataSource = queue.poll();
+        if (currentDataSource == null) { // Shouldn't be encountered
+          continue;
+        }
+        if (currentDataSource instanceof QueryDataSource) {
+          queryDataSourceToSubqueryIds.put((QueryDataSource) currentDataSource, new Pair<>(level, siblingOrder));
+          ++siblingOrder;
+        }
+        queue.addAll(currentDataSource.getChildren());
+      }
+      ++level;
+    }
+    /*
+    Returns the datasource by populating all the subqueries with the id generated in the map above.
+    Implemented in a separate function since the methods on datasource and queries return a new datasource/query
+     */
+    return insertSubqueryIds(rootDataSource, queryDataSourceToSubqueryIds, parentQueryId, parentSqlQueryId);
+  }
+
+  /**
+   * To be used in conjunction with {@code generateSubqueryIds()} method. This does the actual task of populating the
+   * query's id, subQueryId and sqlQueryId
+   *
+   * @param currentDataSource            The datasource to be populated with the subqueries
+   * @param queryDataSourceToSubqueryIds Map of the datasources to their level and sibling order
+   * @param parentQueryId                Parent query's id
+   * @param parentSqlQueryId             Parent query's sqlQueryId
+   * @return Populates the subqueries from the map
+   */
+  private DataSource insertSubqueryIds(
+      DataSource currentDataSource,
+      Map<QueryDataSource, Pair<Integer, Integer>> queryDataSourceToSubqueryIds,
+      @Nullable final String parentQueryId,
+      @Nullable final String parentSqlQueryId
+  )
+  {
+    if (currentDataSource instanceof QueryDataSource
+        && queryDataSourceToSubqueryIds.containsKey((QueryDataSource) currentDataSource)) {
+      QueryDataSource queryDataSource = (QueryDataSource) currentDataSource;
+      Pair<Integer, Integer> nestingInfo = queryDataSourceToSubqueryIds.get(queryDataSource);
+      String subQueryId = nestingInfo.lhs + "." + nestingInfo.rhs;
+      Query<?> query = queryDataSource.getQuery();
+
+      if (StringUtils.isEmpty(query.getSubQueryId())) {
+        query = query.withSubQueryId(subQueryId);
+      }
+
+      if (StringUtils.isEmpty(query.getId()) && StringUtils.isNotEmpty(parentQueryId)) {
+        query = query.withId(parentQueryId);
+      }
+
+      if (StringUtils.isEmpty(query.getSqlQueryId()) && StringUtils.isNotEmpty(parentSqlQueryId)) {
+        query = query.withSqlQueryId(parentSqlQueryId);
+      }
+
+      currentDataSource = new QueryDataSource(query);
+    }
+    return currentDataSource.withChildren(currentDataSource.getChildren()
+                                                           .stream()
+                                                           .map(childDataSource -> insertSubqueryIds(
+                                                               childDataSource,
+                                                               queryDataSourceToSubqueryIds,
+                                                               parentQueryId,
+                                                               parentSqlQueryId
+                                                           ))
+                                                           .collect(Collectors.toList()));
+  }
+
+  /**
    * Convert the results of a particular query into a materialized (List-based) InlineDataSource.
    *
    * @param query            the query
@@ -397,7 +552,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    *                         particular master query
    * @param limit            user-configured limit. If negative, will be treated as {@link Integer#MAX_VALUE}.
    *                         If zero, this method will throw an error immediately.
-   *
    * @throws ResourceLimitExceededException if the limit is exceeded
    */
   private static <T, QueryType extends Query<T>> InlineDataSource toInlineDataSource(
@@ -411,7 +565,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final int limitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
 
     if (limitAccumulator.get() >= limitToUse) {
-      throw new ResourceLimitExceededException("Cannot issue subquery, maximum[%d] reached", limitToUse);
+      throw ResourceLimitExceededException.withMessage(
+          "Cannot issue subquery, maximum[%d] reached",
+          limitToUse
+      );
     }
 
     final RowSignature signature = toolChest.resultArraySignature(query);
@@ -422,7 +579,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         resultList,
         (acc, in) -> {
           if (limitAccumulator.getAndIncrement() >= limitToUse) {
-            throw new ResourceLimitExceededException(
+            throw ResourceLimitExceededException.withMessage(
                 "Subquery generated results beyond maximum[%d]",
                 limitToUse
             );

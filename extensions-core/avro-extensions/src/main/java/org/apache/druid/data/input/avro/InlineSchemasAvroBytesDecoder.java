@@ -101,18 +101,18 @@ public class InlineSchemasAvroBytesDecoder implements AvroBytesDecoder
   public GenericRecord parse(ByteBuffer bytes)
   {
     if (bytes.remaining() < 5) {
-      throw new ParseException("record must have at least 5 bytes carrying version and schemaId");
+      throw new ParseException(null, "record must have at least 5 bytes carrying version and schemaId");
     }
 
     byte version = bytes.get();
     if (version != V1) {
-      throw new ParseException("found record of arbitrary version [%s]", version);
+      throw new ParseException(null, "found record of arbitrary version [%s]", version);
     }
 
     int schemaId = bytes.getInt();
     Schema schemaObj = schemaObjs.get(schemaId);
     if (schemaObj == null) {
-      throw new ParseException("Failed to find schema for id [%s]", schemaId);
+      throw new ParseException(null, "Failed to find schema for id [%s]", schemaId);
     }
 
     DatumReader<GenericRecord> reader = new GenericDatumReader<>(schemaObj);
@@ -122,13 +122,14 @@ public class InlineSchemasAvroBytesDecoder implements AvroBytesDecoder
     catch (EOFException eof) {
       // waiting for avro v1.9.0 (#AVRO-813)
       throw new ParseException(
+          null,
           eof,
           "Avro's unnecessary EOFException, detail: [%s]",
           "https://issues.apache.org/jira/browse/AVRO-813"
       );
     }
     catch (Exception e) {
-      throw new ParseException(e, "Fail to decode avro message with schemaId [%s].", schemaId);
+      throw new ParseException(null, e, "Fail to decode avro message with schemaId [%s].", schemaId);
     }
   }
 }

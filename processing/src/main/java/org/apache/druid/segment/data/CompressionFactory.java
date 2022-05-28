@@ -283,27 +283,15 @@ public class CompressionFactory
 
     long read(int index);
 
-    default void read(long[] out, int outPosition, int startIndex, int length)
-    {
-      for (int i = 0; i < length; i++) {
-        out[outPosition + i] = read(startIndex + i);
-      }
-    }
+    void read(long[] out, int outPosition, int startIndex, int length);
 
-    default int read(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit)
-    {
-      for (int i = 0; i < length; i++) {
-        int index = indexes[outPosition + i] - indexOffset;
-        if (index >= limit) {
-          return i;
-        }
+    int read(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit);
 
-        out[outPosition + i] = read(index);
-      }
-
-      return length;
-    }
-
+    /**
+     * Duplicates this reader, creating a new reader that does not share any state. Important to achieve thread-safety,
+     * because a common pattern is to duplicate a reader multiple times and then call {@link #setBuffer} on the
+     * various duplicates.
+     */
     LongEncodingReader duplicate();
   }
 

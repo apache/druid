@@ -31,11 +31,11 @@ The main goal of this cache is to speed up the access to a high latency lookup s
 Thus user can define various caching strategies or and implementation per lookup, even if the source is the same.
 This module can be used side to side with other lookup module like the global cached lookup module.
 
-To use this extension please make sure to  [include](../../development/extensions.md#loading-extensions) `druid-lookups-cached-single` as an extension.
+To use this Apache Druid extension, [include](../extensions.md#loading-extensions) `druid-lookups-cached-single` in the extensions load list.
 
 > If using JDBC, you will need to add your database's client JAR files to the extension's directory.
 > For Postgres, the connector JAR is already included.
-> For MySQL, you can get it from https://dev.mysql.com/downloads/connector/j/.
+> See the MySQL extension documentation for instructions to obtain [MySQL](./mysql.md#installing-the-mysql-connector-library) or [MariaDB](./mysql.md#alternative-installing-the-mariadb-connector-library) connector libraries.
 > Copy or symlink the downloaded file to `extensions/druid-lookups-cached-single` under the distribution root directory.
 
 ## Architecture
@@ -72,7 +72,7 @@ Same for Loading cache, developer can implement a new type of loading cache by i
 
 |Field|Type|Description|Required|default|
 |-----|----|-----------|--------|-------|
-|dataFetcher|JSON object|Specifies the lookup data fetcher type  to use in order to fetch data|yes|null|
+|dataFetcher|JSON object|Specifies the lookup data fetcher type for fetching data|yes|null|
 |cacheFactory|JSON Object|Cache factory implementation|no |onHeapPolling|
 |pollPeriod|Period|polling period |no |null (poll once)|
 
@@ -129,7 +129,7 @@ Guava cache configuration spec.
    "type":"loadingLookup",
    "dataFetcher":{ "type":"jdbcDataFetcher", "connectorConfig":"jdbc://mysql://localhost:3306/my_data_base", "table":"lookup_table_name", "keyColumn":"key_column_name", "valueColumn": "value_column_name"},
    "loadingCacheSpec":{"type":"guava"},
-   "reverseLoadingCacheSpec":{"type":"guava", "maximumSize":500000, "expireAfterAccess":100000, "expireAfterAccess":10000}
+   "reverseLoadingCacheSpec":{"type":"guava", "maximumSize":500000, "expireAfterAccess":100000, "expireAfterWrite":10000}
 }
 ```
 
@@ -139,7 +139,7 @@ Off heap cache is backed by [MapDB](http://www.mapdb.org/) implementation. MapDB
 
 |Field|Type|Description|Required|default|
 |-----|----|-----------|--------|-------|
-|maxStoreSize|double|maximal size of store in GB, if store is larger entries will start expiring|no |0|
+|maxStoreSize|double|maximal size of store in GiB, if store is larger entries will start expiring|no |0|
 |maxEntriesSize|long| Specifies the maximum number of entries the cache may contain.|no |0 (infinite capacity)|
 |expireAfterAccess|long| Specifies the eviction time after last read in milliseconds.|no |0 (No read-time-based eviction when set to null)|
 |expireAfterWrite|long| Specifies the eviction time after last write in milliseconds.|no |0 (No write-time-based eviction when set to null)|
@@ -150,6 +150,16 @@ Off heap cache is backed by [MapDB](http://www.mapdb.org/) implementation. MapDB
    "type":"loadingLookup",
    "dataFetcher":{ "type":"jdbcDataFetcher", "connectorConfig":"jdbc://mysql://localhost:3306/my_data_base", "table":"lookup_table_name", "keyColumn":"key_column_name", "valueColumn": "value_column_name"},
    "loadingCacheSpec":{"type":"mapDb", "maxEntriesSize":100000},
-   "reverseLoadingCacheSpec":{"type":"mapDb", "maxStoreSize":5, "expireAfterAccess":100000, "expireAfterAccess":10000}
+   "reverseLoadingCacheSpec":{"type":"mapDb", "maxStoreSize":5, "expireAfterAccess":100000, "expireAfterWrite":10000}
 }
 ```
+
+### JDBC Data Fetcher
+
+|Field|Type|Description|Required|default|
+|-----|----|-----------|--------|-------|
+|`connectorConfig`|JSON object|Specifies the database connection details. You can set `connectURI`, `user` and `password`. You can selectively allow JDBC properties in `connectURI`. See [JDBC connections security config](../../configuration/index.md#jdbc-connections-to-external-databases) for more details.|yes||
+|`table`|string|The table name to read from.|yes||
+|`keyColumn`|string|The column name that contains the lookup key.|yes||
+|`valueColumn`|string|The column name that contains the lookup value.|yes||
+|`streamingFetchSize`|int|Fetch size used in JDBC connections.|no|1000|

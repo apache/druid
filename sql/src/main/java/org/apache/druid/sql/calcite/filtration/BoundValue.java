@@ -76,7 +76,7 @@ public class BoundValue implements Comparable<BoundValue>
   public int compareTo(BoundValue o)
   {
     if (!comparator.equals(o.comparator)) {
-      throw new ISE("WTF?! Comparator mismatch?!");
+      throw new ISE("Comparator mismatch");
     }
     return comparator.compare(value, o.value);
   }

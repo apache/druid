@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,12 +37,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
 
-public class FirehoseFactoryToInputSourceAdaptorTest
+public class FirehoseFactoryToInputSourceAdaptorTest extends InitializedNullHandlingTest
 {
   @Test
   public void testUnimplementedInputFormat() throws IOException
@@ -70,7 +70,7 @@ public class FirehoseFactoryToInputSourceAdaptorTest
         new InputRowSchema(
             inputRowParser.getParseSpec().getTimestampSpec(),
             inputRowParser.getParseSpec().getDimensionsSpec(),
-            Collections.emptyList()
+            ColumnsFilter.all()
         ),
         null,
         null

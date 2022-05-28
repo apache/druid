@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.schema.Schema;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.easymock.EasyMock;
@@ -72,9 +71,9 @@ public class RootSchemaProviderTest extends CalciteTestBase
   @Test
   public void testGetShouldReturnRootSchemaWithProvidedSchemasRegistered()
   {
-    SchemaPlus rootSchema = target.get();
-    Assert.assertEquals("", rootSchema.getName());
-    Assert.assertFalse(rootSchema.isCacheEnabled());
+    DruidSchemaCatalog rootSchema = target.get();
+    Assert.assertEquals("", rootSchema.getRootSchema().getName());
+    Assert.assertFalse(rootSchema.getRootSchema().isCacheEnabled());
     // metadata schema should not be added
     Assert.assertEquals(druidSchemas.size(), rootSchema.getSubSchemaNames().size());
 

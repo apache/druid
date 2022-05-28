@@ -22,12 +22,12 @@ import React from 'react';
 import { TaskTableActionDialog } from './task-table-action-dialog';
 
 const basicAction = { title: 'test', onAction: () => null };
-describe('task table action dialog', () => {
+describe('TaskTableActionDialog', () => {
   it('matches snapshot', () => {
     const taskTableActionDialog = (
       <TaskTableActionDialog
-        status={'RUNNING'}
-        taskId={'test'}
+        status="RUNNING"
+        taskId="test"
         actions={[basicAction]}
         onClose={() => {}}
       />

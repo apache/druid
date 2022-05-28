@@ -26,6 +26,7 @@ export async function retryIfJestAssertionError(
   maxTries = 60,
 ) {
   let i = 0;
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
       await callback();

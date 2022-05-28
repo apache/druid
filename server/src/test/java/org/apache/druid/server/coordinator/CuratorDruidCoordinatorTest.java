@@ -38,6 +38,7 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.curator.CuratorUtils;
+import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.curator.discovery.NoopServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -51,6 +52,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -168,10 +170,21 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         new Duration(COORDINATOR_PERIOD),
         null,
         null,
+        null,
         new Duration(COORDINATOR_PERIOD),
         null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
         10,
-        new Duration("PT0s")
+        new Duration("PT0s"),
+        false
     );
     sourceLoadQueueChildrenCache = new PathChildrenCache(
         curator,
@@ -223,7 +236,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         segmentsMetadataManager,
         baseView,
         metadataRuleManager,
-        curator,
+        () -> curator,
         new NoopServiceEmitter(),
         scheduledExecutorFactory,
         null,
@@ -246,10 +259,13 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         druidNode,
         loadManagementPeons,
         null,
+        null,
+        new CoordinatorCustomDutyGroups(ImmutableSet.of()),
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
-        null
+        null,
+        ZkEnablementConfig.ENABLED
     );
   }
 
@@ -461,7 +477,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         zkPathsConfig,
         curator,
         jsonMapper,
-        Predicates.alwaysTrue()
+        Predicates.alwaysTrue(),
+        "test"
     )
     {
       @Override
@@ -521,7 +538,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         segmentsMetadataManager,
         baseView,
         metadataRuleManager,
-        curator,
+        () -> curator,
         new NoopServiceEmitter(),
         scheduledExecutorFactory,
         null,
@@ -544,10 +561,13 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         druidNode,
         loadManagementPeons,
         null,
+        null,
+        new CoordinatorCustomDutyGroups(ImmutableSet.of()),
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
-        null
+        null,
+        ZkEnablementConfig.ENABLED
     );
   }
 

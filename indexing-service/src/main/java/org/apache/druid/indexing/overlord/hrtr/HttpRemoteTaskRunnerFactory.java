@@ -22,7 +22,9 @@ package org.apache.druid.indexing.overlord.hrtr;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Smile;
@@ -33,8 +35,11 @@ import org.apache.druid.indexing.overlord.autoscaling.ProvisioningSchedulerConfi
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.initialization.IndexerZkConfig;
+
+import javax.annotation.Nullable;
 
 /**
  */
@@ -50,8 +55,10 @@ public class HttpRemoteTaskRunnerFactory implements TaskRunnerFactory<HttpRemote
   private final ProvisioningStrategy provisioningStrategy;
   private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
   private final TaskStorage taskStorage;
+  private final ServiceEmitter emitter;
 
   // ZK_CLEANUP_TODO : Remove these when RemoteTaskRunner and WorkerTaskMonitor are removed.
+  @Nullable //Null if zk is disabled
   private final CuratorFramework cf;
   private final IndexerZkConfig indexerZkConfig;
 
@@ -65,8 +72,10 @@ public class HttpRemoteTaskRunnerFactory implements TaskRunnerFactory<HttpRemote
       final ProvisioningStrategy provisioningStrategy,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final TaskStorage taskStorage,
-      final CuratorFramework cf,
-      final IndexerZkConfig indexerZkConfig
+      final Provider<CuratorFramework> cfProvider,
+      final IndexerZkConfig indexerZkConfig,
+      final ZkEnablementConfig zkEnablementConfig,
+      final ServiceEmitter emitter
   )
   {
     this.smileMapper = smileMapper;
@@ -77,8 +86,14 @@ public class HttpRemoteTaskRunnerFactory implements TaskRunnerFactory<HttpRemote
     this.provisioningStrategy = provisioningStrategy;
     this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
     this.taskStorage = taskStorage;
-    this.cf = cf;
     this.indexerZkConfig = indexerZkConfig;
+    this.emitter = emitter;
+
+    if (zkEnablementConfig.isEnabled()) {
+      this.cf = cfProvider.get();
+    } else {
+      this.cf = null;
+    }
   }
 
   @Override
@@ -93,7 +108,8 @@ public class HttpRemoteTaskRunnerFactory implements TaskRunnerFactory<HttpRemote
         druidNodeDiscoveryProvider,
         taskStorage,
         cf,
-        indexerZkConfig
+        indexerZkConfig,
+        emitter
     );
   }
 }

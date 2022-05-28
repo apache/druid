@@ -39,7 +39,7 @@ public class LeftOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("LEFT")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.INTEGER)
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnTypeNonNull(SqlTypeName.VARCHAR)
+      .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
       .build();
 
   @Override
@@ -67,14 +67,11 @@ public class LeftOperatorConversion implements SqlOperatorConversion
     if (call.getOperands().size() != 2) {
       return null;
     }
-    return OperatorConversions.convertCall(
+    return OperatorConversions.convertDirectCall(
         plannerContext,
         rowSignature,
         rexNode,
-        druidExpressions -> DruidExpression.of(
-            null,
-            DruidExpression.functionCall("left", druidExpressions)
-        )
+        "left"
     );
   }
 }

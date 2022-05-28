@@ -20,7 +20,6 @@
 package org.apache.druid.timeline;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterators;
@@ -106,9 +105,18 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
 
   private final Comparator<? super VersionType> versionComparator;
 
+  // Set this to true if the client needs to skip tombstones upon lookup (like the broker)
+  private boolean skipObjectsWithNoData = false;
+
   public VersionedIntervalTimeline(Comparator<? super VersionType> versionComparator)
   {
     this.versionComparator = versionComparator;
+  }
+
+  public VersionedIntervalTimeline(Comparator<? super VersionType> versionComparator, boolean skipObjectsWithNoData)
+  {
+    this(versionComparator);
+    this.skipObjectsWithNoData = skipObjectsWithNoData;
   }
 
   public static void addSegments(
@@ -117,10 +125,14 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   )
   {
     timeline.addAll(
-        Iterators.transform(segments, segment -> segment.getShardSpec().createChunk(segment)),
-        DataSegment::getInterval,
-        DataSegment::getVersion
-    );
+        Iterators.transform(
+            segments,
+            segment -> new PartitionChunkEntry<>(
+                segment.getInterval(),
+                segment.getVersion(),
+                segment.getShardSpec().createChunk(segment)
+            )
+        ));
   }
 
   public Map<Interval, TreeMap<VersionType, TimelineEntry>> getAllTimelineEntries()
@@ -164,8 +176,18 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
    */
   public Set<ObjectType> findNonOvershadowedObjectsInInterval(Interval interval, Partitions completeness)
   {
+    final List<TimelineObjectHolder<VersionType, ObjectType>> holders;
+
+    lock.readLock().lock();
+    try {
+      holders = lookup(interval, completeness);
+    }
+    finally {
+      lock.readLock().unlock();
+    }
+
     return FluentIterable
-        .from(lookup(interval, completeness))
+        .from(holders)
         .transformAndConcat(TimelineObjectHolder::getObject)
         .transform(PartitionChunk::getObject)
         .toSet();
@@ -173,13 +195,11 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
 
   public void add(final Interval interval, VersionType version, PartitionChunk<ObjectType> object)
   {
-    addAll(Iterators.singletonIterator(object), o -> interval, o -> version);
+    addAll(Iterators.singletonIterator(new PartitionChunkEntry<>(interval, version, object)));
   }
 
-  private void addAll(
-      final Iterator<PartitionChunk<ObjectType>> objects,
-      final Function<ObjectType, Interval> intervalFunction,
-      final Function<ObjectType, VersionType> versionFunction
+  public void addAll(
+      final Iterator<PartitionChunkEntry<VersionType, ObjectType>> objects
   )
   {
     lock.writeLock().lock();
@@ -188,9 +208,10 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
       final IdentityHashMap<TimelineEntry, Interval> allEntries = new IdentityHashMap<>();
 
       while (objects.hasNext()) {
-        PartitionChunk<ObjectType> object = objects.next();
-        Interval interval = intervalFunction.apply(object.getObject());
-        VersionType version = versionFunction.apply(object.getObject());
+        PartitionChunkEntry<VersionType, ObjectType> chunkEntry = objects.next();
+        PartitionChunk<ObjectType> object = chunkEntry.getChunk();
+        Interval interval = chunkEntry.getInterval();
+        VersionType version = chunkEntry.getVersion();
         Map<VersionType, TimelineEntry> exists = allTimelineEntries.get(interval);
         TimelineEntry entry;
 
@@ -273,7 +294,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   }
 
   @Override
-  public @Nullable PartitionHolder<ObjectType> findEntry(Interval interval, VersionType version)
+  @Nullable
+  public PartitionChunk<ObjectType> findChunk(Interval interval, VersionType version, int partitionNum)
   {
     lock.readLock().lock();
     try {
@@ -281,7 +303,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
         if (entry.getKey().equals(interval) || entry.getKey().contains(interval)) {
           TimelineEntry foundEntry = entry.getValue().get(version);
           if (foundEntry != null) {
-            return foundEntry.getPartitionHolder().asImmutable();
+            return foundEntry.getPartitionHolder().getChunk(partitionNum);
           }
         }
       }
@@ -730,7 +752,9 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
       Interval timelineInterval = entry.getKey();
       TimelineEntry val = entry.getValue();
 
-      if (timelineInterval.overlaps(interval)) {
+      // exclude empty partition holders (i.e. tombstones) since they do not add value
+      // for higher level code...they have no data rows...
+      if ((!skipObjectsWithNoData || val.partitionHolder.hasData()) && timelineInterval.overlaps(interval)) {
         retVal.add(
             new TimelineObjectHolder<>(
                 timelineInterval,
@@ -836,6 +860,43 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     public int hashCode()
     {
       return Objects.hash(trueInterval, version, partitionHolder);
+    }
+  }
+
+  /**
+   * Stores a {@link PartitionChunk} for a given interval and version. The
+   * interval corresponds to the {@link LogicalSegment#getInterval()}
+   */
+  public static class PartitionChunkEntry<VersionType, ObjectType>
+  {
+    private final Interval interval;
+    private final VersionType version;
+    private final PartitionChunk<ObjectType> chunk;
+
+    public PartitionChunkEntry(
+        Interval interval,
+        VersionType version,
+        PartitionChunk<ObjectType> chunk
+    )
+    {
+      this.interval = interval;
+      this.version = version;
+      this.chunk = chunk;
+    }
+
+    public Interval getInterval()
+    {
+      return interval;
+    }
+
+    public VersionType getVersion()
+    {
+      return version;
+    }
+
+    public PartitionChunk<ObjectType> getChunk()
+    {
+      return chunk;
     }
   }
 }

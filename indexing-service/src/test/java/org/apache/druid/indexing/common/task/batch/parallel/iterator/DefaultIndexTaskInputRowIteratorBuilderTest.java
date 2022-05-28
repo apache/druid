@@ -23,7 +23,6 @@ import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -36,7 +35,6 @@ import org.junit.runner.RunWith;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Consumer;
 
 @RunWith(Enclosed.class)
 public class DefaultIndexTaskInputRowIteratorBuilderTest
@@ -45,9 +43,6 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
   {
     private static final CloseableIterator<InputRow> ITERATOR = EasyMock.mock(CloseableIterator.class);
     private static final GranularitySpec GRANULARITY_SPEC = EasyMock.mock(GranularitySpec.class);
-    private static final Runnable NULL_ROW_RUNNABLE = IndexTaskInputRowIteratorBuilder.NOOP_RUNNABLE;
-    private static final Consumer<InputRow> ABSENT_BUCKET_INTERVAL_CONSUMER =
-        IndexTaskInputRowIteratorBuilder.NOOP_CONSUMER;
 
     @Rule
     public ExpectedException exception = ExpectedException.none();
@@ -60,8 +55,6 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
 
       new DefaultIndexTaskInputRowIteratorBuilder()
           .granularitySpec(GRANULARITY_SPEC)
-          .nullRowRunnable(NULL_ROW_RUNNABLE)
-          .absentBucketIntervalConsumer(ABSENT_BUCKET_INTERVAL_CONSUMER)
           .build();
     }
 
@@ -73,34 +66,6 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
 
       new DefaultIndexTaskInputRowIteratorBuilder()
           .delegate(ITERATOR)
-          .nullRowRunnable(NULL_ROW_RUNNABLE)
-          .absentBucketIntervalConsumer(ABSENT_BUCKET_INTERVAL_CONSUMER)
-          .build();
-    }
-
-    @Test
-    public void requiresNullRowHandler()
-    {
-      exception.expect(NullPointerException.class);
-      exception.expectMessage("nullRowRunnable required");
-
-      new DefaultIndexTaskInputRowIteratorBuilder()
-          .delegate(ITERATOR)
-          .granularitySpec(GRANULARITY_SPEC)
-          .absentBucketIntervalConsumer(ABSENT_BUCKET_INTERVAL_CONSUMER)
-          .build();
-    }
-
-    @Test
-    public void requiresAbsentBucketIntervalHandler()
-    {
-      exception.expect(NullPointerException.class);
-      exception.expectMessage("absentBucketIntervalConsumer required");
-
-      new DefaultIndexTaskInputRowIteratorBuilder()
-          .delegate(ITERATOR)
-          .granularitySpec(GRANULARITY_SPEC)
-          .nullRowRunnable(NULL_ROW_RUNNABLE)
           .build();
     }
 
@@ -110,8 +75,6 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
       new DefaultIndexTaskInputRowIteratorBuilder()
           .delegate(ITERATOR)
           .granularitySpec(GRANULARITY_SPEC)
-          .nullRowRunnable(NULL_ROW_RUNNABLE)
-          .absentBucketIntervalConsumer(ABSENT_BUCKET_INTERVAL_CONSUMER)
           .build();
     }
   }
@@ -126,69 +89,6 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
 
     @Rule
     public ExpectedException exception = ExpectedException.none();
-
-    @Test
-    public void invokesNullRowHandlerFirst()
-    {
-      DateTime invalidTimestamp = DateTimes.utc(Long.MAX_VALUE);
-      CloseableIterator<InputRow> nullInputRowIterator =
-          IndexTaskInputRowIteratorBuilderTestingFactory.createInputRowIterator(null);
-      GranularitySpec absentBucketIntervalGranularitySpec =
-          IndexTaskInputRowIteratorBuilderTestingFactory.createAbsentBucketIntervalGranularitySpec(invalidTimestamp);
-
-      List<IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler> handlerInvocationHistory =
-          HANDLER_TESTER.invokeHandlers(
-              nullInputRowIterator,
-              absentBucketIntervalGranularitySpec,
-              NO_NEXT_INPUT_ROW
-          );
-
-      Assert.assertEquals(
-          Collections.singletonList(IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler.NULL_ROW),
-          handlerInvocationHistory
-      );
-    }
-
-    @Test
-    public void invokesInvalidTimestampHandlerBeforeAbsentBucketIntervalHandler()
-    {
-      DateTime invalidTimestamp = DateTimes.utc(Long.MAX_VALUE);
-      InputRow inputRow = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRow(invalidTimestamp);
-      CloseableIterator<InputRow> inputRowIterator =
-          IndexTaskInputRowIteratorBuilderTestingFactory.createInputRowIterator(inputRow);
-      GranularitySpec absentBucketIntervalGranularitySpec =
-          IndexTaskInputRowIteratorBuilderTestingFactory.createAbsentBucketIntervalGranularitySpec(invalidTimestamp);
-
-      exception.expect(ParseException.class);
-      exception.expectMessage("Encountered row with timestamp that cannot be represented as a long");
-
-      HANDLER_TESTER.invokeHandlers(inputRowIterator, absentBucketIntervalGranularitySpec, NO_NEXT_INPUT_ROW);
-    }
-
-    @Test
-    public void invokesAbsentBucketIntervalHandlerLast()
-    {
-      DateTime timestamp = IndexTaskInputRowIteratorBuilderTestingFactory.TIMESTAMP;
-      InputRow inputRow = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRow(timestamp);
-      CloseableIterator<InputRow> inputRowIterator =
-          IndexTaskInputRowIteratorBuilderTestingFactory.createInputRowIterator(inputRow);
-      GranularitySpec absentBucketIntervalGranularitySpec =
-          IndexTaskInputRowIteratorBuilderTestingFactory.createAbsentBucketIntervalGranularitySpec(timestamp);
-
-      List<IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler> handlerInvocationHistory =
-          HANDLER_TESTER.invokeHandlers(
-              inputRowIterator,
-              absentBucketIntervalGranularitySpec,
-              NO_NEXT_INPUT_ROW
-          );
-
-      Assert.assertEquals(
-          Collections.singletonList(
-              IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler.ABSENT_BUCKET_INTERVAL
-          ),
-          handlerInvocationHistory
-      );
-    }
 
     @Test
     public void invokesAppendedHandlersLast()

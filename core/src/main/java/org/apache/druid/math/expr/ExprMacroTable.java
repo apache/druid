@@ -94,15 +94,23 @@ public class ExprMacroTable
   }
 
   /**
+   * stub interface to allow {@link Parser#flatten(Expr)} a way to recognize macro functions that exend this
+   */
+  public interface ExprMacroFunctionExpr extends Expr
+  {
+    List<Expr> getArgs();
+  }
+
+  /**
    * Base class for single argument {@link ExprMacro} function {@link Expr}
    */
-  public abstract static class BaseScalarUnivariateMacroFunctionExpr implements Expr
+  public abstract static class BaseScalarUnivariateMacroFunctionExpr implements ExprMacroFunctionExpr
   {
     protected final String name;
     protected final Expr arg;
 
     // Use Supplier to memoize values as ExpressionSelectors#makeExprEvalSelector() can make repeated calls for them
-    private final Supplier<BindingDetails> analyzeInputsSupplier;
+    private final Supplier<BindingAnalysis> analyzeInputsSupplier;
 
     public BaseScalarUnivariateMacroFunctionExpr(String name, Expr arg)
     {
@@ -112,14 +120,13 @@ public class ExprMacroTable
     }
 
     @Override
-    public void visit(final Visitor visitor)
+    public List<Expr> getArgs()
     {
-      arg.visit(visitor);
-      visitor.visit(this);
+      return Collections.singletonList(arg);
     }
 
     @Override
-    public BindingDetails analyzeInputs()
+    public BindingAnalysis analyzeInputs()
     {
       return analyzeInputsSupplier.get();
     }
@@ -150,28 +157,41 @@ public class ExprMacroTable
       return Objects.hash(name, arg);
     }
 
-    private BindingDetails supplyAnalyzeInputs()
+    private BindingAnalysis supplyAnalyzeInputs()
     {
       return arg.analyzeInputs().withScalarArguments(ImmutableSet.of(arg));
+    }
+
+
+    @Override
+    public String toString()
+    {
+      return StringUtils.format("(%s %s)", name, getArgs());
     }
   }
 
   /**
    * Base class for multi-argument {@link ExprMacro} function {@link Expr}
    */
-  public abstract static class BaseScalarMacroFunctionExpr implements Expr
+  public abstract static class BaseScalarMacroFunctionExpr implements ExprMacroFunctionExpr
   {
     protected final String name;
     protected final List<Expr> args;
 
     // Use Supplier to memoize values as ExpressionSelectors#makeExprEvalSelector() can make repeated calls for them
-    private final Supplier<BindingDetails> analyzeInputsSupplier;
+    private final Supplier<BindingAnalysis> analyzeInputsSupplier;
 
     public BaseScalarMacroFunctionExpr(String name, final List<Expr> args)
     {
       this.name = name;
       this.args = args;
       analyzeInputsSupplier = Suppliers.memoize(this::supplyAnalyzeInputs);
+    }
+
+    @Override
+    public List<Expr> getArgs()
+    {
+      return args;
     }
 
     @Override
@@ -185,16 +205,7 @@ public class ExprMacroTable
     }
 
     @Override
-    public void visit(final Visitor visitor)
-    {
-      for (Expr arg : args) {
-        arg.visit(visitor);
-      }
-      visitor.visit(this);
-    }
-
-    @Override
-    public BindingDetails analyzeInputs()
+    public BindingAnalysis analyzeInputs()
     {
       return analyzeInputsSupplier.get();
     }
@@ -219,15 +230,21 @@ public class ExprMacroTable
       return Objects.hash(name, args);
     }
 
-    private BindingDetails supplyAnalyzeInputs()
+    private BindingAnalysis supplyAnalyzeInputs()
     {
       final Set<Expr> argSet = Sets.newHashSetWithExpectedSize(args.size());
-      BindingDetails accumulator = new BindingDetails();
+      BindingAnalysis accumulator = new BindingAnalysis();
       for (Expr arg : args) {
         accumulator = accumulator.with(arg);
         argSet.add(arg);
       }
       return accumulator.withScalarArguments(argSet);
+    }
+
+    @Override
+    public String toString()
+    {
+      return StringUtils.format("(%s %s)", name, getArgs());
     }
   }
 }

@@ -55,15 +55,16 @@ public class AvroOCFReader extends IntermediateRowParsingReader<GenericRecord>
       InputEntity source,
       File temporaryDirectory,
       @Nullable Schema readerSchema,
-      JSONPathSpec flattenSpec,
-      boolean binaryAsString
+      @Nullable JSONPathSpec flattenSpec,
+      boolean binaryAsString,
+      boolean extractUnionsByType
   )
   {
     this.inputRowSchema = inputRowSchema;
     this.source = source;
     this.temporaryDirectory = temporaryDirectory;
     this.readerSchema = readerSchema;
-    this.recordFlattener = ObjectFlatteners.create(flattenSpec, new AvroFlattenerMaker(false, binaryAsString));
+    this.recordFlattener = ObjectFlatteners.create(flattenSpec, new AvroFlattenerMaker(false, binaryAsString, extractUnionsByType));
   }
 
   @Override
@@ -111,20 +112,25 @@ public class AvroOCFReader extends IntermediateRowParsingReader<GenericRecord>
   }
 
   @Override
+  protected InputEntity source()
+  {
+    return source;
+  }
+
+  @Override
   protected List<InputRow> parseInputRows(GenericRecord intermediateRow) throws ParseException
   {
     return Collections.singletonList(
         MapInputRowParser.parse(
-            inputRowSchema.getTimestampSpec(),
-            inputRowSchema.getDimensionsSpec(),
+            inputRowSchema,
             recordFlattener.flatten(intermediateRow)
         )
     );
   }
 
   @Override
-  protected Map<String, Object> toMap(GenericRecord intermediateRow)
+  protected List<Map<String, Object>> toMap(GenericRecord intermediateRow)
   {
-    return recordFlattener.toMap(intermediateRow);
+    return Collections.singletonList(recordFlattener.toMap(intermediateRow));
   }
 }

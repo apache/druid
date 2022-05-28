@@ -1,522 +1,185 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`auto-form snapshot matches snapshot 1`] = `
+exports[`AutoForm matches snapshot 1`] = `
 <div
-  class="auto-form"
+  className="auto-form"
 >
-  <div
-    class="bp3-form-group form-group-with-info"
+  <Memo(FormGroupWithInfo)
+    key="testNumber"
+    label="Test number"
   >
-    <label
-      class="bp3-label"
-    >
-      Test one
-       
-      <span
-        class="bp3-text-muted"
-      />
-    </label>
-    <div
-      class="bp3-form-content"
-    >
-      <div
-        class="bp3-control-group bp3-fill bp3-numeric-input"
+    <Memo(NumericInputWithDefault)
+      disabled={false}
+      fill={true}
+      min={0}
+      onBlur={[Function]}
+      onValueChange={[Function]}
+      placeholder=""
+    />
+  </Memo(FormGroupWithInfo)>
+  <Memo(FormGroupWithInfo)
+    key="testSizeBytes"
+    label="Test size bytes"
+  >
+    <Blueprint4.NumericInput
+      allowNumericCharactersOnly={true}
+      buttonPosition="right"
+      clampValueOnBlur={false}
+      defaultValue=""
+      disabled={false}
+      fill={true}
+      large={false}
+      majorStepSize={1000000}
+      min={0}
+      minorStepSize={0.1}
+      onBlur={[Function]}
+      onValueChange={[Function]}
+      selectAllOnFocus={false}
+      selectAllOnIncrement={false}
+      stepSize={1000}
+    />
+  </Memo(FormGroupWithInfo)>
+  <Memo(FormGroupWithInfo)
+    key="testString"
+    label="Test string"
+  >
+    <Memo(SuggestibleInput)
+      disabled={false}
+      multiline={false}
+      onBlur={[Function]}
+      onValueChange={[Function]}
+      placeholder=""
+      value=""
+    />
+  </Memo(FormGroupWithInfo)>
+  <Memo(FormGroupWithInfo)
+    key="testStringWithDefault"
+    label="Test string with default"
+  >
+    <Memo(SuggestibleInput)
+      disabled={false}
+      multiline={false}
+      onBlur={[Function]}
+      onValueChange={[Function]}
+      placeholder=""
+      value="Hello World"
+    />
+  </Memo(FormGroupWithInfo)>
+  <Memo(FormGroupWithInfo)
+    key="testStringWithMultiline"
+    label="Test string with multiline"
+  >
+    <Memo(SuggestibleInput)
+      disabled={false}
+      multiline={true}
+      onBlur={[Function]}
+      onValueChange={[Function]}
+      placeholder=""
+      value="Hello World"
+    />
+  </Memo(FormGroupWithInfo)>
+  <Memo(FormGroupWithInfo)
+    key="testBoolean"
+    label="Test boolean"
+  >
+    <Blueprint4.ButtonGroup>
+      <Blueprint4.Button
+        active={false}
+        disabled={false}
+        onClick={[Function]}
       >
-        <div
-          class="bp3-input-group"
-        >
-          <input
-            autocomplete="off"
-            class="bp3-input"
-            min="0"
-            placeholder=""
-            style="padding-right: 10px;"
-            type="text"
-            value=""
-          />
-        </div>
-        <div
-          class="bp3-button-group bp3-vertical bp3-fixed"
-        >
-          <button
-            class="bp3-button"
-            type="button"
-          >
-            <span
-              class="bp3-icon bp3-icon-chevron-up"
-              icon="chevron-up"
-            >
-              <svg
-                data-icon="chevron-up"
-                height="16"
-                viewBox="0 0 16 16"
-                width="16"
-              >
-                <desc>
-                  chevron-up
-                </desc>
-                <path
-                  d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
-                  fill-rule="evenodd"
-                />
-              </svg>
-            </span>
-          </button>
-          <button
-            class="bp3-button"
-            type="button"
-          >
-            <span
-              class="bp3-icon bp3-icon-chevron-down"
-              icon="chevron-down"
-            >
-              <svg
-                data-icon="chevron-down"
-                height="16"
-                viewBox="0 0 16 16"
-                width="16"
-              >
-                <desc>
-                  chevron-down
-                </desc>
-                <path
-                  d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
-                  fill-rule="evenodd"
-                />
-              </svg>
-            </span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div
-    class="bp3-form-group form-group-with-info"
-  >
-    <label
-      class="bp3-label"
-    >
-      Test two
-       
-      <span
-        class="bp3-text-muted"
-      />
-    </label>
-    <div
-      class="bp3-form-content"
-    >
-      <div
-        class="bp3-control-group bp3-fill bp3-numeric-input"
+        False
+      </Blueprint4.Button>
+      <Blueprint4.Button
+        active={false}
+        disabled={false}
+        onClick={[Function]}
       >
-        <div
-          class="bp3-input-group"
-        >
-          <input
-            autocomplete="off"
-            class="bp3-input"
-            min="0"
-            style="padding-right: 10px;"
-            type="text"
-            value=""
-          />
-        </div>
-        <div
-          class="bp3-button-group bp3-vertical bp3-fixed"
-        >
-          <button
-            class="bp3-button"
-            type="button"
-          >
-            <span
-              class="bp3-icon bp3-icon-chevron-up"
-              icon="chevron-up"
-            >
-              <svg
-                data-icon="chevron-up"
-                height="16"
-                viewBox="0 0 16 16"
-                width="16"
-              >
-                <desc>
-                  chevron-up
-                </desc>
-                <path
-                  d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
-                  fill-rule="evenodd"
-                />
-              </svg>
-            </span>
-          </button>
-          <button
-            class="bp3-button"
-            type="button"
-          >
-            <span
-              class="bp3-icon bp3-icon-chevron-down"
-              icon="chevron-down"
-            >
-              <svg
-                data-icon="chevron-down"
-                height="16"
-                viewBox="0 0 16 16"
-                width="16"
-              >
-                <desc>
-                  chevron-down
-                </desc>
-                <path
-                  d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
-                  fill-rule="evenodd"
-                />
-              </svg>
-            </span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div
-    class="bp3-form-group form-group-with-info"
+        True
+      </Blueprint4.Button>
+    </Blueprint4.ButtonGroup>
+  </Memo(FormGroupWithInfo)>
+  <Memo(FormGroupWithInfo)
+    key="testBooleanWithDefault"
+    label="Test boolean with default"
   >
-    <label
-      class="bp3-label"
-    >
-      Test three
-       
-      <span
-        class="bp3-text-muted"
-      />
-    </label>
-    <div
-      class="bp3-form-content"
-    >
-      <div
-        class="bp3-input-group suggestible-input"
+    <Blueprint4.ButtonGroup>
+      <Blueprint4.Button
+        active={true}
+        disabled={false}
+        onClick={[Function]}
       >
-        <input
-          class="bp3-input"
-          placeholder=""
-          style="padding-right: 10px;"
-          type="text"
-          value=""
-        />
-      </div>
-    </div>
-  </div>
-  <div
-    class="bp3-form-group form-group-with-info"
-  >
-    <label
-      class="bp3-label"
-    >
-      Test four
-       
-      <span
-        class="bp3-text-muted"
-      />
-    </label>
-    <div
-      class="bp3-form-content"
-    >
-      <div
-        class="bp3-button-group"
+        False
+      </Blueprint4.Button>
+      <Blueprint4.Button
+        active={false}
+        disabled={false}
+        onClick={[Function]}
       >
-        <button
-          class="bp3-button"
-          type="button"
-        >
-          <span
-            class="bp3-button-text"
-          >
-            False
-          </span>
-        </button>
-        <button
-          class="bp3-button"
-          type="button"
-        >
-          <span
-            class="bp3-button-text"
-          >
-            True
-          </span>
-        </button>
-      </div>
-    </div>
-  </div>
-  <div
-    class="bp3-form-group form-group-with-info"
+        True
+      </Blueprint4.Button>
+    </Blueprint4.ButtonGroup>
+  </Memo(FormGroupWithInfo)>
+  <Memo(FormGroupWithInfo)
+    key="testStringArray"
+    label="Test string array"
   >
-    <label
-      class="bp3-label"
-    >
-      Test four with default
-       
-      <span
-        class="bp3-text-muted"
-      />
-    </label>
-    <div
-      class="bp3-form-content"
-    >
-      <div
-        class="bp3-button-group"
-      >
-        <button
-          class="bp3-button bp3-active"
-          type="button"
-        >
-          <span
-            class="bp3-button-text"
-          >
-            False
-          </span>
-        </button>
-        <button
-          class="bp3-button"
-          type="button"
-        >
-          <span
-            class="bp3-button-text"
-          >
-            True
-          </span>
-        </button>
-      </div>
-    </div>
-  </div>
-  <div
-    class="bp3-form-group form-group-with-info"
+    <Memo(ArrayInput)
+      disabled={false}
+      onChange={[Function]}
+      placeholder=""
+      values={Array []}
+    />
+  </Memo(FormGroupWithInfo)>
+  <Memo(FormGroupWithInfo)
+    key="testStringArrayWithDefault"
+    label="Test string array with default"
   >
-    <label
-      class="bp3-label"
-    >
-      Test five
-       
-      <span
-        class="bp3-text-muted"
-      />
-    </label>
-    <div
-      class="bp3-form-content"
-    >
-      <textarea
-        class="bp3-input bp3-fill"
-        placeholder=""
-      />
-    </div>
-  </div>
-  <div
-    class="bp3-form-group form-group-with-info"
+    <Memo(ArrayInput)
+      disabled={false}
+      onChange={[Function]}
+      placeholder=""
+      values={
+        Array [
+          "Hello",
+          "World",
+        ]
+      }
+    />
+  </Memo(FormGroupWithInfo)>
+  <Memo(FormGroupWithInfo)
+    key="testJson"
+    label="Test json"
   >
-    <label
-      class="bp3-label"
-    >
-      Test six
-       
-      <span
-        class="bp3-text-muted"
-      />
-    </label>
-    <div
-      class="bp3-form-content"
-    >
-      <div
-        class=" ace_editor ace-tm json-input"
-        id="brace-editor"
-        style="width: 100%; height: 8vh;"
-      >
-        <textarea
-          autocapitalize="off"
-          autocorrect="off"
-          class="ace_text-input"
-          spellcheck="false"
-          style="opacity: 0;"
-          wrap="off"
-        />
-        <div
-          aria-hidden="true"
-          class="ace_gutter"
-          style="display: none;"
-        >
-          <div
-            class="ace_layer ace_gutter-layer ace_folding-enabled"
-          />
-          <div
-            class="ace_gutter-active-line"
-          />
-        </div>
-        <div
-          class="ace_scroller"
-        >
-          <div
-            class="ace_content"
-          >
-            <div
-              class="ace_layer ace_print-margin-layer"
-            >
-              <div
-                class="ace_print-margin"
-                style="left: 4px; visibility: hidden;"
-              />
-            </div>
-            <div
-              class="ace_layer ace_marker-layer"
-            />
-            <div
-              class="ace_layer ace_text-layer"
-              style="padding: 0px 4px;"
-            />
-            <div
-              class="ace_layer ace_marker-layer"
-            />
-            <div
-              class="ace_layer ace_cursor-layer ace_hidden-cursors"
-            >
-              <div
-                class="ace_cursor"
-              />
-            </div>
-          </div>
-        </div>
-        <div
-          class="ace_scrollbar ace_scrollbar-v"
-          style="display: none; width: 20px;"
-        >
-          <div
-            class="ace_scrollbar-inner"
-            style="width: 20px;"
-          />
-        </div>
-        <div
-          class="ace_scrollbar ace_scrollbar-h"
-          style="display: none; height: 20px;"
-        >
-          <div
-            class="ace_scrollbar-inner"
-            style="height: 20px;"
-          />
-        </div>
-        <div
-          style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: hidden;"
-        >
-          <div
-            style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
-          />
-          <div
-            style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
-          >
-            XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div
-    class="bp3-form-group form-group-with-info"
+    <Memo(JsonInput)
+      onChange={[Function]}
+      placeholder=""
+    />
+  </Memo(FormGroupWithInfo)>
+  <Memo(FormGroupWithInfo)
+    key="testStringRequiredAndDefaultValue"
+    label="Test string required and default value"
   >
-    <label
-      class="bp3-label"
-    >
-      Test seven
-       
-      <span
-        class="bp3-text-muted"
-      />
-    </label>
-    <div
-      class="bp3-form-content"
-    >
-      <div
-        class=" ace_editor ace-tm json-input"
-        id="brace-editor"
-        style="width: 100%; height: 8vh;"
-      >
-        <textarea
-          autocapitalize="off"
-          autocorrect="off"
-          class="ace_text-input"
-          spellcheck="false"
-          style="opacity: 0;"
-          wrap="off"
-        />
-        <div
-          aria-hidden="true"
-          class="ace_gutter"
-          style="display: none;"
-        >
-          <div
-            class="ace_layer ace_gutter-layer ace_folding-enabled"
-          />
-          <div
-            class="ace_gutter-active-line"
-          />
-        </div>
-        <div
-          class="ace_scroller"
-        >
-          <div
-            class="ace_content"
-          >
-            <div
-              class="ace_layer ace_print-margin-layer"
-            >
-              <div
-                class="ace_print-margin"
-                style="left: 4px; visibility: hidden;"
-              />
-            </div>
-            <div
-              class="ace_layer ace_marker-layer"
-            />
-            <div
-              class="ace_layer ace_text-layer"
-              style="padding: 0px 4px;"
-            />
-            <div
-              class="ace_layer ace_marker-layer"
-            />
-            <div
-              class="ace_layer ace_cursor-layer ace_hidden-cursors"
-            >
-              <div
-                class="ace_cursor"
-              />
-            </div>
-          </div>
-        </div>
-        <div
-          class="ace_scrollbar ace_scrollbar-v"
-          style="display: none; width: 20px;"
-        >
-          <div
-            class="ace_scrollbar-inner"
-            style="width: 20px;"
-          />
-        </div>
-        <div
-          class="ace_scrollbar ace_scrollbar-h"
-          style="display: none; height: 20px;"
-        >
-          <div
-            class="ace_scrollbar-inner"
-            style="height: 20px;"
-          />
-        </div>
-        <div
-          style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: hidden;"
-        >
-          <div
-            style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
-          />
-          <div
-            style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
-          >
-            XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+    <Memo(SuggestibleInput)
+      disabled={false}
+      intent="primary"
+      multiline={false}
+      onBlur={[Function]}
+      onValueChange={[Function]}
+      placeholder=""
+      value=""
+    />
+  </Memo(FormGroupWithInfo)>
+  <Blueprint4.FormGroup
+    key="more-or-less"
+  >
+    <Blueprint4.Button
+      fill={true}
+      minimal={true}
+      onClick={[Function]}
+      rightIcon="chevron-down"
+      text="Show more"
+    />
+  </Blueprint4.FormGroup>
 </div>
 `;

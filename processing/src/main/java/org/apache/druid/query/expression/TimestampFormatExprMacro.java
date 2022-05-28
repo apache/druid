@@ -25,12 +25,14 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class TimestampFormatExprMacro implements ExprMacroTable.ExprMacro
@@ -93,8 +95,14 @@ public class TimestampFormatExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new TimestampFormatExpr(newArg));
+        return shuttle.visit(apply(shuttle.visitAll(args)));
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getOutputType(InputBindingInspector inspector)
+      {
+        return ExpressionType.STRING;
       }
 
       @Override

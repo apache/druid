@@ -38,7 +38,7 @@ public class WorkerCategorySpec
       @JsonProperty("strong") boolean strong
   )
   {
-    this.categoryMap = categoryMap == null ? Collections.EMPTY_MAP : categoryMap;
+    this.categoryMap = categoryMap == null ? Collections.emptyMap() : categoryMap;
     this.strong = strong;
   }
 
@@ -96,7 +96,7 @@ public class WorkerCategorySpec
     )
     {
       this.defaultCategory = defaultCategory;
-      this.categoryAffinity = categoryAffinity == null ? Collections.EMPTY_MAP : categoryAffinity;
+      this.categoryAffinity = categoryAffinity == null ? Collections.emptyMap() : categoryAffinity;
     }
 
     @JsonProperty

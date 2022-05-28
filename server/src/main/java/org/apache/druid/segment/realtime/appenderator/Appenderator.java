@@ -24,7 +24,6 @@ import com.google.common.base.Supplier;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 
@@ -44,6 +43,12 @@ import java.util.List;
  * Concurrency: all methods defined in this class directly, including {@link #close()} and {@link #closeNow()}, i. e.
  * all methods of the data appending and indexing lifecycle except {@link #drop} must be called from a single thread.
  * Methods inherited from {@link QuerySegmentWalker} can be called concurrently from multiple threads.
+ *<p>
+ * Important note: For historical reasons there was a single implementation for this interface ({@code AppenderatorImpl})
+ * but that since has been split into two classes: {@link StreamAppenderator} and {@link BatchAppenderator}. With this change
+ * all the query support & concurrency has been removed/changed in {@code BatchAppenderator} therefore this class no longer
+ * makes sense to have as an {@code Appenderator}. In the future we may want to refactor away the {@code Appenderator}
+ * interface from {@code BatchAppenderator}.
  */
 public interface Appenderator extends QuerySegmentWalker
 {
@@ -227,20 +232,15 @@ public interface Appenderator extends QuerySegmentWalker
     private final int numRowsInSegment;
     private final boolean isPersistRequired;
 
-    @Nullable
-    private final ParseException parseException;
-
     AppenderatorAddResult(
         SegmentIdWithShardSpec identifier,
         int numRowsInSegment,
-        boolean isPersistRequired,
-        @Nullable ParseException parseException
+        boolean isPersistRequired
     )
     {
       this.segmentIdentifier = identifier;
       this.numRowsInSegment = numRowsInSegment;
       this.isPersistRequired = isPersistRequired;
-      this.parseException = parseException;
     }
 
     SegmentIdWithShardSpec getSegmentIdentifier()
@@ -248,7 +248,8 @@ public interface Appenderator extends QuerySegmentWalker
       return segmentIdentifier;
     }
 
-    int getNumRowsInSegment()
+    @VisibleForTesting
+    public int getNumRowsInSegment()
     {
       return numRowsInSegment;
     }
@@ -256,12 +257,6 @@ public interface Appenderator extends QuerySegmentWalker
     boolean isPersistRequired()
     {
       return isPersistRequired;
-    }
-
-    @Nullable
-    public ParseException getParseException()
-    {
-      return parseException;
     }
   }
 }

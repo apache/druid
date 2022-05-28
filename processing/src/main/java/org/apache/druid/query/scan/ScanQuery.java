@@ -21,25 +21,33 @@ package org.apache.druid.query.scan;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.Query;
+import org.apache.druid.query.Queries;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 public class ScanQuery extends BaseQuery<ScanResultValue>
 {
@@ -81,6 +89,63 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     }
   }
 
+  public static class OrderBy
+  {
+    private final String columnName;
+    private final Order order;
+
+    @JsonCreator
+    public OrderBy(
+        @JsonProperty("columnName") final String columnName,
+        @JsonProperty("order") final Order order
+    )
+    {
+      this.columnName = Preconditions.checkNotNull(columnName, "columnName");
+      this.order = Preconditions.checkNotNull(order, "order");
+
+      if (order == Order.NONE) {
+        throw new IAE("Order required for column [%s]", columnName);
+      }
+    }
+
+    @JsonProperty
+    public String getColumnName()
+    {
+      return columnName;
+    }
+
+    @JsonProperty
+    public Order getOrder()
+    {
+      return order;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      OrderBy that = (OrderBy) o;
+      return Objects.equals(columnName, that.columnName) && order == that.order;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(columnName, order);
+    }
+
+    @Override
+    public String toString()
+    {
+      return StringUtils.format("%s %s", columnName, order == Order.ASCENDING ? "ASC" : "DESC");
+    }
+  }
+
   public enum Order
   {
     ASCENDING,
@@ -110,12 +175,13 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   private final VirtualColumns virtualColumns;
   private final ResultFormat resultFormat;
   private final int batchSize;
-  @JsonProperty("limit")
+  private final long scanRowsOffset;
   private final long scanRowsLimit;
   private final DimFilter dimFilter;
   private final List<String> columns;
   private final Boolean legacy;
-  private final Order order;
+  private final Order timeOrder;
+  private final List<OrderBy> orderBys;
   private final Integer maxRowsQueuedForOrdering;
   private final Integer maxSegmentPartitionsOrderedInMemory;
 
@@ -126,8 +192,10 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       @JsonProperty("virtualColumns") VirtualColumns virtualColumns,
       @JsonProperty("resultFormat") ResultFormat resultFormat,
       @JsonProperty("batchSize") int batchSize,
+      @JsonProperty("offset") long scanRowsOffset,
       @JsonProperty("limit") long scanRowsLimit,
-      @JsonProperty("order") Order order,
+      @JsonProperty("order") Order orderFromUser,
+      @JsonProperty("orderBy") List<OrderBy> orderBysFromUser,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("columns") List<String> columns,
       @JsonProperty("legacy") Boolean legacy,
@@ -142,6 +210,11 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
         this.batchSize > 0,
         "batchSize must be greater than 0"
     );
+    this.scanRowsOffset = scanRowsOffset;
+    Preconditions.checkArgument(
+        this.scanRowsOffset >= 0,
+        "offset must be greater than or equal to 0"
+    );
     this.scanRowsLimit = (scanRowsLimit == 0) ? Long.MAX_VALUE : scanRowsLimit;
     Preconditions.checkArgument(
         this.scanRowsLimit > 0,
@@ -150,15 +223,41 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     this.dimFilter = dimFilter;
     this.columns = columns;
     this.legacy = legacy;
-    this.order = (order == null) ? Order.NONE : order;
-    if (this.order != Order.NONE) {
-      Preconditions.checkArgument(
-          columns == null || columns.size() == 0 || columns.contains(ColumnHolder.TIME_COLUMN_NAME),
-          "The __time column must be selected if the results are time-ordered."
-      );
+
+    final Pair<List<OrderBy>, Order> ordering = verifyAndReconcileOrdering(orderBysFromUser, orderFromUser);
+    this.orderBys = Preconditions.checkNotNull(ordering.lhs);
+    this.timeOrder = ordering.rhs;
+
+    if (this.columns != null && this.columns.size() > 0) {
+      // Validate orderBy. (Cannot validate when signature is empty, since that means "discover at runtime".)
+
+      for (final OrderBy orderByColumn : this.orderBys) {
+        if (!this.columns.contains(orderByColumn.getColumnName())) {
+          // Error message depends on how the user originally specified ordering.
+          if (orderBysFromUser != null) {
+            throw new IAE("Column [%s] from 'orderBy' must also appear in 'columns'.", orderByColumn.getColumnName());
+          } else {
+            throw new IllegalArgumentException("The __time column must be selected if the results are time-ordered.");
+          }
+        }
+      }
     }
+
     this.maxRowsQueuedForOrdering = validateAndGetMaxRowsQueuedForOrdering();
     this.maxSegmentPartitionsOrderedInMemory = validateAndGetMaxSegmentPartitionsOrderedInMemory();
+  }
+
+  /**
+   * Verifies that the ordering of a query is solely determined by {@link #getTimeOrder()}. Required to actually
+   * execute queries, because {@link #getOrderBys()} is not yet understood by the query engines.
+   *
+   * @throws IllegalStateException if the ordering is not solely determined by {@link #getTimeOrder()}
+   */
+  public static void verifyOrderByForNativeExecution(final ScanQuery query)
+  {
+    if (query.getTimeOrder() == Order.NONE && !query.getOrderBys().isEmpty()) {
+      throw new ISE("Cannot execute query with orderBy %s", query.getOrderBys());
+    }
   }
 
   private Integer validateAndGetMaxRowsQueuedForOrdering()
@@ -183,8 +282,8 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return maxSegmentPartitionsOrderedInMemory;
   }
 
-  @Override
   @JsonProperty
+  @Override
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;
@@ -202,16 +301,69 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return batchSize;
   }
 
-  @JsonProperty
+  /**
+   * Offset for this query; behaves like SQL "OFFSET". Zero means no offset. Negative values are invalid.
+   */
+  @JsonProperty("offset")
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public long getScanRowsOffset()
+  {
+    return scanRowsOffset;
+  }
+
+  /**
+   * Limit for this query; behaves like SQL "LIMIT". Will always be positive. {@link Long#MAX_VALUE} is used in
+   * situations where the user wants an effectively unlimited resultset.
+   */
+  @JsonProperty("limit")
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = ScanRowsLimitJsonIncludeFilter.class)
   public long getScanRowsLimit()
   {
     return scanRowsLimit;
   }
 
-  @JsonProperty
-  public Order getOrder()
+  /**
+   * Returns whether this query is limited or not. Because {@link Long#MAX_VALUE} is used to signify unlimitedness,
+   * this is equivalent to {@code getScanRowsLimit() != Long.Max_VALUE}.
+   *
+   * @see #getScanRowsLimit()
+   */
+  public boolean isLimited()
   {
-    return order;
+    return scanRowsLimit != Long.MAX_VALUE;
+  }
+
+  /**
+   * If this query is purely-time-ordered, returns a value of the enum {@link Order}. Otherwise, returns
+   * {@link Order#NONE}. If the returned value is {@link Order#NONE} it may not agree with {@link #getOrderBys()}.
+   */
+  @JsonProperty("order")
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = ScanTimeOrderJsonIncludeFilter.class)
+  public Order getTimeOrder()
+  {
+    return timeOrder;
+  }
+
+  public List<OrderBy> getOrderBys()
+  {
+    return orderBys;
+  }
+
+  @Nullable
+  @JsonProperty("orderBy")
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
+  List<OrderBy> getOrderBysForJson()
+  {
+    // Return "orderBy" if necessary (meaning: if it is nonempty and nontime). Prevents polluting JSONs with
+    // redundant "orderBy" and "order" fields.
+
+    if (orderBys.size() > 1
+        || (orderBys.size() == 1
+            && !Iterables.getOnlyElement(orderBys).getColumnName().equals(ColumnHolder.TIME_COLUMN_NAME))) {
+      return orderBys;
+    } else {
+      return null;
+    }
   }
 
   @Nullable
@@ -235,6 +387,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   }
 
   @Override
+  @Nullable
   @JsonProperty
   public DimFilter getFilter()
   {
@@ -247,7 +400,9 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return SCAN;
   }
 
+  @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<String> getColumns()
   {
     return columns;
@@ -256,7 +411,9 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   /**
    * Compatibility mode with the legacy scan-query extension.
    */
+  @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Boolean isLegacy()
   {
     return legacy;
@@ -265,10 +422,47 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   @Override
   public Ordering<ScanResultValue> getResultOrdering()
   {
-    if (order == Order.NONE) {
+    // No support yet for actually executing queries with non-time orderBy.
+    verifyOrderByForNativeExecution(this);
+
+    if (timeOrder == Order.NONE) {
       return Ordering.natural();
     }
-    return Ordering.from(new ScanResultValueTimestampComparator(this)).reverse();
+    return Ordering.from(
+        new ScanResultValueTimestampComparator(this).thenComparing(
+            timeOrder == Order.ASCENDING
+            ? Comparator.naturalOrder()
+            : Comparator.<ScanResultValue>naturalOrder().reversed()
+        )
+    );
+  }
+
+  @Nullable
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    if (columns == null || columns.isEmpty()) {
+      // We don't know what columns we require. We'll find out when the segment shows up.
+      return null;
+    } else {
+      return Queries.computeRequiredColumns(
+          virtualColumns,
+          dimFilter,
+          Collections.emptyList(),
+          Collections.emptyList(),
+          columns
+      );
+    }
+  }
+
+  public ScanQuery withOffset(final long newOffset)
+  {
+    return Druids.ScanQueryBuilder.copy(this).offset(newOffset).build();
+  }
+
+  public ScanQuery withLimit(final long newLimit)
+  {
+    return Druids.ScanQueryBuilder.copy(this).limit(newLimit).build();
   }
 
   public ScanQuery withNonNullLegacy(final ScanQueryConfig scanQueryConfig)
@@ -277,30 +471,25 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   }
 
   @Override
-  public Query<ScanResultValue> withQuerySegmentSpec(QuerySegmentSpec querySegmentSpec)
+  public ScanQuery withQuerySegmentSpec(QuerySegmentSpec querySegmentSpec)
   {
     return Druids.ScanQueryBuilder.copy(this).intervals(querySegmentSpec).build();
   }
 
   @Override
-  public Query<ScanResultValue> withDataSource(DataSource dataSource)
+  public ScanQuery withDataSource(DataSource dataSource)
   {
     return Druids.ScanQueryBuilder.copy(this).dataSource(dataSource).build();
   }
 
   @Override
-  public Query<ScanResultValue> withOverriddenContext(Map<String, Object> contextOverrides)
+  public ScanQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     return Druids.ScanQueryBuilder.copy(this).context(computeOverriddenContext(getContext(), contextOverrides)).build();
   }
 
-  public ScanQuery withDimFilter(DimFilter dimFilter)
-  {
-    return Druids.ScanQueryBuilder.copy(this).filters(dimFilter).build();
-  }
-
   @Override
-  public boolean equals(final Object o)
+  public boolean equals(Object o)
   {
     if (this == o) {
       return true;
@@ -313,19 +502,31 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     }
     final ScanQuery scanQuery = (ScanQuery) o;
     return batchSize == scanQuery.batchSize &&
+           scanRowsOffset == scanQuery.scanRowsOffset &&
            scanRowsLimit == scanQuery.scanRowsLimit &&
            Objects.equals(legacy, scanQuery.legacy) &&
            Objects.equals(virtualColumns, scanQuery.virtualColumns) &&
            Objects.equals(resultFormat, scanQuery.resultFormat) &&
            Objects.equals(dimFilter, scanQuery.dimFilter) &&
-           Objects.equals(columns, scanQuery.columns);
+           Objects.equals(columns, scanQuery.columns) &&
+           Objects.equals(orderBys, scanQuery.orderBys);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), virtualColumns, resultFormat, batchSize,
-                        scanRowsLimit, dimFilter, columns, legacy);
+    return Objects.hash(
+        super.hashCode(),
+        virtualColumns,
+        resultFormat,
+        batchSize,
+        scanRowsOffset,
+        scanRowsLimit,
+        dimFilter,
+        columns,
+        orderBys,
+        legacy
+    );
   }
 
   @Override
@@ -337,10 +538,109 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
            ", virtualColumns=" + getVirtualColumns() +
            ", resultFormat='" + resultFormat + '\'' +
            ", batchSize=" + batchSize +
-           ", scanRowsLimit=" + scanRowsLimit +
+           ", offset=" + scanRowsOffset +
+           ", limit=" + scanRowsLimit +
            ", dimFilter=" + dimFilter +
            ", columns=" + columns +
-           ", legacy=" + legacy +
+           (orderBys.isEmpty() ? "" : ", orderBy=" + orderBys) +
+           (legacy == null ? "" : ", legacy=" + legacy) +
+           ", context=" + getContext() +
            '}';
+  }
+
+  /**
+   * Verify and reconcile the two ways of specifying ordering: "orderBy", which can refer to any column, and
+   * "order", which refers to the __time column.
+   *
+   * If only "order" is provided, it is returned as-is, along with an equivalent "orderBy".
+   *
+   * If only "orderBy" is provided, it is returned as-is. If it can be converted into an equivalent "order", then that
+   * equivalent "order" is also returned. Otherwise, "orderBy" is returned as-is and "order" is returned as NONE.
+   *
+   * If both "orderBy" and "order" are provided, this returns them as-is if they are compatible, or throws an
+   * exception if they are incompatible.
+   *
+   * @param orderByFromUser "orderBy" specified by the user (can refer to any column)
+   * @param orderFromUser   "order" specified by the user (refers to time order)
+   */
+  private static Pair<List<OrderBy>, Order> verifyAndReconcileOrdering(
+      @Nullable final List<OrderBy> orderByFromUser,
+      @Nullable final Order orderFromUser
+  )
+  {
+    final List<OrderBy> orderByRetVal;
+    final Order orderRetVal;
+
+    // Compute the returned orderBy.
+    if (orderByFromUser != null) {
+      orderByRetVal = orderByFromUser;
+    } else if (orderFromUser == null || orderFromUser == Order.NONE) {
+      orderByRetVal = Collections.emptyList();
+    } else {
+      orderByRetVal = Collections.singletonList(new OrderBy(ColumnHolder.TIME_COLUMN_NAME, orderFromUser));
+    }
+
+    // Compute the returned order.
+    orderRetVal = computeTimeOrderFromOrderBys(orderByRetVal);
+
+    // Verify compatibility, if the user specified both kinds of ordering.
+    if (orderFromUser != null && orderFromUser != Order.NONE && orderRetVal != orderFromUser) {
+      throw new IAE("Cannot provide 'order' incompatible with 'orderBy'");
+    }
+
+    return Pair.of(orderByRetVal, orderRetVal);
+  }
+
+  /**
+   * Compute time ordering based on a list of orderBys.
+   *
+   * Returns {@link Order#ASCENDING} or {@link Order#DESCENDING} if the ordering is time-based; returns
+   * {@link Order#NONE} otherwise. Importantly, this means that the returned order is not necessarily compatible
+   * with the input orderBys.
+   */
+  @Nullable
+  private static Order computeTimeOrderFromOrderBys(final List<OrderBy> orderBys)
+  {
+    if (orderBys.size() == 1) {
+      final OrderBy orderByColumn = Iterables.getOnlyElement(orderBys);
+
+      if (ColumnHolder.TIME_COLUMN_NAME.equals(orderByColumn.getColumnName())) {
+        return orderByColumn.getOrder();
+      }
+    }
+
+    return Order.NONE;
+  }
+
+  /**
+   * {@link JsonInclude} filter for {@link #getTimeOrder()}.
+   *
+   * This API works by "creative" use of equals. It requires warnings to be suppressed and also requires spotbugs
+   * exclusions (see spotbugs-exclude.xml).
+   */
+  @SuppressWarnings({"EqualsAndHashcode", "EqualsHashCode"})
+  static class ScanTimeOrderJsonIncludeFilter // lgtm [java/inconsistent-equals-and-hashcode]
+  {
+    @Override
+    public boolean equals(Object obj)
+    {
+      return obj instanceof Order && Order.NONE.equals(obj);
+    }
+  }
+
+  /**
+   * {@link JsonInclude} filter for {@link #getScanRowsLimit()}.
+   *
+   * This API works by "creative" use of equals. It requires warnings to be suppressed and also requires spotbugs
+   * exclusions (see spotbugs-exclude.xml).
+   */
+  @SuppressWarnings({"EqualsAndHashcode", "EqualsHashCode"})
+  static class ScanRowsLimitJsonIncludeFilter // lgtm [java/inconsistent-equals-and-hashcode]
+  {
+    @Override
+    public boolean equals(Object obj)
+    {
+      return obj instanceof Long && (long) obj == Long.MAX_VALUE;
+    }
   }
 }

@@ -16,39 +16,37 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-core';
+import * as playwright from 'playwright-chromium';
 
-import { DataConnector } from './data-connector';
+import { setLabeledInput } from '../../../util/playwright';
+
+import { clickApplyButton, DataConnector } from './data-connector';
 
 /**
  * Local file connector for data loader input data.
  */
 export class LocalFileDataConnector implements DataConnector {
   readonly name: string;
-  private page: playwright.Page;
-  private baseDirectory: string;
-  private fileFilter: string;
+  readonly needParse: boolean;
+  private readonly page: playwright.Page;
 
-  constructor(page: playwright.Page, baseDirectory: string, fileFilter: string) {
+  constructor(page: playwright.Page, props: LocalFileDataConnectorProps) {
+    Object.assign(this, props);
     this.name = 'Local disk';
+    this.needParse = true;
     this.page = page;
-    this.baseDirectory = baseDirectory;
-    this.fileFilter = fileFilter;
   }
 
   async connect() {
-    const baseDirectoryInput = await this.page.$('input[placeholder="/path/to/files/"]');
-    await this.setInput(baseDirectoryInput!, this.baseDirectory);
-
-    const fileFilterInput = await this.page.$('input[value="*"]');
-    await this.setInput(fileFilterInput!, this.fileFilter);
-
-    const applyButton = await this.page.$('"Apply"');
-    await applyButton!.click();
-  }
-
-  private async setInput(input: playwright.ElementHandle<Element>, value: string) {
-    await input.fill('');
-    await input.type(value);
+    await setLabeledInput(this.page, 'Base directory', this.baseDirectory);
+    await setLabeledInput(this.page, 'File filter', this.fileFilter);
+    await clickApplyButton(this.page);
   }
 }
+
+interface LocalFileDataConnectorProps {
+  readonly baseDirectory: string;
+  readonly fileFilter: string;
+}
+
+export interface LocalFileDataConnector extends LocalFileDataConnectorProps {}

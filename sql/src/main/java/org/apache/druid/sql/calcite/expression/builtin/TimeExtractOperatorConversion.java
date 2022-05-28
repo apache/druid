@@ -44,7 +44,7 @@ public class TimeExtractOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("TIME_EXTRACT")
       .operandTypes(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
       .requiredOperands(2)
-      .returnTypeNonNull(SqlTypeName.BIGINT)
+      .returnTypeCascadeNullable(SqlTypeName.BIGINT)
       .functionCategory(SqlFunctionCategory.TIMEDATE)
       .build();
 
@@ -54,12 +54,13 @@ public class TimeExtractOperatorConversion implements SqlOperatorConversion
       final DateTimeZone timeZone
   )
   {
-    return DruidExpression.fromFunctionCall(
+    return DruidExpression.ofFunctionCall(
+        timeExpression.getDruidType(),
         "timestamp_extract",
         ImmutableList.of(
             timeExpression,
-            DruidExpression.fromExpression(DruidExpression.stringLiteral(unit.name())),
-            DruidExpression.fromExpression(DruidExpression.stringLiteral(timeZone.getID()))
+            DruidExpression.ofStringLiteral(unit.name()),
+            DruidExpression.ofStringLiteral(timeZone.getID())
         )
     );
   }

@@ -19,11 +19,12 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import org.apache.druid.server.coordinator.CompactionStatistics;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Segments in the lists which are the elements of this iterator are sorted according to the natural segment order
@@ -31,10 +32,20 @@ import java.util.List;
  */
 public interface CompactionSegmentIterator extends Iterator<List<DataSegment>>
 {
-  long UNKNOWN_TOTAL_REMAINING_SEGMENTS_SIZE = -1L;
   /**
-   * Return a map of (dataSource, total size of remaining segments) for all dataSources.
-   * This method should consider all segments except the segments returned by {@link #next()}.
+   * Return a map of dataSourceName to CompactionStatistics.
+   * This method returns the aggregated statistics of segments that was already compacted and does not need to be compacted
+   * again. Hence, segment that were not returned by the {@link Iterator#next()} becuase it does not needs compaction.
+   * Note that the aggregations returned by this method is only up to the current point of the iterator being iterated.
    */
-  Object2LongOpenHashMap<String> totalRemainingSegmentsSizeBytes();
+  Map<String, CompactionStatistics> totalCompactedStatistics();
+
+  /**
+   * Return a map of dataSourceName to CompactionStatistics.
+   * This method returns the aggregated statistics of segments that was skipped as it cannot be compacted.
+   * Hence, segment that were not returned by the {@link Iterator#next()} becuase it cannot be compacted.
+   * Note that the aggregations returned by this method is only up to the current point of the iterator being iterated.
+   */
+  Map<String, CompactionStatistics> totalSkippedStatistics();
+
 }

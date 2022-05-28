@@ -80,7 +80,7 @@
       "partitionsSpec": %%PARTITIONS_SPEC%%,
       "splitHintSpec": {
         "type": "maxSize",
-        "maxSplitSize": 1
+        "maxNumFiles": 1
       }
     }
   }

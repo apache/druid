@@ -22,6 +22,7 @@ package org.apache.druid.segment.column;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 
 import javax.annotation.Nullable;
 
@@ -29,20 +30,15 @@ import javax.annotation.Nullable;
  */
 public class ColumnBuilder
 {
-  @Nullable
-  private ValueType type = null;
-  private boolean hasMultipleValues = false;
-  private boolean filterable = false;
-  private boolean dictionaryEncoded = false;
+  private final ColumnCapabilitiesImpl capabilitiesBuilder = ColumnCapabilitiesImpl.createDefault();
 
   @Nullable
   private Supplier<? extends BaseColumn> columnSupplier = null;
   @Nullable
-  private Supplier<BitmapIndex> bitmapIndex = null;
-  @Nullable
-  private Supplier<SpatialIndex> spatialIndex = null;
+  private ColumnIndexSupplier indexSupplier = NoIndexesColumnIndexSupplier.getInstance();
   @Nullable
   private SmooshedFileMapper fileMapper = null;
+
 
   public ColumnBuilder setFileMapper(SmooshedFileMapper fileMapper)
   {
@@ -57,27 +53,35 @@ public class ColumnBuilder
 
   public ColumnBuilder setType(ValueType type)
   {
-    this.type = type;
+    this.capabilitiesBuilder.setType(ColumnTypeFactory.ofValueType(type));
+    return this;
+  }
+
+  public ColumnBuilder setComplexTypeName(String typeName)
+  {
+    this.capabilitiesBuilder.setType(ColumnType.ofComplex(typeName));
     return this;
   }
 
   public ColumnBuilder setHasMultipleValues(boolean hasMultipleValues)
   {
-    this.hasMultipleValues = hasMultipleValues;
+    this.capabilitiesBuilder.setHasMultipleValues(hasMultipleValues);
     return this;
   }
 
   public ColumnBuilder setDictionaryEncodedColumnSupplier(Supplier<? extends DictionaryEncodedColumn<?>> columnSupplier)
   {
     this.columnSupplier = columnSupplier;
-    this.dictionaryEncoded = true;
+    this.capabilitiesBuilder.setDictionaryEncoded(true);
+    this.capabilitiesBuilder.setDictionaryValuesSorted(true);
+    this.capabilitiesBuilder.setDictionaryValuesUnique(true);
     return this;
   }
 
   @SuppressWarnings("unused")
   public ColumnBuilder setFilterable(boolean filterable)
   {
-    this.filterable = filterable;
+    this.capabilitiesBuilder.setFilterable(filterable);
     return this;
   }
 
@@ -93,35 +97,33 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnBuilder setBitmapIndex(Supplier<BitmapIndex> bitmapIndex)
+  public ColumnBuilder setIndexSupplier(
+      @Nullable ColumnIndexSupplier indexSupplier,
+      boolean hasBitmapIndex,
+      boolean hasSpatial
+  )
   {
-    this.bitmapIndex = bitmapIndex;
+    this.indexSupplier = indexSupplier;
+    capabilitiesBuilder.setHasBitmapIndexes(hasBitmapIndex);
+    capabilitiesBuilder.setHasSpatialIndexes(hasSpatial);
     return this;
   }
 
-  public ColumnBuilder setSpatialIndex(Supplier<SpatialIndex> spatialIndex)
+  public ColumnBuilder setHasNulls(boolean nullable)
   {
-    this.spatialIndex = spatialIndex;
+    this.capabilitiesBuilder.setHasNulls(nullable);
+    return this;
+  }
+  public ColumnBuilder setHasNulls(ColumnCapabilities.Capable nullable)
+  {
+    this.capabilitiesBuilder.setHasNulls(nullable);
     return this;
   }
 
   public ColumnHolder build()
   {
-    Preconditions.checkState(type != null, "Type must be set.");
+    Preconditions.checkState(capabilitiesBuilder.getType() != null, "Type must be set.");
 
-    return new SimpleColumnHolder(
-        new ColumnCapabilitiesImpl()
-            .setType(type)
-            .setDictionaryEncoded(dictionaryEncoded)
-            .setHasBitmapIndexes(bitmapIndex != null)
-            .setDictionaryValuesSorted(dictionaryEncoded)
-            .setDictionaryValuesUnique(dictionaryEncoded)
-            .setHasSpatialIndexes(spatialIndex != null)
-            .setHasMultipleValues(hasMultipleValues)
-            .setFilterable(filterable),
-        columnSupplier,
-        bitmapIndex,
-        spatialIndex
-    );
+    return new SimpleColumnHolder(capabilitiesBuilder, columnSupplier, indexSupplier);
   }
 }

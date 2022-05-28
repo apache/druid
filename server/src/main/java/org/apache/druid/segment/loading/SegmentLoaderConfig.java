@@ -28,8 +28,10 @@ import java.io.File;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
+ *
  */
 public class SegmentLoaderConfig
 {
@@ -49,19 +51,24 @@ public class SegmentLoaderConfig
   private int announceIntervalMillis = 0; // do not background announce
 
   @JsonProperty("numLoadingThreads")
-  private int numLoadingThreads = JvmUtils.getRuntimeInfo().getAvailableProcessors();
+  private int numLoadingThreads = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 6);
 
   @JsonProperty("numBootstrapThreads")
   private Integer numBootstrapThreads = null;
 
-  @JsonProperty("locationSelectorStrategy")
-  private StorageLocationSelectorStrategy locationSelectorStrategy;
+  @JsonProperty("numThreadsToLoadSegmentsIntoPageCacheOnDownload")
+  private int numThreadsToLoadSegmentsIntoPageCacheOnDownload = 0;
+
+  @JsonProperty("numThreadsToLoadSegmentsIntoPageCacheOnBootstrap")
+  private Integer numThreadsToLoadSegmentsIntoPageCacheOnBootstrap = null;
 
   @JsonProperty
   private File infoDir = null;
 
   @JsonProperty
   private int statusQueueMaxSize = 100;
+
+  private long combinedMaxSize = 0;
 
   public List<StorageLocationConfig> getLocations()
   {
@@ -98,13 +105,16 @@ public class SegmentLoaderConfig
     return numBootstrapThreads == null ? numLoadingThreads : numBootstrapThreads;
   }
 
-  public StorageLocationSelectorStrategy getStorageLocationSelectorStrategy(List<StorageLocation> storageLocations)
+  public int getNumThreadsToLoadSegmentsIntoPageCacheOnDownload()
   {
-    if (locationSelectorStrategy == null) {
-      // default strategy if no strategy is specified in the config
-      locationSelectorStrategy = new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations);
-    }
-    return locationSelectorStrategy;
+    return numThreadsToLoadSegmentsIntoPageCacheOnDownload;
+  }
+
+  public int getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap()
+  {
+    return numThreadsToLoadSegmentsIntoPageCacheOnBootstrap == null ?
+           numThreadsToLoadSegmentsIntoPageCacheOnDownload :
+           numThreadsToLoadSegmentsIntoPageCacheOnBootstrap;
   }
 
   public File getInfoDir()
@@ -120,6 +130,14 @@ public class SegmentLoaderConfig
     return statusQueueMaxSize;
   }
 
+  public long getCombinedMaxSize()
+  {
+    if (combinedMaxSize == 0) {
+      combinedMaxSize = getLocations().stream().mapToLong(StorageLocationConfig::getMaxSize).sum();
+    }
+    return combinedMaxSize;
+  }
+
   public SegmentLoaderConfig withLocations(List<StorageLocationConfig> locations)
   {
     SegmentLoaderConfig retVal = new SegmentLoaderConfig();
@@ -130,10 +148,28 @@ public class SegmentLoaderConfig
   }
 
   @VisibleForTesting
-  SegmentLoaderConfig withStorageLocationSelectorStrategy(StorageLocationSelectorStrategy strategy)
+  public SegmentLoaderConfig withInfoDir(File infoDir)
   {
-    this.locationSelectorStrategy = strategy;
-    return this;
+    SegmentLoaderConfig retVal = new SegmentLoaderConfig();
+    retVal.locations = this.locations;
+    retVal.deleteOnRemove = this.deleteOnRemove;
+    retVal.infoDir = infoDir;
+    return retVal;
+  }
+
+  /**
+   * Convert StorageLocationConfig objects to StorageLocation objects
+   * <p>
+   * Note: {@link #getLocations} is called instead of variable access because some testcases overrides this method
+   */
+  public List<StorageLocation> toStorageLocations()
+  {
+    return this.getLocations()
+               .stream()
+               .map(locationConfig -> new StorageLocation(locationConfig.getPath(),
+                                                          locationConfig.getMaxSize(),
+                                                          locationConfig.getFreeSpacePercent()))
+               .collect(Collectors.toList());
   }
 
   @Override
@@ -143,7 +179,6 @@ public class SegmentLoaderConfig
            "locations=" + locations +
            ", deleteOnRemove=" + deleteOnRemove +
            ", dropSegmentDelayMillis=" + dropSegmentDelayMillis +
-           ", locationSelectorStrategy=" + locationSelectorStrategy +
            ", infoDir=" + infoDir +
            '}';
   }

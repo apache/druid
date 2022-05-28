@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
 
@@ -37,8 +38,10 @@ public class TestModifiedKafkaIndexTaskTuningConfig extends KafkaIndexTaskTuning
 
   @JsonCreator
   public TestModifiedKafkaIndexTaskTuningConfig(
+      @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
+      @JsonProperty("skipBytesInMemoryOverheadCheck") @Nullable Boolean skipBytesInMemoryOverheadCheck,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") @Nullable Period intermediatePersistPeriod,
@@ -46,8 +49,6 @@ public class TestModifiedKafkaIndexTaskTuningConfig extends KafkaIndexTaskTuning
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
       @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
-      // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
-      @JsonProperty("buildV9Directly") @Nullable Boolean buildV9Directly,
       @Deprecated @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") @Nullable Long handoffConditionTimeout,
       @JsonProperty("resetOffsetAutomatically") @Nullable Boolean resetOffsetAutomatically,
@@ -60,8 +61,10 @@ public class TestModifiedKafkaIndexTaskTuningConfig extends KafkaIndexTaskTuning
   )
   {
     super(
+        appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
+        skipBytesInMemoryOverheadCheck,
         maxRowsPerSegment,
         maxTotalRows,
         intermediatePersistPeriod,
@@ -69,7 +72,6 @@ public class TestModifiedKafkaIndexTaskTuningConfig extends KafkaIndexTaskTuning
         maxPendingPersists,
         indexSpec,
         indexSpecForIntermediatePersists,
-        true,
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,

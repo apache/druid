@@ -32,19 +32,26 @@ used in the command must have all the necessary druid configuration files.
 It can be run in one of the following ways.
 
 ```
-java org.apache.druid.cli.Main tools reset-cluster [--metadataStore] [--segmentFiles] [--taskLogs] [--hadoopWorkingPath]
+java -classpath "/my/druid/lib/*" -Ddruid.extensions.loadList="[]" org.apache.druid.cli.Main \
+  tools reset-cluster \
+  [--metadataStore] \
+  [--segmentFiles] \
+  [--taskLogs] \
+  [--hadoopWorkingPath]
 ```
 
 or
 
 ```
-java org.apache.druid.cli.Main tools reset-cluster --all
+java -classpath "/my/druid/lib/*" -Ddruid.extensions.loadList="[]" org.apache.druid.cli.Main \
+  tools reset-cluster \
+  --all
 ```
 
 Usage documentation can be printed by running following command.
 
 ```
-$ java org.apache.druid.cli.Main help tools reset-cluster
+$ java -classpath "/my/druid/lib/*" -Ddruid.extensions.loadList="[]" org.apache.druid.cli.Main help tools reset-cluster
 
 NAME
         druid tools reset-cluster - Cleanup all persisted state from metadata

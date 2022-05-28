@@ -34,6 +34,7 @@ import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -74,6 +75,7 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
   private final byte cacheTypeId;
 
   public static final String TYPE_NAME = "tDigestSketch";
+  public static final ColumnType TYPE = ColumnType.ofComplex(TYPE_NAME);
 
   @JsonCreator
   public TDigestSketchAggregatorFactory(
@@ -210,10 +212,19 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
     return Collections.singletonList(fieldName);
   }
 
+  /**
+   * actual type is {@link MergingDigest}
+   */
   @Override
-  public String getTypeName()
+  public ColumnType getIntermediateType()
   {
-    return TYPE_NAME;
+    return TYPE;
+  }
+
+  @Override
+  public ColumnType getResultType()
+  {
+    return TYPE;
   }
 
   @Override
@@ -295,5 +306,4 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
            + ", compression=" + compression
            + "}";
   }
-
 }

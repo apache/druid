@@ -22,16 +22,13 @@ package org.apache.druid.sql.avatica;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.SqlLifecycleFactory;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
@@ -43,14 +40,12 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class DruidConnection
 {
-  private static final Logger log = new Logger(DruidConnection.class);
-  private static final Set<String> SENSITIVE_CONTEXT_FIELDS = Sets.newHashSet(
-      "user", "password"
-  );
+  private static final Logger LOG = new Logger(DruidConnection.class);
 
   private final String connectionId;
   private final int maxStatements;
-  private final ImmutableMap<String, Object> context;
+  private final ImmutableMap<String, Object> userSecret;
+  private final QueryContext context;
   private final AtomicInteger statementCounter = new AtomicInteger();
   private final AtomicReference<Future<?>> timeoutFuture = new AtomicReference<>();
 
@@ -63,12 +58,23 @@ public class DruidConnection
   @GuardedBy("connectionLock")
   private boolean open = true;
 
-  public DruidConnection(final String connectionId, final int maxStatements, final Map<String, Object> context)
+  public DruidConnection(
+      final String connectionId,
+      final int maxStatements,
+      final Map<String, Object> userSecret,
+      final QueryContext context
+  )
   {
     this.connectionId = Preconditions.checkNotNull(connectionId);
     this.maxStatements = maxStatements;
-    this.context = ImmutableMap.copyOf(context);
+    this.userSecret = ImmutableMap.copyOf(userSecret);
+    this.context = context;
     this.statements = new ConcurrentHashMap<>();
+  }
+
+  public String getConnectionId()
+  {
+    return connectionId;
   }
 
   public DruidStatement createStatement(SqlLifecycleFactory sqlLifecycleFactory)
@@ -79,36 +85,29 @@ public class DruidConnection
       if (statements.containsKey(statementId)) {
         // Will only happen if statementCounter rolls over before old statements are cleaned up. If this
         // ever happens then something fishy is going on, because we shouldn't have billions of statements.
-        throw new ISE("Uh oh, too many statements");
+        throw DruidMeta.logFailure(new ISE("Uh oh, too many statements"));
       }
 
       if (statements.size() >= maxStatements) {
-        throw new ISE("Too many open statements, limit is[%,d]", maxStatements);
+        throw DruidMeta.logFailure(new ISE("Too many open statements, limit is[%,d]", maxStatements));
       }
-
-      // remove sensitive fields from the context, only the connection's context needs to have authentication
-      // credentials
-      Map<String, Object> sanitizedContext = Maps.filterEntries(
-          context,
-          e -> !SENSITIVE_CONTEXT_FIELDS.contains(e.getKey())
-      );
 
       @SuppressWarnings("GuardedBy")
       final DruidStatement statement = new DruidStatement(
           connectionId,
           statementId,
-          ImmutableSortedMap.copyOf(sanitizedContext),
+          context,
           sqlLifecycleFactory.factorize(),
           () -> {
             // onClose function for the statement
-            log.debug("Connection[%s] closed statement[%s].", connectionId, statementId);
+            LOG.debug("Connection[%s] closed statement[%s].", connectionId, statementId);
             // statements will be accessed unsynchronized to avoid deadlock
             statements.remove(statementId);
           }
       );
 
       statements.put(statementId, statement);
-      log.debug("Connection[%s] opened statement[%s].", connectionId, statementId);
+      LOG.debug("Connection[%s] opened statement[%s].", connectionId, statementId);
       return statement;
     }
   }
@@ -146,11 +145,11 @@ public class DruidConnection
           statement.close();
         }
         catch (Exception e) {
-          log.warn("Connection[%s] failed to close statement[%s]!", connectionId, statement.getStatementId());
+          LOG.warn("Connection[%s] failed to close statement[%s]!", connectionId, statement.getStatementId());
         }
       }
 
-      log.debug("Connection[%s] closed.", connectionId);
+      LOG.debug("Connection[%s] closed.", connectionId);
       open = false;
     }
   }
@@ -164,8 +163,8 @@ public class DruidConnection
     return this;
   }
 
-  public Map<String, Object> context()
+  public Map<String, Object> userSecret()
   {
-    return context;
+    return userSecret;
   }
 }

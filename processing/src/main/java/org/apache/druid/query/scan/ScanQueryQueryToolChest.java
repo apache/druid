@@ -27,19 +27,18 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
-import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -67,29 +66,58 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   public QueryRunner<ScanResultValue> mergeResults(final QueryRunner<ScanResultValue> runner)
   {
     return (queryPlus, responseContext) -> {
+      final ScanQuery originalQuery = ((ScanQuery) (queryPlus.getQuery()));
+      ScanQuery.verifyOrderByForNativeExecution(originalQuery);
+
+      // Remove "offset" and add it to the "limit" (we won't push the offset down, just apply it here, at the
+      // merge at the top of the stack).
+      final long newLimit;
+      if (!originalQuery.isLimited()) {
+        // Unlimited stays unlimited.
+        newLimit = Long.MAX_VALUE;
+      } else if (originalQuery.getScanRowsLimit() > Long.MAX_VALUE - originalQuery.getScanRowsOffset()) {
+        throw new ISE(
+            "Cannot apply limit[%d] with offset[%d] due to overflow",
+            originalQuery.getScanRowsLimit(),
+            originalQuery.getScanRowsOffset()
+        );
+      } else {
+        newLimit = originalQuery.getScanRowsLimit() + originalQuery.getScanRowsOffset();
+      }
+
       // Ensure "legacy" is a non-null value, such that all other nodes this query is forwarded to will treat it
       // the same way, even if they have different default legacy values.
-      final ScanQuery scanQuery = ((ScanQuery) (queryPlus.getQuery()))
-          .withNonNullLegacy(scanQueryConfig);
-      final QueryPlus<ScanResultValue> queryPlusWithNonNullLegacy = queryPlus.withQuery(scanQuery);
-      if (scanQuery.getScanRowsLimit() == Long.MAX_VALUE) {
-        return runner.run(queryPlusWithNonNullLegacy, responseContext);
-      }
-      return new BaseSequence<>(
-          new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryLimitRowIterator>()
-          {
-            @Override
-            public ScanQueryLimitRowIterator make()
-            {
-              return new ScanQueryLimitRowIterator(runner, queryPlusWithNonNullLegacy, responseContext);
-            }
+      final ScanQuery queryToRun = originalQuery.withNonNullLegacy(scanQueryConfig)
+                                                .withOffset(0)
+                                                .withLimit(newLimit);
 
-            @Override
-            public void cleanup(ScanQueryLimitRowIterator iterFromMake)
+      final Sequence<ScanResultValue> results;
+
+      if (!queryToRun.isLimited()) {
+        results = runner.run(queryPlus.withQuery(queryToRun), responseContext);
+      } else {
+        results = new BaseSequence<>(
+            new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryLimitRowIterator>()
             {
-              CloseQuietly.close(iterFromMake);
-            }
-          });
+              @Override
+              public ScanQueryLimitRowIterator make()
+              {
+                return new ScanQueryLimitRowIterator(runner, queryPlus.withQuery(queryToRun), responseContext);
+              }
+
+              @Override
+              public void cleanup(ScanQueryLimitRowIterator iterFromMake)
+              {
+                CloseableUtils.closeAndWrapExceptions(iterFromMake);
+              }
+            });
+      }
+
+      if (originalQuery.getScanRowsOffset() > 0) {
+        return new ScanQueryOffsetSequence(results, originalQuery.getScanRowsOffset());
+      } else {
+        return results;
+      }
     };
   }
 
@@ -118,11 +146,6 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   public QueryRunner<ScanResultValue> preMergeQueryDecoration(final QueryRunner<ScanResultValue> runner)
   {
     return (queryPlus, responseContext) -> {
-      ScanQuery scanQuery = (ScanQuery) queryPlus.getQuery();
-      if (scanQuery.getFilter() != null) {
-        scanQuery = scanQuery.withDimFilter(scanQuery.getFilter().optimize());
-        queryPlus = queryPlus.withQuery(scanQuery);
-      }
       return runner.run(queryPlus, responseContext);
     };
   }
@@ -145,11 +168,11 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
 
       for (String columnName : query.getColumns()) {
         // With the Scan query we only know the columnType for virtual columns. Let's report those, at least.
-        final ValueType columnType;
+        final ColumnType columnType;
 
         final VirtualColumn virtualColumn = query.getVirtualColumns().getVirtualColumn(columnName);
         if (virtualColumn != null) {
-          columnType = virtualColumn.capabilities(columnName).getType();
+          columnType = virtualColumn.capabilities(columnName).toColumnType();
         } else {
           // Unknown type. In the future, it would be nice to have a way to fill these in.
           columnType = null;

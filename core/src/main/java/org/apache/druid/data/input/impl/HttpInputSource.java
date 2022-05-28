@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
@@ -28,6 +29,8 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.PasswordProvider;
 
 import javax.annotation.Nullable;
@@ -45,18 +48,31 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
   private final String httpAuthenticationUsername;
   @Nullable
   private final PasswordProvider httpAuthenticationPasswordProvider;
+  private final HttpInputSourceConfig config;
 
   @JsonCreator
   public HttpInputSource(
       @JsonProperty("uris") List<URI> uris,
       @JsonProperty("httpAuthenticationUsername") @Nullable String httpAuthenticationUsername,
-      @JsonProperty("httpAuthenticationPassword") @Nullable PasswordProvider httpAuthenticationPasswordProvider
+      @JsonProperty("httpAuthenticationPassword") @Nullable PasswordProvider httpAuthenticationPasswordProvider,
+      @JacksonInject HttpInputSourceConfig config
   )
   {
     Preconditions.checkArgument(uris != null && !uris.isEmpty(), "Empty URIs");
+    throwIfInvalidProtocols(config, uris);
     this.uris = uris;
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
+    this.config = config;
+  }
+
+  public static void throwIfInvalidProtocols(HttpInputSourceConfig config, List<URI> uris)
+  {
+    for (URI uri : uris) {
+      if (!config.getAllowedProtocols().contains(StringUtils.toLowerCase(uri.getScheme()))) {
+        throw new IAE("Only %s protocols are allowed", config.getAllowedProtocols());
+      }
+    }
   }
 
   @JsonProperty
@@ -97,7 +113,8 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
     return new HttpInputSource(
         Collections.singletonList(split.get()),
         httpAuthenticationUsername,
-        httpAuthenticationPasswordProvider
+        httpAuthenticationPasswordProvider,
+        config
     );
   }
 
@@ -129,16 +146,17 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    HttpInputSource source = (HttpInputSource) o;
-    return Objects.equals(uris, source.uris) &&
-           Objects.equals(httpAuthenticationUsername, source.httpAuthenticationUsername) &&
-           Objects.equals(httpAuthenticationPasswordProvider, source.httpAuthenticationPasswordProvider);
+    HttpInputSource that = (HttpInputSource) o;
+    return Objects.equals(uris, that.uris) &&
+           Objects.equals(httpAuthenticationUsername, that.httpAuthenticationUsername) &&
+           Objects.equals(httpAuthenticationPasswordProvider, that.httpAuthenticationPasswordProvider) &&
+           Objects.equals(config, that.config);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(uris, httpAuthenticationUsername, httpAuthenticationPasswordProvider);
+    return Objects.hash(uris, httpAuthenticationUsername, httpAuthenticationPasswordProvider, config);
   }
 
   @Override

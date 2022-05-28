@@ -51,14 +51,14 @@ public class VersionedIntervalTimelineTest extends VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testFindEntryWithOverlap()
+  public void testFindChunkWithOverlap()
   {
     add("2011-01-01/2011-01-10", "1", 1);
     add("2011-01-02/2011-01-05", "2", 1);
 
-    Assert.assertEquals(
-        new PartitionHolder<>(makeSingle("1", 1)).asImmutable(),
-        timeline.findEntry(Intervals.of("2011-01-02T02/2011-01-04"), "1")
+    assertSingleElementChunks(
+        makeSingle("1", 1),
+        timeline.findChunk(Intervals.of("2011-01-02T02/2011-01-04"), "1", 0)
     );
   }
 

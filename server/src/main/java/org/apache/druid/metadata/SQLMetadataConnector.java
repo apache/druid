@@ -71,14 +71,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     this.config = config;
     this.tablesConfigSupplier = tablesConfigSupplier;
-    this.shouldRetry = new Predicate<Throwable>()
-    {
-      @Override
-      public boolean apply(Throwable e)
-      {
-        return isTransientException(e);
-      }
-    };
+    this.shouldRetry = this::isTransientException;
   }
 
   /**
@@ -90,7 +83,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    *
    * @return String representing the SQL type
    */
-  protected String getPayloadType()
+  public String getPayloadType()
   {
     return PAYLOAD_TYPE;
   }
@@ -100,7 +93,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    *
    * @return the collation for the character set
    */
-  protected String getCollation()
+  public String getCollation()
   {
     return COLLATION;
   }
@@ -114,7 +107,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    *
    * @return String representing the SQL type and auto-increment statement
    */
-  protected abstract String getSerialType();
+  public abstract String getSerialType();
 
   /**
    * Returns the value that should be passed to statement.setFetchSize to ensure results
@@ -122,7 +115,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    *
    * @return optimal fetch size to stream results back
    */
-  protected abstract int getStreamingFetchSize();
+  public abstract int getStreamingFetchSize();
 
   /**
    * @return the string that should be used to quote string fields
@@ -178,6 +171,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                          || (e instanceof DBIException && isTransientException(e.getCause())));
   }
 
+  /**
+   * Vendor specific errors that are not covered by {@link #isTransientException(Throwable)}
+   */
   protected boolean connectorIsTransientException(Throwable e)
   {
     return false;
@@ -287,7 +283,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             ),
             StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName),
             StringUtils.format(
-                "CREATE INDEX idx_%1$s_datasource_used_end ON %1$s(dataSource, used, %2$send%2$s)",
+                "CREATE INDEX idx_%1$s_datasource_used_end_start ON %1$s(dataSource, used, %2$send%2$s, start)",
                 tableName,
                 getQuoteString()
             )
@@ -661,7 +657,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       if (dbcpProperties != null) {
         dataSource = BasicDataSourceFactory.createDataSource(dbcpProperties);
       } else {
-        dataSource = new BasicDataSource();
+        dataSource = new BasicDataSourceExt(connectorConfig);
       }
     }
     catch (Exception e) {

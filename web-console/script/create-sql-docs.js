@@ -19,46 +19,91 @@
  */
 
 const fs = require('fs-extra');
+const snarkdown = require('snarkdown');
 
-const readfile = '../docs/querying/sql.md';
 const writefile = 'lib/sql-docs.js';
 
+const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 150;
+const MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES = 14;
+
+function hasHtmlTags(str) {
+  return /<(a|br|span|div|p|code)\/?>/.test(str);
+}
+
+function sanitizeArguments(str) {
+  str = str.replace(/`<code>&#124;<\/code>`/g, '|'); // convert the hack to get | in a table to a normal pipe
+
+  // Ensure there are no more html tags other than the <code> we just removed
+  if (hasHtmlTags(str)) {
+    throw new Error(`Arguments contain HTML: ${str}`);
+  }
+
+  return str;
+}
+
+function convertMarkdownToHtml(markdown) {
+  markdown = markdown.replace(/<br\/?>/g, '\n'); // Convert inline <br> to newlines
+
+  // Ensure there are no more html tags other than the <br> we just removed
+  if (hasHtmlTags(markdown)) {
+    throw new Error(`Markdown contains HTML: ${markdown}`);
+  }
+
+  // Concert to markdown
+  markdown = snarkdown(markdown);
+
+  return markdown
+    .replace(/<br \/>/g, '<br /><br />') // Double up the <br>s
+    .replace(/<a[^>]*>(.*?)<\/a>/g, '$1'); // Remove links
+}
+
 const readDoc = async () => {
-  const data = await fs.readFile(readfile, 'utf-8');
+  const data = [
+    await fs.readFile('../docs/querying/sql-data-types.md', 'utf-8'),
+    await fs.readFile('../docs/querying/sql-scalar.md', 'utf-8'),
+    await fs.readFile('../docs/querying/sql-aggregations.md', 'utf-8'),
+    await fs.readFile('../docs/querying/sql-multivalue-string-functions.md', 'utf-8'),
+    await fs.readFile('../docs/querying/sql-operators.md', 'utf-8'),
+  ].join('\n');
+
   const lines = data.split('\n');
 
-  const functionDocs = [];
+  const functionDocs = {};
   const dataTypeDocs = [];
   for (let line of lines) {
-    const functionMatch = line.match(/^\|`(\w+)(\(.*\))`\|(.+)\|$/);
+    const functionMatch = line.match(/^\|\s*`(\w+)\(([^|]*)\)`\s*\|([^|]+)\|(?:([^|]+)\|)?$/);
     if (functionMatch) {
-      functionDocs.push({
-        name: functionMatch[1],
-        arguments: functionMatch[2],
-        description: functionMatch[3],
-      });
+      const functionName = functionMatch[1];
+      const args = sanitizeArguments(functionMatch[2]);
+      const description = convertMarkdownToHtml(functionMatch[3]);
+
+      functionDocs[functionName] = functionDocs[functionName] || [];
+      functionDocs[functionName].push([args, description]);
     }
 
-    const dataTypeMatch = line.match(/^\|([A-Z]+)\|([A-Z]+)\|(.*)\|(.*)\|$/);
+    const dataTypeMatch = line.match(/^\|([A-Z]+)\|([A-Z]+)\|([^|]*)\|([^|]*)\|$/);
     if (dataTypeMatch) {
-      dataTypeDocs.push({
-        name: dataTypeMatch[1],
-        description: dataTypeMatch[4] || `Druid runtime type: ${dataTypeMatch[2]}`,
-      });
+      dataTypeDocs.push([
+        dataTypeMatch[1],
+        dataTypeMatch[2],
+        convertMarkdownToHtml(dataTypeMatch[4]),
+      ]);
     }
   }
 
-  // Make sure there are at least 10 functions for sanity
-  if (functionDocs.length < 10) {
+  // Make sure there are enough functions found
+  const numFunction = Object.keys(functionDocs).length;
+  if (numFunction < MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS) {
     throw new Error(
-      `Did not find enough function entries did the structure of '${readfile}' change? (found ${functionDocs.length})`,
+      `Did not find enough function entries did the structure of '${readfile}' change? (found ${numFunction} but expected at least ${MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS})`,
     );
   }
 
-  // Make sure there are at least 5 data types for sanity
-  if (dataTypeDocs.length < 10) {
+  // Make sure there are at least 10 data types for sanity
+  const numDataTypes = dataTypeDocs.length;
+  if (numDataTypes < MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES) {
     throw new Error(
-      `Did not find enough data type entries did the structure of '${readfile}' change? (found ${dataTypeDocs.length})`,
+      `Did not find enough data type entries did the structure of '${readfile}' change? (found ${numDataTypes} but expected at least ${MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES})`,
     );
   }
 
@@ -89,6 +134,7 @@ exports.SQL_DATA_TYPES = ${JSON.stringify(dataTypeDocs, null, 2)};
 exports.SQL_FUNCTIONS = ${JSON.stringify(functionDocs, null, 2)};
 `;
 
+  console.log(`Found ${numDataTypes} data types and ${numFunction} functions`);
   await fs.writeFile(writefile, content, 'utf-8');
 };
 

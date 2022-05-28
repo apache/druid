@@ -25,6 +25,7 @@ import org.apache.druid.timeline.DataSegment;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Set;
+import java.util.function.Function;
 
 public interface TransactionalSegmentPublisher
 {
@@ -40,20 +41,25 @@ public interface TransactionalSegmentPublisher
    */
   SegmentPublishResult publishAnnotatedSegments(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
+      @Nullable Set<DataSegment> segmentsToDrop,
       Set<DataSegment> segmentsToPublish,
       @Nullable Object commitMetadata
   ) throws IOException;
 
   default SegmentPublishResult publishSegments(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
+      @Nullable Set<DataSegment> segmentsToDrop,
       Set<DataSegment> segmentsToPublish,
+      Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction,
       @Nullable Object commitMetadata
-  )
-      throws IOException
+  ) throws IOException
   {
+    final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction = outputSegmentsAnnotateFunction
+        .andThen(SegmentPublisherHelper::annotateShardSpec);
     return publishAnnotatedSegments(
         segmentsToBeOverwritten,
-        SegmentPublisherHelper.annotateShardSpec(segmentsToPublish),
+        segmentsToDrop,
+        annotateFunction.apply(segmentsToPublish),
         commitMetadata
     );
   }

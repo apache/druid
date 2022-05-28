@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorUtil;
@@ -29,15 +30,28 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 
+import javax.annotation.Nullable;
+
 public class DoublesSketchMergeAggregatorFactory extends DoublesSketchAggregatorFactory
 {
 
   @JsonCreator
   public DoublesSketchMergeAggregatorFactory(
       @JsonProperty("name") final String name,
-      @JsonProperty("k") final Integer k)
+      @JsonProperty("k") @Nullable final Integer k,
+      @JsonProperty("maxStreamLength") @Nullable final Long maxStreamLength
+  )
   {
-    super(name, name, k, AggregatorUtil.QUANTILES_DOUBLES_SKETCH_MERGE_CACHE_TYPE_ID);
+    super(name, name, k, maxStreamLength, AggregatorUtil.QUANTILES_DOUBLES_SKETCH_MERGE_CACHE_TYPE_ID);
+  }
+
+  @VisibleForTesting
+  DoublesSketchMergeAggregatorFactory(
+      final String name,
+      @Nullable final Integer k
+  )
+  {
+    this(name, k, null);
   }
 
   @Override

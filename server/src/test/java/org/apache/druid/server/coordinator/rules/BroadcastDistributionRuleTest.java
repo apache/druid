@@ -308,7 +308,7 @@ public class BroadcastDistributionRuleTest
     return CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(druidCluster)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, false))
         .withUsedSegmentsInTest(usedSegments)
         .build();
   }

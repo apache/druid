@@ -25,13 +25,13 @@ import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
-import org.apache.druid.indexing.common.actions.SurrogateAction;
+import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
+import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.TaskLockHelper.OverwritingRootGenerationPartitions;
 import org.apache.druid.indexing.common.task.batch.parallel.SupervisorTaskAccess;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwritePartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
@@ -44,21 +44,27 @@ import java.io.IOException;
 /**
  * Segment allocator which allocates new segments using the overlord per request.
  */
-public class OverlordCoordinatingSegmentAllocator implements SegmentAllocator
+public class OverlordCoordinatingSegmentAllocator implements SegmentAllocatorForBatch
 {
   private final ActionBasedSegmentAllocator internalAllocator;
+  private final LinearlyPartitionedSequenceNameFunction sequenceNameFunction;
 
   OverlordCoordinatingSegmentAllocator(
       final TaskToolbox toolbox,
+      final String taskId,
       final @Nullable SupervisorTaskAccess supervisorTaskAccess,
       final DataSchema dataSchema,
       final TaskLockHelper taskLockHelper,
-      final boolean appendToExisting,
+      final AbstractTask.IngestionMode ingestionMode,
       final PartitionsSpec partitionsSpec
   )
   {
+    final TaskActionClient taskActionClient =
+        supervisorTaskAccess == null
+        ? toolbox.getTaskActionClient()
+        : new SurrogateTaskActionClient(supervisorTaskAccess.getSupervisorTaskId(), toolbox.getTaskActionClient());
     this.internalAllocator = new ActionBasedSegmentAllocator(
-        toolbox.getTaskActionClient(),
+        taskActionClient,
         dataSchema,
         (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> {
           final GranularitySpec granularitySpec = schema.getGranularitySpec();
@@ -66,41 +72,26 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocator
               .bucketInterval(row.getTimestamp())
               .or(granularitySpec.getSegmentGranularity().bucket(row.getTimestamp()));
           final PartialShardSpec partialShardSpec = createPartialShardSpec(
-              appendToExisting,
+              ingestionMode,
               partitionsSpec,
               taskLockHelper,
               interval
           );
-          if (supervisorTaskAccess != null) {
-            return new SurrogateAction<>(
-                supervisorTaskAccess.getSupervisorTaskId(),
-                new SegmentAllocateAction(
-                    schema.getDataSource(),
-                    row.getTimestamp(),
-                    schema.getGranularitySpec().getQueryGranularity(),
-                    schema.getGranularitySpec().getSegmentGranularity(),
-                    sequenceName,
-                    previousSegmentId,
-                    skipSegmentLineageCheck,
-                    partialShardSpec,
-                    taskLockHelper.getLockGranularityToUse()
-                )
-            );
-          } else {
-            return new SegmentAllocateAction(
-                schema.getDataSource(),
-                row.getTimestamp(),
-                schema.getGranularitySpec().getQueryGranularity(),
-                schema.getGranularitySpec().getSegmentGranularity(),
-                sequenceName,
-                previousSegmentId,
-                skipSegmentLineageCheck,
-                partialShardSpec,
-                taskLockHelper.getLockGranularityToUse()
-            );
-          }
+          return new SegmentAllocateAction(
+              schema.getDataSource(),
+              row.getTimestamp(),
+              schema.getGranularitySpec().getQueryGranularity(),
+              schema.getGranularitySpec().getSegmentGranularity(),
+              sequenceName,
+              previousSegmentId,
+              skipSegmentLineageCheck,
+              partialShardSpec,
+              taskLockHelper.getLockGranularityToUse(),
+              taskLockHelper.getLockTypeToUse()
+          );
         }
     );
+    this.sequenceNameFunction = new LinearlyPartitionedSequenceNameFunction(taskId);
   }
 
   @Nullable
@@ -116,7 +107,7 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocator
   }
 
   private static PartialShardSpec createPartialShardSpec(
-      boolean appendToExisting,
+      AbstractTask.IngestionMode ingestionMode,
       PartitionsSpec partitionsSpec,
       TaskLockHelper taskLockHelper,
       Interval interval
@@ -124,7 +115,8 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocator
   {
     if (partitionsSpec.getType() == SecondaryPartitionType.LINEAR) {
       if (taskLockHelper.isUseSegmentLock()) {
-        if (taskLockHelper.hasOverwritingRootGenerationPartition(interval) && !appendToExisting) {
+        if (taskLockHelper.hasOverwritingRootGenerationPartition(interval) && (ingestionMode
+                                                                               != AbstractTask.IngestionMode.APPEND)) {
           final OverwritingRootGenerationPartitions overwritingRootGenerationPartitions = taskLockHelper
               .getOverwritingRootGenerationPartition(interval);
           if (overwritingRootGenerationPartitions == null) {
@@ -145,5 +137,11 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocator
           partitionsSpec.getClass().getName()
       );
     }
+  }
+
+  @Override
+  public SequenceNameFunction getSequenceNameFunction()
+  {
+    return sequenceNameFunction;
   }
 }

@@ -20,6 +20,7 @@
 package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 
 import java.util.concurrent.Executor;
 
@@ -29,7 +30,7 @@ public class CaffeineCacheConfig
   private long expireAfter = -1;
 
   @JsonProperty
-  private long sizeInBytes = -1;
+  private HumanReadableBytes sizeInBytes = HumanReadableBytes.valueOf(-1);
 
   @JsonProperty
   // Do not use COMMON_FJP unless you're running 8u60 or higher
@@ -46,7 +47,7 @@ public class CaffeineCacheConfig
 
   public long getSizeInBytes()
   {
-    return sizeInBytes;
+    return sizeInBytes.getBytes();
   }
 
   public Executor createExecutor()

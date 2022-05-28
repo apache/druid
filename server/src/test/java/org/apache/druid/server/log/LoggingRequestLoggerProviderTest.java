@@ -31,6 +31,7 @@ import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.initialization.Initialization;
+import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -68,6 +69,15 @@ public class LoggingRequestLoggerProviderTest
     final LoggingRequestLogger requestLogger = (LoggingRequestLogger) provider.get().get().get();
     Assert.assertTrue(requestLogger.isSetContextMDC());
     Assert.assertTrue(requestLogger.isSetMDC());
+  }
+
+  @Test
+  public void testNoopConfigParsing()
+  {
+    final Properties properties = new Properties();
+    properties.put(propertyPrefix + ".type", "noop");
+    provider.inject(properties, injector.getInstance(JsonConfigurator.class));
+    Assert.assertThat(provider.get().get().get(), Matchers.instanceOf(NoopRequestLogger.class));
   }
 
   private Injector makeInjector()

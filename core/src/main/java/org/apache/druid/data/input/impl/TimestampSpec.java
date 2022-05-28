@@ -90,12 +90,20 @@ public class TimestampSpec
     return missingValue;
   }
 
-  public DateTime extractTimestamp(Map<String, Object> input)
+  @Nullable
+  public DateTime extractTimestamp(@Nullable Map<String, Object> input)
   {
-    return parseDateTime(input.get(timestampColumn));
+    return parseDateTime(getRawTimestamp(input));
   }
 
-  public DateTime parseDateTime(Object input)
+  @Nullable
+  public Object getRawTimestamp(@Nullable Map<String, Object> input)
+  {
+    return input == null ? null : input.get(timestampColumn);
+  }
+
+  @Nullable
+  public DateTime parseDateTime(@Nullable Object input)
   {
     DateTime extracted = missingValue;
     if (input != null) {

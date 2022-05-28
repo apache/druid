@@ -25,6 +25,9 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
@@ -38,26 +41,26 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
 {
   public static final Comparator<Float> FLOAT_COMPARATOR = Comparators.naturalNullsFirst();
 
+  private volatile boolean hasNulls = false;
+
   @Override
-  public Float processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
+  public EncodedKeyComponent<Float> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
     if (dimValues instanceof List) {
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
     }
 
-    return DimensionHandlerUtils.convertObjectToFloat(dimValues, reportParseExceptions);
+    Float f = DimensionHandlerUtils.convertObjectToFloat(dimValues, reportParseExceptions);
+    if (f == null) {
+      hasNulls = NullHandling.sqlCompatible();
+    }
+    return new EncodedKeyComponent<>(f, Float.BYTES);
   }
 
   @Override
   public void setSparseIndexed()
   {
-    // no-op, float columns do not have a dictionary to track null values
-  }
-
-  @Override
-  public long estimateEncodedKeyComponentSize(Float key)
-  {
-    return Float.BYTES;
+    hasNulls = NullHandling.sqlCompatible();
   }
 
   @Override
@@ -91,6 +94,16 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   }
 
   @Override
+  public ColumnCapabilities getColumnCapabilities()
+  {
+    ColumnCapabilitiesImpl builder = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT);
+    if (hasNulls) {
+      builder.setHasNulls(hasNulls);
+    }
+    return builder;
+  }
+
+  @Override
   public DimensionSelector makeDimensionSelector(
       DimensionSpec spec,
       IncrementalIndexRowHolder currEntry,
@@ -114,7 +127,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       public boolean isNull()
       {
         final Object[] dims = currEntry.get().getDims();
-        return dimIndex >= dims.length || dims[dimIndex] == null;
+        return hasNulls && (dimIndex >= dims.length || dims[dimIndex] == null);
       }
 
       @Override

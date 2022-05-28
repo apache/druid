@@ -165,6 +165,7 @@ public class LoadingLookupFactoryTest
     }
 
     @Override
+    @SuppressWarnings("EqualsHashCode")
     public boolean equals(Object obj)
     {
       return obj instanceof MockDataFetcher;

@@ -23,14 +23,15 @@ title: "Password providers"
   -->
 
 
-Apache Druid needs some passwords for accessing various secured systems like metadata store, Key Store containing server certificates etc.
-All these passwords have corresponding runtime properties associated with them, for example `druid.metadata.storage.connector.password` corresponds to the metadata store password.
+Passwords help secure Apache Druid systems such as the metadata store and the keystore that contains server certificates, and so on.
 
-By default users can directly set the passwords in plaintext for these runtime properties, for example `druid.metadata.storage.connector.password=pwd` sets the metadata store password
-to be used by Druid to connect to metadata store to `pwd`. Apart from this, users can use environment variables to get password in following way -
+These passwords have corresponding runtime properties associated with them, for example `druid.metadata.storage.connector.password` corresponds to the metadata store password.
 
-Environment variable password provider provides password by looking at specified environment variable. Use this in order to avoid specifying password in runtime.properties file.
-e.g
+By default users can directly set the passwords in plaintext for runtime properties. For example, `druid.metadata.storage.connector.password=pwd` sets the password to be used by Druid to connect to the metadata store to `pwd`. Alternatively, users can can set passwords as environment variables.
+
+Environment variable passwords allow users to avoid exposing passwords in the `runtime.properties` file. 
+
+You can set an environment variable password as in the following example: 
 
 ```json
 druid.metadata.storage.connector.password={ "type": "environment", "variable": "METADATA_STORAGE_PASSWORD" }
@@ -43,11 +44,11 @@ The values are described below.
 |`type`|String|password provider type|Yes: `environment`|
 |`variable`|String|environment variable to read password from|Yes|
 
-However, many times users may want their own way to optionally securely fetch password during runtime of the Druid process.
-Druid allows this by users to implement their own `PasswordProvider` interface and create a Druid extension to register this implementation at Druid process startup.
-Please have a look at "Adding a new Password Provider implementation" on this [page](../development/modules.md) to learn more.
+Another option that provides even greater control is to securely fetch passwords at runtime using a custom extension of the `PasswordProvider` interface that is registered at Druid process startup.
 
-To use this implementation, simply set the relevant password runtime property to something similar as was done for Environment variable password provider like -
+For more information, see [Adding a new Password Provider implementation](../development/modules.md#adding-a-new-password-provider-implementation).
+
+To use this implementation, simply set the relevant password runtime property similarly to how was shown for the environment variable password: 
 
 ```json
 druid.metadata.storage.connector.password={ "type": "<registered_password_provider_name>", "<jackson_property>": "<value>", ... }

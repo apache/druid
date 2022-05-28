@@ -30,7 +30,7 @@ Indexing [tasks](../ingestion/tasks.md) create (and sometimes destroy) Druid [se
 The indexing service is composed of three main components: a [Peon](../design/peons.md) component that can run a single task, a [Middle Manager](../design/middlemanager.md) component that manages Peons, and an [Overlord](../design/overlord.md) component that manages task distribution to MiddleManagers.
 Overlords and MiddleManagers may run on the same process or across multiple processes while MiddleManagers and Peons always run on the same process.
 
-Tasks are managed using API endpoints on the Overlord service. Please see [Overlord Task API](../operations/api-reference.html#tasks) for more information.
+Tasks are managed using API endpoints on the Overlord service. Please see [Overlord Task API](../operations/api-reference.md#tasks) for more information.
 
 ![Indexing Service](../assets/indexing_service.png "Indexing Service")
 

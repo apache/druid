@@ -20,6 +20,7 @@
 package org.apache.druid.client.indexing;
 
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -33,7 +34,7 @@ import java.util.Set;
 public class NoopIndexingServiceClient implements IndexingServiceClient
 {
   @Override
-  public void killUnusedSegments(String dataSource, Interval interval)
+  public void killUnusedSegments(String idPrefix, String dataSource, Interval interval)
   {
 
   }
@@ -46,9 +47,15 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
 
   @Override
   public String compactSegments(
+      String idPrefix,
       List<DataSegment> segments,
       int compactionTaskPriority,
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
+      @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
+      @Nullable ClientCompactionTaskDimensionsSpec dimensionsSpec,
+      @Nullable AggregatorFactory[] metricsSpec,
+      @Nullable ClientCompactionTaskTransformSpec transformSpec,
+      @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context
   )
   {
@@ -62,7 +69,13 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  public String runTask(Object taskObject)
+  public int getTotalWorkerCapacityWithAutoScale()
+  {
+    return 0;
+  }
+
+  @Override
+  public String runTask(String taskId, Object taskObject)
   {
     return null;
   }
@@ -102,5 +115,24 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   public TaskPayloadResponse getTaskPayload(String taskId)
   {
     return null;
+  }
+
+  @Nullable
+  @Override
+  public Map<String, Object> getTaskReport(String taskId)
+  {
+    return null;
+  }
+
+  @Override
+  public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
+  {
+    return Collections.emptyMap();
+  }
+
+  @Override
+  public SamplerResponse sample(SamplerSpec samplerSpec)
+  {
+    return new SamplerResponse(0, 0, Collections.emptyList());
   }
 }

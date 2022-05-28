@@ -48,14 +48,20 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
   abstract List<Pair<String, Object>> newEvent(int row, DateTime timestamp);
 
   @Override
-  public void run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds)
+  public long run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds)
   {
-    run(streamTopic, streamEventWriter, totalNumberOfSeconds, null);
+    return run(streamTopic, streamEventWriter, totalNumberOfSeconds, null);
   }
 
   @Override
-  public void run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds, DateTime overrrideFirstEventTime)
+  public long run(
+      String streamTopic,
+      StreamEventWriter streamEventWriter,
+      int totalNumberOfSeconds,
+      DateTime overrrideFirstEventTime
+  )
   {
+    serializer.initialize(streamTopic);
     // The idea here is that we will send [eventsPerSecond] events that will either use [nowFlooredToSecond]
     // or the [overrrideFirstEventTime] as the primary timestamp.
     // Having a fixed number of events that use the same timestamp will help in allowing us to determine if any events
@@ -65,6 +71,7 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
     DateTime nowCeilingToSecond = DateTimes.nowUtc().secondOfDay().roundCeilingCopy();
     DateTime eventTimestamp = overrrideFirstEventTime == null ? nowCeilingToSecond : overrrideFirstEventTime;
     int seconds = 0;
+    long numWritten = 0;
 
     while (true) {
       try {
@@ -87,6 +94,7 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
 
         for (int i = 1; i <= eventsPerSecond; i++) {
           streamEventWriter.write(streamTopic, serializer.serialize(newEvent(i, eventTimestamp)));
+          numWritten++;
 
           long sleepTime = calculateSleepTimeMs(eventsPerSecond - i, nowCeilingToSecond);
           if ((i <= 100 && i % 10 == 0) || i % 100 == 0) {
@@ -126,6 +134,8 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
         throw new RuntimeException("Exception in event generation loop", e);
       }
     }
+
+    return numWritten;
   }
 
   /**

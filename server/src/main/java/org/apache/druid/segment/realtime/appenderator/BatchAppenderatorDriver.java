@@ -34,6 +34,7 @@ import org.apache.druid.timeline.DataSegment;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -191,13 +192,17 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
    * Publish all segments.
    *
    * @param segmentsToBeOverwritten segments which can be overwritten by new segments published by the given publisher
+   * @param segmentsToBeDropped     segments which will be dropped and marked unused
    * @param publisher               segment publisher
    *
    * @return a {@link ListenableFuture} for the publish task
    */
   public ListenableFuture<SegmentsAndCommitMetadata> publishAll(
       @Nullable final Set<DataSegment> segmentsToBeOverwritten,
-      final TransactionalSegmentPublisher publisher
+      @Nullable final Set<DataSegment> segmentsToBeDropped,
+      @Nullable final Set<DataSegment> tombstones,
+      final TransactionalSegmentPublisher publisher,
+      final Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
   )
   {
     final Map<String, SegmentsForSequence> snapshot;
@@ -207,6 +212,8 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
 
     return publishInBackground(
         segmentsToBeOverwritten,
+        segmentsToBeDropped,
+        tombstones == null ? Collections.emptySet() : tombstones,
         new SegmentsAndCommitMetadata(
             snapshot
                 .values()
@@ -222,7 +229,8 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
                 .collect(Collectors.toList()),
             null
         ),
-        publisher
+        publisher,
+        outputSegmentsAnnotateFunction
     );
   }
 }

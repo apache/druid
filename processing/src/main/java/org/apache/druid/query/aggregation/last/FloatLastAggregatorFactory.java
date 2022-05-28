@@ -23,21 +23,29 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.query.aggregation.any.NumericNilVectorAggregator;
 import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -75,18 +83,21 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   };
 
   private final String fieldName;
+  private final String timeColumn;
   private final String name;
 
   @JsonCreator
   public FloatLastAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName
+      @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("timeColumn") @Nullable final String timeColumn
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
     this.name = name;
     this.fieldName = fieldName;
+    this.timeColumn = timeColumn == null ? ColumnHolder.TIME_COLUMN_NAME : timeColumn;
   }
 
   @Override
@@ -97,7 +108,7 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
       return NIL_AGGREGATOR;
     } else {
       return new FloatLastAggregator(
-          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector
       );
     }
@@ -111,9 +122,32 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
       return NIL_BUFFER_AGGREGATOR;
     } else {
       return new FloatLastBufferAggregator(
-          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector
       );
+    }
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return true;
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(
+      VectorColumnSelectorFactory columnSelectorFactory
+  )
+  {
+    ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
+    VectorValueSelector valueSelector = columnSelectorFactory.makeValueSelector(fieldName);
+    //time is always long
+    BaseLongVectorValueSelector timeSelector = (BaseLongVectorValueSelector) columnSelectorFactory.makeValueSelector(
+        timeColumn);
+    if (capabilities == null || capabilities.isNumeric()) {
+      return new FloatLastVectorAggregator(timeSelector, valueSelector);
+    } else {
+      return NumericNilVectorAggregator.floatNilVectorAggregator();
     }
   }
 
@@ -151,7 +185,7 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new FloatLastAggregatorFactory(name, name)
+    return new FloatLastAggregatorFactory(name, name, timeColumn)
     {
       @Override
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
@@ -216,7 +250,7 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.singletonList(new LongFirstAggregatorFactory(fieldName, fieldName));
+    return Collections.singletonList(new LongFirstAggregatorFactory(fieldName, fieldName, timeColumn));
   }
 
   @Override
@@ -249,29 +283,39 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
     return fieldName;
   }
 
+  @JsonProperty
+  public String getTimeColumn()
+  {
+    return timeColumn;
+  }
+
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(ColumnHolder.TIME_COLUMN_NAME, fieldName);
+    return Arrays.asList(timeColumn, fieldName);
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
-
-    return ByteBuffer.allocate(2 + fieldNameBytes.length)
-                     .put(AggregatorUtil.FLOAT_LAST_CACHE_TYPE_ID)
-                     .put(fieldNameBytes)
-                     .put((byte) 0xff)
-                     .array();
+    return new CacheKeyBuilder(AggregatorUtil.FLOAT_LAST_CACHE_TYPE_ID)
+        .appendString(fieldName)
+        .appendString(timeColumn)
+        .appendByte((byte) 0xff)
+        .build();
   }
 
   @Override
-  public String getTypeName()
+  public ColumnType getIntermediateType()
   {
     // if we don't pretend to be a primitive, group by v1 gets sad and doesn't work because no complex type serde
-    return "float";
+    return ColumnType.FLOAT;
+  }
+
+  @Override
+  public ColumnType getResultType()
+  {
+    return ColumnType.FLOAT;
   }
 
   @Override
@@ -293,7 +337,7 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
 
     FloatLastAggregatorFactory that = (FloatLastAggregatorFactory) o;
 
-    return fieldName.equals(that.fieldName) && name.equals(that.name);
+    return fieldName.equals(that.fieldName) && timeColumn.equals(that.timeColumn) && name.equals(that.name);
   }
 
   @Override
@@ -308,6 +352,7 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
     return "FloatLastAggregatorFactory{" +
            "name='" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
+           ", timeColumn='" + timeColumn + '\'' +
            '}';
   }
 }

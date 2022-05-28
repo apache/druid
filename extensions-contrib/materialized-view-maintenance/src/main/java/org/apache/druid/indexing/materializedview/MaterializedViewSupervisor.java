@@ -37,6 +37,7 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -137,7 +138,7 @@ public class MaterializedViewSupervisor implements Supervisor
             new DerivativeDataSourceMetadata(spec.getBaseDataSource(), spec.getDimensions(), spec.getMetrics())
         );
       }
-      exec = MoreExecutors.listeningDecorator(Execs.scheduledSingleThreaded(supervisorId));
+      exec = MoreExecutors.listeningDecorator(Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorId)));
       final Duration delay = config.getTaskCheckDuration().toStandardDuration();
       future = exec.scheduleWithFixedDelay(
           MaterializedViewSupervisor.this::run,
@@ -282,6 +283,18 @@ public class MaterializedViewSupervisor implements Supervisor
     // do nothing
   }
 
+  @Override
+  public LagStats computeLagStats()
+  {
+    throw new UnsupportedOperationException("Compute Lag Stats not supported in MaterializedViewSupervisor");
+  }
+
+  @Override
+  public int getActiveTaskGroupsCount()
+  {
+    throw new UnsupportedOperationException("Get Active Task Groups Count is not supported in MaterializedViewSupervisor");
+  }
+
   /**
    * Find intervals in which derived dataSource should rebuild the segments.
    * Choose the latest intervals to create new HadoopIndexTask and submit it.
@@ -392,7 +405,7 @@ public class MaterializedViewSupervisor implements Supervisor
     // drop derivative segments which interval equals the interval in toDeleteBaseSegments 
     for (Interval interval : toDropInterval.keySet()) {
       for (DataSegment segment : derivativeSegments.get(interval)) {
-        sqlSegmentsMetadataManager.markSegmentAsUnused(segment.getId().toString());
+        sqlSegmentsMetadataManager.markSegmentAsUnused(segment.getId());
       }
     }
     // data of the latest interval will be built firstly.

@@ -68,10 +68,12 @@ import org.eclipse.jetty.server.ForwardedRequestCustomizer;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.server.handler.ErrorHandler;
 import org.eclipse.jetty.util.component.LifeCycle;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
@@ -82,6 +84,11 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.security.KeyStore;
 import java.security.cert.CRL;
 import java.util.ArrayList;
@@ -94,6 +101,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ *
  */
 public class JettyServerModule extends JerseyServletModule
 {
@@ -101,6 +109,7 @@ public class JettyServerModule extends JerseyServletModule
 
   private static final AtomicInteger ACTIVE_CONNECTIONS = new AtomicInteger();
   private static final String HTTP_1_1_STRING = "HTTP/1.1";
+  private static QueuedThreadPool jettyServerThreadPool = null;
 
   @Override
   protected void configureServlets()
@@ -115,6 +124,7 @@ public class JettyServerModule extends JerseyServletModule
     binder.bind(CustomExceptionMapper.class).in(Singleton.class);
     binder.bind(ForbiddenExceptionMapper.class).in(Singleton.class);
     binder.bind(BadRequestExceptionMapper.class).in(Singleton.class);
+    binder.bind(ServiceUnavailableExceptionMapper.class).in(Singleton.class);
 
     serve("/*").with(DruidGuiceContainer.class);
 
@@ -168,7 +178,7 @@ public class JettyServerModule extends JerseyServletModule
         node,
         config,
         TLSServerConfig,
-        injector.getExistingBinding(Key.get(SslContextFactory.class)),
+        injector.getExistingBinding(Key.get(SslContextFactory.Server.class)),
         injector.getInstance(TLSCertificateChecker.class)
     );
   }
@@ -197,7 +207,7 @@ public class JettyServerModule extends JerseyServletModule
       DruidNode node,
       ServerConfig config,
       TLSServerConfig tlsServerConfig,
-      Binding<SslContextFactory> sslContextFactoryBinding,
+      Binding<SslContextFactory.Server> sslContextFactoryBinding,
       TLSCertificateChecker certificateChecker
   )
   {
@@ -220,6 +230,7 @@ public class JettyServerModule extends JerseyServletModule
     }
 
     threadPool.setDaemon(true);
+    jettyServerThreadPool = threadPool;
 
     final Server server = new Server(threadPool);
 
@@ -237,6 +248,7 @@ public class JettyServerModule extends JerseyServletModule
       }
 
       httpConfiguration.setRequestHeaderSize(config.getMaxRequestHeaderSize());
+      httpConfiguration.setSendServerVersion(false);
       final ServerConnector connector = new ServerConnector(server, new HttpConnectionFactory(httpConfiguration));
       if (node.isBindOnHost()) {
         connector.setHost(node.getHost());
@@ -245,7 +257,8 @@ public class JettyServerModule extends JerseyServletModule
       serverConnectors.add(connector);
     }
 
-    final SslContextFactory sslContextFactory;
+    final SslContextFactory.Server sslContextFactory;
+
     if (node.isEnableTlsPort()) {
       log.info("Creating https connector with port [%d]", node.getTlsPort());
       if (sslContextFactoryBinding == null) {
@@ -321,6 +334,7 @@ public class JettyServerModule extends JerseyServletModule
       httpsConfiguration.setSecurePort(node.getTlsPort());
       httpsConfiguration.addCustomizer(new SecureRequestCustomizer());
       httpsConfiguration.setRequestHeaderSize(config.getMaxRequestHeaderSize());
+      httpsConfiguration.setSendServerVersion(false);
       final ServerConnector connector = new ServerConnector(
           server,
           new SslConnectionFactory(sslContextFactory, HTTP_1_1_STRING),
@@ -461,6 +475,28 @@ public class JettyServerModule extends JerseyServletModule
         Lifecycle.Stage.SERVER
     );
 
+    if (!config.isShowDetailedJettyErrors()) {
+      server.setErrorHandler(new ErrorHandler() {
+        @Override
+        public boolean isShowServlet()
+        {
+          return false;
+        }
+
+        @Override
+        public void handle(
+            String target,
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response
+        ) throws IOException, ServletException
+        {
+          request.setAttribute(RequestDispatcher.ERROR_EXCEPTION, null);
+          super.handle(target, baseRequest, request, response);
+        }
+      });
+    }
+
     return server;
   }
 
@@ -494,11 +530,21 @@ public class JettyServerModule extends JerseyServletModule
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
       emitter.emit(builder.build("jetty/numOpenConnections", ACTIVE_CONNECTIONS.get()));
+      if (jettyServerThreadPool != null) {
+        emitter.emit(builder.build("jetty/threadPool/total", jettyServerThreadPool.getThreads()));
+        emitter.emit(builder.build("jetty/threadPool/idle", jettyServerThreadPool.getIdleThreads()));
+        emitter.emit(builder.build("jetty/threadPool/isLowOnThreads", jettyServerThreadPool.isLowOnThreads() ? 1 : 0));
+        emitter.emit(builder.build("jetty/threadPool/min", jettyServerThreadPool.getMinThreads()));
+        emitter.emit(builder.build("jetty/threadPool/max", jettyServerThreadPool.getMaxThreads()));
+        emitter.emit(builder.build("jetty/threadPool/queueSize", jettyServerThreadPool.getQueueSize()));
+        emitter.emit(builder.build("jetty/threadPool/busy", jettyServerThreadPool.getBusyThreads()));
+      }
+
       return true;
     }
   }
 
-  private static class IdentityCheckOverrideSslContextFactory extends SslContextFactory
+  private static class IdentityCheckOverrideSslContextFactory extends SslContextFactory.Server
   {
     private final TLSServerConfig tlsServerConfig;
     private final TLSCertificateChecker certificateChecker;
@@ -508,7 +554,7 @@ public class JettyServerModule extends JerseyServletModule
         TLSCertificateChecker certificateChecker
     )
     {
-      super(false);
+      super();
       this.tlsServerConfig = tlsServerConfig;
       this.certificateChecker = certificateChecker;
     }
@@ -543,5 +589,11 @@ public class JettyServerModule extends JerseyServletModule
   public int getActiveConnections()
   {
     return ACTIVE_CONNECTIONS.get();
+  }
+
+  @VisibleForTesting
+  public static void setJettyServerThreadPool(QueuedThreadPool threadPool)
+  {
+    jettyServerThreadPool = threadPool;
   }
 }

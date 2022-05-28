@@ -31,9 +31,9 @@ public class IncrementalIndexAddResult
   @Nullable
   private final ParseException parseException;
   @Nullable
-  private String reasonOfNotAdded;
+  private final String reasonOfNotAdded;
 
-  public IncrementalIndexAddResult(
+  private IncrementalIndexAddResult(
       int rowCount,
       long bytesInMemory,
       @Nullable ParseException parseException,
@@ -55,6 +55,23 @@ public class IncrementalIndexAddResult
     this(rowCount, bytesInMemory, parseException, null);
   }
 
+  public IncrementalIndexAddResult(
+      int rowCount,
+      long bytesInMemory,
+      String reasonOfNotAdded
+  )
+  {
+    this(rowCount, bytesInMemory, null, reasonOfNotAdded);
+  }
+
+  public IncrementalIndexAddResult(
+      int rowCount,
+      long bytesInMemory
+  )
+  {
+    this(rowCount, bytesInMemory, null, null);
+  }
+
   public int getRowCount()
   {
     return rowCount;
@@ -65,10 +82,20 @@ public class IncrementalIndexAddResult
     return bytesInMemory;
   }
 
+  public boolean hasParseException()
+  {
+    return parseException != null;
+  }
+
   @Nullable
   public ParseException getParseException()
   {
     return parseException;
+  }
+
+  public boolean isRowAdded()
+  {
+    return reasonOfNotAdded == null && parseException == null;
   }
 
   @Nullable

@@ -67,15 +67,12 @@ import java.util.Map;
 public class TimeFilteringTest extends BaseFilterTest
 {
   private static final String TIMESTAMP_COLUMN = "ts";
+  private static final int NUM_FILTER_VALUES = 32;
 
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
           new TimestampSpec(TIMESTAMP_COLUMN, "millis", DateTimes.of("2000")),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2", "dim3")),
-              null,
-              null
-          )
+          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2", "dim3")))
       )
   );
 
@@ -132,8 +129,8 @@ public class TimeFilteringTest extends BaseFilterTest
     );
 
     // cross the hashing threshold to test hashset implementation, filter on even values
-    List<String> infilterValues = new ArrayList<>(InDimFilter.NUMERIC_HASHING_THRESHOLD * 2);
-    for (int i = 0; i < InDimFilter.NUMERIC_HASHING_THRESHOLD * 2; i++) {
+    List<String> infilterValues = new ArrayList<>(NUM_FILTER_VALUES);
+    for (int i = 0; i < NUM_FILTER_VALUES; i++) {
       infilterValues.add(String.valueOf(i * 2));
     }
     assertFilterMatches(

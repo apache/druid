@@ -27,7 +27,7 @@ import org.apache.druid.segment.filter.TrueFilter;
 import java.util.Collections;
 import java.util.Set;
 
-public class TrueDimFilter implements DimFilter
+public class TrueDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
   private static final TrueDimFilter INSTANCE = new TrueDimFilter();
   private static final byte[] CACHE_KEY = new CacheKeyBuilder(DimFilterUtils.TRUE_CACHE_ID).build();

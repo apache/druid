@@ -31,27 +31,26 @@ import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.ReferenceCountingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.Joinables;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -74,7 +73,7 @@ import java.util.function.Function;
 public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 {
   private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines;
-  private final JoinableFactory joinableFactory;
+  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final QueryRunnerFactoryConglomerate conglomerate;
   @Nullable
   private final QueryScheduler scheduler;
@@ -87,7 +86,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
   )
   {
     this.timelines = timelines;
-    this.joinableFactory = joinableFactory;
+    this.joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
     this.conglomerate = conglomerate;
     this.scheduler = scheduler;
   }
@@ -140,16 +139,11 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       throw new ISE("Cannot handle subquery: %s", analysis.getDataSource());
     }
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = Joinables.createSegmentMapFn(
+    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
+        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
         analysis.getPreJoinableClauses(),
-        joinableFactory,
         new AtomicLong(),
-        QueryContexts.getEnableJoinFilterPushDown(query),
-        QueryContexts.getEnableJoinFilterRewrite(query),
-        QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query),
-        QueryContexts.getJoinFilterRewriteMaxSize(query),
-        query.getFilter() == null ? null : query.getFilter().toFilter(),
-        query.getVirtualColumns()
+        analysis.getBaseQuery().orElse(query)
     );
 
     final QueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<>(
@@ -170,6 +164,9 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     // the LocalQuerySegmentWalker constructor instead since this walker is not mimic remote DruidServer objects
     // to actually serve the queries
     return (theQuery, responseContext) -> {
+      responseContext.initializeRemainingResponses();
+      responseContext.addRemainingResponse(
+          theQuery.getQuery().getMostSpecificId(), 0);
       if (scheduler != null) {
         Set<SegmentServerSelector> segments = new HashSet<>();
         specs.forEach(spec -> segments.add(new SegmentServerSelector(spec)));
@@ -218,7 +215,11 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
                     .transform(
                         segment ->
                             new SpecificSegmentQueryRunner<>(
-                                factory.createRunner(segmentMapFn.apply(ReferenceCountingSegment.wrapRootGenerationSegment(segment.getSegment()))),
+                                new ReferenceCountingSegmentQueryRunner<>(
+                                    factory,
+                                    segmentMapFn.apply(segment.getSegment()),
+                                    segment.getDescriptor()
+                                ),
                                 new SpecificSegmentSpec(segment.getDescriptor())
                             )
                     )
@@ -257,11 +258,12 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       final List<WindowedSegment> retVal = new ArrayList<>();
 
       for (SegmentDescriptor spec : specs) {
-        final PartitionHolder<ReferenceCountingSegment> entry = timeline.findEntry(
+        final PartitionChunk<ReferenceCountingSegment> entry = timeline.findChunk(
             spec.getInterval(),
-            spec.getVersion()
+            spec.getVersion(),
+            spec.getPartitionNumber()
         );
-        retVal.add(new WindowedSegment(entry.getChunk(spec.getPartitionNumber()).getObject(), spec.getInterval()));
+        retVal.add(new WindowedSegment(entry.getObject(), spec.getInterval()));
       }
 
       return retVal;
@@ -270,17 +272,17 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 
   private static class WindowedSegment
   {
-    private final Segment segment;
+    private final ReferenceCountingSegment segment;
     private final Interval interval;
 
-    public WindowedSegment(Segment segment, Interval interval)
+    public WindowedSegment(ReferenceCountingSegment segment, Interval interval)
     {
       this.segment = segment;
       this.interval = interval;
       Preconditions.checkArgument(segment.getId().getInterval().contains(interval));
     }
 
-    public Segment getSegment()
+    public ReferenceCountingSegment getSegment()
     {
       return segment;
     }

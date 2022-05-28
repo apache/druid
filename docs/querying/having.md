@@ -25,7 +25,7 @@ title: "Having filters (groupBy)"
 > Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 > This document describes the native
 > language. For information about functions available in SQL, refer to the
-> [SQL documentation](sql.md#scalar-functions).
+> [SQL documentation](sql-scalar.md).
 
 A having clause is a JSON object identifying which rows from a groupBy query should be returned, by specifying conditions on aggregated values.
 
@@ -35,7 +35,7 @@ Apache Druid supports the following types of having clauses.
 
 ### Query filters
 
-Query filter HavingSpecs allow all [Druid query filters](filters.html) to be used in the Having part of the query.
+Query filter HavingSpecs allow all [Druid query filters](filters.md) to be used in the Having part of the query.
 
 The grammar for a query filter HavingSpec is:
 

@@ -23,6 +23,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.server.security.AllowHttpMethodsResourceFilter;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.eclipse.jetty.server.handler.gzip.GzipHandler;
@@ -32,6 +33,7 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 
 import javax.ws.rs.HttpMethod;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 
 public class JettyServerInitUtils
@@ -92,5 +94,15 @@ public class JettyServerInitUtils
     requestLogHandler.setRequestLog(new JettyRequestLog());
 
     return requestLogHandler;
+  }
+
+  public static void addAllowHttpMethodsFilter(ServletContextHandler root, List<String> allowedHttpMethods)
+  {
+    FilterHolder holder = new FilterHolder(new AllowHttpMethodsResourceFilter(allowedHttpMethods));
+    root.addFilter(
+        holder,
+        "/*",
+        null
+    );
   }
 }

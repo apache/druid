@@ -33,12 +33,12 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
 
@@ -165,25 +165,38 @@ public class DummyStringVirtualColumn implements VirtualColumn
     }
   }
 
+  @Nullable
   @Override
-  public BitmapIndex getBitmapIndex(String columnName, ColumnSelector columnSelector)
+  public ColumnIndexSupplier getIndexSupplier(
+      String columnName,
+      ColumnSelector columnSelector
+  )
   {
-    if (enableBitmaps) {
-      ColumnHolder holder = columnSelector.getColumnHolder(baseColumnName);
-      if (holder == null) {
-        return null;
-      }
+    return new ColumnIndexSupplier()
+    {
 
-      return holder.getBitmapIndex();
-    } else {
-      throw new UnsupportedOperationException("not supported");
-    }
+      @Nullable
+      @Override
+      public <T> T as(Class<T> clazz)
+      {
+        if (enableBitmaps) {
+          ColumnHolder holder = columnSelector.getColumnHolder(baseColumnName);
+          if (holder == null) {
+            return null;
+          }
+
+          return holder.getIndexSupplier().as(clazz);
+        } else {
+          return null;
+        }
+      }
+    };
   }
 
   @Override
   public ColumnCapabilities capabilities(String columnName)
   {
-    ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+    ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
                                                                       .setDictionaryEncoded(true);
     if (enableBitmaps) {
       capabilities.setHasBitmapIndexes(true);

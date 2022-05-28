@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.aggregation.BufferAggregator;
@@ -36,12 +35,14 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.FilteredOffset;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.historical.HistoricalColumnSelector;
 import org.apache.druid.segment.historical.HistoricalCursor;
 import org.apache.druid.segment.historical.HistoricalDimensionSelector;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -49,7 +50,18 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
+ * This {@link TopNAlgorithm} is highly specialized for processing aggregates on string columns that are
+ * {@link ColumnCapabilities#isDictionaryEncoded()} and {@link ColumnCapabilities#areDictionaryValuesUnique()}. This
+ * algorithm is built around using a direct {@link ByteBuffer} from the 'processing pool' of intermediary results
+ * buffers, to aggregate using the dictionary id directly as the key, to defer looking up the value until is necessary.
  *
+ * At runtime, this implementation is specialized with wizardry to optimize for processing common top-n query shapes,
+ * see {@link #computeSpecializedScanAndAggregateImplementations},
+ * {@link Generic1AggPooledTopNScanner} and {@link Generic1AggPooledTopNScannerPrototype},
+ * {@link Generic2AggPooledTopNScanner} and {@link Generic2AggPooledTopNScannerPrototype},
+ * {@link org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop},
+ * {@link org.apache.druid.query.monomorphicprocessing.HotLoopCallee},
+ * {@link org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector} for more details.
  */
 public class PooledTopNAlgorithm
     extends BaseTopNAlgorithm<int[], BufferAggregator[], PooledTopNAlgorithm.PooledTopNParams>
@@ -772,7 +784,7 @@ public class PooledTopNAlgorithm
       if (resultsBufHolder != null) {
         resultsBufHolder.get().clear();
       }
-      CloseQuietly.close(resultsBufHolder);
+      CloseableUtils.closeAndWrapExceptions(resultsBufHolder);
     }
   }
 

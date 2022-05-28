@@ -19,15 +19,34 @@
 
 package org.apache.druid.math.expr;
 
+import org.apache.druid.segment.column.TypeDescriptor;
+
 /**
  * Base 'value' types of Druid expression language, all {@link Expr} must evaluate to one of these types.
  */
-public enum ExprType
+public enum ExprType implements TypeDescriptor
 {
   DOUBLE,
   LONG,
   STRING,
-  DOUBLE_ARRAY,
-  LONG_ARRAY,
-  STRING_ARRAY
+  ARRAY,
+  COMPLEX;
+
+  @Override
+  public boolean isNumeric()
+  {
+    return LONG.equals(this) || DOUBLE.equals(this);
+  }
+
+  @Override
+  public boolean isPrimitive()
+  {
+    return this != ARRAY && this != COMPLEX;
+  }
+
+  @Override
+  public boolean isArray()
+  {
+    return this == ExprType.ARRAY;
+  }
 }

@@ -50,33 +50,19 @@ function _get_druid_version() {
   _get_maven_property_value "project.version"
 }
 
-function _get_zookeeper_version() {
-  _get_maven_property_value "zookeeper.version"
-}
-
-function _download_zookeeper() {
-  local dest="$1"
-  local zk_version
-  zk_version="$(_get_zookeeper_version)"
-  #zk_tar=apache-zookeeper-${zk_version}-bin # for zk 3.5.x
-  zk_tar=zookeeper-${zk_version} # for zk 3.4.x
-
-  _log "Downloading zookeeper"
-  curl -s "https://archive.apache.org/dist/zookeeper/zookeeper-${zk_version}/$zk_tar.tar.gz" \
-    | tar xz \
-  && rm -rf "$dest" \
-  && mv "$zk_tar" "$dest" \
-  && rm -f "$zk_tar"
-}
-
 function _build_distribution() {
   _log "Building druid distribution"
 
   (
+    # Add HEAD as an allowed HTTP method since this is how we check when the Druid service is ready.
     cd "$(_get_code_root)" \
     && mvn -Pdist,skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -q -T1C install \
     && cd distribution/target \
-    && tar xzf "apache-druid-$(_get_druid_version)-bin.tar.gz"
+    && tar xzf "apache-druid-$(_get_druid_version)-bin.tar.gz" \
+    && cd apache-druid-$(_get_druid_version) \
+    && java -classpath "lib/*" org.apache.druid.cli.Main tools pull-deps -c org.apache.druid.extensions:druid-testing-tools \
+    && echo -e "\n\ndruid.extensions.loadList=[\"druid-hdfs-storage\", \"druid-kafka-indexing-service\", \"druid-datasketches\", \"druid-testing-tools\"]" >> conf/druid/single-server/micro-quickstart/_common/common.runtime.properties \
+    && echo -e "\n\ndruid.server.http.allowedHttpMethods=[\"HEAD\"]" >> conf/druid/single-server/micro-quickstart/_common/common.runtime.properties \
   )
 }
 
@@ -107,8 +93,7 @@ DRUID_PID_FILE=".druid.pid"
 
 function build() {
   _log "Building druid"
-  _build_distribution \
-  && _download_zookeeper "$(_get_code_root)/distribution/target/apache-druid-$(_get_druid_version)/zk"
+  _build_distribution
   _log "Done building druid"
 }
 
@@ -119,12 +104,13 @@ function start() {
      _error "${DRUID_PID_FILE} exists with pid '$(<${DRUID_PID_FILE})'. Either shutdown druid or delete this file."
   fi
 
+  export DRUID_SKIP_JAVA_CHECK=1 # Make it simpler to develop the web console when localhost is on JDK11
   "$(_get_code_root)/distribution/target/apache-druid-$(_get_druid_version)/bin/start-micro-quickstart" > /dev/null &
   local pid="$!"
   echo "$pid" > "$DRUID_PID_FILE"
   _log "Druid started with pid ${pid}"
 
-  _wait_for_200_response "http://localhost:8888/unified-console.html" 3 20
+  _wait_for_200_response "http://localhost:8888/unified-console.html" 3 30
 }
 
 function stop() {

@@ -113,5 +113,38 @@
                 "rows" : 1
             }
         } ]
+    },
+    {
+        "description": "timeseries, stringFirst/stringLast aggs, all",
+        "query":{
+            "queryType" : "timeseries",
+            "dataSource": "%%DATASOURCE%%",
+            "granularity":"day",
+            "intervals":[
+                "2013-08-31T00:00/2013-09-01T00:00"
+            ],
+            "filter":null,
+            "aggregations":[
+                {
+                    "type": "stringFirst",
+                    "name": "first_user",
+                    "fieldName": "user"
+                },
+                {
+                    "type":"stringLast",
+                    "name":"last_user",
+                    "fieldName":"user"
+                }
+            ]
+        },
+        "expectedResults":[
+            {
+                "timestamp" : "2013-08-31T00:00:00.000Z",
+                "result" : {
+                    "first_user":"nuclear",
+                    "last_user":"stringer"
+                }
+            }
+        ]
     }
 ]

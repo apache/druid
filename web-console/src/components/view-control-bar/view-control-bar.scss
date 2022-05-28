@@ -29,16 +29,18 @@
   }
 
   .control-label {
-    font-size: 30px;
+    font-size: 21px;
     line-height: 30px;
+    font-weight: 600;
     cursor: default;
     margin-right: 20px;
   }
 
-  label.bp3-control,
-  label.bp3-label {
+  label.#{$bp-ns}-control,
+  label.#{$bp-ns}-label {
     display: inline-block;
-    margin-bottom: 8px;
+    margin-bottom: 0;
+    line-height: 30px;
   }
 
   .table-column-selector {

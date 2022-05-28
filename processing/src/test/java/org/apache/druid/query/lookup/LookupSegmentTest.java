@@ -21,7 +21,6 @@ package org.apache.druid.query.lookup;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -138,7 +137,7 @@ public class LookupSegmentTest
     // reporting complete single-valued capabilities. It would be good to change this in the future, so query engines
     // running on top of lookups can take advantage of singly-valued optimizations.
     Assert.assertTrue(capabilities.hasMultipleValues().isUnknown());
-    Assert.assertFalse(capabilities.isDictionaryEncoded());
+    Assert.assertFalse(capabilities.isDictionaryEncoded().isTrue());
   }
 
   @Test
@@ -151,7 +150,7 @@ public class LookupSegmentTest
     // running on top of lookups can take advantage of singly-valued optimizations.
     Assert.assertEquals(ValueType.STRING, capabilities.getType());
     Assert.assertTrue(capabilities.hasMultipleValues().isUnknown());
-    Assert.assertFalse(capabilities.isDictionaryEncoded());
+    Assert.assertFalse(capabilities.isDictionaryEncoded().isTrue());
   }
 
   @Test
@@ -184,17 +183,22 @@ public class LookupSegmentTest
         null
     );
 
-    final Cursor cursor = Iterables.getOnlyElement(cursors.toList());
     final List<Pair<String, String>> kvs = new ArrayList<>();
 
+    cursors.accumulate(
+        null,
+        (ignored, cursor) -> {
+          final ColumnValueSelector keySelector = cursor.getColumnSelectorFactory().makeColumnValueSelector("k");
+          final ColumnValueSelector valueSelector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
 
-    final ColumnValueSelector keySelector = cursor.getColumnSelectorFactory().makeColumnValueSelector("k");
-    final ColumnValueSelector valueSelector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+          while (!cursor.isDone()) {
+            kvs.add(Pair.of(String.valueOf(keySelector.getObject()), String.valueOf(valueSelector.getObject())));
+            cursor.advanceUninterruptibly();
+          }
 
-    while (!cursor.isDone()) {
-      kvs.add(Pair.of(String.valueOf(keySelector.getObject()), String.valueOf(valueSelector.getObject())));
-      cursor.advanceUninterruptibly();
-    }
+          return null;
+        }
+    );
 
     Assert.assertEquals(
         ImmutableList.of(

@@ -34,9 +34,9 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
-import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireHydrant;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -48,7 +48,7 @@ import java.util.List;
 
 /**
  */
-public class SinkTest
+public class SinkTest extends InitializedNullHandlingTest
 {
   @Test
   public void testSwap() throws Exception
@@ -65,10 +65,11 @@ public class SinkTest
     final Interval interval = Intervals.of("2013-01-01/2013-01-02");
     final String version = DateTimes.nowUtc().toString();
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
+        null,
         100,
         null,
-        new Period("P1Y"),
         null,
+        new Period("P1Y"),
         null,
         null,
         null,
@@ -90,9 +91,10 @@ public class SinkTest
         schema,
         tuningConfig.getShardSpec(),
         version,
+        tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
-        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getMaxBytesInMemoryOrDefault(),
+        true,
         tuningConfig.getDedupColumn()
     );
 
@@ -220,10 +222,11 @@ public class SinkTest
     final Interval interval = Intervals.of("2013-01-01/2013-01-02");
     final String version = DateTimes.nowUtc().toString();
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
+        null,
         100,
         null,
-        new Period("P1Y"),
         null,
+        new Period("P1Y"),
         null,
         null,
         null,
@@ -245,9 +248,10 @@ public class SinkTest
         schema,
         tuningConfig.getShardSpec(),
         version,
+        tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
-        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getMaxBytesInMemoryOrDefault(),
+        true,
         tuningConfig.getDedupColumn()
     );
 

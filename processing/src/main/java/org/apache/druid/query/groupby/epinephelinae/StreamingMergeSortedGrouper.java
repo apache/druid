@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -33,7 +34,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import java.nio.ByteBuffer;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 /**
  * A streaming grouper which can aggregate sorted inputs.  This grouper can aggregate while its iterator is being
@@ -302,7 +302,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
       // The below condition is checked in a while loop instead of using a lock to avoid frequent thread park.
       while ((nextReadIndex == -1 || nextReadIndex == 0) && !Thread.currentThread().isInterrupted()) {
         if (timeoutNs <= 0L) {
-          throw new RuntimeException(new TimeoutException());
+          throw new QueryTimeoutException();
         }
         // Thread.yield() should not be called from the very beginning
         if (spinTimeoutNs <= 0L) {
@@ -321,7 +321,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
       // The below condition is checked in a while loop instead of using a lock to avoid frequent thread park.
       while ((nextWriteIndex == nextReadIndex) && !Thread.currentThread().isInterrupted()) {
         if (timeoutNs <= 0L) {
-          throw new RuntimeException(new TimeoutException());
+          throw new QueryTimeoutException();
         }
         // Thread.yield() should not be called from the very beginning
         if (spinTimeoutNs <= 0L) {
@@ -384,6 +384,8 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
 
     return new CloseableIterator<Entry<KeyType>>()
     {
+      final ReusableEntry<KeyType> reusableEntry = ReusableEntry.create(keySerde, aggregators.length);
+
       {
         // Wait for some data to be ready and initialize nextReadIndex.
         increaseReadIndexTo(0);
@@ -429,11 +431,10 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
         // - an index of the array slot where the aggregation for the corresponding grouping key is done
         // - an index of the array slot which is not read yet
         final int recordOffset = recordSize * nextReadIndex;
-        final KeyType key = keySerde.fromByteBuffer(buffer, recordOffset);
+        keySerde.readFromByteBuffer(reusableEntry.getKey(), buffer, recordOffset);
 
-        final Object[] values = new Object[aggregators.length];
         for (int i = 0; i < aggregators.length; i++) {
-          values[i] = aggregators[i].get(buffer, recordOffset + aggregatorOffsets[i]);
+          reusableEntry.getValues()[i] = aggregators[i].get(buffer, recordOffset + aggregatorOffsets[i]);
         }
 
         final int targetIndex = nextReadIndex == maxNumSlots - 1 ? 0 : nextReadIndex + 1;
@@ -441,7 +442,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
         // nextReadIndex.
         increaseReadIndexTo(targetIndex);
 
-        return new Entry<>(key, values);
+        return reusableEntry;
       }
 
       /**
@@ -470,7 +471,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
         while ((curWriteIndex == -1 || target == curWriteIndex) &&
                !finished && !Thread.currentThread().isInterrupted()) {
           if (timeoutNs <= 0L) {
-            throw new RuntimeException(new TimeoutException());
+            throw new QueryTimeoutException();
           }
           // Thread.yield() should not be called from the very beginning
           if (spinTimeoutNs <= 0L) {

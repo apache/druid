@@ -179,13 +179,13 @@ public class SQLServerConnector extends SQLMetadataConnector
   }
 
   @Override
-  protected String getPayloadType()
+  public String getPayloadType()
   {
     return PAYLOAD_TYPE;
   }
 
   @Override
-  protected String getSerialType()
+  public String getSerialType()
   {
     return SERIAL_TYPE;
   }
@@ -197,7 +197,7 @@ public class SQLServerConnector extends SQLMetadataConnector
   }
 
   @Override
-  protected int getStreamingFetchSize()
+  public int getStreamingFetchSize()
   {
     return DEFAULT_STREAMING_RESULT_SIZE;
   }

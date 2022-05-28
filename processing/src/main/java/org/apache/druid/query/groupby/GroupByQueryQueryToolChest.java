@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
@@ -40,6 +41,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.MappedSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
@@ -91,21 +93,24 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   public static final String GROUP_BY_MERGE_KEY = "groupByMerge";
 
   private final GroupByStrategySelector strategySelector;
+  private final GroupByQueryConfig queryConfig;
   private final GroupByQueryMetricsFactory queryMetricsFactory;
 
   @VisibleForTesting
   public GroupByQueryQueryToolChest(GroupByStrategySelector strategySelector)
   {
-    this(strategySelector, DefaultGroupByQueryMetricsFactory.instance());
+    this(strategySelector, GroupByQueryConfig::new, DefaultGroupByQueryMetricsFactory.instance());
   }
 
   @Inject
   public GroupByQueryQueryToolChest(
       GroupByStrategySelector strategySelector,
+      Supplier<GroupByQueryConfig> queryConfigSupplier,
       GroupByQueryMetricsFactory queryMetricsFactory
   )
   {
     this.strategySelector = strategySelector;
+    this.queryConfig = queryConfigSupplier.get();
     this.queryMetricsFactory = queryMetricsFactory;
   }
 
@@ -415,6 +420,12 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   {
     final boolean resultAsArray = query.getContextBoolean(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false);
 
+    if (resultAsArray && !queryConfig.isIntermediateResultAsMapCompat()) {
+      // We can assume ResultRow are serialized and deserialized as arrays. No need for special decoration,
+      // and we can save the overhead of making a copy of the ObjectMapper.
+      return objectMapper;
+    }
+
     // Serializer that writes array- or map-based rows as appropriate, based on the "resultAsArray" setting.
     final JsonSerializer<ResultRow> serializer = new JsonSerializer<ResultRow>()
     {
@@ -426,9 +437,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       ) throws IOException
       {
         if (resultAsArray) {
-          jg.writeObject(resultRow.getArray());
+          JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, resultRow.getArray());
         } else {
-          jg.writeObject(resultRow.toMapBasedRow(query));
+          JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, resultRow.toMapBasedRow(query));
         }
       }
     };
@@ -472,13 +483,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
-            if (groupByQuery.getDimFilter() != null) {
-              groupByQuery = groupByQuery.withDimFilter(groupByQuery.getDimFilter().optimize());
-            }
-            final GroupByQuery delegateGroupByQuery = groupByQuery;
             final List<DimensionSpec> dimensionSpecs = new ArrayList<>();
-            final BitSet optimizedDimensions = extractionsToRewrite(delegateGroupByQuery);
-            final List<DimensionSpec> dimensions = delegateGroupByQuery.getDimensions();
+            final BitSet optimizedDimensions = extractionsToRewrite(groupByQuery);
+            final List<DimensionSpec> dimensions = groupByQuery.getDimensions();
             for (int i = 0; i < dimensions.size(); i++) {
               final DimensionSpec dimensionSpec = dimensions.get(i);
               if (optimizedDimensions.get(i)) {
@@ -491,7 +498,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
             }
 
             return runner.run(
-                queryPlus.withQuery(delegateGroupByQuery.withDimensionSpecs(dimensionSpecs)),
+                queryPlus.withQuery(groupByQuery.withDimensionSpecs(dimensionSpecs)),
                 responseContext
             );
           }
@@ -517,14 +524,17 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       @Override
       public byte[] computeCacheKey(GroupByQuery query)
       {
-        return new CacheKeyBuilder(GROUPBY_QUERY)
+        CacheKeyBuilder builder = new CacheKeyBuilder(GROUPBY_QUERY)
             .appendByte(CACHE_STRATEGY_VERSION)
             .appendCacheable(query.getGranularity())
             .appendCacheable(query.getDimFilter())
             .appendCacheables(query.getAggregatorSpecs())
             .appendCacheables(query.getDimensions())
-            .appendCacheable(query.getVirtualColumns())
-            .build();
+            .appendCacheable(query.getVirtualColumns());
+        if (query.isApplyLimitPushDown()) {
+          builder.appendCacheable(query.getLimitSpec());
+        }
+        return builder.build();
       }
 
       @Override

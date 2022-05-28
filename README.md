@@ -17,11 +17,12 @@
   ~ under the License.
   -->
 
-[![Slack](https://img.shields.io/badge/slack-%23druid-72eff8?logo=slack)](https://s.apache.org/slack-invite)
-[![Build Status](https://travis-ci.org/apache/druid.svg?branch=master)](https://travis-ci.org/apache/druid)
+[![Slack](https://img.shields.io/badge/slack-%23druid-72eff8?logo=slack)](https://druid.apache.org/community/join-slack)
+[![Build Status](https://api.travis-ci.com/apache/druid.svg?branch=master)](https://app.travis-ci.com/github/apache/druid)
 [![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/apache/druid.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/apache/druid/context:java)
 [![Coverage Status](https://img.shields.io/codecov/c/gh/apache/druid)](https://codecov.io/gh/apache/druid)
 [![Docker](https://img.shields.io/badge/container-docker-blue.svg)](https://hub.docker.com/r/apache/druid)
+[![Helm](https://img.shields.io/badge/helm-druid-5F90AB?logo=helm)](https://github.com/apache/druid/blob/master/helm/druid/README.md)
 <!--- Following badges are disabled until they can be fixed: -->
 <!--- [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) -->
 
@@ -31,7 +32,7 @@
 [Documentation](https://druid.apache.org/docs/latest/design/) |
 [Developer Mailing List](https://lists.apache.org/list.html?dev@druid.apache.org) |
 [User Mailing List](https://groups.google.com/forum/#!forum/druid-user) |
-[Slack](https://s.apache.org/slack-invite) |
+[Slack](https://druid.apache.org/community/join-slack) |
 [Twitter](https://twitter.com/druidio) |
 [Download](https://druid.apache.org/downloads.html)
 
@@ -41,11 +42,11 @@
 
 Druid is a high performance real-time analytics database. Druid's main value add is to reduce time to insight and action.
 
-Druid is designed for workflows where fast queries and ingest really matter. Druid excels at powering UIs, running operational (ad-hoc) queries, or handling high concurrency. Consider Druid as an open source alternative to data warehouses for a variety of use cases.
+Druid is designed for workflows where fast queries and ingest really matter. Druid excels at powering UIs, running operational (ad-hoc) queries, or handling high concurrency. Consider Druid as an open source alternative to data warehouses for a variety of use cases. The [design documentation](https://druid.apache.org/docs/latest/design/architecture.html) explains the key concepts.
 
 ### Getting started
 
-You can get started with Druid with our [quickstart](https://druid.apache.org/docs/latest/tutorials/quickstart.html).
+You can get started with Druid with our [local](https://druid.apache.org/docs/latest/tutorials/quickstart.html) or [Docker](http://druid.apache.org/docs/latest/tutorials/docker.html) quickstart.
 
 Druid provides a rich set of APIs (via HTTP and [JDBC](https://druid.apache.org/docs/latest/querying/sql.html#jdbc)) for loading, managing, and querying your data.
 You can also interact with Druid via the [built-in console](https://druid.apache.org/docs/latest/operations/druid-console.html) (shown below).
@@ -85,11 +86,11 @@ is hosted at Google Groups.
 Development discussions occur on [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org), which
 you can subscribe to by emailing [dev-subscribe@druid.apache.org](mailto:dev-subscribe@druid.apache.org).
 
-Chat with Druid committers and users in real-time on the `#druid` channel in the Apache Slack team. Please use [this invitation link to join the ASF Slack](https://s.apache.org/slack-invite), and once joined, go into the `#druid` channel.
+Chat with Druid committers and users in real-time on the Apache Druid Slack channel. Please use [this invitation link to join and invite others](https://druid.apache.org/community/join-slack).
 
 ### Building from source
 
-Please note that JDK 8 is required to build Druid.
+Please note that JDK 8 or JDK 11 is required to build Druid.
 
 For instructions on building Druid from source, see [docs/development/build.md](docs/development/build.md)
 

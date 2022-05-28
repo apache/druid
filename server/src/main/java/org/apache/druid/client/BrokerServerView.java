@@ -106,23 +106,37 @@ public class BrokerServerView implements TimelineServerView
     this.baseView = baseView;
     this.tierSelectorStrategy = tierSelectorStrategy;
     this.emitter = emitter;
-    this.segmentWatcherConfig = segmentWatcherConfig;
     this.clients = new ConcurrentHashMap<>();
     this.selectors = new HashMap<>();
     this.timelines = new HashMap<>();
 
+    // Validate and set the segment watcher config
+    validateSegmentWatcherConfig(segmentWatcherConfig);
+    this.segmentWatcherConfig = segmentWatcherConfig;
+
     this.segmentFilter = (Pair<DruidServerMetadata, DataSegment> metadataAndSegment) -> {
+
+      // Include only watched tiers if specified
       if (segmentWatcherConfig.getWatchedTiers() != null
           && !segmentWatcherConfig.getWatchedTiers().contains(metadataAndSegment.lhs.getTier())) {
         return false;
       }
 
+      // Exclude ignored tiers if specified
+      if (segmentWatcherConfig.getIgnoredTiers() != null
+          && segmentWatcherConfig.getIgnoredTiers().contains(metadataAndSegment.lhs.getTier())) {
+        return false;
+      }
+
+      // Include only watched datasources if specified
       if (segmentWatcherConfig.getWatchedDataSources() != null
           && !segmentWatcherConfig.getWatchedDataSources().contains(metadataAndSegment.rhs.getDataSource())) {
         return false;
       }
 
-      return true;
+      // Include realtime tasks only if they are watched
+      return metadataAndSegment.lhs.getType() != ServerType.INDEXER_EXECUTOR
+             || segmentWatcherConfig.isWatchRealtimeTasks();
     };
     ExecutorService exec = Execs.singleThreaded("BrokerServerView-%s");
     baseView.registerSegmentCallback(
@@ -184,6 +198,35 @@ public class BrokerServerView implements TimelineServerView
     initialized.await();
   }
 
+  /**
+   * Validates the given BrokerSegmentWatcherConfig.
+   * <ul>
+   *   <li>At most one of watchedTiers or ignoredTiers can be set</li>
+   *   <li>If set, watchedTiers must be non-empty</li>
+   *   <li>If set, ignoredTiers must be non-empty</li>
+   * </ul>
+   */
+  private void validateSegmentWatcherConfig(BrokerSegmentWatcherConfig watcherConfig)
+  {
+    if (watcherConfig.getWatchedTiers() != null
+        && watcherConfig.getIgnoredTiers() != null) {
+      throw new ISE(
+          "At most one of 'druid.broker.segment.watchedTiers' "
+          + "and 'druid.broker.segment.ignoredTiers' can be configured."
+      );
+    }
+
+    if (watcherConfig.getWatchedTiers() != null
+        && watcherConfig.getWatchedTiers().isEmpty()) {
+      throw new ISE("If configured, 'druid.broker.segment.watchedTiers' must be non-empty");
+    }
+
+    if (watcherConfig.getIgnoredTiers() != null
+        && watcherConfig.getIgnoredTiers().isEmpty()) {
+      throw new ISE("If configured, 'druid.broker.segment.ignoredTiers' must be non-empty");
+    }
+  }
+
   private QueryableDruidServer addServer(DruidServer server)
   {
     QueryableDruidServer retVal = new QueryableDruidServer<>(server, makeDirectClient(server));
@@ -231,7 +274,8 @@ public class BrokerServerView implements TimelineServerView
 
           VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
           if (timeline == null) {
-            timeline = new VersionedIntervalTimeline<>(Ordering.natural());
+            // broker needs to skip tombstones
+            timeline = new VersionedIntervalTimeline<>(Ordering.natural(), true);
             timelines.put(segment.getDataSource(), timeline);
           }
 
@@ -307,12 +351,12 @@ public class BrokerServerView implements TimelineServerView
   @Override
   public Optional<VersionedIntervalTimeline<String, ServerSelector>> getTimeline(final DataSourceAnalysis analysis)
   {
-    final TableDataSource tableDataSource =
+    final TableDataSource table =
         analysis.getBaseTableDataSource()
                 .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
 
     synchronized (lock) {
-      return Optional.ofNullable(timelines.get(tableDataSource.getName()));
+      return Optional.ofNullable(timelines.get(table.getName()));
     }
   }
 

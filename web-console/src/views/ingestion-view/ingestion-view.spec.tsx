@@ -19,20 +19,19 @@
 import { shallow } from 'enzyme';
 import React from 'react';
 
-import { Capabilities } from '../../utils/capabilities';
+import { Capabilities } from '../../utils';
 
 import { IngestionView } from './ingestion-view';
 
-describe('tasks view', () => {
+describe('IngestionView', () => {
   it('matches snapshot', () => {
     const taskView = shallow(
       <IngestionView
-        openDialog={'test'}
-        taskGroupId={'test'}
-        datasourceId={'datasource'}
+        openDialog="test"
+        taskGroupId="test"
+        datasourceId="datasource"
         goToDatasource={() => {}}
         goToQuery={() => {}}
-        goToMiddleManager={() => {}}
         goToLoadData={() => {}}
         capabilities={Capabilities.FULL}
       />,

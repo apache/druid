@@ -19,6 +19,7 @@
 
 package org.apache.druid.discovery;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
@@ -34,4 +35,17 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 public abstract class DruidService
 {
   public abstract String getName();
+
+  /**
+   * @return Whether the service should be discoverable. The default implementation returns true.
+   *
+   * Some implementations may choose to override this so that the service is not discoverable if it has not been
+   * configured. This will not throw a fatal exception, but instead will just skip binding and log a message. This could
+   * be useful for optional configuration for the service.
+   */
+  @JsonIgnore
+  public boolean isDiscoverable()
+  {
+    return true;
+  }
 }

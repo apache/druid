@@ -19,6 +19,9 @@
 
 package org.apache.druid.segment.loading;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -32,11 +35,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class RoundRobinStorageLocationSelectorStrategy implements StorageLocationSelectorStrategy
 {
-
   private final List<StorageLocation> storageLocations;
   private final AtomicInteger startIndex = new AtomicInteger(0);
 
-  public RoundRobinStorageLocationSelectorStrategy(List<StorageLocation> storageLocations)
+  @JsonCreator
+  public RoundRobinStorageLocationSelectorStrategy(@JacksonInject List<StorageLocation> storageLocations)
   {
     this.storageLocations = storageLocations;
   }
@@ -44,7 +47,8 @@ public class RoundRobinStorageLocationSelectorStrategy implements StorageLocatio
   @Override
   public Iterator<StorageLocation> getLocations()
   {
-    return new Iterator<StorageLocation>() {
+    return new Iterator<StorageLocation>()
+    {
 
       private final int numStorageLocations = storageLocations.size();
       private int remainingIterations = numStorageLocations;
@@ -73,5 +77,4 @@ public class RoundRobinStorageLocationSelectorStrategy implements StorageLocatio
       }
     };
   }
-
 }

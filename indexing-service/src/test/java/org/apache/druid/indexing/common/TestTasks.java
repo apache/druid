@@ -113,8 +113,7 @@ public class TestTasks
       while (!Thread.currentThread().isInterrupted()) {
         Thread.sleep(1000);
       }
-
-      return TaskStatus.failure(getId());
+      return TaskStatus.failure(getId(), "Dummy task status failure for testing");
     }
   }
 }

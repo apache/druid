@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.timeseries;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.CachingEmitter;
 import org.apache.druid.query.DefaultQueryMetricsTest;
@@ -54,12 +55,13 @@ public class DefaultTimeseriesQueryMetricsTest
         .aggregators(QueryRunnerTestHelper.ROWS_COUNT, QueryRunnerTestHelper.INDEX_DOUBLE_SUM)
         .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .descending(true)
+        .context(ImmutableMap.of("testKey", "testValue"))
         .build();
     queryMetrics.query(query);
 
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
-    Assert.assertEquals(15, actualEvent.size());
+    Assert.assertEquals(16, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
     Assert.assertEquals("", actualEvent.get("host"));
@@ -73,6 +75,7 @@ public class DefaultTimeseriesQueryMetricsTest
     Assert.assertEquals("false", actualEvent.get("hasFilters"));
     Assert.assertEquals(expectedIntervals.get(0).toDuration().toString(), actualEvent.get("duration"));
     Assert.assertEquals("", actualEvent.get(DruidMetrics.ID));
+    Assert.assertEquals(ImmutableMap.of("testKey", "testValue"), actualEvent.get("context"));
 
     // Timeseries-specific dimensions
     Assert.assertEquals("2", actualEvent.get("numMetrics"));

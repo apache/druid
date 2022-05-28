@@ -19,9 +19,12 @@
 
 package org.apache.druid.query.aggregation.variance;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.TestFloatColumnSelector;
+import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -93,16 +96,10 @@ public class VarianceAggregatorTest extends InitializedNullHandlingTest
     Assert.assertEquals(sum, holder.sum, 0.0001);
     Assert.assertEquals(nvariance, holder.nvariance, 0.0001);
     if (count == 0) {
-      try {
-        holder.getVariance(false);
-        Assert.fail("Should throw ISE");
-      }
-      catch (IllegalStateException e) {
-        Assert.assertTrue(e.getMessage().contains("should not be empty holder"));
-      }
+      Assert.assertEquals(NullHandling.defaultDoubleValue(), holder.getVariance(false));
     } else {
-      Assert.assertEquals(holder.getVariance(true), variances_pop[(int) count - 1], 0.0001);
-      Assert.assertEquals(holder.getVariance(false), variances_samp[(int) count - 1], 0.0001);
+      Assert.assertEquals(variances_pop[(int) count - 1], holder.getVariance(true), 0.0001);
+      Assert.assertEquals(variances_samp[(int) count - 1], holder.getVariance(false), 0.0001);
     }
   }
 
@@ -125,6 +122,34 @@ public class VarianceAggregatorTest extends InitializedNullHandlingTest
     assertValues((VarianceAggregatorCollector) agg.get(buffer, 0), 3, 7.3d, 2.9866d);
     aggregate(selector, agg, buffer, 0);
     assertValues((VarianceAggregatorCollector) agg.get(buffer, 0), 4, 8.6d, 3.95d);
+  }
+
+  @Test
+  public void testObjectVarianceBufferAggregatorWithZeroCount()
+  {
+    VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector().add(1.1f);
+    VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector().add(2.7f);
+    VarianceAggregatorCollector holder3 = new VarianceAggregatorCollector();
+    VarianceAggregatorCollector[] values = {holder1, holder2, holder3};
+    TestObjectColumnSelector<VarianceAggregatorCollector> selector = new TestObjectColumnSelector(values);
+    colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(selector);
+    EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly")).andReturn(new ColumnCapabilitiesImpl().setType(VarianceAggregatorFactory.TYPE));
+    EasyMock.replay(colSelectorFactory);
+
+    VarianceBufferAggregator agg = (VarianceBufferAggregator) aggFactory.factorizeBuffered(
+        colSelectorFactory
+    );
+
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[aggFactory.getMaxIntermediateSizeWithNulls()]);
+    agg.init(buffer, 0);
+    assertValues((VarianceAggregatorCollector) agg.get(buffer, 0), 0, 0d, 0d);
+    aggregate(selector, agg, buffer, 0);
+    assertValues((VarianceAggregatorCollector) agg.get(buffer, 0), 1, 1.1d, 0d);
+    aggregate(selector, agg, buffer, 0);
+    assertValues((VarianceAggregatorCollector) agg.get(buffer, 0), 2, 3.8d, 1.28d);
+    aggregate(selector, agg, buffer, 0);
+    assertValues((VarianceAggregatorCollector) agg.get(buffer, 0), 2, 3.8d, 1.28d);
   }
 
   @Test
@@ -157,6 +182,17 @@ public class VarianceAggregatorTest extends InitializedNullHandlingTest
 
   private void aggregate(
       TestFloatColumnSelector selector,
+      VarianceBufferAggregator agg,
+      ByteBuffer buff,
+      int position
+  )
+  {
+    agg.aggregate(buff, position);
+    selector.increment();
+  }
+
+  private void aggregate(
+      TestObjectColumnSelector<VarianceAggregatorCollector> selector,
       VarianceBufferAggregator agg,
       ByteBuffer buff,
       int position

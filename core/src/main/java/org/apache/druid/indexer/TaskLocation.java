@@ -21,13 +21,18 @@ package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.IAE;
 
+import javax.annotation.Nullable;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Objects;
 
 public class TaskLocation
 {
   private static final TaskLocation UNKNOWN = new TaskLocation(null, -1, -1);
 
+  @Nullable
   private final String host;
   private final int port;
   private final int tlsPort;
@@ -44,7 +49,7 @@ public class TaskLocation
 
   @JsonCreator
   public TaskLocation(
-      @JsonProperty("host") String host,
+      @JsonProperty("host") @Nullable String host,
       @JsonProperty("port") int port,
       @JsonProperty("tlsPort") int tlsPort
   )
@@ -54,6 +59,7 @@ public class TaskLocation
     this.tlsPort = tlsPort;
   }
 
+  @Nullable
   @JsonProperty
   public String getHost()
   {
@@ -72,29 +78,25 @@ public class TaskLocation
     return tlsPort;
   }
 
-  @Override
-  public boolean equals(Object o)
+  public URL makeURL(final String encodedPathAndQueryString) throws MalformedURLException
   {
-    if (this == o) {
-      return true;
+    final String scheme;
+    final int portToUse;
+
+    if (tlsPort > 0) {
+      scheme = "https";
+      portToUse = tlsPort;
+    } else {
+      scheme = "http";
+      portToUse = port;
     }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
+
+    if (!encodedPathAndQueryString.startsWith("/")) {
+      throw new IAE("Path must start with '/'");
     }
 
-    TaskLocation that = (TaskLocation) o;
-
-    return port == that.port && tlsPort == that.tlsPort &&
-           Objects.equals(host, that.host);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    int result = host.hashCode();
-    result = 31 * result + port;
-    result = 31 * result + tlsPort;
-    return result;
+    // Use URL constructor, not URI, since the path is already encoded.
+    return new URL(scheme, host, portToUse, encodedPathAndQueryString);
   }
 
   @Override
@@ -105,5 +107,24 @@ public class TaskLocation
            ", port=" + port +
            ", tlsPort=" + tlsPort +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    TaskLocation that = (TaskLocation) o;
+    return port == that.port && tlsPort == that.tlsPort && Objects.equals(host, that.host);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(host, port, tlsPort);
   }
 }

@@ -39,7 +39,7 @@ public final class BloomFilterMergeAggregator
     ByteBuffer other = selector.getObject();
     if (other == null) {
       // nulls should be empty bloom filters by this point, so encountering a nil column in merge agg is unexpected
-      throw new ISE("WTF?! Unexpected null value in BloomFilterMergeAggregator");
+      throw new ISE("Unexpected null value in BloomFilterMergeAggregator");
     }
     BloomKFilter.mergeBloomFilterByteBuffers(buf, buf.position(), other, other.position());
   }

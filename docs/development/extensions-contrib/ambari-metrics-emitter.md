@@ -23,12 +23,11 @@ title: "Ambari Metrics Emitter"
   -->
 
 
-To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `ambari-metrics-emitter` extension.
+To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `ambari-metrics-emitter` in the extensions load list.
 
 ## Introduction
 
-This extension emits Druid metrics to a ambari-metrics carbon server.
-Events are sent after been [pickled](http://ambari-metrics.readthedocs.org/en/latest/feeding-carbon.html#the-pickle-protocol); the size of the batch is configurable.
+This extension emits Druid metrics to an ambari-metrics carbon server. Events are sent after been pickled (i.e., batched). The size of the batch is configurable.
 
 ## Configuration
 

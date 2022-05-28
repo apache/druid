@@ -17,39 +17,41 @@
  */
 
 import { render } from '@testing-library/react';
-import { parseSqlQuery } from 'druid-query-toolkit';
+import { QueryResult, sane, SqlQuery } from 'druid-query-toolkit';
 import React from 'react';
 
 import { QueryOutput } from './query-output';
 
-describe('query output', () => {
+describe('QueryOutput', () => {
   it('matches snapshot', () => {
-    const parsedQuery = parseSqlQuery(`SELECT
-  "language",
-  COUNT(*) AS "Count", COUNT(DISTINCT "language") AS "dist_language", COUNT(*) FILTER (WHERE "language"= 'xxx') AS "language_filtered_count"
-FROM "github"
-WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY AND "language" != 'TypeScript'
-GROUP BY 1
-HAVING "Count" != 37392
-ORDER BY "Count" DESC`);
+    const parsedQuery = SqlQuery.parse(sane`
+      SELECT
+        "language",
+        COUNT(*) AS "Count", COUNT(DISTINCT "language") AS "dist_language", COUNT(*) FILTER (WHERE "language"= 'xxx') AS "language_filtered_count"
+      FROM "github"
+      WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY AND "language" != 'TypeScript'
+      GROUP BY 1
+      HAVING "Count" != 37392
+      ORDER BY "Count" DESC
+    `);
 
     const queryOutput = (
       <QueryOutput
         runeMode={false}
-        loading={false}
-        error="lol"
-        queryResult={{
-          header: ['language', 'Count', 'dist_language', 'language_filtered_count'],
-          rows: [
+        queryResult={QueryResult.fromRawResult(
+          [
+            ['language', 'Count', 'dist_language', 'language_filtered_count'],
             ['', 6881, 1, 0],
             ['JavaScript', 166, 1, 0],
             ['Python', 62, 1, 0],
             ['HTML', 46, 1, 0],
             [],
           ],
-        }}
-        parsedQuery={parsedQuery}
-        onQueryChange={() => null}
+          false,
+          true,
+        ).attachQuery({}, parsedQuery)}
+        onQueryAction={() => {}}
+        onLoadMore={() => {}}
       />
     );
 

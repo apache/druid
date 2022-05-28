@@ -83,6 +83,7 @@ public class MaterializedViewSupervisorTest
   private TaskQueue taskQueue;
   private MaterializedViewSupervisor supervisor;
   private String derivativeDatasourceName;
+  private MaterializedViewSupervisorSpec spec;
   private final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
 
   @Before
@@ -103,9 +104,9 @@ public class MaterializedViewSupervisorTest
     taskQueue = EasyMock.createMock(TaskQueue.class);
     taskQueue.start();
     objectMapper.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
-    MaterializedViewSupervisorSpec spec = new MaterializedViewSupervisorSpec(
+    spec = new MaterializedViewSupervisorSpec(
         "base",
-        new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("dim")), null, null),
+        new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("dim"))),
         new AggregatorFactory[]{new LongSumAggregatorFactory("m1", "m1")},
         HadoopTuningConfig.makeDefaultTuningConfig(),
         null,
@@ -140,7 +141,7 @@ public class MaterializedViewSupervisorTest
             ImmutableMap.of(),
             ImmutableList.of("dim1", "dim2"),
             ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, null, null),
+            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
             9,
             1024
         ),
@@ -151,7 +152,7 @@ public class MaterializedViewSupervisorTest
             ImmutableMap.of(),
             ImmutableList.of("dim1", "dim2"),
             ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, null, null),
+            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
             9,
             1024
         ),
@@ -162,7 +163,7 @@ public class MaterializedViewSupervisorTest
             ImmutableMap.of(),
             ImmutableList.of("dim1", "dim2"),
             ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, null, null),
+            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
             9,
             1024
         )
@@ -175,7 +176,7 @@ public class MaterializedViewSupervisorTest
             ImmutableMap.of(),
             ImmutableList.of("dim1", "dim2"),
             ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, null, null),
+            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
             9,
             1024
         ),
@@ -186,7 +187,7 @@ public class MaterializedViewSupervisorTest
             ImmutableMap.of(),
             ImmutableList.of("dim1", "dim2"),
             ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, null, null),
+            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
             9,
             1024
         )
@@ -209,7 +210,7 @@ public class MaterializedViewSupervisorTest
                 ImmutableMap.of(),
                 ImmutableList.of("dim1", "dim2"),
                 ImmutableList.of("m1"),
-                new HashBasedNumberedShardSpec(0, 1, null, null),
+                new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
                 9,
                 1024
             )
@@ -225,7 +226,7 @@ public class MaterializedViewSupervisorTest
                 ImmutableMap.of(),
                 ImmutableList.of("dim1", "dim2"),
                 ImmutableList.of("m1"),
-                new HashBasedNumberedShardSpec(0, 1, null, null),
+                new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
                 9,
                 1024
             )
@@ -246,7 +247,7 @@ public class MaterializedViewSupervisorTest
             ImmutableMap.of(),
             ImmutableList.of("dim1", "dim2"),
             ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, null, null),
+            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
             9,
             1024
         )
@@ -256,7 +257,7 @@ public class MaterializedViewSupervisorTest
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
     EasyMock.expect(taskStorage.getStatus("test_task1"))
-            .andReturn(Optional.of(TaskStatus.failure("test_task1")))
+            .andReturn(Optional.of(TaskStatus.failure("test_task1", "Dummy task status failure err message")))
             .anyTimes();
     EasyMock.expect(taskStorage.getStatus("test_task2"))
             .andReturn(Optional.of(TaskStatus.running("test_task2")))
@@ -317,12 +318,41 @@ public class MaterializedViewSupervisorTest
 
   }
 
+  /**
+   * Verifies that creating HadoopIndexTask compleates without raising exception.
+   */
+  @Test
+  public void testCreateTask()
+  {
+    List<DataSegment> baseSegments = Collections.singletonList(
+        new DataSegment(
+            "base",
+            Intervals.of("2015-01-02T00Z/2015-01-03T00Z"),
+            "2015-01-03",
+            ImmutableMap.of(),
+            ImmutableList.of("dim1", "dim2"),
+            ImmutableList.of("m1"),
+            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
+            9,
+            1024
+        )
+    );
+
+    HadoopIndexTask task = spec.createTask(
+        Intervals.of("2015-01-02T00Z/2015-01-03T00Z"),
+        "2015-01-03",
+        baseSegments
+    );
+
+    Assert.assertNotNull(task);
+  }
+
   @Test
   public void testSuspendedDoesntRun()
   {
     MaterializedViewSupervisorSpec suspended = new MaterializedViewSupervisorSpec(
         "base",
-        new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("dim")), null, null),
+        new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("dim"))),
         new AggregatorFactory[]{new LongSumAggregatorFactory("m1", "m1")},
         HadoopTuningConfig.makeDefaultTuningConfig(),
         null,

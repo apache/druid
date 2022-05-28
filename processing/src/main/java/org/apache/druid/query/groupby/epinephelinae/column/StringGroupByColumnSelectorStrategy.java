@@ -76,32 +76,39 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
   }
 
   @Override
-  public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
+  public int initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
   {
     DimensionSelector dimSelector = (DimensionSelector) selector;
     IndexedInts row = dimSelector.getRow();
     valuess[columnIndex] = row;
+    return 0;
+  }
+
+  /**
+   * Writes a dictionary ID to the grouping key.
+   *
+   * Protected so subclasses can access it, like {@link DictionaryBuildingStringGroupByColumnSelectorStrategy}.
+   */
+  protected void writeToKeyBuffer(int keyBufferPosition, int dictId, ByteBuffer keyBuffer)
+  {
+    keyBuffer.putInt(keyBufferPosition, dictId);
   }
 
   @Override
-  public Object getOnlyValue(ColumnValueSelector selector)
+  public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
   {
     final DimensionSelector dimSelector = (DimensionSelector) selector;
     final IndexedInts row = dimSelector.getRow();
     Preconditions.checkState(row.size() < 2, "Not supported for multi-value dimensions");
-    return row.size() == 1 ? row.get(0) : GROUP_BY_MISSING_VALUE;
-  }
-
-  @Override
-  public void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer)
-  {
-    keyBuffer.putInt(keyBufferPosition, (int) obj);
+    final int dictId = row.size() == 1 ? row.get(0) : GROUP_BY_MISSING_VALUE;
+    keyBuffer.putInt(keyBufferPosition, dictId);
+    return 0;
   }
 
   @Override
   public void initGroupingKeyColumnValue(
       int keyBufferPosition,
-      int columnIndex,
+      int dimensionIndex,
       Object rowObj,
       ByteBuffer keyBuffer,
       int[] stack
@@ -111,7 +118,7 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
     int rowSize = row.size();
 
     initializeGroupingKeyV2Dimension(row, rowSize, keyBuffer, keyBufferPosition);
-    stack[columnIndex] = rowSize == 0 ? 0 : 1;
+    stack[dimensionIndex] = rowSize == 0 ? 0 : 1;
   }
 
   @Override
@@ -157,8 +164,8 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
         capabilities != null &&
         capabilities.hasBitmapIndexes() &&
         capabilities.areDictionaryValuesSorted().and(capabilities.areDictionaryValuesUnique()).isTrue();
-
-    if (canCompareInts && (stringComparator == null || StringComparators.LEXICOGRAPHIC.equals(stringComparator))) {
+    final StringComparator comparator = stringComparator == null ? StringComparators.LEXICOGRAPHIC : stringComparator;
+    if (canCompareInts && StringComparators.LEXICOGRAPHIC.equals(comparator)) {
       return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Integer.compare(
           lhsBuffer.getInt(lhsPosition + keyBufferPosition),
           rhsBuffer.getInt(rhsPosition + keyBufferPosition)
@@ -168,8 +175,14 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
       return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
         String lhsStr = dictionaryLookup.apply(lhsBuffer.getInt(lhsPosition + keyBufferPosition));
         String rhsStr = dictionaryLookup.apply(rhsBuffer.getInt(rhsPosition + keyBufferPosition));
-        return stringComparator.compare(lhsStr, rhsStr);
+        return comparator.compare(lhsStr, rhsStr);
       };
     }
+  }
+
+  @Override
+  public void reset()
+  {
+    // Nothing to do.
   }
 }

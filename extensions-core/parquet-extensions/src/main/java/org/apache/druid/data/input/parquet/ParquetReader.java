@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.parquet.example.data.Group;
 import org.apache.parquet.hadoop.example.GroupReadSupport;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -57,7 +58,7 @@ public class ParquetReader extends IntermediateRowParsingReader<Group>
       InputRowSchema inputRowSchema,
       InputEntity source,
       File temporaryDirectory,
-      JSONPathSpec flattenSpec,
+      @Nullable JSONPathSpec flattenSpec,
       boolean binaryAsString
   )
   {
@@ -132,20 +133,25 @@ public class ParquetReader extends IntermediateRowParsingReader<Group>
   }
 
   @Override
+  protected InputEntity source()
+  {
+    return source;
+  }
+
+  @Override
   protected List<InputRow> parseInputRows(Group intermediateRow) throws ParseException
   {
     return Collections.singletonList(
         MapInputRowParser.parse(
-            inputRowSchema.getTimestampSpec(),
-            inputRowSchema.getDimensionsSpec(),
+            inputRowSchema,
             flattener.flatten(intermediateRow)
         )
     );
   }
 
   @Override
-  protected Map<String, Object> toMap(Group intermediateRow)
+  protected List<Map<String, Object>> toMap(Group intermediateRow)
   {
-    return flattener.toMap(intermediateRow);
+    return Collections.singletonList(flattener.toMap(intermediateRow));
   }
 }

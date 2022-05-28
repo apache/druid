@@ -19,23 +19,22 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.task.CachingSegmentAllocator;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
+import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
 import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.RangePartitionIndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.common.task.batch.partition.RangePartitionAnalysis;
-import org.apache.druid.indexing.worker.ShuffleDataSegmentPusher;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.indexing.worker.shuffle.ShuffleDataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.joda.time.Interval;
@@ -48,7 +47,7 @@ import java.util.stream.Collectors;
 
 /**
  * The worker task of {@link PartialRangeSegmentGenerateParallelIndexTaskRunner}. This task partitions input data by
- * ranges of the partition dimension specified in {@link SingleDimensionPartitionsSpec}. Partitioned segments are stored
+ * ranges of the partition dimension specified in {@link DimensionRangePartitionsSpec}. Partitioned segments are stored
  * in local storage using {@link ShuffleDataSegmentPusher}.
  */
 public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<GeneratedPartitionsMetadataReport>
@@ -58,6 +57,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   private static final boolean SKIP_NULL = true;
 
   private final String supervisorTaskId;
+  private final String subtaskSpecId;
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final Map<Interval, PartitionBoundaries> intervalToPartitions;
@@ -69,13 +69,12 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
       @JsonProperty("groupId") String groupId,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("supervisorTaskId") String supervisorTaskId,
+      // subtaskSpecId can be null only for old task versions.
+      @JsonProperty("subtaskSpecId") @Nullable final String subtaskSpecId,
       @JsonProperty("numAttempts") int numAttempts, // zero-based counting
       @JsonProperty(PROP_SPEC) ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") Map<String, Object> context,
-      @JsonProperty("intervalToPartitions") Map<Interval, PartitionBoundaries> intervalToPartitions,
-      @JacksonInject IndexingServiceClient indexingServiceClient,
-      @JacksonInject IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
-      @JacksonInject AppenderatorsManager appenderatorsManager
+      @JsonProperty("intervalToPartitions") Map<Interval, PartitionBoundaries> intervalToPartitions
   )
   {
     super(
@@ -85,32 +84,31 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
         supervisorTaskId,
         ingestionSchema,
         context,
-        indexingServiceClient,
-        taskClientFactory,
-        appenderatorsManager,
-        new RangePartitionIndexTaskInputRowIteratorBuilder(getPartitionDimension(ingestionSchema), !SKIP_NULL)
+        new RangePartitionIndexTaskInputRowIteratorBuilder(getPartitionDimensions(ingestionSchema), !SKIP_NULL)
     );
 
+    this.subtaskSpecId = subtaskSpecId;
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
     this.intervalToPartitions = intervalToPartitions;
   }
 
-  private static String getPartitionDimension(ParallelIndexIngestionSpec ingestionSpec)
+  private static List<String> getPartitionDimensions(ParallelIndexIngestionSpec ingestionSpec)
   {
     PartitionsSpec partitionsSpec = ingestionSpec.getTuningConfig().getPartitionsSpec();
     Preconditions.checkArgument(
-        partitionsSpec instanceof SingleDimensionPartitionsSpec,
-        "%s partitionsSpec required",
+        partitionsSpec instanceof DimensionRangePartitionsSpec,
+        "%s or %s partitionsSpec required",
+        DimensionRangePartitionsSpec.NAME,
         SingleDimensionPartitionsSpec.NAME
     );
 
-    SingleDimensionPartitionsSpec singleDimPartitionsSpec = (SingleDimensionPartitionsSpec) partitionsSpec;
-    String partitionDimension = singleDimPartitionsSpec.getPartitionDimension();
-    Preconditions.checkNotNull(partitionDimension, "partitionDimension required");
+    DimensionRangePartitionsSpec multiDimPartitionsSpec = (DimensionRangePartitionsSpec) partitionsSpec;
+    List<String> partitionDimensions = multiDimPartitionsSpec.getPartitionDimensions();
+    Preconditions.checkNotNull(partitionDimensions, "partitionDimension required");
 
-    return partitionDimension;
+    return partitionDimensions;
   }
 
   @JsonProperty
@@ -132,6 +130,13 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   }
 
   @JsonProperty
+  @Override
+  public String getSubtaskSpecId()
+  {
+    return subtaskSpecId;
+  }
+
+  @JsonProperty
   public Map<Interval, PartitionBoundaries> getIntervalToPartitions()
   {
     return intervalToPartitions;
@@ -144,48 +149,38 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   }
 
   @Override
-  public boolean isReady(TaskActionClient taskActionClient)
+  public boolean isReady(TaskActionClient taskActionClient) throws IOException
   {
-    return true;
+    return tryTimeChunkLock(
+        new SurrogateTaskActionClient(supervisorTaskId, taskActionClient),
+        getIngestionSchema().getDataSchema().getGranularitySpec().inputIntervals()
+    );
   }
 
   @Override
-  CachingSegmentAllocator createSegmentAllocator(TaskToolbox toolbox, ParallelIndexSupervisorTaskClient taskClient)
+  SegmentAllocatorForBatch createSegmentAllocator(TaskToolbox toolbox, ParallelIndexSupervisorTaskClient taskClient)
       throws IOException
   {
     final RangePartitionAnalysis partitionAnalysis = new RangePartitionAnalysis(
-        (SingleDimensionPartitionsSpec) ingestionSchema.getTuningConfig().getPartitionsSpec()
+        (DimensionRangePartitionsSpec) ingestionSchema.getTuningConfig().getPartitionsSpec()
     );
     intervalToPartitions.forEach(partitionAnalysis::updateBucket);
     return SegmentAllocators.forNonLinearPartitioning(
         toolbox,
         getDataSource(),
-        getId(),
-        ingestionSchema.getDataSchema().getGranularitySpec().getQueryGranularity(),
+        getSubtaskSpecId(),
+        ingestionSchema.getDataSchema().getGranularitySpec(),
         new SupervisorTaskAccess(supervisorTaskId, taskClient),
         partitionAnalysis
     );
   }
 
   @Override
-  GeneratedPartitionsMetadataReport createGeneratedPartitionsReport(TaskToolbox toolbox, List<DataSegment> segments)
+  GeneratedPartitionsMetadataReport createGeneratedPartitionsReport(TaskToolbox toolbox, List<DataSegment> segments, Map<String, TaskReport> taskReport)
   {
-    List<GenericPartitionStat> partitionStats = segments.stream()
-                                                        .map(segment -> createPartitionStat(toolbox, segment))
+    List<PartitionStat> partitionStats = segments.stream()
+                                                        .map(segment -> toolbox.getIntermediaryDataManager().generatePartitionStat(toolbox, segment))
                                                         .collect(Collectors.toList());
-    return new GeneratedPartitionsMetadataReport(getId(), partitionStats);
-  }
-
-  private GenericPartitionStat createPartitionStat(TaskToolbox toolbox, DataSegment segment)
-  {
-    return new GenericPartitionStat(
-        toolbox.getTaskExecutorNode().getHost(),
-        toolbox.getTaskExecutorNode().getPortToUse(),
-        toolbox.getTaskExecutorNode().isEnableTlsPort(),
-        segment.getInterval(),
-        segment.getShardSpec(),
-        null, // numRows is not supported yet
-        null  // sizeBytes is not supported yet
-    );
+    return new GeneratedPartitionsMetadataReport(getId(), partitionStats, taskReport);
   }
 }

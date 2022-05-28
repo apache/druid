@@ -20,14 +20,16 @@
 package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.client.CachingQueryRunner;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
-import org.apache.druid.guice.annotations.Processing;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -39,14 +41,15 @@ import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.PerSegmentOptimizingQueryRunner;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryMetrics;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ReferenceCountingSegmentQueryRunner;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
@@ -55,26 +58,26 @@ import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.Joinables;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import java.util.Collections;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 /**
  * Query handler for Historical processes (see CliHistorical).
- *
+ * <p>
  * In tests, this class's behavior is partially mimicked by TestClusterQuerySegmentWalker.
  */
 public class ServerManager implements QuerySegmentWalker
@@ -82,20 +85,20 @@ public class ServerManager implements QuerySegmentWalker
   private static final EmittingLogger log = new EmittingLogger(ServerManager.class);
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final ServiceEmitter emitter;
-  private final ExecutorService exec;
+  private final QueryProcessingPool queryProcessingPool;
   private final CachePopulator cachePopulator;
   private final Cache cache;
   private final ObjectMapper objectMapper;
   private final CacheConfig cacheConfig;
   private final SegmentManager segmentManager;
-  private final JoinableFactory joinableFactory;
+  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final ServerConfig serverConfig;
 
   @Inject
   public ServerManager(
       QueryRunnerFactoryConglomerate conglomerate,
       ServiceEmitter emitter,
-      @Processing ExecutorService exec,
+      QueryProcessingPool queryProcessingPool,
       CachePopulator cachePopulator,
       @Smile ObjectMapper objectMapper,
       Cache cache,
@@ -108,14 +111,14 @@ public class ServerManager implements QuerySegmentWalker
     this.conglomerate = conglomerate;
     this.emitter = emitter;
 
-    this.exec = exec;
+    this.queryProcessingPool = queryProcessingPool;
     this.cachePopulator = cachePopulator;
     this.cache = cache;
     this.objectMapper = objectMapper;
 
     this.cacheConfig = cacheConfig;
     this.segmentManager = segmentManager;
-    this.joinableFactory = joinableFactory;
+    this.joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
     this.serverConfig = serverConfig;
   }
 
@@ -130,8 +133,9 @@ public class ServerManager implements QuerySegmentWalker
     if (maybeTimeline.isPresent()) {
       timeline = maybeTimeline.get();
     } else {
-      // Note: this is not correct when there's a right or full outer join going on.
-      // See https://github.com/apache/druid/issues/9229 for details.
+      // Even though we didn't find a timeline for the query datasource, we simply returns a noopQueryRunner
+      // instead of reporting missing intervals because the query intervals are a filter rather than something
+      // we must find.
       return new NoopQueryRunner<>();
     }
 
@@ -165,10 +169,13 @@ public class ServerManager implements QuerySegmentWalker
   {
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
-      log.makeAlert("Unknown query type, [%s]", query.getClass())
+      final QueryUnsupportedException e = new QueryUnsupportedException(
+          StringUtils.format("Unknown query type, [%s]", query.getClass())
+      );
+      log.makeAlert(e, "Error while executing a query[%s]", query.getId())
          .addData("dataSource", query.getDataSource())
          .emit();
-      return new NoopQueryRunner<>();
+      throw e;
     }
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
@@ -187,58 +194,41 @@ public class ServerManager implements QuerySegmentWalker
     if (maybeTimeline.isPresent()) {
       timeline = maybeTimeline.get();
     } else {
-      // Note: this is not correct when there's a right or full outer join going on.
-      // See https://github.com/apache/druid/issues/9229 for details.
-      return new NoopQueryRunner<>();
+      return new ReportTimelineMissingSegmentQueryRunner<>(Lists.newArrayList(specs));
     }
 
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
-    final Function<SegmentReference, SegmentReference> segmentMapFn = Joinables.createSegmentMapFn(
+    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
+        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
         analysis.getPreJoinableClauses(),
-        joinableFactory,
         cpuTimeAccumulator,
-        QueryContexts.getEnableJoinFilterPushDown(query),
-        QueryContexts.getEnableJoinFilterRewrite(query),
-        QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query),
-        QueryContexts.getJoinFilterRewriteMaxSize(query),
-        query.getFilter() == null ? null : query.getFilter().toFilter(),
-        query.getVirtualColumns()
+        analysis.getBaseQuery().orElse(query)
     );
+    // We compute the join cache key here itself so it doesn't need to be re-computed for every segment
+    final Optional<byte[]> cacheKeyPrefix = analysis.isJoin()
+                                            ? joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis)
+                                            : Optional.of(StringUtils.EMPTY_BYTES);
 
-    FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
+    final FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
         .create(specs)
         .transformCat(
-            descriptor -> {
-              final PartitionHolder<ReferenceCountingSegment> entry = timeline.findEntry(
-                  descriptor.getInterval(),
-                  descriptor.getVersion()
-              );
-
-              if (entry == null) {
-                return Collections.singletonList(new ReportTimelineMissingSegmentQueryRunner<>(descriptor));
-              }
-
-              final PartitionChunk<ReferenceCountingSegment> chunk = entry.getChunk(descriptor.getPartitionNumber());
-              if (chunk == null) {
-                return Collections.singletonList(new ReportTimelineMissingSegmentQueryRunner<>(descriptor));
-              }
-
-              final ReferenceCountingSegment segment = chunk.getObject();
-              return Collections.singletonList(
-                  buildAndDecorateQueryRunner(
-                      factory,
-                      toolChest,
-                      segmentMapFn.apply(segment),
-                      descriptor,
-                      cpuTimeAccumulator
-                  )
-              );
-            }
+            descriptor -> Collections.singletonList(
+                buildQueryRunnerForSegment(
+                    query,
+                    descriptor,
+                    factory,
+                    toolChest,
+                    timeline,
+                    segmentMapFn,
+                    cpuTimeAccumulator,
+                    cacheKeyPrefix
+                )
+            )
         );
 
     return CPUTimeMetricQueryRunner.safeBuild(
         new FinalizeResultsQueryRunner<>(
-            toolChest.mergeResults(factory.mergeRunners(exec, queryRunners)),
+            toolChest.mergeResults(factory.mergeRunners(queryProcessingPool, queryRunners)),
             toolChest
         ),
         toolChest,
@@ -248,16 +238,63 @@ public class ServerManager implements QuerySegmentWalker
     );
   }
 
+  protected <T> QueryRunner<T> buildQueryRunnerForSegment(
+      final Query<T> query,
+      final SegmentDescriptor descriptor,
+      final QueryRunnerFactory<T, Query<T>> factory,
+      final QueryToolChest<T, Query<T>> toolChest,
+      final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline,
+      final Function<SegmentReference, SegmentReference> segmentMapFn,
+      final AtomicLong cpuTimeAccumulator,
+      Optional<byte[]> cacheKeyPrefix
+  )
+  {
+    final PartitionChunk<ReferenceCountingSegment> chunk = timeline.findChunk(
+        descriptor.getInterval(),
+        descriptor.getVersion(),
+        descriptor.getPartitionNumber()
+    );
+
+    if (chunk == null) {
+      return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
+    }
+
+    final ReferenceCountingSegment segment = chunk.getObject();
+    return buildAndDecorateQueryRunner(
+        factory,
+        toolChest,
+        segmentMapFn.apply(segment),
+        cacheKeyPrefix,
+        descriptor,
+        cpuTimeAccumulator
+    );
+  }
+
   private <T> QueryRunner<T> buildAndDecorateQueryRunner(
       final QueryRunnerFactory<T, Query<T>> factory,
       final QueryToolChest<T, Query<T>> toolChest,
       final SegmentReference segment,
+      final Optional<byte[]> cacheKeyPrefix,
       final SegmentDescriptor segmentDescriptor,
       final AtomicLong cpuTimeAccumulator
   )
   {
-    SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
-    SegmentId segmentId = segment.getId();
+
+    // Short-circuit when the index comes from a tombstone (it has no data by definition),
+    // check for null also since no all segments (higher level ones) will have QueryableIndex...
+    if (segment.asQueryableIndex() != null && segment.asQueryableIndex().isFromTombstone()) {
+      return new NoopQueryRunner<>();
+    }
+
+    final SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
+    final SegmentId segmentId = segment.getId();
+    final Interval segmentInterval = segment.getDataInterval();
+    // ReferenceCountingSegment can return null for ID or interval if it's already closed.
+    // Here, we check one more time if the segment is closed.
+    // If the segment is closed after this line, ReferenceCountingSegmentQueryRunner will handle and do the right thing.
+    if (segmentId == null || segmentInterval == null) {
+      return new ReportTimelineMissingSegmentQueryRunner<>(segmentDescriptor);
+    }
     String segmentIdString = segmentId.toString();
 
     MetricsEmittingQueryRunner<T> metricsEmittingQueryRunnerInner = new MetricsEmittingQueryRunner<>(
@@ -268,9 +305,15 @@ public class ServerManager implements QuerySegmentWalker
         queryMetrics -> queryMetrics.segment(segmentIdString)
     );
 
+    StorageAdapter storageAdapter = segment.asStorageAdapter();
+    long segmentMaxTime = storageAdapter.getMaxTime().getMillis();
+    long segmentMinTime = storageAdapter.getMinTime().getMillis();
+    Interval actualDataInterval = Intervals.utc(segmentMinTime, segmentMaxTime + 1);
     CachingQueryRunner<T> cachingQueryRunner = new CachingQueryRunner<>(
         segmentIdString,
+        cacheKeyPrefix,
         segmentDescriptor,
+        actualDataInterval,
         objectMapper,
         cache,
         toolChest,
@@ -281,7 +324,7 @@ public class ServerManager implements QuerySegmentWalker
 
     BySegmentQueryRunner<T> bySegmentQueryRunner = new BySegmentQueryRunner<>(
         segmentId,
-        segment.getDataInterval().getStart(),
+        segmentInterval.getStart(),
         cachingQueryRunner
     );
 

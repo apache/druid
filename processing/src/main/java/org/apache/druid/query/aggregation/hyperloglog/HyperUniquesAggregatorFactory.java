@@ -42,6 +42,8 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -56,19 +58,18 @@ import java.util.Objects;
  */
 public class HyperUniquesAggregatorFactory extends AggregatorFactory
 {
+  public static final ColumnType PRECOMPUTED_TYPE = ColumnType.ofComplex("preComputedHyperUnique");
+  public static final ColumnType TYPE = ColumnType.ofComplex("hyperUnique");
+
   public static Object estimateCardinality(@Nullable Object object, boolean round)
   {
-    if (object == null) {
-      return 0;
-    }
-
     final HyperLogLogCollector collector = (HyperLogLogCollector) object;
 
-    // Avoid ternary, it causes estimateCardinalityRound to be cast to double.
+    // Avoid ternary for round check as it causes estimateCardinalityRound to be cast to double.
     if (round) {
-      return collector.estimateCardinalityRound();
+      return collector == null ? 0L : collector.estimateCardinalityRound();
     } else {
-      return collector.estimateCardinality();
+      return collector == null ? 0d : collector.estimateCardinality();
     }
   }
 
@@ -133,7 +134,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   public VectorAggregator factorizeVector(final VectorColumnSelectorFactory selectorFactory)
   {
     final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
-    if (capabilities == null || capabilities.getType() != ValueType.COMPLEX) {
+    if (!Types.is(capabilities, ValueType.COMPLEX)) {
       return NoopVectorAggregator.instance();
     } else {
       return new HyperUniquesVectorAggregator(selectorFactory.makeObjectSelector(fieldName));
@@ -262,15 +263,19 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
         .appendBoolean(round)
         .build();
   }
+  /**
+   * actual type is {@link HyperLogLogCollector}
+   */
+  @Override
+  public ColumnType getIntermediateType()
+  {
+    return isInputHyperUnique ? PRECOMPUTED_TYPE : TYPE;
+  }
 
   @Override
-  public String getTypeName()
+  public ColumnType getResultType()
   {
-    if (isInputHyperUnique) {
-      return "preComputedHyperUnique";
-    } else {
-      return "hyperUnique";
-    }
+    return round ? ColumnType.LONG : ColumnType.DOUBLE;
   }
 
   @Override

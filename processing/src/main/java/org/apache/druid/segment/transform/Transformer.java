@@ -59,7 +59,7 @@ public class Transformer
                                       RowBasedColumnSelectorFactory.create(
                                           RowAdapters.standardRow(),
                                           rowSupplierForValueMatcher::get,
-                                          RowSignature.empty(),
+                                          RowSignature.empty(), // sad
                                           false
                                       )
                                   );
@@ -115,19 +115,26 @@ public class Transformer
       for (InputRow originalRow : originalRows) {
         transformedRows.add(new TransformedInputRow(originalRow, transforms));
       }
-      inputRowListPlusRawValues = InputRowListPlusRawValues.of(transformedRows, row.getRawValues());
+      inputRowListPlusRawValues = InputRowListPlusRawValues.ofList(row.getRawValuesList(), transformedRows);
     }
 
     if (valueMatcher != null) {
       if (inputRowListPlusRawValues.getInputRows() != null) {
-        final List<InputRow> filteredRows = new ArrayList<>(inputRowListPlusRawValues.getInputRows().size());
-        for (InputRow inputRow : inputRowListPlusRawValues.getInputRows()) {
-          rowSupplierForValueMatcher.set(inputRow);
+        // size of inputRows and rawValues are the same
+        int size = inputRowListPlusRawValues.getInputRows().size();
+        final List<InputRow> matchedRows = new ArrayList<>(size);
+        final List<Map<String, Object>> matchedVals = new ArrayList<>(size);
+
+        final List<InputRow> inputRows = inputRowListPlusRawValues.getInputRows();
+        final List<Map<String, Object>> inputVals = inputRowListPlusRawValues.getRawValuesList();
+        for (int i = 0; i < size; i++) {
+          rowSupplierForValueMatcher.set(inputRows.get(i));
           if (valueMatcher.matches()) {
-            filteredRows.add(inputRow);
+            matchedRows.add(inputRows.get(i));
+            matchedVals.add(inputVals.get(i));
           }
         }
-        return InputRowListPlusRawValues.of(filteredRows, row.getRawValues());
+        return InputRowListPlusRawValues.ofList(matchedVals, matchedRows);
       }
     }
 
@@ -139,10 +146,15 @@ public class Transformer
     private final InputRow row;
     private final Map<String, RowFunction> transforms;
 
+    // cached column, because it will be read frequently
+    private final DateTime timestamp;
+
     public TransformedInputRow(final InputRow row, final Map<String, RowFunction> transforms)
     {
       this.row = row;
       this.transforms = transforms;
+
+      this.timestamp = readTimestampFromRow(row, transforms);
     }
 
     @Override
@@ -151,27 +163,29 @@ public class Transformer
       return row.getDimensions();
     }
 
+    static DateTime readTimestampFromRow(final InputRow row, final Map<String, RowFunction> transforms)
+    {
+      final RowFunction transform = transforms.get(ColumnHolder.TIME_COLUMN_NAME);
+      final long ts;
+      if (transform != null) {
+        //noinspection ConstantConditions time column is never null
+        ts = Rows.objectToNumber(ColumnHolder.TIME_COLUMN_NAME, transform.eval(row), true).longValue();
+      } else {
+        ts = row.getTimestampFromEpoch();
+      }
+      return DateTimes.utc(ts);
+    }
+
     @Override
     public long getTimestampFromEpoch()
     {
-      final RowFunction transform = transforms.get(ColumnHolder.TIME_COLUMN_NAME);
-      if (transform != null) {
-        //noinspection ConstantConditions time column is never null
-        return Rows.objectToNumber(ColumnHolder.TIME_COLUMN_NAME, transform.eval(row), true).longValue();
-      } else {
-        return row.getTimestampFromEpoch();
-      }
+      return timestamp.getMillis();
     }
 
     @Override
     public DateTime getTimestamp()
     {
-      final RowFunction transform = transforms.get(ColumnHolder.TIME_COLUMN_NAME);
-      if (transform != null) {
-        return DateTimes.utc(getTimestampFromEpoch());
-      } else {
-        return row.getTimestamp();
-      }
+      return timestamp;
     }
 
     @Override
@@ -205,6 +219,11 @@ public class Transformer
       } else {
         return row.getMetric(metric);
       }
+    }
+
+    public InputRow getRow()
+    {
+      return row;
     }
 
     @Override

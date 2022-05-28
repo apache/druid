@@ -23,10 +23,12 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
@@ -51,16 +53,16 @@ public class CeilOperatorConversion implements SqlOperatorConversion
 
     if (call.getOperands().size() == 1) {
       // CEIL(expr) -- numeric CEIL
-      return OperatorConversions.convertCall(plannerContext, rowSignature, call, "ceil");
+      return OperatorConversions.convertDirectCall(plannerContext, rowSignature, call, "ceil");
     } else if (call.getOperands().size() == 2) {
       // CEIL(expr TO timeUnit) -- time CEIL
-      return DruidExpression.fromFunctionCall(
+      return DruidExpression.ofFunctionCall(
+          Calcites.getColumnTypeForRelDataType(rexNode.getType()),
           "timestamp_ceil",
           TimeFloorOperatorConversion.toTimestampFloorOrCeilArgs(plannerContext, rowSignature, call.getOperands())
       );
     } else {
-      // WTF? CEIL with the wrong number of arguments?
-      return null;
+      throw new ISE("Unexpected number of arguments");
     }
   }
 }

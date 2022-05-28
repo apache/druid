@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.first;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -30,7 +31,8 @@ import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -38,18 +40,20 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 
-public class StringFirstAggregationTest
+public class StringFirstAggregationTest extends InitializedNullHandlingTest
 {
   private final Integer MAX_STRING_SIZE = 1024;
   private AggregatorFactory stringFirstAggFactory;
   private AggregatorFactory combiningAggFactory;
   private ColumnSelectorFactory colSelectorFactory;
   private TestLongColumnSelector timeSelector;
+  private TestLongColumnSelector customTimeSelector;
   private TestObjectColumnSelector<String> valueSelector;
   private TestObjectColumnSelector objectSelector;
 
   private String[] strings = {"1111", "2222", "3333", null, "4444"};
   private long[] times = {8224, 6879, 2436, 3546, 7888};
+  private long[] customTimes = {2, 1, 3, 4, 5};
   private SerializablePairLongString[] pairs = {
       new SerializablePairLongString(52782L, "AAAA"),
       new SerializablePairLongString(65492L, "BBBB"),
@@ -61,17 +65,20 @@ public class StringFirstAggregationTest
   @Before
   public void setup()
   {
-    stringFirstAggFactory = new StringFirstAggregatorFactory("billy", "nilly", MAX_STRING_SIZE);
+    NullHandling.initializeForTests();
+    stringFirstAggFactory = new StringFirstAggregatorFactory("billy", "nilly", null, MAX_STRING_SIZE);
     combiningAggFactory = stringFirstAggFactory.getCombiningFactory();
     timeSelector = new TestLongColumnSelector(times);
+    customTimeSelector = new TestLongColumnSelector(customTimes);
     valueSelector = new TestObjectColumnSelector<>(strings);
     objectSelector = new TestObjectColumnSelector<>(pairs);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME)).andReturn(timeSelector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("customTime")).andReturn(customTimeSelector);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("billy")).andReturn(objectSelector);
     EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly"))
-            .andReturn(new ColumnCapabilitiesImpl().setType(ValueType.STRING));
+            .andReturn(new ColumnCapabilitiesImpl().setType(ColumnType.STRING));
     EasyMock.expect(colSelectorFactory.getColumnCapabilities("billy")).andReturn(null);
     EasyMock.replay(colSelectorFactory);
   }
@@ -92,10 +99,25 @@ public class StringFirstAggregationTest
   }
 
   @Test
+  public void testStringFirstAggregatorWithTimeColumn()
+  {
+    Aggregator agg = new StringFirstAggregatorFactory("billy", "nilly", "customTime", MAX_STRING_SIZE).factorize(colSelectorFactory);
+
+    aggregate(agg);
+    aggregate(agg);
+    aggregate(agg);
+    aggregate(agg);
+
+    Pair<Long, String> result = (Pair<Long, String>) agg.get();
+
+    Assert.assertEquals(strings[1], result.rhs);
+  }
+
+  @Test
   public void testStringFirstBufferAggregator()
   {
-    BufferAggregator agg = stringFirstAggFactory.factorizeBuffered(
-        colSelectorFactory);
+    BufferAggregator agg = new StringFirstAggregatorFactory("billy", "nilly", "customTime", MAX_STRING_SIZE)
+        .factorizeBuffered(colSelectorFactory);
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[stringFirstAggFactory.getMaxIntermediateSize()]);
     agg.init(buffer, 0);
@@ -107,15 +129,31 @@ public class StringFirstAggregationTest
 
     Pair<Long, String> result = (Pair<Long, String>) agg.get(buffer, 0);
 
-    Assert.assertEquals(strings[2], result.rhs);
+    Assert.assertEquals(strings[1], result.rhs);
   }
 
   @Test
-  public void testCombine()
+  public void testCombineLeftLower()
   {
     SerializablePairLongString pair1 = new SerializablePairLongString(1467225000L, "AAAA");
     SerializablePairLongString pair2 = new SerializablePairLongString(1467240000L, "BBBB");
+    Assert.assertEquals(pair1, stringFirstAggFactory.combine(pair1, pair2));
+  }
+
+  @Test
+  public void testCombineRightLower()
+  {
+    SerializablePairLongString pair1 = new SerializablePairLongString(1467240000L, "AAAA");
+    SerializablePairLongString pair2 = new SerializablePairLongString(1467225000L, "BBBB");
     Assert.assertEquals(pair2, stringFirstAggFactory.combine(pair1, pair2));
+  }
+
+  @Test
+  public void testCombineLeftRightSame()
+  {
+    SerializablePairLongString pair1 = new SerializablePairLongString(1467225000L, "AAAA");
+    SerializablePairLongString pair2 = new SerializablePairLongString(1467225000L, "BBBB");
+    Assert.assertEquals(pair1, stringFirstAggFactory.combine(pair1, pair2));
   }
 
   @Test
@@ -158,24 +196,23 @@ public class StringFirstAggregationTest
   @Test
   public void testStringFirstAggregateCombiner()
   {
-    final String[] strings = {"AAAA", "BBBB", "CCCC", "DDDD", "EEEE"};
-    TestObjectColumnSelector columnSelector = new TestObjectColumnSelector<>(strings);
+    TestObjectColumnSelector columnSelector = new TestObjectColumnSelector<>(pairs);
 
     AggregateCombiner stringFirstAggregateCombiner =
         combiningAggFactory.makeAggregateCombiner();
 
     stringFirstAggregateCombiner.reset(columnSelector);
 
-    Assert.assertEquals(strings[0], stringFirstAggregateCombiner.getObject());
+    Assert.assertEquals(pairs[0], stringFirstAggregateCombiner.getObject());
 
     columnSelector.increment();
     stringFirstAggregateCombiner.fold(columnSelector);
 
-    Assert.assertEquals(strings[0], stringFirstAggregateCombiner.getObject());
+    Assert.assertEquals(pairs[0], stringFirstAggregateCombiner.getObject());
 
     stringFirstAggregateCombiner.reset(columnSelector);
 
-    Assert.assertEquals(strings[1], stringFirstAggregateCombiner.getObject());
+    Assert.assertEquals(pairs[1], stringFirstAggregateCombiner.getObject());
   }
 
   private void aggregate(
@@ -184,6 +221,7 @@ public class StringFirstAggregationTest
   {
     agg.aggregate();
     timeSelector.increment();
+    customTimeSelector.increment();
     valueSelector.increment();
     objectSelector.increment();
   }
@@ -196,6 +234,7 @@ public class StringFirstAggregationTest
   {
     agg.aggregate(buff, position);
     timeSelector.increment();
+    customTimeSelector.increment();
     valueSelector.increment();
     objectSelector.increment();
   }

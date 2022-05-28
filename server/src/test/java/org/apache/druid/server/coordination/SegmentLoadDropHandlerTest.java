@@ -25,20 +25,23 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.guice.ServerTypeConfig;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.loading.CacheTestSegmentCacheManager;
 import org.apache.druid.segment.loading.CacheTestSegmentLoader;
+import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.coordination.SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus;
+import org.apache.druid.server.coordination.SegmentLoadDropHandler.Status.STATE;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -46,6 +49,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
@@ -61,7 +66,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 /**
  */
@@ -69,20 +73,21 @@ public class SegmentLoadDropHandlerTest
 {
   public static final int COUNT = 50;
 
-  private static final Logger log = new Logger(ZkCoordinatorTest.class);
-
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   private SegmentLoadDropHandler segmentLoadDropHandler;
 
   private DataSegmentAnnouncer announcer;
   private File infoDir;
+  private TestStorageLocation testStorageLocation;
   private AtomicInteger announceCount;
   private ConcurrentSkipListSet<DataSegment> segmentsAnnouncedByMe;
-  private CacheTestSegmentLoader segmentLoader;
+  private CacheTestSegmentCacheManager segmentCacheManager;
+  private SegmentLoader segmentLoader;
   private SegmentManager segmentManager;
   private List<Runnable> scheduledRunnable;
   private SegmentLoaderConfig segmentLoaderConfig;
+  private SegmentLoaderConfig noAnnouncerSegmentLoaderConfig;
   private SegmentLoaderConfig segmentLoaderConfigNoLocations;
   private ScheduledExecutorFactory scheduledExecutorFactory;
   private List<StorageLocationConfig> locations;
@@ -93,27 +98,29 @@ public class SegmentLoadDropHandlerTest
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
+  public SegmentLoadDropHandlerTest()
+  {
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
+  }
+
   @Before
-  public void setUp()
+  public void setUp() throws IOException
   {
     try {
-      infoDir = temporaryFolder.newFolder();
-      log.info("Creating tmp test files in [%s]", infoDir);
+      testStorageLocation = new TestStorageLocation(temporaryFolder);
+      infoDir = testStorageLocation.getInfoDir();
     }
     catch (IOException e) {
       throw new RuntimeException(e);
     }
 
     locations = Collections.singletonList(
-        new StorageLocationConfig(
-            infoDir,
-            100L,
-            100d
-        )
+        testStorageLocation.toStorageLocationConfig()
     );
 
     scheduledRunnable = new ArrayList<>();
 
+    segmentCacheManager = new CacheTestSegmentCacheManager();
     segmentLoader = new CacheTestSegmentLoader();
     segmentManager = new SegmentManager(segmentLoader);
     segmentsAnnouncedByMe = new ConcurrentSkipListSet<>();
@@ -160,7 +167,7 @@ public class SegmentLoadDropHandlerTest
       @Override
       public File getInfoDir()
       {
-        return infoDir;
+        return testStorageLocation.getInfoDir();
       }
 
       @Override
@@ -173,6 +180,39 @@ public class SegmentLoadDropHandlerTest
       public int getAnnounceIntervalMillis()
       {
         return 50;
+      }
+
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return locations;
+      }
+
+      @Override
+      public int getDropSegmentDelayMillis()
+      {
+        return 0;
+      }
+    };
+
+    noAnnouncerSegmentLoaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public File getInfoDir()
+      {
+        return testStorageLocation.getInfoDir();
+      }
+
+      @Override
+      public int getNumLoadingThreads()
+      {
+        return 5;
+      }
+
+      @Override
+      public int getAnnounceIntervalMillis()
+      {
+        return 0;
       }
 
       @Override
@@ -235,8 +275,9 @@ public class SegmentLoadDropHandlerTest
         jsonMapper,
         segmentLoaderConfig,
         announcer,
-        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
+        Mockito.mock(DataSegmentServerAnnouncer.class),
         segmentManager,
+        segmentCacheManager,
         scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
         new ServerTypeConfig(ServerType.HISTORICAL)
     );
@@ -271,43 +312,9 @@ public class SegmentLoadDropHandlerTest
     }
 
     Assert.assertTrue(segmentsAnnouncedByMe.contains(segment));
-    Assert.assertFalse("segment files shouldn't be deleted", segmentLoader.getSegmentsInTrash().contains(segment));
+    Assert.assertFalse("segment files shouldn't be deleted", segmentCacheManager.getSegmentsInTrash().contains(segment));
 
     segmentLoadDropHandler.stop();
-  }
-
-  @Test
-  public void testSegmentLoading1BrokerWithNoLocations() throws Exception
-  {
-    SegmentLoadDropHandler segmentLoadDropHandlerBrokerWithNoLocations = new SegmentLoadDropHandler(
-        jsonMapper,
-        segmentLoaderConfigNoLocations,
-        announcer,
-        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
-        segmentManager,
-        scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-brokerNoLocations-[%d]"),
-        new ServerTypeConfig(ServerType.BROKER)
-    );
-
-    segmentLoadDropHandlerBrokerWithNoLocations.start();
-    segmentLoadDropHandler.stop();
-  }
-
-  @Test
-  public void testSegmentLoading1HistoricalWithNoLocations()
-  {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Segment cache locations must be set on historicals.");
-
-    new SegmentLoadDropHandler(
-        jsonMapper,
-        segmentLoaderConfigNoLocations,
-        announcer,
-        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
-        segmentManager,
-        scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
-        new ServerTypeConfig(ServerType.HISTORICAL)
-    );
   }
 
   /**
@@ -344,7 +351,7 @@ public class SegmentLoadDropHandlerTest
     }
 
     Assert.assertTrue(segmentsAnnouncedByMe.contains(segment));
-    Assert.assertFalse("segment files shouldn't be deleted", segmentLoader.getSegmentsInTrash().contains(segment));
+    Assert.assertFalse("segment files shouldn't be deleted", segmentCacheManager.getSegmentsInTrash().contains(segment));
 
     segmentLoadDropHandler.stop();
   }
@@ -370,10 +377,10 @@ public class SegmentLoadDropHandlerTest
     }
 
     for (DataSegment segment : segments) {
-      writeSegmentToCache(segment);
+      testStorageLocation.writeSegmentInfoToCache(segment);
     }
 
-    checkCache(segments);
+    testStorageLocation.checkInfoCache(segments);
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
     segmentLoadDropHandler.start();
     Assert.assertTrue(!segmentManager.getDataSourceCounts().isEmpty());
@@ -385,7 +392,7 @@ public class SegmentLoadDropHandlerTest
     segmentLoadDropHandler.stop();
 
     for (DataSegment segment : segments) {
-      deleteSegmentFromCache(segment);
+      testStorageLocation.deleteSegmentInfoFromCache(segment);
     }
 
     Assert.assertEquals(0, infoDir.listFiles().length);
@@ -405,52 +412,6 @@ public class SegmentLoadDropHandlerTest
         IndexIO.CURRENT_VERSION_ID,
         123L
     );
-  }
-
-  private void writeSegmentToCache(final DataSegment segment)
-  {
-    if (!infoDir.exists()) {
-      infoDir.mkdir();
-    }
-
-    File segmentInfoCacheFile = new File(infoDir, segment.getId().toString());
-    try {
-      jsonMapper.writeValue(segmentInfoCacheFile, segment);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
-    Assert.assertTrue(segmentInfoCacheFile.exists());
-  }
-
-  private void deleteSegmentFromCache(final DataSegment segment)
-  {
-    File segmentInfoCacheFile = new File(infoDir, segment.getId().toString());
-    if (segmentInfoCacheFile.exists()) {
-      segmentInfoCacheFile.delete();
-    }
-
-    Assert.assertTrue(!segmentInfoCacheFile.exists());
-  }
-
-  private void checkCache(Set<DataSegment> expectedSegments)
-  {
-    Assert.assertTrue(infoDir.exists());
-    File[] files = infoDir.listFiles();
-
-    Set<DataSegment> segmentsInFiles = Arrays
-        .stream(files)
-        .map(file -> {
-          try {
-            return jsonMapper.readValue(file, DataSegment.class);
-          }
-          catch (IOException e) {
-            throw new RuntimeException(e);
-          }
-        })
-        .collect(Collectors.toSet());
-    Assert.assertEquals(expectedSegments, segmentsInFiles);
   }
 
   @Test
@@ -484,7 +445,10 @@ public class SegmentLoadDropHandlerTest
             return 50;
           }
         },
-        announcer, EasyMock.createNiceMock(DataSegmentServerAnnouncer.class), segmentManager,
+        announcer,
+        Mockito.mock(DataSegmentServerAnnouncer.class),
+        segmentManager,
+        segmentCacheManager,
         new ServerTypeConfig(ServerType.HISTORICAL)
     );
 
@@ -498,10 +462,10 @@ public class SegmentLoadDropHandlerTest
     }
 
     for (DataSegment segment : segments) {
-      writeSegmentToCache(segment);
+      testStorageLocation.writeSegmentInfoToCache(segment);
     }
 
-    checkCache(segments);
+    testStorageLocation.checkInfoCache(segments);
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
 
     handler.start();
@@ -514,7 +478,7 @@ public class SegmentLoadDropHandlerTest
     handler.stop();
 
     for (DataSegment segment : segments) {
-      deleteSegmentFromCache(segment);
+      testStorageLocation.deleteSegmentInfoFromCache(segment);
     }
 
     Assert.assertEquals(0, infoDir.listFiles().length);
@@ -545,15 +509,130 @@ public class SegmentLoadDropHandlerTest
       runnable.run();
     }
 
-    result = segmentLoadDropHandler.processBatch(batch).get();
+    result = segmentLoadDropHandler.processBatch(ImmutableList.of(new SegmentChangeRequestLoad(segment1))).get();
     Assert.assertEquals(SegmentLoadDropHandler.Status.SUCCESS, result.get(0).getStatus());
-    Assert.assertEquals(SegmentLoadDropHandler.Status.SUCCESS, result.get(1).getStatus());
 
+    segmentLoadDropHandler.stop();
+  }
 
-    for (SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus e : segmentLoadDropHandler.processBatch(batch)
-                                                                                            .get()) {
-      Assert.assertEquals(SegmentLoadDropHandler.Status.SUCCESS, e.getStatus());
+  @Test(timeout = 60_000L)
+  public void testProcessBatchDuplicateLoadRequestsWhenFirstRequestFailsSecondRequestShouldSucceed() throws Exception
+  {
+    final SegmentManager segmentManager = Mockito.mock(SegmentManager.class);
+    Mockito.when(segmentManager.loadSegment(ArgumentMatchers.any(), ArgumentMatchers.anyBoolean(),
+                                            ArgumentMatchers.any(), ArgumentMatchers.any()))
+           .thenThrow(new RuntimeException("segment loading failure test"))
+           .thenReturn(true);
+    final SegmentLoadDropHandler segmentLoadDropHandler = new SegmentLoadDropHandler(
+        jsonMapper,
+        segmentLoaderConfig,
+        announcer,
+        Mockito.mock(DataSegmentServerAnnouncer.class),
+        segmentManager,
+        segmentCacheManager,
+        scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
+        new ServerTypeConfig(ServerType.HISTORICAL)
+    );
+
+    segmentLoadDropHandler.start();
+
+    DataSegment segment1 = makeSegment("batchtest1", "1", Intervals.of("P1d/2011-04-01"));
+
+    List<DataSegmentChangeRequest> batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
+
+    ListenableFuture<List<DataSegmentChangeRequestAndStatus>> future = segmentLoadDropHandler
+        .processBatch(batch);
+
+    for (Runnable runnable : scheduledRunnable) {
+      runnable.run();
     }
+    List<DataSegmentChangeRequestAndStatus> result = future.get();
+    Assert.assertEquals(STATE.FAILED, result.get(0).getStatus().getState());
+
+    future = segmentLoadDropHandler.processBatch(batch);
+    for (Runnable runnable : scheduledRunnable) {
+      runnable.run();
+    }
+    result = future.get();
+    Assert.assertEquals(STATE.SUCCESS, result.get(0).getStatus().getState());
+
+    segmentLoadDropHandler.stop();
+  }
+
+  @Test(timeout = 60_000L)
+  public void testProcessBatchLoadDropLoadSequenceForSameSegment() throws Exception
+  {
+    final SegmentManager segmentManager = Mockito.mock(SegmentManager.class);
+    Mockito.when(segmentManager.loadSegment(ArgumentMatchers.any(), ArgumentMatchers.anyBoolean(), ArgumentMatchers.any(), ArgumentMatchers.any()))
+           .thenReturn(true);
+    Mockito.doNothing().when(segmentManager).dropSegment(ArgumentMatchers.any());
+    final SegmentLoadDropHandler segmentLoadDropHandler = new SegmentLoadDropHandler(
+        jsonMapper,
+        noAnnouncerSegmentLoaderConfig,
+        announcer,
+        Mockito.mock(DataSegmentServerAnnouncer.class),
+        segmentManager,
+        segmentCacheManager,
+        scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
+        new ServerTypeConfig(ServerType.HISTORICAL)
+    );
+
+    segmentLoadDropHandler.start();
+
+    DataSegment segment1 = makeSegment("batchtest1", "1", Intervals.of("P1d/2011-04-01"));
+
+    List<DataSegmentChangeRequest> batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
+
+    // load the segment
+    ListenableFuture<List<DataSegmentChangeRequestAndStatus>> future = segmentLoadDropHandler
+        .processBatch(batch);
+    for (Runnable runnable : scheduledRunnable) {
+      runnable.run();
+    }
+    List<DataSegmentChangeRequestAndStatus> result = future.get();
+    Assert.assertEquals(STATE.SUCCESS, result.get(0).getStatus().getState());
+    scheduledRunnable.clear();
+
+    // drop the segment
+    batch = ImmutableList.of(new SegmentChangeRequestDrop(segment1));
+    future = segmentLoadDropHandler.processBatch(batch);
+    for (Runnable runnable : scheduledRunnable) {
+      runnable.run();
+    }
+    result = future.get();
+    Assert.assertEquals(STATE.SUCCESS, result.get(0).getStatus().getState());
+    scheduledRunnable.clear();
+
+    // check invocations after a load-drop sequence
+    Mockito.verify(segmentManager, Mockito.times(1)).loadSegment(ArgumentMatchers.any(), ArgumentMatchers.anyBoolean(), ArgumentMatchers.any(), ArgumentMatchers.any());
+    Mockito.verify(segmentManager, Mockito.times(1)).dropSegment(ArgumentMatchers.any());
+
+    // try to reload the segment - this should be a no-op since it might be the case that this is the first load client
+    // with this request, we'll forget about the success of the load request
+    batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
+    future = segmentLoadDropHandler.processBatch(batch);
+    Assert.assertEquals(scheduledRunnable.size(), 0);
+    result = future.get();
+    Assert.assertEquals(STATE.SUCCESS, result.get(0).getStatus().getState());
+
+    // check invocations - should stay the same
+    Mockito.verify(segmentManager, Mockito.times(1)).loadSegment(ArgumentMatchers.any(), ArgumentMatchers.anyBoolean(), ArgumentMatchers.any(), ArgumentMatchers.any());
+    Mockito.verify(segmentManager, Mockito.times(1)).dropSegment(ArgumentMatchers.any());
+
+    // try to reload the segment - this time the loader will know that is a fresh request to load
+    // so, the segment manager will be asked to load
+    batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
+    future = segmentLoadDropHandler.processBatch(batch);
+    for (Runnable runnable : scheduledRunnable) {
+      runnable.run();
+    }
+    result = future.get();
+    Assert.assertEquals(STATE.SUCCESS, result.get(0).getStatus().getState());
+    scheduledRunnable.clear();
+
+    // check invocations - the load segment counter should bump up
+    Mockito.verify(segmentManager, Mockito.times(2)).loadSegment(ArgumentMatchers.any(), ArgumentMatchers.anyBoolean(), ArgumentMatchers.any(), ArgumentMatchers.any());
+    Mockito.verify(segmentManager, Mockito.times(1)).dropSegment(ArgumentMatchers.any());
 
     segmentLoadDropHandler.stop();
   }

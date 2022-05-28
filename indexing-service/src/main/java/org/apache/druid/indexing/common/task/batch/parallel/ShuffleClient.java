@@ -19,24 +19,29 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
+
 import java.io.File;
 import java.io.IOException;
 
 /**
  * An interface for intermediate data shuffle during the parallel indexing.
- * The only available implementation for production code is {@link HttpShuffleClient} and
- * this interface is more for easier testing.
  *
- * @see org.apache.druid.indexing.worker.IntermediaryDataManager
+ * Extension can implement this interface to fetch intermediary data at custom location such as various cloud storages.
+ *
+ * @see IntermediaryDataManager
  * @see PartialSegmentMergeTask
  */
-public interface ShuffleClient
+@ExtensionPoint
+public interface ShuffleClient<P extends PartitionLocation>
 {
   /**
    * Fetch the segment file into the local storage for the given supervisorTaskId and the location.
    * If the segment file should be fetched from a remote site, the returned file will be created under the given
    * partitionDir. Otherwise, the returned file can be located in any path.
+   * @return dir containing the unzipped segment files
    */
-  <T, P extends PartitionLocation<T>> File fetchSegmentFile(File partitionDir, String supervisorTaskId, P location)
+  File fetchSegmentFile(File partitionDir, String supervisorTaskId, P location)
       throws IOException;
 }

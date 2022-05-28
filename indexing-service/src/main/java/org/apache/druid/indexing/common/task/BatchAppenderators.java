@@ -21,6 +21,10 @@ package org.apache.druid.indexing.common.task;
 
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
@@ -39,7 +43,9 @@ public final class BatchAppenderators
       TaskToolbox toolbox,
       DataSchema dataSchema,
       AppenderatorConfig appenderatorConfig,
-      boolean storeCompactionState
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   )
   {
     return newAppenderator(
@@ -50,7 +56,9 @@ public final class BatchAppenderators
         dataSchema,
         appenderatorConfig,
         toolbox.getSegmentPusher(),
-        storeCompactionState
+        rowIngestionMeters,
+        parseExceptionHandler,
+        useMaxMemoryEstimates
     );
   }
 
@@ -62,21 +70,58 @@ public final class BatchAppenderators
       DataSchema dataSchema,
       AppenderatorConfig appenderatorConfig,
       DataSegmentPusher segmentPusher,
-      boolean storeCompactionState
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   )
   {
-    return appenderatorsManager.createOfflineAppenderatorForTask(
-        taskId,
-        dataSchema,
-        appenderatorConfig.withBasePersistDirectory(toolbox.getPersistDir()),
-        storeCompactionState,
-        metrics,
-        segmentPusher,
-        toolbox.getJsonMapper(),
-        toolbox.getIndexIO(),
-        toolbox.getIndexMergerV9()
-    );
+    if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcessingMode.OPEN_SEGMENTS) {
+      return appenderatorsManager.createOpenSegmentsOfflineAppenderatorForTask(
+          taskId,
+          dataSchema,
+          appenderatorConfig.withBasePersistDirectory(toolbox.getPersistDir()),
+          metrics,
+          segmentPusher,
+          toolbox.getJsonMapper(),
+          toolbox.getIndexIO(),
+          toolbox.getIndexMergerV9(),
+          rowIngestionMeters,
+          parseExceptionHandler,
+          useMaxMemoryEstimates
+      );
+    } else if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcessingMode.CLOSED_SEGMENTS) {
+      return appenderatorsManager.createClosedSegmentsOfflineAppenderatorForTask(
+          taskId,
+          dataSchema,
+          appenderatorConfig.withBasePersistDirectory(toolbox.getPersistDir()),
+          metrics,
+          segmentPusher,
+          toolbox.getJsonMapper(),
+          toolbox.getIndexIO(),
+          toolbox.getIndexMergerV9(),
+          rowIngestionMeters,
+          parseExceptionHandler,
+          useMaxMemoryEstimates
+      );
+    } else if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcessingMode.CLOSED_SEGMENTS_SINKS) {
+      return appenderatorsManager.createOfflineAppenderatorForTask(
+          taskId,
+          dataSchema,
+          appenderatorConfig.withBasePersistDirectory(toolbox.getPersistDir()),
+          metrics,
+          segmentPusher,
+          toolbox.getJsonMapper(),
+          toolbox.getIndexIO(),
+          toolbox.getIndexMergerV9(),
+          rowIngestionMeters,
+          parseExceptionHandler,
+          useMaxMemoryEstimates
+      );
+    } else {
+      throw new IAE("Invalid batchProcesingMode[%s]", toolbox.getConfig().getBatchProcessingMode());
+    }
   }
+
 
   public static BatchAppenderatorDriver newDriver(
       final Appenderator appenderator,

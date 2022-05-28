@@ -21,6 +21,8 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
@@ -32,6 +34,7 @@ import org.apache.druid.segment.loading.SegmentizerFactory;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -159,6 +162,14 @@ public class IndexSpec
   public SegmentizerFactory getSegmentLoader()
   {
     return segmentLoader;
+  }
+
+  public Map<String, Object> asMap(ObjectMapper objectMapper)
+  {
+    return objectMapper.convertValue(
+        this,
+        new TypeReference<Map<String, Object>>() {}
+    );
   }
 
   @Override

@@ -26,6 +26,7 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
@@ -144,5 +145,11 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
     } else {
       throw new UnsupportedOperationException("canVectorize returned true but 'factorizeVector' is not implemented");
     }
+  }
+
+  @Override
+  public ColumnType getResultType()
+  {
+    return getIntermediateType();
   }
 }

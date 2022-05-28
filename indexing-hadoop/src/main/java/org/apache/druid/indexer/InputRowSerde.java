@@ -38,6 +38,7 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -106,7 +107,7 @@ public class InputRowSerde
     Map<String, IndexSerdeTypeHelper> typeHelperMap = new HashMap<>();
     for (DimensionSchema dimensionSchema : dimensionsSpec.getDimensions()) {
       IndexSerdeTypeHelper typeHelper;
-      switch (dimensionSchema.getValueType()) {
+      switch (dimensionSchema.getColumnType().getType()) {
         case STRING:
           typeHelper = STRING_HELPER;
           break;
@@ -120,7 +121,7 @@ public class InputRowSerde
           typeHelper = DOUBLE_HELPER;
           break;
         default:
-          throw new IAE("Invalid type: [%s]", dimensionSchema.getValueType());
+          throw new IAE("Invalid type: [%s]", dimensionSchema.getColumnType());
       }
       typeHelperMap.put(dimensionSchema.getName(), typeHelper);
     }
@@ -340,22 +341,24 @@ public class InputRowSerde
             parseExceptionMessages.add(e.getMessage());
           }
 
-          String t = aggFactory.getTypeName();
+          final ColumnType type = aggFactory.getIntermediateType();
+
           if (agg.isNull()) {
             out.writeByte(NullHandling.IS_NULL_BYTE);
           } else {
             out.writeByte(NullHandling.IS_NOT_NULL_BYTE);
-            if ("float".equals(t)) {
+            if (type.is(ValueType.FLOAT)) {
               out.writeFloat(agg.getFloat());
-            } else if ("long".equals(t)) {
+            } else if (type.is(ValueType.LONG)) {
               WritableUtils.writeVLong(out, agg.getLong());
-            } else if ("double".equals(t)) {
+            } else if (type.is(ValueType.DOUBLE)) {
               out.writeDouble(agg.getDouble());
-            } else {
-              //its a complex metric
+            } else if (type.is(ValueType.COMPLEX)) {
               Object val = agg.get();
-              ComplexMetricSerde serde = getComplexMetricSerde(t);
+              ComplexMetricSerde serde = getComplexMetricSerde(type.getComplexTypeName());
               writeBytes(serde.toBytes(val), out);
+            } else {
+              throw new IAE("Unable to serialize type[%s]", type.asTypeString());
             }
           }
         }
@@ -467,21 +470,23 @@ public class InputRowSerde
       //Read metrics
       int metricSize = WritableUtils.readVInt(in);
       for (int i = 0; i < metricSize; i++) {
-        String metric = readString(in);
-        String type = getType(metric, aggs, i);
-        byte metricNullability = in.readByte();
+        final String metric = readString(in);
+        final AggregatorFactory agg = getAggregator(metric, aggs, i);
+        final ColumnType type = agg.getIntermediateType();
+        final byte metricNullability = in.readByte();
+
         if (metricNullability == NullHandling.IS_NULL_BYTE) {
           // metric value is null.
           continue;
         }
-        if ("float".equals(type)) {
+        if (type.is(ValueType.FLOAT)) {
           event.put(metric, in.readFloat());
-        } else if ("long".equals(type)) {
+        } else if (type.is(ValueType.LONG)) {
           event.put(metric, WritableUtils.readVLong(in));
-        } else if ("double".equals(type)) {
+        } else if (type.is(ValueType.DOUBLE)) {
           event.put(metric, in.readDouble());
         } else {
-          ComplexMetricSerde serde = getComplexMetricSerde(type);
+          ComplexMetricSerde serde = getComplexMetricSerde(agg.getIntermediateType().getComplexTypeName());
           byte[] value = readBytes(in);
           event.put(metric, serde.fromBytes(value, 0, value.length));
         }
@@ -495,15 +500,15 @@ public class InputRowSerde
   }
 
   @Nullable
-  private static String getType(String metric, AggregatorFactory[] aggs, int i)
+  private static AggregatorFactory getAggregator(String metric, AggregatorFactory[] aggs, int i)
   {
     if (aggs[i].getName().equals(metric)) {
-      return aggs[i].getTypeName();
+      return aggs[i];
     }
     log.warn("Aggs disordered, fall backs to loop.");
     for (AggregatorFactory agg : aggs) {
       if (agg.getName().equals(metric)) {
-        return agg.getTypeName();
+        return agg;
       }
     }
     return null;

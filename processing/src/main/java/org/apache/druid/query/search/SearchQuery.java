@@ -109,11 +109,6 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
     return Druids.SearchQueryBuilder.copy(this).context(newContext).build();
   }
 
-  public SearchQuery withDimFilter(DimFilter dimFilter)
-  {
-    return Druids.SearchQueryBuilder.copy(this).filters(dimFilter).build();
-  }
-
   @JsonProperty("filter")
   public DimFilter getDimensionsFilter()
   {

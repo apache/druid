@@ -119,46 +119,50 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
 
     try {
       LOG.info("Starting CoordinatorBasicAuthenticatorMetadataStorageUpdater.");
-      for (Map.Entry<String, Authenticator> entry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
-        Authenticator authenticator = entry.getValue();
-        if (authenticator instanceof BasicHTTPAuthenticator) {
-          String authenticatorName = entry.getKey();
-          authenticatorPrefixes.add(authenticatorName);
-          BasicHTTPAuthenticator basicHTTPAuthenticator = (BasicHTTPAuthenticator) authenticator;
-          BasicAuthDBConfig dbConfig = basicHTTPAuthenticator.getDbConfig();
-          byte[] userMapBytes = getCurrentUserMapBytes(authenticatorName);
-          Map<String, BasicAuthenticatorUser> userMap = BasicAuthUtils.deserializeAuthenticatorUserMap(
-              objectMapper,
-              userMapBytes
-          );
-          cachedUserMaps.put(authenticatorName, new BasicAuthenticatorUserMapBundle(userMap, userMapBytes));
+      BasicAuthUtils.maybeInitialize(
+          () -> {
+            for (Map.Entry<String, Authenticator> entry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
+              Authenticator authenticator = entry.getValue();
+              if (authenticator instanceof BasicHTTPAuthenticator) {
+                String authenticatorName = entry.getKey();
+                authenticatorPrefixes.add(authenticatorName);
+                BasicHTTPAuthenticator basicHTTPAuthenticator = (BasicHTTPAuthenticator) authenticator;
+                BasicAuthDBConfig dbConfig = basicHTTPAuthenticator.getDbConfig();
+                byte[] userMapBytes = getCurrentUserMapBytes(authenticatorName);
+                Map<String, BasicAuthenticatorUser> userMap = BasicAuthUtils.deserializeAuthenticatorUserMap(
+                    objectMapper,
+                    userMapBytes
+                );
+                cachedUserMaps.put(authenticatorName, new BasicAuthenticatorUserMapBundle(userMap, userMapBytes));
 
-          if (dbConfig.getInitialAdminPassword() != null && !userMap.containsKey(BasicAuthUtils.ADMIN_NAME)) {
-            createUserInternal(authenticatorName, BasicAuthUtils.ADMIN_NAME);
-            setUserCredentialsInternal(
-                authenticatorName,
-                BasicAuthUtils.ADMIN_NAME,
-                new BasicAuthenticatorCredentialUpdate(
-                    dbConfig.getInitialAdminPassword().getPassword(),
-                    BasicAuthUtils.DEFAULT_KEY_ITERATIONS
-                )
-            );
-          }
+                if (dbConfig.getInitialAdminPassword() != null && !userMap.containsKey(BasicAuthUtils.ADMIN_NAME)) {
+                  createUserInternal(authenticatorName, BasicAuthUtils.ADMIN_NAME);
+                  setUserCredentialsInternal(
+                      authenticatorName,
+                      BasicAuthUtils.ADMIN_NAME,
+                      new BasicAuthenticatorCredentialUpdate(
+                          dbConfig.getInitialAdminPassword().getPassword(),
+                          BasicAuthUtils.DEFAULT_KEY_ITERATIONS
+                      )
+                  );
+                }
 
-          if (dbConfig.getInitialInternalClientPassword() != null
-              && !userMap.containsKey(BasicAuthUtils.INTERNAL_USER_NAME)) {
-            createUserInternal(authenticatorName, BasicAuthUtils.INTERNAL_USER_NAME);
-            setUserCredentialsInternal(
-                authenticatorName,
-                BasicAuthUtils.INTERNAL_USER_NAME,
-                new BasicAuthenticatorCredentialUpdate(
-                    dbConfig.getInitialInternalClientPassword().getPassword(),
-                    BasicAuthUtils.DEFAULT_KEY_ITERATIONS
-                )
-            );
-          }
-        }
-      }
+                if (dbConfig.getInitialInternalClientPassword() != null
+                    && !userMap.containsKey(BasicAuthUtils.INTERNAL_USER_NAME)) {
+                  createUserInternal(authenticatorName, BasicAuthUtils.INTERNAL_USER_NAME);
+                  setUserCredentialsInternal(
+                      authenticatorName,
+                      BasicAuthUtils.INTERNAL_USER_NAME,
+                      new BasicAuthenticatorCredentialUpdate(
+                          dbConfig.getInitialInternalClientPassword().getPassword(),
+                          BasicAuthUtils.DEFAULT_KEY_ITERATIONS
+                      )
+                  );
+                }
+              }
+            }
+            return true;
+          });
 
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,

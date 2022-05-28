@@ -53,7 +53,6 @@ import java.util.Objects;
  */
 public class NumberedOverwriteShardSpec implements OverwriteShardSpec
 {
-  public static final String TYPE = "numbered_overwrite";
   private final int partitionId;
 
   private final short startRootPartitionId;
@@ -146,12 +145,6 @@ public class NumberedOverwriteShardSpec implements OverwriteShardSpec
     return new NumberedOverwritingPartitionChunk<>(partitionId, obj);
   }
 
-  @Override
-  public boolean isInChunk(long timestamp, InputRow inputRow)
-  {
-    return true;
-  }
-
   @JsonProperty("partitionId")
   @Override
   public int getPartitionNum()
@@ -188,7 +181,7 @@ public class NumberedOverwriteShardSpec implements OverwriteShardSpec
   }
 
   @Override
-  public ShardSpecLookup getLookup(List<ShardSpec> shardSpecs)
+  public ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs)
   {
     return (long timestamp, InputRow row) -> shardSpecs.get(0);
   }
@@ -206,9 +199,9 @@ public class NumberedOverwriteShardSpec implements OverwriteShardSpec
   }
 
   @Override
-  public boolean isCompatible(Class<? extends ShardSpec> other)
+  public String getType()
   {
-    return other == NumberedOverwriteShardSpec.class || other == NumberedShardSpec.class;
+    return Type.NUMBERED_OVERWRITE;
   }
 
   @Override

@@ -20,7 +20,7 @@
 package org.apache.druid.indexing.common.task;
 
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.joda.time.Interval;
 
 /**
@@ -30,16 +30,15 @@ import org.joda.time.Interval;
  * Note that all segment IDs should be allocated upfront to use this function.
  *
  * @see org.apache.druid.indexer.partitions.SecondaryPartitionType
- * @see CachingSegmentAllocator
  */
 public class NonLinearlyPartitionedSequenceNameFunction implements SequenceNameFunction
 {
-  private final String taskId;
+  private final String baseSequenceName;
   private final ShardSpecs shardSpecs;
 
-  public NonLinearlyPartitionedSequenceNameFunction(String taskId, ShardSpecs shardSpecs)
+  public NonLinearlyPartitionedSequenceNameFunction(String baseSequenceName, ShardSpecs shardSpecs)
   {
-    this.taskId = taskId;
+    this.baseSequenceName = baseSequenceName;
     this.shardSpecs = shardSpecs;
   }
 
@@ -55,10 +54,10 @@ public class NonLinearlyPartitionedSequenceNameFunction implements SequenceNameF
    *
    * See {@link org.apache.druid.timeline.partition.HashBasedNumberedShardSpec} as an example of partitioning.
    */
-  private String getSequenceName(Interval interval, ShardSpec shardSpec)
+  public String getSequenceName(Interval interval, BucketNumberedShardSpec<?> bucket)
   {
     // Note: We do not use String format here since this can be called in a tight loop
     // and it's faster to add strings together than it is to use String#format
-    return taskId + "_" + interval + "_" + shardSpec.getPartitionNum();
+    return baseSequenceName + "_" + interval + "_" + bucket.getBucketId();
   }
 }

@@ -63,6 +63,7 @@ public class CuratorModule implements Module
   @Override
   public void configure(Binder binder)
   {
+    JsonConfigProvider.bind(binder, CURATOR_CONFIG_PREFIX, ZkEnablementConfig.class);
     JsonConfigProvider.bind(binder, CURATOR_CONFIG_PREFIX, CuratorConfig.class);
     JsonConfigProvider.bind(binder, EXHIBITOR_CONFIG_PREFIX, ExhibitorConfig.class);
   }
@@ -70,8 +71,12 @@ public class CuratorModule implements Module
   @Provides
   @LazySingleton
   @SuppressForbidden(reason = "System#err")
-  public CuratorFramework makeCurator(CuratorConfig config, EnsembleProvider ensembleProvider, Lifecycle lifecycle)
+  public CuratorFramework makeCurator(ZkEnablementConfig zkEnablementConfig, CuratorConfig config, EnsembleProvider ensembleProvider, Lifecycle lifecycle)
   {
+    if (!zkEnablementConfig.isEnabled()) {
+      throw new RuntimeException("Zookeeper is disabled, Can't create CuratorFramework.");
+    }
+
     final CuratorFrameworkFactory.Builder builder = CuratorFrameworkFactory.builder();
     if (!Strings.isNullOrEmpty(config.getZkUser()) && !Strings.isNullOrEmpty(config.getZkPwd())) {
       builder.authorization(

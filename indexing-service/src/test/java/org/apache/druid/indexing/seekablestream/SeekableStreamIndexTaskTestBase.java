@@ -21,6 +21,7 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
@@ -32,6 +33,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.JSONParseSpec;
@@ -77,7 +79,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorImpl;
+import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CompressionUtils;
 import org.assertj.core.api.Assertions;
@@ -92,6 +94,7 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -113,9 +116,7 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
               new StringDimensionSchema("dim2"),
               new LongDimensionSchema("dimLong"),
               new FloatDimensionSchema("dimFloat")
-          ),
-          null,
-          null
+          )
       ),
       new AggregatorFactory[]{
           new DoubleSumAggregatorFactory("met1sum", "met1"),
@@ -161,9 +162,7 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
                             new StringDimensionSchema("dim2"),
                             new LongDimensionSchema("dimLong"),
                             new FloatDimensionSchema("dimFloat")
-                        ),
-                        null,
-                        null
+                        )
                     ),
                     new JSONPathSpec(true, ImmutableList.of()),
                     ImmutableMap.of(),
@@ -190,7 +189,7 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     this.lockGranularity = lockGranularity;
   }
 
-  protected static byte[] jb(
+  protected static ByteEntity jb(
       String timestamp,
       String dim1,
       String dim2,
@@ -199,8 +198,81 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
       String met1
   )
   {
+    return jb(false, timestamp, dim1, dim2, dimLong, dimFloat, met1);
+  }
+
+  protected static byte[] jbb(
+      String timestamp,
+      String dim1,
+      String dim2,
+      String dimLong,
+      String dimFloat,
+      String met1
+  )
+  {
+    return jbb(false, timestamp, dim1, dim2, dimLong, dimFloat, met1);
+  }
+
+  protected static ByteEntity jb(boolean prettyPrint,
+      String timestamp,
+      String dim1,
+      String dim2,
+      String dimLong,
+      String dimFloat,
+      String met1
+  )
+  {
+    return new ByteEntity(jbb(prettyPrint, timestamp, dim1, dim2, dimLong, dimFloat, met1));
+  }
+
+  protected static byte[] jbb(
+      boolean prettyPrint,
+      String timestamp,
+      String dim1,
+      String dim2,
+      String dimLong,
+      String dimFloat,
+      String met1
+  )
+  {
+    return StringUtils.toUtf8(toJsonString(
+        prettyPrint,
+        timestamp,
+        dim1,
+        dim2,
+        dimLong,
+        dimFloat,
+        met1
+    ));
+  }
+
+  protected static List<ByteEntity> jbl(
+      String timestamp,
+      String dim1,
+      String dim2,
+      String dimLong,
+      String dimFloat,
+      String met1
+  )
+  {
+    return Collections.singletonList(jb(timestamp, dim1, dim2, dimLong, dimFloat, met1));
+  }
+
+  protected static String toJsonString(boolean prettyPrint,
+                             String timestamp,
+                             String dim1,
+                             String dim2,
+                             String dimLong,
+                             String dimFloat,
+                             String met1
+  )
+  {
     try {
-      return new ObjectMapper().writeValueAsBytes(
+      ObjectMapper mapper = new ObjectMapper();
+      if (prettyPrint) {
+        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+      }
+      return mapper.writeValueAsString(
           ImmutableMap.builder()
                       .put("timestamp", timestamp)
                       .put("dim1", dim1)
@@ -214,18 +286,6 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     catch (Exception e) {
       throw new RuntimeException(e);
     }
-  }
-
-  protected static List<byte[]> jbl(
-      String timestamp,
-      String dim1,
-      String dim2,
-      String dimLong,
-      String dimFloat,
-      String met1
-  )
-  {
-    return Collections.singletonList(jb(timestamp, dim1, dim2, dimLong, dimFloat, met1));
   }
 
   protected File getSegmentDirectory()
@@ -398,17 +458,22 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   protected void unlockAppenderatorBasePersistDirForTask(SeekableStreamIndexTask task)
       throws NoSuchMethodException, InvocationTargetException, IllegalAccessException
   {
-    Method unlockBasePersistDir = ((AppenderatorImpl) task.getAppenderator())
+    Method unlockBasePersistDir = ((StreamAppenderator) task.getAppenderator())
         .getClass()
         .getDeclaredMethod("unlockBasePersistDirectory");
     unlockBasePersistDir.setAccessible(true);
     unlockBasePersistDir.invoke(task.getAppenderator());
   }
 
-  protected List<SegmentDescriptor> publishedDescriptors()
+  protected Collection<DataSegment> publishedSegments()
   {
     return metadataStorageCoordinator
-        .retrieveAllUsedSegments(OLD_DATA_SCHEMA.getDataSource(), Segments.ONLY_VISIBLE)
+        .retrieveAllUsedSegments(OLD_DATA_SCHEMA.getDataSource(), Segments.ONLY_VISIBLE);
+  }
+
+  protected List<SegmentDescriptor> publishedDescriptors()
+  {
+    return publishedSegments()
         .stream()
         .map(DataSegment::toDescriptor)
         .collect(Collectors.toList());

@@ -55,6 +55,7 @@ public class SinglePhaseSubTaskSpecTest
               null,
               new LocalInputSource(new File("baseDir"), "filter"),
               new JsonInputFormat(null, null, null),
+              null,
               null
           ),
           null

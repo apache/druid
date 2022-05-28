@@ -20,17 +20,22 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.query.QueryContext;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 
-import java.util.Map;
 import java.util.Objects;
 
 public class PlannerConfig
 {
   public static final String CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT = "useApproximateCountDistinct";
+  public static final String CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT = "useGroupingSetForExactDistinct";
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
+  public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
+  public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
+  public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
+  public static final int NUM_FILTER_NOT_USED = -1;
 
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
@@ -59,9 +64,29 @@ public class PlannerConfig
   @JsonProperty
   private long metadataSegmentPollPeriod = 60000;
 
+  @JsonProperty
+  private boolean useGroupingSetForExactDistinct = false;
+
+  @JsonProperty
+  private boolean computeInnerJoinCostAsFilter = true;
+
+  @JsonProperty
+  private boolean authorizeSystemTablesDirectly = false;
+
+  @JsonProperty
+  private boolean useNativeQueryExplain = false;
+
+  @JsonProperty
+  private int maxNumericInFilters = NUM_FILTER_NOT_USED;
+
   public long getMetadataSegmentPollPeriod()
   {
     return metadataSegmentPollPeriod;
+  }
+
+  public int getMaxNumericInFilters()
+  {
+    return maxNumericInFilters;
   }
 
   public boolean isMetadataSegmentCacheEnable()
@@ -84,6 +109,11 @@ public class PlannerConfig
   public boolean isUseApproximateCountDistinct()
   {
     return useApproximateCountDistinct;
+  }
+
+  public boolean isUseGroupingSetForExactDistinct()
+  {
+    return useGroupingSetForExactDistinct;
   }
 
   public boolean isUseApproximateTopN()
@@ -111,50 +141,87 @@ public class PlannerConfig
     return serializeComplexValues;
   }
 
-  public PlannerConfig withOverrides(final Map<String, Object> context)
+  public boolean isComputeInnerJoinCostAsFilter()
   {
-    if (context == null) {
+    return computeInnerJoinCostAsFilter;
+  }
+
+  public boolean isAuthorizeSystemTablesDirectly()
+  {
+    return authorizeSystemTablesDirectly;
+  }
+
+  public boolean isUseNativeQueryExplain()
+  {
+    return useNativeQueryExplain;
+  }
+
+  public PlannerConfig withOverrides(final QueryContext queryContext)
+  {
+    if (queryContext.isEmpty()) {
       return this;
     }
 
     final PlannerConfig newConfig = new PlannerConfig();
     newConfig.metadataRefreshPeriod = getMetadataRefreshPeriod();
     newConfig.maxTopNLimit = getMaxTopNLimit();
-    newConfig.useApproximateCountDistinct = getContextBoolean(
-        context,
+    newConfig.useApproximateCountDistinct = queryContext.getAsBoolean(
         CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT,
         isUseApproximateCountDistinct()
     );
-    newConfig.useApproximateTopN = getContextBoolean(
-        context,
+    newConfig.useGroupingSetForExactDistinct = queryContext.getAsBoolean(
+        CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+        isUseGroupingSetForExactDistinct()
+    );
+    newConfig.useApproximateTopN = queryContext.getAsBoolean(
         CTX_KEY_USE_APPROXIMATE_TOPN,
         isUseApproximateTopN()
     );
+    newConfig.computeInnerJoinCostAsFilter = queryContext.getAsBoolean(
+        CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER,
+        computeInnerJoinCostAsFilter
+    );
+    newConfig.useNativeQueryExplain = queryContext.getAsBoolean(
+        CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
+        isUseNativeQueryExplain()
+    );
+    final int systemConfigMaxNumericInFilters = getMaxNumericInFilters();
+    final int queryContextMaxNumericInFilters = queryContext.getAsInt(
+        CTX_MAX_NUMERIC_IN_FILTERS,
+        getMaxNumericInFilters()
+    );
+    newConfig.maxNumericInFilters = validateMaxNumericInFilters(queryContextMaxNumericInFilters,
+                                                                systemConfigMaxNumericInFilters);
     newConfig.requireTimeCondition = isRequireTimeCondition();
     newConfig.sqlTimeZone = getSqlTimeZone();
     newConfig.awaitInitializationOnStart = isAwaitInitializationOnStart();
     newConfig.metadataSegmentCacheEnable = isMetadataSegmentCacheEnable();
     newConfig.metadataSegmentPollPeriod = getMetadataSegmentPollPeriod();
     newConfig.serializeComplexValues = shouldSerializeComplexValues();
+    newConfig.authorizeSystemTablesDirectly = isAuthorizeSystemTablesDirectly();
     return newConfig;
   }
 
-  private static boolean getContextBoolean(
-      final Map<String, Object> context,
-      final String parameter,
-      final boolean defaultValue
-  )
+  private int validateMaxNumericInFilters(int queryContextMaxNumericInFilters, int systemConfigMaxNumericInFilters)
   {
-    final Object value = context.get(parameter);
-    if (value == null) {
-      return defaultValue;
-    } else if (value instanceof String) {
-      return Boolean.parseBoolean((String) value);
-    } else if (value instanceof Boolean) {
-      return (Boolean) value;
-    } else {
-      throw new IAE("Expected parameter[%s] to be boolean", parameter);
+    // if maxNumericInFIlters through context == 0 catch exception
+    // else if query context exceeds system set value throw error
+    if (queryContextMaxNumericInFilters == 0) {
+      throw new UOE("[%s] must be greater than 0", CTX_MAX_NUMERIC_IN_FILTERS);
+    } else if (queryContextMaxNumericInFilters > systemConfigMaxNumericInFilters
+               && systemConfigMaxNumericInFilters != NUM_FILTER_NOT_USED) {
+      throw new UOE(
+          "Expected parameter[%s] cannot exceed system set value of [%d]",
+          CTX_MAX_NUMERIC_IN_FILTERS,
+          systemConfigMaxNumericInFilters
+      );
     }
+    // if system set value is not present, thereby inferring default of -1
+    if (systemConfigMaxNumericInFilters == NUM_FILTER_NOT_USED) {
+      return systemConfigMaxNumericInFilters;
+    }
+    // all other cases return the valid query context value
+    return queryContextMaxNumericInFilters;
   }
 
   @Override
@@ -176,7 +243,8 @@ public class PlannerConfig
            metadataSegmentPollPeriod == that.metadataSegmentPollPeriod &&
            serializeComplexValues == that.serializeComplexValues &&
            Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod) &&
-           Objects.equals(sqlTimeZone, that.sqlTimeZone);
+           Objects.equals(sqlTimeZone, that.sqlTimeZone) &&
+           useNativeQueryExplain == that.useNativeQueryExplain;
   }
 
   @Override
@@ -193,7 +261,8 @@ public class PlannerConfig
         sqlTimeZone,
         metadataSegmentCacheEnable,
         metadataSegmentPollPeriod,
-        serializeComplexValues
+        serializeComplexValues,
+        useNativeQueryExplain
     );
   }
 
@@ -211,6 +280,7 @@ public class PlannerConfig
            ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
            ", sqlTimeZone=" + sqlTimeZone +
            ", serializeComplexValues=" + serializeComplexValues +
+           ", useNativeQueryExplain=" + useNativeQueryExplain +
            '}';
   }
 }

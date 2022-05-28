@@ -38,10 +38,13 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  */
@@ -78,11 +81,14 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   {
     super(dataSource, querySegmentSpec, descending, context, granularity);
 
+    // The below should be executed after context is initialized.
+    final String timestampField = getTimestampResultField();
+
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimFilter = dimFilter;
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.of() : aggregatorSpecs;
     this.postAggregatorSpecs = Queries.prepareAggregations(
-        ImmutableList.of(),
+        timestampField == null ? ImmutableList.of() : ImmutableList.of(timestampField),
         this.aggregatorSpecs,
         postAggregatorSpecs == null ? ImmutableList.of() : postAggregatorSpecs
     );
@@ -108,8 +114,8 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return Query.TIMESERIES;
   }
 
-  @Override
   @JsonProperty
+  @Override
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;
@@ -152,6 +158,19 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   public boolean isSkipEmptyBuckets()
   {
     return getContextBoolean(SKIP_EMPTY_BUCKETS, false);
+  }
+
+  @Nullable
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return Queries.computeRequiredColumns(
+        virtualColumns,
+        dimFilter,
+        Collections.emptyList(),
+        aggregatorSpecs,
+        Collections.emptyList()
+    );
   }
 
   @Override

@@ -51,16 +51,25 @@ import java.util.stream.Collectors;
 /**
  * Insert segments into metadata storage. The segment versions must all be less than or equal to a lock held by
  * your task for the segment intervals.
- * <p/>
- * Word of warning: Very large "segments" sets can cause oversized audit log entries, which is bad because it means
- * that the task cannot actually complete. Callers should avoid this by avoiding inserting too many segments in the
- * same action.
  */
 public class SegmentTransactionalInsertAction implements TaskAction<SegmentPublishResult>
 {
+  /**
+   * Set of segments that was fully overshadowed by new segments, {@link SegmentTransactionalInsertAction#segments}
+   */
   @Nullable
   private final Set<DataSegment> segmentsToBeOverwritten;
+  /**
+   * Set of segments to be inserted into metadata storage
+   */
   private final Set<DataSegment> segments;
+  /**
+   * Set of segments to be dropped (mark unused) when new segments, {@link SegmentTransactionalInsertAction#segments},
+   * are inserted into metadata storage.
+   */
+  @Nullable
+  private final Set<DataSegment> segmentsToBeDropped;
+
   @Nullable
   private final DataSourceMetadata startMetadata;
   @Nullable
@@ -70,10 +79,11 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
 
   public static SegmentTransactionalInsertAction overwriteAction(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
+      @Nullable Set<DataSegment> segmentsToBeDropped,
       Set<DataSegment> segmentsToPublish
   )
   {
-    return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToPublish, null, null, null);
+    return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToBeDropped, segmentsToPublish, null, null, null);
   }
 
   public static SegmentTransactionalInsertAction appendAction(
@@ -82,7 +92,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       @Nullable DataSourceMetadata endMetadata
   )
   {
-    return new SegmentTransactionalInsertAction(null, segments, startMetadata, endMetadata, null);
+    return new SegmentTransactionalInsertAction(null, null, segments, startMetadata, endMetadata, null);
   }
 
   public static SegmentTransactionalInsertAction commitMetadataOnlyAction(
@@ -91,12 +101,13 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       DataSourceMetadata endMetadata
   )
   {
-    return new SegmentTransactionalInsertAction(null, null, startMetadata, endMetadata, dataSource);
+    return new SegmentTransactionalInsertAction(null, null, null, startMetadata, endMetadata, dataSource);
   }
 
   @JsonCreator
   private SegmentTransactionalInsertAction(
       @JsonProperty("segmentsToBeOverwritten") @Nullable Set<DataSegment> segmentsToBeOverwritten,
+      @JsonProperty("segmentsToBeDropped") @Nullable Set<DataSegment> segmentsToBeDropped,
       @JsonProperty("segments") @Nullable Set<DataSegment> segments,
       @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
       @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata,
@@ -104,6 +115,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   )
   {
     this.segmentsToBeOverwritten = segmentsToBeOverwritten;
+    this.segmentsToBeDropped = segmentsToBeDropped;
     this.segments = segments == null ? ImmutableSet.of() : ImmutableSet.copyOf(segments);
     this.startMetadata = startMetadata;
     this.endMetadata = endMetadata;
@@ -115,6 +127,13 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   public Set<DataSegment> getSegmentsToBeOverwritten()
   {
     return segmentsToBeOverwritten;
+  }
+
+  @JsonProperty
+  @Nullable
+  public Set<DataSegment> getSegmentsToBeDropped()
+  {
+    return segmentsToBeDropped;
   }
 
   @JsonProperty
@@ -180,6 +199,10 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     if (segmentsToBeOverwritten != null) {
       allSegments.addAll(segmentsToBeOverwritten);
     }
+    if (segmentsToBeDropped != null) {
+      allSegments.addAll(segmentsToBeDropped);
+    }
+
     TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), allSegments);
 
     if (segmentsToBeOverwritten != null && !segmentsToBeOverwritten.isEmpty()) {
@@ -198,6 +221,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
               .onValidLocks(
                   () -> toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
                       segments,
+                      segmentsToBeDropped,
                       startMetadata,
                       endMetadata
                   )
@@ -228,6 +252,10 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     // getSegments() should return an empty set if announceHistoricalSegments() failed
     for (DataSegment segment : retVal.getSegments()) {
       metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
+      metricBuilder.setDimension(
+          DruidMetrics.PARTITIONING_TYPE,
+          segment.getShardSpec() == null ? null : segment.getShardSpec().getType()
+      );
       toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
     }
 
@@ -309,7 +337,8 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
            ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            ", startMetadata=" + startMetadata +
            ", endMetadata=" + endMetadata +
-           ", dataSource=" + dataSource +
+           ", dataSource='" + dataSource + '\'' +
+           ", segmentsToBeDropped=" + SegmentUtils.commaSeparatedIdentifiers(segmentsToBeDropped) +
            '}';
   }
 }

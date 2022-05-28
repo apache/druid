@@ -56,6 +56,9 @@ import java.util.stream.Collectors;
 @PublicApi
 public class DataSegment implements Comparable<DataSegment>, Overshadowable<DataSegment>
 {
+
+  public static final String TOMBSTONE_LOADSPEC_TYPE = "tombstone";
+
   /*
    * The difference between this class and org.apache.druid.segment.Segment is that this class contains the segment
    * metadata only, while org.apache.druid.segment.Segment represents the actual body of segment data, queryable.
@@ -100,7 +103,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   /**
    * Stores some configurations of the compaction task which created this segment.
    * This field is filled in the metadata store only when "storeCompactionState" is set true in the context of the
-   * compaction task which is false by default.
+   * task. True by default see {@link org.apache.druid.indexing.common.task.Tasks#DEFAULT_STORE_COMPACTION_STATE}.
    * Also, this field can be pruned in many Druid modules when this class is loaded from the metadata store.
    * See {@link PruneLastCompactionState} for details.
    */
@@ -168,7 +171,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       List<String> dimensions,
       List<String> metrics,
       ShardSpec shardSpec,
-      CompactionState lastCompactionState,
+      @Nullable CompactionState lastCompactionState,
       Integer binaryVersion,
       long size
   )
@@ -211,6 +214,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   )
   {
     this.id = SegmentId.of(dataSource, interval, version, shardSpec);
+    // prune loadspec if needed
     this.loadSpec = pruneSpecsHolder.pruneLoadSpec ? PRUNED_LOAD_SPEC : prepareLoadSpec(loadSpec);
     // Deduplicating dimensions and metrics lists as a whole because they are very likely the same for the same
     // dataSource
@@ -343,6 +347,11 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     return id;
   }
 
+  public boolean isTombstone()
+  {
+    return getShardSpec().getType().equals(ShardSpec.Type.TOMBSTONE);
+  }
+
   @Override
   public boolean overshadows(DataSegment other)
   {
@@ -425,6 +434,11 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   public DataSegment withBinaryVersion(int binaryVersion)
   {
     return builder(this).binaryVersion(binaryVersion).build();
+  }
+
+  public DataSegment withLastCompactionState(CompactionState compactionState)
+  {
+    return builder(this).lastCompactionState(compactionState).build();
   }
 
   @Override
@@ -591,4 +605,11 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       );
     }
   }
+
+  @Override
+  public boolean hasData()
+  {
+    return !isTombstone();
+  }
+
 }

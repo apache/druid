@@ -24,6 +24,7 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -138,9 +139,15 @@ public class SuppressedAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public ColumnType getIntermediateType()
   {
-    return delegate.getTypeName();
+    return delegate.getIntermediateType();
+  }
+
+  @Override
+  public ColumnType getResultType()
+  {
+    return delegate.getResultType();
   }
 
   @Override

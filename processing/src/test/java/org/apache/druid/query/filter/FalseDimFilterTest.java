@@ -42,6 +42,9 @@ public class FalseDimFilterTest
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(FalseDimFilter.class).usingGetClass().verify();
+    EqualsVerifier.forClass(FalseDimFilter.class)
+                  .usingGetClass()
+                  .withIgnoredFields("cachedOptimizedFilter")
+                  .verify();
   }
 }

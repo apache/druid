@@ -22,7 +22,6 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 
 import java.util.Map;
 
@@ -58,12 +57,10 @@ class SinglePhaseSubTaskSpec extends SubTaskSpec<SinglePhaseSubTask>
         getGroupId(),
         null,
         getSupervisorTaskId(),
+        getId(),
         numAttempts,
         getIngestionSpec(),
-        getContext(),
-        null,
-        null,
-        new DummyForInjectionAppenderatorsManager()
+        getContext()
     );
   }
 
@@ -77,10 +74,7 @@ class SinglePhaseSubTaskSpec extends SubTaskSpec<SinglePhaseSubTask>
         getSupervisorTaskId(),
         numAttempts,
         getIngestionSpec(),
-        getContext(),
-        null,
-        null,
-        new DummyForInjectionAppenderatorsManager()
+        getContext()
     );
   }
 }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.join.table;
 
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -26,6 +27,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nonnull;
@@ -36,22 +38,24 @@ public class IndexedTableColumnSelectorFactory implements ColumnSelectorFactory
 {
   private final IndexedTable table;
   private final IntSupplier currentRow;
+  private final Closer closer;
 
-  IndexedTableColumnSelectorFactory(IndexedTable table, IntSupplier currentRow)
+  IndexedTableColumnSelectorFactory(IndexedTable table, IntSupplier currentRow, Closer closer)
   {
     this.table = table;
     this.currentRow = currentRow;
+    this.closer = closer;
   }
 
   @Nullable
   static ColumnCapabilities columnCapabilities(final IndexedTable table, final String columnName)
   {
-    final ValueType valueType = table.rowSignature().getColumnType(columnName).orElse(null);
+    final ColumnType valueType = table.rowSignature().getColumnType(columnName).orElse(null);
 
     if (valueType != null) {
       final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl().setType(valueType);
 
-      if (valueType == ValueType.STRING) {
+      if (valueType.is(ValueType.STRING)) {
         // IndexedTables are not _really_ dictionary-encoded, but we fake it using the row number as the dict. code.
         capabilities.setDictionaryEncoded(true);
       }
@@ -79,7 +83,8 @@ public class IndexedTableColumnSelectorFactory implements ColumnSelectorFactory
           table,
           currentRow,
           columnNumber,
-          dimensionSpec.getExtractionFn()
+          dimensionSpec.getExtractionFn(),
+          closer
       );
 
       return dimensionSpec.decorate(undecoratedSelector);
@@ -95,7 +100,7 @@ public class IndexedTableColumnSelectorFactory implements ColumnSelectorFactory
     if (columnNumber < 0) {
       return NilColumnValueSelector.instance();
     } else {
-      return new IndexedTableColumnValueSelector(table, currentRow, columnNumber);
+      return new IndexedTableColumnValueSelector(table, currentRow, columnNumber, closer);
     }
   }
 

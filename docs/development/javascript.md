@@ -30,13 +30,13 @@ This page discusses how to use JavaScript to extend Apache Druid.
 
 JavaScript can be used to extend Druid in a variety of ways:
 
-- [Aggregators](../querying/aggregations.html#javascript-aggregator)
-- [Extraction functions](../querying/dimensionspecs.html#javascript-extraction-function)
-- [Filters](../querying/filters.html#javascript-filter)
-- [Post-aggregators](../querying/post-aggregations.html#javascript-post-aggregator)
-- [Input parsers](../ingestion/data-formats.html#javascript-parsespec)
-- [Router strategy](../design/router.html#javascript)
-- [Worker select strategy](../configuration/index.html#javascript-worker-select-strategy)
+- [Aggregators](../querying/aggregations.md#javascript-aggregator)
+- [Extraction functions](../querying/dimensionspecs.md#javascript-extraction-function)
+- [Filters](../querying/filters.md#javascript-filter)
+- [Post-aggregators](../querying/post-aggregations.md#javascript-post-aggregator)
+- [Input parsers](../ingestion/data-formats.md#javascript-parsespec)
+- [Router strategy](../design/router.md#javascript)
+- [Worker select strategy](../configuration/index.md#javascript-worker-select-strategy)
 
 JavaScript can be injected dynamically at runtime, making it convenient to rapidly prototype new functionality
 without needing to write and deploy Druid extensions.
@@ -48,7 +48,7 @@ Druid uses the Mozilla Rhino engine at optimization level 9 to compile and execu
 Druid does not execute JavaScript functions in a sandbox, so they have full access to the machine. So JavaScript
 functions allow users to execute arbitrary code inside druid process. So, by default, JavaScript is disabled.
 However, on dev/staging environments or secured production environments you can enable those by setting
-the [configuration property](../configuration/index.html#javascript)
+the [configuration property](../configuration/index.md#javascript)
 `druid.javascript.enabled = true`.
 
 ## Global variables

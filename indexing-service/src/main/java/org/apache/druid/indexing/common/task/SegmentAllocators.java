@@ -19,12 +19,13 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.batch.parallel.SupervisorTaskAccess;
 import org.apache.druid.indexing.common.task.batch.partition.CompletePartitionAnalysis;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 
 import javax.annotation.Nullable;
@@ -36,35 +37,43 @@ public final class SegmentAllocators
    * Creates a new {@link SegmentAllocator} for the linear partitioning.
    * supervisorTaskAccess can be null if this method is called by the {@link IndexTask}.
    */
-  public static SegmentAllocator forLinearPartitioning(
+  public static SegmentAllocatorForBatch forLinearPartitioning(
       final TaskToolbox toolbox,
+      final String sequenceName,
       final @Nullable SupervisorTaskAccess supervisorTaskAccess,
       final DataSchema dataSchema,
       final TaskLockHelper taskLockHelper,
-      final boolean appendToExisting,
-      final PartitionsSpec partitionsSpec
+      final AbstractTask.IngestionMode ingestionMode,
+      final PartitionsSpec partitionsSpec,
+      final @Nullable Boolean useLineageBasedSegmentAllocation
   ) throws IOException
   {
-    if (appendToExisting || taskLockHelper.isUseSegmentLock()) {
+    if (ingestionMode == AbstractTask.IngestionMode.APPEND || taskLockHelper.isUseSegmentLock()) {
       return new OverlordCoordinatingSegmentAllocator(
           toolbox,
+          sequenceName,
           supervisorTaskAccess,
           dataSchema,
           taskLockHelper,
-          appendToExisting,
+          ingestionMode,
           partitionsSpec
       );
     } else {
       if (supervisorTaskAccess == null) {
         return new LocalSegmentAllocator(
             toolbox,
+            sequenceName,
             dataSchema.getDataSource(),
             dataSchema.getGranularitySpec()
         );
       } else {
         return new SupervisorTaskCoordinatingSegmentAllocator(
-            supervisorTaskAccess.getSupervisorTaskId(),
-            supervisorTaskAccess.getTaskClient()
+            sequenceName,
+            supervisorTaskAccess,
+            Preconditions.checkNotNull(
+                useLineageBasedSegmentAllocation,
+                "useLineageBasedSegmentAllocation"
+            )
         );
       }
     }
@@ -74,11 +83,11 @@ public final class SegmentAllocators
    * Creates a new {@link SegmentAllocator} for the hash and range partitioning.
    * supervisorTaskAccess can be null if this method is called by the {@link IndexTask}.
    */
-  public static CachingSegmentAllocator forNonLinearPartitioning(
+  public static SegmentAllocatorForBatch forNonLinearPartitioning(
       final TaskToolbox toolbox,
       final String dataSource,
-      final String taskId,
-      final Granularity queryGranularity,
+      final String baseSequenceName,
+      final GranularitySpec granularitySpec,
       final @Nullable SupervisorTaskAccess supervisorTaskAccess,
       final CompletePartitionAnalysis partitionAnalysis
   ) throws IOException
@@ -86,10 +95,10 @@ public final class SegmentAllocators
     return new CachingLocalSegmentAllocator(
         toolbox,
         dataSource,
-        taskId,
-        queryGranularity,
+        baseSequenceName,
+        granularitySpec,
         supervisorTaskAccess,
-        partitionAnalysis::convertToIntervalToSegmentIds
+        partitionAnalysis
     );
   }
 

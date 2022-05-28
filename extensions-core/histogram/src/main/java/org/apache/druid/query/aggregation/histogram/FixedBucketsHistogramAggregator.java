@@ -20,10 +20,9 @@
 package org.apache.druid.query.aggregation.histogram;
 
 import com.google.common.primitives.Longs;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -31,6 +30,7 @@ import java.util.Comparator;
 public class FixedBucketsHistogramAggregator implements Aggregator
 {
   public static final String TYPE_NAME = "fixedBucketsHistogram";
+  public static final ColumnType TYPE = ColumnType.ofComplex(TYPE_NAME);
 
   public static final Comparator COMPARATOR = new Comparator()
   {
@@ -66,22 +66,7 @@ public class FixedBucketsHistogramAggregator implements Aggregator
   public void aggregate()
   {
     Object val = selector.getObject();
-
-    if (val == null) {
-      if (NullHandling.replaceWithDefault()) {
-        histogram.add(NullHandling.defaultDoubleValue());
-      } else {
-        histogram.incrementMissing();
-      }
-    } else if (val instanceof String) {
-      histogram.combineHistogram(FixedBucketsHistogram.fromBase64((String) val));
-    } else if (val instanceof FixedBucketsHistogram) {
-      histogram.combineHistogram((FixedBucketsHistogram) val);
-    } else if (val instanceof Number) {
-      histogram.add(((Number) val).doubleValue());
-    } else {
-      throw new ISE("Unknown class for object: " + val.getClass());
-    }
+    histogram.combine(val);
   }
 
   @Nullable

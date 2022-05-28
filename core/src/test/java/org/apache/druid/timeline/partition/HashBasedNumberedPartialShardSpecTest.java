@@ -30,7 +30,7 @@ import java.util.Map;
 
 public class HashBasedNumberedPartialShardSpecTest
 {
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final ObjectMapper MAPPER = ShardSpecTestUtils.initObjectMapper();
 
   @Test
   public void testEquals()
@@ -46,7 +46,9 @@ public class HashBasedNumberedPartialShardSpecTest
   {
     final HashBasedNumberedPartialShardSpec expected = new HashBasedNumberedPartialShardSpec(
         ImmutableList.of("dim1", "dim2"),
-        3
+        1,
+        3,
+        HashPartitionFunction.MURMUR3_32_ABS
     );
     final byte[] json = MAPPER.writeValueAsBytes(expected);
     final HashBasedNumberedPartialShardSpec fromJson = (HashBasedNumberedPartialShardSpec) MAPPER.readValue(
@@ -61,14 +63,35 @@ public class HashBasedNumberedPartialShardSpecTest
   {
     final HashBasedNumberedPartialShardSpec expected = new HashBasedNumberedPartialShardSpec(
         ImmutableList.of("dim1", "dim2"),
-        3
+        1,
+        3,
+        HashPartitionFunction.MURMUR3_32_ABS
     );
     final byte[] json = MAPPER.writeValueAsBytes(expected);
     //noinspection unchecked
     final Map<String, Object> map = MAPPER.readValue(json, Map.class);
-    Assert.assertEquals(3, map.size());
+    Assert.assertEquals(5, map.size());
     Assert.assertEquals(HashBasedNumberedPartialShardSpec.TYPE, map.get("type"));
     Assert.assertEquals(expected.getPartitionDimensions(), map.get("partitionDimensions"));
+    Assert.assertEquals(expected.getBucketId(), map.get("bucketId"));
     Assert.assertEquals(expected.getNumBuckets(), map.get("numPartitions"));
+    Assert.assertEquals(expected.getBucketId(), map.get("bucketId"));
+    Assert.assertEquals(expected.getPartitionFunction().toString(), map.get("partitionFunction"));
+  }
+
+  @Test
+  public void testComplete()
+  {
+    final HashBasedNumberedPartialShardSpec partialShardSpec = new HashBasedNumberedPartialShardSpec(
+        ImmutableList.of("dim"),
+        2,
+        4,
+        null
+    );
+    final ShardSpec shardSpec = partialShardSpec.complete(MAPPER, 1, 3);
+    Assert.assertEquals(
+        new HashBasedNumberedShardSpec(1, 3, 2, 4, ImmutableList.of("dim"), null, MAPPER),
+        shardSpec
+    );
   }
 }

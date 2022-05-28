@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.curator.test.TestingCluster;
+import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -34,7 +35,7 @@ import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.test.TestBroker;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
-import org.apache.druid.indexing.overlord.sampler.SamplerResponse;
+import org.apache.druid.indexing.overlord.sampler.SamplerException;
 import org.apache.druid.indexing.overlord.sampler.SamplerTestUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -51,7 +52,9 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -59,6 +62,9 @@ import java.util.List;
 
 public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
   private static final String TOPIC = "sampling";
   private static final DataSchema DATA_SCHEMA = new DataSchema(
@@ -71,9 +77,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
               new StringDimensionSchema("dim2"),
               new LongDimensionSchema("dimLong"),
               new FloatDimensionSchema("dimFloat")
-          ),
-          null,
-          null
+          )
       ),
       new AggregatorFactory[]{
           new DoubleSumAggregatorFactory("met1sum", "met1"),
@@ -131,6 +135,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             kafkaServer.consumerProperties(),
+            null,
             null,
             null,
             null,
@@ -245,7 +250,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             .build(),
         null,
         true,
-        "Timestamp cannot be represented as a long: [MapBasedInputRow{timestamp=246140482-04-24T15:36:27.903Z, event={timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}]"
+        "Encountered row with timestamp[246140482-04-24T15:36:27.903Z] that cannot be represented as a long: [{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}]"
     ), it.next());
     Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
         null,
@@ -286,5 +291,57 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Test
+  public void testInvalidKafkaConfig()
+  {
+    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
+        null,
+        DATA_SCHEMA,
+        null,
+        new KafkaSupervisorIOConfig(
+            TOPIC,
+            new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+            null,
+            null,
+            null,
+
+            // invalid bootstrap server
+            ImmutableMap.of("bootstrap.servers", "127.0.0.1"),
+
+            null,
+            null,
+            null,
+            null,
+            true,
+            null,
+            null,
+            null,
+            null
+        ),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
+        supervisorSpec,
+        new SamplerConfig(5, null),
+        new InputSourceSampler(),
+        OBJECT_MAPPER
+    );
+
+    expectedException.expect(SamplerException.class);
+    expectedException.expectMessage("Invalid url in bootstrap.servers");
+    samplerSpec.sample();
   }
 }

@@ -21,7 +21,9 @@ package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
@@ -29,6 +31,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.spec.LegacySegmentSpec;
@@ -38,8 +41,10 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -48,19 +53,35 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 
 @RunWith(Enclosed.class)
 public class ScanQueryRunnerFactoryTest
 {
+  private static final ScanQueryConfig CONFIG = new ScanQueryConfig()
+  {
+    @Override
+    public int getMaxRowsQueuedForOrdering()
+    {
+      return 10000;
+    }
+
+    @Override
+    public int getMaxSegmentPartitionsOrderedInMemory()
+    {
+      return 4;
+    }
+  };
 
   private static final ScanQueryRunnerFactory FACTORY = new ScanQueryRunnerFactory(
       new ScanQueryQueryToolChest(
-          new ScanQueryConfig(),
+          CONFIG,
           DefaultGenericQueryMetricsFactory.instance()
       ),
       new ScanQueryEngine(),
-      new ScanQueryConfig()
+      CONFIG
   );
 
   @RunWith(Parameterized.class)
@@ -131,14 +152,14 @@ public class ScanQueryRunnerFactoryTest
         } else if (o1 < o2) {
           retVal = -1;
         }
-        if (query.getOrder().equals(ScanQuery.Order.DESCENDING)) {
+        if (query.getTimeOrder().equals(ScanQuery.Order.DESCENDING)) {
           return retVal * -1;
         }
         return retVal;
       });
       Sequence<ScanResultValue> inputSequence = Sequences.simple(srvs);
       try {
-        List<ScanResultValue> output = FACTORY.priorityQueueSortAndLimit(
+        List<ScanResultValue> output = FACTORY.stableLimitingSort(
             inputSequence,
             query,
             ImmutableList.of(new Interval(
@@ -184,7 +205,7 @@ public class ScanQueryRunnerFactoryTest
         scanResultValues3.add(ScanQueryTestHelper.generateScanResultValue(timestamp, resultFormat, 1));
       }
 
-      if (query.getOrder() == ScanQuery.Order.DESCENDING) {
+      if (query.getTimeOrder() == ScanQuery.Order.DESCENDING) {
         Collections.reverse(scanResultValues1);
         Collections.reverse(scanResultValues2);
         Collections.reverse(scanResultValues3);
@@ -205,7 +226,7 @@ public class ScanQueryRunnerFactoryTest
 
       List<List<QueryRunner<ScanResultValue>>> groupedRunners = new ArrayList<>(2);
 
-      if (query.getOrder() == ScanQuery.Order.DESCENDING) {
+      if (query.getTimeOrder() == ScanQuery.Order.DESCENDING) {
         groupedRunners.add(Arrays.asList(runnerSegment2Partition1, runnerSegment2Partition2));
         groupedRunners.add(Arrays.asList(runnerSegment1Partition1, runnerSegment1Partition2));
       } else {
@@ -220,7 +241,7 @@ public class ScanQueryRunnerFactoryTest
         } else if (o1 < o2) {
           retVal = -1;
         }
-        if (query.getOrder().equals(ScanQuery.Order.DESCENDING)) {
+        if (query.getTimeOrder().equals(ScanQuery.Order.DESCENDING)) {
           return retVal * -1;
         }
         return retVal;
@@ -252,7 +273,7 @@ public class ScanQueryRunnerFactoryTest
 
       // check ordering is correct
       for (int i = 1; i < output.size(); i++) {
-        if (query.getOrder().equals(ScanQuery.Order.DESCENDING)) {
+        if (query.getTimeOrder().equals(ScanQuery.Order.DESCENDING)) {
           Assert.assertTrue(output.get(i).getFirstEventTimestamp(resultFormat) <
                             output.get(i - 1).getFirstEventTimestamp(resultFormat));
         } else {
@@ -274,6 +295,9 @@ public class ScanQueryRunnerFactoryTest
         DateTimes.of("2010-01-01"),
         DateTimes.of("2019-01-01").plusHours(1)
     ), "1", 0);
+
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
 
     @Test
     public void testGetValidIntervalsFromSpec()
@@ -318,6 +342,44 @@ public class ScanQueryRunnerFactoryTest
           )
       );
       FACTORY.getIntervalsFromSpecificQuerySpec(legacySpec);
+    }
+
+
+    @Test
+    public void testMergeRunnersGuardrailsExceeded()
+    {
+      final QueryRunner<ScanResultValue> runner = FACTORY.mergeRunners(
+          Execs.directExecutor(),
+          IntStream.range(0, CONFIG.getMaxSegmentPartitionsOrderedInMemory() + 1)
+                   .mapToObj(i -> (QueryRunner<ScanResultValue>) (queryPlus, responseContext) -> Sequences.empty())
+                   .collect(Collectors.toList())
+      );
+
+      expectedException.expect(ResourceLimitExceededException.class);
+      expectedException.expectMessage(
+          "Time ordering is not supported for a Scan query with 5 segments per time chunk and a row limit of 10,001. "
+          + "Try reducing your query limit below maxRowsQueuedForOrdering (currently 10,000), or using compaction to "
+          + "reduce the number of segments per time chunk, or raising maxSegmentPartitionsOrderedInMemory "
+          + "(currently 4) above the number of segments you have per time chunk."
+      );
+
+      runner.run(
+          QueryPlus.wrap(
+              Druids.newScanQueryBuilder()
+                    .dataSource("foo")
+                    .limit(CONFIG.getMaxRowsQueuedForOrdering() + 1)
+                    .intervals(
+                        new MultipleSpecificSegmentSpec(
+                            IntStream.range(0, CONFIG.getMaxSegmentPartitionsOrderedInMemory() + 1)
+                                     .mapToObj(i -> new SegmentDescriptor(Intervals.ETERNITY, "v0", i))
+                                     .collect(Collectors.toList())
+                        )
+                    )
+                    .order(ScanQuery.Order.ASCENDING)
+                    .build()
+          ),
+          ResponseContext.createEmpty()
+      );
     }
   }
 }

@@ -21,6 +21,7 @@ package org.apache.druid.data.input.impl;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.java.util.common.DateTimes;
@@ -34,10 +35,11 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class InputEntityIteratingReaderTest
@@ -64,7 +66,7 @@ public class InputEntityIteratingReaderTest
             new DimensionsSpec(
                 DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "name", "score"))
             ),
-            Collections.emptyList()
+            ColumnsFilter.all()
         ),
         new CsvInputFormat(
             ImmutableList.of("time", "name", "score"),
@@ -94,5 +96,34 @@ public class InputEntityIteratingReaderTest
       }
       Assert.assertEquals(numFiles, i);
     }
+  }
+
+  @Test
+  public void testIncorrectURI() throws IOException, URISyntaxException
+  {
+    final InputEntityIteratingReader firehose = new InputEntityIteratingReader(
+        new InputRowSchema(
+            new TimestampSpec(null, null, null),
+            new DimensionsSpec(
+                DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "name", "score"))
+            ),
+            ColumnsFilter.all()
+        ),
+        new CsvInputFormat(
+            ImmutableList.of("time", "name", "score"),
+            null,
+            null,
+            false,
+            0
+        ),
+        ImmutableList.of(
+            new HttpEntity(new URI("testscheme://some/path"), null, null)
+        ).iterator(),
+        temporaryFolder.newFolder()
+    );
+    String expectedMessage = "Error occured while trying to read uri: testscheme://some/path";
+    Exception exception = Assert.assertThrows(RuntimeException.class, firehose::read);
+
+    Assert.assertTrue(exception.getMessage().contains(expectedMessage));
   }
 }

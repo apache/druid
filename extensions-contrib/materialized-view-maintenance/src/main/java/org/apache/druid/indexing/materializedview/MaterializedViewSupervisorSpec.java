@@ -181,7 +181,8 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         tuningConfig.getShardSpecs(),
         tuningConfig.getIndexSpec(),
         tuningConfig.getIndexSpecForIntermediatePersists(),
-        tuningConfig.getRowFlushBoundary(),
+        tuningConfig.getAppendableIndexSpec(),
+        tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemory(),
         tuningConfig.isLeaveIntermediate(),
         tuningConfig.isCleanupOnFailure(),
@@ -190,15 +191,15 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         tuningConfig.getJobProperties(),
         tuningConfig.isCombineText(),
         tuningConfig.getUseCombiner(),
-        tuningConfig.getRowFlushBoundary(),
-        tuningConfig.getBuildV9Directly(),
+        tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getNumBackgroundPersistThreads(),
         tuningConfig.isForceExtendableShardSpecs(),
         true,
         tuningConfig.getUserAllowedHadoopPrefix(),
         tuningConfig.isLogParseExceptions(),
         tuningConfig.getMaxParseExceptions(),
-        tuningConfig.isUseYarnRMJobStatusFallback()
+        tuningConfig.isUseYarnRMJobStatusFallback(),
+        tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis()
     );
 
     // generate granularity

@@ -76,9 +76,9 @@ public class MemoryBenchmark
       buffer3 = ByteBuffer.allocateDirect(numBytes).order(ByteOrder.nativeOrder());
     }
 
-    memory1 = WritableMemory.wrap(buffer1, ByteOrder.nativeOrder());
-    memory2 = WritableMemory.wrap(buffer2, ByteOrder.nativeOrder());
-    memory3 = WritableMemory.wrap(buffer3, ByteOrder.nativeOrder());
+    memory1 = WritableMemory.writableWrap(buffer1, ByteOrder.nativeOrder());
+    memory2 = WritableMemory.writableWrap(buffer2, ByteOrder.nativeOrder());
+    memory3 = WritableMemory.writableWrap(buffer3, ByteOrder.nativeOrder());
 
     // Scribble in some random but consistent (same seed) garbage.
     final Random random = new Random(0);

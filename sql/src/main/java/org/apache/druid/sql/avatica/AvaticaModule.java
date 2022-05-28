@@ -36,7 +36,8 @@ public class AvaticaModule implements Module
   {
     JsonConfigProvider.bind(binder, "druid.sql.avatica", AvaticaServerConfig.class);
     binder.bind(AvaticaMonitor.class).in(LazySingleton.class);
-    JettyBindings.addHandler(binder, DruidAvaticaHandler.class);
+    JettyBindings.addHandler(binder, DruidAvaticaJsonHandler.class);
+    JettyBindings.addHandler(binder, DruidAvaticaProtobufHandler.class);
     MetricsModule.register(binder, AvaticaMonitor.class);
   }
 }

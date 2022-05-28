@@ -17,24 +17,31 @@
  */
 
 import classNames from 'classnames';
+import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
 import { TableCellUnparseable } from '../../../components/table-cell-unparseable/table-cell-unparseable';
+import { FlattenField } from '../../../druid-models';
+import {
+  DEFAULT_TABLE_CLASS_NAME,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+} from '../../../react-table';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
-import { FlattenField } from '../../../utils/ingestion-spec';
-import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
+import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './parse-data-table.scss';
 
 export interface ParseDataTableProps {
-  sampleData: HeaderAndRows;
+  sampleData: SampleHeaderAndRows;
   columnFilter: string;
   canFlatten: boolean;
   flattenedColumnsOnly: boolean;
   flattenFields: FlattenField[];
   onFlattenFieldSelect: (field: FlattenField, index: number) => void;
+  useInput?: boolean;
 }
 
 export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDataTableProps) {
@@ -45,12 +52,18 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
     flattenedColumnsOnly,
     flattenFields,
     onFlattenFieldSelect,
+    useInput,
   } = props;
 
+  const key = useInput ? 'input' : 'parsed';
   return (
     <ReactTable
-      className="parse-data-table -striped -highlight"
+      className={classNames('parse-data-table', DEFAULT_TABLE_CLASS_NAME)}
       data={sampleData.rows}
+      sortable={false}
+      defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+      pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+      showPagination={sampleData.rows.length > STANDARD_TABLE_PAGE_SIZE}
       columns={filterMap(sampleData.header, (columnName, i) => {
         if (!caseInsensitiveContains(columnName, columnFilter)) return;
         const flattenFieldIndex = flattenFields.findIndex(f => f.name === columnName);
@@ -72,8 +85,9 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
             </div>
           ),
           id: String(i),
-          accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-          Cell: row => {
+          accessor: (row: SampleEntry) => (row[key] ? row[key]![columnName] : null),
+          width: 140,
+          Cell: function ParseDataTableCell(row) {
             if (row.original.unparseable) {
               return <TableCellUnparseable />;
             }
@@ -86,7 +100,7 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
       })}
       SubComponent={rowInfo => {
         const { input, error } = rowInfo.original;
-        const inputStr = JSON.stringify(input, null, 2);
+        const inputStr = JSONBig.stringify(input, undefined, 2);
 
         if (!error && input && canFlatten) {
           return <pre className="parse-detail">{'Original row: ' + inputStr}</pre>;
@@ -99,9 +113,6 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
           );
         }
       }}
-      defaultPageSize={50}
-      showPagination={false}
-      sortable={false}
     />
   );
 });

@@ -274,6 +274,7 @@ SOURCE/JAVA-CORE
 
     This product contains s3 directory place holder check code adapted from JetS3t (https://bitbucket.org/jmurty/jets3t/wiki/Home).
       * extensions-core/s3-extensions/src/main/java/org/apache/druid/storage/s3/S3Utils.java
+      * extensions-contrib/aliyun-oss-extensions/src/main/java/org/apache/druid/storage/aliyun/OssObjectSummaryIterator.java
 
     This product contains lpad and rpad methods adapted from Apache Flink.
       * core/src/main/java/org/apache/druid/java/util/common/StringUtils.java

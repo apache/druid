@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-core';
+import * as playwright from 'playwright-chromium';
 
 /**
  * Extracts an HTML table into a text representation.
@@ -29,24 +29,28 @@ export async function extractTable(
   tableSelector: string,
   rowSelector: string,
 ): Promise<string[][]> {
-  await page.waitFor(tableSelector);
+  await page.waitForSelector(tableSelector);
 
   return page.evaluate(
-    (tableSelector, rowSelector) => {
+    ([tableSelector, rowSelector]) => {
       const BLANK_VALUE = '\xa0';
       const data = [];
       const rows = document.querySelectorAll(tableSelector);
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         const columns = row.querySelectorAll(rowSelector);
-        const values = Array.from(columns).map(c => (c as HTMLElement).innerText);
+        const values = Array.from(columns).map(c => {
+          const realTexts = Array.from(c.querySelectorAll('.real-text'));
+          return realTexts.length
+            ? (realTexts[0] as HTMLElement).innerText
+            : (c as HTMLElement).innerText;
+        });
         if (!values.every(value => value === BLANK_VALUE)) {
           data.push(values);
         }
       }
       return data;
     },
-    tableSelector,
-    rowSelector,
+    [tableSelector, rowSelector],
   );
 }

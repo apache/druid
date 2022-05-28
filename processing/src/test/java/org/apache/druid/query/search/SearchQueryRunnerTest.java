@@ -36,7 +36,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
-import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
@@ -56,9 +55,10 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
@@ -628,7 +628,7 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
                                         new DefaultDimensionSpec(
                                             ColumnHolder.TIME_COLUMN_NAME,
                                             ColumnHolder.TIME_COLUMN_NAME,
-                                            ValueType.LONG
+                                            ColumnType.LONG
                                         )
                                     )
                                     .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -675,7 +675,7 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
                                         new DefaultDimensionSpec(
                                             QueryRunnerTestHelper.INDEX_METRIC,
                                             QueryRunnerTestHelper.INDEX_METRIC,
-                                            ValueType.DOUBLE
+                                            ColumnType.DOUBLE
                                         )
                                     )
                                     .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -719,14 +719,14 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testSearchWithNullValueInDimension() throws Exception
   {
-    IncrementalIndex<Aggregator> index = new IncrementalIndex.Builder()
+    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
                 .build()
         )
         .setMaxRowCount(10)
-        .buildOnheap();
+        .build();
 
     index.add(
         new MapBasedInputRow(

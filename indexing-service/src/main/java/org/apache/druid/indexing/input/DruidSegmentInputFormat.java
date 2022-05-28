@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.input;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
@@ -27,26 +28,19 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.IndexIO;
 
 import java.io.File;
-import java.util.List;
 
 public class DruidSegmentInputFormat implements InputFormat
 {
   private final IndexIO indexIO;
   private final DimFilter dimFilter;
-  private List<String> dimensions;
-  private List<String> metrics;
 
-  DruidSegmentInputFormat(
+  public DruidSegmentInputFormat(
       IndexIO indexIO,
-      DimFilter dimFilter,
-      List<String> dimensions,
-      List<String> metrics
+      DimFilter dimFilter
   )
   {
     this.indexIO = indexIO;
     this.dimFilter = dimFilter;
-    this.dimensions = dimensions;
-    this.metrics = metrics;
   }
 
   @Override
@@ -62,13 +56,28 @@ public class DruidSegmentInputFormat implements InputFormat
       File temporaryDirectory
   )
   {
-    return new DruidSegmentReader(
-        source,
-        indexIO,
-        dimensions,
-        metrics,
-        dimFilter,
-        temporaryDirectory
+    // this method handles the case when the entity comes from a tombstone or from a regular segment
+    Preconditions.checkArgument(
+        source instanceof DruidSegmentInputEntity,
+        DruidSegmentInputEntity.class.getName() + " required, but "
+        + source.getClass().getName() + " provided."
     );
+
+    final InputEntityReader retVal;
+    // Cast is safe here because of the precondition above passed
+    if (((DruidSegmentInputEntity) source).isFromTombstone()) {
+      retVal = new DruidTombstoneSegmentReader(source);
+    } else {
+      retVal = new DruidSegmentReader(
+          source,
+          indexIO,
+          inputRowSchema.getTimestampSpec(),
+          inputRowSchema.getDimensionsSpec(),
+          inputRowSchema.getColumnsFilter(),
+          dimFilter,
+          temporaryDirectory
+      );
+    }
+    return retVal;
   }
 }

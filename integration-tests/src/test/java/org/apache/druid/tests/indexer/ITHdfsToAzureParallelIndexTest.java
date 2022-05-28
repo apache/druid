@@ -42,6 +42,6 @@ public class ITHdfsToAzureParallelIndexTest extends AbstractHdfsInputSourceParal
   @Test(dataProvider = "resources")
   public void testHdfsIndexData(Pair<String, List> hdfsInputSource) throws Exception
   {
-    doTest(hdfsInputSource, InputFormatDetails.JSON);
+    doTest(hdfsInputSource, InputFormatDetails.JSON, new Pair<>(false, false));
   }
 }

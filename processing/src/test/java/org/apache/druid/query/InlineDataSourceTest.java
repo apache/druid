@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
@@ -46,10 +47,11 @@ public class InlineDataSourceTest
 
   private final AtomicLong iterationCounter = new AtomicLong();
 
+  // raw arrays, e.g. double[]{1.0, 2.0} on round trip get deserialized into List<Double>, so just model that
   private final List<Object[]> rows = ImmutableList.of(
-      new Object[]{DateTimes.of("2000").getMillis(), "foo", 0d, ImmutableMap.of("n", "0")},
-      new Object[]{DateTimes.of("2000").getMillis(), "bar", 1d, ImmutableMap.of("n", "1")},
-      new Object[]{DateTimes.of("2000").getMillis(), "baz", 2d, ImmutableMap.of("n", "2")}
+      new Object[]{DateTimes.of("2000").getMillis(), "foo", 0d, ImmutableMap.of("n", "0"), ImmutableList.of(1.0, 2.0)},
+      new Object[]{DateTimes.of("2000").getMillis(), "bar", 1d, ImmutableMap.of("n", "1"), ImmutableList.of(2.0, 4.0)},
+      new Object[]{DateTimes.of("2000").getMillis(), "baz", 2d, ImmutableMap.of("n", "2"), ImmutableList.of(3.0, 6.0)}
   );
 
   private final Iterable<Object[]> rowsIterable = () -> {
@@ -61,14 +63,17 @@ public class InlineDataSourceTest
       ColumnHolder.TIME_COLUMN_NAME,
       "str",
       "double",
-      "complex"
+      "complex",
+      "double_array"
   );
 
-  private final List<ValueType> expectedColumnTypes = ImmutableList.of(
-      ValueType.LONG,
-      ValueType.STRING,
-      ValueType.DOUBLE,
-      ValueType.COMPLEX
+  private final ColumnType someComplex = new ColumnType(ValueType.COMPLEX, "foo", null);
+  private final List<ColumnType> expectedColumnTypes = ImmutableList.of(
+      ColumnType.LONG,
+      ColumnType.STRING,
+      ColumnType.DOUBLE,
+      someComplex,
+      ColumnType.DOUBLE_ARRAY
   );
 
   private final RowSignature expectedRowSignature;
@@ -123,10 +128,11 @@ public class InlineDataSourceTest
   {
     Assert.assertEquals(
         RowSignature.builder()
-                    .add(ColumnHolder.TIME_COLUMN_NAME, ValueType.LONG)
-                    .add("str", ValueType.STRING)
-                    .add("double", ValueType.DOUBLE)
-                    .add("complex", ValueType.COMPLEX)
+                    .add(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG)
+                    .add("str", ColumnType.STRING)
+                    .add("double", ColumnType.DOUBLE)
+                    .add("complex", someComplex)
+                    .add("double_array", ColumnType.DOUBLE_ARRAY)
                     .build(),
         listDataSource.getRowSignature()
     );
@@ -135,7 +141,8 @@ public class InlineDataSourceTest
   @Test
   public void test_isCacheable()
   {
-    Assert.assertFalse(listDataSource.isCacheable());
+    Assert.assertFalse(listDataSource.isCacheable(true));
+    Assert.assertFalse(listDataSource.isCacheable(false));
   }
 
   @Test
@@ -160,6 +167,7 @@ public class InlineDataSourceTest
     Assert.assertEquals("bar", adapter.columnFunction("str").apply(row));
     Assert.assertEquals(1d, adapter.columnFunction("double").apply(row));
     Assert.assertEquals(ImmutableMap.of("n", "1"), adapter.columnFunction("complex").apply(row));
+    Assert.assertEquals(ImmutableList.of(2.0, 4.0), adapter.columnFunction("double_array").apply(row));
   }
 
   @Test

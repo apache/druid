@@ -19,9 +19,6 @@
 
 package org.apache.druid.indexing.kafka;
 
-import org.apache.druid.indexer.TaskIdUtils;
-import org.apache.druid.java.util.common.StringUtils;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,10 +32,8 @@ public class KafkaConsumerConfigs
   {
     final Map<String, Object> props = new HashMap<>();
     props.put("metadata.max.age.ms", "10000");
-    props.put("group.id", StringUtils.format("kafka-supervisor-%s", TaskIdUtils.getRandomId()));
     props.put("auto.offset.reset", "none");
     props.put("enable.auto.commit", "false");
-    props.put("isolation.level", "read_committed");
     return props;
   }
 

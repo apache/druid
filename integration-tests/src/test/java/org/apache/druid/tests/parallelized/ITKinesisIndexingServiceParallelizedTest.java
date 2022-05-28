@@ -47,28 +47,8 @@ public class ITKinesisIndexingServiceParallelizedTest extends AbstractKinesisInd
    * and supervisor maintained and scoped within this test only
    */
   @Test
-  public void testKinesisIndexDataWithStartStopSupervisor() throws Exception
+  public void testKinesisTerminatedSupervisorAutoCleanup() throws Exception
   {
-    doTestIndexDataWithStartStopSupervisor(null);
-  }
-
-  /**
-   * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
-   * and supervisor maintained and scoped within this test only
-   */
-  @Test
-  public void testKinesisIndexDataWithKinesisReshardSplit() throws Exception
-  {
-    doTestIndexDataWithStreamReshardSplit(null);
-  }
-
-  /**
-   * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
-   * and supervisor maintained and scoped within this test only
-   */
-  @Test
-  public void testKinesisIndexDataWithKinesisReshardMerge() throws Exception
-  {
-    doTestIndexDataWithStreamReshardMerge();
+    doTestTerminatedSupervisorAutoCleanup(false);
   }
 }

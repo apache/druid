@@ -19,32 +19,36 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
  * {@link ParallelIndexTaskRunner} for the phase to create hash partitioned segments in multi-phase parallel indexing.
- *
- * @see PartialHashSegmentMergeParallelIndexTaskRunner
  */
 class PartialHashSegmentGenerateParallelIndexTaskRunner
-    extends InputSourceSplitParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedHashPartitionsReport>
+    extends InputSourceSplitParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedPartitionsReport>
 {
   private static final String PHASE_NAME = "partial segment generation";
+
+  @Nullable
+  private final Map<Interval, Integer> intervalToNumShardsOverride;
 
   PartialHashSegmentGenerateParallelIndexTaskRunner(
       TaskToolbox toolbox,
       String taskId,
       String groupId,
+      String baseSubtaskSpecName,
       ParallelIndexIngestionSpec ingestionSchema,
       Map<String, Object> context,
-      IndexingServiceClient indexingServiceClient
+      @Nullable Map<Interval, Integer> intervalToNumShardsOverride
   )
   {
-    super(toolbox, taskId, groupId, ingestionSchema, context, indexingServiceClient);
+    super(toolbox, taskId, groupId, baseSubtaskSpecName, ingestionSchema, context);
+    this.intervalToNumShardsOverride = intervalToNumShardsOverride;
   }
 
   @Override
@@ -79,12 +83,11 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
             groupId,
             null,
             supervisorTaskId,
+            id,
             numAttempts,
             subTaskIngestionSpec,
             context,
-            null,
-            null,
-            null
+            intervalToNumShardsOverride
         );
       }
     };

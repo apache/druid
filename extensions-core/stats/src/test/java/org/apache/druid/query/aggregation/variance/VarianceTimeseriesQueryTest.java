@@ -19,6 +19,9 @@
 
 package org.apache.druid.query.aggregation.variance;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
@@ -30,13 +33,16 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerTest;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -46,31 +52,32 @@ public class VarianceTimeseriesQueryTest extends InitializedNullHandlingTest
   @Parameterized.Parameters(name = "{0}:descending={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
-    // Use TimeseriesQueryRunnerTest's constructorFeeder, but remove vectorized tests, since this aggregator
-    // can't vectorize yet.
     return StreamSupport.stream(TimeseriesQueryRunnerTest.constructorFeeder().spliterator(), false)
-                        .filter(constructor -> !((boolean) constructor[2]) /* !vectorize */)
-                        .map(constructor -> new Object[]{constructor[0], constructor[1], constructor[3]})
+                        .map(constructor -> new Object[]{constructor[0], constructor[1], constructor[2], constructor[3]})
                         .collect(Collectors.toList());
   }
 
   private final QueryRunner runner;
   private final boolean descending;
+  private final Druids.TimeseriesQueryBuilder queryBuilder;
 
   public VarianceTimeseriesQueryTest(
       QueryRunner runner,
       boolean descending,
+      boolean vectorize,
       List<AggregatorFactory> aggregatorFactories
   )
   {
     this.runner = runner;
     this.descending = descending;
+    this.queryBuilder = Druids.newTimeseriesQueryBuilder()
+                              .context(ImmutableMap.of("vectorize", vectorize ? "force" : "false"));
   }
 
   @Test
   public void testTimeseriesWithNullFilterOnNonExistentDimension()
   {
-    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+    TimeseriesQuery query = queryBuilder
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(QueryRunnerTestHelper.DAY_GRAN)
                                   .filters("bobby", null)
@@ -114,6 +121,39 @@ public class VarianceTimeseriesQueryTest extends InitializedNullHandlingTest
 
     Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     assertExpectedResults(expectedResults, results);
+  }
+
+  @Test
+  public void testEmptyTimeseries()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                  .granularity(QueryRunnerTestHelper.ALL_GRAN)
+                                  .intervals(QueryRunnerTestHelper.EMPTY_INTERVAL)
+                                  .aggregators(
+                                      Arrays.asList(
+                                          QueryRunnerTestHelper.ROWS_COUNT,
+                                          QueryRunnerTestHelper.INDEX_DOUBLE_SUM,
+                                          new VarianceAggregatorFactory("variance", "index", null, null)
+                                      )
+                                  )
+                                  .descending(true)
+                                  .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
+                                  .build();
+    Map<String, Object> resultMap = new HashMap<>();
+    resultMap.put("rows", 0L);
+    resultMap.put("index", NullHandling.defaultDoubleValue());
+    resultMap.put("variance", NullHandling.defaultDoubleValue());
+    List<Result<TimeseriesResultValue>> expectedResults = ImmutableList.of(
+        new Result<>(
+            DateTimes.of("2020-04-02"),
+            new TimeseriesResultValue(
+                resultMap
+            )
+        )
+    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
+    TestHelper.assertExpectedResults(expectedResults, actualResults);
   }
 
   private <T> void assertExpectedResults(Iterable<Result<T>> expectedResults, Iterable<Result<T>> results)

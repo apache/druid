@@ -16,115 +16,51 @@
  * limitations under the License.
  */
 
-import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
-import { IconNames } from '@blueprintjs/icons';
+import { Intent } from '@blueprintjs/core';
 import copy from 'copy-to-clipboard';
 import FileSaver from 'file-saver';
 import hasOwnProp from 'has-own-prop';
+import * as JSONBig from 'json-bigint-native';
 import numeral from 'numeral';
 import React from 'react';
-import { Filter, FilterRender } from 'react-table';
 
-import { AppToaster } from '../singletons/toaster';
+import { AppToaster } from '../singletons';
+
+// These constants are used to make sure that they are not constantly recreated thrashing the pure components
+export const EMPTY_OBJECT: any = {};
+export const EMPTY_ARRAY: any[] = [];
+
+export type NumberLike = number | BigInt;
+
+export function isNumberLikeNaN(x: NumberLike): boolean {
+  return isNaN(Number(x));
+}
+
+export function nonEmptyArray(a: any): a is unknown[] {
+  return Array.isArray(a) && Boolean(a.length);
+}
+
 export function wait(ms: number): Promise<void> {
   return new Promise(resolve => {
     setTimeout(resolve, ms);
   });
 }
 
-export function addFilter(filters: Filter[], id: string, value: string): Filter[] {
-  return addFilterRaw(filters, id, `"${value}"`);
-}
-
-export function addFilterRaw(filters: Filter[], id: string, value: string): Filter[] {
-  const currentFilter = filters.find(f => f.id === id);
-  if (currentFilter) {
-    filters = filters.filter(f => f.id !== id);
-    if (currentFilter.value !== value) {
-      filters = filters.concat({ id, value });
+export function addOrUpdate<T>(xs: readonly T[], x: T, keyFn: (x: T) => string | number): T[] {
+  const keyX = keyFn(x);
+  let added = false;
+  const newXs = xs.map(currentX => {
+    if (keyFn(currentX) === keyX) {
+      added = true;
+      return x;
+    } else {
+      return currentX;
     }
-  } else {
-    filters = filters.concat({ id, value });
+  });
+  if (!added) {
+    newXs.push(x);
   }
-  return filters;
-}
-
-export function makeTextFilter(placeholder = ''): FilterRender {
-  return ({ filter, onChange, key }) => {
-    const filterValue = filter ? filter.value : '';
-    return (
-      <InputGroup
-        key={key}
-        onChange={(e: any) => onChange(e.target.value)}
-        value={filterValue}
-        rightElement={
-          filterValue && <Button icon={IconNames.CROSS} minimal onClick={() => onChange('')} />
-        }
-        placeholder={placeholder}
-      />
-    );
-  };
-}
-
-export function makeBooleanFilter(): FilterRender {
-  return ({ filter, onChange, key }) => {
-    const filterValue = filter ? filter.value : '';
-    return (
-      <HTMLSelect
-        key={key}
-        style={{ width: '100%' }}
-        onChange={(event: any) => onChange(event.target.value)}
-        value={filterValue || 'all'}
-        fill
-      >
-        <option value="all">Show all</option>
-        <option value="true">true</option>
-        <option value="false">false</option>
-      </HTMLSelect>
-    );
-  };
-}
-
-// ----------------------------
-
-interface NeedleAndMode {
-  needle: string;
-  mode: 'exact' | 'prefix';
-}
-
-function getNeedleAndMode(input: string): NeedleAndMode {
-  if (input.startsWith(`"`) && input.endsWith(`"`)) {
-    return {
-      needle: input.slice(1, -1),
-      mode: 'exact',
-    };
-  }
-  return {
-    needle: input.startsWith(`"`) ? input.substring(1) : input,
-    mode: 'prefix',
-  };
-}
-
-export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
-  if (value == null) return false;
-  const haystack = String(value).toLowerCase();
-  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value.toLowerCase());
-  const needle = needleAndMode.needle;
-  if (needleAndMode.mode === 'exact') {
-    return needle === haystack;
-  }
-  return haystack.startsWith(needle);
-}
-
-export function sqlQueryCustomTableFilter(filter: Filter): string {
-  const columnName = JSON.stringify(filter.id);
-  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value);
-  const needle = needleAndMode.needle;
-  if (needleAndMode.mode === 'exact') {
-    return `${columnName} = '${needle}'`;
-  } else {
-    return `LOWER(${columnName}) LIKE LOWER('${needle}%')`;
-  }
+  return newXs;
 }
 
 // ----------------------------
@@ -134,10 +70,29 @@ export function caseInsensitiveContains(testString: string, searchString: string
   return testString.toLowerCase().includes(searchString.toLowerCase());
 }
 
+export function oneOf<T>(thing: T, ...options: T[]): boolean {
+  return options.includes(thing);
+}
+
+export function typeIs<T extends { type?: S }, S = string>(...options: S[]): (x: T) => boolean {
+  return x => {
+    if (x.type == null) return false;
+    return options.includes(x.type);
+  };
+}
+
+export function without<T>(xs: readonly T[], x: T | undefined): T[] {
+  return xs.filter(i => i !== x);
+}
+
+export function change<T>(xs: readonly T[], from: T, to: T): T[] {
+  return xs.map(x => (x === from ? to : x));
+}
+
 // ----------------------------
 
 export function countBy<T>(
-  array: T[],
+  array: readonly T[],
   fn: (x: T, index: number) => string = String,
 ): Record<string, number> {
   const counts: Record<string, number> = {};
@@ -148,20 +103,21 @@ export function countBy<T>(
   return counts;
 }
 
-function identity(x: any): any {
+function identity<T>(x: T): T {
   return x;
 }
 
-export function lookupBy<T, Q>(
-  array: T[],
+export function lookupBy<T, Q = T>(
+  array: readonly T[],
   keyFn: (x: T, index: number) => string = String,
-  valueFn: (x: T, index: number) => Q = identity,
+  valueFn?: (x: T, index: number) => Q,
 ): Record<string, Q> {
+  if (!valueFn) valueFn = identity as any;
   const lookup: Record<string, Q> = {};
   const n = array.length;
   for (let i = 0; i < n; i++) {
     const a = array[i];
-    lookup[keyFn(a, i)] = valueFn(a, i);
+    lookup[keyFn(a, i)] = valueFn!(a, i);
   }
   return lookup;
 }
@@ -206,46 +162,93 @@ export function uniq(array: readonly string[]): string[] {
   });
 }
 
-export function parseList(list: string): string[] {
-  if (!list) return [];
-  return list.split(',');
-}
-
 // ----------------------------
 
-export function formatNumber(n: number): string {
+export function formatInteger(n: NumberLike): string {
   return numeral(n).format('0,0');
 }
 
-export function formatBytes(n: number): string {
+export function formatNumber(n: NumberLike): string {
+  return n.toLocaleString('en-US', { maximumFractionDigits: 20 });
+}
+
+export function formatBytes(n: NumberLike): string {
   return numeral(n).format('0.00 b');
 }
 
-export function formatBytesCompact(n: number): string {
+export function formatBytesCompact(n: NumberLike): string {
   return numeral(n).format('0.00b');
+}
+
+export function formatMegabytes(n: NumberLike): string {
+  return numeral(Number(n) / 1048576).format('0,0.0');
+}
+
+export function formatPercent(n: NumberLike): string {
+  return (Number(n) * 100).toFixed(2) + '%';
+}
+
+export function formatPercentClapped(n: NumberLike): string {
+  return formatPercent(Math.min(Math.max(Number(n), 0), 1));
+}
+
+export function formatMillions(n: NumberLike): string {
+  const s = (Number(n) / 1e6).toFixed(3);
+  if (s === '0.000') return String(Math.round(Number(n)));
+  return s + ' M';
 }
 
 function pad2(str: string | number): string {
   return ('00' + str).substr(-2);
 }
 
-export function formatDuration(ms: number): string {
-  const timeInHours = Math.floor(ms / 3600000);
-  const timeInMin = Math.floor(ms / 60000) % 60;
-  const timeInSec = Math.floor(ms / 1000) % 60;
+function pad3(str: string | number): string {
+  return ('000' + str).substr(-3);
+}
+
+export function formatDuration(ms: NumberLike): string {
+  const n = Number(ms);
+  const timeInHours = Math.floor(n / 3600000);
+  const timeInMin = Math.floor(n / 60000) % 60;
+  const timeInSec = Math.floor(n / 1000) % 60;
   return timeInHours + ':' + pad2(timeInMin) + ':' + pad2(timeInSec);
 }
 
-export function pluralIfNeeded(n: number, singular: string, plural?: string): string {
+export function formatDurationWithMs(ms: NumberLike): string {
+  const n = Number(ms);
+  const timeInHours = Math.floor(n / 3600000);
+  const timeInMin = Math.floor(n / 60000) % 60;
+  const timeInSec = Math.floor(n / 1000) % 60;
+  return (
+    timeInHours + ':' + pad2(timeInMin) + ':' + pad2(timeInSec) + '.' + pad3(Math.floor(n) % 1000)
+  );
+}
+
+export function formatDurationHybrid(ms: NumberLike): string {
+  const n = Number(ms);
+  if (n < 600000) {
+    // anything that looks like 1:23.45 (max 9:59.99)
+    const timeInMin = Math.floor(n / 60000);
+    const timeInSec = Math.floor(n / 1000) % 60;
+    const timeInMs = Math.floor(n) % 1000;
+    return `${timeInMin ? `${timeInMin}:` : ''}${timeInMin ? pad2(timeInSec) : timeInSec}.${pad3(
+      timeInMs,
+    ).substring(0, 2)}s`;
+  } else {
+    return formatDuration(n);
+  }
+}
+
+export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string): string {
   if (!plural) plural = singular + 's';
-  return `${formatNumber(n)} ${n === 1 ? singular : plural}`;
+  return `${formatInteger(n)} ${n === 1 ? singular : plural}`;
 }
 
 // ----------------------------
 
 export function parseJson(json: string): any {
   try {
-    return JSON.parse(json);
+    return JSONBig.parse(json);
   } catch (e) {
     return undefined;
   }
@@ -253,14 +256,14 @@ export function parseJson(json: string): any {
 
 export function validJson(json: string): boolean {
   try {
-    JSON.parse(json);
+    JSONBig.parse(json);
     return true;
   } catch (e) {
     return false;
   }
 }
 
-export function filterMap<T, Q>(xs: T[], f: (x: T, i: number) => Q | undefined): Q[] {
+export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | undefined): Q[] {
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
 }
 
@@ -276,22 +279,21 @@ export function alphanumericCompare(a: string, b: string): number {
   return String(a).localeCompare(b, undefined, { numeric: true });
 }
 
-export function sortWithPrefixSuffix(
-  things: string[],
-  prefix: string[],
-  suffix: string[],
-  cmp: null | ((a: string, b: string) => number),
+export function arrangeWithPrefixSuffix(
+  things: readonly string[],
+  prefix: readonly string[],
+  suffix: readonly string[],
 ): string[] {
   const pre = uniq(prefix.filter(x => things.includes(x)));
   const mid = things.filter(x => !prefix.includes(x) && !suffix.includes(x));
   const post = uniq(suffix.filter(x => things.includes(x)));
-  return pre.concat(cmp ? mid.sort(cmp) : mid, post);
+  return pre.concat(mid, post);
 }
 
 // ----------------------------
 
 export function downloadFile(text: string, type: string, filename: string): void {
-  let blobType: string = '';
+  let blobType;
   switch (type) {
     case 'json':
       blobType = 'application/json';
@@ -309,10 +311,6 @@ export function downloadFile(text: string, type: string, filename: string): void
   FileSaver.saveAs(blob, filename);
 }
 
-export function escapeSqlIdentifier(identifier: string): string {
-  return `"${identifier.replace(/"/g, '""')}"`;
-}
-
 export function copyAndAlert(copyString: string, alertMessage: string): void {
   copy(copyString, { format: 'text/plain' });
   AppToaster.show({
@@ -325,4 +323,125 @@ export function delay(ms: number) {
   return new Promise(resolve => {
     setTimeout(resolve, ms);
   });
+}
+
+export function swapElements<T>(items: readonly T[], indexA: number, indexB: number): T[] {
+  const newItems = items.concat();
+  const t = newItems[indexA];
+  newItems[indexA] = newItems[indexB];
+  newItems[indexB] = t;
+  return newItems;
+}
+
+export function moveElement<T>(items: readonly T[], fromIndex: number, toIndex: number): T[] {
+  const indexDiff = fromIndex - toIndex;
+  if (indexDiff > 0) {
+    // move left
+    return [
+      ...items.slice(0, toIndex),
+      items[fromIndex],
+      ...items.slice(toIndex, fromIndex),
+      ...items.slice(fromIndex + 1, items.length),
+    ];
+  } else if (indexDiff < 0) {
+    // move right
+    const targetIndex = toIndex + 1;
+    return [
+      ...items.slice(0, fromIndex),
+      ...items.slice(fromIndex + 1, targetIndex),
+      items[fromIndex],
+      ...items.slice(targetIndex, items.length),
+    ];
+  } else {
+    // do nothing
+    return items.slice();
+  }
+}
+
+export function moveToIndex<T>(
+  items: readonly T[],
+  itemToIndex: (item: T, i: number) => number,
+): T[] {
+  const frontItems: { item: T; index: number }[] = [];
+  const otherItems: T[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const index = itemToIndex(item, i);
+    if (index >= 0) {
+      frontItems.push({ item, index });
+    } else {
+      otherItems.push(item);
+    }
+  }
+
+  return frontItems
+    .sort((a, b) => a.index - b.index)
+    .map(d => d.item)
+    .concat(otherItems);
+}
+
+export function stringifyValue(value: unknown): string {
+  switch (typeof value) {
+    case 'object':
+      if (!value) return String(value);
+      if (typeof (value as any).toISOString === 'function') return (value as any).toISOString();
+      return JSONBig.stringify(value);
+
+    default:
+      return String(value);
+  }
+}
+
+export function isInBackground(): boolean {
+  return document.visibilityState === 'hidden';
+}
+
+export function twoLines(line1: string, line2: string) {
+  return (
+    <>
+      {line1}
+      <br />
+      {line2}
+    </>
+  );
+}
+
+export function parseCsvLine(line: string): string[] {
+  line = ',' + line.replace(/\r?\n?$/, ''); // remove trailing new lines
+  const parts: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = /^,(?:"([^"]*(?:""[^"]*)*)"|([^,\r\n]*))/m.exec(line))) {
+    parts.push(typeof m[1] === 'string' ? m[1].replace(/""/g, '"') : m[2]);
+    line = line.substr(m[0].length);
+  }
+  return parts;
+}
+
+// From: https://en.wikipedia.org/wiki/Jenkins_hash_function
+export function hashJoaat(str: string): number {
+  let hash = 0;
+  const n = str.length;
+  for (let i = 0; i < n; i++) {
+    hash += str.charCodeAt(i);
+    // eslint-disable-next-line no-bitwise
+    hash += hash << 10;
+    // eslint-disable-next-line no-bitwise
+    hash ^= hash >> 6;
+  }
+  // eslint-disable-next-line no-bitwise
+  hash += hash << 3;
+  // eslint-disable-next-line no-bitwise
+  hash ^= hash >> 11;
+  // eslint-disable-next-line no-bitwise
+  hash += hash << 15;
+  // eslint-disable-next-line no-bitwise
+  return (hash & 4294967295) >>> 0;
+}
+
+export function objectHash(obj: any): string {
+  return hashJoaat(JSONBig.stringify(obj)).toString(16).padStart(8);
+}
+
+export function hasPopoverOpen(): boolean {
+  return Boolean(document.querySelector('.bp4-portal .bp4-overlay .bp4-popover2'));
 }

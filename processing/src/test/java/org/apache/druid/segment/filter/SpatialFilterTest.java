@@ -28,6 +28,7 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.SpatialDimensionSchema;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
@@ -55,6 +56,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
@@ -113,33 +115,31 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
 
   private static IncrementalIndex makeIncrementalIndex() throws IOException
   {
-    IncrementalIndex theIndex = new IncrementalIndex.Builder()
+    IncrementalIndex theIndex = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(DATA_INTERVAL.getStartMillis())
                 .withQueryGranularity(Granularities.DAY)
                 .withMetrics(METRIC_AGGS)
                 .withDimensionsSpec(
-                    new DimensionsSpec(
-                        null,
-                        null,
-                        Arrays.asList(
-                            new SpatialDimensionSchema(
-                                "dim.geo",
-                                Arrays.asList("lat", "long")
-                            ),
-                            new SpatialDimensionSchema(
-                                "spatialIsRad",
-                                Arrays.asList("lat2", "long2")
-                            )
-
-                        )
-                    )
+                    DimensionsSpec.builder()
+                                  .setSpatialDimensions(
+                                      Arrays.asList(
+                                          new SpatialDimensionSchema(
+                                              "dim.geo",
+                                              Arrays.asList("lat", "long")
+                                          ),
+                                          new SpatialDimensionSchema(
+                                              "spatialIsRad",
+                                              Arrays.asList("lat2", "long2")
+                                          )
+                                      )
+                                  )
+                                  .build()
                 ).build()
         )
-        .setReportParseExceptions(false)
         .setMaxRowCount(NUM_POINTS)
-        .buildOnheap();
+        .build();
 
     theIndex.add(
         new MapBasedInputRow(
@@ -270,7 +270,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
     IncrementalIndex theIndex = makeIncrementalIndex();
     File tmpFile = File.createTempFile("billy", "yay");
     tmpFile.delete();
-    tmpFile.mkdirs();
+    FileUtils.mkdirp(tmpFile);
     tmpFile.deleteOnExit();
 
     INDEX_MERGER.persist(theIndex, tmpFile, indexSpec, null);
@@ -280,86 +280,83 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
   private static QueryableIndex makeMergedQueryableIndex(IndexSpec indexSpec)
   {
     try {
-      IncrementalIndex first = new IncrementalIndex.Builder()
+      IncrementalIndex first = new OnheapIncrementalIndex.Builder()
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(DATA_INTERVAL.getStartMillis())
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Arrays.asList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  Arrays.asList("lat", "long")
-                              ),
-                              new SpatialDimensionSchema(
-                                  "spatialIsRad",
-                                  Arrays.asList("lat2", "long2")
-                              )
-                          )
-                      )
+                      DimensionsSpec.builder()
+                                    .setSpatialDimensions(
+                                        Arrays.asList(
+                                            new SpatialDimensionSchema(
+                                                "dim.geo",
+                                                Arrays.asList("lat", "long")
+                                            ),
+                                            new SpatialDimensionSchema(
+                                                "spatialIsRad",
+                                                Arrays.asList("lat2", "long2")
+                                            )
+                                        )
+                                    )
+                                    .build()
                   ).build()
           )
-          .setReportParseExceptions(false)
           .setMaxRowCount(1000)
-          .buildOnheap();
+          .build();
 
-      IncrementalIndex second = new IncrementalIndex.Builder()
+      IncrementalIndex second = new OnheapIncrementalIndex.Builder()
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(DATA_INTERVAL.getStartMillis())
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Arrays.asList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  Arrays.asList("lat", "long")
-                              ),
-                              new SpatialDimensionSchema(
-                                  "spatialIsRad",
-                                  Arrays.asList("lat2", "long2")
-                              )
-                          )
-                      )
+                      DimensionsSpec.builder()
+                                    .setSpatialDimensions(
+                                        Arrays.asList(
+                                            new SpatialDimensionSchema(
+                                                "dim.geo",
+                                                Arrays.asList("lat", "long")
+                                            ),
+                                            new SpatialDimensionSchema(
+                                                "spatialIsRad",
+                                                Arrays.asList("lat2", "long2")
+                                            )
+                                        )
+                                    )
+                                    .build()
                   ).build()
           )
-          .setReportParseExceptions(false)
           .setMaxRowCount(1000)
-          .buildOnheap();
+          .build();
 
-      IncrementalIndex third = new IncrementalIndex.Builder()
+      IncrementalIndex third = new OnheapIncrementalIndex.Builder()
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(DATA_INTERVAL.getStartMillis())
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Arrays.asList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  Arrays.asList("lat", "long")
-                              ),
-                              new SpatialDimensionSchema(
-                                  "spatialIsRad",
-                                  Arrays.asList("lat2", "long2")
-                              )
-                          )
-                      )
+                      DimensionsSpec.builder()
+                                    .setSpatialDimensions(
+                                        Arrays.asList(
+                                            new SpatialDimensionSchema(
+                                                "dim.geo",
+                                                Arrays.asList("lat", "long")
+                                            ),
+                                            new SpatialDimensionSchema(
+                                                "spatialIsRad",
+                                                Arrays.asList("lat2", "long2")
+                                            )
+                                        )
+                                    )
+                                    .build()
                   ).build()
           )
-          .setReportParseExceptions(false)
           .setMaxRowCount(NUM_POINTS)
-          .buildOnheap();
+          .build();
 
       first.add(
           new MapBasedInputRow(
@@ -491,13 +488,13 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
       File thirdFile = new File(tmpFile, "third");
       File mergedFile = new File(tmpFile, "merged");
 
-      firstFile.mkdirs();
+      FileUtils.mkdirp(firstFile);
+      FileUtils.mkdirp(secondFile);
+      FileUtils.mkdirp(thirdFile);
+      FileUtils.mkdirp(mergedFile);
       firstFile.deleteOnExit();
-      secondFile.mkdirs();
       secondFile.deleteOnExit();
-      thirdFile.mkdirs();
       thirdFile.deleteOnExit();
-      mergedFile.mkdirs();
       mergedFile.deleteOnExit();
 
       INDEX_MERGER.persist(first, DATA_INTERVAL, firstFile, indexSpec, null);
@@ -511,7 +508,8 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
               METRIC_AGGS,
               mergedFile,
               indexSpec,
-              null
+              null,
+              -1
           )
       );
 

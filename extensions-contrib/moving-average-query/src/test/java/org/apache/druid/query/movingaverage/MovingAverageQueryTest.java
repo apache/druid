@@ -23,9 +23,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.CachingClusteredClient;
@@ -38,10 +41,12 @@ import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.guava.Accumulators;
@@ -64,9 +69,11 @@ import org.apache.druid.query.movingaverage.test.TestConfig;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.TimelineLookup;
 import org.hamcrest.core.IsInstanceOf;
@@ -149,6 +156,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
               return getQueryRunnerForIntervals(query, null);
             }
           }));
+          Multibinder.newSetBinder(binder, NodeRole.class, Self.class).addBinding().toInstance(NodeRole.BROKER);
         }
     );
 
@@ -363,7 +371,9 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
           }
         },
         ForkJoinPool.commonPool(),
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+        new NoopServiceEmitter()
     );
 
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(
@@ -377,6 +387,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         baseClient,
         null /* local client; unused in this test, so pass in null */,
         warehouse,
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         retryConfig,
         jsonMapper,
         serverConfig,

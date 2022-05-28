@@ -67,4 +67,31 @@ public class ITKinesisIndexingServiceSerializedTest extends AbstractKinesisIndex
   {
     doTestIndexDataWithLosingHistorical(null);
   }
+
+  /**
+   * This test must be run individually due to their resource consumption requirement (task slot, memory, etc.)
+   */
+  @Test
+  public void testKinesisIndexDataWithStartStopSupervisor() throws Exception
+  {
+    doTestIndexDataWithStartStopSupervisor(null);
+  }
+
+  /**
+   * This test must be run individually due to their resource consumption requirement (task slot, memory, etc.)
+   */
+  @Test
+  public void testKinesisIndexDataWithKinesisReshardSplit() throws Exception
+  {
+    doTestIndexDataWithStreamReshardSplit(null);
+  }
+
+  /**
+   * This test must be run individually due to their resource consumption requirement (task slot, memory, etc.)
+   */
+  @Test
+  public void testKinesisIndexDataWithKinesisReshardMerge() throws Exception
+  {
+    doTestIndexDataWithStreamReshardMerge();
+  }
 }

@@ -43,7 +43,7 @@ public interface InputEntity
 {
   Logger LOG = new Logger(InputEntity.class);
 
-  int DEFAULT_FETCH_BUFFER_SIZE = 4 * 1024; // 4 KB
+  int DEFAULT_FETCH_BUFFER_SIZE = 4 * 1024; // 4 KiB
   int DEFAULT_MAX_NUM_FETCH_TRIES = 3; // 3 tries including the initial try
 
   /**
@@ -66,6 +66,9 @@ public interface InputEntity
    * Opens an {@link InputStream} on the input entity directly.
    * This is the basic way to read the given entity.
    *
+   * The behavior of this method is only defined fort the first call to open().
+   * The behavior of subsequent calls is undefined and may vary between implementations.
+   *
    * @see #fetch
    */
   InputStream open() throws IOException;
@@ -87,16 +90,24 @@ public interface InputEntity
   {
     final File tempFile = File.createTempFile("druid-input-entity", ".tmp", temporaryDirectory);
     LOG.debug("Fetching entity into file[%s]", tempFile.getAbsolutePath());
-    try (InputStream is = open()) {
-      FileUtils.copyLarge(
-          is,
-          tempFile,
-          fetchBuffer,
-          getRetryCondition(),
-          DEFAULT_MAX_NUM_FETCH_TRIES,
-          StringUtils.format("Failed to fetch into [%s]", tempFile.getAbsolutePath())
-      );
+
+    final URI uri = getUri();
+    final String message;
+
+    if (uri == null) {
+      message = StringUtils.format("Failed to fetch entity into local file [%s]", tempFile.getAbsolutePath());
+    } else {
+      message = StringUtils.format("Failed to fetch entity [%s] into local file [%s]", uri, tempFile.getAbsolutePath());
     }
+
+    FileUtils.copyLarge(
+        this::open,
+        tempFile,
+        fetchBuffer,
+        getRetryCondition(),
+        DEFAULT_MAX_NUM_FETCH_TRIES,
+        message
+    );
 
     return new CleanableFile()
     {
@@ -125,4 +136,5 @@ public interface InputEntity
   {
     return Predicates.alwaysFalse();
   }
+
 }

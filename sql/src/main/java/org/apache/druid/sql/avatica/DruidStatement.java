@@ -20,7 +20,6 @@
 package org.apache.druid.sql.avatica;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.calcite.avatica.AvaticaParameter;
 import org.apache.calcite.avatica.ColumnMetaData;
@@ -28,24 +27,25 @@ import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
-import org.apache.druid.sql.calcite.rel.QueryMaker;
 
 import java.io.Closeable;
+import java.sql.Array;
 import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -56,7 +56,8 @@ public class DruidStatement implements Closeable
   public static final long START_OFFSET = 0;
   private final String connectionId;
   private final int statementId;
-  private final Map<String, Object> queryContext;
+  private final QueryContext queryContext;
+  @GuardedBy("lock")
   private final SqlLifecycle sqlLifecycle;
   private final Runnable onClose;
   private final Object lock = new Object();
@@ -88,18 +89,22 @@ public class DruidStatement implements Closeable
   public DruidStatement(
       final String connectionId,
       final int statementId,
-      final Map<String, Object> queryContext,
+      final QueryContext queryContext,
       final SqlLifecycle sqlLifecycle,
       final Runnable onClose
   )
   {
     this.connectionId = Preconditions.checkNotNull(connectionId, "connectionId");
     this.statementId = statementId;
-    this.queryContext = queryContext == null ? ImmutableMap.of() : queryContext;
+    this.queryContext = queryContext;
     this.sqlLifecycle = Preconditions.checkNotNull(sqlLifecycle, "sqlLifecycle");
     this.onClose = Preconditions.checkNotNull(onClose, "onClose");
     this.yielderOpenCloseExecutor = Execs.singleThreaded(
-        StringUtils.format("JDBCYielderOpenCloseExecutor-connection-%s-statement-%d", connectionId, statementId)
+        StringUtils.format(
+            "JDBCYielderOpenCloseExecutor-connection-%s-statement-%d",
+            StringUtils.encodeForFormat(connectionId),
+            statementId
+        )
     );
   }
 
@@ -110,12 +115,29 @@ public class DruidStatement implements Closeable
 
     for (int i = 0; i < fieldList.size(); i++) {
       RelDataTypeField field = fieldList.get(i);
-      final ColumnMetaData.Rep rep = QueryMaker.rep(field.getType().getSqlTypeName());
-      final ColumnMetaData.ScalarType columnType = ColumnMetaData.scalar(
-          field.getType().getSqlTypeName().getJdbcOrdinal(),
-          field.getType().getSqlTypeName().getName(),
-          rep
-      );
+
+      final ColumnMetaData.AvaticaType columnType;
+      if (field.getType().getSqlTypeName() == SqlTypeName.ARRAY) {
+        final ColumnMetaData.Rep elementRep = rep(field.getType().getComponentType().getSqlTypeName());
+        final ColumnMetaData.ScalarType elementType = ColumnMetaData.scalar(
+            field.getType().getComponentType().getSqlTypeName().getJdbcOrdinal(),
+            field.getType().getComponentType().getSqlTypeName().getName(),
+            elementRep
+        );
+        final ColumnMetaData.Rep arrayRep = rep(field.getType().getSqlTypeName());
+        columnType = ColumnMetaData.array(
+            elementType,
+            field.getType().getSqlTypeName().getName(),
+            arrayRep
+        );
+      } else {
+        final ColumnMetaData.Rep rep = rep(field.getType().getSqlTypeName());
+        columnType = ColumnMetaData.scalar(
+            field.getType().getSqlTypeName().getJdbcOrdinal(),
+            field.getType().getSqlTypeName().getName(),
+            rep
+        );
+      }
       columns.add(
           new ColumnMetaData(
               i, // ordinal
@@ -157,9 +179,9 @@ public class DruidStatement implements Closeable
       try {
         ensure(State.NEW);
         sqlLifecycle.initialize(query, queryContext);
-
+        sqlLifecycle.validateAndAuthorize(authenticationResult);
         this.authenticationResult = authenticationResult;
-        PrepareResult prepareResult = sqlLifecycle.prepare(authenticationResult);
+        PrepareResult prepareResult = sqlLifecycle.prepare();
         this.maxRowCount = maxRowCount;
         this.query = query;
         List<AvaticaParameter> params = new ArrayList<>();
@@ -192,7 +214,8 @@ public class DruidStatement implements Closeable
       ensure(State.PREPARED);
       try {
         sqlLifecycle.setParameters(parameters);
-        sqlLifecycle.planAndAuthorize(authenticationResult);
+        sqlLifecycle.validateAndAuthorize(authenticationResult);
+        sqlLifecycle.plan();
         final Sequence<Object[]> baseSequence = yielderOpenCloseExecutor.submit(sqlLifecycle::execute).get();
 
         // We can't apply limits greater than Integer.MAX_VALUE, ignore them.
@@ -235,14 +258,6 @@ public class DruidStatement implements Closeable
     synchronized (lock) {
       ensure(State.PREPARED, State.RUNNING, State.DONE);
       return signature;
-    }
-  }
-
-  public RelDataType getRowType()
-  {
-    synchronized (lock) {
-      ensure(State.PREPARED, State.RUNNING, State.DONE);
-      return sqlLifecycle.rowType();
     }
   }
 
@@ -325,7 +340,9 @@ public class DruidStatement implements Closeable
         // First close. Run the onClose function.
         try {
           onClose.run();
-          sqlLifecycle.emitLogsAndMetrics(t, null, -1);
+          synchronized (lock) {
+            sqlLifecycle.finalizeStateAndEmitLogsAndMetrics(t, null, -1);
+          }
         }
         catch (Throwable t1) {
           t.addSuppressed(t1);
@@ -339,7 +356,11 @@ public class DruidStatement implements Closeable
       // First close. Run the onClose function.
       try {
         if (!(this.throwable instanceof ForbiddenException)) {
-          sqlLifecycle.emitLogsAndMetrics(this.throwable, null, -1);
+          synchronized (lock) {
+            sqlLifecycle.finalizeStateAndEmitLogsAndMetrics(this.throwable, null, -1);
+          }
+        } else {
+          DruidMeta.logFailure(this.throwable);
         }
         onClose.run();
       }
@@ -360,14 +381,15 @@ public class DruidStatement implements Closeable
         type.getSqlTypeName().getJdbcOrdinal(),
         type.getSqlTypeName().getName(),
         Calcites.sqlTypeNameJdbcToJavaClass(type.getSqlTypeName()).getName(),
-        field.getName());
+        field.getName()
+    );
   }
-
 
 
   private DruidStatement closeAndPropagateThrowable(Throwable t)
   {
     this.throwable = t;
+    DruidMeta.logFailure(t);
     try {
       close();
     }
@@ -386,6 +408,35 @@ public class DruidStatement implements Closeable
       }
     }
     throw new ISE("Invalid action for state[%s]", state);
+  }
+
+  private static ColumnMetaData.Rep rep(final SqlTypeName sqlType)
+  {
+    if (SqlTypeName.CHAR_TYPES.contains(sqlType)) {
+      return ColumnMetaData.Rep.of(String.class);
+    } else if (sqlType == SqlTypeName.TIMESTAMP) {
+      return ColumnMetaData.Rep.of(Long.class);
+    } else if (sqlType == SqlTypeName.DATE) {
+      return ColumnMetaData.Rep.of(Integer.class);
+    } else if (sqlType == SqlTypeName.INTEGER) {
+      // use Number.class for exact numeric types since JSON transport might switch longs to integers
+      return ColumnMetaData.Rep.of(Number.class);
+    } else if (sqlType == SqlTypeName.BIGINT) {
+      // use Number.class for exact numeric types since JSON transport might switch longs to integers
+      return ColumnMetaData.Rep.of(Number.class);
+    } else if (sqlType == SqlTypeName.FLOAT) {
+      return ColumnMetaData.Rep.of(Float.class);
+    } else if (sqlType == SqlTypeName.DOUBLE || sqlType == SqlTypeName.DECIMAL) {
+      return ColumnMetaData.Rep.of(Double.class);
+    } else if (sqlType == SqlTypeName.BOOLEAN) {
+      return ColumnMetaData.Rep.of(Boolean.class);
+    } else if (sqlType == SqlTypeName.OTHER) {
+      return ColumnMetaData.Rep.of(Object.class);
+    } else if (sqlType == SqlTypeName.ARRAY) {
+      return ColumnMetaData.Rep.of(Array.class);
+    } else {
+      throw new ISE("No rep for SQL type[%s]", sqlType);
+    }
   }
 
   enum State

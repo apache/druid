@@ -27,8 +27,6 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.collections.CloseableDefaultBlockingPool;
-import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -42,18 +40,17 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
+import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -74,7 +71,9 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Assert;
@@ -82,7 +81,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -90,10 +88,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
-public class GroupByLimitPushDownInsufficientBufferTest
+public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullHandlingTest
 {
   public static final ObjectMapper JSON_MAPPER;
 
@@ -133,24 +130,23 @@ public class GroupByLimitPushDownInsufficientBufferTest
 
   private IncrementalIndex makeIncIndex(boolean withRollup)
   {
-    return new IncrementalIndex.Builder()
+    return new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
-                .withDimensionsSpec(new DimensionsSpec(
-                    Arrays.asList(
-                        new StringDimensionSchema("dimA"),
-                        new LongDimensionSchema("metA")
-                    ),
-                    null,
-                    null
-                ))
+                .withDimensionsSpec(
+                    new DimensionsSpec(
+                        Arrays.asList(
+                            new StringDimensionSchema("dimA"),
+                            new LongDimensionSchema("metA")
+                        )
+                    )
+                )
                 .withRollup(withRollup)
                 .build()
         )
-        .setReportParseExceptions(false)
         .setConcurrentEventAdd(true)
         .setMaxRowCount(1000)
-        .buildOnheap();
+        .build();
   }
 
   @Before
@@ -267,27 +263,18 @@ public class GroupByLimitPushDownInsufficientBufferTest
   {
     executorService = Execs.multiThreaded(3, "GroupByThreadPool[%d]");
 
-    final CloseableStupidPool<ByteBuffer> bufferPool = new CloseableStupidPool<>(
-        "GroupByBenchmark-computeBufferPool",
-        new OffheapBufferGenerator("compute", 10_000_000),
-        0,
-        Integer.MAX_VALUE
-    );
+    final TestBufferPool bufferPool = TestBufferPool.offHeap(10_000_000, Integer.MAX_VALUE);
 
     // limit of 2 is required since we simulate both historical merge and broker merge in the same process
-    final CloseableDefaultBlockingPool<ByteBuffer> mergePool = new CloseableDefaultBlockingPool<>(
-        new OffheapBufferGenerator("merge", 10_000_000),
-        2
-    );
+    final TestBufferPool mergePool = TestBufferPool.offHeap(10_000_000, 2);
     // limit of 2 is required since we simulate both historical merge and broker merge in the same process
-    final CloseableDefaultBlockingPool<ByteBuffer> tooSmallMergePool = new CloseableDefaultBlockingPool<>(
-        new OffheapBufferGenerator("merge", 255),
-        2
-    );
+    final TestBufferPool tooSmallMergePool = TestBufferPool.onHeap(255, 2);
 
-    resourceCloser.register(bufferPool);
-    resourceCloser.register(mergePool);
-    resourceCloser.register(tooSmallMergePool);
+    resourceCloser.register(() -> {
+      // Verify that all objects have been returned to the pools.
+      Assert.assertEquals(0, mergePool.getOutstandingObjectCount());
+      Assert.assertEquals(0, tooSmallMergePool.getOutstandingObjectCount());
+    });
 
     final GroupByQueryConfig config = new GroupByQueryConfig()
     {
@@ -352,21 +339,16 @@ public class GroupByLimitPushDownInsufficientBufferTest
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final Supplier<QueryConfig> queryConfigSupplier = Suppliers.ofInstance(
-        new QueryConfig()
-    );
     final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
         configSupplier,
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, bufferPool),
-            NOOP_QUERYWATCHER,
-            bufferPool
+            NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             druidProcessingConfig,
             configSupplier,
-            queryConfigSupplier,
             bufferPool,
             mergePool,
             new ObjectMapper(new SmileFactory()),
@@ -379,13 +361,11 @@ public class GroupByLimitPushDownInsufficientBufferTest
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, bufferPool),
-            NOOP_QUERYWATCHER,
-            bufferPool
+            NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             tooSmallDruidProcessingConfig,
             configSupplier,
-            queryConfigSupplier,
             bufferPool,
             tooSmallMergePool,
             new ObjectMapper(new SmileFactory()),
@@ -631,34 +611,6 @@ public class GroupByLimitPushDownInsufficientBufferTest
     );
     runners.add(tooSmallGroupByFactory.getToolchest().preMergeQueryDecoration(tooSmallRunner));
     return runners;
-  }
-
-  private static class OffheapBufferGenerator implements Supplier<ByteBuffer>
-  {
-    private static final Logger log = new Logger(OffheapBufferGenerator.class);
-
-    private final String description;
-    private final int computationBufferSize;
-    private final AtomicLong count = new AtomicLong(0);
-
-    public OffheapBufferGenerator(String description, int computationBufferSize)
-    {
-      this.description = description;
-      this.computationBufferSize = computationBufferSize;
-    }
-
-    @Override
-    public ByteBuffer get()
-    {
-      log.info(
-          "Allocating new %s buffer[%,d] of size[%,d]",
-          description,
-          count.getAndIncrement(),
-          computationBufferSize
-      );
-
-      return ByteBuffer.allocateDirect(computationBufferSize);
-    }
   }
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(

@@ -35,7 +35,7 @@ import java.util.stream.Stream;
  */
 public interface SplittableInputSource<T> extends InputSource
 {
-  SplitHintSpec DEFAULT_SPLIT_HINT_SPEC = new MaxSizeSplitHintSpec(null);
+  SplitHintSpec DEFAULT_SPLIT_HINT_SPEC = new MaxSizeSplitHintSpec(null, null);
 
   @JsonIgnore
   @Override

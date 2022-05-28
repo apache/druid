@@ -39,6 +39,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -187,7 +188,8 @@ public class PartialDruidQuery
         relBuilder.push(selectProject.getInput());
         relBuilder.project(
             newProjectRexNodes,
-            newSelectProject.getRowType().getFieldNames()
+            newSelectProject.getRowType().getFieldNames(),
+            true
         );
         theProject = (Project) relBuilder.build();
       }
@@ -310,7 +312,28 @@ public class PartialDruidQuery
         sourceRowSignature,
         plannerContext,
         rexBuilder,
-        finalizeAggregations
+        finalizeAggregations,
+        null
+    );
+  }
+
+  public DruidQuery build(
+      final DataSource dataSource,
+      final RowSignature sourceRowSignature,
+      final PlannerContext plannerContext,
+      final RexBuilder rexBuilder,
+      final boolean finalizeAggregations,
+      @Nullable VirtualColumnRegistry virtualColumnRegistry
+  )
+  {
+    return DruidQuery.fromPartialQuery(
+        this,
+        dataSource,
+        sourceRowSignature,
+        plannerContext,
+        rexBuilder,
+        finalizeAggregations,
+        virtualColumnRegistry
     );
   }
 
@@ -393,7 +416,7 @@ public class PartialDruidQuery
       case SCAN:
         return scan;
       default:
-        throw new ISE("WTF?! Unknown stage: %s", currentStage);
+        throw new ISE("Unknown stage: %s", currentStage);
     }
   }
 
@@ -404,11 +427,10 @@ public class PartialDruidQuery
   {
     double cost = CostEstimates.COST_BASE;
 
+    // Account for the cost of post-scan expressions.
     if (getSelectProject() != null) {
       for (final RexNode rexNode : getSelectProject().getChildExps()) {
-        if (rexNode.isA(SqlKind.INPUT_REF)) {
-          cost += CostEstimates.COST_COLUMN_READ;
-        } else {
+        if (!rexNode.isA(SqlKind.INPUT_REF)) {
           cost += CostEstimates.COST_EXPRESSION;
         }
       }
@@ -421,12 +443,6 @@ public class PartialDruidQuery
     }
 
     if (getAggregate() != null) {
-      if (getSelectProject() == null) {
-        // No projection before aggregation, that means the aggregate operator is reading things directly.
-        // Account for the costs.
-        cost += CostEstimates.COST_COLUMN_READ * getAggregate().getGroupSet().size();
-      }
-
       cost += CostEstimates.COST_DIMENSION * getAggregate().getGroupSet().size();
       cost += CostEstimates.COST_AGGREGATION * getAggregate().getAggCallList().size();
     }
@@ -441,13 +457,26 @@ public class PartialDruidQuery
       }
     }
 
+    // Account for the cost of post-aggregation expressions.
     if (getAggregateProject() != null) {
-      cost += CostEstimates.COST_EXPRESSION * getAggregateProject().getChildExps().size();
+      for (final RexNode rexNode : getAggregateProject().getChildExps()) {
+        if (!rexNode.isA(SqlKind.INPUT_REF)) {
+          cost += CostEstimates.COST_EXPRESSION;
+        }
+      }
     }
 
+    // Account for the cost of post-sort expressions.
     if (getSortProject() != null) {
-      cost += CostEstimates.COST_EXPRESSION * getSortProject().getChildExps().size();
+      for (final RexNode rexNode : getSortProject().getChildExps()) {
+        if (!rexNode.isA(SqlKind.INPUT_REF)) {
+          cost += CostEstimates.COST_EXPRESSION;
+        }
+      }
     }
+
+    // Account for the cost of generating outputs.
+    cost += CostEstimates.COST_OUTPUT_COLUMN * getRowType().getFieldCount();
 
     return cost;
   }

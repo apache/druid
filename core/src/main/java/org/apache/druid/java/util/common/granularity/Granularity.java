@@ -31,6 +31,7 @@ import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormatter;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -40,6 +41,30 @@ import java.util.regex.Pattern;
 
 public abstract class Granularity implements Cacheable
 {
+
+  public static Comparator<Granularity> IS_FINER_THAN = new Comparator<Granularity>()
+  {
+    @Override
+    /**
+     * Decide whether this granularity is finer than the other granularity
+     *
+     * @param left The left granularity
+     * @param right The right granularity
+     * @return -1 if left granularity is finer, 0 if it is the same, 1 if it is greater
+     */
+    public int compare(Granularity left, Granularity right)
+    {
+      long leftDuration = left.bucket(DateTimes.EPOCH).toDurationMillis();
+      long rightDuration = right.bucket(DateTimes.EPOCH).toDurationMillis();
+      if (leftDuration < rightDuration) {
+        return -1;
+      } else if (leftDuration == rightDuration) {
+        return 0;
+      } else {
+        return 1;
+      }
+    }
+  };
   /**
    * Default patterns for parsing paths.
    */
@@ -76,18 +101,21 @@ public abstract class Granularity implements Cacheable
     return result;
   }
 
+  /**
+   * Returns a list of standard granularities that are equal to, or finer than, a provided granularity.
+   *
+   * ALL will not be returned unless the provided granularity is ALL. NONE will never be returned, even if the
+   * provided granularity is NONE. This is because the main usage of this function in production is segment
+   * allocation, and we do not wish to generate NONE-granular segments.
+   */
   public static List<Granularity> granularitiesFinerThan(final Granularity gran0)
   {
     final List<Granularity> retVal = new ArrayList<>();
     final DateTime origin = (gran0 instanceof PeriodGranularity) ? ((PeriodGranularity) gran0).getOrigin() : null;
     final DateTimeZone tz = (gran0 instanceof PeriodGranularity) ? ((PeriodGranularity) gran0).getTimeZone() : null;
     for (GranularityType gran : GranularityType.values()) {
-      /**
-       * All and None are excluded b/c when asked to give all granularities finer
-       * than "TEN_MINUTE", you want the answer to be "FIVE_MINUTE, MINUTE and SECOND"
-       * it doesn't make sense to include ALL or None to be part of this.
-       */
-      if (gran == GranularityType.ALL || gran == GranularityType.NONE) {
+      // Exclude ALL, unless we're looking for granularities finer than ALL; always exclude NONE.
+      if ((gran == GranularityType.ALL && !gran0.equals(Granularities.ALL)) || gran == GranularityType.NONE) {
         continue;
       }
       final Granularity segmentGranularity = gran.create(origin, tz);
@@ -107,7 +135,11 @@ public abstract class Granularity implements Cacheable
 
   public abstract DateTimeFormatter getFormatter(Formatter type);
 
+  public abstract long increment(long time);
+
   public abstract DateTime increment(DateTime time);
+
+  public abstract long bucketStart(long time);
 
   public abstract DateTime bucketStart(DateTime time);
 

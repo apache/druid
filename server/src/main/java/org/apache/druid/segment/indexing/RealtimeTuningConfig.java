@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.plumber.IntervalStartVersioningPolicy;
 import org.apache.druid.segment.realtime.plumber.RejectionPolicyFactory;
@@ -41,9 +42,8 @@ import java.io.File;
 /**
  *
  */
-public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
+public class RealtimeTuningConfig implements AppenderatorConfig
 {
-  private static final int DEFAULT_MAX_ROWS_IN_MEMORY = TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY;
   private static final Period DEFAULT_INTERMEDIATE_PERSIST_PERIOD = new Period("PT10M");
   private static final Period DEFAULT_WINDOW_PERIOD = new Period("PT10M");
   private static final VersioningPolicy DEFAULT_VERSIONING_POLICY = new IntervalStartVersioningPolicy();
@@ -65,8 +65,10 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   public static RealtimeTuningConfig makeDefaultTuningConfig(final @Nullable File basePersistDirectory)
   {
     return new RealtimeTuningConfig(
+        DEFAULT_APPENDABLE_INDEX,
         DEFAULT_MAX_ROWS_IN_MEMORY,
         0L,
+        DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK,
         DEFAULT_INTERMEDIATE_PERSIST_PERIOD,
         DEFAULT_WINDOW_PERIOD,
         basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
@@ -76,7 +78,6 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         DEFAULT_SHARD_SPEC,
         DEFAULT_INDEX_SPEC,
         DEFAULT_INDEX_SPEC,
-        true,
         0,
         0,
         DEFAULT_REPORT_PARSE_EXCEPTIONS,
@@ -87,8 +88,10 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     );
   }
 
+  private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
+  private final boolean skipBytesInMemoryOverheadCheck;
   private final Period intermediatePersistPeriod;
   private final Period windowPeriod;
   private final File basePersistDirectory;
@@ -110,8 +113,10 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
 
   @JsonCreator
   public RealtimeTuningConfig(
+      @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
+      @JsonProperty("skipBytesInMemoryOverheadCheck") @Nullable Boolean skipBytesInMemoryOverheadCheck,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
@@ -121,8 +126,6 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("shardSpec") ShardSpec shardSpec,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
-      // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
-      @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("persistThreadPriority") int persistThreadPriority,
       @JsonProperty("mergeThreadPriority") int mergeThreadPriority,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
@@ -132,10 +135,13 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("dedupColumn") @Nullable String dedupColumn
   )
   {
+    this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
     this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
     // initializing this to 0, it will be lazily initialized to a value
-    // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
+    // @see #getMaxBytesInMemoryOrDefault()
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
+    this.skipBytesInMemoryOverheadCheck = skipBytesInMemoryOverheadCheck == null ?
+                                          DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK : skipBytesInMemoryOverheadCheck;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? DEFAULT_INTERMEDIATE_PERSIST_PERIOD
                                      : intermediatePersistPeriod;
@@ -168,6 +174,13 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
 
   @Override
   @JsonProperty
+  public AppendableIndexSpec getAppendableIndexSpec()
+  {
+    return appendableIndexSpec;
+  }
+
+  @Override
+  @JsonProperty
   public int getMaxRowsInMemory()
   {
     return maxRowsInMemory;
@@ -178,6 +191,13 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   public long getMaxBytesInMemory()
   {
     return maxBytesInMemory;
+  }
+
+  @JsonProperty
+  @Override
+  public boolean isSkipBytesInMemoryOverheadCheck()
+  {
+    return skipBytesInMemoryOverheadCheck;
   }
 
   @Override
@@ -245,16 +265,6 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     return indexSpecForIntermediatePersists;
   }
 
-  /**
-   * Always returns true, doesn't affect the version being built.
-   */
-  @Deprecated
-  @JsonProperty
-  public Boolean getBuildV9Directly()
-  {
-    return true;
-  }
-
   @JsonProperty
   public int getPersistThreadPriority()
   {
@@ -304,8 +314,10 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   public RealtimeTuningConfig withVersioningPolicy(VersioningPolicy policy)
   {
     return new RealtimeTuningConfig(
+        appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
+        skipBytesInMemoryOverheadCheck,
         intermediatePersistPeriod,
         windowPeriod,
         basePersistDirectory,
@@ -315,7 +327,6 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         shardSpec,
         indexSpec,
         indexSpecForIntermediatePersists,
-        true,
         persistThreadPriority,
         mergeThreadPriority,
         reportParseExceptions,
@@ -330,8 +341,10 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   public RealtimeTuningConfig withBasePersistDirectory(File dir)
   {
     return new RealtimeTuningConfig(
+        appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
+        skipBytesInMemoryOverheadCheck,
         intermediatePersistPeriod,
         windowPeriod,
         dir,
@@ -341,7 +354,6 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         shardSpec,
         indexSpec,
         indexSpecForIntermediatePersists,
-        true,
         persistThreadPriority,
         mergeThreadPriority,
         reportParseExceptions,

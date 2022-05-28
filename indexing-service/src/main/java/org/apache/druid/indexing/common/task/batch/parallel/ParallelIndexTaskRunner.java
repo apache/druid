@@ -38,8 +38,9 @@ import java.util.Set;
  * uses {@link SinglePhaseParallelIndexTaskRunner} for it.
  *
  * For perfect rollup, parallel indexing is executed in multiple phases. The supervisor task currently uses
- * {@link PartialHashSegmentGenerateParallelIndexTaskRunner} and {@link PartialHashSegmentMergeParallelIndexTaskRunner},
- * and can use more runners in the future.
+ * {@link PartialHashSegmentGenerateParallelIndexTaskRunner}, {@link PartialRangeSegmentGenerateParallelIndexTaskRunner},
+ * and {@link PartialGenericSegmentMergeParallelIndexTaskRunner}.
+ * More runners can be added in the future.
  */
 public interface ParallelIndexTaskRunner<SubTaskType extends Task, SubTaskReportType extends SubTaskReport>
 {
@@ -57,7 +58,9 @@ public interface ParallelIndexTaskRunner<SubTaskType extends Task, SubTaskReport
    * Stop this runner gracefully. This method is called when the task is killed.
    * See {@link org.apache.druid.indexing.overlord.SingleTaskBackgroundRunner#stop}.
    */
-  void stopGracefully();
+  void stopGracefully(String stopReason);
+
+  String getStopReason();
 
   /**
    * {@link SubTaskReport} is the report sent by {@link SubTaskType}s. The subTasks call this method to

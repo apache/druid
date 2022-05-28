@@ -44,7 +44,7 @@ public class GraphiteEmitterModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Collections.EMPTY_LIST;
+    return Collections.emptyList();
   }
 
   @Override

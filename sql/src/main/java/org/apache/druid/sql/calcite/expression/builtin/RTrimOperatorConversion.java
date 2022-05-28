@@ -30,6 +30,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 public class RTrimOperatorConversion implements SqlOperatorConversion
@@ -37,7 +38,7 @@ public class RTrimOperatorConversion implements SqlOperatorConversion
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("RTRIM")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
-      .returnTypeNonNull(SqlTypeName.VARCHAR)
+      .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.STRING)
       .requiredOperands(1)
       .build();
@@ -64,13 +65,15 @@ public class RTrimOperatorConversion implements SqlOperatorConversion
             return TrimOperatorConversion.makeTrimExpression(
                 SqlTrimFunction.Flag.TRAILING,
                 druidExpressions.get(0),
-                druidExpressions.get(1)
+                druidExpressions.get(1),
+                Calcites.getColumnTypeForRelDataType(rexNode.getType())
             );
           } else {
             return TrimOperatorConversion.makeTrimExpression(
                 SqlTrimFunction.Flag.TRAILING,
                 druidExpressions.get(0),
-                DruidExpression.fromExpression(DruidExpression.stringLiteral(" "))
+                DruidExpression.ofStringLiteral(" "),
+                Calcites.getColumnTypeForRelDataType(rexNode.getType())
             );
           }
         }

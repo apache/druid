@@ -29,7 +29,8 @@ import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 
 import java.util.HashMap;
@@ -38,18 +39,24 @@ import java.util.function.Function;
 
 public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregatesProcessor<DimensionSelector>
 {
+  private final ColumnCapabilities capabilities;
   private final Function<Object, Comparable<?>> dimensionValueConverter;
   private HashMap<Comparable<?>, Aggregator[]> aggregatesStore;
 
-  public StringTopNColumnAggregatesProcessor(final ValueType dimensionType)
+  public StringTopNColumnAggregatesProcessor(final ColumnCapabilities capabilities, final ColumnType dimensionType)
   {
-    this.dimensionValueConverter = DimensionHandlerUtils.converterFromTypeToType(ValueType.STRING, dimensionType);
+    this.capabilities = capabilities;
+    this.dimensionValueConverter = DimensionHandlerUtils.converterFromTypeToType(ColumnType.STRING, dimensionType);
   }
 
   @Override
   public int getCardinality(DimensionSelector selector)
   {
-    return selector.getValueCardinality();
+    // only report the underlying selector cardinality if the column the selector is for is dictionary encoded
+    if (capabilities.isDictionaryEncoded().isTrue()) {
+      return selector.getValueCardinality();
+    }
+    return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }
 
   @Override
@@ -59,7 +66,7 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
       throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
     }
 
-    // This method is used for the DimExtractionTopNAlgorithm only.
+    // This method is used for the HeapBasedTopNAlgorithm only.
     // Unlike regular topN we cannot rely on ordering to optimize.
     // Optimization possibly requires a reverse lookup from value to ID, which is
     // not possible when applying an extraction function
@@ -108,7 +115,12 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
       Aggregator[][] rowSelector
   )
   {
-    if (selector.getValueCardinality() != DimensionDictionarySelector.CARDINALITY_UNKNOWN) {
+    final boolean notUnknown = selector.getValueCardinality() != DimensionDictionarySelector.CARDINALITY_UNKNOWN;
+    final boolean hasDictionary = capabilities.isDictionaryEncoded().isTrue();
+    // we must know cardinality to use array based aggregation. in cases where the same dictionary ids map to different
+    // values (1:* or *:*), results can be entirely incorrect since an aggregator for a different value might be
+    // chosen from the array based on the re-used dictionary id
+    if (notUnknown && hasDictionary) {
       return scanAndAggregateWithCardinalityKnown(query, cursor, selector, rowSelector);
     } else {
       return scanAndAggregateWithCardinalityUnknown(query, cursor, selector);
@@ -121,6 +133,11 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
     this.aggregatesStore = new HashMap<>();
   }
 
+  /**
+   * scan and aggregate when column is dictionary encoded and value cardinality is known up front, so values are
+   * aggregated into an array position specified by the dictionaryid, which if not already present, are translated
+   * into the key and fetched (or created if they key hasn't been encountered) from the {@link #aggregatesStore}
+   */
   private long scanAndAggregateWithCardinalityKnown(
       TopNQuery query,
       Cursor cursor,
@@ -153,6 +170,14 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
     return processedRows;
   }
 
+  /**
+   * this method is to allow scan and aggregate when values are not dictionary encoded
+   * (e.g. {@link DimensionSelector#nameLookupPossibleInAdvance()} is false and/or when
+   * {@link ColumnCapabilities#isDictionaryEncoded()} is false). This mode also uses hash table aggregation, storing
+   * results in {@link #aggregatesStore}, and must call {@link DimensionSelector#lookupName(int)} for every row which
+   * is processed and cannot cache lookups, or use the dictionary id in any way other than to lookup the current row
+   * value.
+   */
   private long scanAndAggregateWithCardinalityUnknown(
       TopNQuery query,
       Cursor cursor,

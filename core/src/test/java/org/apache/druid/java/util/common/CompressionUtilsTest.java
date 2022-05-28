@@ -20,9 +20,11 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
+import com.google.common.io.CountingInputStream;
 import com.google.common.io.Files;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
 import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorOutputStream;
@@ -50,11 +52,15 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
@@ -142,25 +148,13 @@ public class CompressionUtilsTest
   {
     final File tmpDir = temporaryFolder.newFolder("testGoodZipCompressUncompress");
     final File zipFile = new File(tmpDir, "compressionUtilTest.zip");
-    try {
-      CompressionUtils.zip(testDir, zipFile);
-      final File newDir = new File(tmpDir, "newDir");
-      newDir.mkdir();
-      CompressionUtils.unzip(zipFile, newDir);
-      final Path newPath = Paths.get(newDir.getAbsolutePath(), testFile.getName());
-      Assert.assertTrue(newPath.toFile().exists());
-      try (final FileInputStream inputStream = new FileInputStream(newPath.toFile())) {
-        assertGoodDataStream(inputStream);
-      }
-    }
-    finally {
-      if (zipFile.exists()) {
-        zipFile.delete();
-      }
-      if (tmpDir.exists()) {
-        tmpDir.delete();
-      }
-    }
+
+    CompressionUtils.zip(testDir, zipFile);
+    final File newDir = new File(tmpDir, "newDir");
+    newDir.mkdir();
+    final FileUtils.FileCopyResult result = CompressionUtils.unzip(zipFile, newDir);
+
+    verifyUnzip(newDir, result, ImmutableMap.of(testFile.getName(), StringUtils.toUtf8(CONTENT)));
   }
 
 
@@ -172,7 +166,8 @@ public class CompressionUtilsTest
     CompressionUtils.zip(testDir, zipFile);
     final File newDir = new File(tmpDir, "newDir");
     newDir.mkdir();
-    CompressionUtils.unzip(
+
+    final FileUtils.FileCopyResult result = CompressionUtils.unzip(
         new ByteSource()
         {
           @Override
@@ -182,13 +177,11 @@ public class CompressionUtilsTest
           }
         },
         newDir,
+        FileUtils.IS_EXCEPTION,
         true
     );
-    final Path newPath = Paths.get(newDir.getAbsolutePath(), testFile.getName());
-    Assert.assertTrue(newPath.toFile().exists());
-    try (final FileInputStream inputStream = new FileInputStream(newPath.toFile())) {
-      assertGoodDataStream(inputStream);
-    }
+
+    verifyUnzip(newDir, result, ImmutableMap.of(testFile.getName(), StringUtils.toUtf8(CONTENT)));
   }
 
   @Test
@@ -219,11 +212,90 @@ public class CompressionUtilsTest
     CompressionUtils.zip(testDir, new FileOutputStream(zipFile));
     final File newDir = new File(tmpDir, "newDir");
     newDir.mkdir();
-    CompressionUtils.unzip(new FileInputStream(zipFile), newDir);
-    final Path newPath = Paths.get(newDir.getAbsolutePath(), testFile.getName());
-    Assert.assertTrue(newPath.toFile().exists());
-    try (final FileInputStream inputStream = new FileInputStream(newPath.toFile())) {
-      assertGoodDataStream(inputStream);
+    final FileUtils.FileCopyResult result = CompressionUtils.unzip(new FileInputStream(zipFile), newDir);
+    verifyUnzip(newDir, result, ImmutableMap.of(testFile.getName(), StringUtils.toUtf8(CONTENT)));
+  }
+
+  private Map<String, byte[]> writeZipWithManyFiles(final File zipFile) throws IOException
+  {
+    final File srcDir = temporaryFolder.newFolder();
+
+    final Map<String, byte[]> expectedFiles = new HashMap<>();
+
+    for (int i = 0; i < 100; i++) {
+      final String filePath = "file" + i;
+
+      try (final FileOutputStream out = new FileOutputStream(new File(srcDir, filePath))) {
+        out.write(i);
+        expectedFiles.put(filePath, new byte[]{(byte) i});
+      }
+    }
+
+    CompressionUtils.zip(srcDir, new FileOutputStream(zipFile));
+
+    return expectedFiles;
+  }
+
+  @Test
+  public void testZipWithManyFiles() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder("testZipWithManyFilesStream");
+    final File zipFile = new File(tmpDir, "compressionUtilTest.zip");
+
+    final Map<String, byte[]> expectedFiles = writeZipWithManyFiles(zipFile);
+
+    final File unzipDir = new File(tmpDir, "unzipDir");
+    unzipDir.mkdir();
+
+    final FileUtils.FileCopyResult result = CompressionUtils.unzip(zipFile, unzipDir);
+    verifyUnzip(unzipDir, result, expectedFiles);
+  }
+
+  @Test
+  public void testZipWithManyFilesStreamWithLocalCopy() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder("testZipWithManyFilesStream");
+    final File zipFile = new File(tmpDir, "compressionUtilTest.zip");
+
+    final Map<String, byte[]> expectedFiles = writeZipWithManyFiles(zipFile);
+
+    final File unzipDir = new File(tmpDir, "unzipDir");
+    unzipDir.mkdir();
+
+    final FileUtils.FileCopyResult result = CompressionUtils.unzip(
+        new ByteSource()
+        {
+          @Override
+          public InputStream openStream() throws IOException
+          {
+            return new FileInputStream(zipFile);
+          }
+        },
+        unzipDir,
+        FileUtils.IS_EXCEPTION,
+        true
+    );
+    verifyUnzip(unzipDir, result, expectedFiles);
+  }
+
+  @Test
+  public void testZipWithManyFilesStream() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder("testZipWithManyFilesStream");
+    final File zipFile = new File(tmpDir, "compressionUtilTest.zip");
+
+    final Map<String, byte[]> expectedFiles = writeZipWithManyFiles(zipFile);
+
+    final File unzipDir = new File(tmpDir, "unzipDir");
+    unzipDir.mkdir();
+
+    try (final CountingInputStream zipIn = new CountingInputStream(new FileInputStream(zipFile))) {
+      final FileUtils.FileCopyResult result = CompressionUtils.unzip(zipIn, unzipDir);
+
+      verifyUnzip(unzipDir, result, expectedFiles);
+
+      // Check that all bytes were read from the stream
+      Assert.assertEquals(zipFile.length(), zipIn.getCount());
     }
   }
 
@@ -322,6 +394,19 @@ public class CompressionUtilsTest
   }
 
   @Test
+  public void testDecompressZipWithManyFiles() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder("testDecompressZip");
+    final File zipFile = new File(tmpDir, testFile.getName() + ".zip");
+    writeZipWithManyFiles(zipFile);
+
+    try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(zipFile), zipFile.getName())) {
+      // Should read the first file, which contains a single null byte.
+      Assert.assertArrayEquals(new byte[]{0}, ByteStreams.toByteArray(inputStream));
+    }
+  }
+
+  @Test
   public void testGoodGZStream() throws IOException
   {
     final File tmpDir = temporaryFolder.newFolder("testGoodGZStream");
@@ -380,6 +465,41 @@ public class CompressionUtilsTest
 
     try {
       CompressionUtils.unzip(new FileInputStream(evilZip), tmpDir);
+    }
+    catch (ISE ise) {
+      Assert.assertTrue(ise.getMessage().contains("does not start with outDir"));
+      Assert.assertFalse("Zip exploit triggered, /tmp/evil.txt was written.", evilResult.exists());
+      return;
+    }
+    Assert.fail("Exception was not thrown for malicious zip file");
+  }
+
+  @Test
+  public void testEvilZipInputStreamWithLocalCopy() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder("testEvilZip");
+
+    final File evilResult = new File("/tmp/evil.txt");
+    java.nio.file.Files.deleteIfExists(evilResult.toPath());
+
+    File evilZip = new File(tmpDir, "evil.zip");
+    java.nio.file.Files.deleteIfExists(evilZip.toPath());
+    CompressionUtilsTest.makeEvilZip(evilZip);
+
+    try {
+      CompressionUtils.unzip(
+          new ByteSource()
+          {
+            @Override
+            public InputStream openStream() throws IOException
+            {
+              return new FileInputStream(evilZip);
+            }
+          },
+          tmpDir,
+          FileUtils.IS_EXCEPTION,
+          true
+      );
     }
     catch (ISE ise) {
       Assert.assertTrue(ise.getMessage().contains("does not start with outDir"));
@@ -683,6 +803,36 @@ public class CompressionUtilsTest
             }
         )
     );
+  }
+
+  private void verifyUnzip(
+      final File unzipDir,
+      final FileUtils.FileCopyResult result,
+      final Map<String, byte[]> expectedFiles
+  ) throws IOException
+  {
+    final List<String> filePaths = expectedFiles.keySet().stream().sorted().collect(Collectors.toList());
+
+    // Check the FileCopyResult
+    Assert.assertEquals(expectedFiles.values().stream().mapToLong(arr -> arr.length).sum(), result.size());
+    Assert.assertEquals(
+        filePaths.stream().map(filePath -> new File(unzipDir, filePath)).collect(Collectors.toList()),
+        result.getFiles().stream().sorted().collect(Collectors.toList())
+    );
+
+    // Check the actual file list
+    Assert.assertEquals(
+        filePaths,
+        Arrays.stream(unzipDir.listFiles()).map(File::getName).sorted().collect(Collectors.toList())
+    );
+
+    // Check actual file contents
+    for (Map.Entry<String, byte[]> entry : expectedFiles.entrySet()) {
+      try (final FileInputStream in = new FileInputStream(new File(unzipDir, entry.getKey()))) {
+        final byte[] bytes = ByteStreams.toByteArray(in);
+        Assert.assertArrayEquals(entry.getValue(), bytes);
+      }
+    }
   }
 
   private static class ZeroRemainingInputStream extends FilterInputStream

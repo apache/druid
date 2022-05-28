@@ -25,11 +25,11 @@ title: "Peons"
 
 ### Configuration
 
-For Apache Druid Peon Configuration, see [Peon Query Configuration](../configuration/index.html#peon-query-configuration) and [Additional Peon Configuration](../configuration/index.html#additional-peon-configuration).
+For Apache Druid Peon Configuration, see [Peon Query Configuration](../configuration/index.md#peon-query-configuration) and [Additional Peon Configuration](../configuration/index.md#additional-peon-configuration).
 
 ### HTTP endpoints
 
-For a list of API endpoints supported by the Peon, please see the [Peon API reference](../operations/api-reference.html#peon).
+For a list of API endpoints supported by the Peon, please see the [Peon API reference](../operations/api-reference.md#peon).
 
 Peons run a single task in a single JVM. MiddleManager is responsible for creating Peons for running tasks.
 Peons should rarely (if ever for testing purposes) be run on their own.

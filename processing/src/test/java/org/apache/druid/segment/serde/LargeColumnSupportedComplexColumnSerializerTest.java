@@ -117,7 +117,7 @@ public class LargeColumnSupportedComplexColumnSerializerTest
             .setType(ValueType.COMPLEX)
             .setHasMultipleValues(false)
             .setFileMapper(mapper);
-        serde.deserializeColumn(mapper.mapFile("test"), builder);
+        serde.deserializeColumn(mapper.mapFile("test"), builder, null);
 
         ColumnHolder columnHolder = builder.build();
         ComplexColumn complexColumn = (ComplexColumn) columnHolder.getColumn();

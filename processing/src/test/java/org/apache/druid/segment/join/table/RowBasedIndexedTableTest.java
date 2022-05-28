@@ -22,8 +22,8 @@ package org.apache.druid.segment.join.table;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinTestHelper;
 import org.junit.Assert;
 import org.junit.Before;
@@ -73,9 +73,9 @@ public class RowBasedIndexedTableTest
   {
     Assert.assertEquals(
         RowSignature.builder()
-                    .add("countryNumber", ValueType.LONG)
-                    .add("countryIsoCode", ValueType.STRING)
-                    .add("countryName", ValueType.STRING)
+                    .add("countryNumber", ColumnType.LONG)
+                    .add("countryIsoCode", ColumnType.STRING)
+                    .add("countryName", ColumnType.STRING)
                     .build(),
         countriesTable.rowSignature()
     );
@@ -178,5 +178,14 @@ public class RowBasedIndexedTableTest
   {
     Assert.assertEquals(JoinTestHelper.INDEXED_TABLE_VERSION, countriesTable.version());
     Assert.assertEquals(JoinTestHelper.INDEXED_TABLE_VERSION, regionsTable.version());
+  }
+
+  @Test
+  public void testIsCacheable() throws IOException
+  {
+    Assert.assertFalse(countriesTable.isCacheable());
+    RowBasedIndexedTable<Map<String, Object>> countriesTableWithCacheKey = JoinTestHelper.createCountriesIndexedTableWithCacheKey();
+    Assert.assertTrue(countriesTableWithCacheKey.isCacheable());
+    Assert.assertArrayEquals(JoinTestHelper.INDEXED_TABLE_CACHE_KEY, countriesTableWithCacheKey.computeCacheKey());
   }
 }

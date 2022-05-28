@@ -19,24 +19,52 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
+import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
+import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.DimensionRangeBucketShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
+import org.easymock.EasyMock;
 import org.hamcrest.Matchers;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.mock;
 
 @RunWith(Enclosed.class)
 public class ParallelIndexSupervisorTaskTest
@@ -45,35 +73,43 @@ public class ParallelIndexSupervisorTaskTest
   public static class CreateMergeIoConfigsTest
   {
     private static final int TOTAL_NUM_MERGE_TASKS = 10;
-    private static final Function<List<HashPartitionLocation>, PartialHashSegmentMergeIOConfig>
-        CREATE_PARTIAL_SEGMENT_MERGE_IO_CONFIG = PartialHashSegmentMergeIOConfig::new;
+    private static final Function<List<PartitionLocation>, PartialSegmentMergeIOConfig>
+        CREATE_PARTIAL_SEGMENT_MERGE_IO_CONFIG = PartialSegmentMergeIOConfig::new;
 
-    @Parameterized.Parameters(name = "count = {0}")
-    public static Iterable<? extends Object> data()
+    @Parameterized.Parameters(name = "count = {0}, partitionLocationType = {1}")
+    public static Iterable<? extends Object[]> data()
     {
       // different scenarios for last (index = 10 - 1 = 9) partition:
       return Arrays.asList(
-          20,  // even partitions per task: round(20 / 10) * (10 - 1) = 2 * 9 = 18 < 20
-          24,  // round down:               round(24 / 10) * (10 - 1) = 2 * 9 = 18 < 24
-          25,  // round up to greater:      round(25 / 10) * (10 - 1) = 3 * 9 = 27 > 25 (index out of bounds)
-          27   // round up to equal:        round(27 / 10) * (10 - 1) = 3 * 9 = 27 == 27 (empty partition)
+          new Object[][]{
+              {20, GenericPartitionStat.TYPE},  // even partitions per task: round(20 / 10) * (10 - 1) = 2 * 9 = 18 < 20
+              {24, DeepStoragePartitionStat.TYPE},  // round down:               round(24 / 10) * (10 - 1) = 2 * 9 = 18 < 24
+              {25, GenericPartitionStat.TYPE},  // round up to greater:      round(25 / 10) * (10 - 1) = 3 * 9 = 27 > 25 (index out of bounds)
+              {27, DeepStoragePartitionStat.TYPE} // round up to equal:        round(27 / 10) * (10 - 1) = 3 * 9 = 27 == 27 (empty partition)
+          }
       );
     }
 
-    @Parameterized.Parameter
+    public CreateMergeIoConfigsTest(int count, String partitionLocationType)
+    {
+      this.count = count;
+      this.partitionLocationType = partitionLocationType;
+    }
+
     public int count;
+    public String partitionLocationType;
 
     @Test
     public void handlesLastPartitionCorrectly()
     {
-      List<PartialHashSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
+      List<PartialSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
       assertNoMissingPartitions(count, assignedPartitionLocation);
     }
 
     @Test
     public void sizesPartitionsEvenly()
     {
-      List<PartialHashSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
+      List<PartialSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
       List<Integer> actualPartitionSizes = assignedPartitionLocation.stream()
                                                                     .map(i -> i.getPartitionLocations().size())
                                                                     .collect(Collectors.toList());
@@ -89,35 +125,56 @@ public class ParallelIndexSupervisorTaskTest
       );
     }
 
-    private List<PartialHashSegmentMergeIOConfig> createMergeIOConfigs()
+    private List<PartialSegmentMergeIOConfig> createMergeIOConfigs()
     {
       return ParallelIndexSupervisorTask.createMergeIOConfigs(
           TOTAL_NUM_MERGE_TASKS,
-          createPartitionToLocations(count),
+          createPartitionToLocations(count, partitionLocationType),
           CREATE_PARTIAL_SEGMENT_MERGE_IO_CONFIG
       );
     }
 
-    private static Map<Pair<Interval, Integer>, List<HashPartitionLocation>> createPartitionToLocations(int count)
+    private static Map<ParallelIndexSupervisorTask.Partition, List<PartitionLocation>> createPartitionToLocations(
+        int count,
+        String partitionLocationType
+    )
     {
       return IntStream.range(0, count).boxed().collect(
           Collectors.toMap(
-              i -> Pair.of(createInterval(i), i),
-              i -> Collections.singletonList(createPartitionLocation(i))
+              i -> new ParallelIndexSupervisorTask.Partition(createInterval(i), i),
+              i -> Collections.singletonList(createPartitionLocation(i, partitionLocationType))
           )
       );
     }
 
-    private static HashPartitionLocation createPartitionLocation(int id)
+    private static PartitionLocation createPartitionLocation(int id, String partitionLocationType)
     {
-      return new HashPartitionLocation(
-          "host",
-          0,
-          false,
-          "subTaskId",
-          createInterval(id),
-          id
-      );
+      if (DeepStoragePartitionStat.TYPE.equals(partitionLocationType)) {
+        return new DeepStoragePartitionLocation("", Intervals.of("2000/2099"), new BuildingHashBasedNumberedShardSpec(
+            id,
+            id,
+            id + 1,
+            null,
+            HashPartitionFunction.MURMUR3_32_ABS,
+            new ObjectMapper()
+        ), ImmutableMap.of());
+      } else {
+        return new GenericPartitionLocation(
+            "host",
+            0,
+            false,
+            "subTaskId",
+            createInterval(id),
+            new BuildingHashBasedNumberedShardSpec(
+                id,
+                id,
+                id + 1,
+                null,
+                HashPartitionFunction.MURMUR3_32_ABS,
+                new ObjectMapper()
+            )
+        );
+      }
     }
 
     private static Interval createInterval(int id)
@@ -127,7 +184,7 @@ public class ParallelIndexSupervisorTaskTest
 
     private static void assertNoMissingPartitions(
         int count,
-        List<PartialHashSegmentMergeIOConfig> assignedPartitionLocation
+        List<PartialSegmentMergeIOConfig> assignedPartitionLocation
     )
     {
       List<Integer> expectedIds = IntStream.range(0, count).boxed().collect(Collectors.toList());
@@ -136,7 +193,7 @@ public class ParallelIndexSupervisorTaskTest
                                                          .flatMap(
                                                              i -> i.getPartitionLocations()
                                                                    .stream()
-                                                                   .map(HashPartitionLocation::getPartitionId)
+                                                                   .map(PartitionLocation::getBucketId)
                                                          )
                                                          .sorted()
                                                          .collect(Collectors.toList());
@@ -144,4 +201,225 @@ public class ParallelIndexSupervisorTaskTest
       Assert.assertEquals(expectedIds, actualIds);
     }
   }
+
+  public static class ConstructorTest
+  {
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
+
+    @Test
+    public void testFailToConstructWhenBothAppendToExistingAndForceGuaranteedRollupAreSet()
+    {
+      final boolean appendToExisting = true;
+      final boolean forceGuaranteedRollup = true;
+      final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
+          null,
+          new InlineInputSource("test"),
+          new JsonInputFormat(null, null, null),
+          appendToExisting,
+          null
+      );
+      final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+          null,
+          null,
+          null,
+          10,
+          1000L,
+          null,
+          null,
+          null,
+          null,
+          new HashedPartitionsSpec(null, 10, null),
+          new IndexSpec(
+              new RoaringBitmapSerdeFactory(true),
+              CompressionStrategy.UNCOMPRESSED,
+              CompressionStrategy.LZF,
+              LongEncodingStrategy.LONGS
+          ),
+          new IndexSpec(),
+          1,
+          forceGuaranteedRollup,
+          true,
+          10000L,
+          OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+          null,
+          10,
+          100,
+          20L,
+          new Duration(3600),
+          128,
+          null,
+          null,
+          false,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
+      final ParallelIndexIngestionSpec indexIngestionSpec = new ParallelIndexIngestionSpec(
+          new DataSchema(
+              "datasource",
+              new TimestampSpec(null, null, null),
+              DimensionsSpec.EMPTY,
+              null,
+              null,
+              null
+          ),
+          ioConfig,
+          tuningConfig
+      );
+      expectedException.expect(IllegalArgumentException.class);
+      expectedException.expectMessage("Perfect rollup cannot be guaranteed when appending to existing dataSources");
+      new ParallelIndexSupervisorTask(
+          null,
+          null,
+          null,
+          indexIngestionSpec,
+          null
+      );
+    }
+  }
+
+  public static class StaticUtilsTest
+  {
+    @Test
+    public void testIsParallelModeFalse_nullTuningConfig()
+    {
+      InputSource inputSource = mock(InputSource.class);
+      Assert.assertFalse(ParallelIndexSupervisorTask.isParallelMode(inputSource, null));
+    }
+
+    @Test
+    public void testIsParallelModeFalse_rangePartition()
+    {
+      InputSource inputSource = mock(InputSource.class);
+      expect(inputSource.isSplittable()).andReturn(true).anyTimes();
+
+      ParallelIndexTuningConfig tuningConfig = mock(ParallelIndexTuningConfig.class);
+      expect(tuningConfig.getGivenOrDefaultPartitionsSpec()).andReturn(mock(SingleDimensionPartitionsSpec.class))
+                                                            .anyTimes();
+      expect(tuningConfig.getMaxNumConcurrentSubTasks()).andReturn(0).andReturn(1).andReturn(2);
+      EasyMock.replay(inputSource, tuningConfig);
+
+      Assert.assertFalse(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+      Assert.assertTrue(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+      Assert.assertTrue(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+    }
+
+    @Test
+    public void testIsParallelModeFalse_notRangePartition()
+    {
+      InputSource inputSource = mock(InputSource.class);
+      expect(inputSource.isSplittable()).andReturn(true).anyTimes();
+
+      ParallelIndexTuningConfig tuningConfig = mock(ParallelIndexTuningConfig.class);
+      expect(tuningConfig.getGivenOrDefaultPartitionsSpec()).andReturn(mock(PartitionsSpec.class))
+                                                            .anyTimes();
+      expect(tuningConfig.getMaxNumConcurrentSubTasks()).andReturn(1).andReturn(2).andReturn(3);
+      EasyMock.replay(inputSource, tuningConfig);
+
+      Assert.assertFalse(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+      Assert.assertTrue(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+      Assert.assertTrue(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+    }
+
+    @Test
+    public void testIsParallelModeFalse_inputSourceNotSplittable()
+    {
+      InputSource inputSource = mock(InputSource.class);
+      expect(inputSource.isSplittable()).andReturn(false).anyTimes();
+
+      ParallelIndexTuningConfig tuningConfig = mock(ParallelIndexTuningConfig.class);
+      expect(tuningConfig.getGivenOrDefaultPartitionsSpec()).andReturn(mock(SingleDimensionPartitionsSpec.class))
+                                                            .anyTimes();
+      expect(tuningConfig.getMaxNumConcurrentSubTasks()).andReturn(3);
+      EasyMock.replay(inputSource, tuningConfig);
+
+      Assert.assertFalse(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+    }
+
+    @Test
+    public void test_getPartitionToLocations_ordersPartitionsCorrectly()
+    {
+      final Interval day1 = Intervals.of("2022-01-01/2022-01-02");
+      final Interval day2 = Intervals.of("2022-01-02/2022-01-03");
+
+      final String task1 = "task1";
+      final String task2 = "task2";
+
+      // Create task reports
+      Map<String, GeneratedPartitionsReport> taskIdToReport = new HashMap<>();
+      taskIdToReport.put(task1, new GeneratedPartitionsReport(task1, Arrays.asList(
+          createRangePartitionStat(day1, 1),
+          createRangePartitionStat(day2, 7),
+          createRangePartitionStat(day1, 0),
+          createRangePartitionStat(day2, 1)
+      ), null));
+      taskIdToReport.put(task2, new GeneratedPartitionsReport(task2, Arrays.asList(
+          createRangePartitionStat(day1, 4),
+          createRangePartitionStat(day1, 6),
+          createRangePartitionStat(day2, 1),
+          createRangePartitionStat(day1, 1)
+      ), null));
+
+      Map<ParallelIndexSupervisorTask.Partition, List<PartitionLocation>> partitionToLocations
+          = ParallelIndexSupervisorTask.getPartitionToLocations(taskIdToReport);
+      Assert.assertEquals(6, partitionToLocations.size());
+
+      // Verify that partitionIds are packed and in the same order as bucketIds
+      verifyPartitionIdAndLocations(day1, 0, partitionToLocations,
+                                    0, task1);
+      verifyPartitionIdAndLocations(day1, 1, partitionToLocations,
+                                    1, task1, task2);
+      verifyPartitionIdAndLocations(day1, 4, partitionToLocations,
+                                    2, task2);
+      verifyPartitionIdAndLocations(day1, 6, partitionToLocations,
+                                    3, task2);
+
+      verifyPartitionIdAndLocations(day2, 1, partitionToLocations,
+                                    0, task1, task2);
+      verifyPartitionIdAndLocations(day2, 7, partitionToLocations,
+                                    1, task1);
+    }
+
+    private PartitionStat createRangePartitionStat(Interval interval, int bucketId)
+    {
+      return new DeepStoragePartitionStat(
+          interval,
+          new DimensionRangeBucketShardSpec(bucketId, Arrays.asList("dim1", "dim2"), null, null),
+          new HashMap<>()
+      );
+    }
+
+    private void verifyPartitionIdAndLocations(
+        Interval interval,
+        int bucketId,
+        Map<ParallelIndexSupervisorTask.Partition, List<PartitionLocation>> partitionToLocations,
+        int expectedPartitionId,
+        String... expectedTaskIds
+    )
+    {
+      final ParallelIndexSupervisorTask.Partition partition
+          = new ParallelIndexSupervisorTask.Partition(interval, bucketId);
+      List<PartitionLocation> locations = partitionToLocations.get(partition);
+      Assert.assertEquals(expectedTaskIds.length, locations.size());
+
+      final Set<String> observedTaskIds = new HashSet<>();
+      for (PartitionLocation location : locations) {
+        Assert.assertEquals(bucketId, location.getBucketId());
+        Assert.assertEquals(interval, location.getInterval());
+        Assert.assertEquals(expectedPartitionId, location.getShardSpec().getPartitionNum());
+
+        observedTaskIds.add(location.getSubTaskId());
+      }
+
+      // Verify the taskIds of the locations
+      Assert.assertEquals(
+          new HashSet<>(Arrays.asList(expectedTaskIds)),
+          observedTaskIds
+      );
+    }
+  }
+
 }

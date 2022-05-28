@@ -89,6 +89,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     queryId(query);
     subQueryId(query);
     sqlQueryId(query);
+    context(query);
   }
 
   @Override
@@ -200,7 +201,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void vectorized(final boolean vectorized)
   {
-    // Emit nothing by default.
+    setDimension("vectorized", vectorized);
   }
 
   @Override
@@ -334,6 +335,13 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
 
   @Override
   public QueryMetrics<QueryType> reportParallelMergeTotalCpuTime(long timeNs)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportQueriedSegmentCount(long segmentCount)
   {
     // Don't emit by default.
     return this;

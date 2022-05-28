@@ -20,31 +20,33 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.java.util.common.guava.Sequence;
 
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * The result of planning an SQL query with {@link DruidPlanner} can be run to produce query result, and also includes
+ * the output row type signature.
+ */
 public class PlannerResult
 {
   private final Supplier<Sequence<Object[]>> resultsSupplier;
   private final RelDataType rowType;
-  private final Set<String> datasourceNames;
   private final AtomicBoolean didRun = new AtomicBoolean();
 
   public PlannerResult(
       final Supplier<Sequence<Object[]>> resultsSupplier,
-      final RelDataType rowType,
-      final Set<String> datasourceNames
+      final RelDataType rowType
   )
   {
     this.resultsSupplier = resultsSupplier;
     this.rowType = rowType;
-    this.datasourceNames = ImmutableSet.copyOf(datasourceNames);
   }
 
+  /**
+   * Run the query
+   */
   public Sequence<Object[]> run()
   {
     if (!didRun.compareAndSet(false, true)) {
@@ -57,10 +59,5 @@ public class PlannerResult
   public RelDataType rowType()
   {
     return rowType;
-  }
-
-  public Set<String> datasourceNames()
-  {
-    return datasourceNames;
   }
 }

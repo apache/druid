@@ -47,9 +47,9 @@ class DruidSqlException(Exception):
     f.flush()
 
 def do_query_with_args(url, sql, context, args):
-  return do_query(url, sql, context, args.timeout, args.user, args.ignore_ssl_verification, args.cafile, args.capath)
+  return do_query(url, sql, context, args.timeout, args.user, args.ignore_ssl_verification, args.cafile, args.capath, args.certchain, args.keyfile, args.keypass)
 
-def do_query(url, sql, context, timeout, user, ignore_ssl_verification, ca_file, ca_path):
+def do_query(url, sql, context, timeout, user, ignore_ssl_verification, ca_file, ca_path, cert_chain, key_file, key_pass):
   json_decoder = json.JSONDecoder(object_pairs_hook=collections.OrderedDict)
   try:
     if timeout <= 0:
@@ -63,13 +63,15 @@ def do_query(url, sql, context, timeout, user, ignore_ssl_verification, ca_file,
 
     # SSL stuff
     ssl_context = None
-    if ignore_ssl_verification or ca_file is not None or ca_path is not None:
+    if ignore_ssl_verification or ca_file is not None or ca_path is not None or cert_chain is not None:
       ssl_context = ssl.create_default_context()
       if ignore_ssl_verification:
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
-      else:
+      elif ca_path is not None:
         ssl_context.load_verify_locations(cafile=ca_file, capath=ca_path)
+      else:
+        ssl_context.load_cert_chain(certfile=cert_chain, keyfile=key_file, password=key_pass)
 
     req = urllib2.Request(url, sql_json, {'Content-Type' : 'application/json'})
 
@@ -402,6 +404,9 @@ def main():
   parser_fmt.add_argument('--tsv-delimiter', type=str, default='\t', help='Delimiter for format "tsv"')
   parser_oth.add_argument('--context-option', '-c', type=str, action='append', help='Set context option for this connection, see https://druid.apache.org/docs/latest/querying/sql.html#connection-context for options')
   parser_oth.add_argument('--execute', '-e', type=str, help='Execute single SQL query')
+  parser_cnn.add_argument('--certchain', type=str, help='Path to SSL certificate used to connect to server. See load_cert_chain() in https://docs.python.org/2/library/ssl.html#ssl.SSLContext.')
+  parser_cnn.add_argument('--keyfile', type=str, help='Path to private SSL key used to connect to server. See load_cert_chain() in https://docs.python.org/2/library/ssl.html#ssl.SSLContext.')
+  parser_cnn.add_argument('--keypass', type=str, help='Password to private SSL key file used to connect to server. See load_cert_chain() in https://docs.python.org/2/library/ssl.html#ssl.SSLContext.')
   args = parser.parse_args()
 
   # Build broker URL

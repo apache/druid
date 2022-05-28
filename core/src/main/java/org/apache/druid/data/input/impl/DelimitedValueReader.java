@@ -83,9 +83,9 @@ public class DelimitedValueReader extends TextReader
   }
 
   @Override
-  public Map<String, Object> toMap(String intermediateRow) throws IOException
+  public List<Map<String, Object>> toMap(String intermediateRow) throws IOException
   {
-    return parseLine(intermediateRow);
+    return Collections.singletonList(parseLine(intermediateRow));
   }
 
   private Map<String, Object> parseLine(String line) throws IOException

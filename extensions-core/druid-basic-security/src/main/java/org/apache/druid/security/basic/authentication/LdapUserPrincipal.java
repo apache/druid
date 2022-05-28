@@ -19,6 +19,7 @@
 
 package org.apache.druid.security.basic.authentication;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.security.basic.BasicAuthUtils;
@@ -50,7 +51,8 @@ public class LdapUserPrincipal implements Principal
     this(name, credentials, searchResult, Instant.now());
   }
 
-  private LdapUserPrincipal(
+  @VisibleForTesting
+  public LdapUserPrincipal(
       String name,
       BasicAuthenticatorCredentials credentials,
       SearchResult searchResult,
@@ -106,21 +108,26 @@ public class LdapUserPrincipal implements Principal
     }
   }
 
-  public boolean isExpired(int duration, int maxDuration)
+  public boolean isExpired(int durationSeconds, int maxDurationSeconds)
   {
-    long now = System.currentTimeMillis();
+    return isExpired(durationSeconds, maxDurationSeconds, System.currentTimeMillis());
+  }
 
-    long maxCutoff = now - (maxDuration * 1000L);
-    if (this.createdAt.toEpochMilli() < maxCutoff) {
-      long cutoff = now - (duration * 1000L);
-      if (this.lastVerified.get().toEpochMilli() < cutoff) {
-        return true;
-      } else {
-        return false;
-      }
+  @VisibleForTesting
+  boolean isExpired(int durationSeconds, int maxDurationSeconds, long nowMillis)
+  {
+    long maxCutoffMillis = nowMillis - (maxDurationSeconds * 1000L);
+    if (this.createdAt.toEpochMilli() < maxCutoffMillis) {
+      // max cutoff is up...so expired
+      return true;
     } else {
-      return false;
+      long cutoffMillis = nowMillis - (durationSeconds * 1000L);
+      if (this.lastVerified.get().toEpochMilli() < cutoffMillis) {
+        // max cutoff not reached yet but cutoff since verified is up, so expired
+        return true;
+      }
     }
+    return false;
   }
 
   @Override

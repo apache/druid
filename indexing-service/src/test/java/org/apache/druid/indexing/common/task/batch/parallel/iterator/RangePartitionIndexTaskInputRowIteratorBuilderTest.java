@@ -39,7 +39,7 @@ public class RangePartitionIndexTaskInputRowIteratorBuilderTest
   private static final IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester HANDLER_TESTER =
       IndexTaskInputRowIteratorBuilderTestingFactory.createHandlerTester(
           () -> new RangePartitionIndexTaskInputRowIteratorBuilder(
-              IndexTaskInputRowIteratorBuilderTestingFactory.DIMENSION,
+              IndexTaskInputRowIteratorBuilderTestingFactory.DIMENSIONS,
               SKIP_NULL
           )
       );
@@ -181,7 +181,7 @@ public class RangePartitionIndexTaskInputRowIteratorBuilderTest
     IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester handlerTester =
         IndexTaskInputRowIteratorBuilderTestingFactory.createHandlerTester(
             () -> new RangePartitionIndexTaskInputRowIteratorBuilder(
-                IndexTaskInputRowIteratorBuilderTestingFactory.DIMENSION,
+                IndexTaskInputRowIteratorBuilderTestingFactory.DIMENSIONS,
                 !SKIP_NULL
             )
         );

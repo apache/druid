@@ -23,6 +23,7 @@ import com.google.api.client.util.DateTime;
 import com.google.api.services.storage.Storage;
 import com.google.api.services.storage.model.Objects;
 import com.google.api.services.storage.model.StorageObject;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
@@ -30,6 +31,8 @@ import org.easymock.EasyMockSupport;
 import org.easymock.IExpectationSetters;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringWriter;
 import java.math.BigInteger;
 import java.net.URI;
 import java.util.HashMap;
@@ -118,5 +121,12 @@ public class GoogleTestUtils extends EasyMockSupport
       }
       resultExpectationSetter.andVoid();
     }
+  }
+
+  public static String readAsString(InputStream is) throws IOException
+  {
+    final StringWriter writer = new StringWriter();
+    IOUtils.copy(is, writer, "UTF-8");
+    return writer.toString();
   }
 }

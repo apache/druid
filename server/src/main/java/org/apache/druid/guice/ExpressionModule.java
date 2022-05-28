@@ -25,7 +25,10 @@ import com.google.inject.Binder;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.expression.CaseInsensitiveContainsExprMacro;
+import org.apache.druid.query.expression.ContainsExprMacro;
 import org.apache.druid.query.expression.GuiceExprMacroTable;
+import org.apache.druid.query.expression.HyperUniqueExpressions;
 import org.apache.druid.query.expression.IPv4AddressMatchExprMacro;
 import org.apache.druid.query.expression.IPv4AddressParseExprMacro;
 import org.apache.druid.query.expression.IPv4AddressStringifyExprMacro;
@@ -54,6 +57,8 @@ public class ExpressionModule implements DruidModule
           .add(RegexpExtractExprMacro.class)
           .add(RegexpLikeExprMacro.class)
           .add(RegexpReplaceExprMacro.class)
+          .add(ContainsExprMacro.class)
+          .add(CaseInsensitiveContainsExprMacro.class)
           .add(TimestampCeilExprMacro.class)
           .add(TimestampExtractExprMacro.class)
           .add(TimestampFloorExprMacro.class)
@@ -63,6 +68,10 @@ public class ExpressionModule implements DruidModule
           .add(TrimExprMacro.BothTrimExprMacro.class)
           .add(TrimExprMacro.LeftTrimExprMacro.class)
           .add(TrimExprMacro.RightTrimExprMacro.class)
+          .add(HyperUniqueExpressions.HllCreateExprMacro.class)
+          .add(HyperUniqueExpressions.HllAddExprMacro.class)
+          .add(HyperUniqueExpressions.HllEstimateExprMacro.class)
+          .add(HyperUniqueExpressions.HllRoundEstimateExprMacro.class)
           .build();
 
   @Override

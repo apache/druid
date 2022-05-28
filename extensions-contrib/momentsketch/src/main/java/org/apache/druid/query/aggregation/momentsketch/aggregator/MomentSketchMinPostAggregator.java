@@ -28,6 +28,8 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.momentsketch.MomentSketchWrapper;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -54,6 +56,12 @@ public class MomentSketchMinPostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  @Override
+  public ColumnType getType(ColumnInspector signature)
+  {
+    return ColumnType.DOUBLE;
   }
 
   @JsonProperty

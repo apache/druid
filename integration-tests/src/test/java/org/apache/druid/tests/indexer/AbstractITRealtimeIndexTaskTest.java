@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
@@ -111,7 +112,11 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       // wait for a while to let the events be ingested
       ITRetryUtil.retryUntil(
           () -> {
-            final int countRows = queryHelper.countRows(fullDatasourceName, Intervals.ETERNITY.toString());
+            final int countRows = queryHelper.countRows(
+                fullDatasourceName,
+                Intervals.ETERNITY,
+                name -> new LongSumAggregatorFactory(name, "count")
+            );
             return countRows == getNumExpectedRowsIngested();
           },
           true,
@@ -145,7 +150,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       // and some on historical.  Which it is depends on where in the minute we were
       // when we started posting events.
       try {
-        this.queryHelper.testQueriesFromString(getRouterURL(), queryStr, 2);
+        this.queryHelper.testQueriesFromString(getRouterURL(), queryStr);
       }
       catch (Exception e) {
         throw new RuntimeException(e);
@@ -164,7 +169,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       );
 
       // queries should be answered by historical
-      this.queryHelper.testQueriesFromString(getRouterURL(), queryStr, 2);
+      this.queryHelper.testQueriesFromString(getRouterURL(), queryStr);
     }
     catch (Exception e) {
       throw new RuntimeException(e);

@@ -25,9 +25,12 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.HistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Map;
 import java.util.Objects;
@@ -63,6 +66,16 @@ public class EqualBucketsPostAggregator extends ApproximateHistogramPostAggregat
   {
     ApproximateHistogram ah = (ApproximateHistogram) values.get(fieldName);
     return ah.toHistogram(numBuckets);
+  }
+
+  /**
+   * actual type is {@link Histogram}
+   * @param signature
+   */
+  @Override
+  public ColumnType getType(ColumnInspector signature)
+  {
+    return HistogramAggregatorFactory.TYPE;
   }
 
   @Override

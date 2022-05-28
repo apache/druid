@@ -38,7 +38,6 @@ public class TimestampAggregator implements Aggregator
   }
 
   private final BaseObjectColumnValueSelector selector;
-  private final String name;
   private final TimestampSpec timestampSpec;
   private final Comparator<Long> comparator;
   private final Long initValue;
@@ -46,14 +45,12 @@ public class TimestampAggregator implements Aggregator
   private long most;
 
   public TimestampAggregator(
-      String name,
       BaseObjectColumnValueSelector selector,
       TimestampSpec timestampSpec,
       Comparator<Long> comparator,
       Long initValue
   )
   {
-    this.name = name;
     this.selector = selector;
     this.timestampSpec = timestampSpec;
     this.comparator = comparator;

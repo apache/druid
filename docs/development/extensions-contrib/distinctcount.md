@@ -23,7 +23,7 @@ title: "DistinctCount Aggregator"
   -->
 
 
-To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) the `druid-distinctcount` extension.
+To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) the `druid-distinctcount` in the extensions load list.
 
 Additionally, follow these steps:
 
@@ -83,7 +83,7 @@ Example:
 {
   "queryType": "groupBy",
   "dataSource": "sample_datasource",
-  "dimensions": "[sample_dim]",
+  "dimensions": ["sample_dim"],
   "granularity": "all",
   "aggregations": [
     {

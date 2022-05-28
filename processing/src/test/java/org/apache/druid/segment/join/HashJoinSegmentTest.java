@@ -22,16 +22,11 @@ package org.apache.druid.segment.join;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
-import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
-import org.apache.druid.segment.join.filter.JoinableClauses;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
@@ -129,16 +124,6 @@ public class HashJoinSegmentTest extends InitializedNullHandlingTest
         )
     );
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        JoinableClauses.fromList(joinableClauses),
-        VirtualColumns.EMPTY,
-        null,
-        true,
-        true,
-        true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
-    );
-
     referencedSegment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
     SegmentReference testWrapper = new SegmentReference()
     {
@@ -187,8 +172,9 @@ public class HashJoinSegmentTest extends InitializedNullHandlingTest
     };
     hashJoinSegment = new HashJoinSegment(
         testWrapper,
+        null,
         joinableClauses,
-        joinFilterPreAnalysis
+        null
     )
     {
       @Override
@@ -209,24 +195,15 @@ public class HashJoinSegmentTest extends InitializedNullHandlingTest
   public void test_constructor_noClauses()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("'clauses' is empty, no need to create HashJoinSegment");
+    expectedException.expectMessage("'clauses' and 'baseFilter' are both empty, no need to create HashJoinSegment");
 
     List<JoinableClause> joinableClauses = ImmutableList.of();
 
-    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        JoinableClauses.fromList(joinableClauses),
-        VirtualColumns.EMPTY,
-        null,
-        true,
-        true,
-        true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
-    );
-
     final HashJoinSegment ignored = new HashJoinSegment(
         ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
+        null,
         joinableClauses,
-        joinFilterPreAnalysis
+        null
     );
   }
 

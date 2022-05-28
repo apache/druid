@@ -15,13 +15,7 @@
 # limitations under the License.
 
 # Creates pseudo distributed hadoop 2.8.5 with java 8
-#
-# Modified from the SequenceIQ Dockerfiles at https://github.com/sequenceiq/hadoop-docker
-#
-# docker build -t druid-hadoop-demo:2.8.5 .
-
-FROM sequenceiq/pam:centos-6.5
-MAINTAINER SequenceIQ
+FROM centos:7
 
 USER root
 
@@ -42,16 +36,27 @@ RUN ssh-keygen -q -N "" -t rsa -f /etc/ssh/ssh_host_rsa_key
 RUN ssh-keygen -q -N "" -t rsa -f /root/.ssh/id_rsa
 RUN cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
 
-# zulu java 8
-COPY setup-zulu-repo.sh /root/setup-zulu-repo.sh
-RUN /root/setup-zulu-repo.sh
-RUN yum install -y zulu-8
+#
+# Pull Zulu OpenJDK binaries from official repository:
+#
 
-ENV JAVA_HOME /usr/lib/jvm/zulu-8
+ARG ZULU_REPO_VER=1.0.0-1
+
+RUN rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
+    curl -sLO https://cdn.azul.com/zulu/bin/zulu-repo-${ZULU_REPO_VER}.noarch.rpm && \
+    rpm -ivh zulu-repo-${ZULU_REPO_VER}.noarch.rpm && \
+    yum -q -y update && \
+    yum -q -y upgrade && \
+    yum -q -y install zulu8-jdk && \
+    yum clean all && \
+    rm -rf /var/cache/yum zulu-repo_${ZULU_REPO_VER}.noarch.rpm
+
+ENV JAVA_HOME=/usr/lib/jvm/zulu8
 ENV PATH $PATH:$JAVA_HOME/bin
 
 # hadoop
-RUN curl -s https://archive.apache.org/dist/hadoop/core/hadoop-2.8.5/hadoop-2.8.5.tar.gz | tar -xz -C /usr/local/
+ARG APACHE_ARCHIVE_MIRROR_HOST=https://archive.apache.org
+RUN curl -s ${APACHE_ARCHIVE_MIRROR_HOST}/dist/hadoop/core/hadoop-2.8.5/hadoop-2.8.5.tar.gz | tar -xz -C /usr/local/
 RUN cd /usr/local && ln -s ./hadoop-2.8.5 hadoop
 
 ENV HADOOP_PREFIX /usr/local/hadoop
@@ -62,7 +67,7 @@ ENV HADOOP_YARN_HOME /usr/local/hadoop
 ENV HADOOP_CONF_DIR /usr/local/hadoop/etc/hadoop
 ENV YARN_CONF_DIR $HADOOP_PREFIX/etc/hadoop
 
-RUN sed -i '/^export JAVA_HOME/ s:.*:export JAVA_HOME=/usr/lib/jvm/zulu-8\nexport HADOOP_PREFIX=/usr/local/hadoop\nexport HADOOP_HOME=/usr/local/hadoop\n:' $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh
+RUN sed -i '/^export JAVA_HOME/ s:.*:export JAVA_HOME=/usr/lib/jvm/zulu8\nexport HADOOP_PREFIX=/usr/local/hadoop\nexport HADOOP_HOME=/usr/local/hadoop\n:' $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh
 RUN sed -i '/^export HADOOP_CONF_DIR/ s:.*:export HADOOP_CONF_DIR=/usr/local/hadoop/etc/hadoop/:' $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh
 
 RUN mkdir $HADOOP_PREFIX/input
@@ -109,8 +114,14 @@ RUN sed  -i "/^[^#]*UsePAM/ s/.*/#&/"  /etc/ssh/sshd_config
 RUN echo "UsePAM no" >> /etc/ssh/sshd_config
 RUN echo "Port 2122" >> /etc/ssh/sshd_config
 
-RUN service sshd start && $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh && $HADOOP_PREFIX/sbin/start-dfs.sh && $HADOOP_PREFIX/bin/hdfs dfs -mkdir -p /user/root
-RUN service sshd start && $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh && $HADOOP_PREFIX/sbin/start-dfs.sh && $HADOOP_PREFIX/bin/hdfs dfs -put $HADOOP_PREFIX/etc/hadoop/ input
+# script for plain sshd start
+RUN echo -e \
+	'#!/bin/bash\n/usr/sbin/sshd\ntimeout 10 bash -c "until printf \"\" 2>>/dev/null >>/dev/tcp/127.0.0.1/2122; do sleep 0.5; done"' > \
+	/usr/local/bin/start_sshd && \
+	chmod a+x /usr/local/bin/start_sshd
+
+RUN start_sshd && $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh && $HADOOP_PREFIX/sbin/start-dfs.sh && $HADOOP_PREFIX/bin/hdfs dfs -mkdir -p /user/root
+RUN start_sshd && $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh && $HADOOP_PREFIX/sbin/start-dfs.sh && $HADOOP_PREFIX/bin/hdfs dfs -put $HADOOP_PREFIX/etc/hadoop/ input
 
 CMD ["/etc/bootstrap.sh", "-d"]
 

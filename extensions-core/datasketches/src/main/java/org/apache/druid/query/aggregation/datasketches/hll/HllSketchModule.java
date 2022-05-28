@@ -40,7 +40,7 @@ import java.util.List;
 
 /**
  * This module is to support count-distinct operations using {@link HllSketch}.
- * See <a href="https://datasketches.github.io/docs/HLL/HLL.html">HyperLogLog Sketch documentation</a>
+ * See <a href="https://datasketches.apache.org/docs/HLL/HLL.html">HyperLogLog Sketch documentation</a>
  */
 public class HllSketchModule implements DruidModule
 {
@@ -65,6 +65,12 @@ public class HllSketchModule implements DruidModule
     SqlBindings.addOperatorConversion(binder, HllSketchEstimateWithErrorBoundsOperatorConversion.class);
     SqlBindings.addOperatorConversion(binder, HllSketchSetUnionOperatorConversion.class);
     SqlBindings.addOperatorConversion(binder, HllSketchToStringOperatorConversion.class);
+
+    SqlBindings.addApproxCountDistinctChoice(
+        binder,
+        HllSketchApproxCountDistinctSqlAggregator.NAME,
+        HllSketchApproxCountDistinctSqlAggregator.class
+    );
   }
 
   @Override

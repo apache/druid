@@ -15,45 +15,55 @@
         "id": "merged",
         "columns": {
           "location": {
+            "typeSignature": "STRING",
             "type": "STRING",
             "size": 0,
             "hasMultipleValues": false,
+            "hasNulls": false,
             "minValue": "location_1",
             "maxValue": "location_5",
             "cardinality": 5,
             "errorMessage": null
           },
           "user_id_sketch": {
+            "typeSignature": "COMPLEX<thetaSketch>",
             "type": "thetaSketch",
             "size": 0,
             "hasMultipleValues": false,
+            "hasNulls": true,
             "minValue": null,
             "maxValue": null,
             "cardinality": null,
             "errorMessage": null
           },
           "other_metric": {
+            "typeSignature": "COMPLEX<thetaSketch>",
             "type": "thetaSketch",
             "size": 0,
             "hasMultipleValues": false,
+            "hasNulls": true,
             "minValue": null,
             "maxValue": null,
             "cardinality": null,
             "errorMessage": null
           },
           "__time": {
+            "typeSignature": "LONG",
             "type": "LONG",
             "size": 0,
             "hasMultipleValues": false,
+            "hasNulls": false,
             "minValue": null,
             "maxValue": null,
             "cardinality": null,
             "errorMessage": null
           },
           "product": {
+            "typeSignature": "STRING",
             "type": "STRING",
             "size": 0,
             "hasMultipleValues": false,
+            "hasNulls": false,
             "minValue": "product_1",
             "maxValue": "product_9",
             "cardinality": 15,

@@ -26,10 +26,9 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.collections.CloseableDefaultBlockingPool;
-import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -42,18 +41,17 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
+import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
@@ -77,9 +75,10 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
@@ -91,7 +90,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -99,7 +97,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 public class GroupByLimitPushDownMultiNodeMergeTest
@@ -141,24 +138,31 @@ public class GroupByLimitPushDownMultiNodeMergeTest
 
   private IncrementalIndex makeIncIndex(boolean withRollup)
   {
-    return new IncrementalIndex.Builder()
+    return makeIncIndex(withRollup, Arrays.asList(
+        new StringDimensionSchema("dimA"),
+        new LongDimensionSchema("metA")
+    ));
+  }
+
+  private IncrementalIndex makeIncIndex(boolean withRollup, List<DimensionSchema> dimensions)
+  {
+    return new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
-                .withDimensionsSpec(new DimensionsSpec(
-                    Arrays.asList(
-                        new StringDimensionSchema("dimA"),
-                        new LongDimensionSchema("metA")
-                    ),
-                    null,
-                    null
-                ))
+                .withDimensionsSpec(
+                    new DimensionsSpec(
+                        Arrays.asList(
+                            new StringDimensionSchema("dimA"),
+                            new LongDimensionSchema("metA")
+                        )
+                    )
+                )
                 .withRollup(withRollup)
                 .build()
         )
-        .setReportParseExceptions(false)
         .setConcurrentEventAdd(true)
         .setMaxRowCount(1000)
-        .buildOnheap();
+        .build();
   }
 
   @Before
@@ -312,7 +316,217 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     );
     QueryableIndex qindexD = INDEX_IO.loadIndex(fileD);
 
-    groupByIndices = Arrays.asList(qindexA, qindexB, qindexC, qindexD);
+    List<String> dimNames2 = Arrays.asList("dimA", "dimB", "metA");
+    List<DimensionSchema> dimensions = Arrays.asList(
+        new StringDimensionSchema("dimA"),
+        new StringDimensionSchema("dimB"),
+        new LongDimensionSchema("metA")
+    );
+    final IncrementalIndex indexE = makeIncIndex(false, dimensions);
+    incrementalIndices.add(indexE);
+
+    event = new HashMap<>();
+    event.put("dimA", "pomegranate");
+    event.put("dimB", "raw");
+    event.put("metA", 5L);
+    row = new MapBasedInputRow(1505260800000L, dimNames2, event);
+    indexE.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "mango");
+    event.put("dimB", "ripe");
+    event.put("metA", 9L);
+    row = new MapBasedInputRow(1605260800000L, dimNames2, event);
+    indexE.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "pomegranate");
+    event.put("dimB", "raw");
+    event.put("metA", 3L);
+    row = new MapBasedInputRow(1705264400000L, dimNames2, event);
+    indexE.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "mango");
+    event.put("dimB", "ripe");
+    event.put("metA", 7L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexE.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "grape");
+    event.put("dimB", "raw");
+    event.put("metA", 5L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexE.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "apple");
+    event.put("dimB", "ripe");
+    event.put("metA", 3L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexE.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "apple");
+    event.put("dimB", "raw");
+    event.put("metA", 1L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexE.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "apple");
+    event.put("dimB", "ripe");
+    event.put("metA", 4L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexE.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "apple");
+    event.put("dimB", "raw");
+    event.put("metA", 1L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexE.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "banana");
+    event.put("dimB", "ripe");
+    event.put("metA", 4L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexE.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "orange");
+    event.put("dimB", "raw");
+    event.put("metA", 9L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexE.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "peach");
+    event.put("dimB", "ripe");
+    event.put("metA", 7L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexE.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "orange");
+    event.put("dimB", "raw");
+    event.put("metA", 2L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexE.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "strawberry");
+    event.put("dimB", "ripe");
+    event.put("metA", 10L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexE.add(row);
+
+    final File fileE = INDEX_MERGER_V9.persist(
+        indexE,
+        new File(tmpDir, "E"),
+        new IndexSpec(),
+        null
+    );
+    QueryableIndex qindexE = INDEX_IO.loadIndex(fileE);
+
+    final IncrementalIndex indexF = makeIncIndex(false, dimensions);
+    incrementalIndices.add(indexF);
+
+    event = new HashMap<>();
+    event.put("dimA", "kiwi");
+    event.put("dimB", "raw");
+    event.put("metA", 7L);
+    row = new MapBasedInputRow(1505260800000L, dimNames2, event);
+    indexF.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "watermelon");
+    event.put("dimB", "ripe");
+    event.put("metA", 14L);
+    row = new MapBasedInputRow(1605260800000L, dimNames2, event);
+    indexF.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "kiwi");
+    event.put("dimB", "raw");
+    event.put("metA", 8L);
+    row = new MapBasedInputRow(1705264400000L, dimNames2, event);
+    indexF.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "kiwi");
+    event.put("dimB", "ripe");
+    event.put("metA", 8L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexF.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "lemon");
+    event.put("dimB", "raw");
+    event.put("metA", 3L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexF.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "cherry");
+    event.put("dimB", "ripe");
+    event.put("metA", 2L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexF.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "cherry");
+    event.put("dimB", "raw");
+    event.put("metA", 7L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexF.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "avocado");
+    event.put("dimB", "ripe");
+    event.put("metA", 12L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexF.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "cherry");
+    event.put("dimB", "raw");
+    event.put("metA", 3L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexF.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "plum");
+    event.put("dimB", "ripe");
+    event.put("metA", 5L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexF.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "plum");
+    event.put("dimB", "raw");
+    event.put("metA", 3L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexF.add(row);
+
+    event = new HashMap<>();
+    event.put("dimA", "lime");
+    event.put("dimB", "ripe");
+    event.put("metA", 7L);
+    row = new MapBasedInputRow(1805264400000L, dimNames2, event);
+    indexF.add(row);
+
+    final File fileF = INDEX_MERGER_V9.persist(
+        indexF,
+        new File(tmpDir, "F"),
+        new IndexSpec(),
+        null
+    );
+    QueryableIndex qindexF = INDEX_IO.loadIndex(fileF);
+
+    groupByIndices = Arrays.asList(qindexA, qindexB, qindexC, qindexD, qindexE, qindexF);
     resourceCloser = Closer.create();
     setupGroupByFactory();
   }
@@ -321,27 +535,17 @@ public class GroupByLimitPushDownMultiNodeMergeTest
   {
     executorService = Execs.multiThreaded(3, "GroupByThreadPool[%d]");
 
-    final CloseableStupidPool<ByteBuffer> bufferPool = new CloseableStupidPool<>(
-        "GroupByBenchmark-computeBufferPool",
-        new OffheapBufferGenerator("compute", 10_000_000),
-        0,
-        Integer.MAX_VALUE
-    );
-
+    final TestBufferPool bufferPool = TestBufferPool.offHeap(10_000_000, Integer.MAX_VALUE);
+    final TestBufferPool mergePool = TestBufferPool.offHeap(10_000_000, 2);
     // limit of 2 is required since we simulate both historical merge and broker merge in the same process
-    final CloseableDefaultBlockingPool<ByteBuffer> mergePool = new CloseableDefaultBlockingPool<>(
-        new OffheapBufferGenerator("merge", 10_000_000),
-        2
-    );
-    // limit of 2 is required since we simulate both historical merge and broker merge in the same process
-    final CloseableDefaultBlockingPool<ByteBuffer> mergePool2 = new CloseableDefaultBlockingPool<>(
-        new OffheapBufferGenerator("merge", 10_000_000),
-        2
-    );
+    final TestBufferPool mergePool2 = TestBufferPool.offHeap(10_000_000, 2);
 
-    resourceCloser.register(bufferPool);
-    resourceCloser.register(mergePool);
-    resourceCloser.register(mergePool2);
+    resourceCloser.register(() -> {
+      // Verify that all objects have been returned to the pools.
+      Assert.assertEquals(0, bufferPool.getOutstandingObjectCount());
+      Assert.assertEquals(0, mergePool.getOutstandingObjectCount());
+      Assert.assertEquals(0, mergePool2.getOutstandingObjectCount());
+    });
 
     final GroupByQueryConfig config = new GroupByQueryConfig()
     {
@@ -384,21 +588,16 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final Supplier<QueryConfig> queryConfigSupplier = Suppliers.ofInstance(
-        new QueryConfig()
-    );
     final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
         configSupplier,
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, bufferPool),
-            NOOP_QUERYWATCHER,
-            bufferPool
+            NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             druidProcessingConfig,
             configSupplier,
-            queryConfigSupplier,
             bufferPool,
             mergePool,
             new ObjectMapper(new SmileFactory()),
@@ -411,13 +610,11 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, bufferPool),
-            NOOP_QUERYWATCHER,
-            bufferPool
+            NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             druidProcessingConfig,
             configSupplier,
-            queryConfigSupplier,
             bufferPool,
             mergePool2,
             new ObjectMapper(new SmileFactory()),
@@ -514,26 +711,26 @@ public class GroupByLimitPushDownMultiNodeMergeTest
             new ExpressionVirtualColumn(
                 "d0:v",
                 "timestamp_extract(\"__time\",'YEAR','UTC')",
-                ValueType.LONG,
+                ColumnType.LONG,
                 TestExprMacroTable.INSTANCE
             ),
             new ExpressionVirtualColumn(
                 "d1:v",
                 "timestamp_extract(\"__time\",'MONTH','UTC')",
-                ValueType.LONG,
+                ColumnType.LONG,
                 TestExprMacroTable.INSTANCE
             ),
             new ExpressionVirtualColumn(
                 "d2:v",
                 "timestamp_extract(\"__time\",'DAY','UTC')",
-                ValueType.LONG,
+                ColumnType.LONG,
                 TestExprMacroTable.INSTANCE
             )
         )
         .setDimensions(
-            new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG),
-            new DefaultDimensionSpec("d1:v", "d1", ValueType.LONG),
-            new DefaultDimensionSpec("d2:v", "d2", ValueType.LONG)
+            new DefaultDimensionSpec("d0:v", "d0", ColumnType.LONG),
+            new DefaultDimensionSpec("d1:v", "d1", ColumnType.LONG),
+            new DefaultDimensionSpec("d2:v", "d2", ColumnType.LONG)
         ).setAggregatorSpecs(new CountAggregatorFactory("a0"))
         .setLimitSpec(
             ls2
@@ -643,7 +840,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
             new ExtractionDimensionSpec(
                 ColumnHolder.TIME_COLUMN_NAME,
                 "hour",
-                ValueType.LONG,
+                ColumnType.LONG,
                 new TimeFormatExtractionFn(
                     null,
                     null,
@@ -710,6 +907,95 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     Assert.assertEquals(expectedRow3, results.get(3));
   }
 
+  @Test
+  public void testForcePushLimitDownAccuracyWhenSortHasNonGroupingFields()
+  {
+    // The two testing segments have non overlapping groups, so the result should be 100% accurate even
+    // forceLimitPushDown is applied
+    List<ResultRow> resultsWithoutLimitPushDown = testForcePushLimitDownAccuracyWhenSortHasNonGroupingFieldsHelper(ImmutableMap.of());
+    List<ResultRow> resultsWithLimitPushDown = testForcePushLimitDownAccuracyWhenSortHasNonGroupingFieldsHelper(ImmutableMap.of(
+        GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true,
+        GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true
+    ));
+
+    List<ResultRow> expectedResults = ImmutableList.of(
+        ResultRow.of("mango", "ripe", 16),
+        ResultRow.of("kiwi", "raw", 15),
+        ResultRow.of("watermelon", "ripe", 14),
+        ResultRow.of("avocado", "ripe", 12),
+        ResultRow.of("orange", "raw", 11)
+    );
+
+    Assert.assertEquals(expectedResults.toString(), resultsWithoutLimitPushDown.toString());
+    Assert.assertEquals(expectedResults.toString(), resultsWithLimitPushDown.toString());
+  }
+
+  private List<ResultRow> testForcePushLimitDownAccuracyWhenSortHasNonGroupingFieldsHelper(Map<String, Object> context)
+  {
+    QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
+    QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            groupByFactory.mergeRunners(executorService, getRunner1(4))
+        ),
+        (QueryToolChest) toolChest
+    );
+
+    QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            groupByFactory2.mergeRunners(executorService, getRunner2(5))
+        ),
+        (QueryToolChest) toolChest
+    );
+
+    QueryRunner<ResultRow> finalRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            new QueryRunner<ResultRow>()
+            {
+              @Override
+              public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
+              {
+                return Sequences
+                    .simple(
+                        ImmutableList.of(
+                            theRunner.run(queryPlus, responseContext),
+                            theRunner2.run(queryPlus, responseContext)
+                        )
+                    )
+                    .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering());
+              }
+            }
+        ),
+        (QueryToolChest) toolChest
+    );
+
+    QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(
+        Collections.singletonList(Intervals.utc(1500000000000L, 1900000000000L))
+    );
+
+    DefaultLimitSpec ls = new DefaultLimitSpec(
+        Collections.singletonList(
+            new OrderByColumnSpec("a0", OrderByColumnSpec.Direction.DESCENDING, StringComparators.NUMERIC)
+        ),
+        5
+    );
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource("blah")
+        .setQuerySegmentSpec(intervalSpec)
+        .setDimensions(
+            new DefaultDimensionSpec("dimA", "d0", ColumnType.STRING),
+            new DefaultDimensionSpec("dimB", "d1", ColumnType.STRING)
+        ).setAggregatorSpecs(new LongSumAggregatorFactory("a0", "metA"))
+        .setLimitSpec(ls)
+        .setContext(context)
+        .setGranularity(Granularities.ALL)
+        .build();
+
+    Sequence<ResultRow> queryResult = finalRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    return queryResult.toList();
+  }
+
   private List<QueryRunner<ResultRow>> getRunner1(int qIndexNumber)
   {
     List<QueryRunner<ResultRow>> runners = new ArrayList<>();
@@ -734,34 +1020,6 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     );
     runners.add(groupByFactory2.getToolchest().preMergeQueryDecoration(tooSmallRunner));
     return runners;
-  }
-
-  private static class OffheapBufferGenerator implements Supplier<ByteBuffer>
-  {
-    private static final Logger log = new Logger(OffheapBufferGenerator.class);
-
-    private final String description;
-    private final int computationBufferSize;
-    private final AtomicLong count = new AtomicLong(0);
-
-    public OffheapBufferGenerator(String description, int computationBufferSize)
-    {
-      this.description = description;
-      this.computationBufferSize = computationBufferSize;
-    }
-
-    @Override
-    public ByteBuffer get()
-    {
-      log.info(
-          "Allocating new %s buffer[%,d] of size[%,d]",
-          description,
-          count.getAndIncrement(),
-          computationBufferSize
-      );
-
-      return ByteBuffer.allocateDirect(computationBufferSize);
-    }
   }
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(

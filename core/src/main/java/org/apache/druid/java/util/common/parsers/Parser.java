@@ -25,6 +25,8 @@ import java.util.Map;
 
 /**
  * Class that can parse Strings into Maps.
+ *
+ * Not thread-safe.
  */
 public interface Parser<K, V>
 {

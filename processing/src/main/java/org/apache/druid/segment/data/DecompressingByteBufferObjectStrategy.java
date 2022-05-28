@@ -71,6 +71,12 @@ public class DecompressingByteBufferObjectStrategy implements ObjectStrategy<Res
   }
 
   @Override
+  public boolean canCompare()
+  {
+    return false;
+  }
+
+  @Override
   public int compare(ResourceHolder<ByteBuffer> o1, ResourceHolder<ByteBuffer> o2)
   {
     throw new UnsupportedOperationException();

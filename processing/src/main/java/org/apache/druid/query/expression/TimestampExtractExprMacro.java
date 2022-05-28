@@ -25,11 +25,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
@@ -158,8 +160,20 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new TimestampExtractExpr(newArg));
+        return shuttle.visit(apply(shuttle.visitAll(args)));
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getOutputType(InputBindingInspector inspector)
+      {
+        switch (unit) {
+          case CENTURY:
+          case MILLENNIUM:
+            return ExpressionType.DOUBLE;
+          default:
+            return ExpressionType.LONG;
+        }
       }
 
       @Override

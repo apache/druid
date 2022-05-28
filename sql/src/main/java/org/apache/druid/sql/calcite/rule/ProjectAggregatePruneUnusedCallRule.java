@@ -61,7 +61,7 @@ public class ProjectAggregatePruneUnusedCallRule extends RelOptRule
     final int fieldCount = aggregate.getGroupCount() + aggregate.getAggCallList().size();
     if (fieldCount != aggregate.getRowType().getFieldCount()) {
       throw new ISE(
-          "WTF, expected[%s] to have[%s] fields but it had[%s]",
+          "Expected[%s] to have[%s] fields but it had[%s]",
           aggregate,
           fieldCount,
           aggregate.getRowType().getFieldCount()

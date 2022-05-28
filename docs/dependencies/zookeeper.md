@@ -23,7 +23,17 @@ title: "ZooKeeper"
   -->
 
 
-Apache Druid uses [Apache ZooKeeper](http://zookeeper.apache.org/) (ZK) for management of current cluster state. The operations that happen over ZK are
+Apache Druid uses [Apache ZooKeeper](http://zookeeper.apache.org/) (ZK) for management of current cluster state.
+
+## Minimum ZooKeeper versions
+
+Apache Druid supports ZooKeeper versions 3.5.x and above.
+
+> Note: Starting with Apache Druid 0.22.0, support for ZooKeeper 3.4.x has been removed
+
+## ZooKeeper Operations
+
+The operations that happen over ZK are
 
 1.  [Coordinator](../design/coordinator.md) leader election
 2.  Segment "publishing" protocol from [Historical](../design/historical.md)
@@ -33,7 +43,7 @@ Apache Druid uses [Apache ZooKeeper](http://zookeeper.apache.org/) (ZK) for mana
 
 ## Coordinator Leader Election
 
-We use the Curator LeadershipLatch recipe to do leader election at path
+We use the Curator [LeaderLatch](https://curator.apache.org/curator-recipes/leader-latch.html) recipe to perform leader election at path
 
 ```
 ${druid.zk.paths.coordinatorPath}/_COORDINATOR

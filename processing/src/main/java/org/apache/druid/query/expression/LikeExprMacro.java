@@ -25,10 +25,11 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.LikeDimFilter;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class LikeExprMacro implements ExprMacroTable.ExprMacro
@@ -81,14 +82,20 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
-        return ExprEval.of(likeMatcher.matches(arg.eval(bindings).asString()), ExprType.LONG);
+        return ExprEval.ofLongBoolean(likeMatcher.matches(arg.eval(bindings).asString()));
       }
 
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new LikeExtractExpr(newArg));
+        return shuttle.visit(apply(shuttle.visitAll(args)));
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getOutputType(InputBindingInspector inspector)
+      {
+        return ExpressionType.LONG;
       }
 
       @Override

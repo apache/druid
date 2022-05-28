@@ -20,41 +20,40 @@
 package org.apache.druid.query.aggregation.first;
 
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
+import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
 
-public class StringFirstAggregateCombiner extends ObjectAggregateCombiner<String>
+public class StringFirstAggregateCombiner extends ObjectAggregateCombiner<SerializablePairLongString>
 {
-  private String firstString;
-  private boolean isReset = false;
+  private SerializablePairLongString firstValue;
 
   @Override
   public void reset(ColumnValueSelector selector)
   {
-    firstString = (String) selector.getObject();
-    isReset = true;
+    firstValue = (SerializablePairLongString) selector.getObject();
   }
 
   @Override
   public void fold(ColumnValueSelector selector)
   {
-    if (!isReset) {
-      firstString = (String) selector.getObject();
-      isReset = true;
+    SerializablePairLongString newValue = (SerializablePairLongString) selector.getObject();
+    if (StringFirstAggregatorFactory.TIME_COMPARATOR.compare(firstValue, newValue) > 0) {
+      firstValue = newValue;
     }
   }
 
   @Nullable
   @Override
-  public String getObject()
+  public SerializablePairLongString getObject()
   {
-    return firstString;
+    return firstValue;
   }
 
   @Override
-  public Class<String> classOfObject()
+  public Class<SerializablePairLongString> classOfObject()
   {
-    return String.class;
+    return SerializablePairLongString.class;
   }
 }

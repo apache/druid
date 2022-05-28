@@ -21,7 +21,7 @@ import React from 'react';
 
 import { AsyncActionDialog } from './async-action-dialog';
 
-describe('async action dialog', () => {
+describe('AsyncActionDialog', () => {
   it('matches snapshot', () => {
     const asyncActionDialog = (
       <AsyncActionDialog
@@ -29,9 +29,9 @@ describe('async action dialog', () => {
           return Promise.resolve();
         }}
         onClose={() => {}}
-        confirmButtonText={'test'}
-        successText={'test'}
-        failText={'test'}
+        confirmButtonText="test"
+        successText="test"
+        failText="test"
       />
     );
     render(asyncActionDialog);

@@ -19,109 +19,150 @@
 
 package org.apache.druid.query.filter.vector;
 
+import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 public class VectorMatchTest
 {
-  private static final int VECTOR_SIZE = 10;
+  private static final int VECTOR_SIZE = 7;
+  private static final int VECTOR_BITS = 1 << VECTOR_SIZE;
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
-  public void testRemoveAll()
+  public void testAddAllExhaustive()
   {
-    assertMatchEquals(
-        VectorMatch.allFalse(),
-        copy(VectorMatch.allTrue(VECTOR_SIZE)).removeAll(VectorMatch.allTrue(VECTOR_SIZE))
-    );
+    // Tests every combination of vectors up to length VECTOR_SIZE.
+    final VectorMatch scratch = VectorMatch.wrap(new int[VECTOR_SIZE]);
 
-    assertMatchEquals(
-        VectorMatch.allTrue(VECTOR_SIZE),
-        copy(VectorMatch.allTrue(VECTOR_SIZE)).removeAll(VectorMatch.allFalse())
-    );
+    final int[] arrayOne = new int[VECTOR_SIZE];
+    final int[] arrayTwo = new int[VECTOR_SIZE];
+    final int[] arrayExpected = new int[VECTOR_SIZE];
 
-    assertMatchEquals(
-        createMatch(new int[]{3, 6, 7, 8, 10}),
-        createMatch(new int[]{3, 5, 6, 7, 8, 10}).removeAll(createMatch(new int[]{4, 5, 9}))
-    );
+    for (int bitsOne = 0; bitsOne < VECTOR_BITS; bitsOne++) {
+      for (int bitsTwo = 0; bitsTwo < VECTOR_BITS; bitsTwo++) {
+        final int lenOne = populate(arrayOne, bitsOne);
+        final int lenTwo = populate(arrayTwo, bitsTwo);
+        final int lenExpected = populate(arrayExpected, bitsOne | bitsTwo);
 
-    assertMatchEquals(
-        createMatch(new int[]{3, 6, 7, 8, 10}),
-        createMatch(new int[]{3, 5, 6, 7, 8, 10}).removeAll(createMatch(new int[]{2, 5, 9}))
-    );
+        final VectorMatch matchOne = VectorMatch.wrap(arrayOne).setSelectionSize(lenOne);
+        final VectorMatch matchTwo = VectorMatch.wrap(arrayTwo).setSelectionSize(lenTwo);
+        final VectorMatch matchExpected = VectorMatch.wrap(arrayExpected).setSelectionSize(lenExpected);
 
-    assertMatchEquals(
-        createMatch(new int[]{6, 7, 8, 10}),
-        createMatch(new int[]{3, 5, 6, 7, 8, 10}).removeAll(createMatch(new int[]{3, 5, 9}))
-    );
-
-    assertMatchEquals(
-        createMatch(new int[]{6, 7, 8}),
-        createMatch(new int[]{3, 5, 6, 7, 8, 10}).removeAll(createMatch(new int[]{3, 5, 10}))
-    );
+        assertMatchEquals(
+            StringUtils.format("%s + %s", matchOne, matchTwo),
+            matchExpected,
+            matchOne.addAll(matchTwo, scratch)
+        );
+      }
+    }
   }
 
   @Test
-  public void testAddAll()
+  public void testAddAllOnSelf()
   {
-    final VectorMatch scratch = VectorMatch.wrap(new int[VECTOR_SIZE]);
+    final VectorMatch match = VectorMatch.wrap(new int[]{0, 1}).setSelectionSize(2);
 
-    assertMatchEquals(
-        VectorMatch.allTrue(VECTOR_SIZE),
-        copy(VectorMatch.allTrue(VECTOR_SIZE)).addAll(VectorMatch.allTrue(VECTOR_SIZE), scratch)
-    );
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("'other' must be a different instance from 'this'");
+    match.addAll(match, VectorMatch.wrap(new int[2]));
+  }
 
-    assertMatchEquals(
-        VectorMatch.allTrue(VECTOR_SIZE),
-        createMatch(new int[]{}).addAll(VectorMatch.allTrue(VECTOR_SIZE), scratch)
-    );
+  @Test
+  public void testRemoveAllExhaustive()
+  {
+    // Tests every combination of vectors up to length VECTOR_SIZE.
 
-    assertMatchEquals(
-        createMatch(new int[]{3, 4, 5, 6, 7, 8, 9, 10}),
-        createMatch(new int[]{3, 5, 6, 7, 8, 10}).addAll(createMatch(new int[]{4, 5, 9}), scratch)
-    );
+    final int[] arrayOne = new int[VECTOR_SIZE];
+    final int[] arrayTwo = new int[VECTOR_SIZE];
+    final int[] arrayExpected = new int[VECTOR_SIZE];
 
-    assertMatchEquals(
-        createMatch(new int[]{3, 4, 5, 6, 7, 8, 10}),
-        createMatch(new int[]{3, 5, 6, 7, 8}).addAll(createMatch(new int[]{4, 5, 10}), scratch)
-    );
+    for (int bitsOne = 0; bitsOne < VECTOR_BITS; bitsOne++) {
+      for (int bitsTwo = 0; bitsTwo < VECTOR_BITS; bitsTwo++) {
+        final int lenOne = populate(arrayOne, bitsOne);
+        final int lenTwo = populate(arrayTwo, bitsTwo);
+        final int lenExpected = populate(arrayExpected, bitsOne & ~bitsTwo);
 
-    assertMatchEquals(
-        createMatch(new int[]{2, 3, 5, 6, 7, 8, 9, 10}),
-        createMatch(new int[]{3, 5, 6, 7, 8, 10}).addAll(createMatch(new int[]{2, 5, 9}), scratch)
-    );
+        final VectorMatch matchOne = VectorMatch.wrap(arrayOne).setSelectionSize(lenOne);
+        final VectorMatch matchTwo = VectorMatch.wrap(arrayTwo).setSelectionSize(lenTwo);
+        final VectorMatch matchExpected = VectorMatch.wrap(arrayExpected).setSelectionSize(lenExpected);
 
-    assertMatchEquals(
-        createMatch(new int[]{3, 5, 6, 7, 8, 9, 10}),
-        createMatch(new int[]{3, 5, 6, 7, 8, 10}).addAll(createMatch(new int[]{3, 5, 9}), scratch)
-    );
+        assertMatchEquals(
+            StringUtils.format("%s - %s", matchOne, matchTwo),
+            matchExpected,
+            matchOne.removeAll(matchTwo)
+        );
+      }
+    }
+  }
 
-    assertMatchEquals(
-        createMatch(new int[]{3, 5, 6, 7, 8, 10}),
-        createMatch(new int[]{3, 5, 6, 7, 8, 10}).addAll(createMatch(new int[]{3, 5, 10}), scratch)
-    );
+  @Test
+  public void testRemoveAllOnSelf()
+  {
+    final VectorMatch match = VectorMatch.wrap(new int[]{0, 1}).setSelectionSize(2);
+
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("'other' must be a different instance from 'this'");
+    match.removeAll(match);
+  }
+
+  @Test
+  public void testCopyFromExhaustive()
+  {
+    // Tests every vector up to length VECTOR_SIZE.
+
+    final VectorMatch target = VectorMatch.wrap(new int[VECTOR_SIZE]);
+
+    final int[] array = new int[VECTOR_SIZE];
+    final int[] arrayTwo = new int[VECTOR_SIZE];
+
+    for (int bits = 0; bits < VECTOR_BITS; bits++) {
+      final int len = populate(array, bits);
+      populate(arrayTwo, bits);
+
+      final VectorMatch match = VectorMatch.wrap(array).setSelectionSize(len);
+      target.copyFrom(match);
+
+      // Sanity check: array shouldn't have been modified
+      Assert.assertArrayEquals(array, arrayTwo);
+
+      assertMatchEquals(match.toString(), match, target);
+    }
+  }
+
+  @Test
+  public void testCopyFromOnSelf()
+  {
+    final VectorMatch match = VectorMatch.wrap(new int[]{0, 1}).setSelectionSize(2);
+
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("'other' must be a different instance from 'this'");
+    match.copyFrom(match);
   }
 
   /**
    * Useful because VectorMatch equality is based on identity, not value. (Since they are mutable.)
    */
-  private static void assertMatchEquals(ReadableVectorMatch expected, ReadableVectorMatch actual)
+  private static void assertMatchEquals(String message, ReadableVectorMatch expected, ReadableVectorMatch actual)
   {
-    Assert.assertEquals(expected.toString(), actual.toString());
+    Assert.assertEquals(message, expected.toString(), actual.toString());
   }
 
-  private static VectorMatch copy(final ReadableVectorMatch match)
+  private static int populate(final int[] array, final int bits)
   {
-    final int[] selection = match.getSelection();
-    final int[] newSelection = new int[selection.length];
-    System.arraycopy(selection, 0, newSelection, 0, selection.length);
-    return VectorMatch.wrap(newSelection).setSelectionSize(match.getSelectionSize());
-  }
+    int len = 0;
 
-  private static VectorMatch createMatch(final int[] selection)
-  {
-    final VectorMatch match = VectorMatch.wrap(new int[VECTOR_SIZE]);
-    System.arraycopy(selection, 0, match.getSelection(), 0, selection.length);
-    match.setSelectionSize(selection.length);
-    return match;
+    for (int bit = 0; bit < VECTOR_SIZE; bit++) {
+      final int mask = (1 << bit);
+      if ((bits & mask) == mask) {
+        array[len++] = bit;
+      }
+    }
+
+    return len;
   }
 }

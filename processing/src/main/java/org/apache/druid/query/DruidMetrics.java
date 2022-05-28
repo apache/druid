@@ -20,6 +20,7 @@
 package org.apache.druid.query;
 
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.List;
 
@@ -33,6 +34,9 @@ public class DruidMetrics
   public static final String ID = "id";
   public static final String TASK_ID = "taskId";
   public static final String STATUS = "status";
+  public static final String TASK_INGESTION_MODE = "taskIngestionMode";
+
+  public static final String PARTITIONING_TYPE = "partitioningType";
 
   // task metrics
   public static final String TASK_TYPE = "taskType";
@@ -41,13 +45,14 @@ public class DruidMetrics
   public static final String SERVER = "server";
   public static final String TIER = "tier";
 
+  public static final String DUTY = "duty";
+  public static final String DUTY_GROUP = "dutyGroup";
+
   public static int findNumComplexAggs(List<AggregatorFactory> aggs)
   {
     int retVal = 0;
     for (AggregatorFactory agg : aggs) {
-      // This needs to change when we have support column types better
-      if (!"float".equals(agg.getTypeName()) && !"long".equals(agg.getTypeName()) && !"double"
-          .equals(agg.getTypeName())) {
+      if (agg.getIntermediateType().is(ValueType.COMPLEX)) {
         retVal++;
       }
     }
@@ -67,7 +72,6 @@ public class DruidMetrics
     } else {
       queryMetrics = queryMetricsFactory.makeMetrics(query);
     }
-    queryMetrics.context(query);
     queryMetrics.remoteAddress(remoteAddr);
     return queryMetrics;
   }

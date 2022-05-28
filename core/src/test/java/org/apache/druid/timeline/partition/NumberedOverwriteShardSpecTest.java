@@ -37,8 +37,8 @@ public class NumberedOverwriteShardSpecTest
   @Test
   public void testSerde() throws JsonProcessingException
   {
-    final ObjectMapper mapper = new ObjectMapper();
-    mapper.registerSubtypes(new NamedType(NumberedOverwriteShardSpec.class, NumberedOverwriteShardSpec.TYPE));
+    final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
+    mapper.registerSubtypes(new NamedType(NumberedOverwriteShardSpec.class, ShardSpec.Type.NUMBERED_OVERWRITE));
     final NumberedOverwriteShardSpec original = new NumberedOverwriteShardSpec(
         PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + 2,
         0,
@@ -47,7 +47,25 @@ public class NumberedOverwriteShardSpecTest
         (short) 3
     );
     final String json = mapper.writeValueAsString(original);
-    final NumberedOverwriteShardSpec fromJson = (NumberedOverwriteShardSpec) mapper.readValue(json, ShardSpec.class);
+    ShardSpec shardSpec = mapper.readValue(json, ShardSpec.class);
+    Assert.assertEquals(ShardSpec.Type.NUMBERED_OVERWRITE, shardSpec.getType());
+    final NumberedOverwriteShardSpec fromJson = (NumberedOverwriteShardSpec) shardSpec;
     Assert.assertEquals(original, fromJson);
+  }
+
+  @Test
+  public void testSharePartitionSpace()
+  {
+    final NumberedOverwriteShardSpec shardSpec = new NumberedOverwriteShardSpec(
+        PartitionIds.NON_ROOT_GEN_START_PARTITION_ID,
+        0,
+        3,
+        (short) 1,
+        (short) 1
+    );
+    Assert.assertFalse(shardSpec.sharePartitionSpace(NumberedPartialShardSpec.instance()));
+    Assert.assertFalse(shardSpec.sharePartitionSpace(new HashBasedNumberedPartialShardSpec(null, 0, 1, null)));
+    Assert.assertFalse(shardSpec.sharePartitionSpace(new SingleDimensionPartialShardSpec("dim", 0, null, null, 1)));
+    Assert.assertTrue(shardSpec.sharePartitionSpace(new NumberedOverwritePartialShardSpec(0, 2, 1)));
   }
 }

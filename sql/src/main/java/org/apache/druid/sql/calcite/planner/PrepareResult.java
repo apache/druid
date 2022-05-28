@@ -21,6 +21,10 @@ package org.apache.druid.sql.calcite.planner;
 
 import org.apache.calcite.rel.type.RelDataType;
 
+/**
+ * After preparing an SQL query with {@link DruidPlanner}, the artifacts produced are the output signature of the
+ * result row, and type information for any dynamic parameters which must be bound before planning the query.
+ */
 public class PrepareResult
 {
   private final RelDataType rowType;

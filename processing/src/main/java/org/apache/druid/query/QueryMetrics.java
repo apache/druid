@@ -123,8 +123,8 @@ import java.util.List;
  *  implement extra methods from SegmentMetadataQueryMetrics interfaces with empty bodies, AND DELEGATE ALL OTHER
  *  METHODS TO A QueryMetrics OBJECT, provided as a sole parameter in DefaultSegmentMetadataQueryMetrics constructor.
  *
- *  NOTE: query(), dataSource(), queryType(), interval(), hasFilters(), duration(), queryId() and sqlQueryId() methods
- *  or any "pre-query-execution-time" methods should either have a empty body or throw exception.
+ *  NOTE: query(), dataSource(), queryType(), interval(), hasFilters(), duration(), queryId(), sqlQueryId(), and
+ *  context() methods or any "pre-query-execution-time" methods should either have a empty body or throw exception.
  *
  *  3. Create `interface SegmentMetadataQueryMetricsFactory` with a single method
  *  `SegmentMetadataQueryMetrics makeMetrics(SegmentMetadataQuery query);`.
@@ -217,6 +217,7 @@ public interface QueryMetrics<QueryType extends Query<?>>
   /**
    * Sets {@link Query#getContext()} of the given query as dimension.
    */
+  @PublicApi
   void context(QueryType query);
 
   void server(String host);
@@ -261,26 +262,51 @@ public interface QueryMetrics<QueryType extends Query<?>>
 
   /**
    * Registers "query time" metric.
+   *
+   * Measures the time between a Jetty thread starting to handle a query, and the response being fully written to
+   * the response output stream. Does not include time spent waiting in a queue before the query runs.
    */
   QueryMetrics<QueryType> reportQueryTime(long timeNs);
 
   /**
    * Registers "query bytes" metric.
+   *
+   * Measures the total number of bytes written by the query server thread to the response output stream.
+   *
+   * Emitted once per query.
    */
   QueryMetrics<QueryType> reportQueryBytes(long byteCount);
 
   /**
+   * Registers "segments queried count" metric.
+   */
+  QueryMetrics<QueryType> reportQueriedSegmentCount(long segmentCount);
+
+  /**
    * Registers "wait time" metric.
+   *
+   * Measures the total time segment-processing runnables spent waiting for execution in the processing thread pool.
+   *
+   * Emitted once per segment.
    */
   QueryMetrics<QueryType> reportWaitTime(long timeNs);
 
   /**
    * Registers "segment time" metric.
+   *
+   * Measures the total wall-clock time spent operating on segments in processing threads.
+   *
+   * Emitted once per segment.
    */
   QueryMetrics<QueryType> reportSegmentTime(long timeNs);
 
   /**
    * Registers "segmentAndCache time" metric.
+   *
+   * Measures the total wall-clock time spent in processing threads, either operating on segments or retrieving items
+   * from cache.
+   *
+   * Emitted once per segment.
    */
   QueryMetrics<QueryType> reportSegmentAndCacheTime(long timeNs);
 

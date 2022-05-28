@@ -20,12 +20,18 @@
 package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
+import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
+import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.HumanReadableBytesRange;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
@@ -56,7 +62,10 @@ public class ServerConfig
       @NotNull Period unannouncePropagationDelay,
       int inflateBufferSize,
       int compressionLevel,
-      boolean enableForwardedRequestCustomizer
+      boolean enableForwardedRequestCustomizer,
+      @NotNull List<String> allowedHttpMethods,
+      boolean showDetailedJettyErrors,
+      @NotNull ErrorResponseTransformStrategy errorResponseTransformStrategy
   )
   {
     this.numThreads = numThreads;
@@ -64,7 +73,7 @@ public class ServerConfig
     this.enableRequestLimit = enableRequestLimit;
     this.maxIdleTime = maxIdleTime;
     this.defaultQueryTimeout = defaultQueryTimeout;
-    this.maxScatterGatherBytes = maxScatterGatherBytes;
+    this.maxScatterGatherBytes = HumanReadableBytes.valueOf(maxScatterGatherBytes);
     this.maxSubqueryRows = maxSubqueryRows;
     this.maxQueryTimeout = maxQueryTimeout;
     this.maxRequestHeaderSize = maxRequestHeaderSize;
@@ -73,6 +82,9 @@ public class ServerConfig
     this.inflateBufferSize = inflateBufferSize;
     this.compressionLevel = compressionLevel;
     this.enableForwardedRequestCustomizer = enableForwardedRequestCustomizer;
+    this.allowedHttpMethods = allowedHttpMethods;
+    this.showDetailedJettyErrors = showDetailedJettyErrors;
+    this.errorResponseTransformStrategy = errorResponseTransformStrategy;
   }
 
   public ServerConfig()
@@ -100,8 +112,9 @@ public class ServerConfig
   private long defaultQueryTimeout = TimeUnit.MINUTES.toMillis(5);
 
   @JsonProperty
-  @Min(1)
-  private long maxScatterGatherBytes = Long.MAX_VALUE;
+  @NotNull
+  @HumanReadableBytesRange(min = 1)
+  private HumanReadableBytes maxScatterGatherBytes = HumanReadableBytes.valueOf(Long.MAX_VALUE);
 
   @JsonProperty
   @Min(1)
@@ -134,6 +147,17 @@ public class ServerConfig
   @JsonProperty
   private boolean enableForwardedRequestCustomizer = false;
 
+  @JsonProperty
+  @NotNull
+  private List<String> allowedHttpMethods = ImmutableList.of();
+
+  @JsonProperty("errorResponseTransform")
+  @NotNull
+  private ErrorResponseTransformStrategy errorResponseTransformStrategy = NoErrorResponseTransformStrategy.INSTANCE;
+
+  @JsonProperty
+  private boolean showDetailedJettyErrors = true;
+
   public int getNumThreads()
   {
     return numThreads;
@@ -161,7 +185,7 @@ public class ServerConfig
 
   public long getMaxScatterGatherBytes()
   {
-    return maxScatterGatherBytes;
+    return maxScatterGatherBytes.getBytes();
   }
 
   public int getMaxSubqueryRows()
@@ -204,6 +228,22 @@ public class ServerConfig
     return enableForwardedRequestCustomizer;
   }
 
+  public boolean isShowDetailedJettyErrors()
+  {
+    return showDetailedJettyErrors;
+  }
+
+  public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
+  {
+    return errorResponseTransformStrategy;
+  }
+
+  @NotNull
+  public List<String> getAllowedHttpMethods()
+  {
+    return allowedHttpMethods;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -218,16 +258,19 @@ public class ServerConfig
            queueSize == that.queueSize &&
            enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
-           maxScatterGatherBytes == that.maxScatterGatherBytes &&
            maxSubqueryRows == that.maxSubqueryRows &&
            maxQueryTimeout == that.maxQueryTimeout &&
            maxRequestHeaderSize == that.maxRequestHeaderSize &&
            inflateBufferSize == that.inflateBufferSize &&
            compressionLevel == that.compressionLevel &&
            enableForwardedRequestCustomizer == that.enableForwardedRequestCustomizer &&
+           showDetailedJettyErrors == that.showDetailedJettyErrors &&
            maxIdleTime.equals(that.maxIdleTime) &&
+           maxScatterGatherBytes.equals(that.maxScatterGatherBytes) &&
            gracefulShutdownTimeout.equals(that.gracefulShutdownTimeout) &&
-           unannouncePropagationDelay.equals(that.unannouncePropagationDelay);
+           unannouncePropagationDelay.equals(that.unannouncePropagationDelay) &&
+           allowedHttpMethods.equals(that.allowedHttpMethods) &&
+           errorResponseTransformStrategy.equals(that.errorResponseTransformStrategy);
   }
 
   @Override
@@ -247,7 +290,10 @@ public class ServerConfig
         unannouncePropagationDelay,
         inflateBufferSize,
         compressionLevel,
-        enableForwardedRequestCustomizer
+        enableForwardedRequestCustomizer,
+        allowedHttpMethods,
+        errorResponseTransformStrategy,
+        showDetailedJettyErrors
     );
   }
 
@@ -269,6 +315,9 @@ public class ServerConfig
            ", inflateBufferSize=" + inflateBufferSize +
            ", compressionLevel=" + compressionLevel +
            ", enableForwardedRequestCustomizer=" + enableForwardedRequestCustomizer +
+           ", allowedHttpMethods=" + allowedHttpMethods +
+           ", errorResponseTransformStrategy=" + errorResponseTransformStrategy +
+           ", showDetailedJettyErrors=" + showDetailedJettyErrors +
            '}';
   }
 

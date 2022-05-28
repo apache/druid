@@ -79,12 +79,12 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
     mixedSegments = Lists.newArrayList(incrementalIndexSegment, queryableIndexSegment);
 
     topNTestHelper = AggregationTestHelper.createTopNQueryAggregationTestHelper(
-        Collections.EMPTY_LIST,
+        Collections.emptyList(),
         null
     );
 
     groupByTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        Collections.EMPTY_LIST,
+        Collections.emptyList(),
         new GroupByQueryConfig(),
         null
     );

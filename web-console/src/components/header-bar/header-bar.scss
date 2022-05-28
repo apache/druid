@@ -17,6 +17,7 @@
  */
 
 @import '../../variables';
+@import '../../blueprint-overrides/common/colors';
 
 .header-bar {
   overflow: hidden;
@@ -32,11 +33,57 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      height: 75px;
+      height: 48px;
+
+      .letter {
+        fill: $dark-gray2;
+      }
+
+      .swirl {
+        fill: $druid-brand2;
+      }
+
+      .#{$bp-ns}-dark & {
+        .letter {
+          fill: $white;
+        }
+
+        .swirl {
+          fill: $druid-brand;
+        }
+      }
     }
   }
 
   * {
     white-space: nowrap;
+  }
+
+  .#{$bp-ns}-navbar-divider {
+    margin: 0 11px;
+  }
+
+  .#{$bp-ns}-button.#{$bp-ns}-minimal {
+    border-radius: 20px;
+    margin: 0 1px;
+
+    .#{$bp-ns}-icon {
+      svg {
+        fill: $blue3;
+
+        .#{$bp-ns}-dark & {
+          fill: $druid-brand;
+        }
+      }
+    }
+    .#{$bp-ns}-dark & {
+      &:hover {
+        background: rgba($dark-gray5, 0.5);
+      }
+
+      &.#{$bp-ns}-active {
+        background: rgba($dark-gray5, 0.9);
+      }
+    }
   }
 }

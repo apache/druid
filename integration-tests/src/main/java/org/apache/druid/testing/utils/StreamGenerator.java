@@ -23,7 +23,13 @@ import org.joda.time.DateTime;
 
 public interface StreamGenerator
 {
-  void run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds);
+  /**
+   * Runs and returns the number of messages written.
+   */
+  long run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds);
 
-  void run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds, DateTime overrrideFirstEventTime);
+  /**
+   * Runs and returns the number of messages written.
+   */
+  long run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds, DateTime overrrideFirstEventTime);
 }

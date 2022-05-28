@@ -19,9 +19,12 @@
 
 package org.apache.druid.data.input.impl;
 
+import com.fasterxml.jackson.databind.AnnotationIntrospector;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import junit.framework.Assert;
+import org.apache.druid.guice.DruidSecondaryModule;
+import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -34,25 +37,29 @@ public class DimensionsSpecSerdeTest
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   static {
+    AnnotationIntrospector introspector = new GuiceAnnotationIntrospector();
+    DruidSecondaryModule.setupAnnotationIntrospector(OBJECT_MAPPER, introspector);
     OBJECT_MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
   }
 
   @Test
   public void testDimensionsSpecSerde() throws Exception
   {
-    DimensionsSpec expected = new DimensionsSpec(
-        Arrays.asList(
-            new StringDimensionSchema("AAA"),
-            new StringDimensionSchema("BBB"),
-            new FloatDimensionSchema("C++"),
-            new NewSpatialDimensionSchema("DDT", null),
-            new LongDimensionSchema("EEE"),
-            new NewSpatialDimensionSchema("DDT2", Arrays.asList("A", "B")),
-            new NewSpatialDimensionSchema("IMPR", Arrays.asList("S", "P", "Q", "R"))
-        ),
-        Arrays.asList("FOO", "HAR"),
-        null
-    );
+    DimensionsSpec expected = DimensionsSpec
+        .builder()
+        .setDimensions(
+            Arrays.asList(
+                new StringDimensionSchema("AAA"),
+                new StringDimensionSchema("BBB"),
+                new FloatDimensionSchema("C++"),
+                new NewSpatialDimensionSchema("DDT", null),
+                new LongDimensionSchema("EEE"),
+                new NewSpatialDimensionSchema("DDT2", Arrays.asList("A", "B")),
+                new NewSpatialDimensionSchema("IMPR", Arrays.asList("S", "P", "Q", "R"))
+            )
+        )
+        .setDimensionExclusions(Arrays.asList("FOO", "HAR"))
+        .build();
 
     String jsonStr = "{\"dimensions\":"
                      + "[\"AAA\", \"BBB\","

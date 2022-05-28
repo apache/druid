@@ -19,6 +19,8 @@
 
 package org.apache.druid.query;
 
+import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.concurrent.ExecutorServiceConfig;
 import org.apache.druid.java.util.common.guava.ParallelMergeCombiningSequence;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -33,23 +35,27 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   private static final Logger log = new Logger(DruidProcessingConfig.class);
 
   public static final int DEFAULT_NUM_MERGE_BUFFERS = -1;
-  public static final int DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = -1;
+  public static final HumanReadableBytes DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = HumanReadableBytes.valueOf(-1);
   public static final int MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = 1024 * 1024 * 1024;
   public static final int DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS = 60_000;
+  public static final int DEFAULT_INITIAL_BUFFERS_FOR_INTERMEDIATE_POOL = 0;
 
   private AtomicReference<Integer> computedBufferSizeBytes = new AtomicReference<>();
 
   @Config({"druid.computation.buffer.size", "${base_path}.buffer.sizeBytes"})
-  public int intermediateComputeSizeBytesConfigured()
+  public HumanReadableBytes intermediateComputeSizeBytesConfigured()
   {
     return DEFAULT_PROCESSING_BUFFER_SIZE_BYTES;
   }
 
   public int intermediateComputeSizeBytes()
   {
-    int sizeBytesConfigured = intermediateComputeSizeBytesConfigured();
-    if (sizeBytesConfigured != DEFAULT_PROCESSING_BUFFER_SIZE_BYTES) {
-      return sizeBytesConfigured;
+    HumanReadableBytes sizeBytesConfigured = intermediateComputeSizeBytesConfigured();
+    if (!DEFAULT_PROCESSING_BUFFER_SIZE_BYTES.equals(sizeBytesConfigured)) {
+      if (sizeBytesConfigured.getBytes() > Integer.MAX_VALUE) {
+        throw new IAE("druid.processing.buffer.sizeBytes must be less than 2GiB");
+      }
+      return sizeBytesConfigured.getBytesInInt();
     } else if (computedBufferSizeBytes.get() != null) {
       return computedBufferSizeBytes.get();
     }
@@ -65,10 +71,7 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     catch (UnsupportedOperationException e) {
       // max direct memory defaults to max heap size on recent JDK version, unless set explicitly
       directSizeBytes = computeMaxMemoryFromMaxHeapSize();
-      log.info(
-          "Defaulting to at most [%,d] bytes (25%% of max heap size) of direct memory for computation buffers",
-          directSizeBytes
-      );
+      log.info("Using up to [%,d] bytes of direct memory for computation buffers.", directSizeBytes);
     }
 
     int numProcessingThreads = getNumThreads();
@@ -79,7 +82,9 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     final int computedSizePerBuffer = Math.min(sizePerBuffer, MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES);
     if (computedBufferSizeBytes.compareAndSet(null, computedSizePerBuffer)) {
       log.info(
-          "Auto sizing buffers to [%,d] bytes each for [%,d] processing and [%,d] merge buffers",
+          "Auto sizing buffers to [%,d] bytes each for [%,d] processing and [%,d] merge buffers. "
+          + "If you run out of direct memory, you may need to set these parameters explicitly using the guidelines at "
+          + "https://druid.apache.org/docs/latest/operations/basic-cluster-tuning.html#processing-threads-buffers.",
           computedSizePerBuffer,
           numProcessingThreads,
           numMergeBuffers
@@ -97,6 +102,15 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   public int poolCacheMaxCount()
   {
     return Integer.MAX_VALUE;
+  }
+
+  @Config({
+      "druid.computation.buffer.poolCacheInitialCount",
+      "${base_path}.buffer.poolCacheInitialCount"
+  })
+  public int getNumInitalBuffersForIntermediatePool()
+  {
+    return DEFAULT_INITIAL_BUFFERS_FOR_INTERMEDIATE_POOL;
   }
 
   @Override

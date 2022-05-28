@@ -26,10 +26,9 @@ import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -39,16 +38,11 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.Overshadowable;
-import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
@@ -149,7 +143,7 @@ public class SchemalessIndexTest
         final long timestamp = new DateTime(event.get(TIMESTAMP), ISOChronology.getInstanceUTC()).getMillis();
 
         if (theIndex == null) {
-          theIndex = new IncrementalIndex.Builder()
+          theIndex = new OnheapIncrementalIndex.Builder()
               .setIndexSchema(
                   new IncrementalIndexSchema.Builder()
                       .withMinTimestamp(timestamp)
@@ -158,7 +152,7 @@ public class SchemalessIndexTest
                       .build()
               )
               .setMaxRowCount(1000)
-              .buildOnheap();
+              .build();
         }
 
         final List<String> dims = new ArrayList<>();
@@ -201,11 +195,11 @@ public class SchemalessIndexTest
         File bottomFile = new File(tmpFile, "bottom");
         File mergedFile = new File(tmpFile, "merged");
 
-        topFile.mkdirs();
+        FileUtils.mkdirp(topFile);
+        FileUtils.mkdirp(bottomFile);
+        FileUtils.mkdirp(mergedFile);
         topFile.deleteOnExit();
-        bottomFile.mkdirs();
         bottomFile.deleteOnExit();
-        mergedFile.mkdirs();
         mergedFile.deleteOnExit();
 
         indexMerger.persist(top, topFile, INDEX_SPEC, null);
@@ -218,7 +212,8 @@ public class SchemalessIndexTest
                 METRIC_AGGS,
                 mergedFile,
                 INDEX_SPEC,
-                null
+                null,
+                -1
             )
         );
 
@@ -255,7 +250,7 @@ public class SchemalessIndexTest
 
         File mergedFile = new File(tmpFile, "merged");
 
-        mergedFile.mkdirs();
+        FileUtils.mkdirp(mergedFile);
         mergedFile.deleteOnExit();
 
         QueryableIndex index = indexIO.loadIndex(
@@ -265,7 +260,8 @@ public class SchemalessIndexTest
                 METRIC_AGGS,
                 mergedFile,
                 INDEX_SPEC,
-                null
+                null,
+                -1
             )
         );
 
@@ -292,7 +288,7 @@ public class SchemalessIndexTest
 
         File mergedFile = new File(tmpFile, "merged");
 
-        mergedFile.mkdirs();
+        FileUtils.mkdirp(mergedFile);
         mergedFile.deleteOnExit();
 
         List<QueryableIndex> indexesToMerge = new ArrayList<>();
@@ -301,21 +297,13 @@ public class SchemalessIndexTest
         }
 
         return indexIO.loadIndex(
-            indexMerger.mergeQueryableIndex(indexesToMerge, true, METRIC_AGGS, mergedFile, INDEX_SPEC, null)
+            indexMerger.mergeQueryableIndex(indexesToMerge, true, METRIC_AGGS, mergedFile, INDEX_SPEC, null, -1)
         );
       }
       catch (IOException e) {
         throw new RuntimeException(e);
       }
     }
-  }
-
-  public QueryableIndex getAppendedIncrementalIndex(
-      Iterable<Pair<String, AggregatorFactory[]>> files,
-      List<Interval> intervals
-  )
-  {
-    return makeAppendedMMappedIndex(files, intervals);
   }
 
   public QueryableIndex getMergedIncrementalIndexDiffMetrics()
@@ -367,7 +355,7 @@ public class SchemalessIndexTest
             }
           }
 
-          final IncrementalIndex rowIndex = new IncrementalIndex.Builder()
+          final IncrementalIndex rowIndex = new OnheapIncrementalIndex.Builder()
               .setIndexSchema(
                   new IncrementalIndexSchema.Builder()
                       .withMinTimestamp(timestamp)
@@ -376,7 +364,7 @@ public class SchemalessIndexTest
                       .build()
               )
               .setMaxRowCount(1000)
-              .buildOnheap();
+              .build();
 
           rowIndex.add(
               new MapBasedInputRow(timestamp, dims, event)
@@ -384,7 +372,7 @@ public class SchemalessIndexTest
 
           File tmpFile = File.createTempFile("billy", "yay");
           tmpFile.delete();
-          tmpFile.mkdirs();
+          FileUtils.mkdirp(tmpFile);
           tmpFile.deleteOnExit();
 
           indexMerger.persist(rowIndex, tmpFile, INDEX_SPEC, null);
@@ -404,7 +392,7 @@ public class SchemalessIndexTest
     String filename = resource.getFile();
     log.info("Realtime loading index file[%s]", filename);
 
-    final IncrementalIndex retVal = new IncrementalIndex.Builder()
+    final IncrementalIndex retVal = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
@@ -413,7 +401,7 @@ public class SchemalessIndexTest
                 .build()
         )
         .setMaxRowCount(1000)
-        .buildOnheap();
+        .build();
 
     try {
       final List<Object> events = JSON_MAPPER.readValue(new File(filename), List.class);
@@ -450,7 +438,7 @@ public class SchemalessIndexTest
     for (Pair<String, AggregatorFactory[]> file : files) {
       IncrementalIndex index = makeIncrementalIndex(file.lhs, file.rhs);
       File theFile = new File(tmpFile, file.lhs);
-      theFile.mkdirs();
+      FileUtils.mkdirp(theFile);
       theFile.deleteOnExit();
       filesToMap.add(theFile);
       indexMerger.persist(index, theFile, INDEX_SPEC, null);
@@ -459,81 +447,13 @@ public class SchemalessIndexTest
     return filesToMap;
   }
 
-  private QueryableIndex makeAppendedMMappedIndex(
-      Iterable<Pair<String, AggregatorFactory[]>> files,
-      final List<Interval> intervals
-  )
-  {
-    try {
-      File tmpFile = File.createTempFile("yay", "boo");
-      tmpFile.delete();
-      File mergedFile = new File(tmpFile, "merged");
-      mergedFile.mkdirs();
-      mergedFile.deleteOnExit();
-
-      List<File> filesToMap = makeFilesToMap(tmpFile, files);
-
-      VersionedIntervalTimeline<Integer, OvershadowableFile> timeline = new VersionedIntervalTimeline<>(
-          Comparators.naturalNullsFirst()
-      );
-
-      ShardSpec noneShardSpec = NoneShardSpec.instance();
-
-      for (int i = 0; i < intervals.size(); i++) {
-        timeline.add(intervals.get(i), i, noneShardSpec.createChunk(new OvershadowableFile(i, filesToMap.get(i))));
-      }
-
-      final List<IndexableAdapter> adapters = Lists.newArrayList(
-          Iterables.concat(
-              // TimelineObjectHolder is actually an iterable of iterable of indexable adapters
-              Iterables.transform(
-                  timeline.lookup(Intervals.of("1000-01-01/3000-01-01")),
-                  new Function<TimelineObjectHolder<Integer, OvershadowableFile>, Iterable<IndexableAdapter>>()
-                  {
-                    @Override
-                    public Iterable<IndexableAdapter> apply(final TimelineObjectHolder<Integer, OvershadowableFile> timelineObjectHolder)
-                    {
-                      return Iterables.transform(
-                          timelineObjectHolder.getObject(),
-
-                          // Each chunk can be used to build the actual IndexableAdapter
-                          new Function<PartitionChunk<OvershadowableFile>, IndexableAdapter>()
-                          {
-                            @Override
-                            public IndexableAdapter apply(PartitionChunk<OvershadowableFile> chunk)
-                            {
-                              try {
-                                return new RowFilteringIndexAdapter(
-                                    new QueryableIndexIndexableAdapter(indexIO.loadIndex(chunk.getObject().file)),
-                                    rowPointer -> timelineObjectHolder.getInterval().contains(rowPointer.getTimestamp())
-                                );
-                              }
-                              catch (IOException e) {
-                                throw new RuntimeException(e);
-                              }
-                            }
-                          }
-                      );
-                    }
-                  }
-              )
-          )
-      );
-
-      return indexIO.loadIndex(indexMerger.append(adapters, null, mergedFile, INDEX_SPEC, null));
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   private QueryableIndex makeMergedMMappedIndex(Iterable<Pair<String, AggregatorFactory[]>> files)
   {
     try {
       File tmpFile = File.createTempFile("yay", "who");
       tmpFile.delete();
       File mergedFile = new File(tmpFile, "merged");
-      mergedFile.mkdirs();
+      FileUtils.mkdirp(mergedFile);
       mergedFile.deleteOnExit();
 
       List<File> filesToMap = makeFilesToMap(tmpFile, files);
@@ -562,7 +482,8 @@ public class SchemalessIndexTest
               METRIC_AGGS,
               mergedFile,
               INDEX_SPEC,
-              null
+              null,
+              -1
           )
       );
     }

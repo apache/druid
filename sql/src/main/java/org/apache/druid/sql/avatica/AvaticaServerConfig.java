@@ -20,21 +20,31 @@
 package org.apache.druid.sql.avatica;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.joda.time.Period;
 
 class AvaticaServerConfig
 {
-  @JsonProperty
-  public int maxConnections = 25;
+  public static int DEFAULT_MAX_CONNECTIONS = 25;
+  public static int DEFAULT_MAX_STATEMENTS_PER_CONNECTION = 4;
+  public static Period DEFAULT_CONNECTION_IDLE_TIMEOUT = new Period("PT5M");
+  public static int DEFAULT_MIN_ROWS_PER_FRAME = 100;
+  public static int DEFAULT_MAX_ROWS_PER_FRAME = 5000;
 
   @JsonProperty
-  public int maxStatementsPerConnection = 4;
+  public int maxConnections = DEFAULT_MAX_CONNECTIONS;
 
   @JsonProperty
-  public Period connectionIdleTimeout = new Period("PT5M");
+  public int maxStatementsPerConnection = DEFAULT_MAX_STATEMENTS_PER_CONNECTION;
 
   @JsonProperty
-  public int maxRowsPerFrame = 5000;
+  public Period connectionIdleTimeout = DEFAULT_CONNECTION_IDLE_TIMEOUT;
+
+  @JsonProperty
+  public int minRowsPerFrame = DEFAULT_MIN_ROWS_PER_FRAME;
+
+  @JsonProperty
+  public int maxRowsPerFrame = DEFAULT_MAX_ROWS_PER_FRAME;
 
   public int getMaxConnections()
   {
@@ -54,5 +64,17 @@ class AvaticaServerConfig
   public int getMaxRowsPerFrame()
   {
     return maxRowsPerFrame;
+  }
+
+  public int getMinRowsPerFrame()
+  {
+    Preconditions.checkArgument(
+        minRowsPerFrame > 0,
+        "'druid.sql.avatica.minRowsPerFrame' must be set to a value greater than 0"
+    );
+    if (maxRowsPerFrame > 0) {
+      return Math.min(getMaxRowsPerFrame(), minRowsPerFrame);
+    }
+    return minRowsPerFrame;
   }
 }

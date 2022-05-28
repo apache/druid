@@ -19,15 +19,22 @@
 
 package org.apache.druid.tests.indexer;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.clients.TaskResponseObject;
 import org.apache.druid.testing.utils.DruidClusterAdminClient;
 import org.apache.druid.testing.utils.EventSerializer;
 import org.apache.druid.testing.utils.ITRetryUtil;
@@ -39,6 +46,7 @@ import org.apache.druid.testing.utils.WikipediaStreamEventStreamGenerator;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.testng.Assert;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -66,15 +74,18 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   // The value to this tag is a timestamp that can be used by a lambda function to remove unused stream.
   private static final String STREAM_EXPIRE_TAG = "druid-ci-expire-after";
   private static final int STREAM_SHARD_COUNT = 2;
-  private static final long WAIT_TIME_MILLIS = 3 * 60 * 1000L;
-  private static final long CYCLE_PADDING_MS = 100;
+  protected static final long CYCLE_PADDING_MS = 100;
 
   private static final String QUERIES_FILE = "/stream/queries/stream_index_queries.json";
   private static final String SUPERVISOR_SPEC_TEMPLATE_FILE = "supervisor_spec_template.json";
+  private static final String SUPERVISOR_WITH_AUTOSCALER_SPEC_TEMPLATE_FILE = "supervisor_with_autoscaler_spec_template.json";
 
   protected static final String DATA_RESOURCE_ROOT = "/stream/data";
   protected static final String SUPERVISOR_SPEC_TEMPLATE_PATH =
       String.join("/", DATA_RESOURCE_ROOT, SUPERVISOR_SPEC_TEMPLATE_FILE);
+  protected static final String SUPERVISOR_WITH_AUTOSCALER_SPEC_TEMPLATE_PATH =
+          String.join("/", DATA_RESOURCE_ROOT, SUPERVISOR_WITH_AUTOSCALER_SPEC_TEMPLATE_FILE);
+
   protected static final String SERIALIZER_SPEC_DIR = "serializer";
   protected static final String INPUT_FORMAT_SPEC_DIR = "input_format";
   protected static final String INPUT_ROW_PARSER_SPEC_DIR = "parser";
@@ -83,14 +94,26 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   protected static final String INPUT_FORMAT = "inputFormat";
   protected static final String INPUT_ROW_PARSER = "parser";
 
-  private static final String JSON_INPUT_FORMAT_PATH =
+  protected static final String JSON_INPUT_FORMAT_PATH =
       String.join("/", DATA_RESOURCE_ROOT, "json", INPUT_FORMAT_SPEC_DIR, "input_format.json");
+
+  protected static final List<String> DEFAULT_DIMENSIONS = ImmutableList.of(
+      "page",
+      "language",
+      "user",
+      "unpatrolled",
+      "newPage",
+      "robot",
+      "anonymous",
+      "namespace",
+      "continent",
+      "country",
+      "region",
+      "city"
+  );
 
   @Inject
   private DruidClusterAdminClient druidClusterAdminClient;
-
-  @Inject
-  private IntegrationTestingConfig config;
 
   private StreamAdminClient streamAdminClient;
 
@@ -110,6 +133,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       String fullDatasourceName,
       String parserType,
       String parserOrInputFormat,
+      List<String> dimensions,
       IntegrationTestingConfig config
   );
 
@@ -132,6 +156,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     return listResources(DATA_RESOURCE_ROOT)
         .stream()
         .filter(resource -> !SUPERVISOR_SPEC_TEMPLATE_FILE.equals(resource))
+        .filter(resource -> !SUPERVISOR_WITH_AUTOSCALER_SPEC_TEMPLATE_FILE.equals(resource))
         .collect(Collectors.toList());
   }
 
@@ -161,7 +186,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     return map;
   }
 
-  private Closeable createResourceCloser(GeneratedTestConfig generatedTestConfig)
+  protected Closeable createResourceCloser(GeneratedTestConfig generatedTestConfig)
   {
     return Closer.create().register(() -> doMethodTeardown(generatedTestConfig));
   }
@@ -191,13 +216,13 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       generatedTestConfig.setSupervisorId(indexer.submitSupervisor(taskSpec));
       LOG.info("Submitted supervisor");
       // Start data generator
-      streamGenerator.run(
+      final long numWritten = streamGenerator.run(
           generatedTestConfig.getStreamName(),
           streamEventWriter,
           TOTAL_NUMBER_OF_SECOND,
           FIRST_EVENT_TIME
       );
-      verifyIngestedData(generatedTestConfig);
+      verifyIngestedData(generatedTestConfig, numWritten);
     }
   }
 
@@ -213,7 +238,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   void doTestIndexDataWithLosingOverlord(@Nullable Boolean transactionEnabled) throws Exception
   {
     testIndexWithLosingNodeHelper(
-        () -> druidClusterAdminClient.restartIndexerContainer(),
+        () -> druidClusterAdminClient.restartOverlordContainer(),
         () -> druidClusterAdminClient.waitUntilIndexerReady(),
         transactionEnabled
     );
@@ -253,7 +278,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           EVENTS_PER_SECOND,
           CYCLE_PADDING_MS
       );
-      streamGenerator.run(
+      long numWritten = streamGenerator.run(
           generatedTestConfig.getStreamName(),
           streamEventWriter,
           secondsToGenerateFirstRound,
@@ -270,7 +295,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       // Suspend the supervisor
       indexer.suspendSupervisor(generatedTestConfig.getSupervisorId());
       // Start generating remainning half of the data
-      streamGenerator.run(
+      numWritten += streamGenerator.run(
           generatedTestConfig.getStreamName(),
           streamEventWriter,
           secondsToGenerateRemaining,
@@ -287,7 +312,137 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           "Waiting for supervisor to be healthy"
       );
       // Verify that supervisor can catch up with the stream
-      verifyIngestedData(generatedTestConfig);
+      verifyIngestedData(generatedTestConfig, numWritten);
+    }
+  }
+
+  protected void doTestIndexDataWithAutoscaler(@Nullable Boolean transactionEnabled) throws Exception
+  {
+    final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig(
+            INPUT_FORMAT,
+            getResourceAsString(JSON_INPUT_FORMAT_PATH)
+    );
+    try (
+            final Closeable closer = createResourceCloser(generatedTestConfig);
+            final StreamEventWriter streamEventWriter = createStreamEventWriter(config, transactionEnabled)
+    ) {
+      final String taskSpec = generatedTestConfig.getStreamIngestionPropsTransform()
+              .apply(getResourceAsString(SUPERVISOR_WITH_AUTOSCALER_SPEC_TEMPLATE_PATH));
+      LOG.info("supervisorSpec: [%s]\n", taskSpec);
+      // Start supervisor
+      generatedTestConfig.setSupervisorId(indexer.submitSupervisor(taskSpec));
+      LOG.info("Submitted supervisor");
+      // Start generating half of the data
+      int secondsToGenerateRemaining = TOTAL_NUMBER_OF_SECOND;
+      int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 2;
+      secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateFirstRound;
+      final StreamGenerator streamGenerator = new WikipediaStreamEventStreamGenerator(
+              new JsonEventSerializer(jsonMapper),
+              EVENTS_PER_SECOND,
+              CYCLE_PADDING_MS
+      );
+      long numWritten = streamGenerator.run(
+              generatedTestConfig.getStreamName(),
+              streamEventWriter,
+              secondsToGenerateFirstRound,
+              FIRST_EVENT_TIME
+      );
+      // Verify supervisor is healthy before suspension
+      ITRetryUtil.retryUntil(
+          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId())),
+              true,
+              10000,
+              30,
+              "Waiting for supervisor to be healthy"
+      );
+
+      // wait for autoScaling task numbers from 1 to 2.
+      ITRetryUtil.retryUntil(
+          () -> indexer.getRunningTasks().size() == 2,
+              true,
+              10000,
+              50,
+              "waiting for autoScaling task numbers from 1 to 2"
+      );
+
+      // Start generating remainning half of the data
+      numWritten += streamGenerator.run(
+              generatedTestConfig.getStreamName(),
+              streamEventWriter,
+              secondsToGenerateRemaining,
+              FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound)
+      );
+
+      // Verify that supervisor can catch up with the stream
+      verifyIngestedData(generatedTestConfig, numWritten);
+    }
+  }
+
+  protected void doTestTerminatedSupervisorAutoCleanup(@Nullable Boolean transactionEnabled) throws Exception
+  {
+    final GeneratedTestConfig generatedTestConfig1 = new GeneratedTestConfig(
+        INPUT_FORMAT,
+        getResourceAsString(JSON_INPUT_FORMAT_PATH)
+    );
+    final GeneratedTestConfig generatedTestConfig2 = new GeneratedTestConfig(
+        INPUT_FORMAT,
+        getResourceAsString(JSON_INPUT_FORMAT_PATH)
+    );
+    try (
+        final Closeable closer1 = createResourceCloser(generatedTestConfig1);
+        final Closeable closer2 = createResourceCloser(generatedTestConfig2);
+    ) {
+      final String taskSpec1 = generatedTestConfig1.getStreamIngestionPropsTransform()
+                                                 .apply(getResourceAsString(SUPERVISOR_SPEC_TEMPLATE_PATH));
+      LOG.info("supervisorSpec1: [%s]\n", taskSpec1);
+      final String taskSpec2 = generatedTestConfig2.getStreamIngestionPropsTransform()
+                                                   .apply(getResourceAsString(SUPERVISOR_SPEC_TEMPLATE_PATH));
+      LOG.info("supervisorSpec2: [%s]\n", taskSpec2);
+      // Start both supervisors
+      generatedTestConfig1.setSupervisorId(indexer.submitSupervisor(taskSpec1));
+      generatedTestConfig2.setSupervisorId(indexer.submitSupervisor(taskSpec2));
+      LOG.info("Submitted supervisors");
+
+      // Sleep for 10 secs to make sure that at least one cycle of supervisor auto cleanup duty ran
+      Thread.sleep(10000);
+
+      // Verify that supervisor specs exist
+      List<Object> specs1 = indexer.getSupervisorHistory(generatedTestConfig1.getSupervisorId());
+      Assert.assertNotNull(specs1);
+      Assert.assertFalse(specs1.isEmpty());
+
+      List<Object> specs2 = indexer.getSupervisorHistory(generatedTestConfig2.getSupervisorId());
+      Assert.assertNotNull(specs2);
+      Assert.assertFalse(specs2.isEmpty());
+
+      // Supervisor 1 should still be active while supervisor 2 is now terminated
+      LOG.info("Terminating supervisor 2");
+      indexer.terminateSupervisor(generatedTestConfig2.getSupervisorId());
+
+      // Verify that auto cleanup eventually removes supervisor spec after termination
+      ITRetryUtil.retryUntil(
+          () -> {
+              try {
+                indexer.getSupervisorHistory(generatedTestConfig2.getSupervisorId());
+                LOG.warn("Supervisor history should not exist");
+                return false;
+              }
+              catch (ISE e) {
+                if (e.getMessage().contains("Not Found")) {
+                  return true;
+                }
+                throw e;
+              }
+          },
+          true,
+          10000,
+          30,
+          "Waiting for supervisor spec 2 to be auto clean"
+      );
+      // Verify that supervisor 1 spec was not remove
+      specs1 = indexer.getSupervisorHistory(generatedTestConfig1.getSupervisorId());
+      Assert.assertNotNull(specs1);
+      Assert.assertFalse(specs1.isEmpty());
     }
   }
 
@@ -332,7 +487,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           EVENTS_PER_SECOND,
           CYCLE_PADDING_MS
       );
-      streamGenerator.run(
+      long numWritten = streamGenerator.run(
           generatedTestConfig.getStreamName(),
           streamEventWriter,
           secondsToGenerateFirstRound,
@@ -353,7 +508,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       // Start generating one third of the data (while restarting)
       int secondsToGenerateSecondRound = TOTAL_NUMBER_OF_SECOND / 3;
       secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateSecondRound;
-      streamGenerator.run(
+      numWritten += streamGenerator.run(
           generatedTestConfig.getStreamName(),
           streamEventWriter,
           secondsToGenerateSecondRound,
@@ -364,7 +519,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       waitForReadyRunnable.run();
       LOG.info("Druid process is now available");
       // Start generating remaining data (after restarting)
-      streamGenerator.run(
+      numWritten += streamGenerator.run(
           generatedTestConfig.getStreamName(),
           streamEventWriter,
           secondsToGenerateRemaining,
@@ -379,7 +534,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           "Waiting for supervisor to be healthy"
       );
       // Verify that supervisor ingested all data
-      verifyIngestedData(generatedTestConfig);
+      verifyIngestedData(generatedTestConfig, numWritten);
     }
   }
 
@@ -409,7 +564,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           EVENTS_PER_SECOND,
           CYCLE_PADDING_MS
       );
-      streamGenerator.run(
+      long numWritten = streamGenerator.run(
           generatedTestConfig.getStreamName(),
           streamEventWriter,
           secondsToGenerateFirstRound,
@@ -428,7 +583,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       // Start generating one third of the data (while resharding)
       int secondsToGenerateSecondRound = TOTAL_NUMBER_OF_SECOND / 3;
       secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateSecondRound;
-      streamGenerator.run(
+      numWritten += streamGenerator.run(
           generatedTestConfig.getStreamName(),
           streamEventWriter,
           secondsToGenerateSecondRound,
@@ -454,7 +609,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           "Waiting for stream to finish resharding"
       );
       // Start generating remaining data (after resharding)
-      streamGenerator.run(
+      numWritten += streamGenerator.run(
           generatedTestConfig.getStreamName(),
           streamEventWriter,
           secondsToGenerateRemaining,
@@ -469,41 +624,70 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           "Waiting for supervisor to be healthy"
       );
       // Verify that supervisor can catch up with the stream
-      verifyIngestedData(generatedTestConfig);
+      verifyIngestedData(generatedTestConfig, numWritten);
+    }
+    // Verify that event thrown away count was not incremented by the reshard
+    List<TaskResponseObject> completedTasks = indexer.getCompleteTasksForDataSource(generatedTestConfig.getFullDatasourceName());
+    for (TaskResponseObject task : completedTasks) {
+      try {
+        RowIngestionMetersTotals stats = indexer.getTaskStats(task.getId());
+        Assert.assertEquals(0L, stats.getThrownAway());
+      }
+      catch (Exception e) {
+        // Failed task may not have a task stats report. We can ignore it as the task did not consume any data
+        if (!task.getStatus().isFailure()) {
+          throw e;
+        }
+      }
     }
   }
 
-  private void verifyIngestedData(GeneratedTestConfig generatedTestConfig) throws Exception
+  protected void verifyIngestedData(GeneratedTestConfig generatedTestConfig, long numWritten) throws Exception
   {
     // Wait for supervisor to consume events
-    LOG.info("Waiting for [%s] millis for stream indexing tasks to consume events", WAIT_TIME_MILLIS);
-    Thread.sleep(WAIT_TIME_MILLIS);
+    LOG.info("Waiting for stream indexing tasks to consume events");
+
+    ITRetryUtil.retryUntilTrue(
+        () ->
+          numWritten == this.queryHelper.countRows(
+              generatedTestConfig.getFullDatasourceName(),
+              Intervals.ETERNITY,
+              name -> new LongSumAggregatorFactory(name, "count")
+          ),
+        StringUtils.format(
+            "dataSource[%s] consumed [%,d] events, expected [%,d]",
+            generatedTestConfig.getFullDatasourceName(),
+            this.queryHelper.countRows(
+                generatedTestConfig.getFullDatasourceName(),
+                Intervals.ETERNITY,
+                name -> new LongSumAggregatorFactory(name, "count")
+            ),
+            numWritten
+        )
+    );
+
     // Query data
     final String querySpec = generatedTestConfig.getStreamQueryPropsTransform()
                                                 .apply(getResourceAsString(QUERIES_FILE));
     // this query will probably be answered from the indexing tasks but possibly from 2 historical segments / 2 indexing
-    this.queryHelper.testQueriesFromString(querySpec, 2);
-    LOG.info("Shutting down supervisor");
-    indexer.shutdownSupervisor(generatedTestConfig.getSupervisorId());
-    // Clear supervisor ID to not shutdown again.
-    generatedTestConfig.setSupervisorId(null);
-    // wait for all indexing tasks to finish
+    this.queryHelper.testQueriesFromString(querySpec);
+
+    // All data written to stream within 10 secs.
+    // Each task duration is 30 secs. Hence, one task will be able to consume all data from the stream.
     LOG.info("Waiting for all indexing tasks to finish");
     ITRetryUtil.retryUntilTrue(
-        () -> (indexer.getUncompletedTasksForDataSource(generatedTestConfig.getFullDatasourceName()).size() == 0),
-        "Waiting for Tasks Completion"
+        () -> (indexer.getCompleteTasksForDataSource(generatedTestConfig.getFullDatasourceName()).size() > 0),
+        "Waiting for Task Completion"
     );
+
     // wait for segments to be handed off
-    ITRetryUtil.retryUntil(
+    ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(generatedTestConfig.getFullDatasourceName()),
-        true,
-        10000,
-        30,
         "Real-time generated segments loaded"
     );
 
     // this query will be answered by at least 1 historical segment, most likely 2, and possibly up to all 4
-    this.queryHelper.testQueriesFromString(querySpec, 2);
+    this.queryHelper.testQueriesFromString(querySpec);
   }
 
   long getSumOfEventSequence(int numEvents)
@@ -515,7 +699,13 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   {
     if (generatedTestConfig.getSupervisorId() != null) {
       try {
-        indexer.shutdownSupervisor(generatedTestConfig.getSupervisorId());
+        LOG.info("Terminating supervisor");
+        indexer.terminateSupervisor(generatedTestConfig.getSupervisorId());
+        // Shutdown all tasks of supervisor
+        List<TaskResponseObject> runningTasks = indexer.getUncompletedTasksForDataSource(generatedTestConfig.getFullDatasourceName());
+        for (TaskResponseObject task : runningTasks) {
+          indexer.shutdownTask(task.getId());
+        }
       }
       catch (Exception e) {
         // Best effort cleanup as the supervisor may have already been cleanup
@@ -538,7 +728,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     }
   }
 
-  private class GeneratedTestConfig
+  protected class GeneratedTestConfig
   {
     private final String streamName;
     private final String fullDatasourceName;
@@ -546,7 +736,12 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     private Function<String, String> streamIngestionPropsTransform;
     private Function<String, String> streamQueryPropsTransform;
 
-    GeneratedTestConfig(String parserType, String parserOrInputFormat) throws Exception
+    public GeneratedTestConfig(String parserType, String parserOrInputFormat) throws Exception
+    {
+      this(parserType, parserOrInputFormat, DEFAULT_DIMENSIONS);
+    }
+
+    public GeneratedTestConfig(String parserType, String parserOrInputFormat, List<String> dimensions) throws Exception
     {
       streamName = getTestNamePrefix() + "_index_test_" + UUID.randomUUID();
       String datasource = getTestNamePrefix() + "_indexing_service_test_" + UUID.randomUUID();
@@ -568,6 +763,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           fullDatasourceName,
           parserType,
           parserOrInputFormat,
+          dimensions,
           config
       );
       streamQueryPropsTransform = generateStreamQueryPropsTransform(streamName, fullDatasourceName);

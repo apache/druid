@@ -20,10 +20,13 @@
 package org.apache.druid.server.audit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.common.config.ConfigSerde;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.DateTimes;
@@ -38,6 +41,7 @@ import org.joda.time.Interval;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.Query;
+import org.skife.jdbi.v2.Update;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.IOException;
@@ -75,8 +79,15 @@ public class SQLAuditManager implements AuditManager
   }
 
   @Override
-  public void doAudit(final AuditEntry auditEntry)
+  public <T> void doAudit(String key, String type, AuditInfo auditInfo, T payload, ConfigSerde<T> configSerde)
   {
+    AuditEntry auditEntry = AuditEntry.builder()
+                                      .key(key)
+                                      .type(type)
+                                      .auditInfo(auditInfo)
+                                      .payload(configSerde.serializeToString(payload, config.isSkipNullField()))
+                                      .build();
+
     dbi.withHandle(
         new HandleCallback<Void>()
         {
@@ -90,16 +101,42 @@ public class SQLAuditManager implements AuditManager
     );
   }
 
-  @Override
-  public void doAudit(AuditEntry auditEntry, Handle handle) throws IOException
+  @VisibleForTesting
+  ServiceMetricEvent.Builder getAuditMetricEventBuilder(AuditEntry auditEntry)
   {
-    emitter.emit(
-        new ServiceMetricEvent.Builder()
+    ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
             .setDimension("key", auditEntry.getKey())
             .setDimension("type", auditEntry.getType())
             .setDimension("author", auditEntry.getAuditInfo().getAuthor())
-            .build("config/audit", 1)
-    );
+            .setDimension("comment", auditEntry.getAuditInfo().getComment())
+            .setDimension("remote_address", auditEntry.getAuditInfo().getIp())
+            .setDimension("created_date", auditEntry.getAuditTime().toString());
+
+    if (config.getIncludePayloadAsDimensionInMetric()) {
+      builder.setDimension("payload", auditEntry.getPayload());
+    }
+
+    return builder;
+  }
+
+  @Override
+  public void doAudit(AuditEntry auditEntry, Handle handle) throws IOException
+  {
+    emitter.emit(getAuditMetricEventBuilder(auditEntry).build("config/audit", 1));
+
+    AuditEntry auditEntryToStore = auditEntry;
+    if (config.getMaxPayloadSizeBytes() >= 0) {
+      int payloadSize = jsonMapper.writeValueAsBytes(auditEntry.getPayload()).length;
+      if (payloadSize > config.getMaxPayloadSizeBytes()) {
+        auditEntryToStore = AuditEntry.builder()
+                                      .key(auditEntry.getKey())
+                                      .type(auditEntry.getType())
+                                      .auditInfo(auditEntry.getAuditInfo())
+                                      .payload(StringUtils.format(PAYLOAD_SKIP_MSG_FORMAT, config.getMaxPayloadSizeBytes()))
+                                      .auditTime(auditEntry.getAuditTime())
+                                      .build();
+      }
+    }
 
     handle.createStatement(
         StringUtils.format(
@@ -112,7 +149,7 @@ public class SQLAuditManager implements AuditManager
           .bind("author", auditEntry.getAuditInfo().getAuthor())
           .bind("comment", auditEntry.getAuditInfo().getComment())
           .bind("created_date", auditEntry.getAuditTime().toString())
-          .bind("payload", jsonMapper.writeValueAsBytes(auditEntry))
+          .bind("payload", jsonMapper.writeValueAsBytes(auditEntryToStore))
           .execute();
   }
 
@@ -191,6 +228,24 @@ public class SQLAuditManager implements AuditManager
       throws IllegalArgumentException
   {
     return fetchAuditHistoryLastEntries(null, type, limit);
+  }
+
+  @Override
+  public int removeAuditLogsOlderThan(final long timestamp)
+  {
+    DateTime dateTime = DateTimes.utc(timestamp);
+    return dbi.withHandle(
+        handle -> {
+          Update sql = handle.createStatement(
+              StringUtils.format(
+                  "DELETE FROM %s WHERE created_date < :date_time",
+                  getAuditTable()
+              )
+          );
+          return sql.bind("date_time", dateTime.toString())
+                    .execute();
+        }
+    );
   }
 
   private List<AuditEntry> fetchAuditHistoryLastEntries(final String key, final String type, int limit)

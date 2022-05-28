@@ -19,14 +19,44 @@
 
 package org.apache.druid.query.aggregation.variance;
 
+import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.MockitoJUnitRunner;
 
-public class StandardDeviationPostAggregatorTest
+import java.util.Map;
+
+@RunWith(MockitoJUnitRunner.class)
+public class StandardDeviationPostAggregatorTest extends InitializedNullHandlingTest
 {
+  private static final String NAME = "NAME";
+  private static final String FIELD_NAME = "FIELD_NAME";
+  private static final String POPULATION = "population";
+  private static final double VARIANCE = 12.56;
+
+  private Map<String, Object> combinedAggregators;
+  @Mock
+  private VarianceAggregatorCollector collector;
+
+  private StandardDeviationPostAggregator target;
+
+  @Before
+  public void setUp()
+  {
+    Mockito.doReturn(VARIANCE).when(collector).getVariance(true);
+    combinedAggregators = ImmutableMap.of(FIELD_NAME, collector);
+    target = new StandardDeviationPostAggregator(NAME, FIELD_NAME, POPULATION);
+  }
+
   @Test
   public void testSerde() throws Exception
   {
@@ -63,5 +93,18 @@ public class StandardDeviationPostAggregatorTest
                   .withNonnullFields("name", "fieldName")
                   .usingGetClass()
                   .verify();
+  }
+
+  @Test
+  public void testComputeForNullVarianceShouldReturnDefaultDoubleValue()
+  {
+    Mockito.when(collector.getVariance(true)).thenReturn(null);
+    Assert.assertEquals(NullHandling.defaultDoubleValue(), target.compute(combinedAggregators));
+  }
+
+  @Test
+  public void testComputeForVarianceShouldReturnSqrtOfVariance()
+  {
+    Assert.assertEquals(Math.sqrt(VARIANCE), target.compute(combinedAggregators), 1e-15);
   }
 }

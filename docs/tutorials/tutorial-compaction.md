@@ -30,7 +30,7 @@ Because there is some per-segment memory and processing overhead, it can sometim
 Please check [Segment size optimization](../operations/segment-optimization.md) for details.
 
 For this tutorial, we'll assume you've already downloaded Apache Druid as described in
-the [single-machine quickstart](index.html) and have it running on your local machine.
+the [single-machine quickstart](index.md) and have it running on your local machine.
 
 It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
 
@@ -90,7 +90,7 @@ We have included a compaction task spec for this tutorial datasource at `quickst
 
 This will compact all segments for the interval `2015-09-12/2015-09-13` in the `compaction-tutorial` datasource.
 
-The parameters in the `tuningConfig` control how many segments will be present in the compacted set of segments.
+The parameters in the `tuningConfig` control the maximum number of rows present in each compacted segment and thus affect the number of segments in the compacted set.
 
 In this tutorial example, only one compacted segment will be created per hour, as each hour has less rows than the 5000000 `maxRowsPerSegment` (note that the total number of rows is 39244).
 
@@ -141,12 +141,15 @@ We have included a compaction task spec that will create DAY granularity segment
   "type": "compact",
   "dataSource": "compaction-tutorial",
   "interval": "2015-09-12/2015-09-13",
-  "segmentGranularity": "DAY",
   "tuningConfig" : {
     "type" : "index_parallel",
     "maxRowsPerSegment" : 5000000,
     "maxRowsInMemory" : 25000,
     "forceExtendableShardSpecs" : true
+  },
+  "granularitySpec" : {
+    "segmentGranularity" : "DAY",
+    "queryGranularity" : "none"
   }
 }
 ```

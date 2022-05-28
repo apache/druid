@@ -19,11 +19,14 @@
 
 package org.apache.druid.indexing.seekablestream;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.JSONParseSpec;
@@ -33,12 +36,18 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.mockito.Mockito;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -48,6 +57,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+@RunWith(MockitoJUnitRunner.class)
 public class StreamChunkParserTest
 {
   private static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec(null, null, null);
@@ -57,6 +67,14 @@ public class StreamChunkParserTest
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
+
+  private final RowIngestionMeters rowIngestionMeters = new NoopRowIngestionMeters();
+  private final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
+      rowIngestionMeters,
+      false,
+      0,
+      0
+  );
 
   @Test
   public void testWithParserAndNullInputformatParseProperly() throws IOException
@@ -71,13 +89,16 @@ public class StreamChunkParserTest
         ),
         StringUtils.UTF8_STRING
     );
-    final StreamChunkParser chunkParser = new StreamChunkParser(
+    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         parser,
         // Set nulls for all parameters below since inputFormat will be never used.
         null,
         null,
         null,
-        null
+        null,
+        row -> true,
+        rowIngestionMeters,
+        parseExceptionHandler
     );
     parseAndAssertResult(chunkParser);
   }
@@ -86,12 +107,15 @@ public class StreamChunkParserTest
   public void testWithNullParserAndInputformatParseProperly() throws IOException
   {
     final JsonInputFormat inputFormat = new JsonInputFormat(JSONPathSpec.DEFAULT, Collections.emptyMap(), null);
-    final StreamChunkParser chunkParser = new StreamChunkParser(
+    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         null,
         inputFormat,
-        new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, Collections.emptyList()),
+        new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
-        temporaryFolder.newFolder()
+        temporaryFolder.newFolder(),
+        row -> true,
+        rowIngestionMeters,
+        parseExceptionHandler
     );
     parseAndAssertResult(chunkParser);
   }
@@ -101,12 +125,15 @@ public class StreamChunkParserTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Either parser or inputFormat should be set");
-    final StreamChunkParser chunkParser = new StreamChunkParser(
+    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         null,
         null,
         null,
         null,
-        null
+        null,
+        row -> true,
+        rowIngestionMeters,
+        parseExceptionHandler
     );
   }
 
@@ -123,25 +150,75 @@ public class StreamChunkParserTest
         ),
         StringUtils.UTF8_STRING
     );
+
     final TrackingJsonInputFormat inputFormat = new TrackingJsonInputFormat(
         JSONPathSpec.DEFAULT,
         Collections.emptyMap()
     );
-    final StreamChunkParser chunkParser = new StreamChunkParser(
+    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         parser,
         inputFormat,
-        new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, Collections.emptyList()),
+        new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
-        temporaryFolder.newFolder()
+        temporaryFolder.newFolder(),
+        row -> true,
+        rowIngestionMeters,
+        parseExceptionHandler
     );
     parseAndAssertResult(chunkParser);
-    Assert.assertTrue(inputFormat.used);
+    Assert.assertTrue(inputFormat.props.used);
   }
 
-  private void parseAndAssertResult(StreamChunkParser chunkParser) throws IOException
+  @Test
+  public void parseEmptyNotEndOfShard() throws IOException
+  {
+    final TrackingJsonInputFormat inputFormat = new TrackingJsonInputFormat(
+        JSONPathSpec.DEFAULT,
+        Collections.emptyMap()
+    );
+    RowIngestionMeters mockRowIngestionMeters = Mockito.mock(RowIngestionMeters.class);
+    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
+        null,
+        inputFormat,
+        new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
+        TransformSpec.NONE,
+        temporaryFolder.newFolder(),
+        row -> true,
+        mockRowIngestionMeters,
+        parseExceptionHandler
+    );
+    List<InputRow> parsedRows = chunkParser.parse(ImmutableList.of(), false);
+    Assert.assertEquals(0, parsedRows.size());
+    Mockito.verify(mockRowIngestionMeters).incrementThrownAway();
+  }
+
+  @Test
+  public void parseEmptyEndOfShard() throws IOException
+  {
+    final TrackingJsonInputFormat inputFormat = new TrackingJsonInputFormat(
+        JSONPathSpec.DEFAULT,
+        Collections.emptyMap()
+    );
+    RowIngestionMeters mockRowIngestionMeters = Mockito.mock(RowIngestionMeters.class);
+    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
+        null,
+        inputFormat,
+        new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
+        TransformSpec.NONE,
+        temporaryFolder.newFolder(),
+        row -> true,
+        mockRowIngestionMeters,
+        parseExceptionHandler
+    );
+    List<InputRow> parsedRows = chunkParser.parse(ImmutableList.of(), true);
+    Assert.assertEquals(0, parsedRows.size());
+    Mockito.verifyNoInteractions(mockRowIngestionMeters);
+  }
+
+  private void parseAndAssertResult(StreamChunkParser<ByteEntity> chunkParser) throws IOException
   {
     final String json = "{\"timestamp\": \"2020-01-01\", \"dim\": \"val\", \"met\": \"val2\"}";
-    List<InputRow> parsedRows = chunkParser.parse(Collections.singletonList(json.getBytes(StringUtils.UTF8_STRING)));
+    List<InputRow> parsedRows = chunkParser.parse(Collections.singletonList(new ByteEntity(json.getBytes(StringUtils.UTF8_STRING))), false);
     Assert.assertEquals(1, parsedRows.size());
     InputRow row = parsedRows.get(0);
     Assert.assertEquals(DateTimes.of("2020-01-01"), row.getTimestamp());
@@ -151,18 +228,44 @@ public class StreamChunkParserTest
 
   private static class TrackingJsonInputFormat extends JsonInputFormat
   {
-    private boolean used;
+    static class Props
+    {
+      private boolean used;
+    }
+    Props props;
 
-    private TrackingJsonInputFormat(@Nullable JSONPathSpec flattenSpec, @Nullable Map<String, Boolean> featureSpec)
+    private TrackingJsonInputFormat(@Nullable JSONPathSpec flattenSpec,
+                                    @Nullable Map<String, Boolean> featureSpec)
     {
       super(flattenSpec, featureSpec, null);
+      props = new Props();
+    }
+
+    private TrackingJsonInputFormat(@Nullable JSONPathSpec flattenSpec,
+                                    @Nullable Map<String, Boolean> featureSpec,
+                                    boolean lineSplittable,
+                                    Props props)
+    {
+      super(flattenSpec, featureSpec, null, lineSplittable);
+      this.props = props;
     }
 
     @Override
     public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
     {
-      used = true;
+      props.used = true;
       return super.createReader(inputRowSchema, source, temporaryDirectory);
+    }
+
+    @Override
+    public JsonInputFormat withLineSplittable(boolean lineSplittable)
+    {
+      return new TrackingJsonInputFormat(this.getFlattenSpec(),
+                                         this.getFeatureSpec(),
+                                         lineSplittable,
+                                         //pass `props` to new object as reference,
+                                         //so any changes on this property of the new object can also be seen from original object
+                                         this.props);
     }
   }
 }

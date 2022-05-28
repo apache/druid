@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
+import java.util.Set;
+
 /**
  * A row transform that is part of a {@link TransformSpec}. Transforms allow adding new fields to input rows. Each
  * one has a "name" (the name of the new field) which can be referred to by DimensionSpecs, AggregatorFactories, etc.
@@ -52,4 +54,9 @@ public interface Transform
    * as output.
    */
   RowFunction getRowFunction();
+
+  /**
+   * Returns the names of all columns that this transform is going to read.
+   */
+  Set<String> getRequiredColumns();
 }

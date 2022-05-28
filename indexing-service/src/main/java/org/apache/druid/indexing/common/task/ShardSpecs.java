@@ -22,7 +22,7 @@ package org.apache.druid.indexing.common.task;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -33,10 +33,10 @@ import java.util.Map;
  */
 public class ShardSpecs
 {
-  private final Map<Interval, List<ShardSpec>> map;
-  private Granularity queryGranularity;
+  private final Map<Interval, List<BucketNumberedShardSpec<?>>> map;
+  private final Granularity queryGranularity;
 
-  ShardSpecs(final Map<Interval, List<ShardSpec>> map, Granularity queryGranularity)
+  ShardSpecs(final Map<Interval, List<BucketNumberedShardSpec<?>>> map, Granularity queryGranularity)
   {
     this.map = map;
     this.queryGranularity = queryGranularity;
@@ -50,13 +50,13 @@ public class ShardSpecs
    *
    * @return a shardSpec
    */
-  ShardSpec getShardSpec(Interval interval, InputRow row)
+  BucketNumberedShardSpec<?> getShardSpec(Interval interval, InputRow row)
   {
-    final List<ShardSpec> shardSpecs = map.get(interval);
+    final List<BucketNumberedShardSpec<?>> shardSpecs = map.get(interval);
     if (shardSpecs == null || shardSpecs.isEmpty()) {
       throw new ISE("Failed to get shardSpec for interval[%s]", interval);
     }
     final long truncatedTimestamp = queryGranularity.bucketStart(row.getTimestamp()).getMillis();
-    return shardSpecs.get(0).getLookup(shardSpecs).getShardSpec(truncatedTimestamp, row);
+    return (BucketNumberedShardSpec<?>) shardSpecs.get(0).getLookup(shardSpecs).getShardSpec(truncatedTimestamp, row);
   }
 }

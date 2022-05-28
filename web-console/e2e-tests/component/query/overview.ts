@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-core';
+import * as playwright from 'playwright-chromium';
 
+import { clickButton, clickText, setInput } from '../../util/playwright';
 import { extractTable } from '../../util/table';
 
 /**
@@ -34,22 +35,50 @@ export class QueryOverview {
 
   async runQuery(query: string): Promise<string[][]> {
     await this.page.goto(this.baseUrl);
-    await this.page.reload({ waitUntil: 'networkidle0' });
+    await this.page.reload({ waitUntil: 'networkidle' });
 
     const input = await this.page.$('div.query-input textarea');
-    await this.setInput(input!, query);
-    await this.clickButton('Run');
-    await this.page.waitFor('div.query-info');
+    await setInput(input!, query);
+    await clickButton(this.page, 'Run');
+    await this.page.waitForSelector('div.query-info');
 
     return await extractTable(this.page, 'div.query-output div.rt-tr-group', 'div.rt-td');
   }
 
-  private async setInput(input: playwright.ElementHandle<Element>, value: string) {
-    await input.fill('');
-    await input.type(value);
-  }
+  async cancelQuery(query: string): Promise<number> {
+    await this.page.goto(this.baseUrl);
+    await this.page.reload({ waitUntil: 'networkidle' });
 
-  private async clickButton(text: string) {
-    await this.page.click(`//button/*[contains(text(),"${text}")]`, { waitUntil: 'load' } as any);
+    await this.page.waitForSelector('div.query-input textarea');
+    const input = await this.page.$('div.query-input textarea');
+
+    await setInput(input!, query);
+
+    await Promise.all([
+      this.page.waitForRequest(
+        request => request.url().includes('druid/v2') && request.method() === 'POST',
+      ),
+      clickButton(this.page, 'Run'),
+    ]);
+
+    await this.page.waitForSelector('.cancel-label');
+
+    const [resp] = await Promise.all([
+      this.page.waitForResponse(
+        response => response.url().includes('druid/v2') && response.request().method() === 'DELETE',
+      ),
+
+      clickText(this.page, 'Cancel query'),
+      this.page.off(
+        'requestfinished',
+        request => request.url().includes('druid/v2') && request.method() === 'POST',
+      ),
+      this.page.off(
+        'requestfinished',
+        request => request.url().includes('druid/v2') && request.method() === 'DELETE',
+      ),
+    ]);
+
+    return resp.status();
   }
 }

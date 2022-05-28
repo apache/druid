@@ -33,6 +33,7 @@ import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnType;
 import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -267,9 +268,15 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public ColumnType getIntermediateType()
   {
-    return "float";
+    return ColumnType.FLOAT;
+  }
+
+  @Override
+  public ColumnType getResultType()
+  {
+    return ColumnType.FLOAT;
   }
 
   @Override

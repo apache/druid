@@ -19,12 +19,15 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.primitives.Ints;
+import com.google.common.collect.Iterables;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.config.CalciteConnectionConfig;
@@ -49,10 +52,14 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlExplain;
+import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
@@ -62,91 +69,202 @@ import org.apache.calcite.tools.Planner;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
+import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.Query;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
+import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
+import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
+import org.apache.druid.sql.calcite.rel.DruidUnionRel;
+import org.apache.druid.sql.calcite.run.QueryMaker;
+import org.apache.druid.sql.calcite.run.QueryMakerFactory;
+import org.apache.druid.utils.Throwables;
+import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class DruidPlanner implements Closeable
 {
+  private static final EmittingLogger log = new EmittingLogger(DruidPlanner.class);
+  private static final Pattern UNNAMED_COLUMN_PATTERN = Pattern.compile("^EXPR\\$\\d+$", Pattern.CASE_INSENSITIVE);
+
   private final FrameworkConfig frameworkConfig;
   private final Planner planner;
   private final PlannerContext plannerContext;
+  private final QueryMakerFactory queryMakerFactory;
+
   private RexBuilder rexBuilder;
 
-  public DruidPlanner(
+  DruidPlanner(
       final FrameworkConfig frameworkConfig,
-      final PlannerContext plannerContext
+      final PlannerContext plannerContext,
+      final QueryMakerFactory queryMakerFactory
   )
   {
     this.frameworkConfig = frameworkConfig;
     this.planner = Frameworks.getPlanner(frameworkConfig);
     this.plannerContext = plannerContext;
+    this.queryMakerFactory = queryMakerFactory;
   }
 
-  public PrepareResult prepare(final String sql) throws SqlParseException, ValidationException, RelConversionException
+  /**
+   * Validates a SQL query and populates {@link PlannerContext#getResourceActions()}.
+   *
+   * @return set of {@link Resource} corresponding to any Druid datasources or views which are taking part in the query.
+   */
+  public ValidationResult validate(boolean authorizeContextParams) throws SqlParseException, ValidationException
   {
-    SqlNode parsed = planner.parse(sql);
-    SqlExplain explain = null;
-    if (parsed.getKind() == SqlKind.EXPLAIN) {
-      explain = (SqlExplain) parsed;
-      parsed = explain.getExplicandum();
-    }
-    final SqlNode validated = planner.validate(parsed);
-    RelRoot root = planner.rel(validated);
-    RelDataType rowType = root.validatedRowType;
-
-    // this is sort of lame, planner won't cough up its validator, it is private and has no accessors, so make another
-    // one so we can get the parameter types... but i suppose beats creating our own Prepare and Planner implementations
-    SqlValidator validator = getValidator();
-    RelDataType parameterTypes = validator.getParameterRowType(validator.validate(parsed));
-
-    if (explain != null) {
-      final RelDataTypeFactory typeFactory = root.rel.getCluster().getTypeFactory();
-      return new PrepareResult(getExplainStructType(typeFactory), parameterTypes);
-    }
-    return new PrepareResult(rowType, parameterTypes);
-  }
-
-  public PlannerResult plan(final String sql)
-      throws SqlParseException, ValidationException, RelConversionException
-  {
-    SqlExplain explain = null;
-    SqlNode parsed = planner.parse(sql);
-    if (parsed.getKind() == SqlKind.EXPLAIN) {
-      explain = (SqlExplain) parsed;
-      parsed = explain.getExplicandum();
-    }
-    // the planner's type factory is not available until after parsing
-    this.rexBuilder = new RexBuilder(planner.getTypeFactory());
-
-    SqlParameterizerShuttle sshuttle = new SqlParameterizerShuttle(plannerContext);
-    SqlNode parametized = parsed.accept(sshuttle);
-    final SqlNode validated = planner.validate(parametized);
-    final RelRoot root = planner.rel(validated);
+    resetPlanner();
+    final ParsedNodes parsed = ParsedNodes.create(planner.parse(plannerContext.getSql()), plannerContext.getTimeZone());
+    final SqlValidator validator = getValidator();
+    final SqlNode validatedQueryNode;
 
     try {
-      return planWithDruidConvention(explain, root);
+      validatedQueryNode = validator.validate(rewriteDynamicParameters(parsed.getQueryNode()));
     }
-    catch (RelOptPlanner.CannotPlanException e) {
-      // Try again with BINDABLE convention. Used for querying Values and metadata tables.
-      try {
-        return planWithBindableConvention(explain, root);
+    catch (RuntimeException e) {
+      throw new ValidationException(e);
+    }
+
+    SqlResourceCollectorShuttle resourceCollectorShuttle = new SqlResourceCollectorShuttle(validator, plannerContext);
+    validatedQueryNode.accept(resourceCollectorShuttle);
+
+    final Set<ResourceAction> resourceActions = new HashSet<>(resourceCollectorShuttle.getResourceActions());
+
+    if (parsed.getInsertOrReplace() != null) {
+      final String targetDataSource = validateAndGetDataSourceForIngest(parsed.getInsertOrReplace());
+      resourceActions.add(new ResourceAction(new Resource(targetDataSource, ResourceType.DATASOURCE), Action.WRITE));
+    }
+    if (authorizeContextParams) {
+      plannerContext.getQueryContext().getUserParams().keySet().forEach(contextParam -> resourceActions.add(
+          new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
+      ));
+    }
+
+    plannerContext.setResourceActions(resourceActions);
+    return new ValidationResult(resourceActions);
+  }
+
+  /**
+   * Prepare an SQL query for execution, including some initial parsing and validation and any dynamic parameter type
+   * resolution, to support prepared statements via JDBC.
+   *
+   * In some future this could perhaps re-use some of the work done by {@link #validate(boolean)}
+   * instead of repeating it, but that day is not today.
+   */
+  public PrepareResult prepare() throws SqlParseException, ValidationException, RelConversionException
+  {
+    resetPlanner();
+
+    final ParsedNodes parsed = ParsedNodes.create(planner.parse(plannerContext.getSql()), plannerContext.getTimeZone());
+    final SqlNode validatedQueryNode = planner.validate(parsed.getQueryNode());
+    final RelRoot rootQueryRel = planner.rel(validatedQueryNode);
+
+    final SqlValidator validator = getValidator();
+    final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
+    final RelDataType parameterTypes = validator.getParameterRowType(validator.validate(validatedQueryNode));
+    final RelDataType returnedRowType;
+
+    if (parsed.getExplainNode() != null) {
+      returnedRowType = getExplainStructType(typeFactory);
+    } else {
+      returnedRowType = buildQueryMaker(rootQueryRel, parsed.getInsertOrReplace()).getResultType();
+    }
+
+    return new PrepareResult(returnedRowType, parameterTypes);
+  }
+
+  /**
+   * Plan an SQL query for execution, returning a {@link PlannerResult} which can be used to actually execute the query.
+   *
+   * Ideally, the query can be planned into a native Druid query, using {@link #planWithDruidConvention}, but will
+   * fall-back to {@link #planWithBindableConvention} if this is not possible.
+   *
+   * In some future this could perhaps re-use some of the work done by {@link #validate(boolean)}
+   * instead of repeating it, but that day is not today.
+   */
+  public PlannerResult plan() throws SqlParseException, ValidationException, RelConversionException
+  {
+    resetPlanner();
+
+    final ParsedNodes parsed = ParsedNodes.create(planner.parse(plannerContext.getSql()), plannerContext.getTimeZone());
+
+    try {
+      if (parsed.getIngestionGranularity() != null) {
+        plannerContext.getQueryContext().addSystemParam(
+            DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
+            plannerContext.getJsonMapper().writeValueAsString(parsed.getIngestionGranularity())
+        );
       }
-      catch (Exception e2) {
-        e.addSuppressed(e2);
+    }
+    catch (JsonProcessingException e) {
+      throw new ValidationException("Unable to serialize partition granularity.");
+    }
+
+    if (parsed.getReplaceIntervals() != null) {
+      plannerContext.getQueryContext().addSystemParam(
+          DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
+          String.join(",", parsed.getReplaceIntervals())
+      );
+    }
+
+    // the planner's type factory is not available until after parsing
+    this.rexBuilder = new RexBuilder(planner.getTypeFactory());
+    final SqlNode parameterizedQueryNode = rewriteDynamicParameters(parsed.getQueryNode());
+    final SqlNode validatedQueryNode = planner.validate(parameterizedQueryNode);
+    final RelRoot rootQueryRel = planner.rel(validatedQueryNode);
+
+    try {
+      return planWithDruidConvention(rootQueryRel, parsed.getExplainNode(), parsed.getInsertOrReplace());
+    }
+    catch (Exception e) {
+      Throwable cannotPlanException = Throwables.getCauseOfType(e, RelOptPlanner.CannotPlanException.class);
+      if (null == cannotPlanException) {
+        // Not a CannotPlanningException, rethrow without trying with bindable
         throw e;
       }
+
+      // If there isn't any ingestion clause, then we should try again with BINDABLE convention. And return without
+      // any error, if it is plannable by the bindable convention
+      if (parsed.getInsertOrReplace() == null) {
+        // Try again with BINDABLE convention. Used for querying Values and metadata tables.
+        try {
+          return planWithBindableConvention(rootQueryRel, parsed.getExplainNode());
+        }
+        catch (Exception e2) {
+          e.addSuppressed(e2);
+        }
+      }
+      Logger logger = log;
+      if (!plannerContext.getQueryContext().isDebug()) {
+        logger = log.noStackTrace();
+      }
+      String errorMessage = buildSQLPlanningErrorMessage(cannotPlanException);
+      logger.warn(e, errorMessage);
+      throw new UnsupportedSQLQueryException(errorMessage);
     }
   }
 
@@ -161,8 +279,330 @@ public class DruidPlanner implements Closeable
     planner.close();
   }
 
+  /**
+   * While the actual query might not have changed, if the druid planner is re-used, we still have the need to reset the
+   * {@link #planner} since we do not re-use artifacts or keep track of state between
+   * {@link #validate}, {@link #prepare}, and {@link #plan} and instead repeat parsing and validation
+   * for each step.
+   *
+   * Currently, that state tracking is done in {@link org.apache.druid.sql.SqlLifecycle}, which will create a new
+   * planner for each of the corresponding steps so this isn't strictly necessary at this time, this method is here as
+   * much to make this situation explicit and provide context for a future refactor as anything else (and some tests
+   * do re-use the planner between validate, prepare, and plan, which will run into this issue).
+   *
+   * This could be improved by tying {@link org.apache.druid.sql.SqlLifecycle} and {@link DruidPlanner} states more
+   * closely with the state of {@link #planner}, instead of repeating parsing and validation between each of these
+   * steps.
+   */
+  private void resetPlanner()
+  {
+    planner.close();
+    planner.reset();
+  }
+
+  /**
+   * Construct a {@link PlannerResult} for a {@link RelNode} that is directly translatable to a native Druid query.
+   */
+  private PlannerResult planWithDruidConvention(
+      final RelRoot root,
+      @Nullable final SqlExplain explain,
+      @Nullable final SqlInsert insertOrReplace
+  ) throws ValidationException, RelConversionException
+  {
+    final RelRoot possiblyLimitedRoot = possiblyWrapRootWithOuterLimitFromContext(root);
+    final QueryMaker queryMaker = buildQueryMaker(root, insertOrReplace);
+    plannerContext.setQueryMaker(queryMaker);
+
+    RelNode parameterized = rewriteRelDynamicParameters(possiblyLimitedRoot.rel);
+    final DruidRel<?> druidRel = (DruidRel<?>) planner.transform(
+        Rules.DRUID_CONVENTION_RULES,
+        planner.getEmptyTraitSet()
+               .replace(DruidConvention.instance())
+               .plus(root.collation),
+        parameterized
+    );
+
+    if (explain != null) {
+      return planExplanation(druidRel, explain, true);
+    } else {
+      final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
+        // sanity check
+        final Set<ResourceAction> readResourceActions =
+            plannerContext.getResourceActions()
+                          .stream()
+                          .filter(action -> action.getAction() == Action.READ)
+                          .collect(Collectors.toSet());
+
+        Preconditions.checkState(
+            readResourceActions.isEmpty() == druidRel.getDataSourceNames().isEmpty()
+            // The resources found in the plannerContext can be less than the datasources in
+            // the query plan, because the query planner can eliminate empty tables by replacing
+            // them with InlineDataSource of empty rows.
+            || readResourceActions.size() >= druidRel.getDataSourceNames().size(),
+            "Authorization sanity check failed"
+        );
+
+        return druidRel.runQuery();
+      };
+
+      return new PlannerResult(resultsSupplier, queryMaker.getResultType());
+    }
+  }
+
+  /**
+   * Construct a {@link PlannerResult} for a fall-back 'bindable' rel, for things that are not directly translatable
+   * to native Druid queries such as system tables and just a general purpose (but definitely not optimized) fall-back.
+   *
+   * See {@link #planWithDruidConvention} which will handle things which are directly translatable
+   * to native Druid queries.
+   */
+  private PlannerResult planWithBindableConvention(
+      final RelRoot root,
+      @Nullable final SqlExplain explain
+  ) throws RelConversionException
+  {
+    BindableRel bindableRel = (BindableRel) planner.transform(
+        Rules.BINDABLE_CONVENTION_RULES,
+        planner.getEmptyTraitSet().replace(BindableConvention.INSTANCE).plus(root.collation),
+        root.rel
+    );
+
+    if (!root.isRefTrivial()) {
+      // Add a projection on top to accommodate root.fields.
+      final List<RexNode> projects = new ArrayList<>();
+      final RexBuilder rexBuilder = bindableRel.getCluster().getRexBuilder();
+      for (int field : Pair.left(root.fields)) {
+        projects.add(rexBuilder.makeInputRef(bindableRel, field));
+      }
+      bindableRel = new Bindables.BindableProject(
+          bindableRel.getCluster(),
+          bindableRel.getTraitSet(),
+          bindableRel,
+          projects,
+          root.validatedRowType
+      );
+    }
+
+    if (explain != null) {
+      return planExplanation(bindableRel, explain, false);
+    } else {
+      final BindableRel theRel = bindableRel;
+      final DataContext dataContext = plannerContext.createDataContext(
+          (JavaTypeFactory) planner.getTypeFactory(),
+          plannerContext.getParameters()
+      );
+      final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
+        final Enumerable<?> enumerable = theRel.bind(dataContext);
+        final Enumerator<?> enumerator = enumerable.enumerator();
+        return Sequences.withBaggage(new BaseSequence<>(
+            new BaseSequence.IteratorMaker<Object[], EnumeratorIterator<Object[]>>()
+            {
+              @Override
+              public EnumeratorIterator<Object[]> make()
+              {
+                return new EnumeratorIterator<>(new Iterator<Object[]>()
+                {
+                  @Override
+                  public boolean hasNext()
+                  {
+                    return enumerator.moveNext();
+                  }
+
+                  @Override
+                  public Object[] next()
+                  {
+                    return (Object[]) enumerator.current();
+                  }
+                });
+              }
+
+              @Override
+              public void cleanup(EnumeratorIterator<Object[]> iterFromMake)
+              {
+
+              }
+            }
+        ), enumerator::close);
+      };
+      return new PlannerResult(resultsSupplier, root.validatedRowType);
+    }
+  }
+
+  /**
+   * Construct a {@link PlannerResult} for an 'explain' query from a {@link RelNode}
+   */
+  private PlannerResult planExplanation(
+      final RelNode rel,
+      final SqlExplain explain,
+      final boolean isDruidConventionExplanation
+  )
+  {
+    String explanation = RelOptUtil.dumpPlan("", rel, explain.getFormat(), explain.getDetailLevel());
+    String resourcesString;
+    try {
+      if (isDruidConventionExplanation && rel instanceof DruidRel) {
+        // Show the native queries instead of Calcite's explain if the legacy flag is turned off
+        if (plannerContext.getPlannerConfig().isUseNativeQueryExplain()) {
+          DruidRel<?> druidRel = (DruidRel<?>) rel;
+          try {
+            explanation = explainSqlPlanAsNativeQueries(druidRel);
+          }
+          catch (Exception ex) {
+            log.warn(ex, "Unable to translate to a native Druid query. Resorting to legacy Druid explain plan");
+          }
+        }
+      }
+      final Set<Resource> resources =
+          plannerContext.getResourceActions().stream().map(ResourceAction::getResource).collect(Collectors.toSet());
+      resourcesString = plannerContext.getJsonMapper().writeValueAsString(resources);
+    }
+    catch (JsonProcessingException jpe) {
+      // this should never happen, we create the Resources here, not a user
+      log.error(jpe, "Encountered exception while serializing Resources for explain output");
+      resourcesString = null;
+    }
+    final Supplier<Sequence<Object[]>> resultsSupplier = Suppliers.ofInstance(
+        Sequences.simple(ImmutableList.of(new Object[]{explanation, resourcesString})));
+    return new PlannerResult(resultsSupplier, getExplainStructType(rel.getCluster().getTypeFactory()));
+  }
+
+  /**
+   * This method doesn't utilize the Calcite's internal {@link RelOptUtil#dumpPlan} since that tends to be verbose
+   * and not indicative of the native Druid Queries which will get executed
+   * This method assumes that the Planner has converted the RelNodes to DruidRels, and thereby we can implictly cast it
+   *
+   * @param rel Instance of the root {@link DruidRel} which is formed by running the planner transformations on it
+   * @return A string representing an array of native queries that correspond to the given SQL query, in JSON format
+   * @throws JsonProcessingException
+   */
+  private String explainSqlPlanAsNativeQueries(DruidRel<?> rel) throws JsonProcessingException
+  {
+    ObjectMapper jsonMapper = plannerContext.getJsonMapper();
+    List<DruidQuery> druidQueryList;
+    druidQueryList = flattenOutermostRel(rel)
+        .stream()
+        .map(druidRel -> druidRel.toDruidQuery(false))
+        .collect(Collectors.toList());
+
+
+    // Putting the queries as object node in an ArrayNode, since directly returning a list causes issues when
+    // serializing the "queryType". Another method would be to create a POJO containing query and signature, and then
+    // serializing it using normal list method.
+    ArrayNode nativeQueriesArrayNode = jsonMapper.createArrayNode();
+
+    for (DruidQuery druidQuery : druidQueryList) {
+      Query<?> nativeQuery = druidQuery.getQuery();
+      ObjectNode objectNode = jsonMapper.createObjectNode();
+      objectNode.put("query", jsonMapper.convertValue(nativeQuery, ObjectNode.class));
+      objectNode.put("signature", jsonMapper.convertValue(druidQuery.getOutputRowSignature(), ArrayNode.class));
+      nativeQueriesArrayNode.add(objectNode);
+    }
+
+    return jsonMapper.writeValueAsString(nativeQueriesArrayNode);
+  }
+
+  /**
+   * Given a {@link DruidRel}, this method recursively flattens the Rels if they are of the type {@link DruidUnionRel}
+   * It is implicitly assumed that the {@link DruidUnionRel} can never be the child of a non {@link DruidUnionRel}
+   * node
+   * For eg, a DruidRel structure of kind:
+   * DruidUnionRel
+   *  DruidUnionRel
+   *    DruidRel (A)
+   *    DruidRel (B)
+   *  DruidRel(C)
+   * will return [DruidRel(A), DruidRel(B), DruidRel(C)]
+   *
+   * @param outermostDruidRel The outermost rel which is to be flattened
+   * @return a list of DruidRel's which donot have a DruidUnionRel nested in between them
+   */
+  private List<DruidRel<?>> flattenOutermostRel(DruidRel<?> outermostDruidRel)
+  {
+    List<DruidRel<?>> druidRels = new ArrayList<>();
+    flattenOutermostRel(outermostDruidRel, druidRels);
+    return druidRels;
+  }
+
+  /**
+   * Recursive function (DFS) which traverses the nodes and collects the corresponding {@link DruidRel} into a list if
+   * they are not of the type {@link DruidUnionRel} or else calls the method with the child nodes. The DFS order of the
+   * nodes are retained, since that is the order in which they will actually be called in {@link DruidUnionRel#runQuery()}
+   *
+   * @param druidRel                The current relNode
+   * @param flattendListAccumulator Accumulator list which needs to be appended by this method
+   */
+  private void flattenOutermostRel(DruidRel<?> druidRel, List<DruidRel<?>> flattendListAccumulator)
+  {
+    if (druidRel instanceof DruidUnionRel) {
+      DruidUnionRel druidUnionRel = (DruidUnionRel) druidRel;
+      druidUnionRel.getInputs().forEach(innerRelNode -> {
+        DruidRel<?> innerDruidRelNode = (DruidRel<?>) innerRelNode; // This type conversion should always be possible
+        flattenOutermostRel(innerDruidRelNode, flattendListAccumulator);
+      });
+    } else {
+      flattendListAccumulator.add(druidRel);
+    }
+  }
+
+  /**
+   * This method wraps the root with a {@link LogicalSort} that applies a limit (no ordering change). If the outer rel
+   * is already a {@link Sort}, we can merge our outerLimit into it, similar to what is going on in
+   * {@link org.apache.druid.sql.calcite.rule.SortCollapseRule}.
+   *
+   * The {@link PlannerContext#CTX_SQL_OUTER_LIMIT} flag that controls this wrapping is meant for internal use only by
+   * the web console, allowing it to apply a limit to queries without rewriting the original SQL.
+   *
+   * @param root root node
+   * @return root node wrapped with a limiting logical sort if a limit is specified in the query context.
+   */
+  @Nullable
+  private RelRoot possiblyWrapRootWithOuterLimitFromContext(RelRoot root)
+  {
+    Object outerLimitObj = plannerContext.getQueryContext().get(PlannerContext.CTX_SQL_OUTER_LIMIT);
+    Long outerLimit = DimensionHandlerUtils.convertObjectToLong(outerLimitObj, true);
+    if (outerLimit == null) {
+      return root;
+    }
+
+    final LogicalSort newRootRel;
+
+    if (root.rel instanceof Sort) {
+      Sort sort = (Sort) root.rel;
+
+      final OffsetLimit originalOffsetLimit = OffsetLimit.fromSort(sort);
+      final OffsetLimit newOffsetLimit = originalOffsetLimit.andThen(new OffsetLimit(0, outerLimit));
+
+      if (newOffsetLimit.equals(originalOffsetLimit)) {
+        // nothing to do, don't bother to make a new sort
+        return root;
+      }
+
+      newRootRel = LogicalSort.create(
+          sort.getInput(),
+          sort.collation,
+          newOffsetLimit.getOffsetAsRexNode(rexBuilder),
+          newOffsetLimit.getLimitAsRexNode(rexBuilder)
+      );
+    } else {
+      newRootRel = LogicalSort.create(
+          root.rel,
+          root.collation,
+          null,
+          new OffsetLimit(0, outerLimit).getLimitAsRexNode(rexBuilder)
+      );
+    }
+
+    return new RelRoot(newRootRel, root.validatedRowType, root.kind, root.fields, root.collation);
+  }
+
+  /**
+   * Constructs an SQL validator, just like papa {@link #planner} uses.
+   */
   private SqlValidator getValidator()
   {
+    // this is sort of lame, planner won't cough up its validator, which is nice and seeded after validating a query,
+    // but it is private and has no accessors, so make another one so we can get the parameter types... but i suppose
+    // beats creating our own Prepare and Planner implementations
     Preconditions.checkNotNull(planner.getTypeFactory());
 
     final CalciteConnectionConfig connectionConfig;
@@ -193,200 +633,130 @@ public class DruidPlanner implements Closeable
     );
   }
 
-  private PlannerResult planWithDruidConvention(
-      final SqlExplain explain,
-      final RelRoot root
-  ) throws RelConversionException
+  /**
+   * Uses {@link SqlParameterizerShuttle} to rewrite {@link SqlNode} to swap out any
+   * {@link org.apache.calcite.sql.SqlDynamicParam} early for their {@link SqlLiteral}
+   * replacement
+   */
+  private SqlNode rewriteDynamicParameters(SqlNode parsed)
   {
-    final RelNode possiblyWrappedRootRel = possiblyWrapRootWithOuterLimitFromContext(root);
-
-    RelParameterizerShuttle parametizer = new RelParameterizerShuttle(plannerContext);
-    RelNode parametized = possiblyWrappedRootRel.accept(parametizer);
-    final DruidRel<?> druidRel = (DruidRel<?>) planner.transform(
-        Rules.DRUID_CONVENTION_RULES,
-        planner.getEmptyTraitSet()
-               .replace(DruidConvention.instance())
-               .plus(root.collation),
-        parametized
-    );
-
-    final Set<String> dataSourceNames = ImmutableSet.copyOf(druidRel.getDataSourceNames());
-
-    if (explain != null) {
-      return planExplanation(druidRel, explain, dataSourceNames);
-    } else {
-      final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
-        if (root.isRefTrivial()) {
-          return druidRel.runQuery();
-        } else {
-          // Add a mapping on top to accommodate root.fields.
-          return Sequences.map(
-              druidRel.runQuery(),
-              input -> {
-                final Object[] retVal = new Object[root.fields.size()];
-                for (int i = 0; i < root.fields.size(); i++) {
-                  retVal[i] = input[root.fields.get(i).getKey()];
-                }
-                return retVal;
-              }
-          );
-        }
-      };
-
-      return new PlannerResult(resultsSupplier, root.validatedRowType, dataSourceNames);
+    if (!plannerContext.getParameters().isEmpty()) {
+      SqlParameterizerShuttle sshuttle = new SqlParameterizerShuttle(plannerContext);
+      return parsed.accept(sshuttle);
     }
-  }
-
-  private PlannerResult planWithBindableConvention(
-      final SqlExplain explain,
-      final RelRoot root
-  ) throws RelConversionException
-  {
-    BindableRel bindableRel = (BindableRel) planner.transform(
-        Rules.BINDABLE_CONVENTION_RULES,
-        planner.getEmptyTraitSet()
-               .replace(BindableConvention.INSTANCE)
-               .plus(root.collation),
-        root.rel
-    );
-
-    if (!root.isRefTrivial()) {
-      // Add a projection on top to accommodate root.fields.
-      final List<RexNode> projects = new ArrayList<>();
-      final RexBuilder rexBuilder = bindableRel.getCluster().getRexBuilder();
-      for (int field : Pair.left(root.fields)) {
-        projects.add(rexBuilder.makeInputRef(bindableRel, field));
-      }
-      bindableRel = new Bindables.BindableProject(
-          bindableRel.getCluster(),
-          bindableRel.getTraitSet(),
-          bindableRel,
-          projects,
-          root.validatedRowType
-      );
-    }
-
-    if (explain != null) {
-      return planExplanation(bindableRel, explain, ImmutableSet.of());
-    } else {
-      final BindableRel theRel = bindableRel;
-      final DataContext dataContext = plannerContext.createDataContext((JavaTypeFactory) planner.getTypeFactory(), plannerContext.getParameters());
-      final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
-        final Enumerable enumerable = theRel.bind(dataContext);
-        final Enumerator enumerator = enumerable.enumerator();
-        return Sequences.withBaggage(new BaseSequence<>(
-            new BaseSequence.IteratorMaker<Object[], EnumeratorIterator<Object[]>>()
-            {
-              @Override
-              public EnumeratorIterator<Object[]> make()
-              {
-                return new EnumeratorIterator<>(new Iterator<Object[]>()
-                {
-                  @Override
-                  public boolean hasNext()
-                  {
-                    return enumerator.moveNext();
-                  }
-
-                  @Override
-                  public Object[] next()
-                  {
-                    return (Object[]) enumerator.current();
-                  }
-                });
-              }
-
-              @Override
-              public void cleanup(EnumeratorIterator iterFromMake)
-              {
-
-              }
-            }
-        ), enumerator::close);
-      };
-      return new PlannerResult(resultsSupplier, root.validatedRowType, ImmutableSet.of());
-    }
+    return parsed;
   }
 
   /**
-   * This method wraps the root with a {@link LogicalSort} that applies a limit (no ordering change). If the outer rel
-   * is already a {@link Sort}, we can merge our outerLimit into it, similar to what is going on in
-   * {@link org.apache.druid.sql.calcite.rule.SortCollapseRule}.
-   *
-   * The {@link PlannerContext#CTX_SQL_OUTER_LIMIT} flag that controls this wrapping is meant for internal use only by
-   * the web console, allowing it to apply a limit to queries without rewriting the original SQL.
-   *
-   * @param root root node
-   * @return root node wrapped with a limiting logical sort if a limit is specified in the query context.
+   * Fall-back dynamic parameter substitution using {@link RelParameterizerShuttle} in the event that
+   * {@link #rewriteDynamicParameters(SqlNode)} was unable to successfully substitute all parameter values, and will
+   * cause a failure if any dynamic a parameters are not bound.
    */
-  @Nullable
-  private RelNode possiblyWrapRootWithOuterLimitFromContext(
-      RelRoot root
-  )
+  private RelNode rewriteRelDynamicParameters(RelNode rootRel)
   {
-    Object outerLimitObj = plannerContext.getQueryContext().get(PlannerContext.CTX_SQL_OUTER_LIMIT);
-    Long outerLimit = DimensionHandlerUtils.convertObjectToLong(outerLimitObj, true);
-    if (outerLimit == null) {
-      return root.rel;
-    }
-
-    if (root.rel instanceof Sort) {
-      Sort innerSort = (Sort) root.rel;
-      final int offset = Calcites.getOffset(innerSort);
-      final int innerLimit = Calcites.getFetch(innerSort);
-      final int fetch = Calcites.collapseFetch(
-          innerLimit,
-          Ints.checkedCast(outerLimit),
-          0
-      );
-
-      if (fetch == innerLimit) {
-        // nothing to do, don't bother to make a new sort
-        return root.rel;
-      }
-
-      return LogicalSort.create(
-          innerSort.getInput(),
-          innerSort.collation,
-          offset > 0 ? makeBigIntLiteral(offset) : null,
-          makeBigIntLiteral(fetch)
-      );
-    }
-    return LogicalSort.create(
-        root.rel,
-        root.collation,
-        null,
-        makeBigIntLiteral(outerLimit)
-    );
+    RelParameterizerShuttle parameterizer = new RelParameterizerShuttle(plannerContext);
+    return rootRel.accept(parameterizer);
   }
 
-  private RexNode makeBigIntLiteral(long value)
+  private QueryMaker buildQueryMaker(
+      final RelRoot rootQueryRel,
+      @Nullable final SqlInsert insertOrReplace
+  ) throws ValidationException
   {
-    return rexBuilder.makeLiteral(
-        value,
-        new BasicSqlType(DruidTypeSystem.INSTANCE, SqlTypeName.BIGINT),
-        false
-    );
-  }
-
-  private PlannerResult planExplanation(
-      final RelNode rel,
-      final SqlExplain explain,
-      final Set<String> datasourceNames
-  )
-  {
-    final String explanation = RelOptUtil.dumpPlan("", rel, explain.getFormat(), explain.getDetailLevel());
-    final Supplier<Sequence<Object[]>> resultsSupplier = Suppliers.ofInstance(
-        Sequences.simple(ImmutableList.of(new Object[]{explanation})));
-    return new PlannerResult(resultsSupplier, getExplainStructType(rel.getCluster().getTypeFactory()), datasourceNames);
+    if (insertOrReplace != null) {
+      final String targetDataSource = validateAndGetDataSourceForIngest(insertOrReplace);
+      validateColumnsForIngestion(rootQueryRel);
+      return queryMakerFactory.buildForInsert(targetDataSource, rootQueryRel, plannerContext);
+    } else {
+      return queryMakerFactory.buildForSelect(rootQueryRel, plannerContext);
+    }
   }
 
   private static RelDataType getExplainStructType(RelDataTypeFactory typeFactory)
   {
     return typeFactory.createStructType(
-        ImmutableList.of(Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)),
-        ImmutableList.of("PLAN")
+        ImmutableList.of(
+            Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR),
+            Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)
+        ),
+        ImmutableList.of("PLAN", "RESOURCES")
     );
+  }
+
+  /**
+   * Extract target datasource from a {@link SqlInsert}, and also validate that the ingestion is of a form we support.
+   * Expects the target datasource to be either an unqualified name, or a name qualified by the default schema.
+   */
+  private String validateAndGetDataSourceForIngest(final SqlInsert insert) throws ValidationException
+  {
+    if (insert.isUpsert()) {
+      throw new ValidationException("UPSERT is not supported.");
+    }
+
+    if (insert.getTargetColumnList() != null) {
+      throw new ValidationException("Ingestion with target column list is not supported.");
+    }
+
+    final SqlIdentifier tableIdentifier = (SqlIdentifier) insert.getTargetTable();
+    final String dataSource;
+
+    if (tableIdentifier.names.isEmpty()) {
+      // I don't think this can happen, but include a branch for it just in case.
+      throw new ValidationException("Ingestion requires target table.");
+    } else if (tableIdentifier.names.size() == 1) {
+      // Unqualified name.
+      dataSource = Iterables.getOnlyElement(tableIdentifier.names);
+    } else {
+      // Qualified name.
+      final String defaultSchemaName =
+          Iterables.getOnlyElement(CalciteSchema.from(frameworkConfig.getDefaultSchema()).path(null));
+
+      if (tableIdentifier.names.size() == 2 && defaultSchemaName.equals(tableIdentifier.names.get(0))) {
+        dataSource = tableIdentifier.names.get(1);
+      } else {
+        throw new ValidationException(
+            StringUtils.format("Cannot ingest into [%s] because it is not a Druid datasource.", tableIdentifier)
+        );
+      }
+    }
+
+    try {
+      IdUtils.validateId("Ingestion dataSource", dataSource);
+    }
+    catch (IllegalArgumentException e) {
+      throw new ValidationException(e.getMessage());
+    }
+
+    return dataSource;
+  }
+
+  private void validateColumnsForIngestion(RelRoot rootQueryRel) throws ValidationException
+  {
+    // Check that there are no unnamed columns in the insert.
+    for (Pair<Integer, String> field : rootQueryRel.fields) {
+      if (UNNAMED_COLUMN_PATTERN.matcher(field.right).matches()) {
+        throw new ValidationException("Cannot ingest expressions that do not have an alias "
+                                      + "or columns with names like EXPR$[digit]."
+                                      + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
+                                      + "\"func(X) as myColumn\"");
+      }
+    }
+  }
+
+  private String buildSQLPlanningErrorMessage(Throwable exception)
+  {
+    String errorMessage = plannerContext.getPlanningError();
+    if (null == errorMessage && exception instanceof UnsupportedSQLQueryException) {
+      errorMessage = exception.getMessage();
+    }
+    if (null == errorMessage) {
+      errorMessage = "Please check broker logs for more details";
+    } else {
+      // Re-phrase since planning errors are more like hints
+      errorMessage = "Possible error: " + errorMessage;
+    }
+    // Finally, add the query itself to error message that user will get.
+    return StringUtils.format("Cannot build plan for query: %s. %s", plannerContext.getSql(), errorMessage);
   }
 
   private static class EnumeratorIterator<T> implements Iterator<T>
@@ -408,6 +778,150 @@ public class DruidPlanner implements Closeable
     public T next()
     {
       return it.next();
+    }
+  }
+
+  private static class ParsedNodes
+  {
+    @Nullable
+    private final SqlExplain explain;
+
+    @Nullable
+    private final SqlInsert insertOrReplace;
+
+    private final SqlNode query;
+
+    @Nullable
+    private final Granularity ingestionGranularity;
+
+    @Nullable
+    private final List<String> replaceIntervals;
+
+    private ParsedNodes(
+        @Nullable SqlExplain explain,
+        @Nullable SqlInsert insertOrReplace,
+        SqlNode query,
+        @Nullable Granularity ingestionGranularity,
+        @Nullable List<String> replaceIntervals
+    )
+    {
+      this.explain = explain;
+      this.insertOrReplace = insertOrReplace;
+      this.query = query;
+      this.ingestionGranularity = ingestionGranularity;
+      this.replaceIntervals = replaceIntervals;
+    }
+
+    static ParsedNodes create(final SqlNode node, DateTimeZone dateTimeZone) throws ValidationException
+    {
+      SqlNode query = node;
+      SqlExplain explain = null;
+      if (query.getKind() == SqlKind.EXPLAIN) {
+        explain = (SqlExplain) query;
+        query = explain.getExplicandum();
+      }
+
+      if (query.getKind() == SqlKind.INSERT) {
+        if (query instanceof DruidSqlInsert) {
+          return handleInsert(explain, (DruidSqlInsert) query);
+        } else if (query instanceof DruidSqlReplace) {
+          return handleReplace(explain, (DruidSqlReplace) query, dateTimeZone);
+        }
+      }
+
+      if (!query.isA(SqlKind.QUERY)) {
+        throw new ValidationException(StringUtils.format("Cannot execute [%s].", query.getKind()));
+      }
+
+      return new ParsedNodes(explain, null, query, null, null);
+    }
+
+    static ParsedNodes handleInsert(SqlExplain explain, DruidSqlInsert druidSqlInsert) throws ValidationException
+    {
+      SqlNode query = druidSqlInsert.getSource();
+
+      // Check if ORDER BY clause is not provided to the underlying query
+      if (query instanceof SqlOrderBy) {
+        SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
+        SqlNodeList orderByList = sqlOrderBy.orderList;
+        if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
+          throw new ValidationException("Cannot have ORDER BY on an INSERT query, use CLUSTERED BY instead.");
+        }
+      }
+
+      Granularity ingestionGranularity = druidSqlInsert.getPartitionedBy();
+
+      if (druidSqlInsert.getClusteredBy() != null) {
+        query = DruidSqlParserUtils.convertClusterByToOrderBy(query, druidSqlInsert.getClusteredBy());
+      }
+
+      if (!query.isA(SqlKind.QUERY)) {
+        throw new ValidationException(StringUtils.format("Cannot execute [%s].", query.getKind()));
+      }
+
+      return new ParsedNodes(explain, druidSqlInsert, query, ingestionGranularity, null);
+    }
+
+    static ParsedNodes handleReplace(SqlExplain explain, DruidSqlReplace druidSqlReplace, DateTimeZone dateTimeZone)
+        throws ValidationException
+    {
+      SqlNode query = druidSqlReplace.getSource();
+
+      // Check if ORDER BY clause is not provided to the underlying query
+      if (query instanceof SqlOrderBy) {
+        SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
+        SqlNodeList orderByList = sqlOrderBy.orderList;
+        if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
+          throw new ValidationException("Cannot have ORDER BY on a REPLACE query, use CLUSTERED BY instead.");
+        }
+      }
+
+      SqlNode replaceTimeQuery = druidSqlReplace.getReplaceTimeQuery();
+      if (replaceTimeQuery == null) {
+        throw new ValidationException("Missing time chunk information in OVERWRITE clause for REPLACE, set it to OVERWRITE WHERE <__time based condition> or set it to overwrite the entire table with OVERWRITE ALL.");
+      }
+
+      Granularity ingestionGranularity = druidSqlReplace.getPartitionedBy();
+      List<String> replaceIntervals = DruidSqlParserUtils.validateQueryAndConvertToIntervals(replaceTimeQuery, ingestionGranularity, dateTimeZone);
+
+      if (druidSqlReplace.getClusteredBy() != null) {
+        query = DruidSqlParserUtils.convertClusterByToOrderBy(query, druidSqlReplace.getClusteredBy());
+      }
+
+      if (!query.isA(SqlKind.QUERY)) {
+        throw new ValidationException(StringUtils.format("Cannot execute [%s].", query.getKind()));
+      }
+
+      return new ParsedNodes(explain, druidSqlReplace, query, ingestionGranularity, replaceIntervals);
+    }
+
+    @Nullable
+    public SqlExplain getExplainNode()
+    {
+      return explain;
+    }
+
+    @Nullable
+    public SqlInsert getInsertOrReplace()
+    {
+      return insertOrReplace;
+    }
+
+    @Nullable
+    public List<String> getReplaceIntervals()
+    {
+      return replaceIntervals;
+    }
+
+    public SqlNode getQueryNode()
+    {
+      return query;
+    }
+
+    @Nullable
+    public Granularity getIngestionGranularity()
+    {
+      return ingestionGranularity;
     }
   }
 }

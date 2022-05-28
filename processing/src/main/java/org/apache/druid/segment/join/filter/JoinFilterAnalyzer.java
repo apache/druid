@@ -26,14 +26,16 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
+import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -46,27 +48,27 @@ import java.util.Set;
 /**
  * When there is a filter in a join query, we can sometimes improve performance by applying parts of the filter
  * when we first read from the base table instead of after the join.
- * 
+ *
  * The first step of the filter splitting is to convert the filter into
  * https://en.wikipedia.org/wiki/Conjunctive_normal_form (an AND of ORs). This allows us to consider each
  * OR clause independently as a candidate for filter push down to the base table.
- * 
+ *
  * A filter clause can be pushed down if it meets one of the following conditions:
  * - The filter only applies to columns from the base table
  * - The filter applies to columns from the join table, and we determine that the filter can be rewritten
  * into a filter on columns from the base table
- * 
+ *
  * For the second case, where we rewrite filter clauses, the rewritten clause can be less selective than the original,
  * so we preserve the original clause in the post-join filtering phase.
- * 
+ *
  * The starting point for join analysis is the {@link #computeJoinFilterPreAnalysis} method. This method should be
  * called before performing any per-segment join query work. This method converts the query filter into
  * conjunctive normal form, and splits the CNF clauses into a portion that only references base table columns and
  * a portion that references join table columns. For the filter clauses that apply to join table columns, the
  * pre-analysis step computes the information necessary for rewriting such filters into filters on base table columns.
- * 
+ *
  * The result of this pre-analysis method should be passed into the next step of join filter analysis, described below.
- * 
+ *
  * The {@link #splitFilter(JoinFilterPreAnalysis)} method takes the pre-analysis result and optionally applies the
  * filter rewrite and push down operations on a per-segment level.
  */
@@ -79,44 +81,48 @@ public class JoinFilterAnalyzer
    * where we convert the query filter (if any) into conjunctive normal form and then
    * determine the structure of RHS filter rewrites (if any), since this information is shared across all
    * per-segment operations.
-   * 
+   *
    * See {@link JoinFilterPreAnalysis} for details on the result of this pre-analysis step.
    *
-   * @param joinableClauses                 The joinable clauses from the query
-   * @param virtualColumns                  The virtual columns from the query
-   * @param originalFilter                  The original filter from the query
-   * @param enableFilterPushDown            Whether to enable filter push down
-   * @param enableFilterRewrite             Whether to enable rewrites of filters involving RHS columns
-   * @param enableRewriteValueColumnFilters Whether to enable rewrites of filters invovling RHS non-key columns
-   * @param filterRewriteMaxSize            The maximum size of the correlated value set for rewritten filters.
-   *                                        If the correlated value set size exceeds this, the filter will not be
-   *                                        rewritten and pushed down.
+   * @param key All the information needed to pre-analyze a filter
    *
    * @return A JoinFilterPreAnalysis containing information determined in this pre-analysis step.
    */
-  public static JoinFilterPreAnalysis computeJoinFilterPreAnalysis(
-      JoinableClauses joinableClauses,
-      VirtualColumns virtualColumns,
-      Filter originalFilter,
-      boolean enableFilterPushDown,
-      boolean enableFilterRewrite,
-      boolean enableRewriteValueColumnFilters,
-      long filterRewriteMaxSize
-  )
+  public static JoinFilterPreAnalysis computeJoinFilterPreAnalysis(final JoinFilterPreAnalysisKey key)
   {
     final List<VirtualColumn> preJoinVirtualColumns = new ArrayList<>();
     final List<VirtualColumn> postJoinVirtualColumns = new ArrayList<>();
 
-    joinableClauses.splitVirtualColumns(virtualColumns, preJoinVirtualColumns, postJoinVirtualColumns);
-    JoinFilterPreAnalysis.Builder preAnalysisBuilder =
-        new JoinFilterPreAnalysis.Builder(joinableClauses, originalFilter, postJoinVirtualColumns)
-            .withEnableFilterPushDown(enableFilterPushDown)
-            .withEnableFilterRewrite(enableFilterRewrite);
-    if (originalFilter == null || !enableFilterPushDown) {
+    final JoinableClauses joinableClauses = JoinableClauses.fromList(key.getJoinableClauses());
+    joinableClauses.splitVirtualColumns(key.getVirtualColumns(), preJoinVirtualColumns, postJoinVirtualColumns);
+
+    final JoinFilterPreAnalysis.Builder preAnalysisBuilder =
+        new JoinFilterPreAnalysis.Builder(key, postJoinVirtualColumns);
+
+    if (key.getFilter() == null || !key.getRewriteConfig().isEnableFilterPushDown()) {
       return preAnalysisBuilder.build();
     }
 
-    Set<Filter> normalizedOrClauses = Filters.toNormalizedOrClauses(originalFilter);
+    List<Filter> normalizedOrClauses;
+    try {
+      normalizedOrClauses = Filters.toNormalizedOrClauses(key.getFilter());
+    }
+    catch (CNFFilterExplosionException cnfFilterExplosionException) {
+      JoinFilterRewriteConfig configWithoutPushdownAndRewrite = new JoinFilterRewriteConfig(
+          false, // disable the filter pushdown and rewrite optimization
+          false,
+          key.getRewriteConfig().isEnableRewriteValueColumnFilters(),
+          key.getRewriteConfig().isEnableRewriteJoinToFilter(),
+          key.getRewriteConfig().getFilterRewriteMaxSize()
+      );
+      JoinFilterPreAnalysisKey keyWithoutPushdownAndRewrite = new JoinFilterPreAnalysisKey(
+          configWithoutPushdownAndRewrite,
+          key.getJoinableClauses(),
+          key.getVirtualColumns(),
+          key.getFilter()
+      );
+      return new JoinFilterPreAnalysis.Builder(keyWithoutPushdownAndRewrite, postJoinVirtualColumns).build();
+    }
 
     List<Filter> normalizedBaseTableClauses = new ArrayList<>();
     List<Filter> normalizedJoinTableClauses = new ArrayList<>();
@@ -135,7 +141,7 @@ public class JoinFilterAnalyzer
     preAnalysisBuilder
         .withNormalizedBaseTableClauses(normalizedBaseTableClauses)
         .withNormalizedJoinTableClauses(normalizedJoinTableClauses);
-    if (!enableFilterRewrite) {
+    if (!key.getRewriteConfig().isEnableFilterRewrite()) {
       return preAnalysisBuilder.build();
     }
 
@@ -146,26 +152,34 @@ public class JoinFilterAnalyzer
         normalizedJoinTableClauses,
         equiconditions,
         joinableClauses,
-        enableRewriteValueColumnFilters,
-        filterRewriteMaxSize
+        key.getRewriteConfig().isEnableRewriteValueColumnFilters(),
+        key.getRewriteConfig().getFilterRewriteMaxSize()
     );
 
-    return preAnalysisBuilder.withCorrelations(correlations)
-                      .build();
+    return preAnalysisBuilder.withCorrelations(correlations).build();
   }
 
-  /**
-   * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
-   *
-   * @return A JoinFilterSplit indicating what parts of the filter should be applied pre-join and post-join
-   */
   public static JoinFilterSplit splitFilter(
       JoinFilterPreAnalysis joinFilterPreAnalysis
   )
   {
+    return splitFilter(joinFilterPreAnalysis, null);
+  }
+
+  /**
+   * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   * @param baseFilter - Filter on base table that was specified in the query itself
+   *
+   * @return A JoinFilterSplit indicating what parts of the filter should be applied pre-join and post-join
+   */
+  public static JoinFilterSplit splitFilter(
+      JoinFilterPreAnalysis joinFilterPreAnalysis,
+      @Nullable Filter baseFilter
+  )
+  {
     if (joinFilterPreAnalysis.getOriginalFilter() == null || !joinFilterPreAnalysis.isEnableFilterPushDown()) {
       return new JoinFilterSplit(
-          null,
+          baseFilter,
           joinFilterPreAnalysis.getOriginalFilter(),
           ImmutableSet.of()
       );
@@ -175,6 +189,10 @@ public class JoinFilterAnalyzer
     List<Filter> leftFilters = new ArrayList<>();
     List<Filter> rightFilters = new ArrayList<>();
     Map<Expr, VirtualColumn> pushDownVirtualColumnsForLhsExprs = new HashMap<>();
+
+    if (null != baseFilter) {
+      leftFilters.add(baseFilter);
+    }
 
     for (Filter baseTableFilter : joinFilterPreAnalysis.getNormalizedBaseTableClauses()) {
       if (!Filters.filterMatchesNull(baseTableFilter)) {
@@ -200,8 +218,8 @@ public class JoinFilterAnalyzer
     }
 
     return new JoinFilterSplit(
-        Filters.and(leftFilters),
-        Filters.and(rightFilters),
+        Filters.maybeAnd(leftFilters).orElse(null),
+        Filters.maybeAnd(rightFilters).orElse(null),
         new HashSet<>(pushDownVirtualColumnsForLhsExprs.values())
     );
   }
@@ -211,16 +229,15 @@ public class JoinFilterAnalyzer
    * Analyze a filter clause from a filter that is in conjunctive normal form (AND of ORs).
    * The clause is expected to be an OR filter or a leaf filter.
    *
-   * @param filterClause                       Individual filter clause (an OR filter or a leaf filter) from a filter that is in CNF
-   * @param joinFilterPreAnalysis              The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
-   * @param pushDownVirtualColumnsForLhsExprs  Used when there are LHS expressions in the join equiconditions.
-   *                                           If we rewrite an RHS filter such that it applies to the LHS expression instead,
-   *                                           because the expression existed only in the equicondition, we must create a virtual column
-   *                                           on the LHS with the same expression in order to apply the filter.
-   *                                           The specific rewriting methods such as {@link #rewriteSelectorFilter} will use this
-   *                                           as a cache for virtual columns that they need to created, keyed by the expression, so that
-   *                                           they can avoid creating redundant virtual columns.
-   *
+   * @param filterClause                      Individual filter clause (an OR filter or a leaf filter) from a filter that is in CNF
+   * @param joinFilterPreAnalysis             The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   * @param pushDownVirtualColumnsForLhsExprs Used when there are LHS expressions in the join equiconditions.
+   *                                          If we rewrite an RHS filter such that it applies to the LHS expression instead,
+   *                                          because the expression existed only in the equicondition, we must create a virtual column
+   *                                          on the LHS with the same expression in order to apply the filter.
+   *                                          The specific rewriting methods such as {@link #rewriteSelectorFilter} will use this
+   *                                          as a cache for virtual columns that they need to created, keyed by the expression, so that
+   *                                          they can avoid creating redundant virtual columns.
    *
    * @return a JoinFilterAnalysis that contains a possible filter rewrite and information on how to handle the filter.
    */
@@ -306,7 +323,7 @@ public class JoinFilterAnalyzer
                 return new ExpressionVirtualColumn(
                     vcName,
                     correlatedBaseExpr,
-                    ValueType.STRING
+                    ColumnType.STRING
                 );
               }
           );
@@ -327,7 +344,7 @@ public class JoinFilterAnalyzer
     return new JoinFilterAnalysis(
         false,
         filterClause,
-        Filters.and(newFilters)
+        Filters.maybeAnd(newFilters).orElse(null)
     );
   }
 
@@ -335,9 +352,10 @@ public class JoinFilterAnalyzer
    * Potentially rewrite the subfilters of an OR filter so that the whole OR filter can be pushed down to
    * the base table.
    *
-   * @param orFilter              OrFilter to be rewritten
-   * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   * @param orFilter                          OrFilter to be rewritten
+   * @param joinFilterPreAnalysis             The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
    * @param pushDownVirtualColumnsForLhsExprs See comments on {@link #analyzeJoinFilterClause}
+   *
    * @return A JoinFilterAnalysis indicating how to handle the potentially rewritten filter
    */
   private static JoinFilterAnalysis rewriteOrFilter(
@@ -346,7 +364,7 @@ public class JoinFilterAnalyzer
       Map<Expr, VirtualColumn> pushDownVirtualColumnsForLhsExprs
   )
   {
-    Set<Filter> newFilters = new HashSet<>();
+    List<Filter> newFilters = new ArrayList<>();
     boolean retainRhs = false;
 
     for (Filter filter : orFilter.getFilters()) {
@@ -386,16 +404,17 @@ public class JoinFilterAnalyzer
     return new JoinFilterAnalysis(
         retainRhs,
         orFilter,
-        Filters.or(newFilters)
+        Filters.maybeOr(newFilters).orElse(null)
     );
   }
 
   /**
    * Rewrites a selector filter on a join table into an IN filter on the base table.
    *
-   * @param selectorFilter        SelectorFilter to be rewritten
-   * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   * @param selectorFilter                    SelectorFilter to be rewritten
+   * @param joinFilterPreAnalysis             The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
    * @param pushDownVirtualColumnsForLhsExprs See comments on {@link #analyzeJoinFilterClause}
+   *
    * @return A JoinFilterAnalysis that indicates how to handle the potentially rewritten filter
    */
   private static JoinFilterAnalysis rewriteSelectorFilter(
@@ -454,9 +473,7 @@ public class JoinFilterAnalyzer
         for (String correlatedBaseColumn : correlationAnalysis.getBaseColumns()) {
           Filter rewrittenFilter = new InDimFilter(
               correlatedBaseColumn,
-              newFilterValues,
-              null,
-              null
+              newFilterValues
           ).toFilter();
           newFilters.add(rewrittenFilter);
         }
@@ -470,16 +487,14 @@ public class JoinFilterAnalyzer
                 return new ExpressionVirtualColumn(
                     vcName,
                     correlatedBaseExpr,
-                    ValueType.STRING
+                    ColumnType.STRING
                 );
               }
           );
 
           Filter rewrittenFilter = new InDimFilter(
               pushDownVirtualColumn.getOutputName(),
-              newFilterValues,
-              null,
-              null
+              newFilterValues
           ).toFilter();
           newFilters.add(rewrittenFilter);
         }
@@ -493,7 +508,7 @@ public class JoinFilterAnalyzer
     return new JoinFilterAnalysis(
         true,
         selectorFilter,
-        Filters.and(newFilters)
+        Filters.maybeAnd(newFilters).orElse(null)
     );
   }
 

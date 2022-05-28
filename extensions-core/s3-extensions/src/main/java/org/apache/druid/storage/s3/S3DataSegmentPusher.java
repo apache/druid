@@ -79,8 +79,13 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   public DataSegment push(final File indexFilesDir, final DataSegment inSegment, final boolean useUniquePath)
       throws IOException
   {
-    final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), getStorageDir(inSegment, useUniquePath));
+    return pushToPath(indexFilesDir, inSegment, getStorageDir(inSegment, useUniquePath));
+  }
 
+  @Override
+  public DataSegment pushToPath(File indexFilesDir, DataSegment inSegment, String storageDirSuffix) throws IOException
+  {
+    final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), storageDirSuffix);
     log.debug("Copying segment[%s] to S3 at location[%s]", inSegment.getId(), s3Path);
 
     final File zipOutFile = File.createTempFile("druid", "index.zip");

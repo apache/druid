@@ -18,7 +18,7 @@
 
 import React from 'react';
 
-import { Capabilities } from '../../utils/capabilities';
+import { Capabilities } from '../../utils';
 
 import { DatasourcesCard } from './datasources-card/datasources-card';
 import { LookupsCard } from './lookups-card/lookups-card';

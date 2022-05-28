@@ -19,22 +19,23 @@
 
 package org.apache.druid.query.groupby.strategy;
 
-import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 import org.apache.druid.segment.StorageAdapter;
 
 import javax.annotation.Nullable;
+
 import java.util.Comparator;
-import java.util.concurrent.ExecutorService;
 import java.util.function.BinaryOperator;
 
 public interface GroupByStrategy
@@ -56,7 +57,7 @@ public interface GroupByStrategy
    *
    * Used by {@link GroupByQueryQueryToolChest#getCacheStrategy(GroupByQuery)}.
    *
-   * @param willMergeRunners indicates that {@link QueryRunnerFactory#mergeRunners(ExecutorService, Iterable)} will be
+   * @param willMergeRunners indicates that {@link QueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)} will be
    *                         called on the cached by-segment results. Can be used to distinguish if we are running on
    *                         a broker or data node.
    *
@@ -163,18 +164,17 @@ public interface GroupByStrategy
 
   /**
    * Merge a variety of single-segment query runners into a combined runner. Used by
-   * {@link org.apache.druid.query.groupby.GroupByQueryRunnerFactory#mergeRunners(ExecutorService, Iterable)}. In
-   * that sense, it is intended to go along with {@link #process(GroupByQuery, StorageAdapter)} (the runners created
+   * {@link org.apache.druid.query.groupby.GroupByQueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)}. In
+   * that sense, it is intended to go along with {@link #process(GroupByQuery, StorageAdapter, GroupByQueryMetrics)} (the runners created
    * by that method will be fed into this method).
-   *
+   * <p>
    * This method is only called on data servers, like Historicals (not the Broker).
    *
-   * @param exec         executor service used for parallel execution of the query runners
-   * @param queryRunners collection of query runners to merge
-   *
+   * @param queryProcessingPool {@link QueryProcessingPool} service used for parallel execution of the query runners
+   * @param queryRunners  collection of query runners to merge
    * @return merged query runner
    */
-  QueryRunner<ResultRow> mergeRunners(ListeningExecutorService exec, Iterable<QueryRunner<ResultRow>> queryRunners);
+  QueryRunner<ResultRow> mergeRunners(QueryProcessingPool queryProcessingPool, Iterable<QueryRunner<ResultRow>> queryRunners);
 
   /**
    * Process a groupBy query on a single {@link StorageAdapter}. This is used by
@@ -188,7 +188,10 @@ public interface GroupByStrategy
    *
    * @return result sequence for the storage adapter
    */
-  Sequence<ResultRow> process(GroupByQuery query, StorageAdapter storageAdapter);
+  Sequence<ResultRow> process(
+      GroupByQuery query,
+      StorageAdapter storageAdapter,
+      @Nullable GroupByQueryMetrics groupByQueryMetrics);
 
   /**
    * Returns whether this strategy supports pushing down outer queries. This is used by

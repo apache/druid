@@ -20,19 +20,39 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.google.inject.Binder;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.PolyBind;
+import org.apache.druid.sql.calcite.run.NativeQueryMakerFactory;
+import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 
 /**
  * The module responsible for provide bindings for the Calcite Planner.
  */
 public class CalcitePlannerModule implements Module
 {
+  public static final String PROPERTY_SQL_EXECUTOR_TYPE = "druid.sql.executor.type";
+
   @Override
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.sql.planner", PlannerConfig.class);
-    binder.bind(PlannerFactory.class);
-    binder.bind(DruidOperatorTable.class);
+
+    PolyBind.optionBinder(binder, Key.get(QueryMakerFactory.class))
+            .addBinding(NativeQueryMakerFactory.TYPE)
+            .to(NativeQueryMakerFactory.class)
+            .in(LazySingleton.class);
+
+    PolyBind.createChoiceWithDefault(
+        binder,
+        PROPERTY_SQL_EXECUTOR_TYPE,
+        Key.get(QueryMakerFactory.class),
+        NativeQueryMakerFactory.TYPE
+    );
+
+    binder.bind(PlannerFactory.class).in(LazySingleton.class);
+    binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
   }
 }

@@ -27,13 +27,20 @@ import com.google.inject.Module;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.GlobalTableDataSource;
+import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.segment.join.BroadcastTableJoinableFactory;
+import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.LookupJoinableFactory;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.join.NoopDataSource;
 import org.apache.druid.segment.join.NoopJoinableFactory;
-import org.hamcrest.CoreMatchers;
+import org.apache.druid.server.SegmentManager;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -64,28 +71,44 @@ public class JoinableFactoryModuleTest
   @Test
   public void testInjectDefaultBindingsShouldBeInjected()
   {
-    Map<Class<? extends DataSource>, JoinableFactory> joinableFactories =
-        injector.getInstance(Key.get(new TypeLiteral<Map<Class<? extends DataSource>, JoinableFactory>>() {}));
-    Assert.assertEquals(JoinableFactoryModule.FACTORY_MAPPINGS.size(), joinableFactories.size());
-
-    final Set<Map.Entry<Class<? extends DataSource>, Class<? extends JoinableFactory>>> expectedEntries =
-        JoinableFactoryModule.FACTORY_MAPPINGS.entrySet();
-
-    for (Map.Entry<Class<? extends DataSource>, Class<? extends JoinableFactory>> entry : expectedEntries) {
-      Assert.assertThat(joinableFactories.get(entry.getKey()), CoreMatchers.instanceOf(entry.getValue()));
-    }
+    final Set<JoinableFactory> factories =
+        injector.getInstance(Key.get(new TypeLiteral<Set<JoinableFactory>>() {}));
+    Assert.assertEquals(JoinableFactoryModule.FACTORY_MAPPINGS.size(), factories.size());
+    Map<Class<? extends JoinableFactory>, Class<? extends DataSource>> joinableFactoriesMappings = injector.getInstance(
+        Key.get(new TypeLiteral<Map<Class<? extends JoinableFactory>, Class<? extends DataSource>>>() {})
+    );
+    assertDefaultFactories(joinableFactoriesMappings);
   }
 
   @Test
   public void testJoinableFactoryCanBind()
   {
     injector = makeInjectorWithProperties(
-        binder -> DruidBinders
-            .joinableFactoryBinder(binder).addBinding(NoopDataSource.class).toInstance(NoopJoinableFactory.INSTANCE));
-    Map<Class<? extends DataSource>, JoinableFactory> joinableFactories =
-        injector.getInstance(Key.get(new TypeLiteral<Map<Class<? extends DataSource>, JoinableFactory>>() {}));
-    Assert.assertEquals(JoinableFactoryModule.FACTORY_MAPPINGS.size() + 1, joinableFactories.size());
-    Assert.assertEquals(NoopJoinableFactory.INSTANCE, joinableFactories.get(NoopDataSource.class));
+        binder -> {
+          DruidBinders.joinableFactoryMultiBinder(binder).addBinding().toInstance(NoopJoinableFactory.INSTANCE);
+          DruidBinders.joinableMappingBinder(binder).addBinding(NoopJoinableFactory.class).toInstance(NoopDataSource.class);
+        }
+    );
+    Map<Class<? extends JoinableFactory>, Class<? extends DataSource>> joinableFactoriesMappings = injector.getInstance(
+        Key.get(new TypeLiteral<Map<Class<? extends JoinableFactory>, Class<? extends DataSource>>>() {})
+    );
+    Set<JoinableFactory> factories = injector.getInstance(Key.get(new TypeLiteral<Set<JoinableFactory>>() {}));
+
+    Assert.assertEquals(JoinableFactoryModule.FACTORY_MAPPINGS.size() + 1, factories.size());
+    Assert.assertEquals(NoopDataSource.class, joinableFactoriesMappings.get(NoopJoinableFactory.class));
+    assertDefaultFactories(joinableFactoriesMappings);
+  }
+
+  private void assertDefaultFactories(
+      Map<Class<? extends JoinableFactory>, Class<? extends DataSource>> joinableFactoriesMappings
+  )
+  {
+    Assert.assertEquals(LookupDataSource.class, joinableFactoriesMappings.get(LookupJoinableFactory.class));
+    Assert.assertEquals(InlineDataSource.class, joinableFactoriesMappings.get(InlineJoinableFactory.class));
+    Assert.assertEquals(
+        GlobalTableDataSource.class,
+        joinableFactoriesMappings.get(BroadcastTableJoinableFactory.class)
+    );
   }
 
   private Injector makeInjectorWithProperties(Module... otherModules)
@@ -97,6 +120,7 @@ public class JoinableFactoryModuleTest
         ImmutableList.<Module>builder()
             .add(new JoinableFactoryModule())
             .add(binder -> binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider))
+            .add(binder -> binder.bind(SegmentManager.class).toInstance(EasyMock.createMock(SegmentManager.class)))
             .add(binder -> binder.bindScope(LazySingleton.class, Scopes.SINGLETON));
 
     for (final Module otherModule : otherModules) {

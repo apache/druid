@@ -38,7 +38,7 @@ public class ParseLongOperatorConversion implements SqlOperatorConversion
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(NAME)
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.INTEGER)
-      .returnTypeNonNull(SqlTypeName.BIGINT)
+      .returnTypeCascadeNullable(SqlTypeName.BIGINT)
       .functionCategory(SqlFunctionCategory.STRING)
       .requiredOperands(1)
       .build();
@@ -56,6 +56,6 @@ public class ParseLongOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    return OperatorConversions.convertCall(plannerContext, rowSignature, rexNode, "parse_long");
+    return OperatorConversions.convertDirectCall(plannerContext, rowSignature, rexNode, "parse_long");
   }
 }

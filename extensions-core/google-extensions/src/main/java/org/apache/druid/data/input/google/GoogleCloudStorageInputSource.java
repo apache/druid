@@ -33,6 +33,7 @@ import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.google.GoogleInputDataConfig;
 import org.apache.druid.storage.google.GoogleStorage;
+import org.apache.druid.storage.google.GoogleStorageDruidModule;
 import org.apache.druid.storage.google.GoogleUtils;
 import org.apache.druid.utils.Streams;
 
@@ -47,8 +48,6 @@ import java.util.stream.Stream;
 
 public class GoogleCloudStorageInputSource extends CloudObjectInputSource
 {
-  public static final String SCHEME = "gs";
-
   private static final Logger LOG = new Logger(GoogleCloudStorageInputSource.class);
 
   private final GoogleStorage storage;
@@ -63,7 +62,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects
   )
   {
-    super(SCHEME, uris, prefixes, objects);
+    super(GoogleStorageDruidModule.SCHEME_GS, uris, prefixes, objects);
     this.storage = storage;
     this.inputDataConfig = inputDataConfig;
   }

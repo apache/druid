@@ -17,18 +17,41 @@
  */
 
 import { render } from '@testing-library/react';
+import { sane } from 'druid-query-toolkit';
 import React from 'react';
 
-import { Capabilities } from '../../utils/capabilities';
+import { Capabilities } from '../../utils';
 
 import { SegmentTimeline } from './segment-timeline';
 
-describe('Segment Timeline', () => {
+jest.useFakeTimers('modern').setSystemTime(Date.parse('2021-06-08T12:34:56Z'));
+
+describe('SegmentTimeline', () => {
+  it('.getSqlQuery', () => {
+    expect(
+      SegmentTimeline.getSqlQuery(
+        new Date('2020-01-01T00:00:00Z'),
+        new Date('2021-02-01T00:00:00Z'),
+      ),
+    ).toEqual(sane`
+      SELECT
+        "start", "end", "datasource",
+        COUNT(*) AS "count",
+        SUM("size") AS "size"
+      FROM sys.segments
+      WHERE
+        '2020-01-01T00:00:00.000Z' <= "start" AND
+        "end" <= '2021-02-01T00:00:00.000Z' AND
+        is_published = 1 AND
+        is_overshadowed = 0
+      GROUP BY 1, 2, 3
+      ORDER BY "start" DESC
+    `);
+  });
+
   it('matches snapshot', () => {
-    const tableColumn = (
-      <SegmentTimeline capabilities={Capabilities.FULL} chartHeight={100} chartWidth={100} />
-    );
-    const { container } = render(tableColumn);
+    const segmentTimeline = <SegmentTimeline capabilities={Capabilities.FULL} />;
+    const { container } = render(segmentTimeline);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

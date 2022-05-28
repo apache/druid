@@ -24,7 +24,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
+import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 
@@ -33,25 +37,47 @@ public class UserCompactionTaskQueryTuningConfig extends ClientCompactionTaskQue
   @JsonCreator
   public UserCompactionTaskQueryTuningConfig(
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
+      @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
-      @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
+      @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
       @JsonProperty("splitHintSpec") @Nullable SplitHintSpec splitHintSpec,
+      @JsonProperty("partitionsSpec") @Nullable PartitionsSpec partitionsSpec,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
+      @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
       @JsonProperty("pushTimeout") @Nullable Long pushTimeout,
-      @JsonProperty("maxNumConcurrentSubTasks") @Nullable Integer maxNumConcurrentSubTasks
+      @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      @JsonProperty("maxNumConcurrentSubTasks") @Nullable Integer maxNumConcurrentSubTasks,
+      @JsonProperty("maxRetry") @Nullable Integer maxRetry,
+      @JsonProperty("taskStatusCheckPeriodMs") @Nullable Long taskStatusCheckPeriodMs,
+      @JsonProperty("chatHandlerTimeout") @Nullable Duration chatHandlerTimeout,
+      @JsonProperty("chatHandlerNumRetries") @Nullable Integer chatHandlerNumRetries,
+      @JsonProperty("maxNumSegmentsToMerge") @Nullable Integer maxNumSegmentsToMerge,
+      @JsonProperty("totalNumMergeTasks") @Nullable Integer totalNumMergeTasks,
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
   )
   {
     super(
         null,
+        appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
         maxTotalRows,
         splitHintSpec,
+        partitionsSpec,
         indexSpec,
+        indexSpecForIntermediatePersists,
         maxPendingPersists,
         pushTimeout,
-        maxNumConcurrentSubTasks
+        segmentWriteOutMediumFactory,
+        maxNumConcurrentSubTasks,
+        maxRetry,
+        taskStatusCheckPeriodMs,
+        chatHandlerTimeout,
+        chatHandlerNumRetries,
+        maxNumSegmentsToMerge,
+        totalNumMergeTasks,
+        maxColumnsToMerge
     );
   }
 

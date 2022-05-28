@@ -24,26 +24,16 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 
 import java.util.List;
-import java.util.function.Consumer;
 
 /**
  * <pre>
  * Build an {@link HandlingInputRowIterator} for {@link IndexTask}s used for range partitioning. Each {@link
  * InputRow} is processed by the following handlers, in order:
  *
- *   1. Null row: If {@link InputRow} is null, invoke the null row {@link Runnable} callback.
- *
- *   2. Invalid timestamp: If {@link InputRow} has an invalid timestamp, throw a {@link ParseException}.
- *
- *   3. Absent bucket interval: If {@link InputRow} has a timestamp that does not match the
- *      {@link GranularitySpec} bucket intervals, invoke the absent bucket interval {@link Consumer}
- *      callback.
- *
- *   4. Filter for rows with only a single dimension value count for the specified partition dimension.
+ *   1. Filter for rows with only a single dimension value count for the specified partition dimension.
  *
  * If any of the handlers invoke their respective callback, the {@link HandlingInputRowIterator} will yield
  * a null {@link InputRow} next; otherwise, the next {@link InputRow} is yielded.
@@ -56,17 +46,17 @@ public class RangePartitionIndexTaskInputRowIteratorBuilder implements IndexTask
   private final DefaultIndexTaskInputRowIteratorBuilder delegate;
 
   /**
-   * @param partitionDimension Create range partitions for this dimension
+   * @param partitionDimensions Create range partitions for these dimensions
    * @param skipNull Whether to skip rows with a dimension value of null
    */
-  public RangePartitionIndexTaskInputRowIteratorBuilder(String partitionDimension, boolean skipNull)
+  public RangePartitionIndexTaskInputRowIteratorBuilder(List<String> partitionDimensions, boolean skipNull)
   {
     delegate = new DefaultIndexTaskInputRowIteratorBuilder();
 
     if (skipNull) {
-      delegate.appendInputRowHandler(createOnlySingleDimensionValueRowsHandler(partitionDimension));
+      delegate.appendInputRowHandler(createOnlySingleDimensionValueRowsHandler(partitionDimensions));
     } else {
-      delegate.appendInputRowHandler(createOnlySingleOrNullDimensionValueRowsHandler(partitionDimension));
+      delegate.appendInputRowHandler(createOnlySingleOrNullDimensionValueRowsHandler(partitionDimensions));
     }
   }
 
@@ -83,54 +73,75 @@ public class RangePartitionIndexTaskInputRowIteratorBuilder implements IndexTask
   }
 
   @Override
-  public IndexTaskInputRowIteratorBuilder nullRowRunnable(Runnable nullRowRunnable)
-  {
-    return delegate.nullRowRunnable(nullRowRunnable);
-  }
-
-  @Override
-  public IndexTaskInputRowIteratorBuilder absentBucketIntervalConsumer(Consumer<InputRow> absentBucketIntervalConsumer)
-  {
-    return delegate.absentBucketIntervalConsumer(absentBucketIntervalConsumer);
-  }
-
-  @Override
   public HandlingInputRowIterator build()
   {
     return delegate.build();
   }
 
   private static HandlingInputRowIterator.InputRowHandler createOnlySingleDimensionValueRowsHandler(
-      String partitionDimension
+      List<String> partitionDimensions
   )
   {
     return inputRow -> {
-      int dimensionValueCount = getSingleOrNullDimensionValueCount(inputRow, partitionDimension);
-      return dimensionValueCount != 1;
+      // Rows with multiple dimension values should cause an exception
+      ensureNoMultiValuedDimensions(inputRow, partitionDimensions);
+
+      // Rows with empty dimension values should be marked handled
+      // and need not be processed further
+      return hasEmptyDimensions(inputRow, partitionDimensions);
     };
   }
 
   private static HandlingInputRowIterator.InputRowHandler createOnlySingleOrNullDimensionValueRowsHandler(
-      String partitionDimension
+      List<String> partitionDimensions
   )
   {
     return inputRow -> {
-      int dimensionValueCount = getSingleOrNullDimensionValueCount(inputRow, partitionDimension);
-      return dimensionValueCount > 1;  // Rows.objectToStrings() returns an empty list for a single null value
+      // Rows with multiple dimension values should cause an exception
+      ensureNoMultiValuedDimensions(inputRow, partitionDimensions);
+
+      // All other rows (single or null dimension values) need to be processed
+      // further and should not be marked as handled
+      return false;
     };
   }
 
-  private static int getSingleOrNullDimensionValueCount(InputRow inputRow, String partitionDimension)
+  /**
+   * Checks if the given InputRow has any dimension column that is empty.
+   */
+  private static boolean hasEmptyDimensions(InputRow inputRow, List<String> partitionDimensions)
   {
-    List<String> dimensionValues = inputRow.getDimension(partitionDimension);
-    int dimensionValueCount = dimensionValues.size();
-    if (dimensionValueCount > 1) {
-      throw new IAE(
-          "Cannot partition on multi-value dimension [%s] for input row [%s]",
-          partitionDimension,
-          inputRow
-      );
+    for (String dimension : partitionDimensions) {
+      int dimensionValueCount = inputRow.getDimension(dimension).size();
+      if (dimensionValueCount == 0) {
+        return true;
+      }
     }
-    return dimensionValueCount;
+
+    return false;
   }
+
+  /**
+   * Verifies that the given InputRow does not have multiple values for any dimension.
+   *
+   * @throws IAE if any of the dimension columns in the given InputRow have
+   *             multiple values.
+   */
+  private static void ensureNoMultiValuedDimensions(
+      InputRow inputRow,
+      List<String> partitionDimensions
+  ) throws IAE
+  {
+    for (String dimension : partitionDimensions) {
+      int dimensionValueCount = inputRow.getDimension(dimension).size();
+      if (dimensionValueCount > 1) {
+        throw new IAE(
+            "Cannot partition on multi-value dimension [%s] for input row [%s]",
+            dimension,
+            inputRow
+        );
+      }
+    }
+  }
+
 }

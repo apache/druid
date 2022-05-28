@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite.filtration;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
@@ -34,7 +33,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class ConvertSelectorsToIns extends BottomUpTransform
 {
@@ -80,12 +78,13 @@ public class ConvertSelectorsToIns extends BottomUpTransform
         final List<SelectorDimFilter> filterList = entry.getValue();
         if (filterList.size() > 1) {
           // We found a simplification. Remove the old filters and add new ones.
-          final Set<String> values = Sets.newHashSetWithExpectedSize(filterList.size());
+          final InDimFilter.ValuesSet values = new InDimFilter.ValuesSet();
 
           for (final SelectorDimFilter selector : filterList) {
             values.add(selector.getValue());
             if (!children.remove(selector)) {
-              throw new ISE("WTF?! Tried to remove selector but couldn't?");
+              // Don't expect this to happen, but include it as a sanity check.
+              throw new ISE("Tried to remove selector but couldn't");
             }
           }
 

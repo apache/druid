@@ -44,6 +44,7 @@ class IndexTaskInputRowIteratorBuilderTestingFactory
 {
   static final DateTime TIMESTAMP = DateTimes.utc(0);
   static final String DIMENSION = "dimension";
+  static final List<String> DIMENSIONS = Collections.singletonList(DIMENSION);
   static final Optional<Interval> PRESENT_BUCKET_INTERVAL_OPT = Optional.of(Intervals.ETERNITY);
 
   static InputRow createInputRow(DateTime timestamp)
@@ -143,9 +144,7 @@ class IndexTaskInputRowIteratorBuilderTestingFactory
       List<Handler> handlerInvocationHistory = new ArrayList<>();
       IndexTaskInputRowIteratorBuilder iteratorBuilder = iteratorBuilderSupplier.get()
           .delegate(inputRowIterator)
-          .granularitySpec(granularitySpec)
-          .nullRowRunnable(() -> handlerInvocationHistory.add(Handler.NULL_ROW))
-          .absentBucketIntervalConsumer(row -> handlerInvocationHistory.add(Handler.ABSENT_BUCKET_INTERVAL));
+          .granularitySpec(granularitySpec);
 
       if (iteratorBuilder instanceof DefaultIndexTaskInputRowIteratorBuilder) {
         appendedHandlers.stream()

@@ -52,8 +52,8 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
   public static final String EXPIRED_MARKER = "EXPIRED";
 
   /**
-   * this flag is used to indicate either END_OF_SHARD_MARKER
-   * or NO_END_SEQUENCE_NUMBER so that they can be properly compared
+   * this flag is used to indicate either END_OF_SHARD_MARKER, NO_END_SEQUENCE_NUMBER
+   * or EXPIRED_MARKER so that they can be properly compared
    * with other sequence numbers
    */
   private final boolean isMaxSequenceNumber;
@@ -62,7 +62,9 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
   private KinesisSequenceNumber(String sequenceNumber, boolean isExclusive)
   {
     super(sequenceNumber, isExclusive);
-    if (END_OF_SHARD_MARKER.equals(sequenceNumber) || NO_END_SEQUENCE_NUMBER.equals(sequenceNumber)) {
+    if (END_OF_SHARD_MARKER.equals(sequenceNumber)
+        || NO_END_SEQUENCE_NUMBER.equals(sequenceNumber)
+        || EXPIRED_MARKER.equals(sequenceNumber)) {
       isMaxSequenceNumber = true;
       this.intSequence = null;
     } else {
@@ -79,6 +81,19 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
   public static KinesisSequenceNumber of(String sequenceNumber, boolean isExclusive)
   {
     return new KinesisSequenceNumber(sequenceNumber, isExclusive);
+  }
+
+  /**
+   * Checks whether the sequence number is recognized by kinesis client library
+   * @param sequenceNumber
+   * @return
+   */
+  public static boolean isValidAWSKinesisSequence(String sequenceNumber)
+  {
+    return !(END_OF_SHARD_MARKER.equals(sequenceNumber)
+             || NO_END_SEQUENCE_NUMBER.equals(sequenceNumber)
+             || EXPIRED_MARKER.equals(sequenceNumber)
+      );
   }
 
   @Override

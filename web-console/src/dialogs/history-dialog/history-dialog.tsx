@@ -16,60 +16,103 @@
  * limitations under the License.
  */
 
-import { Card, Classes, Dialog, Divider } from '@blueprintjs/core';
+import { Button, Classes, Dialog, Tab, Tabs } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import React, { ReactNode } from 'react';
+import * as JSONBig from 'json-bigint-native';
+import React, { useState } from 'react';
 
-import { JsonCollapse } from '../../components';
+import { ShowValue } from '../../components/show-value/show-value';
+import { DiffDialog } from '../diff-dialog/diff-dialog';
 
 import './history-dialog.scss';
 
+function normalizePayload(payload: string): string {
+  try {
+    return JSONBig.stringify(JSONBig.parse(payload), undefined, 2);
+  } catch {
+    return payload;
+  }
+}
+
+interface HistoryRecord {
+  auditInfo: {
+    author?: string;
+    comment?: string;
+    ip?: string;
+  };
+  auditTime: string;
+  payload: string;
+}
+
 interface HistoryDialogProps {
-  historyRecords: any[];
-  buttons?: ReactNode;
+  className?: string;
+  title: string;
+  historyRecords: HistoryRecord[];
+  onBack(): void;
 }
 
 export const HistoryDialog = React.memo(function HistoryDialog(props: HistoryDialogProps) {
-  const { buttons, historyRecords } = props;
+  const { className, title, historyRecords, onBack } = props;
 
-  let content;
+  const [diffIndex, setDiffIndex] = useState(-1);
+
+  let content: JSX.Element;
   if (historyRecords.length === 0) {
     content = <div className="no-record">No history records available</div>;
   } else {
     content = (
-      <>
-        <span className="history-dialog-title">History</span>
-        <div className="history-record-entries">
-          {historyRecords.map((record, i) => {
-            const auditInfo = record.auditInfo;
-            const auditTime = record.auditTime;
-            const formattedTime = auditTime.replace('T', ' ').substring(0, auditTime.length - 5);
+      <Tabs animate renderActiveTabPanelOnly vertical defaultSelectedTabId={0}>
+        {historyRecords.map(({ auditInfo, auditTime, payload }, i) => {
+          const formattedTime = auditTime.replace('T', ' ').substring(0, auditTime.length - 5);
+          return (
+            <Tab
+              id={i}
+              key={i}
+              title={`${auditInfo.comment || 'Change'} @ ${formattedTime}`}
+              panel={
+                <ShowValue
+                  jsonValue={normalizePayload(payload)}
+                  onDiffWithPrevious={
+                    i < historyRecords.length - 1 ? () => setDiffIndex(i) : undefined
+                  }
+                />
+              }
+              panelClassName="panel"
+            />
+          );
+        })}
+        <Tabs.Expander />
+      </Tabs>
+    );
+  }
 
-            return (
-              <div key={i} className="history-record-entry">
-                <Card>
-                  <div className="history-record-title">
-                    <span className="history-record-title-change">Change</span>
-                    <span>{formattedTime}</span>
-                  </div>
-                  <Divider />
-                  <p>{auditInfo.comment === '' ? '(No comment)' : auditInfo.comment}</p>
-                  <JsonCollapse stringValue={record.payload} buttonText="Payload" />
-                </Card>
-              </div>
-            );
-          })}
-        </div>
-      </>
+  if (diffIndex !== -1) {
+    return (
+      <DiffDialog
+        title="Supervisor spec diff"
+        versions={historyRecords.map(({ auditInfo, auditTime, payload }) => ({
+          label: auditInfo.comment || auditTime,
+          value: normalizePayload(payload),
+        }))}
+        initLeftIndex={diffIndex + 1}
+        initRightIndex={diffIndex}
+        onClose={() => setDiffIndex(-1)}
+      />
     );
   }
 
   return (
-    <Dialog isOpen {...props}>
-      <div className="history-dialog">
-        <div className={classNames(Classes.DIALOG_BODY, 'history-record-container')}>{content}</div>
-        <div className={Classes.DIALOG_FOOTER}>
-          <div className={Classes.DIALOG_FOOTER_ACTIONS}>{buttons}</div>
+    <Dialog
+      className={classNames('history-dialog', className)}
+      isOpen
+      title={title}
+      onClose={onBack}
+    >
+      <div className={Classes.DIALOG_BODY}>{content}</div>
+      <div className={Classes.DIALOG_FOOTER}>
+        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+          <Button onClick={onBack} icon={IconNames.ARROW_LEFT} text="Back" />
         </div>
       </div>
     </Dialog>

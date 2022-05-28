@@ -56,7 +56,7 @@ Other lookup types are available as extensions, including:
 Query Syntax
 ------------
 
-In [Druid SQL](sql.html), lookups can be queried using the [`LOOKUP` function](sql.md#string-functions), for example:
+In [Druid SQL](sql.md), lookups can be queried using the [`LOOKUP` function](sql-scalar.md#string-functions), for example:
 
 ```sql
 SELECT
@@ -78,11 +78,11 @@ FROM
 GROUP BY 1
 ```
 
-In native queries, lookups can be queried with [dimension specs or extraction functions](dimensionspecs.html).
+In native queries, lookups can be queried with [dimension specs or extraction functions](dimensionspecs.md).
 
 Query Execution
 ---------------
-When executing an aggregation query involving lookup functions (like the SQL [`LOOKUP` function](sql.md#string-functions),
+When executing an aggregation query involving lookup functions (like the SQL [`LOOKUP` function](sql-scalar.md#string-functions),
 Druid can decide to apply them while scanning and aggregating rows, or to apply them after aggregation is complete. It
 is more efficient to apply lookups after aggregation is complete, so Druid will do this if it can. Druid decides this
 by checking if the lookup is marked as "injective" or not. In general, you should set this property for any lookup that
@@ -272,7 +272,7 @@ All entries in the map will UPDATE existing entries. No entries will be deleted.
 
 ### Update lookup
 
-A `POST` to a particular lookup extractor factory via `/druid/coordinator/v1/lookups/config/{tier}/{id}` will update that specific extractor factory.
+A `POST` to a particular lookup extractor factory via `/druid/coordinator/v1/lookups/config/{tier}/{id}` creates or updates that specific extractor factory.
 
 For example, a post to `/druid/coordinator/v1/lookups/config/realtime_customer1/site_id_customer1` might contain the following:
 
@@ -289,6 +289,8 @@ For example, a post to `/druid/coordinator/v1/lookups/config/realtime_customer1/
 ```
 
 This will replace the `site_id_customer1` lookup in the `realtime_customer1` with the definition above.
+
+Assign a unique version identifier each time you update a lookup extractor factory. Otherwise the call will fail.
 
 ### Get all lookups
 
@@ -347,7 +349,7 @@ These end points can be used to get the propagation status of configured lookups
 
 ### List lookup state of all processes
 
-`GET /druid/coordinator/v1/lookups/nodeStatus` with optional query parameter `discover` to discover tiers or configured lookup tiers are listed.
+`GET /druid/coordinator/v1/lookups/nodeStatus` with optional query parameter `discover` to discover tiers advertised by other Druid nodes, or by default, returning all configured lookup tiers. The default response will also include the lookups which are loaded, being loaded, or being dropped on each node, for each tier, including the complete lookup spec. Add the optional query parameter `detailed=false` to only include the 'version' of the lookup instead of the complete spec.
 
 ### List lookup state of processes in a tier
 

@@ -39,6 +39,7 @@ public interface DruidLeaderSelector
    * Get ID of current Leader. Returns NULL if it can't find the leader.
    * Note that it is possible for leadership to change right after this call returns, so caller would get wrong
    * leader.
+   * This is expected to work even if a listener is not registered.
    */
   @Nullable
   String getCurrentLeader();

@@ -55,7 +55,9 @@ public class TaskReportSerdeTest
             ImmutableMap.of(
                 "number", 1234
             ),
-            "an error message"
+            "an error message",
+            true,
+            1000L
         )
     );
     String report1serialized = jsonMapper.writeValueAsString(report1);
@@ -64,7 +66,7 @@ public class TaskReportSerdeTest
         IngestionStatsAndErrorsTaskReport.class
     );
     Assert.assertEquals(report1, report2);
-
+    Assert.assertEquals(report1.hashCode(), report2.hashCode());
 
     Map<String, TaskReport> reportMap1 = TaskReport.buildTaskReports(report1);
     String reportMapSerialized = jsonMapper.writeValueAsString(reportMap1);

@@ -287,9 +287,7 @@ public class DeterminePartitionsJobTest
                         new CSVParseSpec(
                             new TimestampSpec("timestamp", "yyyyMMddHH", null),
                             new DimensionsSpec(
-                                DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "country")),
-                                null,
-                                null
+                                DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "country"))
                             ),
                             null,
                             ImmutableList.of("timestamp", "host", "country", "visited_num"),
@@ -328,6 +326,7 @@ public class DeterminePartitionsJobTest
                 null,
                 null,
                 null,
+                null,
                 false,
                 false,
                 false,
@@ -337,9 +336,9 @@ public class DeterminePartitionsJobTest
                 false,
                 null,
                 null,
+                false,
+                false,
                 null,
-                false,
-                false,
                 null,
                 null,
                 null,

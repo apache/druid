@@ -13,11 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*
+If you are changing this class, make sure to add --include_imports flag while generating the descriptor file
+*/
+
 syntax = "proto2";
 package prototest;
 option java_package = "org.apache.druid.data.input.protobuf";
 option java_outer_classname = "ProtoTestEventWrapper";
-
+import "google/protobuf/timestamp.proto";
 
 message ProtoTestEvent {
     enum EventCategory {
@@ -42,4 +46,5 @@ message ProtoTestEvent {
     optional uint64 someLongColumn = 9;
     optional Foo foo = 10;
     repeated Foo bar = 11;
+    optional google.protobuf.Timestamp otherTimestamp = 12;
 }

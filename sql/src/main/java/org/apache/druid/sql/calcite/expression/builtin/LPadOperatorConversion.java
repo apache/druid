@@ -30,6 +30,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 public class LPadOperatorConversion implements SqlOperatorConversion
@@ -37,7 +38,7 @@ public class LPadOperatorConversion implements SqlOperatorConversion
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("LPAD")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.INTEGER, SqlTypeFamily.CHARACTER)
-      .returnTypeNonNull(SqlTypeName.VARCHAR)
+      .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.STRING)
       .requiredOperands(2)
       .build();
@@ -61,7 +62,8 @@ public class LPadOperatorConversion implements SqlOperatorConversion
         rexNode,
         druidExpressions -> {
           if (druidExpressions.size() > 2) {
-            return DruidExpression.fromFunctionCall(
+            return DruidExpression.ofFunctionCall(
+                Calcites.getColumnTypeForRelDataType(rexNode.getType()),
                 "lpad",
                 ImmutableList.of(
                     druidExpressions.get(0),
@@ -70,12 +72,13 @@ public class LPadOperatorConversion implements SqlOperatorConversion
                 )
             );
           } else {
-            return DruidExpression.fromFunctionCall(
+            return DruidExpression.ofFunctionCall(
+                Calcites.getColumnTypeForRelDataType(rexNode.getType()),
                 "lpad",
                 ImmutableList.of(
                     druidExpressions.get(0),
                     druidExpressions.get(1),
-                    DruidExpression.fromExpression(DruidExpression.stringLiteral(" "))
+                    DruidExpression.ofStringLiteral(" ")
                 )
             );
           }

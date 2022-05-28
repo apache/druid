@@ -20,7 +20,7 @@
 package org.apache.druid.query.planning;
 
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.Triple;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
@@ -28,6 +28,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 
 import javax.annotation.Nullable;
@@ -44,7 +45,9 @@ import java.util.Optional;
  *
  * <pre>
  *
- *                             Q  <-- Possible outer query datasource(s) [may be multiple stacked]
+ *                             Q  <-- Possible query datasource(s) [may be none, or multiple stacked]
+ *                             |
+ *                             Q  <-- Base query datasource, returned by {@link #getBaseQuery()} if it exists
  *                             |
  *                             J  <-- Possible join tree, expected to be left-leaning
  *                            / \
@@ -77,13 +80,16 @@ public class DataSourceAnalysis
   private final DataSource dataSource;
   private final DataSource baseDataSource;
   @Nullable
-  private final QuerySegmentSpec baseQuerySegmentSpec;
+  private final Query<?> baseQuery;
+  @Nullable
+  private final DimFilter joinBaseTableFilter;
   private final List<PreJoinableClause> preJoinableClauses;
 
   private DataSourceAnalysis(
       DataSource dataSource,
       DataSource baseDataSource,
-      @Nullable QuerySegmentSpec baseQuerySegmentSpec,
+      @Nullable Query<?> baseQuery,
+      @Nullable DimFilter joinBaseTableFilter,
       List<PreJoinableClause> preJoinableClauses
   )
   {
@@ -95,33 +101,35 @@ public class DataSourceAnalysis
 
     this.dataSource = dataSource;
     this.baseDataSource = baseDataSource;
-    this.baseQuerySegmentSpec = baseQuerySegmentSpec;
+    this.baseQuery = baseQuery;
+    this.joinBaseTableFilter = joinBaseTableFilter;
     this.preJoinableClauses = preJoinableClauses;
   }
 
   public static DataSourceAnalysis forDataSource(final DataSource dataSource)
   {
     // Strip outer queries, retaining querySegmentSpecs as we go down (lowest will become the 'baseQuerySegmentSpec').
-    QuerySegmentSpec baseQuerySegmentSpec = null;
+    Query<?> baseQuery = null;
     DataSource current = dataSource;
 
     while (current instanceof QueryDataSource) {
       final Query<?> subQuery = ((QueryDataSource) current).getQuery();
 
       if (!(subQuery instanceof BaseQuery)) {
-        // All builtin query types are BaseQuery, so we only expect this with funky extension queries.
+        // We must verify that the subQuery is a BaseQuery, because it is required to make "getBaseQuerySegmentSpec"
+        // work properly. All builtin query types are BaseQuery, so we only expect this with funky extension queries.
         throw new IAE("Cannot analyze subquery of class[%s]", subQuery.getClass().getName());
       }
 
-      baseQuerySegmentSpec = ((BaseQuery<?>) subQuery).getQuerySegmentSpec();
+      baseQuery = subQuery;
       current = subQuery.getDataSource();
     }
 
     if (current instanceof JoinDataSource) {
-      final Pair<DataSource, List<PreJoinableClause>> flattened = flattenJoin((JoinDataSource) current);
-      return new DataSourceAnalysis(dataSource, flattened.lhs, baseQuerySegmentSpec, flattened.rhs);
+      final Triple<DataSource, DimFilter, List<PreJoinableClause>> flattened = flattenJoin((JoinDataSource) current);
+      return new DataSourceAnalysis(dataSource, flattened.first, baseQuery, flattened.second, flattened.third);
     } else {
-      return new DataSourceAnalysis(dataSource, current, baseQuerySegmentSpec, Collections.emptyList());
+      return new DataSourceAnalysis(dataSource, current, baseQuery, null, Collections.emptyList());
     }
   }
 
@@ -131,14 +139,19 @@ public class DataSourceAnalysis
    *
    * @throws IllegalArgumentException if dataSource cannot be fully flattened.
    */
-  private static Pair<DataSource, List<PreJoinableClause>> flattenJoin(final JoinDataSource dataSource)
+  private static Triple<DataSource, DimFilter, List<PreJoinableClause>> flattenJoin(final JoinDataSource dataSource)
   {
     DataSource current = dataSource;
+    DimFilter currentDimFilter = null;
     final List<PreJoinableClause> preJoinableClauses = new ArrayList<>();
 
     while (current instanceof JoinDataSource) {
       final JoinDataSource joinDataSource = (JoinDataSource) current;
       current = joinDataSource.getLeft();
+      if (currentDimFilter != null) {
+        throw new IAE("Left filters are only allowed when left child is direct table access");
+      }
+      currentDimFilter = joinDataSource.getLeftFilter();
       preJoinableClauses.add(
           new PreJoinableClause(
               joinDataSource.getRightPrefix(),
@@ -153,7 +166,7 @@ public class DataSourceAnalysis
     // going-up order. So reverse them.
     Collections.reverse(preJoinableClauses);
 
-    return Pair.of(current, preJoinableClauses);
+    return Triple.of(current, currentDimFilter, preJoinableClauses);
   }
 
   /**
@@ -165,7 +178,7 @@ public class DataSourceAnalysis
   }
 
   /**
-   * Returns the base (bottom-leftmost) datasource.
+   * Returns the base (bottom-leftmost) datasource.
    */
   public DataSource getBaseDataSource()
   {
@@ -173,8 +186,10 @@ public class DataSourceAnalysis
   }
 
   /**
-   * Returns the same datasource as {@link #getBaseDataSource()}, but only if it is a table. Useful on data servers,
-   * since they generally can only handle queries where the base datasource is a table.
+   * If {@link #getBaseDataSource()} is a {@link TableDataSource}, returns it. Otherwise, returns an empty Optional.
+   *
+   * Note that this can return empty even if {@link #isConcreteTableBased()} is true. This happens if the base
+   * datasource is a {@link UnionDataSource} of {@link TableDataSource}.
    */
   public Optional<TableDataSource> getBaseTableDataSource()
   {
@@ -186,13 +201,50 @@ public class DataSourceAnalysis
   }
 
   /**
+   * If {@link #getBaseDataSource()} is a {@link UnionDataSource}, returns it. Otherwise, returns an empty Optional.
+   */
+  public Optional<UnionDataSource> getBaseUnionDataSource()
+  {
+    if (baseDataSource instanceof UnionDataSource) {
+      return Optional.of((UnionDataSource) baseDataSource);
+    } else {
+      return Optional.empty();
+    }
+  }
+
+  /**
+   * Returns the bottommost (i.e. innermost) {@link Query} from a possible stack of outer queries at the root of
+   * the datasource tree. This is the query that will be applied to the base datasource plus any joinables that might
+   * be present.
+   *
+   * @return the query associated with the base datasource if {@link #isQuery()} is true, else empty
+   */
+  public Optional<Query<?>> getBaseQuery()
+  {
+    return Optional.ofNullable(baseQuery);
+  }
+
+  /**
+   * If the original data source is a join data source and there is a DimFilter on the base table data source,
+   * that DimFilter is returned here
+   */
+  public Optional<DimFilter> getJoinBaseTableFilter()
+  {
+    return Optional.ofNullable(joinBaseTableFilter);
+  }
+
+  /**
    * Returns the {@link QuerySegmentSpec} that is associated with the base datasource, if any. This only happens
    * when there is an outer query datasource. In this case, the base querySegmentSpec is the one associated with the
    * innermost subquery.
+   * <p>
+   * This {@link QuerySegmentSpec} is taken from the query returned by {@link #getBaseQuery()}.
+   *
+   * @return the query segment spec associated with the base datasource if {@link #isQuery()} is true, else empty
    */
   public Optional<QuerySegmentSpec> getBaseQuerySegmentSpec()
   {
-    return Optional.ofNullable(baseQuerySegmentSpec);
+    return getBaseQuery().map(query -> ((BaseQuery<?>) query).getQuerySegmentSpec());
   }
 
   /**
@@ -205,7 +257,7 @@ public class DataSourceAnalysis
 
   /**
    * Returns true if all servers have the ability to compute this datasource. These datasources depend only on
-   * globally broadcast data, like lookups or inline data.
+   * globally broadcast data, like lookups or inline data or broadcast segments.
    */
   public boolean isGlobal()
   {
@@ -224,8 +276,8 @@ public class DataSourceAnalysis
 
   /**
    * Returns true if this datasource is concrete-based (see {@link #isConcreteBased()}, and the base datasource is a
-   * 'table' or union of them. This is an important property because it corresponds to datasources that can be handled
-   * by Druid data servers, like Historicals.
+   * {@link TableDataSource} or a {@link UnionDataSource} composed entirely of {@link TableDataSource}. This is an
+   * important property, because it corresponds to datasources that can be handled by Druid's distributed query stack.
    */
   public boolean isConcreteTableBased()
   {
@@ -240,11 +292,19 @@ public class DataSourceAnalysis
   }
 
   /**
-   * Returns true if this datasource represents a subquery.
+   * Returns true if this datasource represents a subquery (that is, whether it is a {@link QueryDataSource}).
    */
   public boolean isQuery()
   {
     return dataSource instanceof QueryDataSource;
+  }
+
+  /**
+   * Returns true if this datasource is made out of a join operation
+   */
+  public boolean isJoin()
+  {
+    return !preJoinableClauses.isEmpty();
   }
 
   @Override
@@ -257,16 +317,13 @@ public class DataSourceAnalysis
       return false;
     }
     DataSourceAnalysis that = (DataSourceAnalysis) o;
-    return Objects.equals(dataSource, that.dataSource) &&
-           Objects.equals(baseDataSource, that.baseDataSource) &&
-           Objects.equals(baseQuerySegmentSpec, that.baseQuerySegmentSpec) &&
-           Objects.equals(preJoinableClauses, that.preJoinableClauses);
+    return Objects.equals(dataSource, that.dataSource);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, baseDataSource, baseQuerySegmentSpec, preJoinableClauses);
+    return Objects.hash(dataSource);
   }
 
   @Override
@@ -275,8 +332,8 @@ public class DataSourceAnalysis
     return "DataSourceAnalysis{" +
            "dataSource=" + dataSource +
            ", baseDataSource=" + baseDataSource +
-           ", baseQuerySegmentSpec=" + baseQuerySegmentSpec +
-           ", joinClauses=" + preJoinableClauses +
+           ", baseQuery=" + baseQuery +
+           ", preJoinableClauses=" + preJoinableClauses +
            '}';
   }
 }

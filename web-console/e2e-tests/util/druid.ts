@@ -16,4 +16,34 @@
  * limitations under the License.
  */
 
-export const UNIFIED_CONSOLE_URL = 'http://localhost:8888/unified-console.html';
+import { execSync } from 'child_process';
+import path from 'path';
+
+const UNIFIED_CONSOLE_PORT = process.env['DRUID_E2E_TEST_UNIFIED_CONSOLE_PORT'] || '8888';
+export const UNIFIED_CONSOLE_URL = `http://localhost:${UNIFIED_CONSOLE_PORT}/unified-console.html`;
+export const COORDINATOR_URL = 'http://localhost:8081';
+
+const UTIL_DIR = __dirname;
+const E2E_TEST_DIR = path.dirname(UTIL_DIR);
+const WEB_CONSOLE_DIR = path.dirname(E2E_TEST_DIR);
+const DRUID_DIR = path.dirname(WEB_CONSOLE_DIR);
+export const DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR = path.join(
+  DRUID_DIR,
+  'examples',
+  'quickstart',
+  'tutorial',
+);
+
+export function runIndexTask(ingestionSpecPath: string, sedCommands: Array<string>) {
+  const postIndexTask = path.join(DRUID_DIR, 'examples', 'bin', 'post-index-task');
+  const sedCommandsString = sedCommands.map(sedCommand => `-e '${sedCommand}'`).join(' ');
+  execSync(
+    `${postIndexTask} \
+       --file <(sed ${sedCommandsString} ${ingestionSpecPath}) \
+       --url ${COORDINATOR_URL}`,
+    {
+      shell: 'bash',
+      timeout: 3 * 60 * 1000,
+    },
+  );
+}

@@ -25,11 +25,11 @@ title: "MiddleManager Process"
 
 ### Configuration
 
-For Apache Druid MiddleManager Process Configuration, see [Indexing Service Configuration](../configuration/index.html#middlemanager-and-peons).
+For Apache Druid MiddleManager Process Configuration, see [Indexing Service Configuration](../configuration/index.md#middlemanager-and-peons).
 
 ### HTTP endpoints
 
-For a list of API endpoints supported by the MiddleManager, please see the [API reference](../operations/api-reference.html#middlemanager).
+For a list of API endpoints supported by the MiddleManager, please see the [API reference](../operations/api-reference.md#middlemanager).
 
 ### Overview
 

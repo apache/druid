@@ -26,10 +26,13 @@ import org.apache.calcite.plan.RelOptMaterialization;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.hep.HepProgram;
+import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.plan.volcano.AbstractConverter;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
+import org.apache.calcite.rel.metadata.RelMetadataProvider;
 import org.apache.calcite.rel.rules.AggregateCaseToFilterRule;
 import org.apache.calcite.rel.rules.AggregateExpandDistinctAggregatesRule;
 import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
@@ -70,7 +73,8 @@ import org.apache.calcite.sql2rel.RelFieldTrimmer;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
-import org.apache.druid.sql.calcite.rel.QueryMaker;
+import org.apache.druid.sql.calcite.external.ExternalTableScanRule;
+import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
 import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
 import org.apache.druid.sql.calcite.rule.DruidRules;
 import org.apache.druid.sql.calcite.rule.DruidTableScanRule;
@@ -84,6 +88,16 @@ public class Rules
 {
   public static final int DRUID_CONVENTION_RULES = 0;
   public static final int BINDABLE_CONVENTION_RULES = 1;
+
+  // Due to Calcite bug (CALCITE-3845), ReduceExpressionsRule can considered expression which is the same as the
+  // previous input expression as reduced. Basically, the expression is actually not reduced but is still considered as
+  // reduced. Hence, this resulted in an infinite loop of Calcite trying to reducing the same expression over and over.
+  // Calcite 1.23.0 fixes this issue by not consider expression as reduced if this case happens. However, while
+  // we are still using Calcite 1.21.0, a workaround is to limit the number of pattern matches to avoid infinite loop.
+  private static final String HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING = "druid.sql.planner.hepMatchLimit";
+  private static final int HEP_DEFAULT_MATCH_LIMIT = Integer.valueOf(
+      System.getProperty(HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING, "1200")
+  );
 
   // Rules from RelOptUtil's registerBaseRules, minus:
   //
@@ -189,32 +203,47 @@ public class Rules
     // No instantiation.
   }
 
-  public static List<Program> programs(final PlannerContext plannerContext, final QueryMaker queryMaker)
+  public static List<Program> programs(final PlannerContext plannerContext)
   {
+
+
     // Program that pre-processes the tree before letting the full-on VolcanoPlanner loose.
     final Program preProgram =
         Programs.sequence(
             Programs.subQuery(DefaultRelMetadataProvider.INSTANCE),
             DecorrelateAndTrimFieldsProgram.INSTANCE,
-            Programs.hep(REDUCTION_RULES, true, DefaultRelMetadataProvider.INSTANCE)
+            buildHepProgram(REDUCTION_RULES, true, DefaultRelMetadataProvider.INSTANCE, HEP_DEFAULT_MATCH_LIMIT)
         );
 
     return ImmutableList.of(
-        Programs.sequence(preProgram, Programs.ofRules(druidConventionRuleSet(plannerContext, queryMaker))),
+        Programs.sequence(preProgram, Programs.ofRules(druidConventionRuleSet(plannerContext))),
         Programs.sequence(preProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext)))
     );
   }
 
-  private static List<RelOptRule> druidConventionRuleSet(
-      final PlannerContext plannerContext,
-      final QueryMaker queryMaker
-  )
+  private static Program buildHepProgram(Iterable<? extends RelOptRule> rules,
+                                         boolean noDag,
+                                         RelMetadataProvider metadataProvider,
+                                         int matchLimit)
   {
-    final ImmutableList.Builder<RelOptRule> retVal = ImmutableList.<RelOptRule>builder()
+    final HepProgramBuilder builder = HepProgram.builder();
+    builder.addMatchLimit(matchLimit);
+    for (RelOptRule rule : rules) {
+      builder.addRuleInstance(rule);
+    }
+    return Programs.of(builder.build(), noDag, metadataProvider);
+  }
+
+  private static List<RelOptRule> druidConventionRuleSet(final PlannerContext plannerContext)
+  {
+    final ImmutableList.Builder<RelOptRule> retVal = ImmutableList
+        .<RelOptRule>builder()
         .addAll(baseRuleSet(plannerContext))
         .add(DruidRelToDruidRule.instance())
-        .add(new DruidTableScanRule(queryMaker))
-        .addAll(DruidRules.rules());
+        .add(new DruidTableScanRule(plannerContext))
+        .add(new DruidLogicalValuesRule(plannerContext))
+        .add(new ExternalTableScanRule(plannerContext))
+        .addAll(DruidRules.rules(plannerContext));
 
     return retVal.build();
   }
@@ -240,9 +269,11 @@ public class Rules
     rules.addAll(ABSTRACT_RELATIONAL_RULES);
 
     if (!plannerConfig.isUseApproximateCountDistinct()) {
-      // For some reason, even though we support grouping sets, using AggregateExpandDistinctAggregatesRule.INSTANCE
-      // here causes CalciteQueryTest#testExactCountDistinctWithGroupingAndOtherAggregators to fail.
-      rules.add(AggregateExpandDistinctAggregatesRule.JOIN);
+      if (plannerConfig.isUseGroupingSetForExactDistinct()) {
+        rules.add(AggregateExpandDistinctAggregatesRule.INSTANCE);
+      } else {
+        rules.add(AggregateExpandDistinctAggregatesRule.JOIN);
+      }
     }
 
     // Rules that we wrote.

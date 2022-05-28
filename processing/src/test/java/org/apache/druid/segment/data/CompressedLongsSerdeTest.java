@@ -23,10 +23,10 @@ import com.google.common.base.Supplier;
 import com.google.common.primitives.Longs;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import org.apache.druid.utils.CloseableUtils;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -224,11 +224,17 @@ public class CompressedLongsSerdeTest
     Assert.assertEquals(vals.length, indexed.size());
 
     // sequential access
+    long[] vector = new long[256];
     int[] indices = new int[vals.length];
     for (int i = 0; i < indexed.size(); ++i) {
+      if (i % 256 == 0) {
+        indexed.get(vector, i, Math.min(256, indexed.size() - i));
+      }
       Assert.assertEquals(vals[i], indexed.get(i));
+      Assert.assertEquals(vals[i], vector[i % 256]);
       indices[i] = i;
     }
+
 
     // random access, limited to 1000 elements for large lists (every element would take too long)
     IntArrays.shuffle(indices, ThreadLocalRandom.current());
@@ -350,7 +356,7 @@ public class CompressedLongsSerdeTest
       stopLatch.await();
     }
     finally {
-      CloseQuietly.close(indexed2);
+      CloseableUtils.closeAndWrapExceptions(indexed2);
     }
 
     if (failureHappened.get()) {

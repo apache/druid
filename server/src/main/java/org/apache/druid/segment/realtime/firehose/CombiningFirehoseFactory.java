@@ -22,9 +22,12 @@ package org.apache.druid.segment.realtime.firehose;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
@@ -33,11 +36,12 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Creates firehose that combines data from different Firehoses. Useful for ingesting data from multiple sources.
  */
-public class CombiningFirehoseFactory implements FirehoseFactory<InputRowParser>
+public class CombiningFirehoseFactory implements FiniteFirehoseFactory<InputRowParser, List<FirehoseFactory>>
 {
   private static final EmittingLogger log = new EmittingLogger(CombiningFirehoseFactory.class);
 
@@ -62,6 +66,32 @@ public class CombiningFirehoseFactory implements FirehoseFactory<InputRowParser>
   public List<FirehoseFactory> getDelegateFactoryList()
   {
     return delegateFactoryList;
+  }
+
+  @Override
+  public boolean isSplittable()
+  {
+    return false;
+  }
+
+  @Override
+  public Stream<InputSplit<List<FirehoseFactory>>> getSplits(
+      @Nullable SplitHintSpec splitHintSpec
+  )
+  {
+    return Stream.of(new InputSplit<>(delegateFactoryList));
+  }
+
+  @Override
+  public int getNumSplits(@Nullable SplitHintSpec splitHintSpec)
+  {
+    return 1;
+  }
+
+  @Override
+  public FiniteFirehoseFactory<InputRowParser, List<FirehoseFactory>> withSplit(InputSplit<List<FirehoseFactory>> split)
+  {
+    return new CombiningFirehoseFactory(split.get());
   }
 
   class CombiningFirehose implements Firehose

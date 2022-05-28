@@ -22,8 +22,10 @@ package org.apache.druid.query;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -44,6 +46,7 @@ import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchQuerySpec;
 import org.apache.druid.query.search.SearchSortSpec;
 import org.apache.druid.query.spec.LegacySegmentSpec;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -59,8 +62,10 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 /**
+ *
  */
 public class Druids
 {
@@ -205,7 +210,7 @@ public class Druids
     {
       final Set<String> filterValues = Sets.newHashSet(values);
       filterValues.add(value);
-      dimFilter = new InDimFilter(dimensionName, filterValues, null, null);
+      dimFilter = new InDimFilter(dimensionName, filterValues);
       return this;
     }
 
@@ -259,7 +264,18 @@ public class Druids
 
     public TimeseriesQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      this.context = c;
+      return this;
+    }
+
+    public TimeseriesQueryBuilder randomQueryId()
+    {
+      return queryId(UUID.randomUUID().toString());
+    }
+
+    public TimeseriesQueryBuilder queryId(String queryId)
+    {
+      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(BaseQuery.QUERY_ID, queryId));
       return this;
     }
 
@@ -466,7 +482,18 @@ public class Druids
 
     public SearchQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      this.context = c;
+      return this;
+    }
+
+    public SearchQueryBuilder randomQueryId()
+    {
+      return queryId(UUID.randomUUID().toString());
+    }
+
+    public SearchQueryBuilder queryId(String queryId)
+    {
+      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(BaseQuery.QUERY_ID, queryId));
       return this;
     }
   }
@@ -572,7 +599,18 @@ public class Druids
 
     public TimeBoundaryQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      this.context = c;
+      return this;
+    }
+
+    public TimeBoundaryQueryBuilder randomQueryId()
+    {
+      return queryId(UUID.randomUUID().toString());
+    }
+
+    public TimeBoundaryQueryBuilder queryId(String queryId)
+    {
+      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(BaseQuery.QUERY_ID, queryId));
       return this;
     }
   }
@@ -721,7 +759,7 @@ public class Druids
 
     public SegmentMetadataQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      this.context = c;
       return this;
     }
   }
@@ -739,9 +777,9 @@ public class Druids
    * Usage example:
    * <pre><code>
    *   ScanQuery query = new ScanQueryBuilder()
-   *                                  .dataSource("Example")
-   *                                  .interval("2010/2013")
-   *                                  .build();
+   *           .dataSource("Example")
+   *           .eternityInterval()
+   *           .build();
    * </code></pre>
    *
    * @see ScanQuery
@@ -754,26 +792,13 @@ public class Druids
     private Map<String, Object> context;
     private ScanQuery.ResultFormat resultFormat;
     private int batchSize;
+    private long offset;
     private long limit;
     private DimFilter dimFilter;
-    private List<String> columns;
+    private List<String> columns = new ArrayList<>();
     private Boolean legacy;
     private ScanQuery.Order order;
-
-    public ScanQueryBuilder()
-    {
-      dataSource = null;
-      querySegmentSpec = null;
-      virtualColumns = null;
-      context = null;
-      resultFormat = null;
-      batchSize = 0;
-      limit = 0;
-      dimFilter = null;
-      columns = new ArrayList<>();
-      legacy = null;
-      order = null;
-    }
+    private List<ScanQuery.OrderBy> orderBy;
 
     public ScanQuery build()
     {
@@ -783,8 +808,10 @@ public class Druids
           virtualColumns,
           resultFormat,
           batchSize,
+          offset,
           limit,
           order,
+          orderBy,
           dimFilter,
           columns,
           legacy,
@@ -800,12 +827,13 @@ public class Druids
           .virtualColumns(query.getVirtualColumns())
           .resultFormat(query.getResultFormat())
           .batchSize(query.getBatchSize())
+          .offset(query.getScanRowsOffset())
           .limit(query.getScanRowsLimit())
           .filters(query.getFilter())
           .columns(query.getColumns())
           .legacy(query.isLegacy())
           .context(query.getContext())
-          .order(query.getOrder());
+          .orderBy(query.getOrderBys());
     }
 
     public ScanQueryBuilder dataSource(String ds)
@@ -826,6 +854,16 @@ public class Druids
       return this;
     }
 
+    /**
+     * Convenience method for an interval over all time.
+     */
+    public ScanQueryBuilder eternityInterval()
+    {
+      return intervals(
+            new MultipleIntervalSegmentSpec(
+                  ImmutableList.of(Intervals.ETERNITY)));
+    }
+
     public ScanQueryBuilder virtualColumns(VirtualColumns virtualColumns)
     {
       this.virtualColumns = virtualColumns;
@@ -839,7 +877,7 @@ public class Druids
 
     public ScanQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      this.context = c;
       return this;
     }
 
@@ -852,6 +890,12 @@ public class Druids
     public ScanQueryBuilder batchSize(int b)
     {
       batchSize = b;
+      return this;
+    }
+
+    public ScanQueryBuilder offset(long o)
+    {
+      offset = o;
       return this;
     }
 
@@ -888,6 +932,12 @@ public class Druids
     public ScanQueryBuilder order(ScanQuery.Order order)
     {
       this.order = order;
+      return this;
+    }
+
+    public ScanQueryBuilder orderBy(List<ScanQuery.OrderBy> orderBys)
+    {
+      this.orderBy = orderBys;
       return this;
     }
   }
@@ -967,7 +1017,7 @@ public class Druids
 
     public DataSourceMetadataQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      this.context = c;
       return this;
     }
   }

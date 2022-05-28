@@ -19,10 +19,14 @@
 
 package org.apache.druid.indexing.overlord.supervisor;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
 
 public interface Supervisor
@@ -46,6 +50,11 @@ public interface Supervisor
     return ImmutableMap.of();
   }
 
+  default List<ParseExceptionReport> getParseErrors()
+  {
+    return ImmutableList.of();
+  }
+
   @Nullable
   default Boolean isHealthy()
   {
@@ -64,4 +73,11 @@ public interface Supervisor
    * @param checkpointMetadata metadata for the sequence to currently checkpoint
    */
   void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata);
+
+  /**
+   * Computes maxLag, totalLag and avgLag
+   */
+  LagStats computeLagStats();
+
+  int getActiveTaskGroupsCount();
 }

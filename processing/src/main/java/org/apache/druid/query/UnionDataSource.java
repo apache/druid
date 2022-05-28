@@ -22,10 +22,10 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 
 import java.util.List;
 import java.util.Set;
@@ -39,7 +39,10 @@ public class UnionDataSource implements DataSource
   @JsonCreator
   public UnionDataSource(@JsonProperty("dataSources") List<TableDataSource> dataSources)
   {
-    Preconditions.checkNotNull(dataSources, "dataSources cannot be null for unionDataSource");
+    if (dataSources == null || dataSources.isEmpty()) {
+      throw new ISE("'dataSources' must be non-null and non-empty for 'union'");
+    }
+
     this.dataSources = dataSources;
   }
 
@@ -80,7 +83,7 @@ public class UnionDataSource implements DataSource
   }
 
   @Override
-  public boolean isCacheable()
+  public boolean isCacheable(boolean isBroker)
   {
     // Disables result-level caching for 'union' datasources, which doesn't work currently.
     // See https://github.com/apache/druid/issues/8713 for reference.

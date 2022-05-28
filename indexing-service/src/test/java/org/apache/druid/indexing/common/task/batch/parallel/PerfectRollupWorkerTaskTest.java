@@ -56,24 +56,10 @@ public class PerfectRollupWorkerTaskTest
   }
 
   @Test
-  public void failsWithInvalidPartitionsSpec()
+  public void succeedsWithUnspecifiedNumShards()
   {
-    exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("forceGuaranteedRollup is incompatible with partitionsSpec");
-
     new PerfectRollupWorkerTaskBuilder()
         .partitionsSpec(HashedPartitionsSpec.defaultSpec())
-        .build();
-  }
-
-  @Test
-  public void requiresGranularitySpecInputIntervals()
-  {
-    exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("Missing intervals in granularitySpec");
-
-    new PerfectRollupWorkerTaskBuilder()
-        .granularitySpecInputIntervals(Collections.emptyList())
         .build();
   }
 
@@ -89,6 +75,7 @@ public class PerfectRollupWorkerTaskTest
     private static final PartitionsSpec PARTITIONS_SPEC = new HashedPartitionsSpec(
         null,
         1,
+        null,
         null,
         null,
         null
@@ -177,13 +164,19 @@ public class PerfectRollupWorkerTaskTest
     @Override
     public String getType()
     {
-      throw new UnsupportedOperationException();
+      return "TestPerfectRollupWorkerTask";
     }
 
     @Override
     public boolean isReady(TaskActionClient taskActionClient)
     {
       throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String getSubtaskSpecId()
+    {
+      return "subtaskSpecId";
     }
   }
 }

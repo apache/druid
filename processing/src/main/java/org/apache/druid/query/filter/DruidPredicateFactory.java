@@ -32,4 +32,20 @@ public interface DruidPredicateFactory
   DruidFloatPredicate makeFloatPredicate();
 
   DruidDoublePredicate makeDoublePredicate();
+
+  /**
+   * Object predicate is currently only used by vectorized matchers for non-string object selectors. This currently
+   * means it will be used only if we encounter COMPLEX types, but will also include array types once they are more
+   * supported throughout the query engines.
+   *
+   * To preserve behavior with non-vectorized matchers which use a string predicate with null inputs for these 'nil'
+   * matchers, we do the same thing here.
+   *
+   * @see org.apache.druid.segment.VectorColumnProcessorFactory#makeObjectProcessor
+   */
+  default Predicate<Object> makeObjectPredicate()
+  {
+    final Predicate<String> stringPredicate = makeStringPredicate();
+    return o -> stringPredicate.apply(null);
+  }
 }

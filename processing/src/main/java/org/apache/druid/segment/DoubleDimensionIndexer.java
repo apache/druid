@@ -25,6 +25,9 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
@@ -38,25 +41,25 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
 {
   public static final Comparator<Double> DOUBLE_COMPARATOR = Comparators.naturalNullsFirst();
 
+  private volatile boolean hasNulls = false;
+
   @Override
-  public Double processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
+  public EncodedKeyComponent<Double> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
     if (dimValues instanceof List) {
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
     }
-    return DimensionHandlerUtils.convertObjectToDouble(dimValues, reportParseExceptions);
+    Double d = DimensionHandlerUtils.convertObjectToDouble(dimValues, reportParseExceptions);
+    if (d == null) {
+      hasNulls = NullHandling.sqlCompatible();
+    }
+    return new EncodedKeyComponent<>(d, Double.BYTES);
   }
 
   @Override
   public void setSparseIndexed()
   {
-    // no-op, double columns do not have a dictionary to track null values
-  }
-
-  @Override
-  public long estimateEncodedKeyComponentSize(Double key)
-  {
-    return Double.BYTES;
+    hasNulls = NullHandling.sqlCompatible();
   }
 
   @Override
@@ -90,6 +93,16 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   }
 
   @Override
+  public ColumnCapabilities getColumnCapabilities()
+  {
+    ColumnCapabilitiesImpl builder = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE);
+    if (hasNulls) {
+      builder.setHasNulls(hasNulls);
+    }
+    return builder;
+  }
+
+  @Override
   public DimensionSelector makeDimensionSelector(
       DimensionSpec spec,
       IncrementalIndexRowHolder currEntry,
@@ -113,7 +126,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       public boolean isNull()
       {
         final Object[] dims = currEntry.get().getDims();
-        return dimIndex >= dims.length || dims[dimIndex] == null;
+        return hasNulls && (dimIndex >= dims.length || dims[dimIndex] == null);
       }
 
       @Override

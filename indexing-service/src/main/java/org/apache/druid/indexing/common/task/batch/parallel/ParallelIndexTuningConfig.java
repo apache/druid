@@ -23,16 +23,18 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Objects;
 
 public class ParallelIndexTuningConfig extends IndexTuningConfig
@@ -45,6 +47,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   private static final int DEFAULT_CHAT_HANDLER_NUM_RETRIES = 5;
   private static final int DEFAULT_MAX_NUM_SEGMENTS_TO_MERGE = 100;
   private static final int DEFAULT_TOTAL_NUM_MERGE_TASKS = 10;
+  private static final int DEFAULT_MAX_ALLOWED_LOCK_COUNT = -1;
 
   private final SplitHintSpec splitHintSpec;
 
@@ -57,21 +60,28 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
 
   /**
    * Max number of segments to merge at the same time.
-   * Used only by {@link PartialHashSegmentMergeTask}.
+   * Used only by {@link PartialGenericSegmentMergeTask}.
    * This configuration was temporarily added to avoid using too much memory while merging segments,
    * and will be removed once {@link org.apache.druid.segment.IndexMerger} is improved to not use much memory.
    */
   private final int maxNumSegmentsToMerge;
 
   /**
-   * Total number of tasks for partial segment merge (that is, number of {@link PartialHashSegmentMergeTask}s).
+   * Total number of tasks for partial segment merge (that is, number of {@link PartialGenericSegmentMergeTask}s).
    * Used only when this task runs with shuffle.
    */
   private final int totalNumMergeTasks;
 
+  private final int maxAllowedLockCount;
+
   public static ParallelIndexTuningConfig defaultConfig()
   {
     return new ParallelIndexTuningConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
         null,
         null,
         null,
@@ -105,8 +115,10 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   public ParallelIndexTuningConfig(
       @JsonProperty("targetPartitionSize") @Deprecated @Nullable Integer targetPartitionSize,
       @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
+      @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
+      @JsonProperty("skipBytesInMemoryOverheadCheck") @Nullable Boolean skipBytesInMemoryOverheadCheck,
       @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
       @JsonProperty("numShards") @Deprecated @Nullable Integer numShards,
       @JsonProperty("splitHintSpec") @Nullable SplitHintSpec splitHintSpec,
@@ -128,14 +140,19 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
       @JsonProperty("totalNumMergeTasks") @Nullable Integer totalNumMergeTasks,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
+      @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis,
+      @JsonProperty("maxAllowedLockCount") @Nullable Integer maxAllowedLockCount
   )
   {
     super(
         targetPartitionSize,
         maxRowsPerSegment,
+        appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
+        skipBytesInMemoryOverheadCheck,
         maxTotalRows,
         null,
         numShards,
@@ -151,7 +168,9 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         segmentWriteOutMediumFactory,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        maxColumnsToMerge,
+        awaitSegmentAvailabilityTimeoutMillis
     );
 
     if (maxNumSubTasks != null && maxNumConcurrentSubTasks != null) {
@@ -183,12 +202,17 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
                             ? DEFAULT_TOTAL_NUM_MERGE_TASKS
                             : totalNumMergeTasks;
 
+    this.maxAllowedLockCount = maxAllowedLockCount == null
+                               ? DEFAULT_MAX_ALLOWED_LOCK_COUNT
+                               : maxAllowedLockCount;
+
     Preconditions.checkArgument(this.maxNumConcurrentSubTasks > 0, "maxNumConcurrentSubTasks must be positive");
     Preconditions.checkArgument(this.maxNumSegmentsToMerge > 0, "maxNumSegmentsToMerge must be positive");
     Preconditions.checkArgument(this.totalNumMergeTasks > 0, "totalNumMergeTasks must be positive");
-    if (getPartitionsSpec() != null && getPartitionsSpec() instanceof SingleDimensionPartitionsSpec) {
-      if (((SingleDimensionPartitionsSpec) getPartitionsSpec()).getPartitionDimension() == null) {
-        throw new IAE("partitionDimension must be specified");
+    if (getPartitionsSpec() != null && getPartitionsSpec() instanceof DimensionRangePartitionsSpec) {
+      List<String> partitionDimensions = ((DimensionRangePartitionsSpec) getPartitionsSpec()).getPartitionDimensions();
+      if (partitionDimensions == null || partitionDimensions.isEmpty()) {
+        throw new IAE("partitionDimensions must be specified");
       }
     }
   }
@@ -242,14 +266,22 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
     return totalNumMergeTasks;
   }
 
+  @JsonProperty
+  public int getMaxAllowedLockCount()
+  {
+    return maxAllowedLockCount;
+  }
+
   @Override
   public ParallelIndexTuningConfig withPartitionsSpec(PartitionsSpec partitionsSpec)
   {
     return new ParallelIndexTuningConfig(
         null,
         null,
+        getAppendableIndexSpec(),
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
+        isSkipBytesInMemoryOverheadCheck(),
         null,
         null,
         getSplitHintSpec(),
@@ -271,7 +303,10 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         getTotalNumMergeTasks(),
         isLogParseExceptions(),
         getMaxParseExceptions(),
-        getMaxSavedParseExceptions()
+        getMaxSavedParseExceptions(),
+        getMaxColumnsToMerge(),
+        getAwaitSegmentAvailabilityTimeoutMillis(),
+        getMaxAllowedLockCount()
     );
   }
 
@@ -294,6 +329,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
            chatHandlerNumRetries == that.chatHandlerNumRetries &&
            maxNumSegmentsToMerge == that.maxNumSegmentsToMerge &&
            totalNumMergeTasks == that.totalNumMergeTasks &&
+           maxAllowedLockCount == that.maxAllowedLockCount &&
            Objects.equals(splitHintSpec, that.splitHintSpec) &&
            Objects.equals(chatHandlerTimeout, that.chatHandlerTimeout);
   }
@@ -310,7 +346,8 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         chatHandlerTimeout,
         chatHandlerNumRetries,
         maxNumSegmentsToMerge,
-        totalNumMergeTasks
+        totalNumMergeTasks,
+        maxAllowedLockCount
     );
   }
 
@@ -326,6 +363,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
            ", chatHandlerNumRetries=" + chatHandlerNumRetries +
            ", maxNumSegmentsToMerge=" + maxNumSegmentsToMerge +
            ", totalNumMergeTasks=" + totalNumMergeTasks +
+           ", maxAllowedLockCount=" + maxAllowedLockCount +
            "} " + super.toString();
   }
 }

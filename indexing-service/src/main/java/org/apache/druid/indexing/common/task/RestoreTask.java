@@ -74,7 +74,7 @@ public class RestoreTask extends AbstractFixedIntervalTask
     for (final DataSegment unusedSegment : unusedSegments) {
       if (unusedSegment.getVersion().compareTo(myLock.getVersion()) > 0) {
         throw new ISE(
-            "WTF?! Unused segment[%s] has version[%s] > task version[%s]",
+            "Unused segment[%s] has version[%s] > task version[%s]",
             unusedSegment.getId(),
             unusedSegment.getVersion(),
             myLock.getVersion()
