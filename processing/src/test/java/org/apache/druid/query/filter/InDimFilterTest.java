@@ -232,7 +232,8 @@ public class InDimFilterTest extends InitializedNullHandlingTest
         RowAdapters.standardRow(),
         () -> new MapBasedRow(0, row),
         RowSignature.builder().add("dim", ColumnType.STRING).build(),
-        true
+        true,
+        false
     );
 
     final ValueMatcher matcher = filter.toFilter().makeMatcher(columnSelectorFactory);
