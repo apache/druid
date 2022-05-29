@@ -31,6 +31,7 @@
 
   <module name="NewlineAtEndOfFile"/>
   <module name="FileTabCharacter"/>
+  <module name="SuppressWarningsFilter"/>
 
   <!-- Added as per the issue #7384 - Prohibit @author tags in Javadoc -->
   <module name="RegexpSingleline">

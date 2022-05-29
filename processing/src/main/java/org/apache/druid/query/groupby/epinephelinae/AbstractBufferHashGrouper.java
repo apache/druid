@@ -129,7 +129,7 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
 
     if (keyBuffer.remaining() != keySize) {
       throw new IAE(
-          "keySerde.toByteBuffer(key).remaining[%s] != keySerde.keySize[%s], buffer was the wrong size?!",
+          "keySerde.toByteBuffer(key).remaining %d != keySerde.keySize %d, buffer was the wrong size?!",
           keyBuffer.remaining(),
           keySize
       );
@@ -185,7 +185,7 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
 
     if (reusableEntry.getValues().length != aggregators.size()) {
       throw new ISE(
-          "Expected entry with [%d] values but got [%d]",
+          "Expected entry with %d values but got %d",
           aggregators.size(),
           reusableEntry.getValues().length
       );

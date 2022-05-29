@@ -32,6 +32,8 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.queryng.config.QueryNGConfig;
+import org.apache.druid.queryng.planner.TimeSeriesPlanner;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 
@@ -98,9 +100,15 @@ public class TimeseriesQueryRunnerFactory
       if (!(input instanceof TimeseriesQuery)) {
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), TimeseriesQuery.class);
       }
+      if (QueryNGConfig.enabledFor(queryPlus)) {
+        return TimeSeriesPlanner.queryEngine(
+            queryPlus,
+            adapter,
+            engine.bufferPool()
+         );
+      }
 
       return engine.process((TimeseriesQuery) input, adapter, (TimeseriesQueryMetrics) queryPlus.getQueryMetrics());
     }
   }
-
 }

@@ -108,7 +108,7 @@ public class ByteBufferHashTable
 
     if (maxBuckets < 1) {
       throw new IAE(
-          "Not enough capacity for even one row! Need[%,d] but have[%,d].",
+          "Not enough capacity for even one row! Need %,d but have %,d.",
           bucketSizeWithHash + Integer.BYTES,
           buffer.capacity()
       );
@@ -169,7 +169,7 @@ public class ByteBufferHashTable
     }
 
     if (newBuckets < maxBuckets) {
-      throw new ISE("newBuckets[%,d] < maxBuckets[%,d]", newBuckets, maxBuckets);
+      throw new ISE("newBuckets %,d < maxBuckets %,d", newBuckets, maxBuckets);
     }
 
     ByteBuffer newTableBuffer = buffer.duplicate();
@@ -230,7 +230,7 @@ public class ByteBufferHashTable
     growthCount++;
 
     if (size != newSize) {
-      throw new ISE("size[%,d] != newSize[%,d] after resizing", size, newSize);
+      throw new ISE("size %,d != newSize %,d after resizing", size, newSize);
     }
   }
 

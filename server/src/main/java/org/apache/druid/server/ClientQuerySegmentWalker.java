@@ -151,8 +151,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   {
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
-    // transform TableDataSource to GlobalTableDataSource when eligible
-    // before further transformation to potentially inline
+    // Transform TableDataSource to GlobalTableDataSource when eligible
+    // before further transformation to potentially inline.
 
     // Populate the subquery ids of the subquery id present in the main query
     Query<T> newQuery = query.withDataSource(generateSubqueryIds(
@@ -162,7 +162,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     ));
 
     final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
-    // do an inlining dry run to see if any inlining is necessary, without actually running the queries.
+
+    // Do an inlining dry run to see if any inlining is necessary, without actually running the queries.
     final int maxSubqueryRows = QueryContexts.getMaxSubqueryRows(query, serverConfig.getMaxSubqueryRows());
 
     final DataSource inlineDryRun = inlineIfNecessary(
@@ -404,7 +405,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   /**
    * Decorate query runners created by {@link #clusterClient}, adding result caching, result merging, metric
    * emission, etc. Not to be used on runners from {@link #localClient}, since we expect it to do this kind
-   * of decoration to itself.
+   * of decoration itself.
    *
    * @param query             the query
    * @param baseClusterRunner runner from {@link #clusterClient}

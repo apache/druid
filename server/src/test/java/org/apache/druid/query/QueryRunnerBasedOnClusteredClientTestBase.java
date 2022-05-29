@@ -45,6 +45,8 @@ import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.query.topn.TopNQueryConfig;
+import org.apache.druid.queryng.fragment.QueryManagerFactory;
+import org.apache.druid.queryng.fragment.TestQueryManagerFactory;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
@@ -91,6 +93,9 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
   private static final Closer CLOSER = Closer.create();
   private static final String DATASOURCE = "datasource";
   private static final boolean USE_PARALLEL_MERGE_POOL_CONFIGURED = false;
+  // Query timeout. Set long for debugging, short for automated tests.
+  private static final long TIMEOUT_MS = 300_000; // 10_000;
+  protected static final QueryManagerFactory QUERY_MANAGER_FACTORY = new TestQueryManagerFactory();
 
   protected final ObjectMapper objectMapper = new DefaultObjectMapper();
   protected final QueryToolChestWarehouse toolChestWarehouse;
@@ -221,7 +226,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
                  .context(
                      ImmutableMap.of(
                          DirectDruidClient.QUERY_FAIL_TIME,
-                         System.currentTimeMillis() + 10000
+                         System.currentTimeMillis() + TIMEOUT_MS
                      )
                  )
                  .build()

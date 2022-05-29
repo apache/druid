@@ -52,12 +52,19 @@ public class QueryRunnerHelper
   )
   {
     Preconditions.checkArgument(
-        queryIntervals.size() == 1, "Can only handle a single interval, got[%s]", queryIntervals
+        queryIntervals.size() == 1, "Can only handle a single interval, got [%s]", queryIntervals
     );
 
     return Sequences.filter(
         Sequences.map(
-            adapter.makeCursors(filter, queryIntervals.get(0), virtualColumns, granularity, descending, queryMetrics),
+            adapter.makeCursors(
+                filter,
+                queryIntervals.get(0),
+                virtualColumns,
+                granularity,
+                descending,
+                queryMetrics
+            ),
             mapFn
         ),
         Objects::nonNull

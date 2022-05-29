@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
@@ -48,6 +49,8 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.queryng.fragment.FragmentManager;
+import org.apache.druid.queryng.planner.SqlPlanner;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.ComparableList;
@@ -136,7 +139,6 @@ public class NativeQueryMaker implements QueryMaker
       }
     }
 
-
     final List<String> rowOrder;
     if (query instanceof TimeseriesQuery && !druidQuery.getGrouping().getDimensions().isEmpty()) {
       // Hack for timeseries queries: when generating them, DruidQuery.toTimeseriesQuery translates a dimension
@@ -174,7 +176,7 @@ public class NativeQueryMaker implements QueryMaker
   }
 
   @SuppressWarnings("unchecked")
-  private <T> QueryResponse<Object[]> execute(Query<?> query, final List<String> newFields, final List<SqlTypeName> newTypes)
+  private <T> QueryResponse<Object[]> execute(Query<T> query, final List<String> newFields, final List<SqlTypeName> newTypes)
   {
     Hook.QUERY_PLAN.run(query);
 
@@ -196,15 +198,37 @@ public class NativeQueryMaker implements QueryMaker
     // otherwise it won't yet be initialized. (A bummer, since ideally, we'd verify the toolChest exists and can do
     // array-based results before starting the query; but in practice we don't expect this to happen since we keep
     // tight control over which query types we generate in the SQL layer. They all support array-based results.)
-    final QueryResponse<T> results = queryLifecycle.runSimple((Query<T>) query, authenticationResult, authorizationResult);
+    final QueryResponse<T> results = queryLifecycle.runSimple(query, authenticationResult, authorizationResult);
 
-    return mapResultSequence(
-        results,
-        (QueryToolChest<T, Query<T>>) queryLifecycle.getToolChest(),
-        (Query<T>) query,
-        newFields,
-        newTypes
-    );
+    final QueryToolChest<T, Query<T>> toolChest = queryLifecycle.getToolChest();
+    final List<String> resultArrayFields = toolChest.resultArraySignature(query).getColumnNames();
+    QueryPlus<T> queryPlus = QueryPlus.wrap(query).withFragment(results.fragment());
+
+    if (results.isFragment()) {
+      FragmentManager fragment = results.fragment();
+      final Sequence<T> seq = fragment.rootSequence();
+      final Sequence<Object[]> resultArrays = toolChest.resultsAsArrays(queryPlus, seq);
+      fragment.registerRoot(
+          SqlPlanner.projectResults(
+              fragment,
+              resultArrays,
+              plannerContext,
+              jsonMapper,
+              resultArrayFields,
+              newFields,
+              newTypes
+          )
+      );
+      return results.withRoot();
+    } else {
+      return mapResultSequence(
+          results,
+          (QueryToolChest<T, Query<T>>) queryLifecycle.getToolChest(),
+          (Query<T>) query,
+          newFields,
+          newTypes
+      );
+    }
   }
 
   private <T> QueryResponse<Object[]> mapResultSequence(
@@ -231,7 +255,7 @@ public class NativeQueryMaker implements QueryMaker
       final int idx = originalFieldsLookup.getInt(newField);
       if (idx < 0) {
         throw new ISE(
-            "newField[%s] not contained in originalFields[%s]",
+            "newField [%s] not contained in originalFields [%s]",
             newField,
             String.join(", ", originalFields)
         );
@@ -242,7 +266,7 @@ public class NativeQueryMaker implements QueryMaker
 
     //noinspection unchecked
     final Sequence<Object[]> sequence = toolChest.resultsAsArrays(query, results.getResults());
-    return new QueryResponse(
+    return results.withSequence(
         Sequences.map(
             sequence,
             array -> {
@@ -252,8 +276,7 @@ public class NativeQueryMaker implements QueryMaker
               }
               return newArray;
             }
-        ),
-        results.getResponseContext()
+        )
     );
   }
 
@@ -368,7 +391,6 @@ public class NativeQueryMaker implements QueryMaker
     return coercedValue;
   }
 
-
   @VisibleForTesting
   static Object maybeCoerceArrayToList(Object value, boolean mustCoerce)
   {
@@ -401,7 +423,7 @@ public class NativeQueryMaker implements QueryMaker
     } else if (value instanceof ComparableStringArray) {
       return Arrays.asList(((ComparableStringArray) value).getDelegate());
     } else if (value instanceof ComparableList) {
-      return ((ComparableList) value).getDelegate();
+      return ((ComparableList<?>) value).getDelegate();
     } else if (mustCoerce) {
       return null;
     }

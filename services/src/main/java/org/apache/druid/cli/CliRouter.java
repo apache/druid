@@ -41,6 +41,7 @@ import org.apache.druid.guice.http.JettyHttpClientModule;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupSerdeModule;
+import org.apache.druid.queryng.guice.QueryNGModule;
 import org.apache.druid.server.AsyncQueryForwardingServlet;
 import org.apache.druid.server.NoopQuerySegmentWalker;
 import org.apache.druid.server.http.RouterResource;
@@ -127,7 +128,8 @@ public class CliRouter extends ServerRunnable
           Jerseys.addResource(binder, SelfDiscoveryResource.class);
           LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
         },
-        new LookupSerdeModule()
+        new LookupSerdeModule(),
+        new QueryNGModule()
     );
   }
 }

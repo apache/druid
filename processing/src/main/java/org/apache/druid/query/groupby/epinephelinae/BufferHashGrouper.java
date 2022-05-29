@@ -70,7 +70,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
     this.initialBuckets = initialBuckets > 0 ? Math.max(MIN_INITIAL_BUCKETS, initialBuckets) : DEFAULT_INITIAL_BUCKETS;
 
     if (this.maxLoadFactor >= 1.0f) {
-      throw new IAE("Invalid maxLoadFactor[%f], must be < 1.0", maxLoadFactor);
+      throw new IAE("Invalid maxLoadFactor %f, must be < 1.0", maxLoadFactor);
     }
 
     this.bucketSize = HASH_SIZE + keySerde.keySize() + aggregators.spaceNeeded();

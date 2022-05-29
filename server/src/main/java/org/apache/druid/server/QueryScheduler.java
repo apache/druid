@@ -42,6 +42,9 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryWatcher;
+import org.apache.druid.queryng.config.QueryNGConfig;
+import org.apache.druid.queryng.operators.general.ThrottleOperator.Throttle;
+import org.apache.druid.queryng.planner.ServerExecutionPlanner;
 import org.apache.druid.server.initialization.ServerConfig;
 
 import java.time.Duration;
@@ -62,32 +65,86 @@ import java.util.Set;
  */
 public class QueryScheduler implements QueryWatcher
 {
+  /**
+   * Opaque token that represents a lease of query resources.
+   * The grantee is responsible for calling {@link #release()} at
+   * query completion: success or failure.
+   */
+  public interface LaneToken
+  {
+    void release();
+  }
+
+  /**
+   * Private implementation of the resource lease based on bulkheads.
+   */
+  private class LaneTokenImpl implements LaneToken
+  {
+    final List<Bulkhead> lanes;
+
+    private LaneTokenImpl(List<Bulkhead> lanes)
+    {
+      this.lanes = lanes;
+    }
+
+    @Override
+    public void release()
+    {
+      releaseLanes(lanes);
+      lanes.clear();
+    }
+  }
+
+  public class AcceptThrottleImpl implements Throttle
+  {
+    private final Query<?> query;
+    List<Bulkhead> bulkheads;
+
+    public AcceptThrottleImpl(Query<?> query)
+    {
+      this.query = query;
+    }
+
+    @Override
+    public void accept()
+    {
+      bulkheads = acquireLanes(query);
+    }
+
+    @Override
+    public void release()
+    {
+      finishLanes(bulkheads);
+    }
+  }
+
   private static final Logger LOGGER = new Logger(QueryScheduler.class);
   public static final int UNAVAILABLE = -1;
   public static final String TOTAL = "total";
+
   private final int totalCapacity;
   private final QueryPrioritizationStrategy prioritizationStrategy;
   private final QueryLaningStrategy laningStrategy;
   private final BulkheadRegistry laneRegistry;
 
   /**
-   * mapping of query id to set of futures associated with the query.
-   * This map is synchronized as there are 2 threads, query execution thread and query canceling thread,
+   * Mapping of query id to set of futures associated with the query.
+   * This map is synchronized as there are two threads, query execution thread and query canceling thread,
    * that can access the map at the same time.
    *
    * The updates (additions and removals) on this and {@link #queryDatasources} are racy
-   * as those updates are not being done atomically on those 2 maps,
+   * as those updates are not being done atomically on those two maps,
    * but it is OK in most cases since they will be cleaned up once the query is done.
    */
   private final SetMultimap<String, ListenableFuture<?>> queryFutures;
 
   /**
-   * mapping of query id to set of datasource names that are being queried, used for authorization.
-   * This map is synchronized as there are 2 threads, query execution thread and query canceling thread,
+   * Mapping of query ID to set of datasource names that are being queried, used for authorization.
+   * This map is synchronized as there are two threads, query execution thread and query canceling thread,
    * that can access the map at the same time.
    *
    * The updates (additions and removals) on this and {@link #queryFutures} are racy
-   * as those updates are not being done atomically on those 2 maps,
+   * as those updates are not being done atomically on those two maps,
    * but it is OK in most cases since they will be cleaned up once the query is done.
    */
   private final SetMultimap<String, String> queryDatasources;
@@ -105,7 +162,7 @@ public class QueryScheduler implements QueryWatcher
     this.laningStrategy = laningStrategy;
     this.queryFutures = Multimaps.synchronizedSetMultimap(HashMultimap.create());
     this.queryDatasources = Multimaps.synchronizedSetMultimap(HashMultimap.create());
-    // if totalNumThreads is above 0 and less than druid.server.http.numThreads, enforce total limit
+    // If totalNumThreads is above 0 and less than druid.server.http.numThreads, enforce total limit
     final boolean limitTotal;
     if (totalNumThreads > 0 && totalNumThreads < serverConfig.getNumThreads()) {
       limitTotal = true;
@@ -119,7 +176,7 @@ public class QueryScheduler implements QueryWatcher
   }
 
   /**
-   * Keeping the old constructor as many test classes are dependent on this
+   * Keeping the old constructor as many test classes are dependent on this.
    */
   @VisibleForTesting
   public QueryScheduler(
@@ -151,7 +208,7 @@ public class QueryScheduler implements QueryWatcher
   }
 
   /**
-   * Assign a query a priority and lane (if not set)
+   * Assign a query a priority and lane (if not set).
    */
   public <T> Query<T> prioritizeAndLaneQuery(QueryPlus<T> queryPlus, Set<SegmentServerSelector> segments)
   {
@@ -174,7 +231,7 @@ public class QueryScheduler implements QueryWatcher
   }
 
   /**
-   * Run a query with the scheduler, attempting to acquire a semaphore from the total and lane specific query capacities
+   * Run a query with the scheduler, attempting to acquire a semaphore from the total and lane specific query capacities.
    *
    * Note that {@link #cancelQuery} should not interrupt the thread that calls run, in all current usages it only
    * cancels any {@link ListenableFuture} created downstream. If this ever commonly changes, we should add
@@ -195,14 +252,23 @@ public class QueryScheduler implements QueryWatcher
    */
   public <T> QueryRunner<T> wrapQueryRunner(QueryRunner<T> baseRunner)
   {
-    return (queryPlus, responseContext) ->
-        QueryScheduler.this.run(
+    return (queryPlus, responseContext) -> {
+      if (QueryNGConfig.enabledFor(queryPlus)) {
+        return ServerExecutionPlanner.throttle(
+            queryPlus,
+            baseRunner,
+            new AcceptThrottleImpl(queryPlus.getQuery())
+        );
+      } else {
+        return QueryScheduler.this.run(
             queryPlus.getQuery(), new LazySequence<>(() -> baseRunner.run(queryPlus, responseContext))
         );
+      }
+    };
   }
 
   /**
-   * Forcibly cancel all futures that have been registered to a specific query id
+   * Forcibly cancel all futures that have been registered to a specific query ID.
    */
   public boolean cancelQuery(String id)
   {
@@ -249,7 +315,7 @@ public class QueryScheduler implements QueryWatcher
   }
 
   /**
-   * Acquire a semaphore for both the 'total' and a lane, if any is associated with a query
+   * Acquire a semaphore for both the 'total' and a lane, if any is associated with a query.
    */
   @VisibleForTesting
   List<Bulkhead> acquireLanes(Query<?> query)
@@ -268,10 +334,10 @@ public class QueryScheduler implements QueryWatcher
         hallPasses.add(laneLimiter);
       });
 
-      // everyone needs to take one from the total lane; to ensure we don't acquire a lane and never release it, we want
+      // Everyone needs to take one from the total lane; to ensure we don't acquire a lane and never release it, we want
       // to check for total capacity exceeded and release the lane (if present) before throwing capacity exceeded
       // note that this isn't strictly fair: the bulkhead doesn't use a fair semaphore, the first to acquire the lane
-      // might lose to one that came after it when acquiring the total, or an unlaned query might lose to a laned query
+      // might lose to one that came after it when acquiring the total, or an unlaned query might lose to a laned query.
       totalConfig.ifPresent(config -> {
         Bulkhead totalLimiter = laneRegistry.bulkhead(TOTAL, config);
         if (!totalLimiter.tryAcquirePermission()) {
@@ -287,8 +353,13 @@ public class QueryScheduler implements QueryWatcher
     }
   }
 
+  public LaneToken accept(Query<?> query)
+  {
+    return new LaneTokenImpl(acquireLanes(query));
+  }
+
   /**
-   * Release all {@link Bulkhead} semaphores in the list
+   * Release all {@link Bulkhead} semaphores in the list.
    */
   @VisibleForTesting
   void releaseLanes(List<Bulkhead> bulkheads)

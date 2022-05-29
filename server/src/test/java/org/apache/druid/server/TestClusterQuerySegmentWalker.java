@@ -32,6 +32,7 @@ import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -43,6 +44,8 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
+import org.apache.druid.queryng.config.QueryNGConfig;
+import org.apache.druid.queryng.planner.ServerExecutionPlanner;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.filter.Filters;
@@ -53,6 +56,7 @@ import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -119,7 +123,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
   {
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
-      throw new ISE("Unknown query type[%s].", query.getClass());
+      throw new ISE("Unknown query type [%s].", query.getClass());
     }
 
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
@@ -156,16 +160,28 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
         toolChest
     );
 
-
-    // Wrap baseRunner in a runner that rewrites the QuerySegmentSpec to mention the specific segments.
-    // This mimics what CachingClusteredClient on the Broker does, and is required for certain queries (like Scan)
-    // to function properly. SegmentServerSelector does not currently mimic CachingClusteredClient, it is using
-    // the LocalQuerySegmentWalker constructor instead since this walker is not mimic remote DruidServer objects
-    // to actually serve the queries
+    // Wrap baseRunner in a runner that rewrites the QuerySegmentSpec to mention
+    // the specific segments. This mimics what CachingClusteredClient on the Broker
+    // does, and is required for certain queries (like Scan) to function properly.
+    // SegmentServerSelector does not currently mimic CachingClusteredClient, it uses
+    // the LocalQuerySegmentWalker constructor instead since this walker does not
+    // mimic remote DruidServer objects to actually serve the queries.
     return (theQuery, responseContext) -> {
+      if (QueryNGConfig.enabledFor(theQuery)) {
+        return ServerExecutionPlanner.testRun(
+            theQuery,
+            baseRunner,
+            responseContext,
+            specs,
+            scheduler);
+      }
       responseContext.initializeRemainingResponses();
       responseContext.addRemainingResponse(
           theQuery.getQuery().getMostSpecificId(), 0);
+      QueryPlus<T> rewritten = theQuery.withQuery(
+          Queries.withSpecificSegments(
+              theQuery.getQuery(),
+              ImmutableList.copyOf(specs)));
       if (scheduler != null) {
         Set<SegmentServerSelector> segments = new HashSet<>();
         specs.forEach(spec -> segments.add(new SegmentServerSelector(spec)));
@@ -173,17 +189,14 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
             scheduler.prioritizeAndLaneQuery(theQuery, segments),
             new LazySequence<>(
                 () -> baseRunner.run(
-                    theQuery.withQuery(Queries.withSpecificSegments(
-                        theQuery.getQuery(),
-                        ImmutableList.copyOf(specs)
-                    )),
+                    rewritten,
                     responseContext
                 )
             )
         );
       } else {
         return baseRunner.run(
-            theQuery.withQuery(Queries.withSpecificSegments(theQuery.getQuery(), ImmutableList.copyOf(specs))),
+            rewritten,
             responseContext
         );
       }
@@ -284,11 +297,6 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     public ReferenceCountingSegment getSegment()
     {
       return segment;
-    }
-
-    public Interval getInterval()
-    {
-      return interval;
     }
 
     public SegmentDescriptor getDescriptor()

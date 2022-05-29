@@ -24,16 +24,20 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
 /**
- * This class implements the logic of how units of query execution run concurrently. It is used in {@link QueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)}.
- * In a most straightforward implementation, each unit will be submitted to an {@link PrioritizedExecutorService}. Extensions,
+ * This class implements the logic of how units of query execution run concurrently.
+ * It is used in {@link QueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)}.
+ * In a most straightforward implementation, each unit will be submitted to an
+ * {@link PrioritizedExecutorService}. Extensions,
  * however, can implement their own logic for picking which unit to pick first for execution.
  * <p>
  * This interface extends {@link ListeningExecutorService} as well. It has a separate
- * method to submit query execution tasks so that implementations can differentiate those tasks from any regular async
- * tasks. One example is {@link org.apache.druid.query.groupby.strategy.GroupByStrategyV2#mergeRunners(QueryProcessingPool, Iterable)}
+ * method to submit query execution tasks so that implementations can differentiate those
+ * tasks from any regular async tasks. One example is
+ * {@link org.apache.druid.query.groupby.strategy.GroupByStrategyV2#mergeRunners(QueryProcessingPool, Iterable)}
  * where different kind of tasks are submitted to same processing pool.
  * <p>
- * Query execution task also includes a reference to {@link QueryRunner} so that any state required to decide the priority
+ * Query execution task also includes a reference to {@link QueryRunner} so that any
+ * state required to decide the priority
  * of a unit can be carried forward with the corresponding {@link QueryRunner}.
  */
 @ExtensionPoint

@@ -26,6 +26,8 @@ import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.queryng.config.QueryNGConfig;
+import org.apache.druid.queryng.planner.QueryPlanner;
 import org.apache.druid.utils.JvmUtils;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -59,6 +61,17 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
   {
+    if (QueryNGConfig.enabledFor(queryPlus)) {
+      return QueryPlanner.runCpuTimeMetric(
+          delegate,
+          queryToolChest,
+          cpuTimeAccumulator,
+          emitter,
+          report,
+          queryPlus,
+          responseContext
+      );
+    }
     final long startRun = JvmUtils.getCurrentThreadCpuTime();
     final QueryPlus<T> queryWithMetrics = queryPlus.withQueryMetrics(queryToolChest);
     final Sequence<T> baseSequence = delegate.run(queryWithMetrics, responseContext);

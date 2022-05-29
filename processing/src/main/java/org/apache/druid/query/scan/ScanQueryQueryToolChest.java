@@ -32,9 +32,12 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
+import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.queryng.config.QueryNGConfig;
+import org.apache.druid.queryng.planner.ScanPlanner;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -66,6 +69,9 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   public QueryRunner<ScanResultValue> mergeResults(final QueryRunner<ScanResultValue> runner)
   {
     return (queryPlus, responseContext) -> {
+      if (QueryNGConfig.enabledFor(queryPlus)) {
+        return ScanPlanner.runLimitAndOffset(queryPlus, runner, responseContext, scanQueryConfig);
+      }
       final ScanQuery originalQuery = ((ScanQuery) (queryPlus.getQuery()));
       ScanQuery.verifyOrderByForNativeExecution(originalQuery);
 
@@ -213,7 +219,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
             // Uh oh... mismatch in expected and actual field count. I don't think this should happen, so let's
             // throw an exception. If this really does happen, and there's a good reason for it, then we should remap
             // the result row here.
-            throw new ISE("Mismatch in expected[%d] vs actual[%s] field count", fields.size(), row.size());
+            throw new ISE("Mismatch in expected [%d] vs actual [%s] field count", fields.size(), row.size());
           }
         };
         break;
@@ -224,10 +230,24 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     return resultSequence.flatMap(
         result -> {
           // Generics? Where we're going, we don't need generics.
-          final List rows = (List) result.getEvents();
-          final Iterable arrays = Iterables.transform(rows, (Function) mapper);
+          @SuppressWarnings("unchecked")
+          final List<Object[]> rows = (List<Object[]>) result.getEvents();
+          @SuppressWarnings("unchecked")
+          final Iterable<Object[]> arrays = Iterables.transform(rows, (Function) mapper);
           return Sequences.simple(arrays);
         }
     );
+  }
+
+  @Override
+  public Sequence<Object[]> resultsAsArrays(QueryPlus<ScanResultValue> queryPlus, Sequence<ScanResultValue> resultSequence)
+  {
+    ScanQuery query = (ScanQuery) queryPlus.getQuery();
+    if (QueryNGConfig.enabledFor(queryPlus)) {
+      final List<String> fields = resultArraySignature(query).getColumnNames();
+      return ScanPlanner.resultsAsArrays(queryPlus, fields, resultSequence);
+    } else {
+      return resultsAsArrays(query, resultSequence);
+    }
   }
 }

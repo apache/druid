@@ -21,6 +21,23 @@ package org.apache.druid.segment.vector;
 
 /**
  * The movable version of ReadableVectorOffset.
+ * <p>
+ * Protocol is:
+ * <ul>
+ * <li>Check {@link #isDone()}.</li>
+ * <li>If {@code false}, read a vector of length {@link #getCurrentVectorSize()}.</li>
+ * <li>Call {@link #advance()}.</li>
+ * <li>Repeat.</li>
+ * </ul>
+ * That is: <pre><code>
+ * while (!offset.isDone()) {
+ *   // Do something with a vector of size offset.getCurrentVectorSize()
+ *   offset.advance()
+ * }</code></pre>
+ * <p>
+ * Note that the value of {@link #getStartOffset()} and
+ * {@link #getCurrentVectorSize()} are undefined after
+ * {@link #isDone()} returns {@code false}.
  *
  * @see org.apache.druid.segment.data.Offset, the non-vectorized version.
  */

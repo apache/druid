@@ -78,6 +78,11 @@ public class TimeseriesQueryEngine
     this.bufferPool = bufferPool;
   }
 
+  public NonBlockingPool<ByteBuffer> bufferPool()
+  {
+    return bufferPool;
+  }
+
   /**
    * Run a single-segment, single-interval timeseries query on a particular adapter. The query must have been
    * scoped down to a single interval before calling this method.

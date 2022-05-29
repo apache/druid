@@ -49,13 +49,13 @@ public class VectorCursorGranularizer
 
   // Current time vector.
   @Nullable
-  private long[] timestamps = null;
+  private long[] timestamps;
 
   // Offset into the vector that we should start reading from.
-  private int startOffset = 0;
+  private int startOffset;
 
   // Offset into the vector that is one past the last one we should read.
-  private int endOffset = 0;
+  private int endOffset;
 
   private VectorCursorGranularizer(
       VectorCursor cursor,
@@ -104,35 +104,35 @@ public class VectorCursorGranularizer
 
   public void setCurrentOffsets(final Interval bucketInterval)
   {
+    int vectorSize = cursor.getCurrentVectorSize();
+
+    if (timeSelector == null) {
+      endOffset = vectorSize;
+      return;
+    }
+
+    if (timestamps == null) {
+      timestamps = timeSelector.getLongVector();
+    }
+
     final long timeStart = bucketInterval.getStartMillis();
     final long timeEnd = bucketInterval.getEndMillis();
 
-    int vectorSize = cursor.getCurrentVectorSize();
-    endOffset = 0;
-
-    if (timeSelector != null) {
-      if (timestamps == null) {
-        timestamps = timeSelector.getLongVector();
-      }
-
-      // Skip "offset" to start of bucketInterval.
-      while (startOffset < vectorSize && timestamps[startOffset] < timeStart) {
-        startOffset++;
-      }
-
-      // Find end of bucketInterval.
-      for (endOffset = vectorSize - 1;
-           endOffset >= startOffset && timestamps[endOffset] >= timeEnd;
-           endOffset--) {
-        // nothing needed, "for" is doing the work.
-      }
-
-      // Adjust: endOffset is now pointing at the last row to aggregate, but we want it
-      // to be one _past_ the last row.
-      endOffset++;
-    } else {
-      endOffset = vectorSize;
+    // Skip "offset" to start of bucketInterval.
+    while (startOffset < vectorSize && timestamps[startOffset] < timeStart) {
+      startOffset++;
     }
+
+    // Find end of bucketInterval.
+    for (endOffset = vectorSize - 1;
+         endOffset >= startOffset && timestamps[endOffset] >= timeEnd;
+         endOffset--) {
+      // nothing needed, "for" is doing the work.
+    }
+
+    // Adjust: endOffset is now pointing at the last row to aggregate, but we want it
+    // to be one _past_ the last row.
+    endOffset++;
   }
 
   /**
@@ -141,19 +141,20 @@ public class VectorCursorGranularizer
    */
   public boolean advanceCursorWithinBucket()
   {
-    if (endOffset == cursor.getCurrentVectorSize()) {
-      cursor.advance();
-
-      if (timeSelector != null && !cursor.isDone()) {
-        timestamps = timeSelector.getLongVector();
-      }
-
-      startOffset = 0;
-
-      return true;
-    } else {
+    // Cannot advance if the current bucket does not reside at the tail of the vector.
+    if (endOffset != cursor.getCurrentVectorSize()) {
       return false;
     }
+
+    // Otherwise, move to the next vector.
+    cursor.advance();
+
+    if (timeSelector != null && !cursor.isDone()) {
+      timestamps = timeSelector.getLongVector();
+    }
+
+    startOffset = 0;
+    return true;
   }
 
   public Iterable<Interval> getBucketIterable()

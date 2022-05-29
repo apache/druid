@@ -166,13 +166,11 @@ public class ServerManagerTest
           @Override
           public void cleanup(DataSegment segment)
           {
-
           }
 
           @Override
           public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
           {
-
           }
         }
     );
@@ -251,7 +249,6 @@ public class ServerManagerTest
         Collections.emptyList() // tombstone returns no data
     );
     waitForTestVerificationAndCleanup(future);
-
   }
 
   @Test

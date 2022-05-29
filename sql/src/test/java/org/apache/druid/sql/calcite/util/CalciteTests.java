@@ -81,6 +81,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.queryng.fragment.TestQueryManagerFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
@@ -145,6 +146,7 @@ import org.joda.time.Duration;
 import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -786,7 +788,8 @@ public class CalciteTests
         new NoopRequestLogger(),
         new AuthConfig(),
         TEST_AUTHORIZER_MAPPER,
-        Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+        Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())),
+        new TestQueryManagerFactory()
     );
   }
 

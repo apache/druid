@@ -26,6 +26,8 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.queryng.config.QueryNGConfig;
+import org.apache.druid.queryng.planner.QueryPlanner;
 
 import java.util.function.Consumer;
 import java.util.function.ObjLongConsumer;
@@ -34,20 +36,21 @@ import java.util.function.ObjLongConsumer;
  */
 public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
 {
+  private static final Logger log = new Logger(MetricsEmittingQueryRunner.class);
+
   private final ServiceEmitter emitter;
   private final QueryToolChest<T, ? extends Query<T>> queryToolChest;
   private final QueryRunner<T> queryRunner;
   private final long creationTimeNs;
-  private final ObjLongConsumer<? super QueryMetrics<?>> reportMetric;
+  private final ObjLongConsumer<QueryMetrics<?>> reportMetric;
   private final Consumer<QueryMetrics<?>> applyCustomDimensions;
-  private static final Logger log = new Logger(MetricsEmittingQueryRunner.class);
 
   private MetricsEmittingQueryRunner(
       ServiceEmitter emitter,
       QueryToolChest<T, ? extends Query<T>> queryToolChest,
       QueryRunner<T> queryRunner,
       long creationTimeNs,
-      ObjLongConsumer<? super QueryMetrics<?>> reportMetric,
+      ObjLongConsumer<QueryMetrics<?>> reportMetric,
       Consumer<QueryMetrics<?>> applyCustomDimensions
   )
   {
@@ -63,7 +66,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
       ServiceEmitter emitter,
       QueryToolChest<T, ? extends Query<T>> queryToolChest,
       QueryRunner<T> queryRunner,
-      ObjLongConsumer<? super QueryMetrics<?>> reportMetric,
+      ObjLongConsumer<QueryMetrics<?>> reportMetric,
       Consumer<QueryMetrics<?>> applyCustomDimensions
   )
   {
@@ -85,6 +88,17 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
   {
+    if (QueryNGConfig.enabledFor(queryPlus)) {
+      return QueryPlanner.runMetrics(
+          emitter,
+          queryToolChest,
+          queryRunner,
+          creationTimeNs,
+          reportMetric,
+          applyCustomDimensions,
+          queryPlus,
+          responseContext);
+    }
     QueryPlus<T> queryWithMetrics = queryPlus.withQueryMetrics(queryToolChest);
     final QueryMetrics<?> queryMetrics = queryWithMetrics.getQueryMetrics();
 

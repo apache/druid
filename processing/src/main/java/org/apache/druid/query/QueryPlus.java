@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.queryng.fragment.FragmentManager;
 
 import javax.annotation.Nullable;
 
@@ -40,18 +41,25 @@ public final class QueryPlus<T>
   public static <T> QueryPlus<T> wrap(Query<T> query)
   {
     Preconditions.checkNotNull(query);
-    return new QueryPlus<>(query, null, null);
+    return new QueryPlus<>(query, null, null, null);
   }
 
   private final Query<T> query;
   private final QueryMetrics<?> queryMetrics;
   private final String identity;
+  private final FragmentManager fragmentManager;
 
-  private QueryPlus(Query<T> query, QueryMetrics<?> queryMetrics, String identity)
+  private QueryPlus(
+      Query<T> query,
+      QueryMetrics<?> queryMetrics,
+      String identity,
+      FragmentManager fragmentManager
+  )
   {
     this.query = query;
     this.queryMetrics = queryMetrics;
     this.identity = identity;
+    this.fragmentManager = fragmentManager;
   }
 
   public Query<T> getQuery()
@@ -71,7 +79,7 @@ public final class QueryPlus<T>
    */
   public QueryPlus<T> withIdentity(String identity)
   {
-    return new QueryPlus<>(query, queryMetrics, identity);
+    return new QueryPlus<>(query, queryMetrics, identity, fragmentManager);
   }
 
   /**
@@ -89,14 +97,22 @@ public final class QueryPlus<T>
     if (queryMetrics != null) {
       return this;
     } else {
-      final QueryMetrics metrics = ((QueryToolChest) queryToolChest).makeMetrics(query);
+      final QueryMetrics<?> metrics = ((QueryToolChest) queryToolChest).makeMetrics(query);
 
       if (identity != null) {
         metrics.identity(identity);
       }
 
-      return new QueryPlus<>(query, metrics, identity);
+      return new QueryPlus<>(query, metrics, identity, fragmentManager);
     }
+  }
+
+  public QueryPlus<T> withoutMetrics()
+  {
+    if (queryMetrics == null) {
+      return this;
+    }
+    return new QueryPlus<>(query, null, identity, fragmentManager);
   }
 
   /**
@@ -108,7 +124,7 @@ public final class QueryPlus<T>
    */
   public QueryPlus<T> withoutThreadUnsafeState()
   {
-    return withoutQueryMetrics();
+    return withoutQueryMetrics().withFragment(null);
   }
 
   /**
@@ -120,7 +136,7 @@ public final class QueryPlus<T>
     if (queryMetrics == null) {
       return this;
     } else {
-      return new QueryPlus<>(query, null, identity);
+      return new QueryPlus<>(query, null, identity, fragmentManager);
     }
   }
 
@@ -132,7 +148,8 @@ public final class QueryPlus<T>
     return new QueryPlus<>(
         query.withOverriddenContext(ImmutableMap.of(QueryContexts.MAX_QUEUED_BYTES_KEY, maxQueuedBytes)),
         queryMetrics,
-        identity
+        identity,
+        fragmentManager
     );
   }
 
@@ -141,7 +158,7 @@ public final class QueryPlus<T>
    */
   public <U> QueryPlus<U> withQuery(Query<U> replacementQuery)
   {
-    return new QueryPlus<>(replacementQuery, queryMetrics, identity);
+    return new QueryPlus<>(replacementQuery, queryMetrics, identity, fragmentManager);
   }
 
   public Sequence<T> run(QuerySegmentWalker walker, ResponseContext context)
@@ -151,6 +168,26 @@ public final class QueryPlus<T>
 
   public QueryPlus<T> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
   {
-    return new QueryPlus<>(query.optimizeForSegment(optimizationContext), queryMetrics, identity);
+    return new QueryPlus<>(
+        query.optimizeForSegment(optimizationContext),
+        queryMetrics,
+        identity,
+        fragmentManager
+    );
+  }
+
+  /**
+   * Returns the same QueryPlus object with the fragment builder added. The fragment
+   * builder enables this query to use the "Next Gen" query engine. The builder
+   * may be null, which indicates to use the "classic" rather than "NG" engine.
+   */
+  public QueryPlus<T> withFragment(FragmentManager fragmentManager)
+  {
+    return new QueryPlus<>(query, queryMetrics, identity, fragmentManager);
+  }
+
+  public FragmentManager fragment()
+  {
+    return fragmentManager;
   }
 }

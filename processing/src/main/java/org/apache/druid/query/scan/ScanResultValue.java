@@ -77,10 +77,17 @@ public class ScanResultValue implements Comparable<ScanResultValue>
     return events;
   }
 
+  @SuppressWarnings("unchecked")
+  public <T> List<T> getRows()
+  {
+    return (List<T>) getEvents();
+  }
+
   public long getFirstEventTimestamp(ScanQuery.ResultFormat resultFormat)
   {
     if (resultFormat.equals(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)) {
-      Object timestampObj = ((Map<String, Object>) ((List<Object>) this.getEvents()).get(0)).get(ColumnHolder.TIME_COLUMN_NAME);
+      final List<Map<String, Object>> rows = getRows();
+      Object timestampObj = rows.get(0).get(ColumnHolder.TIME_COLUMN_NAME);
       if (timestampObj == null) {
         throw new ISE("Unable to compare timestamp for rows without a time column");
       }
@@ -90,7 +97,8 @@ public class ScanResultValue implements Comparable<ScanResultValue>
       if (timeColumnIndex == -1) {
         throw new ISE("Unable to compare timestamp for rows without a time column");
       }
-      List<Object> firstEvent = (List<Object>) ((List<Object>) this.getEvents()).get(0);
+      final List<List<Object>> rows = getRows();
+      final List<Object> firstEvent = rows.get(0);
       return DimensionHandlerUtils.convertObjectToLong(firstEvent.get(timeColumnIndex));
     }
     throw new UOE("Unable to get first event timestamp using result format of [%s]", resultFormat.toString());
@@ -98,12 +106,16 @@ public class ScanResultValue implements Comparable<ScanResultValue>
 
   public List<ScanResultValue> toSingleEventScanResultValues()
   {
-    List<ScanResultValue> singleEventScanResultValues = new ArrayList<>();
-    List<Object> events = (List<Object>) this.getEvents();
-    for (Object event : events) {
+    final List<ScanResultValue> singleEventScanResultValues = new ArrayList<>();
+    for (Object event : getRows()) {
       singleEventScanResultValues.add(new ScanResultValue(segmentId, columns, Collections.singletonList(event)));
     }
     return singleEventScanResultValues;
+  }
+
+  public int rowCount()
+  {
+    return getRows().size();
   }
 
   @Override

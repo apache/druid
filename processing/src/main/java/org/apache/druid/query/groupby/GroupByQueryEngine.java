@@ -105,7 +105,7 @@ public class GroupByQueryEngine
     }
     final List<Interval> intervals = query.getQuerySegmentSpec().getIntervals();
     if (intervals.size() != 1) {
-      throw new IAE("Should only have one interval, got[%s]", intervals);
+      throw new IAE("Should only have one interval, got [%s]", intervals);
     }
 
     Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimFilter()));

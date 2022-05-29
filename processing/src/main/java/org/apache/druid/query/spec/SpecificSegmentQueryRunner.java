@@ -33,6 +33,8 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.queryng.config.QueryNGConfig;
+import org.apache.druid.queryng.planner.QueryPlanner;
 import org.apache.druid.segment.SegmentMissingException;
 
 import java.io.IOException;
@@ -47,7 +49,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
   private final SpecificSegmentSpec specificSpec;
 
   @VisibleForTesting
-  static final String CTX_SET_THREAD_NAME = "setProcessingThreadNames";
+  public static final String CTX_SET_THREAD_NAME = "setProcessingThreadNames";
 
   public SpecificSegmentQueryRunner(
       QueryRunner<T> base,
@@ -61,6 +63,14 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final QueryPlus<T> input, final ResponseContext responseContext)
   {
+    if (QueryNGConfig.enabledFor(input)) {
+      return QueryPlanner.runSpecificSegment(
+          base,
+          specificSpec,
+          input,
+          responseContext
+      );
+    }
     final QueryPlus<T> queryPlus = input.withQuery(
         Queries.withSpecificSegments(
             input.getQuery(),

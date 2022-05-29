@@ -50,6 +50,8 @@ import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.queryng.config.QueryNGConfig;
+import org.apache.druid.queryng.planner.TimeSeriesPlanner;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnType;
@@ -65,7 +67,7 @@ import java.util.Map;
 import java.util.function.BinaryOperator;
 
 /**
- *
+ * @see <a href="https://druid.apache.org/docs/latest/querying/timeseriesquery.html">Time Series Query</a>
  */
 public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery>
 {
@@ -126,6 +128,17 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     };
 
     return (queryPlus, responseContext) -> {
+      if (QueryNGConfig.enabledFor(queryPlus)) {
+        // A bit awkward: when using operators, we create the resultMergeQueryRunner, but
+        // don't us it. Reason: in the outer function, we don't have visibility to the query.
+        return TimeSeriesPlanner.mergeResults(
+            queryPlus,
+            responseContext,
+            queryRunner,
+            this::createResultComparator,
+            this::createMergeFn
+        );
+      }
       final TimeseriesQuery query = (TimeseriesQuery) queryPlus.getQuery();
       final Sequence<Result<TimeseriesResultValue>> baseResults = resultMergeQueryRunner.run(
           queryPlus.withQuery(
@@ -148,7 +161,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           // Returns empty sequence if bySegment is set because bySegment results are mostly used for
           // caching in historicals or debugging where the exact results are preferred.
           !QueryContexts.isBySegment(query)) {
-        // Usally it is NOT Okay to materialize results via toList(), but Granularity is ALL thus
+        // Usually it is NOT Okay to materialize results via toList(), but Granularity is ALL thus
         // we have only one record.
         final List<Result<TimeseriesResultValue>> val = baseResults.toList();
         finalSequence = val.isEmpty() ? Sequences.simple(Collections.singletonList(
@@ -218,7 +231,12 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     return ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending());
   }
 
-  private Result<TimeseriesResultValue> getNullTimeseriesResultValue(TimeseriesQuery query)
+  /**
+   * Create an "empty row" that contains the default (starter) values for each aggregate defined
+   * in the query. The timestamp is the beginning of the first interval, or the epoch, if no
+   * intervals are present (aggregation is overall).
+   */
+  public static Result<TimeseriesResultValue> getNullTimeseriesResultValue(TimeseriesQuery query)
   {
     List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
     Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
@@ -226,6 +244,8 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     RowSignature aggregatorsSignature =
         RowSignature.builder().addAggregators(aggregatorSpecs, RowSignature.Finalization.UNKNOWN).build();
     for (int i = 0; i < aggregatorSpecs.size(); i++) {
+      // Define the aggregator. Each requires a column selector. To provide one, create an empty row
+      // and a column selector on top of that empty row.
       aggregators[i] =
           aggregatorSpecs.get(i)
                          .factorize(
@@ -423,6 +443,23 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     rowSignatureBuilder.addAggregators(query.getAggregatorSpecs(), RowSignature.Finalization.UNKNOWN);
     rowSignatureBuilder.addPostAggregators(query.getPostAggregatorSpecs());
     return rowSignatureBuilder.build();
+  }
+
+  @Override
+  public Sequence<Object[]> resultsAsArrays(
+      final QueryPlus<Result<TimeseriesResultValue>> queryPlus,
+      final Sequence<Result<TimeseriesResultValue>> resultSequence
+  )
+  {
+    TimeseriesQuery query = (TimeseriesQuery) queryPlus.getQuery();
+    if (QueryNGConfig.enabledFor(queryPlus)) {
+      return TimeSeriesPlanner.toArray(
+          queryPlus,
+          resultSequence,
+          resultArraySignature(query)
+      );
+    }
+    return resultsAsArrays(query, resultSequence);
   }
 
   @Override

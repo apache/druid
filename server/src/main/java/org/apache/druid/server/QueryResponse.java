@@ -20,31 +20,113 @@
 package org.apache.druid.server;
 
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.queryng.fragment.FragmentManager;
 
-public class QueryResponse<T>
+public abstract class QueryResponse<T>
 {
-  private final Sequence<T> results;
+  public static class FragmentResponse<T> extends QueryResponse<T>
+  {
+    /**
+     * Fragment context is included because the SQL layer adds another
+     * operator on top of the sequence returned here, and that operator
+     * (if enabled), needs visibility to the fragment context.
+     */
+    private final FragmentManager fragment;
+
+    public FragmentResponse(
+        final FragmentManager fragment,
+        final ResponseContext responseContext
+    )
+    {
+      super(responseContext);
+      this.fragment = fragment;
+    }
+
+    @Override
+    public boolean isFragment()
+    {
+      return true;
+    }
+
+    @Override
+    public Sequence<T> getResults()
+    {
+      return fragment.runAsSequence();
+    }
+
+    @Override
+    public FragmentManager fragment()
+    {
+      return fragment;
+    }
+  }
+
+  public static class SequenceResponse<T> extends QueryResponse<T>
+  {
+    private final Sequence<T> results;
+
+    public SequenceResponse(
+        final Sequence<T> results,
+        final ResponseContext responseContext
+    )
+    {
+      super(responseContext);
+      this.results = results == null ? Sequences.empty() : results;
+    }
+
+    @Override
+    public boolean isFragment()
+    {
+      return false;
+    }
+
+    @Override
+    public Sequence<T> getResults()
+    {
+      return results;
+    }
+  }
+
   private final ResponseContext responseContext;
 
-  public QueryResponse(final Sequence<T> results, final ResponseContext responseContext)
+  public QueryResponse(final ResponseContext responseContext)
   {
-    this.results = results;
     this.responseContext = responseContext;
   }
 
   public static <T> QueryResponse<T> withEmptyContext(Sequence<T> results)
   {
-    return new QueryResponse<T>(results, ResponseContext.createEmpty());
+    return new SequenceResponse<T>(results, ResponseContext.createEmpty());
   }
 
-  public Sequence<T> getResults()
+  public abstract boolean isFragment();
+
+  public abstract Sequence<T> getResults();
+
+  public FragmentManager fragment()
   {
-    return results;
+    return null;
   }
 
   public ResponseContext getResponseContext()
   {
     return responseContext;
+  }
+
+  public <U> QueryResponse<U> withSequence(final Sequence<U> results)
+  {
+    return new SequenceResponse<U>(results, getResponseContext());
+  }
+
+  public <U> QueryResponse<U> withRoot()
+  {
+    return new FragmentResponse<U>(fragment(), getResponseContext());
+  }
+
+  public static <T> QueryResponse<T> empty()
+  {
+    return new SequenceResponse<T>(Sequences.empty(), ResponseContext.createEmpty());
   }
 }

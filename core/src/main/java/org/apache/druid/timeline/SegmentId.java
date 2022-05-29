@@ -115,7 +115,7 @@ public final class SegmentId implements Comparable<SegmentId>
    *
    * Another source of ambiguity is the end of a segment id like '_123' - it could always be interpreted either as the
    * partitionNum of the segment id, or as the end of the version, with the implicit partitionNum of 0. This method
-   * prefers the first iterpretation. To iterate all possible parsings of a segment id, use {@link
+   * prefers the first interpretation. To iterate all possible parsings of a segment id, use {@link
    * #iteratePossibleParsingsWithDataSource}.
    *
    * @param dataSource the dataSource corresponding to this segment id

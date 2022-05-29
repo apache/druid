@@ -80,7 +80,7 @@ public interface Sequence<T>
   }
 
   /**
-   * This will materialize the entire sequence.  Use at your own risk.
+   * This will materialize the entire sequence. Use at your own risk.
    */
   default List<T> toList()
   {

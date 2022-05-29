@@ -25,7 +25,10 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.queryng.fragment.FragmentManager;
+import org.apache.druid.queryng.fragment.QueryManager;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -52,6 +55,16 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     cache.close();
   }
 
+  private <T> Sequence<T> runQuery(QueryRunner<T> runner, Query<T> query, ResponseContext responseContext)
+  {
+    final QueryManager queryManager = QUERY_MANAGER_FACTORY.create(query);
+    final FragmentManager fragment = queryManager == null
+        ? null
+        : queryManager.createRootFragment(responseContext);
+    QueryPlus<T> queryPlus = QueryPlus.wrap(query).withFragment(fragment);
+    return runner.run(queryPlus, responseContext);
+  }
+
   @Test
   public void testNotPopulateAndNotUse()
   {
@@ -62,8 +75,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         query
     );
 
-    final Sequence<Result<TimeseriesResultValue>> sequence1 = queryRunner1.run(
-        QueryPlus.wrap(query),
+    final Sequence<Result<TimeseriesResultValue>> sequence1 = runQuery(
+        queryRunner1,
+        query,
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results1 = sequence1.toList();
@@ -76,8 +90,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         query
     );
 
-    final Sequence<Result<TimeseriesResultValue>> sequence2 = queryRunner2.run(
-        QueryPlus.wrap(query),
+    final Sequence<Result<TimeseriesResultValue>> sequence2 = runQuery(
+        queryRunner2,
+        query,
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results2 = sequence2.toList();
@@ -97,8 +112,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         query
     );
 
-    final Sequence<Result<TimeseriesResultValue>> sequence1 = queryRunner1.run(
-        QueryPlus.wrap(query),
+    final Sequence<Result<TimeseriesResultValue>> sequence1 = runQuery(
+        queryRunner1,
+        query,
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results1 = sequence1.toList();
@@ -111,8 +127,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         query
     );
 
-    final Sequence<Result<TimeseriesResultValue>> sequence2 = queryRunner2.run(
-        QueryPlus.wrap(query),
+    final Sequence<Result<TimeseriesResultValue>> sequence2 = runQuery(
+        queryRunner2,
+        query,
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results2 = sequence2.toList();
@@ -132,8 +149,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         query
     );
 
-    final Sequence<Result<TimeseriesResultValue>> sequence1 = queryRunner1.run(
-        QueryPlus.wrap(query),
+    final Sequence<Result<TimeseriesResultValue>> sequence1 = runQuery(
+        queryRunner1,
+        query,
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results1 = sequence1.toList();
@@ -146,8 +164,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         query
     );
 
-    final Sequence<Result<TimeseriesResultValue>> sequence2 = queryRunner2.run(
-        QueryPlus.wrap(query),
+    final Sequence<Result<TimeseriesResultValue>> sequence2 = runQuery(
+        queryRunner2,
+        query,
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results2 = sequence2.toList();
@@ -167,8 +186,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         query
     );
 
-    final Sequence<Result<TimeseriesResultValue>> sequence1 = queryRunner1.run(
-        QueryPlus.wrap(query),
+    final Sequence<Result<TimeseriesResultValue>> sequence1 = runQuery(
+        queryRunner1,
+        query,
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results1 = sequence1.toList();
@@ -181,8 +201,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         query
     );
 
-    final Sequence<Result<TimeseriesResultValue>> sequence2 = queryRunner2.run(
-        QueryPlus.wrap(query),
+    final Sequence<Result<TimeseriesResultValue>> sequence2 = runQuery(
+        queryRunner2,
+        query,
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results2 = sequence2.toList();
@@ -210,8 +231,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         query
     );
 
-    final Sequence<Result<TimeseriesResultValue>> sequence = queryRunner.run(
-        QueryPlus.wrap(query),
+    final Sequence<Result<TimeseriesResultValue>> sequence = runQuery(
+        queryRunner,
+        query,
         responseContext()
     );
     try {

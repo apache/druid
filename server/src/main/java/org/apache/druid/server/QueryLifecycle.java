@@ -46,6 +46,10 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.queryng.fragment.FragmentManager;
+import org.apache.druid.queryng.fragment.Fragments;
+import org.apache.druid.queryng.fragment.QueryManager;
+import org.apache.druid.queryng.fragment.QueryManagerFactory;
 import org.apache.druid.server.QueryResource.ResourceIOReaderWriter;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
@@ -61,6 +65,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -93,6 +98,7 @@ public class QueryLifecycle
   private final AuthorizerMapper authorizerMapper;
   private final DefaultQueryConfig defaultQueryConfig;
   private final AuthConfig authConfig;
+  private final QueryManagerFactory fragmentContextFactory;
   private final long startMs;
   private final long startNs;
 
@@ -112,6 +118,7 @@ public class QueryLifecycle
       final AuthorizerMapper authorizerMapper,
       final DefaultQueryConfig defaultQueryConfig,
       final AuthConfig authConfig,
+      final QueryManagerFactory fragmentContextFactory,
       final long startMs,
       final long startNs
   )
@@ -124,6 +131,7 @@ public class QueryLifecycle
     this.authorizerMapper = authorizerMapper;
     this.defaultQueryConfig = defaultQueryConfig;
     this.authConfig = authConfig;
+    this.fragmentContextFactory = fragmentContextFactory;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -147,8 +155,6 @@ public class QueryLifecycle
   {
     initialize(query);
 
-    final Sequence<T> results;
-
     final QueryResponse<T> queryResponse;
     try {
       preAuthorized(authenticationResult, authorizationResult);
@@ -157,33 +163,41 @@ public class QueryLifecycle
       }
 
       queryResponse = execute();
-      results = queryResponse.getResults();
     }
     catch (Throwable e) {
       emitLogsAndMetrics(e, null, -1);
       throw e;
     }
 
-    /*
-     * It seems extremely weird that the below code is wrapping the Sequence in order to emitLogsAndMetrics.
-     * The Sequence was returned by the call to execute, it would be worthwile to figure out why this wrapping
-     * cannot be moved into execute().  We leave this as an exercise for the future, however as this oddity
-     * was discovered while just trying to expose HTTP response headers
-     */
-    return new QueryResponse<T>(
-        Sequences.wrap(
-            results,
-            new SequenceWrapper()
-            {
-              @Override
-              public void after(final boolean isDone, final Throwable thrown)
+    if (queryResponse.isFragment()) {
+      // Operator version of the below.
+      // TODO: Move to an actual operator class, which will require refactoring
+      // the emitLogsAndMetrics method.
+      queryResponse.fragment().onClose(f -> {
+        emitLogsAndMetrics(f.exception(), null, -1);
+      });
+      return queryResponse;
+    } else {
+      /*
+       * It seems extremely weird that the below code is wrapping the Sequence in order to emitLogsAndMetrics.
+       * The Sequence was returned by the call to execute, it would be worthwhile to figure out why this wrapping
+       * cannot be moved into execute().  We leave this as an exercise for the future, however as this oddity
+       * was discovered while just trying to expose HTTP response headers
+       */
+      return queryResponse.withSequence(
+          Sequences.wrap(
+              queryResponse.getResults(),
+              new SequenceWrapper()
               {
-                emitLogsAndMetrics(thrown, null, -1);
+                @Override
+                public void after(final boolean isDone, final Throwable thrown)
+                {
+                  emitLogsAndMetrics(thrown, null, -1);
+                }
               }
-            }
-        ),
-        queryResponse.getResponseContext()
-    );
+          )
+      );
+    }
   }
 
   /**
@@ -285,12 +299,34 @@ public class QueryLifecycle
 
     final ResponseContext responseContext = DirectDruidClient.makeResponseContextForQuery();
 
+    final QueryManager queryManager = fragmentContextFactory.create(baseQuery);
+    final FragmentManager fragment = queryManager == null ? null : queryManager.createRootFragment(responseContext);
     @SuppressWarnings("unchecked")
     final Sequence<T> res = QueryPlus.wrap((Query<T>) baseQuery)
                                   .withIdentity(authenticationResult.getIdentity())
+                                  .withFragment(fragment)
                                   .run(texasRanger, responseContext);
 
-    return new QueryResponse<T>(res == null ? Sequences.empty() : res, responseContext);
+    if (fragment == null) {
+      Sequence<T> wrapped = Sequences.wrap(
+          res,
+          new SequenceWrapper()
+          {
+            @Override
+            public void after(final boolean isDone, final Throwable thrown)
+            {
+              emitLogsAndMetrics(thrown, null, -1);
+            }
+          }
+      );
+      return new QueryResponse.SequenceResponse<T>(wrapped, responseContext);
+    } else {
+      fragment.onClose(f -> {
+        Fragments.logProfile(f);
+      });
+      fragment.registerRoot(res);
+      return new QueryResponse.FragmentResponse<T>(fragment, responseContext);
+    }
   }
 
   /**
@@ -313,7 +349,7 @@ public class QueryLifecycle
     }
 
     if (state == State.DONE) {
-      log.warn("Tried to emit logs and metrics twice for query[%s]!", baseQuery.getId());
+      log.warn("Tried to emit logs and metrics twice for query [%s]!", baseQuery.getId());
     }
 
     state = State.DONE;
@@ -323,7 +359,7 @@ public class QueryLifecycle
     try {
       final long queryTimeNs = System.nanoTime() - startNs;
 
-      QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
+      QueryMetrics<?> queryMetrics = DruidMetrics.makeRequestMetrics(
           queryMetricsFactory,
           toolChest,
           baseQuery,
@@ -430,7 +466,7 @@ public class QueryLifecycle
   private void transition(final State from, final State to)
   {
     if (state != from) {
-      throw new ISE("Cannot transition from[%s] to[%s].", from, to);
+      throw new ISE("Cannot transition from [%s] to [%s].", from, to);
     }
 
     state = to;
@@ -446,5 +482,4 @@ public class QueryLifecycle
     UNAUTHORIZED,
     DONE
   }
-
 }

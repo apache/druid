@@ -68,7 +68,9 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
     this.limit = query.getScanRowsLimit();
     Query<ScanResultValue> historicalQuery =
         queryPlus.getQuery().withOverriddenContext(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false));
-    Sequence<ScanResultValue> baseSequence = baseRunner.run(QueryPlus.wrap(historicalQuery), responseContext);
+    // No metrics past this point: metrics are not thread-safe.
+    QueryPlus<ScanResultValue> wrapped = queryPlus.withQuery(historicalQuery).withoutMetrics();
+    Sequence<ScanResultValue> baseSequence = baseRunner.run(wrapped, responseContext);
     this.yielder = baseSequence.toYielder(
         null,
         new YieldingAccumulator<ScanResultValue, ScanResultValue>()

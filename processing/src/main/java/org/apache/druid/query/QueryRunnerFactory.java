@@ -67,7 +67,7 @@ public interface QueryRunnerFactory<T, QueryType extends Query<T>>
   }
 
   /**
-   * Runners generated with createRunner() and combined into an Iterable in (time,shardId) order are passed
+   * Runners generated with createRunner() and combined into an Iterable in (time, shardId) order are passed
    * along to this method with an {@link QueryProcessingPool}.  The method should then return a {@link QueryRunner} that,
    * when asked, will use the {@link QueryProcessingPool} to run the base QueryRunners in some fashion.
    *

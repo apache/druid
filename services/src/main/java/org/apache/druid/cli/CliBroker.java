@@ -55,6 +55,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.lookup.LookupModule;
+import org.apache.druid.queryng.guice.QueryNGModule;
 import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.ClientQuerySegmentWalker;
@@ -171,7 +172,8 @@ public class CliBroker extends ServerRunnable
           LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
         },
         new LookupModule(),
-        new SqlModule()
+        new SqlModule(),
+        new QueryNGModule()
     );
   }
 }

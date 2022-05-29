@@ -35,7 +35,6 @@ import java.util.concurrent.Executor;
  */
 public class Sequences
 {
-
   private static final EmptySequence EMPTY_SEQUENCE = new EmptySequence();
 
   public static <T> Sequence<T> simple(final Iterable<T> iterable)

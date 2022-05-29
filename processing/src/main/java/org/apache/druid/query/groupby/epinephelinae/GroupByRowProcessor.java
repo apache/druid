@@ -183,6 +183,5 @@ public class GroupByRowProcessor
           }
         }
     );
-
   }
 }

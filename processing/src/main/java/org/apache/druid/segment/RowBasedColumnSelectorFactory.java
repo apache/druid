@@ -82,9 +82,9 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   /**
    * Create an instance based on any object, along with a {@link RowAdapter} for that object.
    *
-   * @param adapter                     adapter for these row objects
+   * @param adapter                     adapter for the row objects
    * @param supplier                    supplier of row objects
-   * @param columnInspector             will be used for reporting available columns and their capabilities. Note that
+   * @param columnInspector             used for reporting available columns and their capabilities. Note that
    *                                    this factory will still allow creation of selectors on any named field in the
    *                                    rows, even if it doesn't appear in "columnInspector". (It only needs to be
    *                                    accessible via {@link RowAdapter#columnFunction}.) As a result, you can achieve

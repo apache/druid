@@ -31,10 +31,11 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Creates an executor service that runs each task in the thread that invokes {@code
- * execute/submit}, as in {@link java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy} This applies both to individually submitted
+ * execute/submit}, as in {@link java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy}
+ * This applies both to individually submitted
  * tasks and to collections of tasks submitted via {@code invokeAll} or {@code invokeAny}. In the
  * latter case, tasks will run serially on the calling thread. Tasks are run to completion before
- * a {@code Future} is returned to the caller (unless the executor has been shutdown).
+ * a {@code Future} is returned to the caller (unless the executor has been shut down).
  *
  * <p>Although all tasks are immediately executed in the thread that submitted the task, this
  * {@code ExecutorService} imposes a small locking overhead on each task submission in order to
@@ -54,7 +55,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class DirectExecutorService extends AbstractListeningExecutorService
 {
-
   /**
    * Lock used whenever accessing the state variables (runningTasks, shutdown) of the executor
    */

@@ -66,7 +66,7 @@ public abstract class AggregatorFactory implements Cacheable
    */
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
-    throw new UOE("Aggregator[%s] cannot vectorize", getClass().getName());
+    throw new UOE("Aggregator [%s] cannot vectorize", getClass().getName());
   }
 
   /**
@@ -115,7 +115,7 @@ public abstract class AggregatorFactory implements Cacheable
   public abstract Object combine(@Nullable Object lhs, @Nullable Object rhs);
 
   /**
-   * Creates an AggregateCombiner to fold rollup aggregation results from serveral "rows" of different indexes during
+   * Creates an AggregateCombiner to fold rollup aggregation results from several "rows" of different indexes during
    * index merging. AggregateCombiner implements the same logic as {@link #combine}, with the difference that it uses
    * {@link org.apache.druid.segment.ColumnValueSelector} and it's subinterfaces to get inputs and implements {@code
    * ColumnValueSelector} to provide output.
@@ -195,7 +195,7 @@ public abstract class AggregatorFactory implements Cacheable
 
   /**
    * Used by {@link org.apache.druid.query.groupby.strategy.GroupByStrategyV1} when running nested groupBys, to
-   * "transfer" values from this aggreagtor to an incremental index that the outer query will run on. This method
+   * "transfer" values from this aggregator to an incremental index that the outer query will run on. This method
    * only exists due to the design of GroupByStrategyV1, and should probably not be used for anything else. If you are
    * here because you are looking for a way to get the input fields required by this aggregator, and thought
    * "getRequiredColumns" sounded right, please use {@link #requiredFields()} instead.

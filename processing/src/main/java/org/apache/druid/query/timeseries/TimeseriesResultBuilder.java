@@ -26,6 +26,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * Builds a row of the form (timestamp, event-map) given the timestamp and a
+ * set of values. Wraps the row in a {@link Result} that holds a
+ * {@link TimeseriesResultValue}.
  */
 public class TimeseriesResultBuilder
 {

@@ -30,6 +30,8 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.queryng.config.QueryNGConfig;
+import org.apache.druid.queryng.planner.QueryPlanner;
 
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -48,6 +50,9 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
   {
+    if (QueryNGConfig.enabledFor(queryPlus)) {
+      return QueryPlanner.runUnionQuery(queryPlus, baseRunner, responseContext);
+    }
     Query<T> query = queryPlus.getQuery();
 
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
@@ -107,14 +112,14 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
 
   /**
    * Appends and returns the name and the position of the individual datasource in the union with the parent query id
-   * if preseent
+   * if present
    *
    * @param parentSubqueryId The subquery Id of the parent query which is generating this subquery
    * @param dataSourceName   Name of the datasource for which the UnionRunner is running
    * @param dataSourceIndex  Position of the datasource for which the UnionRunner is running
    * @return Subquery Id which needs to be populated
    */
-  private String generateSubqueryId(String parentSubqueryId, String dataSourceName, int dataSourceIndex)
+  public static String generateSubqueryId(String parentSubqueryId, String dataSourceName, int dataSourceIndex)
   {
     String dataSourceNameIndex = dataSourceName + "." + dataSourceIndex;
     if (StringUtils.isEmpty(parentSubqueryId)) {

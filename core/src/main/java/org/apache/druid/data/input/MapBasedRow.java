@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * Immutable data row comprised of a timestamp plus a map of values that are an "event".
+ * Rows can be compared, but only by timestamp.
  */
 @PublicApi
 public class MapBasedRow implements Row

@@ -60,6 +60,9 @@ public class CombiningSequence<T> implements Sequence<T>
   {
     final CombiningAccumulator<OutType> combiningAccumulator = new CombiningAccumulator<>(initValue, accumulator);
     T lastValue = baseSequence.accumulate(null, combiningAccumulator);
+
+    // Did the accumulator see any rows? If so, return the accumulated value.
+    // Otherwise, return a "zero-value" for empty time slots.
     if (combiningAccumulator.accumulatedSomething()) {
       return accumulator.accumulate(combiningAccumulator.retVal, lastValue);
     } else {
@@ -213,16 +216,24 @@ public class CombiningSequence<T> implements Sequence<T>
         accumulatedSomething = true;
       }
 
+      // If no previous value, this is the first row for the first group.
+      // Initialize the aggregation and return it.
       if (prevValue == null) {
         lastMergedVal = mergeFn.apply(t, null);
         return lastMergedVal;
       }
 
+      // If this is another value within the existing group, accumulate the
+      // row and return the new partial aggregation.
       if (ordering.compare(prevValue, t) == 0) {
         lastMergedVal = mergeFn.apply(prevValue, t);
         return lastMergedVal;
       }
 
+      // New group. Initialize the intermediate aggregation with the
+      // first row of the new group. Then, accumulate the merged result
+      // using the previous accumulated result. Return the current row
+      // as the previous row for the next cycle.
       lastMergedVal = t;
       retVal = accumulator.accumulate(retVal, prevValue);
       return t;
@@ -239,6 +250,11 @@ public class CombiningSequence<T> implements Sequence<T>
     }
   }
 
+  /**
+   * Stateful accumulator for aggregation. The output type is the partial or complete
+   * aggregation, input values are individual rows (or values). A merge function
+   * aggregates each value into the aggregated total.
+   */
   private class CombiningAccumulator<OutType> implements Accumulator<T, T>
   {
     private OutType retVal;

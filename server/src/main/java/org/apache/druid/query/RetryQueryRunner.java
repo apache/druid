@@ -34,6 +34,8 @@ import org.apache.druid.java.util.common.guava.YieldingSequenceBase;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Keys;
+import org.apache.druid.queryng.config.QueryNGConfig;
+import org.apache.druid.queryng.planner.ServerExecutionPlanner;
 import org.apache.druid.segment.SegmentMissingException;
 
 import java.util.Collections;
@@ -98,6 +100,14 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext context)
   {
+    if (QueryNGConfig.enabledFor(queryPlus)) {
+      return ServerExecutionPlanner.retryRun(
+          queryPlus,
+          baseRunner,
+          retryRunnerCreateFn,
+          config,
+          jsonMapper);
+    }
     // Calling baseRunner.run() (which is SpecificQueryRunnable.run()) in the RetryingSequenceIterator
     // could be better because we can minimize the chance that data servers report missing segments as
     // we construct the query distribution tree when the query processing is actually started.
@@ -137,9 +147,9 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
 
   private List<SegmentDescriptor> getMissingSegments(QueryPlus<T> queryPlus, final ResponseContext context)
   {
-    // Sanity check before retrieving missingSegments from responseContext.
+    // Sanity check before retrieving missing segments from the response context.
     // The missingSegments in the responseContext is only valid when all servers have responded to the broker.
-    // The remainingResponses MUST be not null but 0 in the responseContext at this point.
+    // The remainingResponses MUST be not null but 0 in the response context at this point.
     final ConcurrentHashMap<String, Integer> idToRemainingResponses =
         Preconditions.checkNotNull(
             context.getRemainingResponses(),
@@ -149,7 +159,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
 
     final int remainingResponses = Preconditions.checkNotNull(
         idToRemainingResponses.get(queryPlus.getQuery().getMostSpecificId()),
-        "Number of remaining responses for query[%s]",
+        "Number of remaining responses for query [%s]",
         queryPlus.getQuery().getMostSpecificId()
     );
     if (remainingResponses > 0) {
@@ -224,7 +234,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
           return false;
         } else if (retryCount >= maxNumRetries) {
           if (!QueryContexts.allowReturnPartialResults(queryPlus.getQuery(), config.isReturnPartialResults())) {
-            throw new SegmentMissingException("No results found for segments[%s]", missingSegments);
+            throw new SegmentMissingException("No results found for segments [%s]", missingSegments);
           } else {
             return false;
           }

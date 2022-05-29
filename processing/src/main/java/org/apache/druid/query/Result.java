@@ -30,6 +30,9 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
+ * JSON-serializable row in the form of a (timestamp, value), where the value an be
+ * of any type. {@code Result}s are equal based on the timezone-adjusted timestamp,
+ * and equality of the value, and comparable based only on timestamp.
  */
 @PublicApi
 public class Result<T> implements Comparable<Result<T>>
@@ -79,7 +82,8 @@ public class Result<T> implements Comparable<Result<T>>
       return false;
     }
 
-    Result result = (Result) o;
+    @SuppressWarnings("unchecked")
+    Result<T> result = (Result<T>) o;
 
     if (timestamp != null && result.timestamp != null) {
       if (!timestamp.isEqual(result.timestamp)

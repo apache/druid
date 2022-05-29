@@ -33,7 +33,6 @@ public class DirectQueryProcessingPool extends ForwardingListeningExecutorServic
 
   private DirectQueryProcessingPool()
   {
-
   }
 
   @Override
