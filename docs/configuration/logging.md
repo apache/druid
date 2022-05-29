@@ -72,8 +72,8 @@ An example log4j2.xml file is shown below:
 
 > NOTE:
 > Although the log4j configuration file is shared with Druid's task peon processes,
-> the appenders in this file DO NOT take effect for peon processes, which always output logs to stdout.
-> Middle Managers redirect task logs from stdout to [long-term storage](index.md#log-long-term-storage).
+> the appenders in this file DO NOT take effect for peon processes, which always output logs to standard output.
+> Middle Managers redirect task logs from standard output to [long-term storage](index.md#log-long-term-storage).
 >
 > However, log level settings do take effect for these task peon processes,
 > which means you can still configure loggers at different logging level for task logs using log4j2.xml.
@@ -89,10 +89,10 @@ If you use one of the all-in-one start commands, such as `bin/start-micro-quicks
 each service has two kind of log files. The main log file (for example, `log/historical.log`) is written by log4j2 and
 is rotated periodically.
 
-The secondary log file (for example, `log/historical.stdout.log`) contains anything that is written to stdout or stderr
-without going through log4j2. This consists mainly of messages from the Java runtime itself. This file is not rotated,
-but it is generally small due to the low volume of messages. If necessary, you can truncate it using the Linux command
-`truncate --size 0 log/historical.stdout.log`.
+The secondary log file (for example, `log/historical.stdout.log`) contains anything that is written by the component
+directly to standard output or standard error without going through log4j2. This consists mainly of messages from the
+Java runtime itself. This file is not rotated, but it is generally small due to the low volume of messages. If
+necessary, you can truncate it using the Linux command `truncate --size 0 log/historical.stdout.log`.
 
 ## Avoid reflective access warnings in logs
 
