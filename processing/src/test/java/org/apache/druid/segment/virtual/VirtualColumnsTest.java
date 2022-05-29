@@ -392,6 +392,45 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testCompositeVirtualColumnsCycles()
+  {
+    final ExpressionVirtualColumn expr1 = new ExpressionVirtualColumn("v1", "1 + x", ColumnType.LONG, TestExprMacroTable.INSTANCE);
+    final ExpressionVirtualColumn expr2 = new ExpressionVirtualColumn("v2", "1 + y", ColumnType.LONG, TestExprMacroTable.INSTANCE);
+    final ExpressionVirtualColumn expr0 = new ExpressionVirtualColumn("v0", "case_searched(notnull(1 + x), v1, v2)", ColumnType.LONG, TestExprMacroTable.INSTANCE);
+    final VirtualColumns virtualColumns = VirtualColumns.create(ImmutableList.of(expr0, expr1, expr2));
+
+    Assert.assertTrue(virtualColumns.exists("v0"));
+    Assert.assertTrue(virtualColumns.exists("v1"));
+    Assert.assertTrue(virtualColumns.exists("v2"));
+  }
+
+  @Test
+  public void testCompositeVirtualColumnsCyclesSiblings()
+  {
+    final ExpressionVirtualColumn expr1 = new ExpressionVirtualColumn("v1", "1 + x", ColumnType.LONG, TestExprMacroTable.INSTANCE);
+    final ExpressionVirtualColumn expr2 = new ExpressionVirtualColumn("v2", "1 + y", ColumnType.LONG, TestExprMacroTable.INSTANCE);
+    final ExpressionVirtualColumn expr0 = new ExpressionVirtualColumn("v0", "case_searched(notnull(v1), v1, v2)", ColumnType.LONG, TestExprMacroTable.INSTANCE);
+    final VirtualColumns virtualColumns = VirtualColumns.create(ImmutableList.of(expr0, expr1, expr2));
+
+    Assert.assertTrue(virtualColumns.exists("v0"));
+    Assert.assertTrue(virtualColumns.exists("v1"));
+    Assert.assertTrue(virtualColumns.exists("v2"));
+  }
+
+  @Test
+  public void testCompositeVirtualColumnsCyclesTree()
+  {
+    final ExpressionVirtualColumn expr1 = new ExpressionVirtualColumn("v1", "1 + x", ColumnType.LONG, TestExprMacroTable.INSTANCE);
+    final ExpressionVirtualColumn expr2 = new ExpressionVirtualColumn("v2", "1 + v1", ColumnType.LONG, TestExprMacroTable.INSTANCE);
+    final ExpressionVirtualColumn expr0 = new ExpressionVirtualColumn("v0", "v1 + v2", ColumnType.LONG, TestExprMacroTable.INSTANCE);
+    final VirtualColumns virtualColumns = VirtualColumns.create(ImmutableList.of(expr0, expr1, expr2));
+
+    Assert.assertTrue(virtualColumns.exists("v0"));
+    Assert.assertTrue(virtualColumns.exists("v1"));
+    Assert.assertTrue(virtualColumns.exists("v2"));
+  }
+
   private VirtualColumns makeVirtualColumns()
   {
     final ExpressionVirtualColumn expr = new ExpressionVirtualColumn(
