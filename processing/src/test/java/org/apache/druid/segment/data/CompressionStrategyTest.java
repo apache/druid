@@ -126,21 +126,15 @@ public class CompressionStrategyTest
                                                                .allocateOutBuffer(originalData.length, closer);
                 ByteBuffer compressionIn = compressionStrategy.getCompressor()
                                                               .allocateInBuffer(originalData.length, closer);
-                try {
-                  compressionIn.put(originalData);
-                  compressionIn.position(0);
-                  ByteBuffer compressed = compressionStrategy.getCompressor().compress(compressionIn, compressionOut);
-                  ByteBuffer output = compressionStrategy.getCompressor().allocateOutBuffer(originalData.length, closer);
-                  compressionStrategy.getDecompressor().decompress(compressed, compressed.remaining(), output);
-                  byte[] checkArray = new byte[DATA_SIZER];
-                  output.get(checkArray);
-                  Assert.assertArrayEquals("Uncompressed data does not match", originalData, checkArray);
-                  return true;
-                }
-                finally {
-                  ByteBufferUtils.free(compressionIn);
-                  ByteBufferUtils.free(compressionOut);
-                }
+                compressionIn.put(originalData);
+                compressionIn.position(0);
+                ByteBuffer compressed = compressionStrategy.getCompressor().compress(compressionIn, compressionOut);
+                ByteBuffer output = compressionStrategy.getCompressor().allocateOutBuffer(originalData.length, closer);
+                compressionStrategy.getDecompressor().decompress(compressed, compressed.remaining(), output);
+                byte[] checkArray = new byte[DATA_SIZER];
+                output.get(checkArray);
+                Assert.assertArrayEquals("Uncompressed data does not match", originalData, checkArray);
+                return true;
               }
           )
       );
