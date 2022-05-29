@@ -40,7 +40,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
-import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
 
@@ -49,12 +48,10 @@ import java.util.function.ToLongFunction;
  */
 public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
 {
-  private static final long NO_ID = -1;
-
   private final Supplier<T> rowSupplier;
 
   @Nullable
-  private final LongSupplier rowIdSupplier;
+  private final RowIdSupplier rowIdSupplier;
   private final RowAdapter<T> adapter;
   private final ColumnInspector columnInspector;
   private final boolean throwParseExceptions;
@@ -65,7 +62,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
    */
   RowBasedColumnSelectorFactory(
       final Supplier<T> rowSupplier,
-      @Nullable final LongSupplier rowIdSupplier,
+      @Nullable final RowIdSupplier rowIdSupplier,
       final RowAdapter<T> adapter,
       final ColumnInspector columnInspector,
       final boolean throwParseExceptions
@@ -167,7 +164,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
 
       return new BaseSingleValueDimensionSelector()
       {
-        private long currentId = NO_ID;
+        private long currentId = RowIdSupplier.INIT;
         private String currentValue;
 
         @Override
@@ -186,11 +183,11 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
 
         private void updateCurrentValue()
         {
-          if (rowIdSupplier == null || rowIdSupplier.getAsLong() != currentId) {
+          if (rowIdSupplier == null || rowIdSupplier.getRowId() != currentId) {
             currentValue = extractionFn.apply(timestampFunction.applyAsLong(rowSupplier.get()));
 
             if (rowIdSupplier != null) {
-              currentId = rowIdSupplier.getAsLong();
+              currentId = rowIdSupplier.getRowId();
             }
           }
         }
@@ -200,7 +197,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
 
       return new DimensionSelector()
       {
-        private long currentId = NO_ID;
+        private long currentId = RowIdSupplier.INIT;
         private List<String> dimensionValues;
 
         private final RangeIndexedInts indexedInts = new RangeIndexedInts();
@@ -331,7 +328,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
 
         private void updateCurrentValues()
         {
-          if (rowIdSupplier == null || rowIdSupplier.getAsLong() != currentId) {
+          if (rowIdSupplier == null || rowIdSupplier.getRowId() != currentId) {
             try {
               final Object rawValue = dimFunction.apply(rowSupplier.get());
 
@@ -377,12 +374,12 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
               }
             }
             catch (Throwable e) {
-              currentId = NO_ID;
+              currentId = RowIdSupplier.INIT;
               throw e;
             }
 
             if (rowIdSupplier != null) {
-              currentId = rowIdSupplier.getAsLong();
+              currentId = rowIdSupplier.getRowId();
             }
           }
         }
@@ -489,6 +486,13 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         }
       };
     }
+  }
+
+  @Nullable
+  @Override
+  public RowIdSupplier getRowIdSupplier()
+  {
+    return rowIdSupplier;
   }
 
   @Nullable
