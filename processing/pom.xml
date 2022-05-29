@@ -169,6 +169,10 @@
             <groupId>io.netty</groupId>
             <artifactId>netty-common</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.github.luben</groupId>
+            <artifactId>zstd-jni</artifactId>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
