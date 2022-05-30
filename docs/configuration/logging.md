@@ -76,7 +76,7 @@ An example log4j2.xml file is shown below:
 > Middle Managers redirect task logs from standard output to [long-term storage](index.md#log-long-term-storage).
 >
 > However, log level settings do take effect for these task peon processes,
-> which means you can still configure loggers at different logging level for task logs using log4j2.xml.
+> which means you can still configure loggers at different logging level for task logs using `log4j2.xml`.
 
 ## Log directory
 The included log4j2.xml configuration for Druid and ZooKeeper will output logs to the `log` directory at the root of the distribution.
