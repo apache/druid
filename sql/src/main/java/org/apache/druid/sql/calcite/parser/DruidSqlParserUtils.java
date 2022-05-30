@@ -34,6 +34,7 @@ import org.apache.calcite.sql.SqlTimestampLiteral;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.AndDimFilter;
@@ -159,7 +160,11 @@ public class DruidSqlParserUtils
       catch (IllegalArgumentException e) {
         throw new ParseException(StringUtils.format("%s is an invalid period string", granularitySqlNode.toString()));
       }
-      return new PeriodGranularity(period, null, null);
+      Granularity granularity = new PeriodGranularity(period, null, null);
+      if (!GranularityType.isStandard(granularity)) {
+        throw new ParseException("The granularity specified in PARTITIONED BY is not supported. Please use a supported standard granularity.");
+      }
+      return granularity;
 
     } else if ("FLOOR".equalsIgnoreCase(operatorName)) { // If the floor function is of form FLOOR(__time TO DAY)
       SqlNode granularitySqlNode = operandList.get(1);
