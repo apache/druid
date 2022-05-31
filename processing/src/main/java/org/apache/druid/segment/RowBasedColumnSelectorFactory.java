@@ -55,6 +55,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   private final RowAdapter<T> adapter;
   private final ColumnInspector columnInspector;
   private final boolean throwParseExceptions;
+  private final boolean useStringValueOfNullInLists;
 
   /**
    * Package-private constructor for {@link RowBasedCursor}. Allows passing in a rowIdSupplier, which enables
@@ -65,7 +66,8 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
       @Nullable final RowIdSupplier rowIdSupplier,
       final RowAdapter<T> adapter,
       final ColumnInspector columnInspector,
-      final boolean throwParseExceptions
+      final boolean throwParseExceptions,
+      final boolean useStringValueOfNullInLists
   )
   {
     this.rowSupplier = rowSupplier;
@@ -74,29 +76,42 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
     this.columnInspector =
         Preconditions.checkNotNull(columnInspector, "columnInspector must be nonnull");
     this.throwParseExceptions = throwParseExceptions;
+    this.useStringValueOfNullInLists = useStringValueOfNullInLists;
   }
 
   /**
    * Create an instance based on any object, along with a {@link RowAdapter} for that object.
    *
-   * @param adapter                 adapter for these row objects
-   * @param supplier                supplier of row objects
-   * @param columnInspector         will be used for reporting available columns and their capabilities. Note that this
-   *                                factory will still allow creation of selectors on any named field in the rows, even if
-   *                                it doesn't appear in "columnInspector". (It only needs to be accessible via
-   *                                {@link RowAdapter#columnFunction}.) As a result, you can achieve an untyped mode by
-   *                                passing in {@link org.apache.druid.segment.column.RowSignature#empty()}.
-   * @param throwParseExceptions    whether numeric selectors should throw parse exceptions or use a default/null value
-   *                                when their inputs are not actually numeric
+   * @param adapter                     adapter for these row objects
+   * @param supplier                    supplier of row objects
+   * @param columnInspector             will be used for reporting available columns and their capabilities. Note that
+   *                                    this factory will still allow creation of selectors on any named field in the
+   *                                    rows, even if it doesn't appear in "columnInspector". (It only needs to be
+   *                                    accessible via {@link RowAdapter#columnFunction}.) As a result, you can achieve
+   *                                    an untyped mode by passing in
+   *                                    {@link org.apache.druid.segment.column.RowSignature#empty()}.
+   * @param throwParseExceptions        whether numeric selectors should throw parse exceptions or use a default/null
+   *                                    value when their inputs are not actually numeric
+   * @param useStringValueOfNullInLists whether nulls in multi-value strings should be replaced with the string "null".
+   *                                    for example: the list ["a", null] would be converted to ["a", "null"]. Useful
+   *                                    for callers that need compatibility with {@link Rows#objectToStrings}.
    */
   public static <RowType> RowBasedColumnSelectorFactory<RowType> create(
       final RowAdapter<RowType> adapter,
       final Supplier<RowType> supplier,
       final ColumnInspector columnInspector,
-      final boolean throwParseExceptions
+      final boolean throwParseExceptions,
+      final boolean useStringValueOfNullInLists
   )
   {
-    return new RowBasedColumnSelectorFactory<>(supplier, null, adapter, columnInspector, throwParseExceptions);
+    return new RowBasedColumnSelectorFactory<>(
+        supplier,
+        null,
+        adapter,
+        columnInspector,
+        throwParseExceptions,
+        useStringValueOfNullInLists
+    );
   }
 
   @Nullable
@@ -341,19 +356,26 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
                   dimensionValues = Collections.singletonList(extractionFn.apply(s));
                 }
               } else if (rawValue instanceof List) {
-                // Consistent behavior with Rows.objectToStrings, but applies extractionFn too.
                 //noinspection rawtypes
                 final List<String> values = new ArrayList<>(((List) rawValue).size());
 
                 //noinspection rawtypes
                 for (final Object item : ((List) rawValue)) {
+                  final String itemString;
+
+                  if (useStringValueOfNullInLists) {
+                    itemString = String.valueOf(item);
+                  } else {
+                    itemString = item == null ? null : String.valueOf(item);
+                  }
+
                   // Behavior with null item is to convert it to string "null". This is not what most other areas of Druid
                   // would do when treating a null as a string, but it's consistent with Rows.objectToStrings, which is
                   // commonly used when retrieving strings from input-row-like objects.
                   if (extractionFn == null) {
-                    values.add(String.valueOf(item));
+                    values.add(itemString);
                   } else {
-                    values.add(extractionFn.apply(String.valueOf(item)));
+                    values.add(extractionFn.apply(itemString));
                   }
                 }
 
