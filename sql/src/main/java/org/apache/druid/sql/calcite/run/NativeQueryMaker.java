@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
@@ -112,6 +113,8 @@ public class NativeQueryMaker implements QueryMaker
       case CAN_READ_EXTERNAL_DATA:
       case SCAN_CAN_ORDER_BY_NON_TIME:
         return false;
+      case CAN_RUN_TIME_BOUNDARY:
+        return QueryContexts.isTimeBoundaryPlanningEnabled(plannerContext.getQueryContext().getMergedParams());
       default:
         throw new IAE("Unrecognized feature: %s", feature);
     }
@@ -137,7 +140,7 @@ public class NativeQueryMaker implements QueryMaker
     // a BoundFilter is created internally for each of the values
     // whereas when Vi s are String the Filters are converted as BoundFilter to SelectorFilter to InFilter
     // which takes lesser processing for bitmaps
-    // So in a case where user executes a query with multiple numeric INs, flame graph shows BoundFilter.getBitmapResult
+    // So in a case where user executes a query with multiple numeric INs, flame graph shows BoundFilter.getBitmapColumnIndex
     // and BoundFilter.match predicate eating up processing time which stalls a historical for a query with large number
     // of numeric INs (> 10K). In such cases user should change the query to specify the IN clauses as String
     // Instead of IN(v1,v2,v3) user should specify IN('v1','v2','v3')

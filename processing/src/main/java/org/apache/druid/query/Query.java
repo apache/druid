@@ -101,7 +101,14 @@ public interface Query<T>
   Map<String, Object> getContext();
 
   /**
-   * Returns QueryContext for this query.
+   * Returns QueryContext for this query. This type distinguishes between user provided, system default, and system
+   * generated query context keys so that authorization may be employed directly against the user supplied context
+   * values.
+   *
+   * This method is marked @Nullable, but is only so for backwards compatibility with Druid versions older than 0.23.
+   * Callers should check if the result of this method is null, and if so, they are dealing with a legacy query
+   * implementation, and should fall back to using {@link #getContext()} and {@link #withOverriddenContext(Map)} to
+   * manipulate the query context.
    *
    * Note for query context serialization and deserialization.
    * Currently, once a query is serialized, its queryContext can be different from the original queryContext
@@ -110,7 +117,11 @@ public interface Query<T>
    * after it is deserialized. This is because {@link BaseQuery#getContext()} uses
    * {@link QueryContext#getMergedParams()} for serialization, and queries accept a map for deserialization.
    */
-  QueryContext getQueryContext();
+  @Nullable
+  default QueryContext getQueryContext()
+  {
+    return null;
+  }
 
   <ContextType> ContextType getContextValue(String key);
 

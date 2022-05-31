@@ -31,6 +31,7 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.List;
 import java.util.Objects;
@@ -46,7 +47,8 @@ public class QueryRunnerHelper
       final VirtualColumns virtualColumns,
       final boolean descending,
       final Granularity granularity,
-      final Function<Cursor, Result<T>> mapFn
+      final Function<Cursor, Result<T>> mapFn,
+      @Nullable final QueryMetrics<?> queryMetrics
   )
   {
     Preconditions.checkArgument(
@@ -55,7 +57,7 @@ public class QueryRunnerHelper
 
     return Sequences.filter(
         Sequences.map(
-            adapter.makeCursors(filter, queryIntervals.get(0), virtualColumns, granularity, descending, null),
+            adapter.makeCursors(filter, queryIntervals.get(0), virtualColumns, granularity, descending, queryMetrics),
             mapFn
         ),
         Objects::nonNull

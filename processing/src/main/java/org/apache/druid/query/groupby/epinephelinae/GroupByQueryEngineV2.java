@@ -41,6 +41,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.column.ArrayDoubleGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.ArrayLongGroupByColumnSelectorStrategy;
@@ -90,7 +91,7 @@ import java.util.stream.Stream;
  * This code runs on data servers, like Historicals.
  *
  * Used by
- * {@link GroupByStrategyV2#process(GroupByQuery, StorageAdapter)}.
+ * {@link GroupByStrategyV2#process(GroupByQuery, StorageAdapter, GroupByQueryMetrics)}.
  */
 public class GroupByQueryEngineV2
 {
@@ -119,7 +120,8 @@ public class GroupByQueryEngineV2
       final GroupByQuery query,
       @Nullable final StorageAdapter storageAdapter,
       final NonBlockingPool<ByteBuffer> intermediateResultsBufferPool,
-      final GroupByQueryConfig querySpecificConfig
+      final GroupByQueryConfig querySpecificConfig,
+      @Nullable final GroupByQueryMetrics groupByQueryMetrics
   )
   {
     if (storageAdapter == null) {
@@ -161,7 +163,8 @@ public class GroupByQueryEngineV2
             fudgeTimestamp,
             filter,
             interval,
-            querySpecificConfig
+            querySpecificConfig,
+            groupByQueryMetrics
         );
       } else {
         result = processNonVectorized(
@@ -171,7 +174,8 @@ public class GroupByQueryEngineV2
             fudgeTimestamp,
             querySpecificConfig,
             filter,
-            interval
+            interval,
+            groupByQueryMetrics
         );
       }
 
@@ -190,7 +194,8 @@ public class GroupByQueryEngineV2
       @Nullable final DateTime fudgeTimestamp,
       final GroupByQueryConfig querySpecificConfig,
       @Nullable final Filter filter,
-      final Interval interval
+      final Interval interval,
+      @Nullable final GroupByQueryMetrics groupByQueryMetrics
   )
   {
     final Sequence<Cursor> cursors = storageAdapter.makeCursors(
@@ -199,7 +204,7 @@ public class GroupByQueryEngineV2
         query.getVirtualColumns(),
         query.getGranularity(),
         false,
-        null
+        groupByQueryMetrics
     );
 
     return cursors.flatMap(

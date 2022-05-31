@@ -760,7 +760,8 @@ public class RowBasedGrouperHelper
             case DOUBLE:
               return (InputRawSupplierColumnSelectorStrategy<ColumnValueSelector>)
                   columnSelector ->
-                      () -> DimensionHandlerUtils.convertToList(columnSelector.getObject());
+                      () -> DimensionHandlerUtils.convertToList(columnSelector.getObject(),
+                                                                capabilities.getElementType().getType());
             default:
               throw new IAE(
                   "Cannot create query type helper from invalid type [%s]",
@@ -1049,8 +1050,10 @@ public class RowBasedGrouperHelper
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhs, rhs);
         } else if (fieldTypes.get(i - dimStart).equals(ColumnType.LONG_ARRAY)
                    || fieldTypes.get(i - dimStart).equals(ColumnType.DOUBLE_ARRAY)) {
-          final ComparableList lhs = DimensionHandlerUtils.convertToList(key1.getKey()[i]);
-          final ComparableList rhs = DimensionHandlerUtils.convertToList(key2.getKey()[i]);
+          final ComparableList lhs = DimensionHandlerUtils.convertToList(key1.getKey()[i],
+                                                                         fieldTypes.get(i - dimStart).getElementType().getType());
+          final ComparableList rhs = DimensionHandlerUtils.convertToList(key2.getKey()[i],
+                                                                         fieldTypes.get(i - dimStart).getElementType().getType());
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhs, rhs);
         } else {
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(
@@ -1128,8 +1131,8 @@ public class RowBasedGrouperHelper
 
           cmp = ComparableList.compareWithComparator(
               comparator,
-              DimensionHandlerUtils.convertToList(lhs),
-              DimensionHandlerUtils.convertToList(rhs)
+              DimensionHandlerUtils.convertToList(lhs, fieldType.getElementType().getType()),
+              DimensionHandlerUtils.convertToList(rhs, fieldType.getElementType().getType())
           );
 
         } else {

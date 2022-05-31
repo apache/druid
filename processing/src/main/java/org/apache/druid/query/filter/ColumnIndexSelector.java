@@ -19,33 +19,26 @@
 
 package org.apache.druid.query.filter;
 
-import com.google.errorprone.annotations.MustBeClosed;
 import org.apache.druid.collections.bitmap.BitmapFactory;
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.column.BitmapIndex;
-import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.data.CloseableIndexed;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 
 import javax.annotation.Nullable;
 
 /**
  */
-public interface BitmapIndexSelector extends ColumnInspector
+public interface ColumnIndexSelector extends ColumnInspector
 {
-  @MustBeClosed
-  @Nullable
-  CloseableIndexed<String> getDimensionValues(String dimension);
-
-  @Deprecated
-  ColumnCapabilities.Capable hasMultipleValues(String dimension);
-
   int getNumRows();
+
   BitmapFactory getBitmapFactory();
+
+  /**
+   * Get the {@link ColumnIndexSupplier} of a column. If the column exists, but does not support indexes, this method
+   * will return a non-null index supplier, likely {@link org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier}.
+   * Columns which are 'missing' will return a null value from this method, which allows for filters to act on this
+   * information to produce an all true or all false index depending on how the filter matches the null value.
+   */
   @Nullable
-  BitmapIndex getBitmapIndex(String dimension);
-  @Nullable
-  ImmutableBitmap getBitmapIndex(String dimension, String value);
-  ImmutableRTree getSpatialIndex(String dimension);
+  ColumnIndexSupplier getIndexSupplier(String column);
 }

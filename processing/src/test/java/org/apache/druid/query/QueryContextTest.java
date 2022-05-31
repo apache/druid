@@ -20,10 +20,25 @@
 package org.apache.druid.query;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Ordering;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Duration;
+import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
+
+import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 public class QueryContextTest
 {
@@ -231,5 +246,177 @@ public class QueryContextTest
     );
 
     Assert.assertSame(context.getMergedParams(), context.getMergedParams());
+  }
+
+  @Test
+  public void testLegacyReturnsLegacy()
+  {
+    Query legacy = new LegacyContextQuery(ImmutableMap.of("foo", "bar"));
+    Assert.assertNull(legacy.getQueryContext());
+  }
+
+  @Test
+  public void testNonLegacyIsNotLegacyContext()
+  {
+    Query timeseries = Druids.newTimeseriesQueryBuilder()
+                             .dataSource("test")
+                             .intervals("2015-01-02/2015-01-03")
+                             .granularity(Granularities.DAY)
+                             .aggregators(Collections.singletonList(new CountAggregatorFactory("theCount")))
+                             .context(ImmutableMap.of("foo", "bar"))
+                             .build();
+    Assert.assertNotNull(timeseries.getQueryContext());
+  }
+
+  public static class LegacyContextQuery implements Query
+  {
+    private final Map<String, Object> context;
+
+    public LegacyContextQuery(Map<String, Object> context)
+    {
+      this.context = context;
+    }
+
+    @Override
+    public DataSource getDataSource()
+    {
+      return new TableDataSource("fake");
+    }
+
+    @Override
+    public boolean hasFilters()
+    {
+      return false;
+    }
+
+    @Override
+    public DimFilter getFilter()
+    {
+      return null;
+    }
+
+    @Override
+    public String getType()
+    {
+      return "legacy-context-query";
+    }
+
+    @Override
+    public QueryRunner getRunner(QuerySegmentWalker walker)
+    {
+      return new NoopQueryRunner();
+    }
+
+    @Override
+    public List<Interval> getIntervals()
+    {
+      return Collections.singletonList(Intervals.ETERNITY);
+    }
+
+    @Override
+    public Duration getDuration()
+    {
+      return getIntervals().get(0).toDuration();
+    }
+
+    @Override
+    public Granularity getGranularity()
+    {
+      return Granularities.ALL;
+    }
+
+    @Override
+    public DateTimeZone getTimezone()
+    {
+      return DateTimeZone.UTC;
+    }
+
+    @Override
+    public Map<String, Object> getContext()
+    {
+      return context;
+    }
+
+    @Override
+    public boolean getContextBoolean(String key, boolean defaultValue)
+    {
+      if (context == null || !context.containsKey(key)) {
+        return defaultValue;
+      }
+      return (boolean) context.get(key);
+    }
+
+    @Override
+    public boolean isDescending()
+    {
+      return false;
+    }
+
+    @Override
+    public Ordering getResultOrdering()
+    {
+      return Ordering.natural();
+    }
+
+    @Override
+    public Query withQuerySegmentSpec(QuerySegmentSpec spec)
+    {
+      return new LegacyContextQuery(context);
+    }
+
+    @Override
+    public Query withId(String id)
+    {
+      context.put(BaseQuery.QUERY_ID, id);
+      return this;
+    }
+
+    @Nullable
+    @Override
+    public String getId()
+    {
+      return (String) context.get(BaseQuery.QUERY_ID);
+    }
+
+    @Override
+    public Query withSubQueryId(String subQueryId)
+    {
+      context.put(BaseQuery.SUB_QUERY_ID, subQueryId);
+      return this;
+    }
+
+    @Nullable
+    @Override
+    public String getSubQueryId()
+    {
+      return (String) context.get(BaseQuery.SUB_QUERY_ID);
+    }
+
+    @Override
+    public Query withDataSource(DataSource dataSource)
+    {
+      return this;
+    }
+
+    @Override
+    public Query withOverriddenContext(Map contextOverride)
+    {
+      return new LegacyContextQuery(contextOverride);
+    }
+
+    @Override
+    public Object getContextValue(String key, Object defaultValue)
+    {
+      if (!context.containsKey(key)) {
+        return defaultValue;
+      }
+      return context.get(key);
+    }
+
+    @Override
+    public Object getContextValue(String key)
+    {
+      return context.get(key);
+    }
   }
 }

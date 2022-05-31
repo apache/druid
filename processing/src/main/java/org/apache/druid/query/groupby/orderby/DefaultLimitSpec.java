@@ -440,11 +440,12 @@ public class DefaultLimitSpec implements LimitSpec
   {
     Comparator arrayComparator = null;
     if (columnType.isArray()) {
+      final ValueType elementType = columnType.getElementType().getType();
       if (columnType.getElementType().isNumeric()) {
         arrayComparator = (Comparator<Object>) (o1, o2) -> ComparableList.compareWithComparator(
             comparator,
-            DimensionHandlerUtils.convertToList(o1),
-            DimensionHandlerUtils.convertToList(o2)
+            DimensionHandlerUtils.convertToList(o1, elementType),
+            DimensionHandlerUtils.convertToList(o2, elementType)
         );
       } else if (columnType.getElementType().equals(ColumnType.STRING)) {
         arrayComparator = (Comparator<Object>) (o1, o2) -> ComparableStringArray.compareWithComparator(

@@ -49,6 +49,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -59,7 +60,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class CardinalityAggregatorTest
+public class CardinalityAggregatorTest extends InitializedNullHandlingTest
 {
   public static class TestDimensionSelector extends AbstractDimensionSelector
   {
@@ -381,7 +382,6 @@ public class CardinalityAggregatorTest
   @Test
   public void testAggregateRows()
   {
-    NullHandling.initializeForTestsWithValues(null, null);
     CardinalityAggregator agg = new CardinalityAggregator(
         dimInfoList,
         true
@@ -397,7 +397,6 @@ public class CardinalityAggregatorTest
   @Test
   public void testAggregateValues()
   {
-    NullHandling.initializeForTestsWithValues(null, null);
     CardinalityAggregator agg = new CardinalityAggregator(
         dimInfoList,
         false
@@ -421,7 +420,6 @@ public class CardinalityAggregatorTest
   @Test
   public void testBufferAggregateRows()
   {
-    NullHandling.initializeForTestsWithValues(null, null);
     CardinalityBufferAggregator agg = new CardinalityBufferAggregator(
         dimInfoList.toArray(new ColumnSelectorPlus[0]),
         true
@@ -444,7 +442,6 @@ public class CardinalityAggregatorTest
   @Test
   public void testBufferAggregateValues()
   {
-    NullHandling.initializeForTestsWithValues(null, null);
     CardinalityBufferAggregator agg = new CardinalityBufferAggregator(
         dimInfoList.toArray(new ColumnSelectorPlus[0]),
         false
@@ -474,7 +471,6 @@ public class CardinalityAggregatorTest
   @Test
   public void testCombineRows()
   {
-    NullHandling.initializeForTestsWithValues(null, null);
     List<DimensionSelector> selector1 = Collections.singletonList(dim1);
     List<DimensionSelector> selector2 = Collections.singletonList(dim2);
     List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> dimInfo1 = Collections.singletonList(
@@ -520,7 +516,6 @@ public class CardinalityAggregatorTest
   @Test
   public void testCombineValues()
   {
-    NullHandling.initializeForTestsWithValues(null, null);
     List<DimensionSelector> selector1 = Collections.singletonList(dim1);
     List<DimensionSelector> selector2 = Collections.singletonList(dim2);
 
@@ -573,7 +568,6 @@ public class CardinalityAggregatorTest
   @Test
   public void testAggregateRowsWithExtraction()
   {
-    NullHandling.initializeForTestsWithValues(null, null);
     CardinalityAggregator agg = new CardinalityAggregator(
         dimInfoListWithExtraction,
         true
@@ -596,7 +590,6 @@ public class CardinalityAggregatorTest
   @Test
   public void testAggregateValuesWithExtraction()
   {
-    NullHandling.initializeForTestsWithValues(null, null);
     CardinalityAggregator agg = new CardinalityAggregator(
         dimInfoListWithExtraction,
         false
@@ -669,92 +662,107 @@ public class CardinalityAggregatorTest
   public void testAggregateRowsIgnoreNulls()
   {
     NullHandling.initializeForTestsWithValues(null, true);
-    CardinalityAggregator agg = new CardinalityAggregator(
-        dimInfoList,
-        true
-    );
+    try {
+      CardinalityAggregator agg = new CardinalityAggregator(
+          dimInfoList,
+          true
+      );
 
-    for (int i = 0; i < VALUES1.size(); ++i) {
-      aggregate(selectorList, agg);
+      for (int i = 0; i < VALUES1.size(); ++i) {
+        aggregate(selectorList, agg);
+      }
+      Assert.assertEquals(9.0, (Double) rowAggregatorFactory.finalizeComputation(agg.get()), 0.05);
+      Assert.assertEquals(9L, rowAggregatorFactoryRounded.finalizeComputation(agg.get()));
     }
-    Assert.assertEquals(9.0, (Double) rowAggregatorFactory.finalizeComputation(agg.get()), 0.05);
-    Assert.assertEquals(9L, rowAggregatorFactoryRounded.finalizeComputation(agg.get()));
+    finally {
+      NullHandling.initializeForTests();
+    }
   }
 
   @Test
   public void testAggregateValuesIgnoreNulls()
   {
     NullHandling.initializeForTestsWithValues(null, true);
-    CardinalityAggregator agg = new CardinalityAggregator(
-        dimInfoList,
-        false
-    );
+    try {
+      CardinalityAggregator agg = new CardinalityAggregator(
+          dimInfoList,
+          false
+      );
 
-    for (int i = 0; i < VALUES1.size(); ++i) {
-      aggregate(selectorList, agg);
+      for (int i = 0; i < VALUES1.size(); ++i) {
+        aggregate(selectorList, agg);
+      }
+      //setting is not applied when druid.generic.useDefaultValueForNull=false
+      Assert.assertEquals(
+          NullHandling.replaceWithDefault() ? 6.0 : 6.0,
+          (Double) valueAggregatorFactory.finalizeComputation(agg.get()),
+          0.05
+      );
+      Assert.assertEquals(
+          NullHandling.replaceWithDefault() ? 6L : 6L,
+          rowAggregatorFactoryRounded.finalizeComputation(agg.get())
+      );
     }
-    //setting is not applied when druid.generic.useDefaultValueForNull=false
-    Assert.assertEquals(
-        NullHandling.replaceWithDefault() ? 6.0 : 6.0,
-        (Double) valueAggregatorFactory.finalizeComputation(agg.get()),
-        0.05
-    );
-    Assert.assertEquals(
-        NullHandling.replaceWithDefault() ? 6L : 6L,
-        rowAggregatorFactoryRounded.finalizeComputation(agg.get())
-    );
+    finally {
+      NullHandling.initializeForTests();
+    }
   }
 
   @Test
   public void testCombineValuesIgnoreNulls()
   {
     NullHandling.initializeForTestsWithValues(null, true);
-    List<DimensionSelector> selector1 = Collections.singletonList(dim1);
-    List<DimensionSelector> selector2 = Collections.singletonList(dim2);
+    try {
+      List<DimensionSelector> selector1 = Collections.singletonList(dim1);
+      List<DimensionSelector> selector2 = Collections.singletonList(dim2);
 
-    List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> dimInfo1 = Collections.singletonList(
-        new ColumnSelectorPlus<>(
-            dimSpec1.getDimension(),
-            dimSpec1.getOutputName(),
-            new StringCardinalityAggregatorColumnSelectorStrategy(), dim1
-        )
-    );
-    List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> dimInfo2 = Collections.singletonList(
-        new ColumnSelectorPlus<>(
-            dimSpec1.getDimension(),
-            dimSpec1.getOutputName(),
-            new StringCardinalityAggregatorColumnSelectorStrategy(), dim2
-        )
-    );
+      List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> dimInfo1 = Collections.singletonList(
+          new ColumnSelectorPlus<>(
+              dimSpec1.getDimension(),
+              dimSpec1.getOutputName(),
+              new StringCardinalityAggregatorColumnSelectorStrategy(), dim1
+          )
+      );
+      List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> dimInfo2 = Collections.singletonList(
+          new ColumnSelectorPlus<>(
+              dimSpec1.getDimension(),
+              dimSpec1.getOutputName(),
+              new StringCardinalityAggregatorColumnSelectorStrategy(), dim2
+          )
+      );
 
-    CardinalityAggregator agg1 = new CardinalityAggregator(dimInfo1, false);
-    CardinalityAggregator agg2 = new CardinalityAggregator(dimInfo2, false);
+      CardinalityAggregator agg1 = new CardinalityAggregator(dimInfo1, false);
+      CardinalityAggregator agg2 = new CardinalityAggregator(dimInfo2, false);
 
-    for (int i = 0; i < VALUES1.size(); ++i) {
-      aggregate(selector1, agg1);
+      for (int i = 0; i < VALUES1.size(); ++i) {
+        aggregate(selector1, agg1);
+      }
+      for (int i = 0; i < VALUES2.size(); ++i) {
+        aggregate(selector2, agg2);
+      }
+      Assert.assertEquals(
+          NullHandling.replaceWithDefault() ? 3.0 : 3.0,
+          (Double) valueAggregatorFactory.finalizeComputation(agg1.get()),
+          0.05
+      );
+      Assert.assertEquals(
+          NullHandling.replaceWithDefault() ? 6.0 : 6.0,
+          (Double) valueAggregatorFactory.finalizeComputation(agg2.get()),
+          0.05
+      );
+      Assert.assertEquals(
+          NullHandling.replaceWithDefault() ? 6.0 : 6.0,
+          (Double) rowAggregatorFactory.finalizeComputation(
+              rowAggregatorFactory.combine(
+                  agg1.get(),
+                  agg2.get()
+              )
+          ),
+          0.05
+      );
     }
-    for (int i = 0; i < VALUES2.size(); ++i) {
-      aggregate(selector2, agg2);
+    finally {
+      NullHandling.initializeForTests();
     }
-    Assert.assertEquals(
-        NullHandling.replaceWithDefault() ? 3.0 : 3.0,
-        (Double) valueAggregatorFactory.finalizeComputation(agg1.get()),
-        0.05
-    );
-    Assert.assertEquals(
-        NullHandling.replaceWithDefault() ? 6.0 : 6.0,
-        (Double) valueAggregatorFactory.finalizeComputation(agg2.get()),
-        0.05
-    );
-    Assert.assertEquals(
-        NullHandling.replaceWithDefault() ? 6.0 : 6.0,
-        (Double) rowAggregatorFactory.finalizeComputation(
-            rowAggregatorFactory.combine(
-                agg1.get(),
-                agg2.get()
-            )
-        ),
-        0.05
-    );
   }
 }

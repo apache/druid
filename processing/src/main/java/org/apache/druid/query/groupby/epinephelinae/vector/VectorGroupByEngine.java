@@ -33,6 +33,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.AggregateResult;
 import org.apache.druid.query.groupby.epinephelinae.BufferArrayGrouper;
@@ -128,7 +129,8 @@ public class VectorGroupByEngine
       @Nullable final DateTime fudgeTimestamp,
       @Nullable final Filter filter,
       final Interval interval,
-      final GroupByQueryConfig config
+      final GroupByQueryConfig config,
+      @Nullable final GroupByQueryMetrics groupByQueryMetrics
   )
   {
     if (!canVectorize(query, storageAdapter, filter)) {
@@ -147,7 +149,7 @@ public class VectorGroupByEngine
                 query.getVirtualColumns(),
                 false,
                 QueryContexts.getVectorSize(query),
-                null
+                groupByQueryMetrics
             );
 
             if (cursor == null) {
