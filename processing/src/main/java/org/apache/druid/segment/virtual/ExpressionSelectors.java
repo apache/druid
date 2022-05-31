@@ -40,6 +40,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantExprEvalSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.RowIdSupplier;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -143,6 +144,8 @@ public class ExpressionSelectors
       ExpressionPlan plan
   )
   {
+    final RowIdSupplier rowIdSupplier = columnSelectorFactory.getRowIdSupplier();
+
     if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
       final String column = plan.getSingleInputName();
       final ColumnType inputType = plan.getSingleInputType();
@@ -150,12 +153,14 @@ public class ExpressionSelectors
         return new SingleLongInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeColumnValueSelector(column),
             plan.getExpression(),
-            !ColumnHolder.TIME_COLUMN_NAME.equals(column) // __time doesn't need an LRU cache since it is sorted.
+            !ColumnHolder.TIME_COLUMN_NAME.equals(column), // __time doesn't need an LRU cache since it is sorted.
+            rowIdSupplier
         );
       } else if (inputType.is(ValueType.STRING)) {
         return new SingleStringInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ColumnType.STRING)),
-            plan.getExpression()
+            plan.getExpression(),
+            rowIdSupplier
         );
       }
     }
@@ -169,11 +174,11 @@ public class ExpressionSelectors
     // if any unknown column input types, fall back to an expression selector that examines input bindings on a
     // per row basis
     if (plan.any(ExpressionPlan.Trait.UNKNOWN_INPUTS, ExpressionPlan.Trait.INCOMPLETE_INPUTS)) {
-      return new RowBasedExpressionColumnValueSelector(plan, bindings);
+      return new RowBasedExpressionColumnValueSelector(plan, bindings, rowIdSupplier);
     }
 
     // generic expression value selector for fully known input types
-    return new ExpressionColumnValueSelector(plan.getAppliedExpression(), bindings);
+    return new ExpressionColumnValueSelector(plan.getAppliedExpression(), bindings, rowIdSupplier);
   }
 
   /**

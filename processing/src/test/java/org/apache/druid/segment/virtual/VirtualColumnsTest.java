@@ -56,6 +56,11 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
+import org.mockito.quality.Strictness;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -67,6 +72,12 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
+
+  @Rule
+  public MockitoRule mockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS);
+
+  @Mock
+  public ColumnSelectorFactory baseColumnSelectorFactory;
 
   @Test
   public void testExists()
@@ -197,24 +208,35 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("No such virtual column[bar]");
 
-    virtualColumns.makeColumnValueSelector("bar", null);
+    virtualColumns.makeColumnValueSelector("bar", baseColumnSelectorFactory);
   }
 
   @Test
   public void testMakeSelectors()
   {
+    Mockito.when(baseColumnSelectorFactory.getRowIdSupplier()).thenReturn(null);
+
     final VirtualColumns virtualColumns = makeVirtualColumns();
-    final BaseObjectColumnValueSelector objectSelector = virtualColumns.makeColumnValueSelector("expr", null);
+    final BaseObjectColumnValueSelector objectSelector = virtualColumns.makeColumnValueSelector(
+        "expr",
+        baseColumnSelectorFactory
+    );
     final DimensionSelector dimensionSelector = virtualColumns.makeDimensionSelector(
         new DefaultDimensionSpec("expr", "x"),
-        null
+        baseColumnSelectorFactory
     );
     final DimensionSelector extractionDimensionSelector = virtualColumns.makeDimensionSelector(
         new ExtractionDimensionSpec("expr", "x", new BucketExtractionFn(1.0, 0.5)),
-        null
+        baseColumnSelectorFactory
     );
-    final BaseFloatColumnValueSelector floatSelector = virtualColumns.makeColumnValueSelector("expr", null);
-    final BaseLongColumnValueSelector longSelector = virtualColumns.makeColumnValueSelector("expr", null);
+    final BaseFloatColumnValueSelector floatSelector = virtualColumns.makeColumnValueSelector(
+        "expr",
+        baseColumnSelectorFactory
+    );
+    final BaseLongColumnValueSelector longSelector = virtualColumns.makeColumnValueSelector(
+        "expr",
+        baseColumnSelectorFactory
+    );
 
     Assert.assertEquals(1L, objectSelector.getObject());
     Assert.assertEquals("1", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
@@ -227,13 +249,22 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
   public void testMakeSelectorsWithDotSupport()
   {
     final VirtualColumns virtualColumns = makeVirtualColumns();
-    final BaseObjectColumnValueSelector objectSelector = virtualColumns.makeColumnValueSelector("foo.5", null);
+    final BaseObjectColumnValueSelector objectSelector = virtualColumns.makeColumnValueSelector(
+        "foo.5",
+        baseColumnSelectorFactory
+    );
     final DimensionSelector dimensionSelector = virtualColumns.makeDimensionSelector(
         new DefaultDimensionSpec("foo.5", "x"),
-        null
+        baseColumnSelectorFactory
     );
-    final BaseFloatColumnValueSelector floatSelector = virtualColumns.makeColumnValueSelector("foo.5", null);
-    final BaseLongColumnValueSelector longSelector = virtualColumns.makeColumnValueSelector("foo.5", null);
+    final BaseFloatColumnValueSelector floatSelector = virtualColumns.makeColumnValueSelector(
+        "foo.5",
+        baseColumnSelectorFactory
+    );
+    final BaseLongColumnValueSelector longSelector = virtualColumns.makeColumnValueSelector(
+        "foo.5",
+        baseColumnSelectorFactory
+    );
 
     Assert.assertEquals(5L, objectSelector.getObject());
     Assert.assertEquals("5", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
@@ -245,13 +276,22 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
   public void testMakeSelectorsWithDotSupportBaseNameOnly()
   {
     final VirtualColumns virtualColumns = makeVirtualColumns();
-    final BaseObjectColumnValueSelector objectSelector = virtualColumns.makeColumnValueSelector("foo", null);
+    final BaseObjectColumnValueSelector objectSelector = virtualColumns.makeColumnValueSelector(
+        "foo",
+        baseColumnSelectorFactory
+    );
     final DimensionSelector dimensionSelector = virtualColumns.makeDimensionSelector(
         new DefaultDimensionSpec("foo", "x"),
-        null
+        baseColumnSelectorFactory
     );
-    final BaseFloatColumnValueSelector floatSelector = virtualColumns.makeColumnValueSelector("foo", null);
-    final BaseLongColumnValueSelector longSelector = virtualColumns.makeColumnValueSelector("foo", null);
+    final BaseFloatColumnValueSelector floatSelector = virtualColumns.makeColumnValueSelector(
+        "foo",
+        baseColumnSelectorFactory
+    );
+    final BaseLongColumnValueSelector longSelector = virtualColumns.makeColumnValueSelector(
+        "foo",
+        baseColumnSelectorFactory
+    );
 
     Assert.assertEquals(-1L, objectSelector.getObject());
     Assert.assertEquals("-1", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
