@@ -356,7 +356,9 @@ public class MultiValueStringOperatorConversions
         return expressionBuilder.toString();
       };
 
-      if (druidExpressions.get(0).isSimpleExtraction()) {
+      boolean useSimpleExpressionsForExplain = plannerContext.getPlannerConfig().isUseNativeQueryExplain()
+          && plannerContext.getPlannerConfig().isUseDefaultExpressionExplain();
+      if (druidExpressions.get(0).isSimpleExtraction() && !useSimpleExpressionsForExplain) {
         DruidExpression druidExpression = DruidExpression.ofVirtualColumn(
             Calcites.getColumnTypeForRelDataType(rexNode.getType()),
             builder,

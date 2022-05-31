@@ -34,6 +34,7 @@ public class PlannerConfig
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
   public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
   public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
+  public static final String CTX_KEY_USE_DEFAULT_EXPRESSION_EXPLAIN = "useDefaultExpressionExplain";
   public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
   public static final int NUM_FILTER_NOT_USED = -1;
 
@@ -75,6 +76,9 @@ public class PlannerConfig
 
   @JsonProperty
   private boolean useNativeQueryExplain = false;
+
+  @JsonProperty
+  private boolean useDefaultExpressionExplain = false;
 
   @JsonProperty
   private int maxNumericInFilters = NUM_FILTER_NOT_USED;
@@ -156,6 +160,11 @@ public class PlannerConfig
     return useNativeQueryExplain;
   }
 
+  public boolean isUseDefaultExpressionExplain()
+  {
+    return useDefaultExpressionExplain;
+  }
+
   public PlannerConfig withOverrides(final QueryContext queryContext)
   {
     if (queryContext.isEmpty()) {
@@ -184,6 +193,10 @@ public class PlannerConfig
     newConfig.useNativeQueryExplain = queryContext.getAsBoolean(
         CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
         isUseNativeQueryExplain()
+    );
+    newConfig.useDefaultExpressionExplain = queryContext.getAsBoolean(
+        CTX_KEY_USE_DEFAULT_EXPRESSION_EXPLAIN,
+        isUseDefaultExpressionExplain()
     );
     final int systemConfigMaxNumericInFilters = getMaxNumericInFilters();
     final int queryContextMaxNumericInFilters = queryContext.getAsInt(
