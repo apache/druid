@@ -1240,19 +1240,20 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        // this is a bug
-        // instead of default values it should actually be 'no b';
+        // this behavior is strange - you might be expecting instead of default values it should actually be 'no b', but
+        // instead we end up with something else
         //
         // it happens when using 'notnull' on the mv-filtered virtual column because deferred expression selector
-        // returns a 0 sized row, which is treated as a missing value by the grouping and the expression which would
-        // evaluate it and return 'no b' is never evaluated (because we don't add a null value in the forwarding
-        // dictionary even if it exists in the underlying column).
+        // returns a 0 sized row, which is treated as a missing value by the grouping, and so the expression which would
+        // evaluate and return 'no b' is never evaluated. If we were not using the deferred selector, the results would
+        // be 'no b' because IndexedInts representing [], [null], and null are homogenized into [null] to handle
+        // variation between segments.
         //
         // if the 'notnull' was instead using the array filtering fallback expression
         // case_searched(notnull(filter((x) -> array_contains(array('b'), x), \"dim3\")),\"v1\",'no b')
         // where it doesn't use the deferred selector because it is no longer a single input expression, it would still
         // evaluate to null because the filter expression never returns null, only an empty array, which is not null,
-        // so it evaluates 'v1' which of course is null because it is an empty row.
+        // so it evaluates 'v1' which of course is null because it is an empty row
         useDefault ? ImmutableList.of(
             new Object[]{"", 4L},
             new Object[]{"b", 2L}
@@ -1306,6 +1307,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
+        // with 2 inputs, the non-deferred selector is used, and so the values of dim1 are used for all of the 'null'
+        // values returned by MV_FILTER_ONLY
         ImmutableList.of(
             new Object[]{"b", 2L},
             new Object[]{"1", 1L},
@@ -1362,7 +1365,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        // unfortunately, unable to work around the bug by adding nulls to the allow list
+        // unfortunately, unable to work around the strange behavior by adding nulls to the allow list, since not all of the values are actually
+        // [], so some of them end up as 'no b'
         useDefault ? ImmutableList.of(
             new Object[]{"", 2L},
             new Object[]{"b", 2L},
