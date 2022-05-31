@@ -113,7 +113,7 @@ Since the automatic compaction system provides a management layer on top of manu
 the auto-compaction configuration does not include task-specific properties found in a typical Druid ingestion spec.
 The following properties are automatically set by the Coordinator:
 * `type`: Set to `compact`.
-* `id`: Generated using the task type, datasource name, interval, and timestamp.
+* `id`: Generated using the task type, datasource name, interval, and timestamp. The task ID is prefixed with `coordinator-issued`.
 * `context`: Set according to the user-provided `taskContext`.
 
 For more details on each of the specs in an auto-compaction configuration, see [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration).
@@ -123,9 +123,9 @@ For more details on each of the specs in an auto-compaction configuration, see [
 
 The Coordinator compacts segments from newest to oldest. In the auto-compaction configuration, you can set a time period, relative to the end time of the most recent segment, for segments that should not be compacted. Assign this value to `skipOffsetFromLatest`. Note that this offset is not relative to the current time but to the latest segment time. For example, if you want to skip over segments from thirty days prior to the end time of the most recent segment, assign `"skipOffsetFromLatest": "P30D"`.
 
-Compaction tasks that interfere with ingestion tasks will fail. For example, this occurs when an ingestion task needs to write data to a segment for a time interval locked for compaction. To facilitate the continuance of compaction tasks, consider one of the following strategies:
+Compaction tasks may be interrupted when they interfere with ingestion. For example, this occurs when an ingestion task needs to write data to a segment for a time interval locked for compaction. If there are continuous failures that prevent compaction from making progress, consider one of the following strategies:
 * Set `skipOffsetFromLatest` to reduce the chance of conflicts between ingestion and compaction.
-* Increase the priority value of compaction tasks relative to ingestion tasks. In the auto-compaction configuration, set `taskPriority` to the desired priority value. See [Lock priority](../ingestion/tasks.md#lock-priority) for the priority values of different task types.
+* Increase the priority value of compaction tasks relative to ingestion tasks. Only recommended for advanced users. This approach can cause ingestion jobs to fail or lag. To change the priority of compaction tasks, set `taskPriority` to the desired priority value in the auto-compaction configuration. For details on the priority values of different task types, see [Lock priority](../ingestion/tasks.md#lock-priority).
 
 
 ### Set frequency of compaction runs
@@ -147,7 +147,7 @@ To get statistics by API, send a [`GET` request](../operations/api-reference.md#
 
 ## Examples
 
-The following examples demonstrate potential use cases in which auto-compaction may improve your Druid performance. Note that compaction in itself does not modify the underlying data of the segments. However, you can use manual compaction tasks or the automatic compaction system to modify data to improve query performance. See more details in [Compaction strategies](../ingestion/compaction.md#compaction-strategies). The examples in this section do not change the underlying data.
+The following examples demonstrate potential use cases in which auto-compaction may improve your Druid performance. See more details in [Compaction strategies](../ingestion/compaction.md#compaction-strategies). The examples in this section do not change the underlying data.
 
 ### Change segment granularity
 
@@ -164,6 +164,8 @@ The following auto-compaction configuration compacts existing `HOUR` segments in
   "skipOffsetFromLatest": "P1W",
 }
 ```
+`skipOffsetFromLatest` applies to cases in which your stream consistently ingests late arriving data. If your stream only occasionally ingests late arriving data, the auto-compaction system robustly compacts your data even without `skipOffsetFromLatest`.
+
 ### Update partitioning scheme
 
 For your `wikipedia` datasource, you want to optimize segment access when regularly ingesting data without compromising compute time when querying the data. Your ingestion spec for batch append uses [dynamic partitioning](../ingestion/native-batch.md#dynamic-partitioning) to optimize for write-time operations, while your stream ingestion partitioning is configured by the stream service. You want to implement auto-compaction to reorganize the data with a suitable read-time partitioning using [multi-dimension range partitioning](../ingestion/native-batch.md#multi-dimension-range-partitioning). Based on the dimensions frequently accessed in queries, you wish to partition on the following dimensions: `channel`, `countryName`, `namespace`.
