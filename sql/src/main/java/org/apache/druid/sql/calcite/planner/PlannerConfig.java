@@ -160,6 +160,11 @@ public class PlannerConfig
     return useNativeQueryExplain;
   }
 
+  /**
+   * @return true if SQL expressions like {@code MV_FILTER_ONLY,
+   * MV_FILTER_NONE} should use "expression"-type virtual columns, false if they
+   * should use "mv-filtered"-type virtual columns.
+   */
   public boolean isUseDefaultExpressionExplain()
   {
     return useDefaultExpressionExplain;
