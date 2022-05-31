@@ -46,8 +46,10 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Test;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
 {
@@ -1191,6 +1193,184 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             // selector, which treats a 0 length array as null instead of an empty array like is produced by filter
             new Object[]{null, 4L},
             new Object[]{1, 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueListFilterComposedNested() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT COALESCE(MV_FILTER_ONLY(dim3, ARRAY['b']), 'no b'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"v1\"),\"v1\",'no b')",
+                                ColumnType.STRING
+                            ),
+                            new ListFilteredVirtualColumn(
+                                "v1",
+                                DefaultDimensionSpec.of("dim3"),
+                                ImmutableSet.of("b"),
+                                true
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        // this is a bug
+        // instead of default values it should actually be 'no b';
+        //
+        // it happens when using 'notnull' on the mv-filtered virtual column because deferred expression selector
+        // returns a 0 sized row, which is treated as a missing value by the grouping and the expression which would
+        // evaluate it and return 'no b' is never evaluated (because we don't add a null value in the forwarding
+        // dictionary even if it exists in the underlying column).
+        //
+        // if the 'notnull' was instead using the array filtering fallback expression
+        // case_searched(notnull(filter((x) -> array_contains(array('b'), x), \"dim3\")),\"v1\",'no b')
+        // where it doesn't use the deferred selector because it is no longer a single input expression, it would still
+        // evaluate to null because the filter expression never returns null, only an empty array, which is not null,
+        // so it evaluates 'v1' which of course is null because it is an empty row.
+        useDefault ? ImmutableList.of(
+            new Object[]{"", 4L},
+            new Object[]{"b", 2L}
+        ) : ImmutableList.of(
+            new Object[]{null, 4L},
+            new Object[]{"b", 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueListFilterComposedNested2Input() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT COALESCE(MV_FILTER_ONLY(dim3, ARRAY['b']), dim1), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"v1\"),\"v1\",\"dim1\")",
+                                ColumnType.STRING
+                            ),
+                            new ListFilteredVirtualColumn(
+                                "v1",
+                                DefaultDimensionSpec.of("dim3"),
+                                ImmutableSet.of("b"),
+                                true
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"b", 2L},
+            new Object[]{"1", 1L},
+            new Object[]{"2", 1L},
+            new Object[]{"abc", 1L},
+            new Object[]{"def", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueListFilterComposedNestedNullLiteral() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+    Set<String> filter = new HashSet<>();
+    filter.add(null);
+    filter.add("b");
+
+    testQuery(
+        "SELECT COALESCE(MV_FILTER_ONLY(dim3, ARRAY[NULL, 'b']), 'no b'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"v1\"),\"v1\",'no b')",
+                                ColumnType.STRING
+                            ),
+                            new ListFilteredVirtualColumn(
+                                "v1",
+                                DefaultDimensionSpec.of("dim3"),
+                                filter,
+                                true
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        // unfortunately, unable to work around the bug by adding nulls to the allow list
+        useDefault ? ImmutableList.of(
+            new Object[]{"", 2L},
+            new Object[]{"b", 2L},
+            new Object[]{"no b", 2L}
+        ) : ImmutableList.of(
+            new Object[]{null, 3L},
+            new Object[]{"b", 2L},
+            new Object[]{"no b", 1L}
         )
     );
   }
