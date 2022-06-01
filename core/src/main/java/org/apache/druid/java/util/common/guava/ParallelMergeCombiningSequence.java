@@ -22,6 +22,8 @@ package org.apache.druid.java.util.common.guava;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import it.unimi.dsi.fastutil.PriorityQueue;
+import it.unimi.dsi.fastutil.objects.ObjectHeapPriorityQueue;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -40,7 +42,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -555,7 +556,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
         T currentCombinedValue = initialValue;
         while (counter < yieldAfter && !pQueue.isEmpty()) {
-          BatchedResultsCursor<T> cursor = pQueue.poll();
+          BatchedResultsCursor<T> cursor = pQueue.first();
 
           // push the queue along
           if (!cursor.isDone()) {
@@ -563,8 +564,9 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
             cursor.advance();
             if (!cursor.isDone()) {
-              pQueue.offer(cursor);
+              pQueue.changed();
             } else {
+              pQueue.dequeue();
               cursor.close();
             }
 
@@ -725,13 +727,13 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     @Override
     protected void compute()
     {
-      PriorityQueue<BatchedResultsCursor<T>> cursors = new PriorityQueue<>(partition.size());
+      PriorityQueue<BatchedResultsCursor<T>> cursors = new ObjectHeapPriorityQueue<>(partition.size());
       try {
         for (BatchedResultsCursor<T> cursor : partition) {
           // this is blocking
           cursor.initialize();
           if (!cursor.isDone()) {
-            cursors.offer(cursor);
+            cursors.enqueue(cursor);
           } else {
             cursor.close();
           }
@@ -1382,6 +1384,16 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   {
     Closer closer = Closer.create();
     closer.registerAll(cursors);
+    CloseableUtils.closeAndSuppressExceptions(closer, e -> LOG.warn(e, "Failed to close result cursors"));
+  }
+
+  private static <T> void closeAllCursors(final PriorityQueue<BatchedResultsCursor<T>> cursors)
+  {
+    Closer closer = Closer.create();
+    while (!cursors.isEmpty()) {
+      BatchedResultsCursor<T> cursor = cursors.dequeue();
+      closer.register(cursor);
+    }
     CloseableUtils.closeAndSuppressExceptions(closer, e -> LOG.warn(e, "Failed to close result cursors"));
   }
 }
