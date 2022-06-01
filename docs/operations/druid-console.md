@@ -43,10 +43,10 @@ This topic presents the high-level features and functionality of the Druid conso
 
 ## Home
 
-The home view provides a high-level overview of the cluster.
+The **Home** view provides a high-level overview of the cluster.
 Each card is clickable and links to the appropriate view.
 
-The home view displays the following cards:
+The **Home** view displays the following cards:
 
 * __Status__. Click this card for information on the Druid version and any extensions loaded on the cluster.
 * [Datasources](#datasources)
@@ -56,7 +56,7 @@ The home view displays the following cards:
 * [Services](#services)
 * [Lookups](#lookups)
 
-You can access the [data loader](#data-loader) and [lookups view](#lookups) from the top-level navigation of the home view.
+You can access the [data loader](#data-loader) and [lookups view](#lookups) from the top-level navigation of the **Home** view.
 
 ![home-view](../assets/web-console-01-home-view.png "home view")
 
