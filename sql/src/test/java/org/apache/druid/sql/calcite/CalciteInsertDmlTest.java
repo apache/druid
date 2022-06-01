@@ -744,11 +744,12 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("insert into foo1 select __time, dim1 FROM foo partitioned by time_floor(__time, 'PT2H')")
-        .expectValidationError(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(SqlPlanningException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "The granularity specified in PARTITIONED BY is not supported. Please use a supported standard granularity."))
-                               )
+        .expectValidationError(
+            CoreMatchers.allOf(
+                CoreMatchers.instanceOf(SqlPlanningException.class),
+                ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                    "The granularity specified in PARTITIONED BY is not supported. Please use a standard granularity."))
+            )
         )
         .verify();
   }

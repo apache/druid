@@ -65,6 +65,11 @@ org.apache.druid.java.util.common.Pair<Granularity, String> PartitionGranularity
     e = Expression(ExprContext.ACCEPT_SUB_QUERY)
     {
       granularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(e);
+      if(!GranularityType.isStandard(granularity))
+      {
+        throw new IAE("The granularity specified in PARTITIONED BY is not supported. "
+        + "Please use a standard granularity.");
+      }
       unparseString = e.toString();
     }
   )
