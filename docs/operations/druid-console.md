@@ -76,8 +76,8 @@ Navigating with the top navigation leaves the underlying spec unmodified while c
 
 ## Datasources
 
-The datasources view shows all the datasources currently loaded on the cluster, as well as their sizes and availability.
-From the datasources view, you can edit the retention rules, configure automatic compaction, and drop data in a datasource.
+The **Datasources** view shows all the datasources currently loaded on the cluster, as well as their sizes and availability.
+From the **Datasources** view, you can edit the retention rules, configure automatic compaction, and drop data in a datasource.
 
 A datasource is partitioned into one or more segments organized by time chunks.
 To display a timeline of segments, toggle the option for **Show segment timeline**.
@@ -92,7 +92,7 @@ You can view and edit retention rules to determine the general availability of a
 
 ## Segments
 
-The segments view shows all the [segments](../design/segments.md) in the cluster.
+The **Segments** view shows all the [segments](../design/segments.md) in the cluster.
 Each segment has a detail view that provides more information.
 The Segment ID is also conveniently broken down into Datasource, Start, End, Version, and Partition columns for ease of filtering and sorting.
 
@@ -119,14 +119,14 @@ Click on the magnifying glass for any task to see more detail about it.
 
 ## Services
 
-The services view lets you see the current status of the nodes making up your cluster.
+The **Services** view lets you see the current status of the nodes making up your cluster.
 You can group the nodes by type or by tier to get meaningful summary statistics. 
 
 ![servers](../assets/web-console-10-servers.png)
 
 ## Query
 
-The query view lets you issue [Druid SQL](../querying/sql.md) queries and display the results as a table.
+The **Query** view lets you issue [Druid SQL](../querying/sql.md) queries and display the results as a table.
 The view will attempt to infer your query and let you modify the query via contextual actions such as adding filters and changing the sort order when possible.
 
 From the ellipsis menu beside **Run**, you can view your query history, see the native query translation for a given Druid SQL query, and set the [query context](../querying/query-context.md).
@@ -140,7 +140,7 @@ To send a native Druid query, start your query with `{` and format it as a JSON 
 
 ## Lookups
 
-Access the lookups view from the **Lookups** card in the home view or by clicking on the gear icon in the upper right corner.
+Access the **Lookups** view from the **Lookups** card in the home view or by clicking on the gear icon in the upper right corner.
 Here you can create and edit query time [lookups](../querying/lookups.md).
 
 ![lookups](../assets/web-console-13-lookups.png)
