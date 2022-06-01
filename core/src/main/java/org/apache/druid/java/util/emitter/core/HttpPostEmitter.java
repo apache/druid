@@ -729,7 +729,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
       try {
         Thread.sleep(backoffCheckDelayMillis);
       }
-      catch (InterruptedException e) {
+      catch (InterruptedException ignored) {
         return;
       }
     }
