@@ -145,8 +145,8 @@ public interface SegmentsMetadataManager
 
   /**
    * Returns top N unused segment intervals with the end time no later than the specified maxEndTime and
-   * last_used time no later than maxLastUsedTime when ordered by
-   * segment start time, end time.
+   * last_used time no later than maxLastUsedTime when ordered by segment start time, end time. Any segment having no
+   * last_used time due to upgrade from legacy Druid means maxLastUsedTime is ignored for that segment.
    */
   List<Interval> getUnusedSegmentIntervals(
       String dataSource,

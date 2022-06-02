@@ -211,6 +211,12 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
   }
 
+  /**
+   * Execute the desired ALTER statement on the desired table
+   *
+   * @param tableName The name of the table being altered
+   * @param sql ALTER statment to be executed
+   */
   public void alterTable(final String tableName, final Iterable<String> sql)
   {
     try {
@@ -441,7 +447,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
-  // This is public so UpdateTables can call it as a part of Druid cli tools
+  /**
+   * Adds the last_used column to the Druid segment table.
+   *
+   * This is public due to allow the UpdateTables cli tool to use for upgrade prep.
+   */
   @Override
   public void alterSegmentTableAddLastUsed()
   {
@@ -463,7 +473,12 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
   }
 
-  // This is public so UpdateTables can call it as a part of Druid cli tools
+  /**
+   * Populates the last_used column for all unused segments in the Druid segment table.
+   *
+   * The current UTC timestamp string is used for the content of each column.
+   * This is public due to allow the UpdateTables cli tool to use in a optional post-upgrade action.
+   */
   @Override
   public void updateSegmentTablePopulateLastUsed()
   {
@@ -838,6 +853,13 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
   }
 
+  /**
+   * Interrogate table metadata and return true or false depending on the existance of the indicated column
+   *
+   * @param tableName The table being interrogated
+   * @param columnName The column being looked for
+   * @return boolean indicating the existence of the column in question
+   */
   private boolean tableHasColumn(String tableName, String columnName)
   {
     return getDBI().withHandle(
@@ -867,7 +889,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   /**
    * Ensure that the segment table has the proper schema required to run Druid properly.
    *
-   * Throws RuntimeException if the column does not exist. There is no recovering from an invalid schema, the program should crash.
+   * Throws RuntimeException if the column does not exist. There is no recovering from an invalid schema,
+   * the program should crash.
    */
   private void validateSegmentTable()
   {
