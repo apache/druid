@@ -748,7 +748,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(SqlPlanningException.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                    "The granularity specified in PARTITIONED BY is not supported. Please use a standard granularity."))
+                    "The granularity specified in PARTITIONED BY is not supported. "
+                    + "Please use an equivalent of these granularities: second, minute, five_minute, ten_minute, "
+                    + "fifteen_minute, thirty_minute, hour, six_hour, day, week, month, quarter, year, all."))
             )
         )
         .verify();
