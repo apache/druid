@@ -431,7 +431,7 @@ public class DruidSqlParserUtils
           Arrays.stream(GranularityType.values())
                 .filter(granularityType -> !granularityType.equals(GranularityType.NONE))
                 .map(Enum::name)
-                .map(String::toLowerCase)
+                .map(StringUtils::toLowerCase)
                 .collect(Collectors.joining(", "))
       );
     }
