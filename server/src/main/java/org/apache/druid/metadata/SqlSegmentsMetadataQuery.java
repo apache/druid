@@ -269,8 +269,8 @@ public class SqlSegmentsMetadataQuery
       }
 
       if (matchMode == IntervalMode.OVERLAPS) {
-        sql.bind("minmatch", "0000-");
-        sql.bind("maxmatch", "10000-");
+        sql.bind("minmatch", "0000-"); // '-' is lexicographically lower than '0' so this catches negative-year starts
+        sql.bind("maxmatch", "10000-"); // Catches end points at 10000 or after
       }
     }
 
