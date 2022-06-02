@@ -46,6 +46,7 @@ import org.apache.druid.query.BadJsonQueryException;
 import org.apache.druid.query.BadQueryException;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
@@ -373,7 +374,14 @@ public class QueryResource implements QueryCountStatsProvider
     String prevEtag = getPreviousEtag(req);
 
     if (prevEtag != null) {
-      baseQuery.getQueryContext().addSystemParam(HEADER_IF_NONE_MATCH, prevEtag);
+      if (baseQuery.getQueryContext() == null) {
+        QueryContext context = new QueryContext(baseQuery.getContext());
+        context.addSystemParam(HEADER_IF_NONE_MATCH, prevEtag);
+
+        return baseQuery.withOverriddenContext(context.getMergedParams());
+      } else {
+        baseQuery.getQueryContext().addSystemParam(HEADER_IF_NONE_MATCH, prevEtag);
+      }
     }
 
     return baseQuery;
