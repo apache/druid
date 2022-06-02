@@ -45,6 +45,8 @@ import org.skife.jdbi.v2.util.IntegerMapper;
 
 import javax.annotation.Nullable;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
 import java.sql.SQLTransientException;
@@ -234,7 +236,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       );
     }
     catch (Exception e) {
-      log.warn(e, "Exception creating table");
+      log.warn(e, "Exception Altering table[%s]", tableName);
     }
   }
 
@@ -439,20 +441,38 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
+  // This is public so UpdateTables can call it as a part of Druid cli tools
   @Override
-  public void updateSegmentsTableAddLastUsed()
+  public void alterSegmentTableAddLastUsed()
   {
     String tableName = tablesConfigSupplier.get().getSegmentsTable();
-    alterTable(
-        tableName,
-        ImmutableList.of(
-            StringUtils.format(
-                "ALTER TABLE %1$s \n"
-                + "ADD last_used varchar(255) NOT NULL DEFAULT '%2$s'",
-                tableName,
-                DateTimes.nowUtc().toString()
-            )
-        )
+    if (!tableHasColumn(tableName, "last_used")) {
+      log.info("Adding last_used column to %s", tableName);
+      alterTable(
+          tableName,
+          ImmutableList.of(
+              StringUtils.format(
+                  "ALTER TABLE %1$s \n"
+                  + "ADD last_used varchar(255)",
+                  tableName
+              )
+          )
+      );
+    } else {
+      log.info("%s already has last_used column", tableName);
+    }
+  }
+
+  // This is public so UpdateTables can call it as a part of Druid cli tools
+  @Override
+  public void updateSegmentTablePopulateLastUsed()
+  {
+    String tableName = tablesConfigSupplier.get().getSegmentsTable();
+    getDBI().withHandle(
+        (Handle handle) -> handle
+            .createStatement(StringUtils.format("UPDATE %s SET last_used = :last_used WHERE used = false", tableName))
+            .bind("last_used", DateTimes.nowUtc().toString())
+            .execute()
     );
   }
 
@@ -601,7 +621,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     if (config.get().isCreateTables()) {
       createSegmentTable(tablesConfigSupplier.get().getSegmentsTable());
+      alterSegmentTableAddLastUsed();
     }
+    // Called outside of the above conditional because we want to validate the table
+    // regardless of cluster configuration for creating tables.
+    validateSegmentTable();
   }
 
   @Override
@@ -811,6 +835,46 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
     catch (Exception e) {
       log.warn(e, "Exception while deleting records from table");
+    }
+  }
+
+  private boolean tableHasColumn(String tableName, String columnName)
+  {
+    return getDBI().withHandle(
+        new HandleCallback<Boolean>()
+        {
+          @Override
+          public Boolean withHandle(Handle handle)
+          {
+            try {
+              DatabaseMetaData dbMetaData = handle.getConnection().getMetaData();
+              ResultSet columns = dbMetaData.getColumns(
+                  null,
+                  null,
+                  tableName,
+                  columnName
+              );
+              return columns.next();
+            }
+            catch (SQLException e) {
+              return false;
+            }
+          }
+        }
+    );
+  }
+
+  /**
+   * Ensure that the segment table has the proper schema required to run Druid properly.
+   *
+   * Throws RuntimeException if the column does not exist. There is no recovering from an invalid schema, the program should crash.
+   */
+  private void validateSegmentTable()
+  {
+    if (tableHasColumn(tablesConfigSupplier.get().getSegmentsTable(), "last_used")) {
+      return;
+    } else {
+      throw new RuntimeException("Invalid Segment Table Schema! No last_used column!");
     }
   }
 }

@@ -89,5 +89,8 @@ public interface MetadataStorageConnector
 
   void deleteAllRecords(String tableName);
 
-  void updateSegmentsTableAddLastUsed();
+  void alterSegmentTableAddLastUsed();
+
+  void updateSegmentTablePopulateLastUsed();
+
 }

@@ -520,8 +520,9 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     try {
       int numUpdatedDatabaseEntries = connector.getDBI().withHandle(
           (Handle handle) -> handle
-              .createStatement(StringUtils.format("UPDATE %s SET used=true, last_used = CURRENT_TIMESTAMP WHERE id = :id", getSegmentsTable()))
+              .createStatement(StringUtils.format("UPDATE %s SET used=true, last_used = :last_used WHERE id = :id", getSegmentsTable()))
               .bind("id", segmentId)
+              .bind("last_used", DateTimes.nowUtc().toString())
               .execute()
       );
       // Unlike bulk markAsUsed methods: markAsUsedAllNonOvershadowedSegmentsInDataSource(),
@@ -988,6 +989,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       DateTime maxLastUsedTime
   )
   {
+    // Note that we handle the case where last_used IS NULL here to allow smooth transition to Druid version that uses last_used column
     return connector.inReadOnlyTransaction(
         new TransactionCallback<List<Interval>>()
         {
@@ -998,7 +1000,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                 .createQuery(
                     StringUtils.format(
                         "SELECT start, %2$send%2$s FROM %1$s WHERE dataSource = :dataSource AND "
-                        + "%2$send%2$s <= :end AND used = false AND last_used <= :last_used ORDER BY start, %2$send%2$s",
+                        + "%2$send%2$s <= :end AND used = false AND (last_used IS NULL or last_used <= :last_used) ORDER BY start, %2$send%2$s",
                         getSegmentsTable(),
                         connector.getQuoteString()
                     )
