@@ -29,7 +29,7 @@ Apache Druid supports filtering specially spatially indexed columns based on an 
 
 ## Spatial indexing
 
-In any of the data specs, there is the option of providing spatial dimensions.
+You can provide spatial dimensions in any data spec.
 For example, you can specify spatial dimensions for a JSON data spec as follows:
 
 ```json
