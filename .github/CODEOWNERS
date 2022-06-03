@@ -1,2 +1,1 @@
-# See go/codeowners - automatically generated for confluentinc/druid:
-*	@confluentinc/observability
+*	@confluentinc/obs-data
