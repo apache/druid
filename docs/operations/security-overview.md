@@ -108,7 +108,7 @@ druid.extensions.loadList=[......., "simple-client-sslcontext"]
 # Setup client side TLS
 druid.client.https.protocol=TLSv1.2
 druid.client.https.trustStoreType=jks
-druid.client.https.trustStorePath=truststore.jks # replace with correct turstStore file
+druid.client.https.trustStorePath=truststore.jks # replace with correct trustStore file
 druid.client.https.trustStorePassword=secret123  # replace with your own password
 
 # Setup server side TLS
