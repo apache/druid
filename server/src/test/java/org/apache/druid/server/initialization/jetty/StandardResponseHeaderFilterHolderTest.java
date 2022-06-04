@@ -47,7 +47,7 @@ public class StandardResponseHeaderFilterHolderTest
   public FilterChain filterChain;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     serverConfig = EasyMock.strictMock(ServerConfig.class);
     httpRequest = EasyMock.strictMock(HttpServletRequest.class);
@@ -56,7 +56,7 @@ public class StandardResponseHeaderFilterHolderTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     EasyMock.verify(serverConfig, httpRequest, httpResponse, filterChain);
   }

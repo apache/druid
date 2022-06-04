@@ -281,7 +281,7 @@ public class ServerConfig
            unannouncePropagationDelay.equals(that.unannouncePropagationDelay) &&
            allowedHttpMethods.equals(that.allowedHttpMethods) &&
            errorResponseTransformStrategy.equals(that.errorResponseTransformStrategy) &&
-           contentSecurityPolicy.equals(that.contentSecurityPolicy);
+           Objects.equals(contentSecurityPolicy, that.getContentSecurityPolicy());
   }
 
   @Override

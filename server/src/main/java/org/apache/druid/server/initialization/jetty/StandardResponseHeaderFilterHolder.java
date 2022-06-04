@@ -24,10 +24,7 @@ import com.google.inject.Inject;
 import org.apache.commons.lang.CharUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.server.security.AllowOptionsResourceFilter;
 import org.eclipse.jetty.client.api.Response;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.ServletContextHandler;
 
 import javax.annotation.Nullable;
 import javax.servlet.DispatcherType;
@@ -138,7 +135,7 @@ public class StandardResponseHeaderFilterHolder implements ServletFilterHolder
     }
 
     @Override
-    public void init(FilterConfig filterConfig) throws ServletException
+    public void init(FilterConfig filterConfig)
     {
       // Nothing to do.
     }
