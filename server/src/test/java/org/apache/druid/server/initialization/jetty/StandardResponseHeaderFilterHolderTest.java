@@ -62,40 +62,10 @@ public class StandardResponseHeaderFilterHolderTest
   }
 
   @Test
-  public void test_get_html_nullContentSecurityPolicy() throws Exception
-  {
-    EasyMock.expect(serverConfig.getContentSecurityPolicy()).andReturn(null).once();
-    EasyMock.expect(httpRequest.getMethod()).andReturn(HttpMethod.GET).anyTimes();
-    EasyMock.expect(httpResponse.getContentType()).andReturn("text/html").anyTimes();
-
-    runFilterAndVerifyHeaders(
-        ImmutableMap.<String, String>builder()
-                    .put("Cache-Control", "no-cache, no-store, max-age=0")
-                    .put("Content-Security-Policy", "frame-ancestors 'none'")
-                    .build()
-    );
-  }
-
-  @Test
-  public void test_get_png_nullContentSecurityPolicy() throws Exception
-  {
-    EasyMock.expect(serverConfig.getContentSecurityPolicy()).andReturn(null).once();
-    EasyMock.expect(httpRequest.getMethod()).andReturn(HttpMethod.GET).anyTimes();
-    EasyMock.expect(httpResponse.getContentType()).andReturn("image/png").anyTimes();
-
-    runFilterAndVerifyHeaders(
-        ImmutableMap.<String, String>builder()
-                    .put("Content-Security-Policy", "frame-ancestors 'none'")
-                    .build()
-    );
-  }
-
-  @Test
-  public void test_get_json_nullContentSecurityPolicy() throws Exception
+  public void test_get_nullContentSecurityPolicy() throws Exception
   {
     EasyMock.expect(serverConfig.getContentSecurityPolicy()).andReturn("").once();
     EasyMock.expect(httpRequest.getMethod()).andReturn(HttpMethod.GET).anyTimes();
-    EasyMock.expect(httpResponse.getContentType()).andReturn("application/json").anyTimes();
 
     runFilterAndVerifyHeaders(
         ImmutableMap.<String, String>builder()
@@ -106,31 +76,19 @@ public class StandardResponseHeaderFilterHolderTest
   }
 
   @Test
-  public void test_post_json_nullContentSecurityPolicy() throws Exception
+  public void test_post_nullContentSecurityPolicy() throws Exception
   {
     EasyMock.expect(serverConfig.getContentSecurityPolicy()).andReturn("").once();
     EasyMock.expect(httpRequest.getMethod()).andReturn(HttpMethod.POST).anyTimes();
-    EasyMock.expect(httpResponse.getContentType()).andReturn("application/json").anyTimes();
 
     runFilterAndVerifyHeaders(Collections.emptyMap());
   }
 
   @Test
-  public void test_post_html_nullContentSecurityPolicy() throws Exception
-  {
-    EasyMock.expect(serverConfig.getContentSecurityPolicy()).andReturn("").once();
-    EasyMock.expect(httpRequest.getMethod()).andReturn(HttpMethod.POST).anyTimes();
-    EasyMock.expect(httpResponse.getContentType()).andReturn("text/html").anyTimes();
-
-    runFilterAndVerifyHeaders(Collections.emptyMap());
-  }
-
-  @Test
-  public void test_get_html_emptyContentSecurityPolicy() throws Exception
+  public void test_get_emptyContentSecurityPolicy() throws Exception
   {
     EasyMock.expect(serverConfig.getContentSecurityPolicy()).andReturn("").once();
     EasyMock.expect(httpRequest.getMethod()).andReturn(HttpMethod.GET).anyTimes();
-    EasyMock.expect(httpResponse.getContentType()).andReturn("text/html").anyTimes();
 
     runFilterAndVerifyHeaders(
         ImmutableMap.<String, String>builder()
@@ -141,7 +99,7 @@ public class StandardResponseHeaderFilterHolderTest
   }
 
   @Test
-  public void test_get_html_overrideContentSecurityPolicy() throws Exception
+  public void test_get_overrideContentSecurityPolicy() throws Exception
   {
     EasyMock.expect(serverConfig.getContentSecurityPolicy()).andReturn("frame-ancestors 'self'").once();
     EasyMock.expect(httpRequest.getMethod()).andReturn(HttpMethod.GET).anyTimes();
@@ -156,7 +114,7 @@ public class StandardResponseHeaderFilterHolderTest
   }
 
   @Test
-  public void test_get_html_invalidContentSecurityPolicy()
+  public void test_get_invalidContentSecurityPolicy()
   {
     EasyMock.expect(serverConfig.getContentSecurityPolicy()).andReturn("erroné").once();
 
