@@ -322,6 +322,7 @@ public class JoinableFactoryWrapper
    *
    * If convertedFilter is null and joinClauseFullyConverted is true, it means that all parts of the joinable clause can
    * be broken into filters. Further, all the clause conditions are on columns where the right side is only null values.
+   * In that case, we replace joinable with a FalseFilter.
    * If convertedFilter is null and joinClauseFullyConverted is false, it means that no parts of the joinable clause can
    * be broken into filters.
    * If convertedFilter is non-null, then joinClauseFullyConverted represents whether the filter encapsulates the clause
