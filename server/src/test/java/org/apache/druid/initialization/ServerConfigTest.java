@@ -60,7 +60,8 @@ public class ServerConfigTest
         true,
         ImmutableList.of(HttpMethod.OPTIONS),
         true,
-        new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of(".*"))
+        new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of(".*")),
+        defaultConfig.getContentSecurityPolicy()
     );
     String modifiedConfigJson = OBJECT_MAPPER.writeValueAsString(modifiedConfig);
     ServerConfig modifiedConfig2 = OBJECT_MAPPER.readValue(modifiedConfigJson, ServerConfig.class);

@@ -131,10 +131,11 @@ public class JettyServerModule extends JerseyServletModule
     Jerseys.addResource(binder, StatusResource.class);
     binder.bind(StatusResource.class).in(LazySingleton.class);
 
-    // Adding empty binding for ServletFilterHolders and Handlers so that injector returns an empty set if none
-    // are provided by extensions.
+    // Add empty binding for Handlers so that the injector returns an empty set if none are provided by extensions.
     Multibinder.newSetBinder(binder, Handler.class);
-    Multibinder.newSetBinder(binder, ServletFilterHolder.class);
+    Multibinder.newSetBinder(binder, ServletFilterHolder.class)
+               .addBinding()
+               .to(StandardResponseHeaderFilterHolder.class);
 
     MetricsModule.register(binder, JettyMonitor.class);
   }
