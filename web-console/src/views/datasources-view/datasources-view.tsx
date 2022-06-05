@@ -349,7 +349,7 @@ ORDER BY 1`;
 
     const datasourceFilter: Filter[] = [];
     if (props.initDatasource) {
-      datasourceFilter.push({ id: 'datasource', value: `"${props.initDatasource}"` });
+      datasourceFilter.push({ id: 'datasource', value: `=${props.initDatasource}` });
     }
 
     this.state = {

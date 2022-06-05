@@ -365,6 +365,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
               new DictionaryEncodedStringIndexSupplier(
                   bitmapSerdeFactory.getBitmapFactory(),
                   rDictionary,
+                  rDictionaryUtf8,
                   rBitmaps,
                   rSpatialIndex
               ),

@@ -30,21 +30,21 @@ import javax.annotation.Nullable;
 public interface LexicographicalRangeIndex
 {
   /**
-   * Get an {@link BitmapColumnIndex} corresponding to the values supplied in the specified range
+   * Get a {@link BitmapColumnIndex} corresponding to the values supplied in the specified range.
    */
-  default BitmapColumnIndex forRange(
+  BitmapColumnIndex forRange(
       @Nullable String startValue,
       boolean startStrict,
       @Nullable String endValue,
       boolean endStrict
-  )
-  {
-    return forRange(startValue, startStrict, endValue, endStrict, (index) -> true);
-  }
+  );
 
   /**
-   * Get an {@link BitmapColumnIndex} corresponding to the values supplied in the specified range whose dictionary ids
-   * also match some predicate, such as to match a prefix
+   * Get a {@link BitmapColumnIndex} corresponding to the values supplied in the specified range whose dictionary ids
+   * also match some predicate, such as to match a prefix.
+   *
+   * If the provided {@code} matcher is always true, it's better to use the other
+   * {@link #forRange(String, boolean, String, boolean)} method.
    */
   BitmapColumnIndex forRange(
       @Nullable String startValue,

@@ -285,6 +285,7 @@ gzipped
 hadoop
 hasher
 hashtable
+high-QPS
 historicals
 hostname
 hostnames
@@ -377,6 +378,7 @@ procs
 programmatically
 proto
 proxied
+QPS
 quantile
 quantiles
 queryable
@@ -403,6 +405,7 @@ searchable
 secondaryPartitionPruning
 seekable-stream
 servlet
+setProcessingThreadNames
 simple-client-sslcontext
 sharded
 sharding
@@ -530,6 +533,7 @@ error_msg
 exprs
 group_id
 interval_expr
+is_active
 is_available
 is_leader
 is_overshadowed
@@ -568,6 +572,7 @@ IEC
 100x
  - ../docs/configuration/logging.md
 _common
+appenders
  - ../docs/dependencies/deep-storage.md
 druid-hdfs-storage
 druid-s3-extensions
@@ -1463,6 +1468,7 @@ poolName
 remoteAddress
 segmentAvailabilityConfirmed
 serviceName
+taskIngestionMode
 taskStatus
 taskType
 threadPoolNumBusyThreads.
@@ -1575,6 +1581,7 @@ pre-existing
 pushdown
 row1
 subtotalsSpec
+tradeoff
 unnested
 unnesting
  - ../docs/querying/having.md

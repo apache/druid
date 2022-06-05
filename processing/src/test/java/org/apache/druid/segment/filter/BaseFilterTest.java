@@ -745,6 +745,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                 RowAdapters.standardRow(),
                 rowSupplier::get,
                 rowSignatureBuilder.build(),
+                false,
                 false
             )
         )

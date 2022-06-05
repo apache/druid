@@ -217,7 +217,7 @@ exports[`IngestionView matches snapshot 1`] = `
           Array [
             Object {
               "id": "datasource",
-              "value": "datasource",
+              "value": "=datasource",
             },
           ]
         }
@@ -536,11 +536,11 @@ exports[`IngestionView matches snapshot 1`] = `
           Array [
             Object {
               "id": "group_id",
-              "value": "test",
+              "value": "=test",
             },
             Object {
               "id": "datasource",
-              "value": "datasource",
+              "value": "=datasource",
             },
           ]
         }

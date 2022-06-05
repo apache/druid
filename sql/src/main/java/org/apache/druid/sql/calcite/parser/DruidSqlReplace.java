@@ -51,6 +51,9 @@ public class DruidSqlReplace extends SqlInsert
 
   private final SqlNode replaceTimeQuery;
 
+  @Nullable
+  private final SqlNodeList clusteredBy;
+
   /**
    * While partitionedBy and partitionedByStringForUnparse can be null as arguments to the constructor, this is
    * disallowed (semantically) and the constructor performs checks to ensure that. This helps in producing friendly
@@ -61,7 +64,8 @@ public class DruidSqlReplace extends SqlInsert
       @Nonnull SqlInsert insertNode,
       @Nullable Granularity partitionedBy,
       @Nullable String partitionedByStringForUnparse,
-      @Nonnull SqlNode replaceTimeQuery
+      @Nullable SqlNodeList clusteredBy,
+      @Nullable SqlNode replaceTimeQuery
   ) throws ParseException
   {
     super(
@@ -71,14 +75,19 @@ public class DruidSqlReplace extends SqlInsert
         insertNode.getSource(),
         insertNode.getTargetColumnList()
     );
+    if (replaceTimeQuery == null) {
+      throw new ParseException("Missing time chunk information in OVERWRITE clause for REPLACE, set it to OVERWRITE WHERE <__time based condition> or set it to overwrite the entire table with OVERWRITE ALL.");
+    }
     if (partitionedBy == null) {
-      throw new ParseException("REPLACE statements must specify PARTITIONED BY clause explictly");
+      throw new ParseException("REPLACE statements must specify PARTITIONED BY clause explicitly");
     }
     this.partitionedBy = partitionedBy;
 
     this.partitionedByStringForUnparse = Preconditions.checkNotNull(partitionedByStringForUnparse);
 
     this.replaceTimeQuery = replaceTimeQuery;
+
+    this.clusteredBy = clusteredBy;
   }
 
   public SqlNode getReplaceTimeQuery()
@@ -89,6 +98,12 @@ public class DruidSqlReplace extends SqlInsert
   public Granularity getPartitionedBy()
   {
     return partitionedBy;
+  }
+
+  @Nullable
+  public SqlNodeList getClusteredBy()
+  {
+    return clusteredBy;
   }
 
   @Nonnull
@@ -125,5 +140,14 @@ public class DruidSqlReplace extends SqlInsert
 
     writer.keyword("PARTITIONED BY");
     writer.keyword(partitionedByStringForUnparse);
+
+    if (getClusteredBy() != null) {
+      writer.keyword("CLUSTERED BY");
+      SqlWriter.Frame frame = writer.startList("", "");
+      for (SqlNode clusterByOpts : getClusteredBy().getList()) {
+        clusterByOpts.unparse(writer, leftPrec, rightPrec);
+      }
+      writer.endList(frame);
+    }
   }
 }

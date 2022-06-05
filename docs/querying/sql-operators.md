@@ -35,7 +35,7 @@ sidebar_label: "Operators"
 > This document describes the SQL language.
 
 
-Operators in Druid SQL typically operate on one or two values and return a result based on the values. Types of operators in Druid SQL include arithmetic, comparison, logical, and more, as described here. 
+Operators in [Druid SQL](./sql.md) typically operate on one or two values and return a result based on the values. Types of operators in Druid SQL include arithmetic, comparison, logical, and more, as described here. 
 
 ## Arithmetic operators
 

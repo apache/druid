@@ -27,6 +27,7 @@ import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.extendedset.intset.ConciseSetUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.ordering.StringComparators;
@@ -48,6 +49,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -160,7 +162,7 @@ public class BoundFilterBenchmark
     final BitmapSerdeFactory serdeFactory = new RoaringBitmapSerdeFactory(null);
     final List<Integer> ints = generateInts();
     final GenericIndexed<String> dictionary = GenericIndexed.fromIterable(
-        FluentIterable.from(ints).transform(i -> i.toString()),
+        FluentIterable.from(ints).transform(Object::toString),
         GenericIndexed.STRING_STRATEGY
     );
     final GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.fromIterable(
@@ -174,9 +176,14 @@ public class BoundFilterBenchmark
                       ),
         serdeFactory.getObjectStrategy()
     );
+    final GenericIndexed<ByteBuffer> dictionaryUtf8 = GenericIndexed.fromIterable(
+        FluentIterable.from(ints)
+                      .transform(i -> ByteBuffer.wrap(StringUtils.toUtf8(String.valueOf(i)))),
+        GenericIndexed.BYTE_BUFFER_STRATEGY
+    );
     selector = new MockColumnIndexSelector(
         bitmapFactory,
-        new DictionaryEncodedStringIndexSupplier(bitmapFactory, dictionary, bitmaps, null)
+        new DictionaryEncodedStringIndexSupplier(bitmapFactory, dictionary, dictionaryUtf8, bitmaps, null)
     );
   }
 

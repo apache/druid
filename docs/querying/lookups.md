@@ -272,7 +272,7 @@ All entries in the map will UPDATE existing entries. No entries will be deleted.
 
 ### Update lookup
 
-A `POST` to a particular lookup extractor factory via `/druid/coordinator/v1/lookups/config/{tier}/{id}` will update that specific extractor factory.
+A `POST` to a particular lookup extractor factory via `/druid/coordinator/v1/lookups/config/{tier}/{id}` creates or updates that specific extractor factory.
 
 For example, a post to `/druid/coordinator/v1/lookups/config/realtime_customer1/site_id_customer1` might contain the following:
 
@@ -289,6 +289,8 @@ For example, a post to `/druid/coordinator/v1/lookups/config/realtime_customer1/
 ```
 
 This will replace the `site_id_customer1` lookup in the `realtime_customer1` with the definition above.
+
+Assign a unique version identifier each time you update a lookup extractor factory. Otherwise the call will fail.
 
 ### Get all lookups
 

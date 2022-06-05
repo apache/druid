@@ -660,37 +660,50 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     if (zkWorker == null) {
       // Worker is not running this task, it might be available in deep storage
       return Optional.absent();
-    } else {
-      TaskLocation taskLocation = runningTasks.get(taskId).getLocation();
-      final URL url = TaskRunnerUtils.makeTaskLocationURL(
-          taskLocation,
-          "/druid/worker/v1/chat/%s/liveReports",
-          taskId
-      );
-      return Optional.of(
-          new ByteSource()
+    }
+
+    final RemoteTaskRunnerWorkItem runningWorkItem = runningTasks.get(taskId);
+
+    if (runningWorkItem == null) {
+      // Worker very recently exited.
+      return Optional.absent();
+    }
+
+    final TaskLocation taskLocation = runningWorkItem.getLocation();
+
+    if (TaskLocation.unknown().equals(taskLocation)) {
+      // No location known for this task. It may have not been assigned one yet.
+      return Optional.absent();
+    }
+
+    final URL url = TaskRunnerUtils.makeTaskLocationURL(
+        taskLocation,
+        "/druid/worker/v1/chat/%s/liveReports",
+        taskId
+    );
+    return Optional.of(
+        new ByteSource()
+        {
+          @Override
+          public InputStream openStream() throws IOException
           {
-            @Override
-            public InputStream openStream() throws IOException
-            {
-              try {
-                return httpClient.go(
-                    new Request(HttpMethod.GET, url),
-                    new InputStreamResponseHandler()
-                ).get();
-              }
-              catch (InterruptedException e) {
-                throw new RuntimeException(e);
-              }
-              catch (ExecutionException e) {
-                // Unwrap if possible
-                Throwables.propagateIfPossible(e.getCause(), IOException.class);
-                throw new RuntimeException(e);
-              }
+            try {
+              return httpClient.go(
+                  new Request(HttpMethod.GET, url),
+                  new InputStreamResponseHandler()
+              ).get();
+            }
+            catch (InterruptedException e) {
+              throw new RuntimeException(e);
+            }
+            catch (ExecutionException e) {
+              // Unwrap if possible
+              Throwables.propagateIfPossible(e.getCause(), IOException.class);
+              throw new RuntimeException(e);
             }
           }
-      );
-    }
+        }
+    );
   }
 
   /**
@@ -919,10 +932,10 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     synchronized (statusLock) {
       if (!zkWorkers.containsKey(worker) || lazyWorkers.containsKey(worker)) {
         // the worker might have been killed or marked as lazy
-        log.info("Not assigning task to already removed worker[%s]", worker);
+        log.debug("Not assigning task to already removed worker[%s]", worker);
         return false;
       }
-      log.info("Coordinator asking Worker[%s] to add task[%s]", worker, task.getId());
+      log.info("Assigning task [%s] to worker [%s]", task.getId(), worker);
 
       CuratorUtils.createIfNotExists(
           cf,
@@ -949,7 +962,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
       RemoteTaskRunnerWorkItem newWorkItem = workItem.withWorker(theZkWorker.getWorker(), null);
       runningTasks.put(task.getId(), newWorkItem);
-      log.info("Task %s switched from pending to running (on [%s])", task.getId(), newWorkItem.getWorker().getHost());
+      log.info("Task [%s] started running on worker [%s]", task.getId(), newWorkItem.getWorker().getHost());
       TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.running(task.getId()));
 
       // Syncing state with Zookeeper - don't assign new tasks until the task we just assigned is actually running

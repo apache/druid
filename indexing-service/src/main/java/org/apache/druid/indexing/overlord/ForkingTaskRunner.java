@@ -47,6 +47,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.tasklogs.ConsoleLoggingEnforcementConfigurationFactory;
 import org.apache.druid.indexing.common.tasklogs.LogUtils;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
@@ -339,6 +340,7 @@ public class ForkingTaskRunner
                         command.add(
                             StringUtils.format("-Ddruid.task.executor.enableTlsPort=%s", node.isEnableTlsPort())
                         );
+                        command.add(StringUtils.format("-Dlog4j2.configurationFactory=%s", ConsoleLoggingEnforcementConfigurationFactory.class.getName()));
 
                         // These are not enabled per default to allow the user to either set or not set them
                         // Users are highly suggested to be set in druid.indexer.runner.javaOpts

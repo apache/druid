@@ -464,12 +464,11 @@ public class VirtualColumns implements Cacheable
                                 : Sets.newHashSet(columnNames);
 
     for (String columnName : virtualColumn.requiredColumns()) {
-      if (!nextSet.add(columnName)) {
-        throw new IAE("Self-referential column[%s]", columnName);
-      }
-
       final VirtualColumn dependency = getVirtualColumn(columnName);
       if (dependency != null) {
+        if (!nextSet.add(columnName)) {
+          throw new IAE("Self-referential column[%s]", columnName);
+        }
         detectCycles(dependency, nextSet);
       }
     }

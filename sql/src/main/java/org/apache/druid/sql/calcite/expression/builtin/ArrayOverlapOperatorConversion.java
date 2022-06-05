@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
-import com.google.common.collect.Sets;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
@@ -40,6 +39,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.List;
 
 public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOperatorConversion
@@ -123,7 +123,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
       } else {
         return new InDimFilter(
             simpleExtractionExpr.getSimpleExtraction().getColumn(),
-            Sets.newHashSet(arrayElements),
+            new InDimFilter.ValuesSet(Arrays.asList(arrayElements)),
             simpleExtractionExpr.getSimpleExtraction().getExtractionFn(),
             null
         );

@@ -1025,6 +1025,17 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                   }
                 }
             );
+            // emit segment count metric:
+            int segmentCount = 0;
+            if (publishedSegmentsAndCommitMetadata != null
+                && publishedSegmentsAndCommitMetadata.getSegments() != null) {
+              segmentCount = publishedSegmentsAndCommitMetadata.getSegments().size();
+            }
+            task.emitMetric(
+                toolbox.getEmitter(),
+                "ingest/segment/count",
+                segmentCount
+            );
           }
 
           @Override
