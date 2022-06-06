@@ -845,7 +845,8 @@ public class CalciteTests
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
         new NoopRequestLogger(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        authConfig
+        authConfig,
+        new DefaultQueryConfig(ImmutableMap.of())
     );
   }
 
