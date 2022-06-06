@@ -24,9 +24,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.name.Named;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.JsonNonNull;
@@ -36,6 +38,14 @@ import org.apache.druid.guice.annotations.Smile;
  */
 public class JacksonModule implements Module
 {
+  private String serviceName;
+
+  @Inject
+  public void setServiceName(@Named("serviceName") String serviceName)
+  {
+    this.serviceName = serviceName;
+  }
+
   @Override
   public void configure(Binder binder)
   {
@@ -45,7 +55,7 @@ public class JacksonModule implements Module
   @Provides @LazySingleton @Json
   public ObjectMapper jsonMapper()
   {
-    return new DefaultObjectMapper();
+    return new DefaultObjectMapper(serviceName);
   }
 
   /**
@@ -54,7 +64,7 @@ public class JacksonModule implements Module
   @Provides @LazySingleton @JsonNonNull
   public ObjectMapper jsonMapperOnlyNonNullValue()
   {
-    return new DefaultObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    return new DefaultObjectMapper(serviceName).setSerializationInclusion(JsonInclude.Include.NON_NULL);
   }
 
   @Provides @LazySingleton @Smile
@@ -63,7 +73,7 @@ public class JacksonModule implements Module
     final SmileFactory smileFactory = new SmileFactory();
     smileFactory.configure(SmileGenerator.Feature.ENCODE_BINARY_AS_7BIT, false);
     smileFactory.delegateToTextual(true);
-    final ObjectMapper retVal = new DefaultObjectMapper(smileFactory);
+    final ObjectMapper retVal = new DefaultObjectMapper(smileFactory, serviceName);
     retVal.getFactory().setCodec(retVal);
     return retVal;
   }

@@ -20,11 +20,21 @@
 package org.apache.druid.jackson;
 
 import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.deser.DeserializationProblemHandler;
+import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
+import com.fasterxml.jackson.databind.jsontype.TypeIdResolver;
+import com.fasterxml.jackson.databind.util.ClassUtil;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+
+import javax.annotation.Nullable;
+
+import java.io.IOException;
 
 /**
  */
@@ -32,7 +42,12 @@ public class DefaultObjectMapper extends ObjectMapper
 {
   public DefaultObjectMapper()
   {
-    this((JsonFactory) null);
+    this((JsonFactory) null, null);
+  }
+
+  public DefaultObjectMapper(String serviceName)
+  {
+    this((JsonFactory) null, serviceName);
   }
 
   public DefaultObjectMapper(DefaultObjectMapper mapper)
@@ -40,7 +55,7 @@ public class DefaultObjectMapper extends ObjectMapper
     super(mapper);
   }
 
-  public DefaultObjectMapper(JsonFactory factory)
+  public DefaultObjectMapper(JsonFactory factory, @Nullable String serviceName)
   {
     super(factory);
     registerModule(new DruidDefaultSerializersModule());
@@ -61,11 +76,48 @@ public class DefaultObjectMapper extends ObjectMapper
     configure(MapperFeature.ALLOW_FINAL_FIELDS_AS_MUTATORS, false);
     configure(SerializationFeature.INDENT_OUTPUT, false);
     configure(SerializationFeature.FLUSH_AFTER_WRITE_VALUE, false);
+
+    addHandler(new DefaultDeserializationProblemHandler(serviceName));
   }
 
   @Override
   public ObjectMapper copy()
   {
     return new DefaultObjectMapper(this);
+  }
+
+  /**
+   * A custom implementation of {@link #DeserializationProblemHandler} to add custom error message so
+   * that users know how to troubleshoot unknown type ids.
+   */
+  private static class DefaultDeserializationProblemHandler extends DeserializationProblemHandler
+  {
+    private final String serviceName;
+
+    public DefaultDeserializationProblemHandler(@Nullable String serviceName)
+    {
+      this.serviceName = serviceName == null ? "unknown" : serviceName;
+    }
+
+    @Override
+    public JavaType handleUnknownTypeId(DeserializationContext ctxt,
+                                        JavaType baseType, String subTypeId, TypeIdResolver idResolver,
+                                        String failureMsg)
+        throws IOException
+    {
+      String msg = String.format("Please make sure to load all the necessary extensions and jars on '%s' service " +
+              "that have '%s' type. " +
+              "Could not resolve type id '%s' as a subtype of %s",
+          serviceName, subTypeId, subTypeId, ClassUtil.getTypeDescription(baseType));
+      throw InvalidTypeIdException.from(ctxt.getParser(), extraFailureMessage(msg, failureMsg), baseType, subTypeId);
+    }
+
+    private String extraFailureMessage(String msgBase, @Nullable String extra)
+    {
+      if (extra == null) {
+        return msgBase;
+      }
+      return msgBase + " " + extra;
+    }
   }
 }

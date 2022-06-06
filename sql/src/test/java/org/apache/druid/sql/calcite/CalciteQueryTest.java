@@ -6384,7 +6384,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 )
             )
         ),
-        "SELECT FLOOR(__time to day), COUNT(distinct city), COUNT(distinct user) FROM druid.visits GROUP BY 1",
+        "SELECT TIME_FLOOR(__time, 'PT1D'), COUNT(distinct city), COUNT(distinct user) FROM druid.visits GROUP BY 1",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
