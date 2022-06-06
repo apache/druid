@@ -77,7 +77,8 @@ public class DefaultObjectMapperTest
     DefaultObjectMapper objectMapper = new DefaultObjectMapper("testService");
     try {
       objectMapper.readValue("{\"queryType\":\"random\",\"name\":\"does-not-matter\"}", Query.class);
-    } catch (InvalidTypeIdException e) {
+    }
+    catch (InvalidTypeIdException e) {
       String message = e.getMessage();
       Assert.assertTrue(message, message.startsWith("Please make sure to load all the necessary extensions and " +
           "jars with type 'random' on 'testService' service."));
