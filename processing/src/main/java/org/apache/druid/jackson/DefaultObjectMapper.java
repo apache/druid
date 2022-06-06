@@ -105,10 +105,10 @@ public class DefaultObjectMapper extends ObjectMapper
                                         String failureMsg)
         throws IOException
     {
-      String msg = String.format("Please make sure to load all the necessary extensions and jars on '%s' service " +
-              "that have '%s' type. " +
+      String msg = String.format("Please make sure to load all the necessary extensions and jars " +
+              "with type '%s' on '%s' service. " +
               "Could not resolve type id '%s' as a subtype of %s",
-          serviceName, subTypeId, subTypeId, ClassUtil.getTypeDescription(baseType));
+          subTypeId, serviceName, subTypeId, ClassUtil.getTypeDescription(baseType));
       throw InvalidTypeIdException.from(ctxt.getParser(), extraFailureMessage(msg, failureMsg), baseType, subTypeId);
     }
 
