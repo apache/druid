@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import com.fasterxml.jackson.databind.jsontype.TypeIdResolver;
 import com.fasterxml.jackson.databind.util.ClassUtil;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.google.common.annotations.VisibleForTesting;
 
 import javax.annotation.Nullable;
 
@@ -90,13 +91,19 @@ public class DefaultObjectMapper extends ObjectMapper
    * A custom implementation of {@link #DeserializationProblemHandler} to add custom error message so
    * that users know how to troubleshoot unknown type ids.
    */
-  private static class DefaultDeserializationProblemHandler extends DeserializationProblemHandler
+  static class DefaultDeserializationProblemHandler extends DeserializationProblemHandler
   {
     private final String serviceName;
 
     public DefaultDeserializationProblemHandler(@Nullable String serviceName)
     {
       this.serviceName = serviceName == null ? "unknown" : serviceName;
+    }
+
+    @VisibleForTesting
+    String getServiceName()
+    {
+      return serviceName;
     }
 
     @Override
