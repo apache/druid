@@ -64,7 +64,7 @@ Metrics may have additional dimensions beyond those listed above.
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
 |`query/time`|Milliseconds taken to complete a query.|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|< 1s|
-|`query/segment/time`|Milliseconds taken to query individual segment. Includes time to page in the segment from disk.|id, status, segment.|several hundred milliseconds|
+|`query/segment/time`|Milliseconds taken to query individual segment. Includes time to page in the segment from disk.|id, status, segment, vectorized.|several hundred milliseconds|
 |`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|id, segment.|< several hundred milliseconds|
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
 |`query/segmentAndCache/time`|Milliseconds taken to query individual segment or hit the cache (if it is enabled on the Historical process).|id, segment.|several hundred milliseconds|
@@ -144,6 +144,31 @@ If SQL is enabled, the Broker will emit the following metrics for SQL.
 
 ## Ingestion metrics
 
+## General native ingestion metrics
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`ingest/count`|Count of `1` every time an ingestion job runs (includes compaction jobs). Aggregate using dimensions. |dataSource, taskId, taskType, taskIngestionMode|Always `1`.|
+|`ingest/segments/count`|Count of final segments created by job (includes tombstones). |dataSource, taskId, taskType, taskIngestionMode|At least `1`.|
+|`ingest/tombstones/count`|Count of tombstones created by job |dataSource, taskId, taskType, taskIngestionMode|Zero or more for replace. Always zero for non-replace tasks (always zero for legacy replace, see below).|
+
+The `taskIngestionMode` dimension includes the following modes: 
+`APPEND`, `REPLACE_LEGACY`, and `REPLACE`. The `APPEND` mode indicates a native
+ingestion job that is appending to existing segments; `REPLACE` a native ingestion
+job replacing existing segments using tombstones; 
+and `REPLACE_LEGACY` the original replace before tombstones.
+
+The mode is decided using the values
+of the `isAppendToExisting` and `isDropExisting` flags in the
+task's `IOConfig` as follows:
+
+|`isAppendToExisting` | `isDropExisting` | mode |
+|---------------------|-------------------|------|
+`true` | `false` | `APPEND`|
+`true` | `true  ` | Invalid combination, exception thrown. |
+`false` | `false` | `REPLACE_LEGACY` (this is the default for native batch ingestion). |
+`false` | `true` | `REPLACE`|
+
 ### Ingestion metrics for Kafka
 
 These metrics apply to the [Kafka indexing service](../development/extensions-core/kafka-ingestion.md).
@@ -198,6 +223,7 @@ Note: If the JVM does not support CPU time measurement for the current thread, i
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
 |`task/run/time`|Milliseconds taken to run a task.|dataSource, taskId, taskType, taskStatus.|Varies.|
+|`task/pending/time`|Milliseconds taken for a task to wait for running.|dataSource, taskId, taskType.|Varies.|
 |`task/action/log/time`|Milliseconds taken to log a task action to the audit log.|dataSource, taskId, taskType|< 1000 (subsecond)|
 |`task/action/run/time`|Milliseconds taken to execute a task action.|dataSource, taskId, taskType|Varies from subsecond to a few seconds, based on action type.|
 |`segment/added/bytes`|Size in bytes of new segments created.|dataSource, taskId, taskType, interval.|Varies.|
@@ -214,6 +240,13 @@ Note: If the JVM does not support CPU time measurement for the current thread, i
 |`taskSlot/lazy/count`|Number of total task slots in lazy marked MiddleManagers and Indexers per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.|category.|Varies.|
 |`taskSlot/blacklisted/count`|Number of total task slots in blacklisted MiddleManagers and Indexers per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.|category.|Varies.|
 |`task/segmentAvailability/wait/time`|The amount of milliseconds a batch indexing task waited for newly created segments to become available for querying.|dataSource, taskType, taskId, segmentAvailabilityConfirmed|Varies.|
+|`worker/task/failed/count`|Number of failed tasks run on the reporting worker per emission period. This metric is only available if the WorkerTaskCountStatsMonitor module is included, and is only supported for middleManager nodes.|category, version.|Varies.|
+|`worker/task/success/count`|Number of successful tasks run on the reporting worker per emission period. This metric is only available if the WorkerTaskCountStatsMonitor module is included, and is only supported for middleManager nodes.|category, version.|Varies.|
+|`worker/taskSlot/idle/count`|Number of idle task slots on the reporting worker per emission period. This metric is only available if the WorkerTaskCountStatsMonitor module is included, and is only supported for middleManager nodes.|category, version.|Varies.|
+|`worker/taskSlot/total/count`|Number of total task slots on the reporting worker per emission period. This metric is only available if the WorkerTaskCountStatsMonitor module is included.|category, version.|Varies.|
+|`worker/taskSlot/used/count`|Number of busy task slots on the reporting worker per emission period. This metric is only available if the WorkerTaskCountStatsMonitor module is included.|category, version.|Varies.|
+
+
 
 ## Shuffle metrics (Native parallel task)
 
@@ -224,6 +257,7 @@ See [Enabling Metrics](../configuration/index.md#enabling-metrics) for more deta
 |------|-----------|----------|------------|
 |`ingest/shuffle/bytes`|Number of bytes shuffled per emission period.|supervisorTaskId|Varies|
 |`ingest/shuffle/requests`|Number of shuffle requests per emission period.|supervisorTaskId|Varies|
+
 
 ## Coordination
 

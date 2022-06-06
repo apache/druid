@@ -82,6 +82,7 @@ import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.server.security.AuthTestUtils;
@@ -972,7 +973,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     // maxRowsPerSegment is set to 2 inside the runIndexTask methods
     Pair<TaskStatus, List<DataSegment>> result = runIndexTask();
     Assert.assertEquals(6, result.rhs.size());
-    
+
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory,
@@ -1096,7 +1097,121 @@ public class CompactionTaskRunTest extends IngestionTestBase
         Intervals.of("2014-01-01T02:00:00.000Z/2014-01-01T03:00:00.000Z"),
         realSegmentsAfterFullCompaction.get(2).getInterval()
     );
-    
+
+  }
+
+  @Test
+  public void testCompactDatasourceOverIntervalWithOnlyTombstones() throws Exception
+  {
+    // This test fails with segment lock because of the bug reported in https://github.com/apache/druid/issues/10911.
+    if (lockGranularity == LockGranularity.SEGMENT) {
+      return;
+    }
+
+    // The following task creates (several, more than three, last time I checked, six) HOUR segments with intervals of
+    // - 2014-01-01T00:00:00/2014-01-01T01:00:00
+    // - 2014-01-01T01:00:00/2014-01-01T02:00:00
+    // - 2014-01-01T02:00:00/2014-01-01T03:00:00
+    // The six segments are:
+    // three rows in hour 00:
+    // 2014-01-01T00:00:00.000Z_2014-01-01T01:00:00.000Z with two rows
+    // 2014-01-01T00:00:00.000Z_2014-01-01T01:00:00.000Z_1 with one row
+    // three rows in hour 01:
+    // 2014-01-01T01:00:00.000Z_2014-01-01T02:00:00.000Z with two rows
+    // 2014-01-01T01:00:00.000Z_2014-01-01T02:00:00.000Z_1 with one row
+    // four rows in hour 02:
+    // 2014-01-01T02:00:00.000Z_2014-01-01T03:00:00.000Z with two rows
+    // 2014-01-01T02:00:00.000Z_2014-01-01T03:00:00.000Z_1 with two rows
+    // there are 10 rows total in data set
+
+    // maxRowsPerSegment is set to 2 inside the runIndexTask methods
+    Pair<TaskStatus, List<DataSegment>> result = runIndexTask();
+    Assert.assertEquals(6, result.rhs.size());
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    // Setup partial interval compaction:
+    // Change the granularity from HOUR to MINUTE through compaction for hour 01, there are three rows in the compaction
+    // interval,
+    // all three in the same timestamp (see TEST_ROWS), this should generate one segment in same, first, minute
+    // (task will now use
+    // the default rows per segments since compaction's tuning config is null) and
+    // 59 tombstones to completely overshadow the existing hour 01 segment. Since the segments outside the
+    // compaction interval should remanin unchanged there should be a total of 1 + (2 + 59) + 2 = 64 segments
+
+    // **** PARTIAL COMPACTION: hour -> minute ****
+    final Interval compactionPartialInterval = Intervals.of("2014-01-01T01:00:00/2014-01-01T02:00:00");
+    final CompactionTask partialCompactionTask = builder
+        .segmentGranularity(Granularities.MINUTE)
+        // Set dropExisting to true
+        .inputSpec(new CompactionIntervalSpec(compactionPartialInterval, null), true)
+        .build();
+    final Pair<TaskStatus, List<DataSegment>> partialCompactionResult = runTask(partialCompactionTask);
+    Assert.assertTrue(partialCompactionResult.lhs.isSuccess());
+
+    // Segments that did not belong in the compaction interval (hours 00 and 02) are expected unchanged
+    // add 2 unchanged segments for hour 00:
+    final Set<DataSegment> expectedSegments = new HashSet<>();
+    expectedSegments.addAll(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
+            DATA_SOURCE,
+            Collections.singletonList(Intervals.of("2014-01-01T00:00:00/2014-01-01T01:00:00")),
+            Segments.ONLY_VISIBLE
+        )
+    );
+    // add 2 unchanged segments for hour 02:
+    expectedSegments.addAll(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
+            DATA_SOURCE,
+            Collections.singletonList(Intervals.of("2014-01-01T02:00:00/2014-01-01T03:00:00")),
+            Segments.ONLY_VISIBLE
+        )
+    );
+    expectedSegments.addAll(partialCompactionResult.rhs);
+    Assert.assertEquals(64, expectedSegments.size());
+
+    // New segments that were compacted are expected. However, old segments of the compacted interval should be
+    // overshadowed by the new tombstones (59) being created for all minutes other than 01:01
+    final Set<DataSegment> segmentsAfterPartialCompaction = new HashSet<>(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
+            DATA_SOURCE,
+            Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
+            Segments.ONLY_VISIBLE
+        )
+    );
+    Assert.assertEquals(expectedSegments, segmentsAfterPartialCompaction);
+    final List<DataSegment> realSegmentsAfterPartialCompaction =
+        segmentsAfterPartialCompaction.stream()
+                                      .filter(s -> !s.isTombstone())
+                                      .collect(Collectors.toList());
+    final List<DataSegment> tombstonesAfterPartialCompaction =
+        segmentsAfterPartialCompaction.stream()
+                                      .filter(s -> s.isTombstone())
+                                      .collect(Collectors.toList());
+    Assert.assertEquals(59, tombstonesAfterPartialCompaction.size());
+    Assert.assertEquals(5, realSegmentsAfterPartialCompaction.size());
+    Assert.assertEquals(64, segmentsAfterPartialCompaction.size());
+
+    // Now setup compaction over an interval with only tombstones, keeping same, minute granularity
+    final CompactionTask compactionTaskOverOnlyTombstones = builder
+        .segmentGranularity(null)
+        // Set dropExisting to true
+        // last 59 minutes of our 01, should be all tombstones
+        .inputSpec(new CompactionIntervalSpec(Intervals.of("2014-01-01T01:01:00/2014-01-01T02:00:00"), null), true)
+        .build();
+
+    // **** Compaction over tombstones ****
+    final Pair<TaskStatus, List<DataSegment>> resultOverOnlyTombstones = runTask(compactionTaskOverOnlyTombstones);
+    Assert.assertTrue(resultOverOnlyTombstones.lhs.isSuccess());
+
+    // compaction should not fail but since it is over the same granularity it should leave
+    // the tombstones unchanged
+    Assert.assertEquals(59, resultOverOnlyTombstones.rhs.size());
+    resultOverOnlyTombstones.rhs.forEach(t -> Assert.assertTrue(t.isTombstone()));
   }
 
   @Test
@@ -1454,6 +1569,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final ObjectMapper objectMapper = getObjectMapper();
     objectMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
     objectMapper.registerSubtypes(LocalDataSegmentPuller.class);
+    objectMapper.registerSubtypes(TombstoneLoadSpec.class);
 
     final TaskToolbox box = createTaskToolbox(objectMapper, task);
 
@@ -1480,7 +1596,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
   private TaskToolbox createTaskToolbox(ObjectMapper objectMapper, Task task) throws IOException
   {
     final SegmentCacheManager loader = new SegmentLocalCacheManager(
-        new SegmentLoaderConfig() {
+        new SegmentLoaderConfig()
+        {
           @Override
           public List<StorageLocationConfig> getLocations()
           {
@@ -1490,59 +1607,41 @@ public class CompactionTaskRunTest extends IngestionTestBase
         objectMapper
     );
 
-    return new TaskToolbox(
-        new TaskConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            null,
-            null,
-            null,
-            false,
-            false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-            null
-        ),
-        null,
-        createActionClient(task),
-        null,
-        new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()),
-        new NoopDataSegmentKiller(),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        NoopJoinableFactory.INSTANCE,
-        null,
-        loader,
-        objectMapper,
-        temporaryFolder.newFolder(),
-        getIndexIO(),
-        null,
-        null,
-        null,
-        getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)),
-        null,
-        null,
-        null,
-        null,
-        new NoopTestTaskReportFileWriter(),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new NoopChatHandlerProvider(),
-        testUtils.getRowIngestionMetersFactory(),
-        new TestAppenderatorsManager(),
-        indexingServiceClient,
-        coordinatorClient,
-        null,
-        null
-    );
+    return new TaskToolbox.Builder()
+        .config(
+            new TaskConfig(
+                null,
+                null,
+                null,
+                null,
+                null,
+                false,
+                null,
+                null,
+                null,
+                false,
+                false,
+                TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+                null
+            )
+        )
+        .taskActionClient(createActionClient(task))
+        .segmentPusher(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()))
+        .dataSegmentKiller(new NoopDataSegmentKiller())
+        .joinableFactory(NoopJoinableFactory.INSTANCE)
+        .segmentCacheManager(loader)
+        .jsonMapper(objectMapper)
+        .taskWorkDir(temporaryFolder.newFolder())
+        .indexIO(getIndexIO())
+        .indexMergerV9(getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
+        .taskReportFileWriter(new NoopTestTaskReportFileWriter())
+        .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
+        .chatHandlerProvider(new NoopChatHandlerProvider())
+        .rowIngestionMetersFactory(testUtils.getRowIngestionMetersFactory())
+        .appenderatorsManager(new TestAppenderatorsManager())
+        .indexingServiceClient(indexingServiceClient)
+        .coordinatorClient(coordinatorClient)
+        .build();
   }
 
   private List<String> getCSVFormatRowsFromSegments(List<DataSegment> segments) throws Exception

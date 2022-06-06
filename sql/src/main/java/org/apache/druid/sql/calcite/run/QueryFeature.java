@@ -46,4 +46,9 @@ public enum QueryFeature
    * other than the "__time" column.
    */
   SCAN_CAN_ORDER_BY_NON_TIME,
+
+  /**
+   * Queries of type {@link org.apache.druid.query.timeboundary.TimeBoundaryQuery} are usable.
+   */
+  CAN_RUN_TIME_BOUNDARY
 }

@@ -69,6 +69,7 @@ import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -735,6 +736,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             null,
@@ -800,6 +802,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             null,
@@ -859,6 +862,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             null,
@@ -913,6 +917,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -985,6 +990,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             null,
@@ -1047,6 +1053,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             null,
@@ -1103,6 +1110,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1205,6 +1213,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1336,6 +1345,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             null,
@@ -1393,6 +1403,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1459,6 +1470,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1611,6 +1623,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             null,
@@ -1708,6 +1721,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null),
@@ -1739,6 +1753,132 @@ public class CompactSegmentsTest
     Assert.assertNotNull(actual);
     ClientCompactionTaskGranularitySpec expected = new ClientCompactionTaskGranularitySpec(Granularities.YEAR, null, null);
     Assert.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testCompactWithMetricsSpecShouldSetPreserveExistingMetricsTrue()
+  {
+    final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
+    final String dataSource = DATA_SOURCE_PREFIX + 0;
+    compactionConfigs.add(
+        new DataSourceCompactionConfig(
+            dataSource,
+            0,
+            500L,
+            null,
+            new Period("PT0H"), // smaller than segment interval
+            new UserCompactionTaskQueryTuningConfig(
+                null,
+                null,
+                null,
+                null,
+                null,
+                partitionsSpec,
+                null,
+                null,
+                null,
+                null,
+                null,
+                3,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            ),
+            null,
+            null,
+            new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
+            null,
+            null,
+            null
+        )
+    );
+    doCompactSegments(compactSegments, compactionConfigs);
+    ArgumentCaptor<ClientCompactionTaskQueryTuningConfig> clientCompactionTaskQueryTuningConfigArgumentCaptor = ArgumentCaptor.forClass(
+        ClientCompactionTaskQueryTuningConfig.class);
+    Mockito.verify(mockIndexingServiceClient).compactSegments(
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.anyInt(),
+        clientCompactionTaskQueryTuningConfigArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any()
+    );
+    Assert.assertNotNull(clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue());
+    Assert.assertNotNull(clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue().getAppendableIndexSpec());
+    Assert.assertTrue(((OnheapIncrementalIndex.Spec) clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue().getAppendableIndexSpec()).isPreserveExistingMetrics());
+  }
+
+  @Test
+  public void testCompactWithoutMetricsSpecShouldSetPreserveExistingMetricsFalse()
+  {
+    final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
+    final String dataSource = DATA_SOURCE_PREFIX + 0;
+    compactionConfigs.add(
+        new DataSourceCompactionConfig(
+            dataSource,
+            0,
+            500L,
+            null,
+            new Period("PT0H"), // smaller than segment interval
+            new UserCompactionTaskQueryTuningConfig(
+                null,
+                null,
+                null,
+                null,
+                null,
+                partitionsSpec,
+                null,
+                null,
+                null,
+                null,
+                null,
+                3,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            ),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
+    );
+    doCompactSegments(compactSegments, compactionConfigs);
+    ArgumentCaptor<ClientCompactionTaskQueryTuningConfig> clientCompactionTaskQueryTuningConfigArgumentCaptor = ArgumentCaptor.forClass(
+        ClientCompactionTaskQueryTuningConfig.class);
+    Mockito.verify(mockIndexingServiceClient).compactSegments(
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.anyInt(),
+        clientCompactionTaskQueryTuningConfigArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any()
+    );
+    Assert.assertNotNull(clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue());
+    Assert.assertNotNull(clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue().getAppendableIndexSpec());
+    Assert.assertFalse(((OnheapIncrementalIndex.Spec) clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue().getAppendableIndexSpec()).isPreserveExistingMetrics());
   }
 
   private void verifySnapshot(
@@ -2024,6 +2164,7 @@ public class CompactSegmentsTest
                   null,
                   null,
                   maxNumConcurrentSubTasks,
+                  null,
                   null,
                   null,
                   null,

@@ -403,6 +403,7 @@ public class RowBasedGrouperHelper
         adapter,
         supplier::get,
         decoratedSignature,
+        false,
         false
     );
   }
@@ -760,7 +761,8 @@ public class RowBasedGrouperHelper
             case DOUBLE:
               return (InputRawSupplierColumnSelectorStrategy<ColumnValueSelector>)
                   columnSelector ->
-                      () -> DimensionHandlerUtils.convertToList(columnSelector.getObject());
+                      () -> DimensionHandlerUtils.convertToList(columnSelector.getObject(),
+                                                                capabilities.getElementType().getType());
             default:
               throw new IAE(
                   "Cannot create query type helper from invalid type [%s]",
@@ -871,6 +873,15 @@ public class RowBasedGrouperHelper
           valueTypes,
           dictionary
       );
+    }
+
+    @Override
+    public RowBasedKey copyKey(RowBasedKey key)
+    {
+      final int keyLength = key.getKey().length;
+      final Object[] keyCopy = new Object[keyLength];
+      System.arraycopy(key.getKey(), 0, keyCopy, 0, keyLength);
+      return new RowBasedKey(keyCopy);
     }
 
     @Override
@@ -1040,8 +1051,10 @@ public class RowBasedGrouperHelper
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhs, rhs);
         } else if (fieldTypes.get(i - dimStart).equals(ColumnType.LONG_ARRAY)
                    || fieldTypes.get(i - dimStart).equals(ColumnType.DOUBLE_ARRAY)) {
-          final ComparableList lhs = DimensionHandlerUtils.convertToList(key1.getKey()[i]);
-          final ComparableList rhs = DimensionHandlerUtils.convertToList(key2.getKey()[i]);
+          final ComparableList lhs = DimensionHandlerUtils.convertToList(key1.getKey()[i],
+                                                                         fieldTypes.get(i - dimStart).getElementType().getType());
+          final ComparableList rhs = DimensionHandlerUtils.convertToList(key2.getKey()[i],
+                                                                         fieldTypes.get(i - dimStart).getElementType().getType());
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhs, rhs);
         } else {
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(
@@ -1119,8 +1132,8 @@ public class RowBasedGrouperHelper
 
           cmp = ComparableList.compareWithComparator(
               comparator,
-              DimensionHandlerUtils.convertToList(lhs),
-              DimensionHandlerUtils.convertToList(rhs)
+              DimensionHandlerUtils.convertToList(lhs, fieldType.getElementType().getType()),
+              DimensionHandlerUtils.convertToList(rhs, fieldType.getElementType().getType())
           );
 
         } else {
@@ -1285,29 +1298,30 @@ public class RowBasedGrouperHelper
     }
 
     @Override
-    public RowBasedKey fromByteBuffer(ByteBuffer buffer, int position)
+    public RowBasedKey createKey()
+    {
+      return new RowBasedKey(new Object[includeTimestamp ? dimCount + 1 : dimCount]);
+    }
+
+    @Override
+    public void readFromByteBuffer(final RowBasedKey key, final ByteBuffer buffer, final int position)
     {
       final int dimStart;
-      final Comparable[] key;
       final int dimsPosition;
 
       if (includeTimestamp) {
-        key = new Comparable[dimCount + 1];
-        key[0] = buffer.getLong(position);
+        key.getKey()[0] = buffer.getLong(position);
         dimsPosition = position + Long.BYTES;
         dimStart = 1;
       } else {
-        key = new Comparable[dimCount];
         dimsPosition = position;
         dimStart = 0;
       }
 
-      for (int i = dimStart; i < key.length; i++) {
+      for (int i = dimStart; i < key.getKey().length; i++) {
         // Writes value from buffer to key[i]
-        serdeHelpers[i - dimStart].getFromByteBuffer(buffer, dimsPosition, i, key);
+        serdeHelpers[i - dimStart].getFromByteBuffer(buffer, dimsPosition, i, key.getKey());
       }
-
-      return new RowBasedKey(key);
     }
 
     @Override
@@ -1532,7 +1546,7 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
       {
         dimValues[dimValIdx] = listDictionary.get(buffer.getInt(initialOffset + keyBufferPosition));
       }
@@ -1584,7 +1598,7 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
       {
         dimValues[dimValIdx] = arrayDictionary.get(buffer.getInt(initialOffset + keyBufferPosition));
       }
@@ -1644,7 +1658,7 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
       {
         dimValues[dimValIdx] = dictionary.get(buffer.getInt(initialOffset + keyBufferPosition));
       }
@@ -1683,6 +1697,7 @@ public class RowBasedGrouperHelper
        * this returns -1.
        *
        * @param s a string
+       *
        * @return id for this string, or -1
        */
       private int addToDictionary(final String s)
@@ -1761,7 +1776,7 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
       {
         dimValues[dimValIdx] = buffer.getLong(initialOffset + keyBufferPosition);
       }
@@ -1806,7 +1821,7 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
       {
         dimValues[dimValIdx] = buffer.getFloat(initialOffset + keyBufferPosition);
       }
@@ -1851,7 +1866,7 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
       {
         dimValues[dimValIdx] = buffer.getDouble(initialOffset + keyBufferPosition);
       }
@@ -1903,7 +1918,7 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
       {
         if (buffer.get(initialOffset + keyBufferPosition) == NullHandling.IS_NULL_BYTE) {
           dimValues[dimValIdx] = null;

@@ -22,6 +22,7 @@ package org.apache.druid.segment.column;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 
 import javax.annotation.Nullable;
 
@@ -34,9 +35,7 @@ public class ColumnBuilder
   @Nullable
   private Supplier<? extends BaseColumn> columnSupplier = null;
   @Nullable
-  private Supplier<BitmapIndex> bitmapIndex = null;
-  @Nullable
-  private Supplier<SpatialIndex> spatialIndex = null;
+  private ColumnIndexSupplier indexSupplier = NoIndexesColumnIndexSupplier.getInstance();
   @Nullable
   private SmooshedFileMapper fileMapper = null;
 
@@ -98,17 +97,15 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnBuilder setBitmapIndex(Supplier<BitmapIndex> bitmapIndex)
+  public ColumnBuilder setIndexSupplier(
+      @Nullable ColumnIndexSupplier indexSupplier,
+      boolean hasBitmapIndex,
+      boolean hasSpatial
+  )
   {
-    this.bitmapIndex = bitmapIndex;
-    this.capabilitiesBuilder.setHasBitmapIndexes(true);
-    return this;
-  }
-
-  public ColumnBuilder setSpatialIndex(Supplier<SpatialIndex> spatialIndex)
-  {
-    this.spatialIndex = spatialIndex;
-    this.capabilitiesBuilder.setHasSpatialIndexes(true);
+    this.indexSupplier = indexSupplier;
+    capabilitiesBuilder.setHasBitmapIndexes(hasBitmapIndex);
+    capabilitiesBuilder.setHasSpatialIndexes(hasSpatial);
     return this;
   }
 
@@ -127,6 +124,6 @@ public class ColumnBuilder
   {
     Preconditions.checkState(capabilitiesBuilder.getType() != null, "Type must be set.");
 
-    return new SimpleColumnHolder(capabilitiesBuilder, columnSupplier, bitmapIndex, spatialIndex);
+    return new SimpleColumnHolder(capabilitiesBuilder, columnSupplier, indexSupplier);
   }
 }

@@ -189,44 +189,48 @@ public class TaskToolboxFactory
   public TaskToolbox build(Task task)
   {
     final File taskWorkDir = config.getTaskWorkDir(task.getId());
-    return new TaskToolbox(
-        config,
-        taskExecutorNode,
-        taskActionClientFactory.create(task),
-        emitter,
-        segmentPusher,
-        dataSegmentKiller,
-        dataSegmentMover,
-        dataSegmentArchiver,
-        segmentAnnouncer,
-        serverAnnouncer,
-        handoffNotifierFactory,
-        queryRunnerFactoryConglomerateProvider,
-        queryProcessingPool,
-        joinableFactory,
-        monitorSchedulerProvider,
-        segmentCacheManagerFactory.manufacturate(taskWorkDir),
-        jsonMapper,
-        taskWorkDir,
-        indexIO,
-        cache,
-        cacheConfig,
-        cachePopulatorStats,
-        indexMergerV9Factory.create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, config.isStoreEmptyColumns())),
-        druidNodeAnnouncer,
-        druidNode,
-        lookupNodeService,
-        dataNodeService,
-        taskReportFileWriter,
-        intermediaryDataManager,
-        authorizerMapper,
-        chatHandlerProvider,
-        rowIngestionMetersFactory,
-        appenderatorsManager,
-        indexingServiceClient,
-        coordinatorClient,
-        supervisorTaskClientFactory,
-        shuffleClient
-    );
+    return new TaskToolbox.Builder()
+        .config(config)
+        .taskExecutorNode(taskExecutorNode)
+        .taskActionClient(taskActionClientFactory.create(task))
+        .emitter(emitter)
+        .segmentPusher(segmentPusher)
+        .dataSegmentKiller(dataSegmentKiller)
+        .dataSegmentMover(dataSegmentMover)
+        .dataSegmentArchiver(dataSegmentArchiver)
+        .segmentAnnouncer(segmentAnnouncer)
+        .serverAnnouncer(serverAnnouncer)
+        .handoffNotifierFactory(handoffNotifierFactory)
+        .queryRunnerFactoryConglomerateProvider(queryRunnerFactoryConglomerateProvider)
+        .queryProcessingPool(queryProcessingPool)
+        .joinableFactory(joinableFactory)
+        .monitorSchedulerProvider(monitorSchedulerProvider)
+        .segmentCacheManager(segmentCacheManagerFactory.manufacturate(taskWorkDir))
+        .jsonMapper(jsonMapper)
+        .taskWorkDir(taskWorkDir)
+        .indexIO(indexIO)
+        .cache(cache)
+        .cacheConfig(cacheConfig)
+        .cachePopulatorStats(cachePopulatorStats)
+        .indexMergerV9(
+            indexMergerV9Factory.create(
+                task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, config.isStoreEmptyColumns())
+            )
+        )
+        .druidNodeAnnouncer(druidNodeAnnouncer)
+        .druidNode(druidNode)
+        .lookupNodeService(lookupNodeService)
+        .dataNodeService(dataNodeService)
+        .taskReportFileWriter(taskReportFileWriter)
+        .intermediaryDataManager(intermediaryDataManager)
+        .authorizerMapper(authorizerMapper)
+        .chatHandlerProvider(chatHandlerProvider)
+        .rowIngestionMetersFactory(rowIngestionMetersFactory)
+        .appenderatorsManager(appenderatorsManager)
+        .indexingServiceClient(indexingServiceClient)
+        .coordinatorClient(coordinatorClient)
+        .supervisorTaskClientFactory(supervisorTaskClientFactory)
+        .shuffleClient(shuffleClient)
+        .build();
   }
 }

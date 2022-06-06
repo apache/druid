@@ -24,6 +24,7 @@ import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.filter.DimFilter;
@@ -105,6 +106,12 @@ public class SelectQuery implements Query<Object>
 
   @Override
   public Map<String, Object> getContext()
+  {
+    throw new RuntimeException(REMOVED_ERROR_MESSAGE);
+  }
+
+  @Override
+  public QueryContext getQueryContext()
   {
     throw new RuntimeException(REMOVED_ERROR_MESSAGE);
   }

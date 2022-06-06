@@ -205,8 +205,7 @@ public class IndexMergerV9 implements IndexMerger
       final File outDir,
       final ProgressIndicator progress,
       final List<String> mergedDimensions, // should have both explicit and implicit dimensions
-      // a subset of mergedDimensions that are explicitly specified in DimensionsSpec
-      final Set<String> explicitDimensions,
+      final DimensionsSpecInspector dimensionsSpecInspector,
       final List<String> mergedMetrics,
       final Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn,
       final boolean fillRowNumConversions,
@@ -333,7 +332,7 @@ public class IndexMergerV9 implements IndexMerger
         if (!merger.hasOnlyNulls()) {
           ColumnDescriptor columnDesc = merger.makeColumnDescriptor();
           makeColumn(v9Smoosher, mergedDimensions.get(i), columnDesc);
-        } else if (shouldStore(explicitDimensions, mergedDimensions.get(i))) {
+        } else if (dimensionsSpecInspector.shouldStore(mergedDimensions.get(i))) {
           // shouldStore AND hasOnlyNulls
           ColumnDescriptor columnDesc = ColumnDescriptor
               .builder()
@@ -357,7 +356,7 @@ public class IndexMergerV9 implements IndexMerger
           progress,
           indexSpec,
           mergers,
-          explicitDimensions
+          dimensionsSpecInspector
       );
       makeMetadataBinary(v9Smoosher, progress, segmentMetadata);
 
@@ -372,14 +371,6 @@ public class IndexMergerV9 implements IndexMerger
     finally {
       closer.close();
     }
-  }
-
-  private boolean shouldStore(
-      Set<String> explicitDimensions,
-      String dimension
-  )
-  {
-    return storeEmptyColumns && explicitDimensions.contains(dimension);
   }
 
   private void makeMetadataBinary(
@@ -404,7 +395,7 @@ public class IndexMergerV9 implements IndexMerger
       final ProgressIndicator progress,
       final IndexSpec indexSpec,
       final List<DimensionMergerV9> mergers,
-      final Set<String> explicitDimensions
+      final DimensionsSpecInspector dimensionsSpecInspector
   ) throws IOException
   {
     final Set<String> columnSet = new HashSet<>(mergedDimensions);
@@ -439,7 +430,7 @@ public class IndexMergerV9 implements IndexMerger
         nonNullOnlyColumns.add(mergedDimensions.get(i));
         allDimensions.add(null);
         allColumns.add(null);
-      } else if (shouldStore(explicitDimensions, mergedDimensions.get(i))) {
+      } else if (dimensionsSpecInspector.shouldStore(mergedDimensions.get(i))) {
         // shouldStore AND hasOnlyNulls
         allDimensions.add(mergedDimensions.get(i));
         allColumns.add(mergedDimensions.get(i));
@@ -1315,7 +1306,7 @@ public class IndexMergerV9 implements IndexMerger
         outDir,
         progress,
         mergedDimensions,
-        dimensionsSpec == null ? ImmutableSet.of() : new HashSet<>(dimensionsSpec.getDimensionNames()),
+        new DimensionsSpecInspector(storeEmptyColumns, dimensionsSpec),
         mergedMetrics,
         rowMergerFn,
         true,
@@ -1458,6 +1449,36 @@ public class IndexMergerV9 implements IndexMerger
           reorderedMetricSelectors,
           reorderedMetrics
       );
+    }
+  }
+
+  private static class DimensionsSpecInspector
+  {
+    private final boolean storeEmptyColumns;
+    private final Set<String> explicitDimensions;
+    private final boolean includeAllDimensions;
+
+    private DimensionsSpecInspector(
+        boolean storeEmptyColumns,
+        @Nullable DimensionsSpec dimensionsSpec
+    )
+    {
+      this.storeEmptyColumns = storeEmptyColumns;
+      this.explicitDimensions = dimensionsSpec == null
+                                ? ImmutableSet.of()
+                                : new HashSet<>(dimensionsSpec.getDimensionNames());
+      this.includeAllDimensions = dimensionsSpec != null && dimensionsSpec.isIncludeAllDimensions();
+    }
+
+    /**
+     * Returns true if the given dimension should be stored in the segment even when the column has only nulls.
+     * If it has non-nulls, then the column must be stored.
+     *
+     * @see DimensionMerger#hasOnlyNulls()
+     */
+    private boolean shouldStore(String dimension)
+    {
+      return storeEmptyColumns && (includeAllDimensions || explicitDimensions.contains(dimension));
     }
   }
 }
