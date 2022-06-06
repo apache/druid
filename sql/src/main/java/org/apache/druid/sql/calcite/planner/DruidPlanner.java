@@ -694,7 +694,7 @@ public class DruidPlanner implements Closeable
     }
 
     if (insert.getTargetColumnList() != null) {
-      throw new ValidationException("Ingestion with target column list is not supported.");
+      throw new ValidationException(insert.getOperator().getName() + " with target column list is not supported.");
     }
 
     final SqlIdentifier tableIdentifier = (SqlIdentifier) insert.getTargetTable();
@@ -702,7 +702,7 @@ public class DruidPlanner implements Closeable
 
     if (tableIdentifier.names.isEmpty()) {
       // I don't think this can happen, but include a branch for it just in case.
-      throw new ValidationException("Ingestion requires target table.");
+      throw new ValidationException(insert.getOperator().getName() + " requires target table.");
     } else if (tableIdentifier.names.size() == 1) {
       // Unqualified name.
       dataSource = Iterables.getOnlyElement(tableIdentifier.names);
@@ -715,13 +715,13 @@ public class DruidPlanner implements Closeable
         dataSource = tableIdentifier.names.get(1);
       } else {
         throw new ValidationException(
-            StringUtils.format("Cannot ingest into [%s] because it is not a Druid datasource.", tableIdentifier)
+            StringUtils.format("Cannot %s into [%s] because it is not a Druid datasource.", insert.getOperator().getName(), tableIdentifier)
         );
       }
     }
 
     try {
-      IdUtils.validateId("Ingestion dataSource", dataSource);
+      IdUtils.validateId(insert.getOperator().getName() + " dataSource", dataSource);
     }
     catch (IllegalArgumentException e) {
       throw new ValidationException(e.getMessage());
