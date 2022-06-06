@@ -113,6 +113,11 @@ We've introduced a Kafka input format so you can ingest header data in addition 
 
 (#11630)
 
+### Kinesis ingestion - Improvements
+We have made following improvements in kinesis ingestion 
+- Re-sharding can affect and slow down ingestion as many intermediate empty shards are created. These shards get assigned to tasks causing imbalance in load assignment. You can set `skipIgnorableShards` to `true` in kinesis ingestion tuning config to ignore such shards.
+- Currently, kinesis ingestion uses `DescribeStream` to fetch the list of shards. This call is deprecated and slower. In this release, you can switch to a newer API `listShards` by setting `useListShards` to `true` in kinesis ingestion tuning config.
+
 ## Native Batch Ingestion
 
 ### Multi-dimension range partitioning
@@ -168,6 +173,11 @@ We've added a new API to cancel SQL queries, so you can now cancel SQL queries j
 (#11738)
 (#11710)
 
+### Improved SQL compatibility
+We have made changes to expressions that make expression evaluation more SQL compliant. This new behaviour is disabled by default. It can be enabled by setting `druid.expressions.useStrictBooleans` to `true`. We recommend enabling this behaviour since it is also more performant in some cases. 
+
+(#11184)
+
 ### Improvements to SQL user experience
 
 This release includes several additional improvements for SQL:
@@ -179,7 +189,6 @@ This release includes several additional improvements for SQL:
 - Improved the way the `DruidRexExecutor` handles numeric arrays (#11968)
 - Druid now returns an empty result after optimizing a GROUP BY query to a time series query (#12065)
 - As an administrator, you can now configure the implementation for APPROX_COUNT_DISTINCT and COUNT(DISTINCT expr) in approximate mode (#11181)
-- 
 
 
 ## Coordinator/Overlord
@@ -285,6 +294,18 @@ maintained version, while minimizing breaking changes.
 This is a backwards incompatible change, and custom extensions relying on the CliCommandCreator extension point will also need to be updated.
 
 [12270](https://github.com/apache/druid/pull/12270)
+
+## Return 404 instead of 400 for unknown supervisors or tasks
+Earlier supervisor/task endpoint return 400 when a supervisor or a task is not found. This status code is not friendly and confusing for the 3rd system. And according to the definition of HTTP status code, 404 is right code for such case. So we have changed the status code from 400 to 404 to eliminate the ambigiuty. Any clients of these endpoints should change the response code handling accordingly. 
+
+[11724](https://github.com/apache/druid/pull/11724)
+
+## Return 400 instead of 500 when SQL query cannot be planned
+Any SQL query that cannot be planned by Druid is not considered a bad request. For such queries, we now return 400. Developers using SQL API should change the response code handling if needed.
+
+[12033](https://github.com/apache/druid/pull/12033)
+
+
 
 # Known issues
 
