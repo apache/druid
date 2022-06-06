@@ -738,4 +738,21 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         )
         .verify();
   }
+
+  @Test
+  public void testInsertQueryWithInvalidGranularity()
+  {
+    testIngestionQuery()
+        .sql("insert into foo1 select __time, dim1 FROM foo partitioned by time_floor(__time, 'PT2H')")
+        .expectValidationError(
+            CoreMatchers.allOf(
+                CoreMatchers.instanceOf(SqlPlanningException.class),
+                ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                    "The granularity specified in PARTITIONED BY is not supported. "
+                    + "Please use an equivalent of these granularities: second, minute, five_minute, ten_minute, "
+                    + "fifteen_minute, thirty_minute, hour, six_hour, day, week, month, quarter, year, all."))
+            )
+        )
+        .verify();
+  }
 }
