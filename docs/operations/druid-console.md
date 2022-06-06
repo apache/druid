@@ -25,7 +25,7 @@ title: "Druid console"
 Druid includes a web console for loading data, managing datasources and tasks, and viewing server status and segment information.
 You can also run SQL and native Druid queries in the console.
 
-The following cluster settings must be enabled to use the Druid console. Note that these settings are enabled by default.
+Enable the following cluster settings to use the Druid console. Note that these settings are enabled by default.
 - Enable the Router's [management proxy](../design/router.md#enabling-the-management-proxy).
 - Enable [Druid SQL](../configuration/index.md#sql) for the Broker processes in the cluster.
 
@@ -62,7 +62,7 @@ You can access the [data loader](#data-loader) and [lookups view](#lookups) from
 
 ## Data loader
 
-The data loader allows you to load data by building an ingestion spec with a step-by-step wizard.
+You can use the data loader to build an ingestion spec with a step-by-step wizard.
 
 ![data-loader-1](../assets/web-console-02-data-loader-1.png)
 
@@ -133,8 +133,7 @@ From the ellipsis menu beside **Run**, you can view your query history, see the 
 
 ![query-sql](../assets/web-console-11-query-sql.png)
 
-The query view can also issue queries in Druid's [native query format](../querying/querying.md), which is JSON over HTTP.
-To send a native Druid query, start your query with `{` and format it as a JSON object.
+You can also use the query editor to issue queries in Druid's [native query format](../querying/querying.md), which is JSON over HTTP.
 
 ![query-rune](../assets/web-console-12-query-rune.png)
 
