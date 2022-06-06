@@ -22,12 +22,12 @@ title: "Automatic compaction"
   ~ under the License.
   -->
 
-In Apache Druid, compaction is a special type of ingestion task that reads data from a Druid datasource and writes it back into the same datasource. A common use case for this is to [optimally size segments](../operations/segment-optimization.md) after the data is ingested in Druid to improve query performance. Automatic compaction, or auto-compaction, refers to the system for automatic execution of compaction tasks managed by the [Druid Coordinator](../design/coordinator.md).
+In Apache Druid, compaction is a special type of ingestion task that reads data from a Druid datasource and writes it back into the same datasource. A common use case for this is to [optimally size segments](../operations/segment-optimization.md) after ingestion to improve query performance. Automatic compaction, or auto-compaction, refers to the system for automatic execution of compaction tasks managed by the [Druid Coordinator](../design/coordinator.md).
 
-The frequency of compaction tasks relies on the Coordinator [indexing period](../configuration/index.md#coordinator-operation), configured by `druid.coordinator.period.indexingPeriod`.
+The Coordinator [indexing period](../configuration/index.md#coordinator-operation), `druid.coordinator.period.indexingPeriod`, controls the frequency of compaction tasks.
 The default indexing period is 30 minutes, meaning that the Coordinator first checks for segments to compact at most 30 minutes from when auto-compaction is enabled.
-Note this time period affects other Coordinator duties including merge and conversion tasks.
-To configure the frequency of compaction tasks, [create a new duty group for the Coordinator](#set-frequency-of-compaction-runs).
+This time period affects other Coordinator duties including merge and conversion tasks.
+To configure the auto-compaction time period, see [Set frequency of compaction runs](#set-frequency-of-compaction-runs).
 
 At every indexing period, the Coordinator initiates a [segment search](../design/coordinator.md#segment-search-policy-in-automatic-compaction) to determine eligible segments to compact.
 When there are eligible segments to compact, the Coordinator issues compaction tasks based on available worker capacity.
@@ -103,7 +103,7 @@ The automatic compaction system uses the following syntax:
 }
 ```
 
-Most fields in the auto-compaction configuration align with a typical [Druid ingestion spec](../ingestion/ingestion-spec.md).
+Most fields in the auto-compaction configuration correlate to a typical [Druid ingestion spec](../ingestion/ingestion-spec.md).
 The following properties only apply to auto-compaction:
 * `skipOffsetFromLatest`
 * `taskPriority`
@@ -130,7 +130,9 @@ Compaction tasks may be interrupted when they interfere with ingestion. For exam
 
 ### Set frequency of compaction runs
 
-If you want the Coordinator to check for compaction more frequently than its indexing period, create a separate duty group and set its time period in the `coordinator/runtime.properties` file. For example, to change the auto-compaction period to 1 minute:
+If you want the Coordinator to check for compaction more frequently than its indexing period, create a separate group to handle compaction duties.
+Set the time period of the duty group in the `coordinator/runtime.properties` file.
+The following example shows how to create a duty group named `compaction` and set the auto-compaction period to 1 minute:
 ```
 druid.coordinator.dutyGroups=["compaction"]
 druid.coordinator.compaction.duties=["compactSegments"]
@@ -164,7 +166,7 @@ The following auto-compaction configuration compacts existing `HOUR` segments in
   "skipOffsetFromLatest": "P1W",
 }
 ```
-`skipOffsetFromLatest` applies to cases in which your stream consistently ingests late arriving data. If your stream only occasionally ingests late arriving data, the auto-compaction system robustly compacts your data even without `skipOffsetFromLatest`.
+To set `skipOffsetFromLatest`, consider how frequently you expect the stream to receive late arriving data. If your stream only occasionally receives late arriving data, the auto-compaction system robustly compacts your data even though data is ingested outside the `skipOffsetFromLatest` window. For most realtime streaming ingestion use cases, it is reasonable to set `skipOffsetFromLatest` to a few hours or a day.
 
 ### Update partitioning scheme
 
