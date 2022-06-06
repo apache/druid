@@ -49,6 +49,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
@@ -214,6 +215,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                       .toProvider(QuerySchedulerProvider.class)
                       .in(LazySingleton.class);
                 binder.bind(QueryMakerFactory.class).to(NativeQueryMakerFactory.class);
+                binder.bind(DefaultQueryConfig.class).toInstance(new DefaultQueryConfig(ImmutableMap.of()));
               }
             }
         )
