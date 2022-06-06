@@ -22,6 +22,7 @@ package org.apache.druid.sql.guice;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -198,6 +199,7 @@ public class SqlModuleTest
               binder.bind(QueryScheduler.class)
                     .toProvider(QuerySchedulerProvider.class)
                     .in(LazySingleton.class);
+              binder.bind(DefaultQueryConfig.class).toInstance(new DefaultQueryConfig(ImmutableMap.of()));
             },
             new SqlModule(props),
             new TestViewManagerModule()
