@@ -115,8 +115,8 @@ We've introduced a Kafka input format so you can ingest header data in addition 
 
 ### Kinesis ingestion - Improvements
 We have made following improvements in kinesis ingestion 
-- Re-sharding can affect and slow down ingestion as many intermediate empty shards are created. These shards get assigned to tasks causing imbalance in load assignment. You can set `skipIgnorableShards` to `true` in kinesis ingestion tuning config to ignore such shards.
-- Currently, kinesis ingestion uses `DescribeStream` to fetch the list of shards. This call is deprecated and slower. In this release, you can switch to a newer API `listShards` by setting `useListShards` to `true` in kinesis ingestion tuning config.
+- Re-sharding can affect and slow down ingestion as many intermediate empty shards are created. These shards get assigned to tasks causing imbalance in load assignment. You can set `skipIgnorableShards` to `true` in kinesis ingestion tuning config to ignore such shards. (#12235)
+- Currently, kinesis ingestion uses `DescribeStream` to fetch the list of shards. This call is deprecated and slower. In this release, you can switch to a newer API `listShards` by setting `useListShards` to `true` in kinesis ingestion tuning config. (#12161)
 
 ## Native Batch Ingestion
 
