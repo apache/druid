@@ -122,7 +122,8 @@ public class SqlLifecycle
       RequestLogger requestLogger,
       QueryScheduler queryScheduler,
       AuthConfig authConfig,
-      DefaultQueryConfig defaultQueryConfig, long startMs,
+      DefaultQueryConfig defaultQueryConfig,
+      long startMs,
       long startNs
   )
   {
