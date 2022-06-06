@@ -23,17 +23,15 @@ title: "Segments"
   -->
 
 
-Apache Druid stores its index in *segment files* partitioned by
-time. In a basic setup, Druid creates one segment file for each time
-interval, where the time interval is configurable in the
-`segmentGranularity` parameter of the
-[`granularitySpec`](../ingestion/ingestion-spec.md#granularityspec).
+Apache Druid stores its data and indexes in *segment files* partitioned by time. Druid creates a segment for each segment interval that contains data. If an interval is empty (contains no rows) no segment exists for that time interval. Druid may create multiple segments for the same interval if you ingest data for that period via different ingestion jobs. Compaction is the Druid process that attempts to combine these segments into a single "one per segment" interval for optimal performance.
+
+The time interval is configurable in the `segmentGranularity` parameter of the [`granularitySpec`](../ingestion/ingestion-spec.md#granularityspec).
 
 For Druid to operate well under heavy query load, it is important for the segment
 file size to be within the recommended range of 300MB-700MB. If your
 segment files are larger than this range, then consider either
-changing the granularity of the time interval or partitioning your
-data and adjusting the `targetRowsPerSegment` in your `partitionsSpec`.
+changing the granularity of the segment time interval or partitioning your
+data and/or adjusting the `targetRowsPerSegment` in your `partitionsSpec`.
 A good starting point for this parameter is 5 million rows.
 
 See the Sharding section below and the 'Partitioning specification' section of
@@ -106,7 +104,7 @@ A ColumnDescriptor is an object that allows the use of Jackson's polymorphic des
 
 ### Multi-value columns
 
-If a data source uses multi-value columns, then the data structures within the segment files look a bit different. Let's imagine that in the example above, the second row is tagged with both the `Ke$ha` *and* `Justin Bieber` topics, as follows:
+A multi-value column allows a single row to contain multiple strings for a column. You can think of it as an array of strings. If a data source uses multi-value columns, then the data structures within the segment files look a bit different. Let's imagine that in the example above, the second row is tagged with both the `Ke$ha` *and* `Justin Bieber` topics, as follows:
 
 ```
 1: Dictionary
@@ -138,7 +136,7 @@ the list is an array of values. Additionally, a row with *n* values in the list 
 
 Druid uses LZ4 by default to compress blocks of values for string, long, float, and double columns. Druid uses Roaring to compress bitmaps for string columns and numeric null values. We recommend that you use these defaults unless you've experimented with your data and query patterns suggest that non-default options will perform better in your specific case. 
 
-For bitmap in string columns, the differences between using Roaring and Concise are most pronounced for high cardinality columns. In this case, Roaring is substantially faster on filters that match a lot of values, but in some cases Concise can have a lower footprint due to the overhead of the Roaring format (but is still slower when a lot of values are matched). You configure compression at the segment level, not for individual columns. See [IndexSpec](../ingestion/ingestion-spec.md#indexspec) for more details.
+For string column bitmaps, the differences between using Roaring and Concise are most pronounced for high cardinality columns. In this case, Roaring is substantially faster on filters that match many values, but in some cases Concise can have a lower footprint due to the overhead of the Roaring format (but is still slower when many values are matched). You configure compression at the segment level, not for individual columns. See [IndexSpec](../ingestion/ingestion-spec.md#indexspec) for more details.
 
 ## Segment identification
 
