@@ -646,15 +646,7 @@ public class ForkingTaskRunner
   @Override
   public void start()
   {
-    // Divide number of available processors by the number of tasks.
-    // This prevents various automatically-sized thread pools from being unreasonably large (we don't want each
-    // task to size its pools as if it is the only thing on the entire machine).
-
-    final int availableProcessors = JvmUtils.getRuntimeInfo().getAvailableProcessors();
-    numProcessorsPerTask = Math.max(
-        1,
-        IntMath.divide(availableProcessors, workerConfig.getCapacity(), RoundingMode.CEILING)
-    );
+    setNumProcessorsPerTask();
   }
 
   @Override
@@ -805,6 +797,20 @@ public class ForkingTaskRunner
     long lastReportedSuccessfulTaskCount = LAST_REPORTED_SUCCESSFUL_TASK_COUNT.get();
     LAST_REPORTED_SUCCESSFUL_TASK_COUNT.set(successfulTaskCount);
     return successfulTaskCount - lastReportedSuccessfulTaskCount;
+  }
+
+  @VisibleForTesting
+  void setNumProcessorsPerTask()
+  {
+    // Divide number of available processors by the number of tasks.
+    // This prevents various automatically-sized thread pools from being unreasonably large (we don't want each
+    // task to size its pools as if it is the only thing on the entire machine).
+
+    final int availableProcessors = JvmUtils.getRuntimeInfo().getAvailableProcessors();
+    numProcessorsPerTask = Math.max(
+        1,
+        IntMath.divide(availableProcessors, workerConfig.getCapacity(), RoundingMode.CEILING)
+    );
   }
 
   protected static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem
