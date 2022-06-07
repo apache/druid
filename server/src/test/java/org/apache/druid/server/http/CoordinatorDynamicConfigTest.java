@@ -459,7 +459,7 @@ public class CoordinatorDynamicConfigTest
   {
     try {
       String jsonStr = "{\n"
-                       + "  \"maxSegmentsToLoad\": -1\n"
+                       + "  \"maxSegmentsToLoadPerCoordinationCycle\": -1\n"
                        + "}\n";
 
       mapper.readValue(
@@ -859,7 +859,7 @@ public class CoordinatorDynamicConfigTest
       boolean pauseCoordination,
       boolean replicateAfterLoadTimeout,
       int maxNonPrimaryReplicantsToLoad,
-      int maxSegmentsToLoad
+      int maxSegmentsToLoadPerCoordinationCycle
   )
   {
     Assert.assertEquals(
@@ -888,6 +888,6 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(pauseCoordination, config.getPauseCoordination());
     Assert.assertEquals(replicateAfterLoadTimeout, config.getReplicateAfterLoadTimeout());
     Assert.assertEquals(maxNonPrimaryReplicantsToLoad, config.getMaxNonPrimaryReplicantsToLoad());
-    Assert.assertEquals(maxSegmentsToLoad, config.getMaxSegmentsToLoadPerCoordinationCycle());
+    Assert.assertEquals(maxSegmentsToLoadPerCoordinationCycle, config.getMaxSegmentsToLoadPerCoordinationCycle());
   }
 }
