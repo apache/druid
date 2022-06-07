@@ -2056,6 +2056,141 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
 
     List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(78L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(97L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(109L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(110L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(112L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(113L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(114L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(118L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(119L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(120L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(121L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(126L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(135L)), "rows", 2L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(144L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(147L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(158L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(166L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1049L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1144L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1193L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1234L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1314L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1321L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1447L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1522L)), "rows", 1L)
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outer);
+    TestHelper.assertExpectedObjects(expectedResults, results, "long-groupby-arrays");
+  }
+
+  @Test
+  public void testGroupByWithLongArraysDesc()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
+    }
+    cannotVectorize();
+    GroupByQuery outer = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "v0",
+            "array(index)",
+            ColumnType.LONG_ARRAY,
+            ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new DefaultDimensionSpec("v0", "alias_outer", ColumnType.LONG_ARRAY)
+        )
+        .setLimitSpec(new DefaultLimitSpec(
+            ImmutableList.of(new OrderByColumnSpec(
+                "alias_outer",
+                OrderByColumnSpec.Direction.DESCENDING,
+                StringComparators.NUMERIC
+            )),
+            Integer.MAX_VALUE - 1
+        ))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(78L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(97L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(109L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(110L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(112L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(113L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(114L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(118L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(119L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(120L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(121L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(126L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(135L)), "rows", 2L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(144L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(147L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(158L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(166L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1049L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1144L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1193L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1234L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1314L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1321L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1447L)), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1522L)), "rows", 1L)
+    );
+    // reversing list
+    Collections.reverse(expectedResults);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outer);
+    TestHelper.assertExpectedObjects(expectedResults, results, "long-groupby-arrays");
+  }
+
+  @Test
+  public void testGroupByWithDoubleArrays()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
+    }
+    cannotVectorize();
+    GroupByQuery outer = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "v0",
+            "array(index)",
+            ColumnType.DOUBLE_ARRAY,
+            ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new DefaultDimensionSpec("v0", "alias_outer", ColumnType.DOUBLE_ARRAY)
+        )
+        .setLimitSpec(new DefaultLimitSpec(
+            ImmutableList.of(new OrderByColumnSpec(
+                "alias_outer",
+                OrderByColumnSpec.Direction.ASCENDING,
+                StringComparators.NUMERIC
+            )),
+            Integer.MAX_VALUE - 1
+        ))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+
+    List<ResultRow> expectedResults = Arrays.asList(
         makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(78.622547)), "rows", 1L),
         makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(97.387433)), "rows", 1L),
         makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(109.705815)), "rows", 1L),
@@ -2083,13 +2218,13 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1447.34116)), "rows", 1L),
         makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1522.043733)), "rows", 1L)
     );
-
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outer);
     TestHelper.assertExpectedObjects(expectedResults, results, "long-groupby-arrays");
   }
 
+
   @Test
-  public void testGroupByWithLongArraysDesc()
+  public void testGroupByWithDoubleArraysDesc()
   {
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
@@ -2102,11 +2237,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setVirtualColumns(new ExpressionVirtualColumn(
             "v0",
             "array(index)",
-            ColumnType.LONG_ARRAY,
+            ColumnType.DOUBLE_ARRAY,
             ExprMacroTable.nil()
         ))
         .setDimensions(
-            new DefaultDimensionSpec("v0", "alias_outer", ColumnType.LONG_ARRAY)
+            new DefaultDimensionSpec("v0", "alias_outer", ColumnType.DOUBLE_ARRAY)
         )
         .setLimitSpec(new DefaultLimitSpec(
             ImmutableList.of(new OrderByColumnSpec(

@@ -379,7 +379,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO \"in/valid\" OVERWRITE ALL SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlPlanningException.class, "Ingestion dataSource cannot contain the '/' character.")
+        .expectValidationError(SqlPlanningException.class, "REPLACE dataSource cannot contain the '/' character.")
         .verify();
   }
 
@@ -388,7 +388,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst (foo, bar) OVERWRITE ALL SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlPlanningException.class, "Ingestion with target column list is not supported.")
+        .expectValidationError(SqlPlanningException.class, "REPLACE with target column list is not supported.")
         .verify();
   }
 
@@ -435,7 +435,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO INFORMATION_SCHEMA.COLUMNS OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot ingest into [INFORMATION_SCHEMA.COLUMNS] because it is not a Druid datasource."
+            "Cannot REPLACE into [INFORMATION_SCHEMA.COLUMNS] because it is not a Druid datasource."
         )
         .verify();
   }
@@ -447,7 +447,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO view.aview OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot ingest into [view.aview] because it is not a Druid datasource."
+            "Cannot REPLACE into [view.aview] because it is not a Druid datasource."
         )
         .verify();
   }
@@ -477,7 +477,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO nonexistent.dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot ingest into [nonexistent.dst] because it is not a Druid datasource."
+            "Cannot REPLACE into [nonexistent.dst] because it is not a Druid datasource."
         )
         .verify();
   }
