@@ -217,7 +217,7 @@ public class CoordinatorDynamicConfig
   }
 
   /**
-   * Setup a watch on the {@link CoordinatorDynamicConfig}.
+   * Setup a watch on the {@link CoordinatorDynamicConfig} in order to ensure access to the latest stored version of the config.
    *
    * Note that the {@link CoordinatorDynamicConfig.Builder} class is used here for serde because that allows clean setting of
    * defaults for missing configuation keys. Missing configuration keys are common in cases such as the addition of a
