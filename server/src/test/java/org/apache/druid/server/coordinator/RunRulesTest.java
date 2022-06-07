@@ -1496,7 +1496,7 @@ public class RunRulesTest
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToLoad(20).build())
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToLoadPerCoordinationCycle(20).build())
         .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);

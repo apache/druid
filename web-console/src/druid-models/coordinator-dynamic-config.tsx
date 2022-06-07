@@ -37,7 +37,7 @@ export interface CoordinatorDynamicConfig {
   decommissioningNodes?: string[];
   decommissioningMaxPercentOfMaxSegmentsToMove?: number;
   pauseCoordination?: boolean;
-  maxSegmentsToLoad?: number;
+  maxSegmentsToLoadPerCoordinationCycle?: number;
   maxNonPrimaryReplicantsToLoad?: number;
 }
 
@@ -255,7 +255,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
     ),
   },
   {
-    name: 'maxSegmentsToLoad',
+    name: 'maxSegmentsToLoadPerCoordinationCycle',
     type: 'number',
     defaultValue: 2147483647,
     info: (
@@ -282,7 +282,8 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
         Tuning this value lower can help reduce the delay in loading primary segments when the
         cluster has a very large number of non-primary replicants to load (such as when a single
         historical drops out of the cluster leaving many under-replicated segments). This
-        configuration has no effect if the value is greater than the value of maxSegmentsToLoad
+        configuration has no effect if the value is greater than the value of
+        maxSegmentsToLoadPerCoordinationCycle
       </>
     ),
   },

@@ -231,7 +231,7 @@ public class CoordinatorDynamicConfigTest
         Integer.MAX_VALUE
     );
 
-    actual = CoordinatorDynamicConfig.builder().withMaxSegmentsToLoad(20).build(actual);
+    actual = CoordinatorDynamicConfig.builder().withMaxSegmentsToLoadPerCoordinationCycle(20).build(actual);
     assertConfig(
         actual,
         1,
@@ -888,6 +888,6 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(pauseCoordination, config.getPauseCoordination());
     Assert.assertEquals(replicateAfterLoadTimeout, config.getReplicateAfterLoadTimeout());
     Assert.assertEquals(maxNonPrimaryReplicantsToLoad, config.getMaxNonPrimaryReplicantsToLoad());
-    Assert.assertEquals(maxSegmentsToLoad, config.getMaxSegmentsToLoad());
+    Assert.assertEquals(maxSegmentsToLoad, config.getMaxSegmentsToLoadPerCoordinationCycle());
   }
 }

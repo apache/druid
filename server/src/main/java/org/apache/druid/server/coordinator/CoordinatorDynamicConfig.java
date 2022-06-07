@@ -106,7 +106,7 @@ public class CoordinatorDynamicConfig
    * This is the upper limit on segments to load per coordination cycle. Once this limit is hit, the coordinator will
    * move on to it's next task.
    */
-  private final int maxSegmentsToLoad;
+  private final int maxSegmentsToLoadPerCoordinationCycle;
 
   private static final Logger log = new Logger(CoordinatorDynamicConfig.class);
 
@@ -142,7 +142,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("pauseCoordination") boolean pauseCoordination,
       @JsonProperty("replicateAfterLoadTimeout") boolean replicateAfterLoadTimeout,
       @JsonProperty("maxNonPrimaryReplicantsToLoad") @Nullable Integer maxNonPrimaryReplicantsToLoad,
-      @JsonProperty("maxSegmentsToLoad") @Nullable Integer maxSegmentsToLoad
+      @JsonProperty("maxSegmentsToLoadPerCoordinationCycle") @Nullable Integer maxSegmentsToLoadPerCoordinationCycle
   )
   {
     this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
@@ -204,21 +204,21 @@ public class CoordinatorDynamicConfig
     );
     this.maxNonPrimaryReplicantsToLoad = maxNonPrimaryReplicantsToLoad;
 
-    if (maxSegmentsToLoad == null) {
+    if (maxSegmentsToLoadPerCoordinationCycle == null) {
       log.debug(
-          "maxSegmentsToLoad was null! This is likely because your metastore does not "
+          "maxSegmentsToLoadPerCoordinationCycle was null! This is likely because your metastore does not "
           + "reflect this configuration being added to Druid in a recent release. Druid is defaulting the value "
           + "to the Druid default of %d. It is recommended that you re-submit your dynamic config with your "
           + "desired value for maxNonPrimaryReplicantsToLoad",
-          Builder.DEFAULT_MAX_SEGMENTS_TO_LOAD
+          Builder.DEFAULT_MAX_SEGMENTS_TO_LOAD_PER_COORDINATION_CYCLE
       );
-      maxSegmentsToLoad = Builder.DEFAULT_MAX_SEGMENTS_TO_LOAD;
+      maxSegmentsToLoadPerCoordinationCycle = Builder.DEFAULT_MAX_SEGMENTS_TO_LOAD_PER_COORDINATION_CYCLE;
     }
     Preconditions.checkArgument(
-        maxSegmentsToLoad >= 0,
+        maxSegmentsToLoadPerCoordinationCycle >= 0,
         "maxPrimaryReplicantsToLoad must be greater than or equal to 0."
     );
-    this.maxSegmentsToLoad = maxSegmentsToLoad;
+    this.maxSegmentsToLoadPerCoordinationCycle = maxSegmentsToLoadPerCoordinationCycle;
   }
 
   private static Set<String> parseJsonStringOrArray(Object jsonStringOrArray)
@@ -395,9 +395,9 @@ public class CoordinatorDynamicConfig
 
   @Min(0)
   @JsonProperty
-  public int getMaxSegmentsToLoad()
+  public int getMaxSegmentsToLoadPerCoordinationCycle()
   {
-    return maxSegmentsToLoad;
+    return maxSegmentsToLoadPerCoordinationCycle;
   }
 
   @Override
@@ -423,7 +423,7 @@ public class CoordinatorDynamicConfig
            ", pauseCoordination=" + pauseCoordination +
            ", replicateAfterLoadTimeout=" + replicateAfterLoadTimeout +
            ", maxNonPrimaryReplicantsToLoad=" + maxNonPrimaryReplicantsToLoad +
-           ", maxPrimaryReplicantsToLoad=" + maxSegmentsToLoad +
+           ", maxPrimaryReplicantsToLoad=" + maxSegmentsToLoadPerCoordinationCycle +
            '}';
   }
 
@@ -491,7 +491,7 @@ public class CoordinatorDynamicConfig
     if (maxNonPrimaryReplicantsToLoad != that.maxNonPrimaryReplicantsToLoad) {
       return false;
     }
-    if (maxSegmentsToLoad != that.maxSegmentsToLoad) {
+    if (maxSegmentsToLoadPerCoordinationCycle != that.maxSegmentsToLoadPerCoordinationCycle) {
       return false;
     }
     return decommissioningMaxPercentOfMaxSegmentsToMove == that.decommissioningMaxPercentOfMaxSegmentsToMove;
@@ -518,7 +518,7 @@ public class CoordinatorDynamicConfig
         decommissioningMaxPercentOfMaxSegmentsToMove,
         pauseCoordination,
         maxNonPrimaryReplicantsToLoad,
-        maxSegmentsToLoad
+        maxSegmentsToLoadPerCoordinationCycle
     );
   }
 
@@ -545,7 +545,7 @@ public class CoordinatorDynamicConfig
     private static final boolean DEFAULT_PAUSE_COORDINATION = false;
     private static final boolean DEFAULT_REPLICATE_AFTER_LOAD_TIMEOUT = false;
     private static final int DEFAULT_MAX_NON_PRIMARY_REPLICANTS_TO_LOAD = Integer.MAX_VALUE;
-    private static final int DEFAULT_MAX_SEGMENTS_TO_LOAD = Integer.MAX_VALUE;
+    private static final int DEFAULT_MAX_SEGMENTS_TO_LOAD_PER_COORDINATION_CYCLE = Integer.MAX_VALUE;
 
     private Long leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments;
     private Long mergeBytesLimit;
@@ -565,7 +565,7 @@ public class CoordinatorDynamicConfig
     private Boolean pauseCoordination;
     private Boolean replicateAfterLoadTimeout;
     private Integer maxNonPrimaryReplicantsToLoad;
-    private Integer maxSegmentsToLoad;
+    private Integer maxSegmentsToLoadPerCoordinationCycle;
 
     public Builder()
     {
@@ -593,7 +593,7 @@ public class CoordinatorDynamicConfig
         @JsonProperty("pauseCoordination") @Nullable Boolean pauseCoordination,
         @JsonProperty("replicateAfterLoadTimeout") @Nullable Boolean replicateAfterLoadTimeout,
         @JsonProperty("maxNonPrimaryReplicantsToLoad") @Nullable Integer maxNonPrimaryReplicantsToLoad,
-        @JsonProperty("maxSegmentsToLoad") @Nullable Integer maxSegmentsToLoad
+        @JsonProperty("maxSegmentsToLoadPerCoordinationCycle") @Nullable Integer maxSegmentsToLoadPerCoordinationCycle
     )
     {
       this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
@@ -615,7 +615,7 @@ public class CoordinatorDynamicConfig
       this.pauseCoordination = pauseCoordination;
       this.replicateAfterLoadTimeout = replicateAfterLoadTimeout;
       this.maxNonPrimaryReplicantsToLoad = maxNonPrimaryReplicantsToLoad;
-      this.maxSegmentsToLoad = maxSegmentsToLoad;
+      this.maxSegmentsToLoadPerCoordinationCycle = maxSegmentsToLoadPerCoordinationCycle;
     }
 
     public Builder withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(long leadingTimeMillis)
@@ -721,9 +721,9 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
-    public Builder withMaxSegmentsToLoad(int maxSegmentsToLoad)
+    public Builder withMaxSegmentsToLoadPerCoordinationCycle(int maxSegmentsToLoadPerCoordinationCycle)
     {
-      this.maxSegmentsToLoad = maxSegmentsToLoad;
+      this.maxSegmentsToLoadPerCoordinationCycle = maxSegmentsToLoadPerCoordinationCycle;
       return this;
     }
 
@@ -756,7 +756,8 @@ public class CoordinatorDynamicConfig
           replicateAfterLoadTimeout == null ? DEFAULT_REPLICATE_AFTER_LOAD_TIMEOUT : replicateAfterLoadTimeout,
           maxNonPrimaryReplicantsToLoad == null ? DEFAULT_MAX_NON_PRIMARY_REPLICANTS_TO_LOAD
                                                 : maxNonPrimaryReplicantsToLoad,
-          maxSegmentsToLoad == null ? DEFAULT_MAX_SEGMENTS_TO_LOAD : maxSegmentsToLoad
+          maxSegmentsToLoadPerCoordinationCycle == null ? DEFAULT_MAX_SEGMENTS_TO_LOAD_PER_COORDINATION_CYCLE
+                                                        : maxSegmentsToLoadPerCoordinationCycle
       );
     }
 
@@ -795,7 +796,7 @@ public class CoordinatorDynamicConfig
           maxNonPrimaryReplicantsToLoad == null
           ? defaults.getMaxNonPrimaryReplicantsToLoad()
           : maxNonPrimaryReplicantsToLoad,
-          maxSegmentsToLoad == null ? defaults.getMaxSegmentsToLoad() : maxSegmentsToLoad
+          maxSegmentsToLoadPerCoordinationCycle == null ? defaults.getMaxSegmentsToLoadPerCoordinationCycle() : maxSegmentsToLoadPerCoordinationCycle
       );
     }
   }

@@ -123,9 +123,9 @@ public class RunRules implements CoordinatorDuty
     }
 
     for (DataSegment segment : params.getUsedSegments()) {
-      if (stats.getGlobalStat(LoadRule.AGGREGATE_ASSIGNED_COUNT) >= params.getCoordinatorDynamicConfig().getMaxSegmentsToLoad()) {
+      if (stats.getGlobalStat(LoadRule.AGGREGATE_ASSIGNED_COUNT) >= params.getCoordinatorDynamicConfig().getMaxSegmentsToLoadPerCoordinationCycle()) {
         log.info("Maximum number of segments [%d] have been loaded for the current RunRules execution.",
-                 params.getCoordinatorDynamicConfig().getMaxSegmentsToLoad());
+                 params.getCoordinatorDynamicConfig().getMaxSegmentsToLoadPerCoordinationCycle());
         break;
       }
 
