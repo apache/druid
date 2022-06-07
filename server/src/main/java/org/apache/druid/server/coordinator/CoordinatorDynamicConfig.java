@@ -216,6 +216,16 @@ public class CoordinatorDynamicConfig
     }
   }
 
+  /**
+   * Setup a watch on the CoordinatorDynamicConfig.
+   *
+   * Note that the CoordinatorDynamicConfig.Builder class is used here for serde because that allows clean setting of
+   * defaults for missing configuation keys. Missing configuration keys are common in cases such as the addition of a
+   * new config key in a new Druid version.
+   *
+   * @param configManager responsible for managing the reading/writing of druid configs to the metastore.
+   * @return AtomicReference to CoordinatorDyamicConfig.Builder
+   */
   public static AtomicReference<CoordinatorDynamicConfig.Builder> watch(final JacksonConfigManager configManager)
   {
     return configManager.watch(
@@ -228,8 +238,7 @@ public class CoordinatorDynamicConfig
   @Nonnull
   public static CoordinatorDynamicConfig current(final JacksonConfigManager configManager)
   {
-    Preconditions.checkNotNull(watch(configManager).get(), "Got null config from watcher?!");
-    return watch(configManager).get().build();
+    return Preconditions.checkNotNull(watch(configManager).get().build(), "Got null config from watcher?!");
   }
 
   @JsonProperty("millisToWaitBeforeDeleting")
