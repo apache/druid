@@ -97,10 +97,10 @@ Druid segments for the same datasource may have different schemas. If a string c
 
 Each column is stored as two parts:
 
-- A Jackson-serialized ColumnDescriptor.
-- The rest of the binary for the column.
+- A Jackson-serialized `ColumnDescriptor`.
+- The binary data for the column.
 
-A ColumnDescriptor is an object that allows the use of Jackson's polymorphic deserialization to add new and interesting methods of serialization with minimal impact to the code. It consists of some metadata about the column (for example: type, whether it's multi-value) and a list of serialization/deserialization logic that can deserialize the rest of the binary.
+A `ColumnDescriptor` is  Jackson-serialized instance of the internal Druid `ColumnDescriptor` class . It allows the use of Jackson's polymorphic deserialization to add new and interesting methods of serialization with minimal impact to the code. It consists of some metadata about the column (for example: type, whether it's multi-value) and a list of serialization/deserialization logic that can deserialize the rest of the binary.
 
 ### Multi-value columns
 
