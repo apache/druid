@@ -846,7 +846,7 @@ public class CalciteTests
         new NoopRequestLogger(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
         authConfig,
-        new DefaultQueryConfig(ImmutableMap.of())
+        Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
     );
   }
 

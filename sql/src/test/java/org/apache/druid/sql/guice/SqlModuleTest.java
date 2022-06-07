@@ -199,7 +199,6 @@ public class SqlModuleTest
               binder.bind(QueryScheduler.class)
                     .toProvider(QuerySchedulerProvider.class)
                     .in(LazySingleton.class);
-              binder.bind(DefaultQueryConfig.class).toInstance(new DefaultQueryConfig(ImmutableMap.of()));
             },
             new SqlModule(props),
             new TestViewManagerModule()

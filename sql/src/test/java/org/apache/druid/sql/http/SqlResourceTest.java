@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -263,7 +264,7 @@ public class SqlResourceTest extends CalciteTestBase
         testRequestLogger,
         scheduler,
         authConfig,
-        defaultQueryConfig
+        Suppliers.ofInstance(defaultQueryConfig)
     )
     {
       @Override

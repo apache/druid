@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql;
 
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.SqlType;
@@ -78,7 +79,7 @@ public class SqlLifecycleTest
         requestLogger,
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
         new AuthConfig(),
-        defaultQueryConfig
+        Suppliers.ofInstance(defaultQueryConfig)
     );
   }
 
