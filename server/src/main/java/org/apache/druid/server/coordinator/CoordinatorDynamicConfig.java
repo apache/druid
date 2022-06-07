@@ -217,14 +217,14 @@ public class CoordinatorDynamicConfig
   }
 
   /**
-   * Setup a watch on the CoordinatorDynamicConfig.
+   * Setup a watch on the {@link CoordinatorDynamicConfig}.
    *
-   * Note that the CoordinatorDynamicConfig.Builder class is used here for serde because that allows clean setting of
+   * Note that the {@link CoordinatorDynamicConfig.Builder} class is used here for serde because that allows clean setting of
    * defaults for missing configuation keys. Missing configuration keys are common in cases such as the addition of a
    * new config key in a new Druid version.
    *
-   * @param configManager responsible for managing the reading/writing of druid configs to the metastore.
-   * @return AtomicReference to CoordinatorDyamicConfig.Builder
+   * @param configManager {@link JacksonConfigManager } responsible for managing persisted druid configuration content
+   * @return {@link AtomicReference} of {@link CoordinatorDynamicConfig.Builder}
    */
   public static AtomicReference<CoordinatorDynamicConfig.Builder> watch(final JacksonConfigManager configManager)
   {
