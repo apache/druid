@@ -423,7 +423,7 @@ public class CoordinatorDynamicConfig
            ", pauseCoordination=" + pauseCoordination +
            ", replicateAfterLoadTimeout=" + replicateAfterLoadTimeout +
            ", maxNonPrimaryReplicantsToLoad=" + maxNonPrimaryReplicantsToLoad +
-           ", maxPrimaryReplicantsToLoad=" + maxSegmentsToLoadPerCoordinationCycle +
+           ", maxSegmentsToLoadPerCoordinationCycle=" + maxSegmentsToLoadPerCoordinationCycle +
            '}';
   }
 
