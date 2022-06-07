@@ -131,7 +131,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
             EasyMock.anyObject(Class.class),
             EasyMock.anyObject()
         )
-    ).andReturn(new AtomicReference(CoordinatorDynamicConfig.builder().build())).anyTimes();
+    ).andReturn(new AtomicReference(CoordinatorDynamicConfig.builder())).anyTimes();
     EasyMock.expect(
         configManager.watch(
             EasyMock.eq(CoordinatorCompactionConfig.CONFIG_KEY),
@@ -729,6 +729,9 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.expect(dynamicConfig.getBalancerComputeThreads()).andReturn(5).times(2);
     EasyMock.expect(dynamicConfig.getBalancerComputeThreads()).andReturn(10).once();
 
+    CoordinatorDynamicConfig.Builder dynamicConfigBuilder = EasyMock.createNiceMock(CoordinatorDynamicConfig.Builder.class);
+    EasyMock.expect(dynamicConfigBuilder.build()).andReturn(dynamicConfig).anyTimes();
+
     JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
     EasyMock.expect(
         configManager.watch(
@@ -736,10 +739,10 @@ public class DruidCoordinatorTest extends CuratorTestBase
             EasyMock.anyObject(Class.class),
             EasyMock.anyObject()
         )
-    ).andReturn(new AtomicReference(dynamicConfig)).anyTimes();
+    ).andReturn(new AtomicReference(dynamicConfigBuilder)).anyTimes();
 
     ScheduledExecutorFactory scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
-    EasyMock.replay(configManager, dynamicConfig, scheduledExecutorFactory);
+    EasyMock.replay(configManager, dynamicConfig, scheduledExecutorFactory, dynamicConfigBuilder);
 
     DruidCoordinator c = new DruidCoordinator(
         druidCoordinatorConfig,
@@ -1025,7 +1028,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
             EasyMock.anyObject(Class.class),
             EasyMock.anyObject()
         )
-    ).andReturn(new AtomicReference(CoordinatorDynamicConfig.builder().build())).anyTimes();
+    ).andReturn(new AtomicReference(CoordinatorDynamicConfig.builder())).anyTimes();
     EasyMock.expect(
         configManager.watch(
             EasyMock.eq(CoordinatorCompactionConfig.CONFIG_KEY),

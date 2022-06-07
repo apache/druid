@@ -216,19 +216,20 @@ public class CoordinatorDynamicConfig
     }
   }
 
-  public static AtomicReference<CoordinatorDynamicConfig> watch(final JacksonConfigManager configManager)
+  public static AtomicReference<CoordinatorDynamicConfig.Builder> watch(final JacksonConfigManager configManager)
   {
     return configManager.watch(
         CoordinatorDynamicConfig.CONFIG_KEY,
-        CoordinatorDynamicConfig.class,
-        CoordinatorDynamicConfig.builder().build()
+        CoordinatorDynamicConfig.Builder.class,
+        CoordinatorDynamicConfig.builder()
     );
   }
 
   @Nonnull
   public static CoordinatorDynamicConfig current(final JacksonConfigManager configManager)
   {
-    return Preconditions.checkNotNull(watch(configManager).get(), "Got null config from watcher?!");
+    Preconditions.checkNotNull(watch(configManager).get(), "Got null config from watcher?!");
+    return watch(configManager).get().build();
   }
 
   @JsonProperty("millisToWaitBeforeDeleting")
