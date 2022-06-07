@@ -27,9 +27,9 @@ In Apache Druid, compaction is a special type of ingestion task that reads data 
 The Coordinator [indexing period](../configuration/index.md#coordinator-operation), `druid.coordinator.period.indexingPeriod`, controls the frequency of compaction tasks.
 The default indexing period is 30 minutes, meaning that the Coordinator first checks for segments to compact at most 30 minutes from when auto-compaction is enabled.
 This time period affects other Coordinator duties including merge and conversion tasks.
-To configure the auto-compaction time period, see [Set frequency of compaction runs](#set-frequency-of-compaction-runs).
+To configure the auto-compaction time period without interfering with `indexingPeriod`, see [Set frequency of compaction runs](#set-frequency-of-compaction-runs).
 
-At every indexing period, the Coordinator initiates a [segment search](../design/coordinator.md#segment-search-policy-in-automatic-compaction) to determine eligible segments to compact.
+At every invocation of auto-compaction, the Coordinator initiates a [segment search](../design/coordinator.md#segment-search-policy-in-automatic-compaction) to determine eligible segments to compact.
 When there are eligible segments to compact, the Coordinator issues compaction tasks based on available worker capacity.
 If a compaction task takes longer than the indexing period, the Coordinator waits for it to finish before resuming the period for segment search.
 
