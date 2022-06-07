@@ -61,7 +61,7 @@ public class JacksonModuleTest
 
   private void verifyUnknownServiceName(DefaultObjectMapper objectMapper)
   {
-    verifyServiceName(objectMapper, "unknown");
+    verifyServiceName(objectMapper, null);
   }
 
   private void verifyServiceName(DefaultObjectMapper objectMapper, String expectedServiceName)

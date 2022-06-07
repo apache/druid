@@ -86,4 +86,20 @@ public class DefaultObjectMapperTest
     }
     Assert.fail("We expect InvalidTypeIdException to be thrown");
   }
+
+  @Test
+  public void testUnknownTypeWithUnknownService() throws JsonProcessingException
+  {
+    DefaultObjectMapper objectMapper = new DefaultObjectMapper((String) null);
+    try {
+      objectMapper.readValue("{\"queryType\":\"random\",\"name\":\"does-not-matter\"}", Query.class);
+    }
+    catch (InvalidTypeIdException e) {
+      String message = e.getMessage();
+      Assert.assertTrue(message, message.startsWith("Please make sure to load all the necessary extensions and " +
+          "jars with type 'random'."));
+      return;
+    }
+    Assert.fail("We expect InvalidTypeIdException to be thrown");
+  }
 }

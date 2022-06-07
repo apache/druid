@@ -32,6 +32,7 @@ import com.fasterxml.jackson.databind.jsontype.TypeIdResolver;
 import com.fasterxml.jackson.databind.util.ClassUtil;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 
@@ -93,13 +94,15 @@ public class DefaultObjectMapper extends ObjectMapper
    */
   static class DefaultDeserializationProblemHandler extends DeserializationProblemHandler
   {
+    @Nullable
     private final String serviceName;
 
     public DefaultDeserializationProblemHandler(@Nullable String serviceName)
     {
-      this.serviceName = serviceName == null ? "unknown" : serviceName;
+      this.serviceName = serviceName;
     }
 
+    @Nullable
     @VisibleForTesting
     String getServiceName()
     {
@@ -112,19 +115,13 @@ public class DefaultObjectMapper extends ObjectMapper
                                         String failureMsg)
         throws IOException
     {
-      String msg = String.format("Please make sure to load all the necessary extensions and jars " +
-              "with type '%s' on '%s' service. " +
+      String serviceMsg = (serviceName == null) ? "" : StringUtils.format(" on '%s' service", serviceName);
+      String msg = StringUtils.format("Please make sure to load all the necessary extensions and jars " +
+              "with type '%s'%s. " +
               "Could not resolve type id '%s' as a subtype of %s",
-          subTypeId, serviceName, subTypeId, ClassUtil.getTypeDescription(baseType));
-      throw InvalidTypeIdException.from(ctxt.getParser(), extraFailureMessage(msg, failureMsg), baseType, subTypeId);
-    }
-
-    private String extraFailureMessage(String msgBase, @Nullable String extra)
-    {
-      if (extra == null) {
-        return msgBase;
-      }
-      return msgBase + " " + extra;
+          subTypeId, serviceMsg, subTypeId, ClassUtil.getTypeDescription(baseType));
+      String extraFailureMsg = (failureMsg == null) ? msg : msg + " " + failureMsg;
+      throw InvalidTypeIdException.from(ctxt.getParser(), extraFailureMsg, baseType, subTypeId);
     }
   }
 }
