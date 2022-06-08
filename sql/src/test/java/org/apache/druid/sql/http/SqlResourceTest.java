@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -46,6 +47,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
@@ -255,12 +257,14 @@ public class SqlResourceTest extends CalciteTestBase
     };
     final ServiceEmitter emitter = new NoopServiceEmitter();
     final AuthConfig authConfig = new AuthConfig();
+    final DefaultQueryConfig defaultQueryConfig = new DefaultQueryConfig(ImmutableMap.of());
     sqlLifecycleFactory = new SqlLifecycleFactory(
         plannerFactory,
         emitter,
         testRequestLogger,
         scheduler,
-        authConfig
+        authConfig,
+        Suppliers.ofInstance(defaultQueryConfig)
     )
     {
       @Override
@@ -1776,7 +1780,7 @@ public class SqlResourceTest extends CalciteTestBase
         SettableSupplier<Function<Sequence<Object[]>, Sequence<Object[]>>> sequenceMapFnSupplier
     )
     {
-      super(plannerFactory, emitter, requestLogger, queryScheduler, authConfig, startMs, startNs);
+      super(plannerFactory, emitter, requestLogger, queryScheduler, authConfig, new DefaultQueryConfig(ImmutableMap.of()), startMs, startNs);
       this.validateAndAuthorizeLatchSupplier = validateAndAuthorizeLatchSupplier;
       this.planLatchSupplier = planLatchSupplier;
       this.executeLatchSupplier = executeLatchSupplier;

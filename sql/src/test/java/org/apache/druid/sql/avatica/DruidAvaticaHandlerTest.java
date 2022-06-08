@@ -19,6 +19,8 @@
 
 package org.apache.druid.sql.avatica;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -30,6 +32,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import org.apache.calcite.avatica.AvaticaClientRuntimeException;
@@ -49,6 +52,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
@@ -214,6 +218,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                       .toProvider(QuerySchedulerProvider.class)
                       .in(LazySingleton.class);
                 binder.bind(QueryMakerFactory.class).to(NativeQueryMakerFactory.class);
+                binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
               }
             }
         )
@@ -236,6 +241,8 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     propertiesLosAngeles.setProperty(BaseQuery.SQL_QUERY_ID, DUMMY_SQL_QUERY_ID);
     clientLosAngeles = DriverManager.getConnection(url, propertiesLosAngeles);
   }
+
+
 
   @After
   public void tearDown() throws Exception
