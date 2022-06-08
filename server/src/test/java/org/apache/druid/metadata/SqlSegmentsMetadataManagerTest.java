@@ -372,7 +372,6 @@ public class SqlSegmentsMetadataManagerTest
     );
   }
 
-  // TODO
   @Test
   public void testGetUnusedSegmentIntervals() throws IOException
   {
