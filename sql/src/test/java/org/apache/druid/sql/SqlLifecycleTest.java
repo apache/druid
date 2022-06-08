@@ -99,18 +99,23 @@ public class SqlLifecycleTest
   @Test
   public void testDefaultQueryContextIsApplied()
   {
-
     SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
+    // lifecycle should not have a query context is there on it when created/factorized
+    Assert.assertNull(lifecycle.getQueryContext());
     final String sql = "select 1 + ?";
     final Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true");
-    lifecycle.initialize(sql, new QueryContext(queryContext));
+    QueryContext testQueryContext = new QueryContext(queryContext);
+    // default query context isn't applied to query context until lifecycle is initialized
+    for (String defaultContextKey : defaultQueryConfig.getContext().keySet()) {
+      Assert.assertFalse(testQueryContext.getMergedParams().containsKey(defaultContextKey));
+    }
+    lifecycle.initialize(sql, testQueryContext);
     Assert.assertEquals(SqlLifecycle.State.INITIALIZED, lifecycle.getState());
     Assert.assertEquals(2, lifecycle.getQueryContext().getMergedParams().size());
-    // should contain only query id, not bySegment since it is not valid for SQL
+    // should lifecycle should contain default query context values after initialization
     for (String defaultContextKey : defaultQueryConfig.getContext().keySet()) {
       Assert.assertTrue(lifecycle.getQueryContext().getMergedParams().containsKey(defaultContextKey));
     }
-
   }
 
   @Test
