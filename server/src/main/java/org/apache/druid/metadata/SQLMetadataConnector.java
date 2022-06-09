@@ -483,12 +483,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   public void updateSegmentTablePopulateLastUsed()
   {
     String tableName = tablesConfigSupplier.get().getSegmentsTable();
-    getDBI().withHandle(
-        (Handle handle) -> handle
-            .createStatement(StringUtils.format("UPDATE %s SET last_used = :last_used WHERE used = false", tableName))
-            .bind("last_used", DateTimes.nowUtc().toString())
-            .execute()
-    );
+    if (tableHasColumn(tableName, "last_used")) {
+      getDBI().withHandle(
+          (Handle handle) -> handle
+              .createStatement(StringUtils.format("UPDATE %s SET last_used = :last_used WHERE used = false", tableName))
+              .bind("last_used", DateTimes.nowUtc().toString())
+              .execute()
+      );
+    }
   }
 
   @Override
@@ -869,14 +871,18 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
           public Boolean withHandle(Handle handle)
           {
             try {
-              DatabaseMetaData dbMetaData = handle.getConnection().getMetaData();
-              ResultSet columns = dbMetaData.getColumns(
-                  null,
-                  null,
-                  tableName,
-                  columnName
-              );
-              return columns.next();
+              if (tableExists(handle, tableName)) {
+                DatabaseMetaData dbMetaData = handle.getConnection().getMetaData();
+                ResultSet columns = dbMetaData.getColumns(
+                    null,
+                    null,
+                    tableName,
+                    columnName
+                );
+                return columns.next();
+              } else {
+                return false;
+              }
             }
             catch (SQLException e) {
               return false;
