@@ -73,34 +73,12 @@ public class HttpLoadQueuePeonTest
       null, null, null, null, 0, 0
   );
 
-  final TestDruidCoordinatorConfig config = new TestDruidCoordinatorConfig(
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      10,
-      Duration.ZERO,
-      false
-  )
-  {
-    @Override
-    public int getHttpLoadQueuePeonBatchSize()
-    {
-      return 2;
-    }
-  };
+  final TestDruidCoordinatorConfig config = new TestDruidCoordinatorConfig.Builder()
+      .withCoordinatorKillMaxSegments(10)
+      .withLoadQueuePeonRepeatDelay(Duration.ZERO)
+      .withCoordinatorKillIgnoreDurationToRetain(false)
+      .withHttpLoadQueuePeonBatchSize(2)
+      .build();
 
   @Test(timeout = 60_000L)
   public void testSimple() throws Exception
