@@ -59,7 +59,7 @@ and update the script tag top level html file, [unified-console.html](../web-con
 <script src="public/web-console-0.18.0.js"></script>
 ```
 
-Finally, the sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) used in the Docker quickstart documentation should be updated to reflect the version for the next release:
+The sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) used in the Docker quickstart documentation should be updated to reflect the version for the next release:
 
 ```yaml
 ...
@@ -69,13 +69,9 @@ Finally, the sample [`docker-compose.yml`](https://github.com/apache/druid/blob/
 ...
 ```
 
+`DRUID_DOCS_VERSION` has to be changed to `0.17.0` in [`links.ts`](https://github.com/apache/druid/blob/master/web-console/src/links.ts).
+
 Once this is completed, open a PR to the master branch. Also, be sure to confirm that these versions are all correct in the release branch, otherwise fix them and open a backport PR to the release branch.
-
-#### Version updates on master and release branch
-
-You also need to update the version manually in some places for both master branch and the release branch.
-- `DRUID_DOCS_VERSION` has to be changed to `0.17.0` in `web-console/src/links.ts`.
-- Docker image tag has to be changed to `0.17.0` for all druid services in `distribution/docker/docker-compose.yml`.
 
 #### Updating redirect links in the docs
 
