@@ -316,7 +316,10 @@ public class NettyHttpClient extends AbstractHttpClient
               }
             }
 
+            // Ignore return value of setException, since exceptionCaught can be called multiple times and we
+            // only want to report the first one.
             retVal.setException(event.getCause());
+
             // response is non-null if we received initial chunk and then exception occurs
             if (response != null) {
               handler.exceptionCaught(response, event.getCause());
@@ -330,7 +333,11 @@ public class NettyHttpClient extends AbstractHttpClient
               log.warn(e, "Error while closing channel");
             }
             finally {
-              channelResourceContainer.returnResource();
+              if (channelResourceContainer.isPresent()) {
+                // exceptionCaught can be called multiple times: we only want to return the channel if it hasn't
+                // already been returned.
+                channelResourceContainer.returnResource();
+              }
             }
           }
 
