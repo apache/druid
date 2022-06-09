@@ -59,8 +59,8 @@ public class SQLMetadataStorageUpdaterJobHandler implements MetadataStorageUpdat
           {
             final PreparedBatch batch = handle.prepareBatch(
                 StringUtils.format(
-                    "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
-                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+                    "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, last_used) "
+                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :last_used)",
                     tableName, connector.getQuoteString()
                 )
             );
@@ -77,6 +77,7 @@ public class SQLMetadataStorageUpdaterJobHandler implements MetadataStorageUpdat
                       .put("version", segment.getVersion())
                       .put("used", true)
                       .put("payload", mapper.writeValueAsBytes(segment))
+                      .put("last_used", DateTimes.nowUtc().toString())
                       .build()
               );
 
