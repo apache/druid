@@ -152,7 +152,7 @@ You'll need to configure Maven with your Apache credentials by adding the follow
 
 ## LICENSE and NOTICE handling
 
-Before cutting a release candidate, the release manager should ensure that the contents of our `LICENSE` and `NOTICE` files are up-to-date.
+Before cutting a release candidate, the release manager should ensure that the contents of our `LICENSE` and `NOTICE` files are up-to-date. You should specifically check that copyright YEAR is updated in the `NOTICE` file. 
 
 The following links are helpful for understanding Apache's third-party licensing policies:
 
