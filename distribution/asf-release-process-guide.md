@@ -71,6 +71,17 @@ Finally, the sample [`docker-compose.yml`](https://github.com/apache/druid/blob/
 
 Once this is completed, open a PR to the master branch. Also, be sure to confirm that these versions are all correct in the release branch, otherwise fix them and open a backport PR to the release branch.
 
+#### Version updates on master and release branch
+
+You also need to update the version manually in some places for both master branch and the release branch.
+- `DRUID_DOCS_VERSION` has to be changed to `0.17.0` in `web-console/src/links.ts`.
+- Docker image tag has to be changed to `0.17.0` for all druid services in `distribution/docker/docker-compose.yml`.
+
+#### Updating redirect links in the docs
+
+For docs, please make sure to add any relevant redirects in `website/redirects.json`. This has to be done before building the new website. 
+
+
 ### Release branch hygiene
 
 The only additions to the release branch after branching should be bug fixes, which should be back-ported from the master branch, via a second PR, not with a direct PR to the release branch. Bug fix release branches may be initially populated via cherry-picking, but it is recommended to leave at least 1 commit to do as a backport PR in order to run through CI. (Note that CI is sometimes flaky for older branches).
@@ -248,10 +259,16 @@ must be tagged properly to make this script working. See the above [Release note
 Once the release branch is good for an RC, you can build a new tag with:
 
 ```bash
-$ mvn -DreleaseVersion=0.17.0 -DdevelopmentVersion=0.18.0-SNAPSHOT -Dtag=druid-0.17.0-rc3 -DpushChanges=false clean release:clean release:prepare
+$ mvn -Pwebsite-docs -DreleaseVersion=0.17.0 -DdevelopmentVersion=0.18.0-SNAPSHOT -Dtag=druid-0.17.0-rc3 -DpushChanges=false clean release:clean release:prepare
 ```
 
-In this example it will create a tag, `druid-0.17.0-rc3`. If this release passes vote then we can add the final `druid-0.17.0` release tag later.
+In this example it will create a tag, `druid-0.17.0-rc3`. If this release passes vote then we can add the final `druid-0.17.0` release tag later. 
+We added `website-docs` profile, because otherwise, website module is not updated with rc version. 
+If you want to skip tests, you can do so with following command
+
+```bash
+$ mvn -DreleaseVersion=0.17.0 -DdevelopmentVersion=0.18.0-SNAPSHOT -Dtag=druid-0.17.0-rc3 -DpushChanges=false -DskipTests -Darguments=-DskipTests clean release:clean release:prepare
+```
 
 **Retain the release.properties file! You will need it when uploading the Maven artifacts for the final release.**
 
