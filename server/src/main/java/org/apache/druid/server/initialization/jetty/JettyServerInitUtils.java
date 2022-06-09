@@ -40,7 +40,11 @@ public class JettyServerInitUtils
 {
   private static final String[] GZIP_METHODS = new String[]{HttpMethod.GET, HttpMethod.POST};
 
-  public static GzipHandler wrapWithDefaultGzipHandler(final Handler handler, int inflateBufferSize, int compressionLevel)
+  public static GzipHandler wrapWithDefaultGzipHandler(
+      final Handler handler,
+      int inflateBufferSize,
+      int compressionLevel
+  )
   {
     GzipHandler gzipHandler = new GzipHandler();
     gzipHandler.setMinGzipSize(0);
@@ -54,11 +58,43 @@ public class JettyServerInitUtils
     return gzipHandler;
   }
 
+  /**
+   * Add any filters that were registered with {@link JettyBindings#addQosFilter}. These must be added first in
+   * the filter chain, because when a request is suspended and later resumed due to QoS constraints, its filter
+   * chain is restarted. Placing QoSFilters first in the chain avoids double-execution of other filters.
+   */
+  public static void addQosFilters(ServletContextHandler handler, Injector injector)
+  {
+    final Set<JettyBindings.QosFilterHolder> filters =
+        injector.getInstance(Key.get(new TypeLiteral<Set<JettyBindings.QosFilterHolder>>() {}));
+    addFilters(handler, filters);
+  }
+
   public static void addExtensionFilters(ServletContextHandler handler, Injector injector)
   {
-    Set<ServletFilterHolder> extensionFilters = injector.getInstance(Key.get(new TypeLiteral<Set<ServletFilterHolder>>(){}));
+    final Set<ServletFilterHolder> filters =
+        injector.getInstance(Key.get(new TypeLiteral<Set<ServletFilterHolder>>() {}));
+    addFilters(handler, filters);
+  }
 
-    for (ServletFilterHolder servletFilterHolder : extensionFilters) {
+  public static Handler getJettyRequestLogHandler()
+  {
+    // Ref: http://www.eclipse.org/jetty/documentation/9.2.6.v20141205/configuring-jetty-request-logs.html
+    RequestLogHandler requestLogHandler = new RequestLogHandler();
+    requestLogHandler.setRequestLog(new JettyRequestLog());
+
+    return requestLogHandler;
+  }
+
+  public static void addAllowHttpMethodsFilter(ServletContextHandler root, List<String> allowedHttpMethods)
+  {
+    FilterHolder holder = new FilterHolder(new AllowHttpMethodsResourceFilter(allowedHttpMethods));
+    root.addFilter(holder, "/*", null);
+  }
+
+  private static void addFilters(ServletContextHandler handler, Set<? extends ServletFilterHolder> filterHolders)
+  {
+    for (ServletFilterHolder servletFilterHolder : filterHolders) {
       // Check the Filter first to guard against people who don't read the docs and return the Class even
       // when they have an instance.
       FilterHolder holder;
@@ -85,24 +121,5 @@ public class JettyServerInitUtils
 
       handler.getServletHandler().addFilter(holder, filterMapping);
     }
-  }
-
-  public static Handler getJettyRequestLogHandler()
-  {
-    // Ref: http://www.eclipse.org/jetty/documentation/9.2.6.v20141205/configuring-jetty-request-logs.html
-    RequestLogHandler requestLogHandler = new RequestLogHandler();
-    requestLogHandler.setRequestLog(new JettyRequestLog());
-
-    return requestLogHandler;
-  }
-
-  public static void addAllowHttpMethodsFilter(ServletContextHandler root, List<String> allowedHttpMethods)
-  {
-    FilterHolder holder = new FilterHolder(new AllowHttpMethodsResourceFilter(allowedHttpMethods));
-    root.addFilter(
-        holder,
-        "/*",
-        null
-    );
   }
 }
