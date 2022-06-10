@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 @PublicApi
@@ -71,6 +72,12 @@ public class QueryContexts
   public static final String BROKER_SERVICE_NAME = "brokerService";
   public static final String IN_SUB_QUERY_THRESHOLD_KEY = "inSubQueryThreshold";
   public static final String TIME_BOUNDARY_PLANNING_KEY = "enableTimeBoundaryPlanning";
+  public static final String POPULATE_CACHE_KEY = "populateCache";
+  public static final String POPULATE_RESULT_LEVEL_CACHE_KEY = "populateResultLevelCache";
+  public static final String USE_RESULT_LEVEL_CACHE_KEY = "useResultLevelCache";
+  public static final String SERIALIZE_DATE_TIME_AS_LONG_KEY = "serializeDateTimeAsLong";
+  public static final String SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY = "serializeDateTimeAsLongInner";
+  public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
@@ -158,7 +165,7 @@ public class QueryContexts
 
   public static <T> boolean isPopulateCache(Query<T> query, boolean defaultValue)
   {
-    return parseBoolean(query, "populateCache", defaultValue);
+    return parseBoolean(query, POPULATE_CACHE_KEY, defaultValue);
   }
 
   public static <T> boolean isUseCache(Query<T> query)
@@ -178,7 +185,7 @@ public class QueryContexts
 
   public static <T> boolean isPopulateResultLevelCache(Query<T> query, boolean defaultValue)
   {
-    return parseBoolean(query, "populateResultLevelCache", defaultValue);
+    return parseBoolean(query, POPULATE_RESULT_LEVEL_CACHE_KEY, defaultValue);
   }
 
   public static <T> boolean isUseResultLevelCache(Query<T> query)
@@ -188,22 +195,22 @@ public class QueryContexts
 
   public static <T> boolean isUseResultLevelCache(Query<T> query, boolean defaultValue)
   {
-    return parseBoolean(query, "useResultLevelCache", defaultValue);
+    return parseBoolean(query, USE_RESULT_LEVEL_CACHE_KEY, defaultValue);
   }
-
   public static <T> boolean isFinalize(Query<T> query, boolean defaultValue)
+
   {
     return parseBoolean(query, FINALIZE_KEY, defaultValue);
   }
 
   public static <T> boolean isSerializeDateTimeAsLong(Query<T> query, boolean defaultValue)
   {
-    return parseBoolean(query, "serializeDateTimeAsLong", defaultValue);
+    return parseBoolean(query, SERIALIZE_DATE_TIME_AS_LONG_KEY, defaultValue);
   }
 
   public static <T> boolean isSerializeDateTimeAsLongInner(Query<T> query, boolean defaultValue)
   {
-    return parseBoolean(query, "serializeDateTimeAsLongInner", defaultValue);
+    return parseBoolean(query, SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY, defaultValue);
   }
 
   public static <T> Vectorize getVectorize(Query<T> query)
@@ -248,7 +255,7 @@ public class QueryContexts
 
   public static <T> int getUncoveredIntervalsLimit(Query<T> query, int defaultValue)
   {
-    return parseInt(query, "uncoveredIntervalsLimit", defaultValue);
+    return parseInt(query, UNCOVERED_INTERVALS_LIMIT_KEY, defaultValue);
   }
 
   public static <T> int getPriority(Query<T> query)
@@ -476,6 +483,85 @@ public class QueryContexts
   {
     final Object val = context.get(key);
     return val == null ? defaultValue : Numbers.parseBoolean(val);
+  }
+
+  public static String getAsString(
+      final String parameter,
+      final Object value,
+      final String defaultValue
+  )
+  {
+    if (value == null) {
+      return defaultValue;
+    } else if (value instanceof String) {
+      return (String) value;
+    } else {
+      throw new IAE("Expected parameter [%s] to be String", parameter);
+    }
+  }
+
+  public static boolean getAsBoolean(
+      final String parameter,
+      final Object value,
+      final boolean defaultValue
+  )
+  {
+    if (value == null) {
+      return defaultValue;
+    } else if (value instanceof String) {
+      return Boolean.parseBoolean((String) value);
+    } else if (value instanceof Boolean) {
+      return (Boolean) value;
+    } else {
+      throw new IAE("Expected parameter [%s] to be boolean", parameter);
+    }
+  }
+
+  public static int getAsInt(
+      final String parameter,
+      final Object value,
+      final int defaultValue
+  )
+  {
+    if (value == null) {
+      return defaultValue;
+    } else if (value instanceof String) {
+      return Numbers.parseInt(value);
+    } else if (value instanceof Number) {
+      return ((Number) value).intValue();
+    } else {
+      throw new IAE("Expected parameter [%s] to be integer", parameter);
+    }
+  }
+
+  public static long getAsLong(
+      final String parameter,
+      final Object value,
+      final long defaultValue)
+  {
+    if (value == null) {
+      return defaultValue;
+    } else if (value instanceof String) {
+      return Numbers.parseLong(value);
+    } else if (value instanceof Number) {
+      return ((Number) value).longValue();
+    } else {
+      throw new IAE("Expected parameter [%s] to be long", parameter);
+    }
+  }
+
+  public static Map<String, Object> override(
+      final Map<String, Object> context,
+      final Map<String, Object> overrides
+  )
+  {
+    Map<String, Object> overridden = new TreeMap<>();
+    if (context != null) {
+      overridden.putAll(context);
+    }
+    overridden.putAll(overrides);
+
+    return overridden;
   }
 
   private QueryContexts()
