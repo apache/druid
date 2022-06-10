@@ -954,7 +954,7 @@ These configuration options control the behavior of the Lookup dynamic configura
 
 ##### Automatic compaction dynamic configuration
 
-You can set or update automatic compaction properties dynamically using the
+You can set or update [automatic compaction](../ingestion/automatic-compaction.md) properties dynamically using the
 [Coordinator API](../operations/api-reference.md#automatic-compaction-configuration) without restarting Coordinators.
 
 For details about segment compaction, see [Segment size optimization](../operations/segment-optimization.md).
@@ -987,8 +987,12 @@ Automatic compaction config example:
 }
 ```
 
-Compaction tasks fail when higher priority tasks cause Druid to revoke their locks. By default, realtime tasks like ingestion have a higher priority than compaction tasks. Therefore frequent conflicts between compaction tasks and realtime tasks can cause the coordinator's automatic compaction to get stuck.
-You may see this issue with streaming ingestion from Kafka and Kinesis, which ingest late-arriving data. To mitigate this problem, set `skipOffsetFromLatest` to a value large enough so that arriving data tends to fall outside the offset value from the current time. This way you can avoid conflicts between compaction tasks and realtime ingestion tasks.
+Compaction tasks fail when higher priority tasks cause Druid to revoke their locks. By default, realtime tasks like ingestion have a higher priority than compaction tasks. Frequent conflicts between compaction tasks and realtime tasks can cause the Coordinator's automatic compaction to hang.
+You may see this issue with streaming ingestion from Kafka and Kinesis, which ingest late-arriving data.
+
+To mitigate this problem, set `skipOffsetFromLatest` to a value large enough so that arriving data tends to fall outside the offset value from the current time. This way you can avoid conflicts between compaction tasks and realtime ingestion tasks.
+For example, if you want to skip over segments from thirty days prior to the end time of the most recent segment, assign `"skipOffsetFromLatest": "P30D"`.
+For more information, see [Avoid conflicts with ingestion](../ingestion/automatic-compaction.md#avoid-conflicts-with-ingestion).
 
 ###### Automatic compaction tuningConfig
 
