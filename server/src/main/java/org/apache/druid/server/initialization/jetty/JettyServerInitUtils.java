@@ -40,11 +40,7 @@ public class JettyServerInitUtils
 {
   private static final String[] GZIP_METHODS = new String[]{HttpMethod.GET, HttpMethod.POST};
 
-  public static GzipHandler wrapWithDefaultGzipHandler(
-      final Handler handler,
-      int inflateBufferSize,
-      int compressionLevel
-  )
+  public static GzipHandler wrapWithDefaultGzipHandler(final Handler handler, int inflateBufferSize, int compressionLevel)
   {
     GzipHandler gzipHandler = new GzipHandler();
     gzipHandler.setMinGzipSize(0);
@@ -77,22 +73,7 @@ public class JettyServerInitUtils
     addFilters(handler, filters);
   }
 
-  public static Handler getJettyRequestLogHandler()
-  {
-    // Ref: http://www.eclipse.org/jetty/documentation/9.2.6.v20141205/configuring-jetty-request-logs.html
-    RequestLogHandler requestLogHandler = new RequestLogHandler();
-    requestLogHandler.setRequestLog(new JettyRequestLog());
-
-    return requestLogHandler;
-  }
-
-  public static void addAllowHttpMethodsFilter(ServletContextHandler root, List<String> allowedHttpMethods)
-  {
-    FilterHolder holder = new FilterHolder(new AllowHttpMethodsResourceFilter(allowedHttpMethods));
-    root.addFilter(holder, "/*", null);
-  }
-
-  private static void addFilters(ServletContextHandler handler, Set<? extends ServletFilterHolder> filterHolders)
+  public static void addFilters(ServletContextHandler handler, Set<? extends ServletFilterHolder> filterHolders)
   {
     for (ServletFilterHolder servletFilterHolder : filterHolders) {
       // Check the Filter first to guard against people who don't read the docs and return the Class even
@@ -121,5 +102,24 @@ public class JettyServerInitUtils
 
       handler.getServletHandler().addFilter(holder, filterMapping);
     }
+  }
+
+  public static Handler getJettyRequestLogHandler()
+  {
+    // Ref: http://www.eclipse.org/jetty/documentation/9.2.6.v20141205/configuring-jetty-request-logs.html
+    RequestLogHandler requestLogHandler = new RequestLogHandler();
+    requestLogHandler.setRequestLog(new JettyRequestLog());
+
+    return requestLogHandler;
+  }
+
+  public static void addAllowHttpMethodsFilter(ServletContextHandler root, List<String> allowedHttpMethods)
+  {
+    FilterHolder holder = new FilterHolder(new AllowHttpMethodsResourceFilter(allowedHttpMethods));
+    root.addFilter(
+        holder,
+        "/*",
+        null
+    );
   }
 }
