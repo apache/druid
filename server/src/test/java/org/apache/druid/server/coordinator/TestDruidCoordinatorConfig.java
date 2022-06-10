@@ -434,7 +434,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     }
 
     public Builder withHttpLoadQueuePeonHostTimeout(Duration httpLoadQueuePeonHostTimeout)
-
     {
       this.httpLoadQueuePeonHostTimeout = httpLoadQueuePeonHostTimeout;
       return this;
