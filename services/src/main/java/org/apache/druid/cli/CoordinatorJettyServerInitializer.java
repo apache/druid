@@ -61,7 +61,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
   private final ServerConfig serverConfig;
 
   @Inject
-  CoordinatorJettyServerInitializer(Properties properties, ServerConfig serverConfig, AuthConfig authConfig)
+  CoordinatorJettyServerInitializer(Properties properties, ServerConfig serverConfig)
   {
     this.beOverlord = CliCoordinator.isOverlord(properties);
     this.serverConfig = serverConfig;
