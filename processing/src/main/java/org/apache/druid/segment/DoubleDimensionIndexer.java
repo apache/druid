@@ -49,6 +49,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
     if (dimValues instanceof List) {
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
     }
+
     Double d = DimensionHandlerUtils.convertObjectToDouble(dimValues, reportParseExceptions);
     if (d == null) {
       hasNulls = NullHandling.sqlCompatible();

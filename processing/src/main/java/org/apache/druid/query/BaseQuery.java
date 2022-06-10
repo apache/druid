@@ -19,6 +19,8 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -101,6 +103,7 @@ public abstract class BaseQuery<T> implements Query<T>
 
   @JsonProperty
   @Override
+  @JsonInclude(Include.NON_DEFAULT)
   public boolean isDescending()
   {
     return descending;
@@ -165,6 +168,7 @@ public abstract class BaseQuery<T> implements Query<T>
 
   @Override
   @JsonProperty
+  @JsonInclude(Include.NON_DEFAULT)
   public Map<String, Object> getContext()
   {
     return context.getMergedParams();

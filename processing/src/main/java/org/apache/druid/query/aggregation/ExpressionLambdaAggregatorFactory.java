@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
@@ -204,6 +205,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
 
   @JsonProperty
   @Nullable
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public Set<String> getFields()
   {
     return fields;
@@ -211,6 +213,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
 
   @JsonProperty
   @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getAccumulatorIdentifier()
   {
     return accumulatorId;
@@ -260,6 +263,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
 
   @JsonProperty("compare")
   @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getCompareExpressionString()
   {
     return compareExpressionString;
@@ -267,6 +271,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
 
   @JsonProperty("finalize")
   @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getFinalizeExpressionString()
   {
     return finalizeExpressionString;
