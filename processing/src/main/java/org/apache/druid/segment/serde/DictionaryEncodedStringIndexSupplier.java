@@ -87,7 +87,7 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
   public <T> T as(Class<T> clazz)
   {
     if (bitmaps != null) {
-      if (clazz.equals(NullValueIndex.class) && zeroIsNull) {
+      if (clazz.equals(NullValueIndex.class)) {
         final BitmapColumnIndex nullIndex;
         if (zeroIsNull) {
           nullIndex = new SimpleImmutableBitmapIndex(bitmaps.get(0));
