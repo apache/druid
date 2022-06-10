@@ -42,7 +42,7 @@ if [ -z "$JAVA_BIN" ]; then
   exit 1
 fi
 
-LOG_DIR="${DRUID_LOG_DIR:=${WHEREAMI}/log}"
+LOG_DIR="${DRUID_LOG_DIR:=${WHEREAMI}/../log}"
 # Remove possible ending slash
 if [[ $LOG_DIR == */ ]];
 then

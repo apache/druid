@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
@@ -93,6 +94,7 @@ public class SqlLifecycle
   private final RequestLogger requestLogger;
   private final QueryScheduler queryScheduler;
   private final AuthConfig authConfig;
+  private final DefaultQueryConfig defaultQueryConfig;
   private final long startMs;
   private final long startNs;
 
@@ -120,6 +122,7 @@ public class SqlLifecycle
       RequestLogger requestLogger,
       QueryScheduler queryScheduler,
       AuthConfig authConfig,
+      DefaultQueryConfig defaultQueryConfig,
       long startMs,
       long startNs
   )
@@ -129,6 +132,7 @@ public class SqlLifecycle
     this.requestLogger = requestLogger;
     this.queryScheduler = queryScheduler;
     this.authConfig = authConfig;
+    this.defaultQueryConfig = defaultQueryConfig;
     this.startMs = startMs;
     this.startNs = startNs;
     this.parameters = Collections.emptyList();
@@ -144,6 +148,7 @@ public class SqlLifecycle
     transition(State.NEW, State.INITIALIZED);
     this.sql = sql;
     this.queryContext = contextWithSqlId(queryContext);
+    this.queryContext.addDefaultParams(defaultQueryConfig.getContext());
     return sqlQueryId();
   }
 

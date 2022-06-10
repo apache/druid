@@ -133,7 +133,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("INSERT INTO \"in/valid\" SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlPlanningException.class, "Ingestion dataSource cannot contain the '/' character.")
+        .expectValidationError(SqlPlanningException.class, "INSERT dataSource cannot contain the '/' character.")
         .verify();
   }
 
@@ -142,7 +142,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("INSERT INTO dst (foo, bar) SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlPlanningException.class, "Ingestion with target column list is not supported.")
+        .expectValidationError(SqlPlanningException.class, "INSERT with target column list is not supported.")
         .verify();
   }
 
@@ -162,7 +162,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO INFORMATION_SCHEMA.COLUMNS SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot ingest into [INFORMATION_SCHEMA.COLUMNS] because it is not a Druid datasource."
+            "Cannot INSERT into [INFORMATION_SCHEMA.COLUMNS] because it is not a Druid datasource."
         )
         .verify();
   }
@@ -174,7 +174,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO view.aview SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot ingest into [view.aview] because it is not a Druid datasource."
+            "Cannot INSERT into [view.aview] because it is not a Druid datasource."
         )
         .verify();
   }
@@ -204,7 +204,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO nonexistent.dst SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
             SqlPlanningException.class,
-            "Cannot ingest into [nonexistent.dst] because it is not a Druid datasource."
+            "Cannot INSERT into [nonexistent.dst] because it is not a Druid datasource."
         )
         .verify();
   }
@@ -735,6 +735,23 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
             + "or columns with names like EXPR$[digit]."
             + "E.g. if you are ingesting \"func(X)\", then you can rewrite it as "
             + "\"func(X) as myColumn\""
+        )
+        .verify();
+  }
+
+  @Test
+  public void testInsertQueryWithInvalidGranularity()
+  {
+    testIngestionQuery()
+        .sql("insert into foo1 select __time, dim1 FROM foo partitioned by time_floor(__time, 'PT2H')")
+        .expectValidationError(
+            CoreMatchers.allOf(
+                CoreMatchers.instanceOf(SqlPlanningException.class),
+                ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                    "The granularity specified in PARTITIONED BY is not supported. "
+                    + "Please use an equivalent of these granularities: second, minute, five_minute, ten_minute, "
+                    + "fifteen_minute, thirty_minute, hour, six_hour, day, week, month, quarter, year, all."))
+            )
         )
         .verify();
   }

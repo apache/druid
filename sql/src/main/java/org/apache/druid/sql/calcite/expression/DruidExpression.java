@@ -495,7 +495,7 @@ public class DruidExpression
     {
       List<DruidExpression> list = new ArrayList<>(expressions.size());
       for (DruidExpression expr : expressions) {
-        list.add(visit(expr));
+        list.add(visit(expr.visit(this)));
       }
       return list;
     }
