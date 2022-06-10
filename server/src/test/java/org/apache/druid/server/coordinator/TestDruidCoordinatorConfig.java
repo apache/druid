@@ -313,61 +313,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     {
     }
 
-    public Builder(
-        Duration coordinatorStartDelay,
-        Duration coordinatorPeriod,
-        Duration coordinatorIndexingPeriod,
-        Duration metadataStoreManagementPeriod,
-        Duration coordinatorKillPeriod,
-        Duration coordinatorKillDurationToRetain,
-        Boolean coordinatorKillIgnoreDurationToRetain,
-        Integer coordinatorKillMaxSegments,
-        Duration coordinatorSupervisorKillPeriod,
-        Duration coordinatorSupervisorKillDurationToRetain,
-        Duration coordinatorCompactionKillPeriod,
-        Duration coordinatorRuleKillPeriod,
-        Duration coordinatorRuleKillDurationToRetain,
-        Duration coordinatorDatasourceKillPeriod,
-        Duration coordinatorDatasourceKillDurationToRetain,
-        Duration loadTimeoutDelay,
-        Duration loadQueuePeonRepeatDelay,
-        String loadQueuePeonType,
-        Duration httpLoadQueuePeonRepeatDelay,
-        Integer curatorLoadQueuePeonNumCallbackThreads,
-        Duration httpLoadQueuePeonHostTimeout,
-        Integer httpLoadQueuePeonBatchSize,
-        Boolean compactionSkippedLockedIntervals,
-        Duration coordinatorAuditKillPeriod,
-        Duration coordinatorAuditKillDurationToRetain
-    )
-    {
-      this.coordinatorStartDelay = coordinatorStartDelay;
-      this.coordinatorPeriod = coordinatorPeriod;
-      this.coordinatorIndexingPeriod = coordinatorIndexingPeriod;
-      this.metadataStoreManagementPeriod = metadataStoreManagementPeriod;
-      this.coordinatorKillPeriod = coordinatorKillPeriod;
-      this.coordinatorKillDurationToRetain = coordinatorKillDurationToRetain;
-      this.coordinatorKillIgnoreDurationToRetain = coordinatorKillIgnoreDurationToRetain;
-      this.coordinatorKillMaxSegments = coordinatorKillMaxSegments;
-      this.coordinatorSupervisorKillPeriod = coordinatorSupervisorKillPeriod;
-      this.coordinatorSupervisorKillDurationToRetain = coordinatorSupervisorKillDurationToRetain;
-      this.coordinatorCompactionKillPeriod = coordinatorCompactionKillPeriod;
-      this.coordinatorRuleKillPeriod = coordinatorRuleKillPeriod;
-      this.coordinatorRuleKillDurationToRetain = coordinatorRuleKillDurationToRetain;
-      this.coordinatorDatasourceKillPeriod = coordinatorDatasourceKillPeriod;
-      this.coordinatorDatasourceKillDurationToRetain = coordinatorDatasourceKillDurationToRetain;
-      this.loadTimeoutDelay = loadTimeoutDelay;
-      this.loadQueuePeonRepeatDelay = loadQueuePeonRepeatDelay;
-      this.loadQueuePeonType = loadQueuePeonType;
-      this.httpLoadQueuePeonRepeatDelay = httpLoadQueuePeonRepeatDelay;
-      this.curatorLoadQueuePeonNumCallbackThreads = curatorLoadQueuePeonNumCallbackThreads;
-      this.httpLoadQueuePeonHostTimeout = httpLoadQueuePeonHostTimeout;
-      this.httpLoadQueuePeonBatchSize = httpLoadQueuePeonBatchSize;
-      this.compactionSkippedLockedIntervals = compactionSkippedLockedIntervals;
-      this.coordinatorAuditKillPeriod = coordinatorAuditKillPeriod;
-      this.coordinatorAuditKillDurationToRetain = coordinatorAuditKillDurationToRetain;
-    }
-
     public Builder withCoordinatorStartDelay(Duration coordinatorStartDelay)
     {
       this.coordinatorStartDelay = coordinatorStartDelay;
@@ -488,7 +433,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       return this;
     }
 
-    public Builder withHttpLoadQueuePeonHostTimeout(Duration withHttploadQueuePeonHostTimeout)
+    public Builder withHttpLoadQueuePeonHostTimeout(Duration httpLoadQueuePeonHostTimeout)
+
     {
       this.httpLoadQueuePeonHostTimeout = httpLoadQueuePeonHostTimeout;
       return this;
@@ -518,7 +464,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       return this;
     }
 
-    //TODO add mising fields to both TEst and builder.build investigate loadTimeoutDelay naming in Test. Migrate usage to builder.
     public TestDruidCoordinatorConfig build()
     {
       return new TestDruidCoordinatorConfig(
