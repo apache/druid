@@ -33,18 +33,19 @@ import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.BitmapColumnIndex;
-import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.column.DruidPredicateIndex;
 import org.apache.druid.segment.column.LexicographicalRangeIndex;
-import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
+import org.apache.druid.segment.column.NullValueIndex;
+import org.apache.druid.segment.column.SimpleBitmapColumnIndex;
+import org.apache.druid.segment.column.SimpleImmutableBitmapIndex;
+import org.apache.druid.segment.column.SimpleImmutableBitmapIterableIndex;
 import org.apache.druid.segment.column.SpatialIndex;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.column.Utf8ValueSetIndex;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
-import org.apache.druid.segment.filter.Filters;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -54,8 +55,6 @@ import java.util.SortedSet;
 
 public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
 {
-  public static final ColumnIndexCapabilities CAPABILITIES = new SimpleColumnIndexCapabilities(true, true);
-
   private final BitmapFactory bitmapFactory;
   private final GenericIndexed<String> dictionary;
   private final GenericIndexed<ByteBuffer> dictionaryUtf8;
@@ -63,6 +62,8 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
   private final GenericIndexed<ImmutableBitmap> bitmaps;
   @Nullable
   private final ImmutableRTree indexedTree;
+
+  private final boolean zeroIsNull;
 
   public DictionaryEncodedStringIndexSupplier(
       BitmapFactory bitmapFactory,
@@ -77,6 +78,7 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
     this.dictionaryUtf8 = dictionaryUtf8;
     this.bitmaps = bitmaps;
     this.indexedTree = indexedTree;
+    this.zeroIsNull = NullHandling.isNullOrEquivalent(dictionary.get(0));
   }
 
   @Nullable
@@ -84,33 +86,35 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
   @SuppressWarnings("unchecked")
   public <T> T as(Class<T> clazz)
   {
-    if (bitmaps != null && clazz.equals(StringValueSetIndex.class)) {
-      return (T) new GenericIndexedDictionaryEncodedStringValueSetIndex(bitmapFactory, dictionaryUtf8, bitmaps);
-    } else if (bitmaps != null && clazz.equals(Utf8ValueSetIndex.class)) {
-      return (T) new GenericIndexedDictionaryEncodedStringValueSetIndex(bitmapFactory, dictionaryUtf8, bitmaps);
-    } else if (bitmaps != null && clazz.equals(DruidPredicateIndex.class)) {
-      return (T) new GenericIndexedDictionaryEncodedStringDruidPredicateIndex(bitmapFactory, dictionary, bitmaps);
-    } else if (bitmaps != null && clazz.equals(LexicographicalRangeIndex.class)) {
-      return (T) new GenericIndexedDictionaryEncodedColumnLexicographicalRangeIndex(
-          bitmapFactory,
-          dictionaryUtf8,
-          bitmaps
-      );
-    } else if (bitmaps != null && clazz.equals(DictionaryEncodedStringValueIndex.class)) {
-      return (T) new GenericIndexedDictionaryEncodedStringValueIndex(bitmapFactory, dictionary, bitmaps);
-    } else if (indexedTree != null && clazz.equals(SpatialIndex.class)) {
+    if (bitmaps != null) {
+      if (clazz.equals(NullValueIndex.class) && zeroIsNull) {
+        final BitmapColumnIndex nullIndex;
+        if (zeroIsNull) {
+          nullIndex = new SimpleImmutableBitmapIndex(bitmaps.get(0));
+        } else {
+          nullIndex = new SimpleImmutableBitmapIndex(bitmapFactory.makeEmptyImmutableBitmap());
+        }
+        return (T) (NullValueIndex) () -> nullIndex;
+      } else if (clazz.equals(StringValueSetIndex.class)) {
+        return (T) new GenericIndexedDictionaryEncodedStringValueSetIndex(bitmapFactory, dictionaryUtf8, bitmaps);
+      } else if (clazz.equals(Utf8ValueSetIndex.class)) {
+        return (T) new GenericIndexedDictionaryEncodedStringValueSetIndex(bitmapFactory, dictionaryUtf8, bitmaps);
+      } else if (clazz.equals(DruidPredicateIndex.class)) {
+        return (T) new GenericIndexedDictionaryEncodedStringDruidPredicateIndex(bitmapFactory, dictionary, bitmaps);
+      } else if (clazz.equals(LexicographicalRangeIndex.class)) {
+        return (T) new GenericIndexedDictionaryEncodedColumnLexicographicalRangeIndex(
+            bitmapFactory,
+            dictionaryUtf8,
+            bitmaps
+        );
+      } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)) {
+        return (T) new GenericIndexedDictionaryEncodedStringValueIndex(bitmapFactory, dictionary, bitmaps);
+      }
+    }
+    if (indexedTree != null && clazz.equals(SpatialIndex.class)) {
       return (T) (SpatialIndex) () -> indexedTree;
     }
     return null;
-  }
-
-  private abstract static class DictionaryEncodedStringBitmapColumnIndex implements BitmapColumnIndex
-  {
-    @Override
-    public ColumnIndexCapabilities getIndexCapabilities()
-    {
-      return CAPABILITIES;
-    }
   }
 
   private abstract static class BaseGenericIndexedDictionaryEncodedIndex<T>
@@ -196,7 +200,7 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
     {
-      return new DictionaryEncodedStringBitmapColumnIndex()
+      return new SimpleBitmapColumnIndex()
       {
         @Override
         public double estimateSelectivity(int totalRows)
@@ -251,21 +255,10 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
      */
     private BitmapColumnIndex getBitmapColumnIndexForSortedIterableUtf8(Iterable<ByteBuffer> valuesUtf8)
     {
-      return new DictionaryEncodedStringBitmapColumnIndex()
+      return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          return Filters.estimateSelectivity(getBitmapsIterable().iterator(), totalRows);
-        }
-
-        @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
-        {
-          return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapsIterable());
-        }
-
-        private Iterable<ImmutableBitmap> getBitmapsIterable()
+        public Iterable<ImmutableBitmap> getBitmapIterable()
         {
           final int dictionarySize = dictionary.size();
 
@@ -332,24 +325,10 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
     @Override
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
-      return new DictionaryEncodedStringBitmapColumnIndex()
+      return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          return Filters.estimateSelectivity(
-              getBitmapIterable().iterator(),
-              totalRows
-          );
-        }
-
-        @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
-        {
-          return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable());
-        }
-
-        private Iterable<ImmutableBitmap> getBitmapIterable()
+        public Iterable<ImmutableBitmap> getBitmapIterable()
         {
           return () -> new Iterator<ImmutableBitmap>()
           {
@@ -424,21 +403,10 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
         boolean endStrict
     )
     {
-      return new DictionaryEncodedStringBitmapColumnIndex()
+      return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          return Filters.estimateSelectivity(getBitmapIterable().iterator(), totalRows);
-        }
-
-        @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
-        {
-          return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable());
-        }
-
-        private Iterable<ImmutableBitmap> getBitmapIterable()
+        public Iterable<ImmutableBitmap> getBitmapIterable()
         {
           final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
           final int start = range.leftInt(), end = range.rightInt();
@@ -471,22 +439,10 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
         Predicate<String> matcher
     )
     {
-      return new DictionaryEncodedStringBitmapColumnIndex()
+      return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          return Filters.estimateSelectivity(getBitmapIterable().iterator(), totalRows);
-        }
-
-        @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
-        {
-
-          return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable());
-        }
-
-        private Iterable<ImmutableBitmap> getBitmapIterable()
+        public Iterable<ImmutableBitmap> getBitmapIterable()
         {
           final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
           final int start = range.leftInt(), end = range.rightInt();
