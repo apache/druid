@@ -319,9 +319,9 @@ public class NettyHttpClient extends AbstractHttpClient
             }
 
             if (event.getCause() instanceof ReadTimeoutException) {
-              // ReadTimeoutException is a singleton with a misleading stack trace. No point including it: instead,
-              // we replace it with our own exception.
-              retVal.setException(new RE("[%s] Read timed out", requestDesc));
+              // ReadTimeoutException thrown by ReadTimeoutHandler is a singleton with a misleading stack trace.
+              // No point including it: instead, we replace it with a fresh exception.
+              retVal.setException(new ReadTimeoutException(StringUtils.format("[%s] Read timed out", requestDesc)));
             } else {
               retVal.setException(event.getCause());
             }
