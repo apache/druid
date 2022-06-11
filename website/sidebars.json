@@ -39,6 +39,7 @@
       "ingestion/schema-design",
       "ingestion/data-management",
       "ingestion/compaction",
+      "ingestion/automatic-compaction",
       {
         "type": "subcategory",
         "label": "Stream ingestion",
