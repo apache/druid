@@ -30,9 +30,9 @@ import org.apache.calcite.sql.validate.SqlConformance;
  * {code CalciteSqlValidator} itself is protected which is why
  * this class is in a Calcite name space.
  */
-public class DruidSqlValidator extends CalciteSqlValidator
+public class BaseDruidSqlValidator extends CalciteSqlValidator
 {
-  public DruidSqlValidator(
+  public BaseDruidSqlValidator(
       SqlOperatorTable opTab,
       CalciteCatalogReader catalogReader,
       JavaTypeFactory typeFactory,
@@ -40,5 +40,4 @@ public class DruidSqlValidator extends CalciteSqlValidator
   {
     super(opTab, catalogReader, typeFactory, conformance);
   }
-
 }

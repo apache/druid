@@ -19,30 +19,24 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import com.google.common.collect.ImmutableSet;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceAction;
-
-import java.util.Set;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
+import org.apache.calcite.prepare.BaseDruidSqlValidator;
+import org.apache.calcite.prepare.CalciteCatalogReader;
+import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.validate.SqlConformance;
 
 /**
- * If an SQL query can be validated by {@link DruidPlanner}, the resulting artifact is the set of {@link Resource}
- * corresponding to the datasources and views which an authenticated request must be authorized for to process the
- * query.
+ * Druid extended SQL validator. (At present, it doesn't actually
+ * have any extensions yet, but it will soon.)
  */
-public class ValidationResult
+class DruidSqlValidator extends BaseDruidSqlValidator
 {
-  private final Set<ResourceAction> resourceActions;
-
-  public ValidationResult(
-      final Set<ResourceAction> resourceActions
-  )
+  protected DruidSqlValidator(
+      SqlOperatorTable opTab,
+      CalciteCatalogReader catalogReader,
+      JavaTypeFactory typeFactory,
+      SqlConformance conformance)
   {
-    this.resourceActions = ImmutableSet.copyOf(resourceActions);
-  }
-
-  public Set<ResourceAction> getResourceActions()
-  {
-    return resourceActions;
+    super(opTab, catalogReader, typeFactory, conformance);
   }
 }
