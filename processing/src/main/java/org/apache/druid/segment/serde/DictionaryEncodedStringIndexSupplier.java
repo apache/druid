@@ -63,8 +63,6 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
   @Nullable
   private final ImmutableRTree indexedTree;
 
-  private final boolean zeroIsNull;
-
   public DictionaryEncodedStringIndexSupplier(
       BitmapFactory bitmapFactory,
       GenericIndexed<String> dictionary,
@@ -78,7 +76,6 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
     this.dictionaryUtf8 = dictionaryUtf8;
     this.bitmaps = bitmaps;
     this.indexedTree = indexedTree;
-    this.zeroIsNull = NullHandling.isNullOrEquivalent(dictionary.get(0));
   }
 
   @Nullable
@@ -89,7 +86,7 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
     if (bitmaps != null) {
       if (clazz.equals(NullValueIndex.class)) {
         final BitmapColumnIndex nullIndex;
-        if (zeroIsNull) {
+        if (NullHandling.isNullOrEquivalent(dictionary.get(0))) {
           nullIndex = new SimpleImmutableBitmapIndex(bitmaps.get(0));
         } else {
           nullIndex = new SimpleImmutableBitmapIndex(bitmapFactory.makeEmptyImmutableBitmap());
@@ -105,7 +102,8 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
         return (T) new GenericIndexedDictionaryEncodedColumnLexicographicalRangeIndex(
             bitmapFactory,
             dictionaryUtf8,
-            bitmaps
+            bitmaps,
+            NullHandling.isNullOrEquivalent(dictionary.get(0))
         );
       } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)) {
         return (T) new GenericIndexedDictionaryEncodedStringValueIndex(bitmapFactory, dictionary, bitmaps);
@@ -385,14 +383,17 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
   public static final class GenericIndexedDictionaryEncodedColumnLexicographicalRangeIndex
       extends BaseGenericIndexedDictionaryEncodedIndex<ByteBuffer> implements LexicographicalRangeIndex
   {
+    private final boolean hasNull;
 
     public GenericIndexedDictionaryEncodedColumnLexicographicalRangeIndex(
         BitmapFactory bitmapFactory,
         GenericIndexed<ByteBuffer> dictionary,
-        GenericIndexed<ImmutableBitmap> bitmaps
+        GenericIndexed<ImmutableBitmap> bitmaps,
+        boolean hasNull
     )
     {
       super(bitmapFactory, dictionary, bitmaps);
+      this.hasNull = hasNull;
     }
 
     @Override
@@ -508,13 +509,14 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
         boolean endStrict
     )
     {
+      final int firstValue = hasNull ? 1 : 0;
       int startIndex, endIndex;
       if (startValue == null) {
-        startIndex = 0;
+        startIndex = firstValue;
       } else {
         final String startValueToUse = NullHandling.emptyToNullIfNeeded(startValue);
         final int found = dictionary.indexOf(StringUtils.toUtf8ByteBuffer(startValueToUse));
-        if (found >= 0) {
+        if (found >= firstValue) {
           startIndex = startStrict ? found + 1 : found;
         } else {
           startIndex = -(found + 1);
@@ -526,7 +528,7 @@ public class DictionaryEncodedStringIndexSupplier implements ColumnIndexSupplier
       } else {
         final String endValueToUse = NullHandling.emptyToNullIfNeeded(endValue);
         final int found = dictionary.indexOf(StringUtils.toUtf8ByteBuffer(endValueToUse));
-        if (found >= 0) {
+        if (found >= firstValue) {
           endIndex = endStrict ? found : found + 1;
         } else {
           endIndex = -(found + 1);

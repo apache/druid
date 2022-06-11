@@ -22,8 +22,10 @@ package org.apache.druid.segment.filter;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
@@ -42,8 +44,10 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.BitmapColumnIndex;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.LexicographicalRangeIndex;
+import org.apache.druid.segment.column.NullValueIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -81,12 +85,50 @@ public class BoundFilter implements Filter
         // column
         return null;
       }
-      return rangeIndex.forRange(
+      final BitmapColumnIndex rangeBitmaps = rangeIndex.forRange(
           boundDimFilter.getLower(),
           boundDimFilter.isLowerStrict(),
           boundDimFilter.getUpper(),
           boundDimFilter.isUpperStrict()
       );
+      // preserve sad backwards compatible behavior where bound filter matches 'null' if the lower bound is not set
+      if (boundDimFilter.hasLowerBound() && !NullHandling.isNullOrEquivalent(boundDimFilter.getLower())) {
+        return rangeBitmaps;
+      } else {
+        final NullValueIndex nulls = indexSupplier.as(NullValueIndex.class);
+        if (nulls == null) {
+          return null;
+        }
+        final BitmapColumnIndex nullBitmap = nulls.forNull();
+        return new BitmapColumnIndex()
+        {
+          @Override
+          public ColumnIndexCapabilities getIndexCapabilities()
+          {
+            return rangeBitmaps.getIndexCapabilities().merge(nullBitmap.getIndexCapabilities());
+          }
+
+          @Override
+          public double estimateSelectivity(int totalRows)
+          {
+            return Math.min(
+                1.0,
+                rangeBitmaps.estimateSelectivity(totalRows) + nullBitmap.estimateSelectivity(totalRows)
+            );
+          }
+
+          @Override
+          public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+          {
+            return bitmapResultFactory.union(
+                ImmutableList.of(
+                    rangeBitmaps.computeBitmapResult(bitmapResultFactory),
+                    nullBitmap.computeBitmapResult(bitmapResultFactory)
+                )
+            );
+          }
+        };
+      }
     } else {
       return Filters.makePredicateIndex(boundDimFilter.getDimension(), selector, getPredicateFactory());
     }
