@@ -106,11 +106,17 @@ public class SqlLifecycle
   @GuardedBy("stateLock")
   private State state = State.NEW;
 
-  // init during intialize
+  // init during initialize
   private String sql;
   private QueryContext queryContext;
   private List<TypedValue> parameters;
+
   // init during plan
+  /**
+   * The Druid planner follows the SQL statement through the lifecycle.
+   * The planner's state is start --> validate --> (prepare | plan).
+   */
+  private DruidPlanner planner;
   private PlannerContext plannerContext;
   private ValidationResult validationResult;
   private PrepareResult prepareResult;
@@ -170,7 +176,7 @@ public class SqlLifecycle
   }
 
   /**
-   * Assign dynamic parameters to be used to substitute values during query exection. This can be performed at any
+   * Assign dynamic parameters to be used to substitute values during query execution. This can be performed at any
    * part of the lifecycle.
    */
   public void setParameters(List<TypedValue> parameters)
@@ -228,15 +234,20 @@ public class SqlLifecycle
     checkAccess(access);
   }
 
+  /**
+   * Perform the validation step on the Druid planner, leaving the planner
+   * ready to perform either prepare or plan.
+   */
   private ValidationResult validate(AuthenticationResult authenticationResult)
   {
-    try (DruidPlanner planner = plannerFactory.createPlanner(sql, queryContext)) {
+    try {
+      planner = plannerFactory.createPlanner(sql, queryContext);
       // set planner context for logs/metrics in case something explodes early
-      this.plannerContext = planner.getPlannerContext();
-      this.plannerContext.setAuthenticationResult(authenticationResult);
+      plannerContext = planner.getPlannerContext();
+      plannerContext.setAuthenticationResult(authenticationResult);
       // set parameters on planner context, if parameters have already been set
-      this.plannerContext.setParameters(parameters);
-      this.validationResult = planner.validate(authConfig.authorizeQueryContextParams());
+      plannerContext.setParameters(parameters);
+      validationResult = planner.validate(authConfig.authorizeQueryContextParams());
       return validationResult;
     }
     // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
@@ -268,19 +279,23 @@ public class SqlLifecycle
   }
 
   /**
-   * Prepare the query lifecycle for execution, without completely planning into something that is executable, but
-   * including some initial parsing and validation and any dyanmic parameter type resolution, to support prepared
+   * Prepare the query lifecycle for execution, without completely planning into
+   * something that is executable, but including some initial parsing and
+   * validation and any dynamic parameter type resolution, to support prepared
    * statements via JDBC.
+   *
+   * The planner must have already performed the validation step: the planner
+   * state is reused here.
    */
   public PrepareResult prepare() throws RelConversionException
   {
     synchronized (stateLock) {
       if (state != State.AUTHORIZED) {
-        throw new ISE("Cannot prepare because current state[%s] is not [%s].", state, State.AUTHORIZED);
+        throw new ISE("Cannot prepare because current state [%s] is not [%s].", state, State.AUTHORIZED);
       }
     }
     Preconditions.checkNotNull(plannerContext, "Cannot prepare, plannerContext is null");
-    try (DruidPlanner planner = plannerFactory.createPlannerWithContext(plannerContext)) {
+    try {
       this.prepareResult = planner.prepare();
       return prepareResult;
     }
@@ -291,18 +306,27 @@ public class SqlLifecycle
     catch (ValidationException e) {
       throw new SqlPlanningException(e);
     }
+    finally {
+      // Done with the planner, close it.
+      planner.close();
+      planner = null;
+    }
   }
 
   /**
    * Plan the query to enable execution.
    *
-   * If successful, the lifecycle will first transition from {@link State#AUTHORIZED} to {@link State#PLANNED}.
+   * The planner must have already performed the validation step: the planner
+   * state is reused here.
+   *
+   * If successful, the lifecycle will first transition from
+   * {@link State#AUTHORIZED} to {@link State#PLANNED}.
    */
   public void plan() throws RelConversionException
   {
     transition(State.AUTHORIZED, State.PLANNED);
     Preconditions.checkNotNull(plannerContext, "Cannot plan, plannerContext is null");
-    try (DruidPlanner planner = plannerFactory.createPlannerWithContext(plannerContext)) {
+    try {
       this.plannerResult = planner.plan();
     }
     // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
@@ -311,6 +335,11 @@ public class SqlLifecycle
     }
     catch (ValidationException e) {
       throw new SqlPlanningException(e);
+    }
+    finally {
+      // Done with the planner, close it.
+      planner.close();
+      planner = null;
     }
   }
 
@@ -376,7 +405,6 @@ public class SqlLifecycle
     });
   }
 
-
   @VisibleForTesting
   public ValidationResult runAnalyzeResources(AuthenticationResult authenticationResult)
   {
@@ -438,6 +466,11 @@ public class SqlLifecycle
 
         state = State.DONE;
       }
+    }
+
+    if (planner != null) {
+      planner.close();
+      planner = null;
     }
 
     final boolean success = e == null;

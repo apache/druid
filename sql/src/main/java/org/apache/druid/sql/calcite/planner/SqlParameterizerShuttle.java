@@ -53,7 +53,7 @@ public class SqlParameterizerShuttle extends SqlShuttle
       if (plannerContext.getParameters().size() > param.getIndex()) {
         TypedValue paramBinding = plannerContext.getParameters().get(param.getIndex());
         if (paramBinding == null) {
-          throw new IAE("Parameter at position[%s] is not bound", param.getIndex());
+          throw new IAE("Parameter at position [%s] is not bound", param.getIndex());
         }
         if (paramBinding.value == null) {
           return SqlLiteral.createNull(param.getParserPosition());
@@ -72,7 +72,7 @@ public class SqlParameterizerShuttle extends SqlShuttle
 
         return typeName.createLiteral(paramBinding.value, param.getParserPosition());
       } else {
-        throw new IAE("Parameter at position[%s] is not bound", param.getIndex());
+        throw new IAE("Parameter at position [%s] is not bound", param.getIndex());
       }
     }
     catch (ClassCastException ignored) {
