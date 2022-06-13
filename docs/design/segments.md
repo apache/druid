@@ -77,13 +77,13 @@ To get a better sense of these data structures, consider the ‘page’ column f
    value="Ke$ha":         [0,0,1,1]
 ```
 
-Note that the bitmap is different from the dictionary and list data structures: the dictionary and list grow linearly with the size of the data, but the size of the bitmap section is the product of data size * column cardinality. 
+Note that the bitmap is different from the dictionary and list data structures: the dictionary and list grow linearly with the size of the data, but the size of the bitmap section is the product of data size * column cardinality. That is, there is one bitmap per separate column value. (Columns with the same value share the same bitmap.)
 
 For each row in the list of column data, there is only a single bitmap that has a non-zero entry. This means that high cardinality columns have extremely sparse, and therefore highly compressible, bitmaps. Druid exploits this using compression algorithms that are specially suited for bitmaps, such as [Roaring bitmap compression](https://github.com/RoaringBitmap/RoaringBitmap).
 
 ## Handling null values
 
-By default, Druid string dimension columns use the values `''` and `null` interchangeably and numeric and metric columns can not represent `null` at all, instead coercing nulls to `0`. However, Druid also provides a SQL compatible null handling mode, which you can enable at the system level, through `druid.generic.useDefaultValueForNull`. This setting, when set to `false`, allows Druid to create segments _at ingestion time_ in which the string columns can distinguish `''` from `null`, and numeric columns which can represent `null` valued rows instead of `0`.
+By default, Druid string dimension columns use the values `''` and `null` interchangeably and numeric and metric columns can not represent `null` at all, instead using nulls for `0`. However, Druid also provides a SQL compatible null handling mode, which you can enable at the system level, through `druid.generic.useDefaultValueForNull`. This setting, when set to `false`, allows Druid to create segments _at ingestion time_ in which the string columns can distinguish `''` from `null`, and numeric columns which can represent `null` valued rows instead of `0`.
 
 String dimension columns contain no additional column structures in this mode, instead they reserve an additional dictionary entry for the `null` value. Numeric columns are stored in the segment with an additional bitmap in which the set bits indicate `null` valued rows. 
 
@@ -91,7 +91,7 @@ In addition to slightly increased segment sizes, SQL compatible null handling ca
 
 ## Segments with different schemas
 
-Druid segments for the same datasource may have different schemas. If a string column (dimension) exists in one segment but not another, queries that involve both segments still work. Queries for the segment without the dimension behave as if the dimension contains only null values. Similarly, if one segment has a numeric column (metric) but another does not, queries on the segment without the metric generally operate as expected. Aggregations over the missing metric operate as if the metric doesn't exist.
+Druid segments for the same datasource may have different schemas. If a string column (dimension) exists in one segment but not another, queries that involve both segments still work. Queries for the segment without the dimension behave as if the dimension contains only blank values (default) or null valies (SQL-compatible mode). Similarly, if one segment has a numeric column (metric) but another does not, queries on the segment without the metric generally operate as expected. Aggregations over the missing metric operate as if the metric doesn't exist.
 
 ## Column format
 
@@ -136,7 +136,7 @@ the list is an array of values. Additionally, a row with *n* values in the list 
 
 Druid uses LZ4 by default to compress blocks of values for string, long, float, and double columns. Druid uses Roaring to compress bitmaps for string columns and numeric null values. We recommend that you use these defaults unless you've experimented with your data and query patterns suggest that non-default options will perform better in your specific case. 
 
-For string column bitmaps, the differences between using Roaring and Concise are most pronounced for high cardinality columns. In this case, Roaring is substantially faster on filters that match many values, but in some cases Concise can have a lower footprint due to the overhead of the Roaring format (but is still slower when many values are matched). You configure compression at the segment level, not for individual columns. See [IndexSpec](../ingestion/ingestion-spec.md#indexspec) for more details.
+Druid also supports Concise bitmap compression. For string column bitmaps, the differences between using Roaring and Concise are most pronounced for high cardinality columns. In this case, Roaring is substantially faster on filters that match many values, but in some cases Concise can have a lower footprint due to the overhead of the Roaring format (but is still slower when many values are matched). You configure compression at the segment level, not for individual columns. See [IndexSpec](../ingestion/ingestion-spec.md#indexspec) for more details.
 
 ## Segment identification
 
@@ -202,7 +202,7 @@ In the codebase, segments have an internal format version. The current segment f
 
 ## Implications of updating segments
 
-Druid batch indexing (either Hadoop-based or IndexTask-based) guarantees atomic updates on an interval-by-interval basis. In our example, until all `v2` segments for `2015-01-01/2015-01-02` are loaded in a Druid cluster, queries exclusively use `v1` segments. Once all `v2` segments are loaded and queryable, all queries ignore `v1` segments and switch to the `v2` segments. Shortly afterwards, the `v1` segments are unloaded from the cluster.
+Druid uses versioning to manage updates to create a form of MVCC (multi-version concurrency control.) These MVCC versions are distinct from the segment format version discussed above.
 
 Note that updates that span multiple segment intervals are only atomic within each interval. They are not atomic across the entire update. For example, if you have the following segments:
 
@@ -212,7 +212,7 @@ foo_2015-01-02/2015-01-03_v1_1
 foo_2015-01-03/2015-01-04_v1_2
 ```
 
-`v2` segments are loaded into the cluster as soon as they are built and replace `v1` segments for the period of time the segments overlap. Before v2 segments are completely loaded, the cluster may contain a mixture of `v1` and `v2` segments.
+`v2` segments are loaded into the cluster as soon as they are built and replace `v1` segments for the period of time the segments overlap. Before `v2` segments are completely loaded, the cluster may contain a mixture of `v1` and `v2` segments.
 
 ```
 foo_2015-01-01/2015-01-02_v1_0
