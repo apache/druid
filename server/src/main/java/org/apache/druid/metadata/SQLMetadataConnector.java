@@ -217,7 +217,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    * @param tableName The name of the table being altered
    * @param sql ALTER statment to be executed
    */
-  public void alterTable(final String tableName, final Iterable<String> sql)
+  private void alterTable(final String tableName, final Iterable<String> sql)
   {
     try {
       retryWithHandle(
@@ -858,11 +858,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   /**
    * Interrogate table metadata and return true or false depending on the existance of the indicated column
    *
+   * public visibility because DerbyConnector needs to override thanks to uppercase table and column names invalidating
+   * this implementation.
+   *
    * @param tableName The table being interrogated
    * @param columnName The column being looked for
    * @return boolean indicating the existence of the column in question
    */
-  private boolean tableHasColumn(String tableName, String columnName)
+  public boolean tableHasColumn(String tableName, String columnName)
   {
     return getDBI().withHandle(
         new HandleCallback<Boolean>()

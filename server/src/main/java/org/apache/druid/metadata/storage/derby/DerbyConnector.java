@@ -35,6 +35,10 @@ import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
 @ManageLifecycle
 public class DerbyConnector extends SQLMetadataConnector
 {
@@ -134,6 +138,46 @@ public class DerbyConnector extends SQLMetadataConnector
                 )
             ).execute();
             return null;
+          }
+        }
+    );
+  }
+
+  /**
+   * Interrogate table metadata and return true or false depending on the existance of the indicated column
+   *
+   * public visibility because DerbyConnector needs to override thanks to uppercase table and column names.
+   *
+   * @param tableName The table being interrogated
+   * @param columnName The column being looked for
+   * @return boolean indicating the existence of the column in question
+   */
+  @Override
+  public boolean tableHasColumn(String tableName, String columnName)
+  {
+    return getDBI().withHandle(
+        new HandleCallback<Boolean>()
+        {
+          @Override
+          public Boolean withHandle(Handle handle)
+          {
+            try {
+              if (tableExists(handle, tableName)) {
+                DatabaseMetaData dbMetaData = handle.getConnection().getMetaData();
+                ResultSet columns = dbMetaData.getColumns(
+                    null,
+                    null,
+                    tableName.toUpperCase(),
+                    columnName.toUpperCase()
+                );
+                return columns.next();
+              } else {
+                return false;
+              }
+            }
+            catch (SQLException e) {
+              return false;
+            }
           }
         }
     );

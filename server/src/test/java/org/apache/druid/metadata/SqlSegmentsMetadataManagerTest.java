@@ -46,6 +46,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.skife.jdbi.v2.Batch;
+import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.IOException;
 import java.util.Set;
@@ -110,6 +113,11 @@ public class SqlSegmentsMetadataManagerTest
   private void publish(DataSegment segment, boolean used, DateTime lastUsed) throws IOException
   {
     boolean partitioned = !(segment.getShardSpec() instanceof NoneShardSpec);
+
+    String lastUsedStr = null;
+    if (null != lastUsed) {
+      lastUsedStr = lastUsed.toString();
+    }
     publisher.publishSegment(
         segment.getId().toString(),
         segment.getDataSource(),
@@ -120,7 +128,7 @@ public class SqlSegmentsMetadataManagerTest
         segment.getVersion(),
         used,
         jsonMapper.writeValueAsBytes(segment),
-        lastUsed.toString()
+        lastUsedStr
     );
   }
 
@@ -144,6 +152,7 @@ public class SqlSegmentsMetadataManagerTest
         connector
     );
 
+    //TODO can I have a test override to allow nullable last_used?
     connector.createSegmentTable();
 
     publisher.publishSegment(segment1);
@@ -377,6 +386,10 @@ public class SqlSegmentsMetadataManagerTest
   {
     sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
     sqlSegmentsMetadataManager.poll();
+
+    // We alter the segment table to allow nullable last_used in order to test compatibility during druid upgrade from version without last_used.
+    allowLastUsedToBeNullable();
+
     Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
     int numChangedSegments = sqlSegmentsMetadataManager.markAsUnusedAllSegmentsInDataSource("wikipedia");
     Assert.assertEquals(2, numChangedSegments);
@@ -400,6 +413,15 @@ public class SqlSegmentsMetadataManagerTest
     );
     publish(newSegment2, false, DateTimes.nowUtc().minus(Duration.parse("PT172800S").getMillis()));
 
+    final DataSegment newSegment3 = createSegment(
+        newDs,
+        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
+        "2017-10-15T20:19:12.565Z",
+        "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        0
+    );
+    publish(newSegment3, false, null);
+
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval()),
         sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.of("3000"), 1, DateTimes.COMPARE_DATE_AS_STRING_MAX)
@@ -417,13 +439,18 @@ public class SqlSegmentsMetadataManagerTest
     );
 
     // Test a buffer period that should exclude some segments
+
+    // The wikipedia datasource has segments generated with last used time equal to roughly the time of test run. None of these segments should be selected with a bufer period of 1 day
     Assert.assertEquals(
         ImmutableList.of(),
         sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.of("3000"), 5, DateTimes.nowUtc().minus(Duration.parse("PT86400S")))
     );
 
+    // One of the 3 segments in newDs has a null last_used which should mean getUnusedSegmentIntervals returns it because null last_used means bufferPeriod does not come into play
+    // One of the 3 segments in newDs has a last_used older than 1 day which means it should also be returned
+    // The last of the 3 segemns in newDs has a last_used date less than one day and should not be returned
     Assert.assertEquals(
-        ImmutableList.of(newSegment2.getInterval()),
+        ImmutableList.of(newSegment2.getInterval(), newSegment3.getInterval()),
         sqlSegmentsMetadataManager.getUnusedSegmentIntervals(newDs, DateTimes.of("3000"), 5, DateTimes.nowUtc().minus(Duration.parse("PT86400S")))
     );
   }
@@ -907,6 +934,36 @@ public class SqlSegmentsMetadataManagerTest
     Assert.assertEquals(2, dataSegmentSet.size());
     Assert.assertTrue(dataSegmentSet.contains(segment1));
     Assert.assertTrue(dataSegmentSet.contains(newSegment2));
+  }
+
+  /**
+   * Allows us to test backwards compatibility of segments table where null values are possible for last_used column.
+   */
+  private void allowLastUsedToBeNullable()
+  {
+    try {
+      derbyConnectorRule.getConnector().retryWithHandle(
+          new HandleCallback<Void>()
+          {
+            @Override
+            public Void withHandle(Handle handle)
+            {
+              final Batch batch = handle.createBatch();
+              batch.add(
+                  StringUtils.format(
+                      "ALTER TABLE %1$s ALTER COLUMN LAST_USED NULL",
+                      derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable().toUpperCase()
+                  )
+              );
+              batch.execute();
+              return null;
+            }
+          }
+      );
+    }
+    catch (Exception e) {
+      return;
+    }
   }
 
 }
