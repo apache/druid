@@ -26,6 +26,7 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -301,7 +302,7 @@ public class CliPeon extends GuiceRunnable
   public void run()
   {
     try {
-      Injector injector = makeInjector();
+      Injector injector = makeInjector(ImmutableSet.of(NodeRole.PEON));
       try {
         final Lifecycle lifecycle = initLifecycle(injector);
         final Thread hook = new Thread(
