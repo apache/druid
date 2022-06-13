@@ -89,7 +89,7 @@ public class DruidConnection
       }
 
       if (statements.size() >= maxStatements) {
-        throw DruidMeta.logFailure(new ISE("Too many open statements, limit is[%,d]", maxStatements));
+        throw DruidMeta.logFailure(new ISE("Too many open statements, limit is [%,d]", maxStatements));
       }
 
       @SuppressWarnings("GuardedBy")
@@ -100,14 +100,14 @@ public class DruidConnection
           sqlLifecycleFactory.factorize(),
           () -> {
             // onClose function for the statement
-            LOG.debug("Connection[%s] closed statement[%s].", connectionId, statementId);
+            LOG.debug("Connection [%s] closed statement [%s].", connectionId, statementId);
             // statements will be accessed unsynchronized to avoid deadlock
             statements.remove(statementId);
           }
       );
 
       statements.put(statementId, statement);
-      LOG.debug("Connection[%s] opened statement[%s].", connectionId, statementId);
+      LOG.debug("Connection [%s] opened statement [%s].", connectionId, statementId);
       return statement;
     }
   }
@@ -145,11 +145,11 @@ public class DruidConnection
           statement.close();
         }
         catch (Exception e) {
-          LOG.warn("Connection[%s] failed to close statement[%s]!", connectionId, statement.getStatementId());
+          LOG.warn("Connection [%s] failed to close statement [%s]!", connectionId, statement.getStatementId());
         }
       }
 
-      LOG.debug("Connection[%s] closed.", connectionId);
+      LOG.debug("Connection [%s] closed.", connectionId);
       open = false;
     }
   }

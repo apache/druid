@@ -148,7 +148,6 @@ public class SqlLifecycleTest
     mockPlannerContext.setAuthorizationResult(Access.OK);
     EasyMock.expectLastCall();
     EasyMock.expect(mockPlanner.validate(false)).andReturn(validationResult).once();
-    mockPlanner.close();
     EasyMock.expectLastCall();
 
     EasyMock.replay(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext);
@@ -160,9 +159,7 @@ public class SqlLifecycleTest
 
     // test prepare
     PrepareResult mockPrepareResult = EasyMock.createMock(PrepareResult.class);
-    EasyMock.expect(plannerFactory.createPlannerWithContext(EasyMock.eq(mockPlannerContext))).andReturn(mockPlanner).once();
     EasyMock.expect(mockPlanner.prepare()).andReturn(mockPrepareResult).once();
-    mockPlanner.close();
     EasyMock.expectLastCall();
     EasyMock.replay(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult);
     lifecycle.prepare();
@@ -173,7 +170,6 @@ public class SqlLifecycleTest
 
     // test plan
     PlannerResult mockPlanResult = EasyMock.createMock(PlannerResult.class);
-    EasyMock.expect(plannerFactory.createPlannerWithContext(EasyMock.eq(mockPlannerContext))).andReturn(mockPlanner).once();
     EasyMock.expect(mockPlanner.plan()).andReturn(mockPlanResult).once();
     mockPlanner.close();
     EasyMock.expectLastCall();
@@ -244,7 +240,6 @@ public class SqlLifecycleTest
     mockPlannerContext.setAuthorizationResult(Access.OK);
     EasyMock.expectLastCall();
     EasyMock.expect(mockPlanner.validate(false)).andReturn(validationResult).once();
-    mockPlanner.close();
     EasyMock.expectLastCall();
 
     HttpServletRequest request = EasyMock.createMock(HttpServletRequest.class);
@@ -262,9 +257,7 @@ public class SqlLifecycleTest
 
     // test prepare
     PrepareResult mockPrepareResult = EasyMock.createMock(PrepareResult.class);
-    EasyMock.expect(plannerFactory.createPlannerWithContext(EasyMock.eq(mockPlannerContext))).andReturn(mockPlanner).once();
     EasyMock.expect(mockPlanner.prepare()).andReturn(mockPrepareResult).once();
-    mockPlanner.close();
     EasyMock.expectLastCall();
     EasyMock.replay(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult);
     lifecycle.prepare();
@@ -275,7 +268,6 @@ public class SqlLifecycleTest
 
     // test plan
     PlannerResult mockPlanResult = EasyMock.createMock(PlannerResult.class);
-    EasyMock.expect(plannerFactory.createPlannerWithContext(EasyMock.eq(mockPlannerContext))).andReturn(mockPlanner).once();
     EasyMock.expect(mockPlanner.plan()).andReturn(mockPlanResult).once();
     mockPlanner.close();
     EasyMock.expectLastCall();

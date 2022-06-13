@@ -46,7 +46,6 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.tools.RelConversionException;
@@ -86,6 +85,7 @@ abstract class QueryHandler extends BaseStatementHandler
   protected SqlNode queryNode;
   protected SqlExplain explain;
   protected SqlNode validatedQueryNode;
+  private RelRoot rootQueryRel;
 
   public QueryHandler(HandlerContext handlerContext, SqlNode sqlNode, SqlExplain explain)
   {
@@ -111,7 +111,7 @@ abstract class QueryHandler extends BaseStatementHandler
   @Override
   public PrepareResult prepare() throws RelConversionException, ValidationException
   {
-    final RelRoot rootQueryRel = handlerContext.planner().rel(validatedQueryNode);
+    rootQueryRel = handlerContext.planner().rel(validatedQueryNode);
 
     final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
     final SqlValidator validator = handlerContext.planner().getValidator();
@@ -139,13 +139,25 @@ abstract class QueryHandler extends BaseStatementHandler
 
   protected abstract QueryMaker buildQueryMaker(RelRoot rootQueryRel) throws ValidationException;
 
+  /**
+   * Plan an SQL query for execution, returning a {@link PlannerResult} which
+   * can be used to actually execute the query.
+   *
+   * Ideally, the query can be planned into a native Druid query, using
+   * {@link #planWithDruidConvention}, but will fall-back to
+   * {@link #planWithBindableConvention} if this is not possible.
+   */
   @Override
-  public PlannerResult plan() throws SqlParseException, ValidationException, RelConversionException
+  public PlannerResult plan() throws ValidationException, RelConversionException
   {
     CalcitePlanner planner = handlerContext.planner();
+    if (rootQueryRel == null) {
+      // Set if the prepare step was done, null if jump straight to plan.
+      rootQueryRel = planner.rel(validatedQueryNode);
+    }
+
     // the planner's type factory is not available until after parsing
     RexBuilder rexBuilder = new RexBuilder(planner.getTypeFactory());
-    final RelRoot rootQueryRel = planner.rel(validatedQueryNode);
 
     try {
       return planWithDruidConvention(rootQueryRel, rexBuilder);
@@ -277,7 +289,7 @@ abstract class QueryHandler extends BaseStatementHandler
       final DruidRel<?> druidRel,
       RelRoot possiblyLimitedRoot,
       QueryMaker queryMaker
-  ) throws ValidationException
+  )
   {
     final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
       // sanity check

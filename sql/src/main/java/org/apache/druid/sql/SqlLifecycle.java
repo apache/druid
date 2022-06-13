@@ -299,17 +299,8 @@ public class SqlLifecycle
       this.prepareResult = planner.prepare();
       return prepareResult;
     }
-    // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
-    catch (SqlParseException e) {
-      throw new SqlPlanningException(e);
-    }
     catch (ValidationException e) {
       throw new SqlPlanningException(e);
-    }
-    finally {
-      // Done with the planner, close it.
-      planner.close();
-      planner = null;
     }
   }
 
@@ -328,10 +319,6 @@ public class SqlLifecycle
     Preconditions.checkNotNull(plannerContext, "Cannot plan, plannerContext is null");
     try {
       this.plannerResult = planner.plan();
-    }
-    // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
-    catch (SqlParseException e) {
-      throw new SqlPlanningException(e);
     }
     catch (ValidationException e) {
       throw new SqlPlanningException(e);

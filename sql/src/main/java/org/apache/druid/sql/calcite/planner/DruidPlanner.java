@@ -59,7 +59,7 @@ public class DruidPlanner implements Closeable
     void analyze() throws ValidationException;
     Set<ResourceAction> resourceActions();
     PrepareResult prepare() throws RelConversionException, ValidationException;
-    PlannerResult plan() throws SqlParseException, ValidationException, RelConversionException;
+    PlannerResult plan() throws ValidationException, RelConversionException;
   }
 
   static final EmittingLogger log = new EmittingLogger(DruidPlanner.class);
@@ -140,7 +140,7 @@ public class DruidPlanner implements Closeable
    * Prepare a SQL query for execution to support prepared statements via JDBC.
    * The statement must have already been validated.
    */
-  public PrepareResult prepare() throws SqlParseException, ValidationException, RelConversionException
+  public PrepareResult prepare() throws ValidationException, RelConversionException
   {
     Preconditions.checkState(state == State.VALIDATED);
     state = State.PREPARED;
@@ -150,14 +150,10 @@ public class DruidPlanner implements Closeable
   /**
    * Plan an SQL query for execution, returning a {@link PlannerResult} which
    * can be used to actually execute the query.
-   *
-   * Ideally, the query can be planned into a native Druid query, using
-   * {@link #planWithDruidConvention}, but will fall-back to
-   * {@link #planWithBindableConvention} if this is not possible.
    */
-  public PlannerResult plan() throws SqlParseException, ValidationException, RelConversionException
+  public PlannerResult plan() throws ValidationException, RelConversionException
   {
-    Preconditions.checkState(state == State.VALIDATED);
+    Preconditions.checkState(state == State.VALIDATED || state == State.PREPARED);
     state = State.PLANNED;
     return handler.plan();
   }

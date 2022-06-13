@@ -109,15 +109,7 @@ public class PlannerFactory
         queryContext
     );
 
-    return createPlannerWithContext(context);
-  }
-
-  /**
-   * Create a new Druid query planner, re-using a previous {@link PlannerContext}
-   */
-  public DruidPlanner createPlannerWithContext(final PlannerContext plannerContext)
-  {
-    return new DruidPlanner(buildFrameworkConfig(plannerContext), plannerContext, queryMakerFactory);
+    return new DruidPlanner(buildFrameworkConfig(context), context, queryMakerFactory);
   }
 
   /**

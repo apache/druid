@@ -51,6 +51,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -121,15 +122,15 @@ public class DruidStatementTest extends CalciteTestBase
       Assert.assertEquals(Meta.StatementType.SELECT, signature.statementType);
       Assert.assertEquals(sql, signature.sql);
       Assert.assertEquals(
-          Lists.newArrayList(
-              Lists.newArrayList("__time", "TIMESTAMP", "java.lang.Long"),
-              Lists.newArrayList("cnt", "BIGINT", "java.lang.Number"),
-              Lists.newArrayList("dim1", "VARCHAR", "java.lang.String"),
-              Lists.newArrayList("dim2", "VARCHAR", "java.lang.String"),
-              Lists.newArrayList("dim3", "VARCHAR", "java.lang.String"),
-              Lists.newArrayList("m1", "FLOAT", "java.lang.Float"),
-              Lists.newArrayList("m2", "DOUBLE", "java.lang.Double"),
-              Lists.newArrayList("unique_dim1", "OTHER", "java.lang.Object")
+          Arrays.asList(
+              Arrays.asList("__time", "TIMESTAMP", "java.lang.Long"),
+              Arrays.asList("cnt", "BIGINT", "java.lang.Number"),
+              Arrays.asList("dim1", "VARCHAR", "java.lang.String"),
+              Arrays.asList("dim2", "VARCHAR", "java.lang.String"),
+              Arrays.asList("dim3", "VARCHAR", "java.lang.String"),
+              Arrays.asList("m1", "FLOAT", "java.lang.Float"),
+              Arrays.asList("m2", "DOUBLE", "java.lang.Double"),
+              Arrays.asList("unique_dim1", "OTHER", "java.lang.Object")
           ),
           Lists.transform(
               signature.columns,
@@ -138,7 +139,7 @@ public class DruidStatementTest extends CalciteTestBase
                 @Override
                 public List<String> apply(final ColumnMetaData columnMetaData)
                 {
-                  return Lists.newArrayList(
+                  return Arrays.asList(
                       columnMetaData.label,
                       columnMetaData.type.name,
                       columnMetaData.type.rep.clazz.getName()
@@ -161,7 +162,7 @@ public class DruidStatementTest extends CalciteTestBase
           Meta.Frame.create(
               0,
               true,
-              Lists.newArrayList(
+              Arrays.asList(
                   new Object[]{""},
                   new Object[]{
                       "1"
@@ -189,7 +190,7 @@ public class DruidStatementTest extends CalciteTestBase
           Meta.Frame.create(
               0,
               true,
-              Lists.newArrayList(
+              Arrays.asList(
                   new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
                   new Object[]{
                       DateTimes.of("2000-01-02").getMillis(),
@@ -221,7 +222,7 @@ public class DruidStatementTest extends CalciteTestBase
           Meta.Frame.create(
               0,
               false,
-              Lists.newArrayList(
+              Arrays.asList(
                   new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
                   new Object[]{
                       DateTimes.of("2000-01-02").getMillis(),
@@ -242,7 +243,7 @@ public class DruidStatementTest extends CalciteTestBase
           Meta.Frame.create(
               2,
               true,
-              Lists.newArrayList(
+              Arrays.asList(
                   new Object[]{DateTimes.of("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
                   new Object[]{DateTimes.of("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},
                   new Object[]{DateTimes.of("2001-01-02").getMillis(), 1L, "def", "abc", 5.0f},
@@ -255,6 +256,7 @@ public class DruidStatementTest extends CalciteTestBase
     }
   }
 
+  @SuppressWarnings("resource")
   private DruidStatement statement(String sql)
   {
     return new DruidStatement(

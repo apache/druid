@@ -719,7 +719,6 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     );
   }
 
-
   @Test(timeout = 90_000L)
   public void testConcurrentQueries() throws Exception
   {
@@ -754,14 +753,14 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
   @Test
   public void testTooManyStatements() throws Exception
   {
-    final Statement statement1 = client.createStatement();
-    final Statement statement2 = client.createStatement();
-    final Statement statement3 = client.createStatement();
-    final Statement statement4 = client.createStatement();
+    client.createStatement();
+    client.createStatement();
+    client.createStatement();
+    client.createStatement();
 
     expectedException.expect(AvaticaClientRuntimeException.class);
-    expectedException.expectMessage("Too many open statements, limit is[4]");
-    final Statement statement5 = client.createStatement();
+    expectedException.expectMessage("Too many open statements, limit is [4]");
+    client.createStatement();
   }
 
   @Test
@@ -849,7 +848,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     expectedException.expect(AvaticaClientRuntimeException.class);
     expectedException.expectMessage("Too many connections");
 
-    final Connection connection5 = DriverManager.getConnection(url);
+    DriverManager.getConnection(url);
   }
 
   @Test
@@ -864,7 +863,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     final Connection connection3 = DriverManager.getConnection(url);
     connection3.createStatement().close();
 
-    final Connection connection4 = DriverManager.getConnection(url);
+    DriverManager.getConnection(url);
     Assert.assertTrue(true);
   }
 
@@ -1051,7 +1050,6 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void testSqlRequestLog() throws Exception
   {
     // valid sql
@@ -1435,6 +1433,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     }
   }
 
+  @SafeVarargs
   private static Map<String, Object> row(final Pair<String, ?>... entries)
   {
     final Map<String, Object> m = new HashMap<>();

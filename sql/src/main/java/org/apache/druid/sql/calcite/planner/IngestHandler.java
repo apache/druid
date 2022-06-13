@@ -219,7 +219,12 @@ abstract class IngestHandler extends QueryHandler
     private final DateTimeZone timeZone;
     private List<String> replaceIntervals;
 
-    public ReplaceHandler(HandlerContext handlerContext, DruidSqlReplace sqlNode, DateTimeZone timeZone, SqlExplain explain)
+    public ReplaceHandler(
+        HandlerContext handlerContext,
+        DruidSqlReplace sqlNode,
+        DateTimeZone timeZone,
+        SqlExplain explain
+    )
     {
       super(handlerContext, sqlNode, explain);
       this.sqlNode = sqlNode;
