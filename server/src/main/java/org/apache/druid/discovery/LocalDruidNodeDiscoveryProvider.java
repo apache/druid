@@ -105,7 +105,7 @@ public class LocalDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider 
       listener.nodeViewInitialized();
     }
 
-    private synchronized boolean contains(DruidNode node)
+    private boolean contains(DruidNode node)
     {
       synchronized (LocalDruidNodeDiscoveryProvider.this) {
         return nodes.containsKey(node);
