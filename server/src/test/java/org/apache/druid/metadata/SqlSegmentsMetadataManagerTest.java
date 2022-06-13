@@ -51,6 +51,7 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.IOException;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -952,7 +953,7 @@ public class SqlSegmentsMetadataManagerTest
               batch.add(
                   StringUtils.format(
                       "ALTER TABLE %1$s ALTER COLUMN LAST_USED NULL",
-                      derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable().toUpperCase()
+                      derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable().toUpperCase(Locale.ENGLISH)
                   )
               );
               batch.execute();

@@ -38,6 +38,7 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Locale;
 
 @ManageLifecycle
 public class DerbyConnector extends SQLMetadataConnector
@@ -167,8 +168,8 @@ public class DerbyConnector extends SQLMetadataConnector
                 ResultSet columns = dbMetaData.getColumns(
                     null,
                     null,
-                    tableName.toUpperCase(),
-                    columnName.toUpperCase()
+                    tableName.toUpperCase(Locale.ENGLISH),
+                    columnName.toUpperCase(Locale.ENGLISH)
                 );
                 return columns.next();
               } else {
