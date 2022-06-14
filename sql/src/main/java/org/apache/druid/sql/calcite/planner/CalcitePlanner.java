@@ -267,13 +267,13 @@ public class CalcitePlanner implements Planner, ViewExpander
   }
 
   @Override
-  public final RelNode convert(SqlNode sql) throws RelConversionException
+  public final RelNode convert(SqlNode sql)
   {
     return rel(sql).rel;
   }
 
   @Override
-  public RelRoot rel(SqlNode sql) throws RelConversionException
+  public RelRoot rel(SqlNode sql)
   {
     ensure(State.STATE_4_VALIDATED);
     assert validatedSqlNode != null;
@@ -384,7 +384,7 @@ public class CalcitePlanner implements Planner, ViewExpander
       int ruleSetIndex,
       RelTraitSet requiredOutputTraits,
       RelNode rel
-  ) throws RelConversionException
+  )
   {
     ensure(State.STATE_5_CONVERTED);
     rel.getCluster().setMetadataProvider(
