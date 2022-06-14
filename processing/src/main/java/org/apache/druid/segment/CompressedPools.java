@@ -34,7 +34,7 @@ public class CompressedPools
   private static final Logger log = new Logger(CompressedPools.class);
 
   public static final int BUFFER_SIZE = 0x10000;
-  public static final StupidPool<BufferRecycler> BUFFER_RECYCLER_POOL = new StupidPool<>(
+  private static final StupidPool<BufferRecycler> BUFFER_RECYCLER_POOL = new StupidPool<>(
       "bufferRecyclerPool",
       new Supplier<BufferRecycler>()
       {
@@ -54,7 +54,7 @@ public class CompressedPools
     return BUFFER_RECYCLER_POOL.take();
   }
 
-  public static final StupidPool<byte[]> OUTPUT_BYTES_POOL = new StupidPool<byte[]>(
+  private static final StupidPool<byte[]> OUTPUT_BYTES_POOL = new StupidPool<byte[]>(
       "outputBytesPool",
       new Supplier<byte[]>()
       {
@@ -74,7 +74,7 @@ public class CompressedPools
     return OUTPUT_BYTES_POOL.take();
   }
 
-  public static final StupidPool<ByteBuffer> BIG_ENDIAN_BYTE_BUF_POOL = new StupidPool<ByteBuffer>(
+  private static final StupidPool<ByteBuffer> BIG_ENDIAN_BYTE_BUF_POOL = new StupidPool<ByteBuffer>(
       "bigEndByteBufPool",
       new Supplier<ByteBuffer>()
       {
@@ -89,7 +89,7 @@ public class CompressedPools
       }
   );
 
-  public static final StupidPool<ByteBuffer> LITTLE_ENDIAN_BYTE_BUF_POOL = new StupidPool<>(
+  private static final StupidPool<ByteBuffer> LITTLE_ENDIAN_BYTE_BUF_POOL = new StupidPool<>(
       "littleEndByteBufPool",
       new Supplier<ByteBuffer>()
       {

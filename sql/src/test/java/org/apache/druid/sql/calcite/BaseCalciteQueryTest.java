@@ -522,7 +522,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     walker.close();
     walker = null;
-    System.gc();
   }
 
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException

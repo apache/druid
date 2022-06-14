@@ -31,18 +31,6 @@ import org.junit.Test;
 
 public class StupidPoolTest
 {
-  static {
-    final String key = "druid.test.stupidPool.poison";
-    final String value = System.getProperty(key);
-    if (!Boolean.parseBoolean(value)) {
-      throw new RE(
-          "Resource leaks must be caught.  Property [%s] must be set to [\"true\"] for that to happen, it was [%s].",
-          key,
-          value
-      );
-    }
-  }
-
   private Supplier<String> generator;
   private CloseableStupidPool<String> poolOfString;
   private ResourceHolder<String> resourceHolderObj;
