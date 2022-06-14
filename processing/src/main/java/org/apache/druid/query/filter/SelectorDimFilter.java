@@ -117,9 +117,11 @@ public class SelectorDimFilter extends AbstractOptimizableDimFilter implements D
     return dimension;
   }
 
+  /**
+   * Value to filter against. If {@code null}, then the meaning is `is null`.
+   */
   @Nullable
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getValue()
   {
     return value;

@@ -319,9 +319,12 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return limitSpec;
   }
 
+  /**
+   * Subtotals spec may be empty which has a distinct meaning from {@code null}.
+   */
   @Nullable
   @JsonProperty("subtotalsSpec")
-  @JsonInclude(JsonInclude.Include.NON_EMPTY)
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public List<List<String>> getSubtotalsSpec()
   {
     return subtotalsSpec;
