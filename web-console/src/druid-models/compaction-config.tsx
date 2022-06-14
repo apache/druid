@@ -250,7 +250,8 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     type: 'number',
     defaultValue: 10,
     min: 1,
-    defined: t => oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
+    defined: t =>
+      oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim', 'range'),
     info: <>Maximum number of merge tasks which can be run at the same time.</>,
   },
   {
