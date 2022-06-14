@@ -227,21 +227,15 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     if (actualInterval == null) {
       return null;
     }
-
-    final ColumnSelectorColumnIndexSelector bitmapIndexSelector = makeBitmapIndexSelector(virtualColumns);
-
-    final FilterAnalysis filterAnalysis = analyzeFilter(filter, bitmapIndexSelector, queryMetrics);
-
     return new QueryableIndexCursorSequenceBuilder(
         index,
         actualInterval,
         virtualColumns,
-        filterAnalysis.getPreFilterBitmap(),
+        filter,
+        queryMetrics,
         getMinTime().getMillis(),
         getMaxTime().getMillis(),
-        descending,
-        filterAnalysis.getPostFilter(),
-        bitmapIndexSelector
+        descending
     ).buildVectorized(vectorSize > 0 ? vectorSize : DEFAULT_VECTOR_SIZE);
   }
 
@@ -265,21 +259,16 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       return Sequences.empty();
     }
 
-    final ColumnSelectorColumnIndexSelector bitmapIndexSelector = makeBitmapIndexSelector(virtualColumns);
-
-    final FilterAnalysis filterAnalysis = analyzeFilter(filter, bitmapIndexSelector, queryMetrics);
-
     return Sequences.filter(
         new QueryableIndexCursorSequenceBuilder(
             index,
             actualInterval,
             virtualColumns,
-            filterAnalysis.getPreFilterBitmap(),
+            filter,
+            queryMetrics,
             getMinTime().getMillis(),
             getMaxTime().getMillis(),
-            descending,
-            filterAnalysis.getPostFilter(),
-            bitmapIndexSelector
+            descending
         ).build(gran),
         Objects::nonNull
     );
@@ -295,7 +284,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     // Compute and cache minTime, maxTime.
     final ColumnHolder columnHolder = index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME);
-    try (final NumericColumn column = (NumericColumn) columnHolder.getColumn()) {
+    try (NumericColumn column = (NumericColumn) columnHolder.getColumn()) {
       this.minTime = DateTimes.utc(column.getLongSingleValueRow(0));
       this.maxTime = DateTimes.utc(column.getLongSingleValueRow(column.length() - 1));
     }
@@ -316,12 +305,14 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @VisibleForTesting
-  public ColumnSelectorColumnIndexSelector makeBitmapIndexSelector(final VirtualColumns virtualColumns)
+  public ColumnSelectorColumnIndexSelector makeBitmapIndexSelector(
+      final VirtualColumns virtualColumns
+  )
   {
     return new ColumnSelectorColumnIndexSelector(
         index.getBitmapFactoryForDimensions(),
         virtualColumns,
-        index
+        new DeprecatedQueryableIndexColumnSelector(index)
     );
   }
 
@@ -440,4 +431,5 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       return postFilter;
     }
   }
+
 }

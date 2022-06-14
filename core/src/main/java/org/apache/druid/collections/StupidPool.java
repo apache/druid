@@ -39,6 +39,18 @@ import java.util.concurrent.atomic.AtomicReference;
 public class StupidPool<T> implements NonBlockingPool<T>
 {
   private static final Logger log = new Logger(StupidPool.class);
+  private static final AtomicBoolean POISONED = new AtomicBoolean(false);
+
+  static {
+    if (Boolean.parseBoolean(System.getProperty("druid.test.stupidPool.poison"))) {
+      POISONED.set(true);
+    }
+  }
+
+  public static boolean isPoisoned()
+  {
+    return POISONED.get();
+  }
 
   /**
    * StupidPool Implementation Note
@@ -64,6 +76,8 @@ public class StupidPool<T> implements NonBlockingPool<T>
 
   private final AtomicLong createdObjectsCounter = new AtomicLong(0);
   private final AtomicLong leakedObjectsCounter = new AtomicLong(0);
+
+  private final AtomicReference<RuntimeException> capturedException = new AtomicReference<>(null);
 
   //note that this is just the max entries in the cache, pool can still create as many buffers as needed.
   private final int objectsCacheMaxCount;
@@ -106,9 +120,20 @@ public class StupidPool<T> implements NonBlockingPool<T>
   {
     ObjectResourceHolder resourceHolder = objects.poll();
     if (resourceHolder == null) {
+      if (POISONED.get() && capturedException.get() != null) {
+        throw capturedException.get();
+      }
       return makeObjectWithHandler();
     } else {
       poolSize.decrementAndGet();
+      if (POISONED.get()) {
+        final RuntimeException exception = capturedException.get();
+        if (exception == null) {
+          resourceHolder.notifier.except = new RuntimeException("leaky leak!");
+        } else {
+          throw exception;
+        }
+      }
       return resourceHolder;
     }
   }
@@ -118,7 +143,7 @@ public class StupidPool<T> implements NonBlockingPool<T>
     T object = generator.get();
     createdObjectsCounter.incrementAndGet();
     ObjectId objectId = new ObjectId();
-    ObjectLeakNotifier notifier = new ObjectLeakNotifier(this);
+    ObjectLeakNotifier notifier = new ObjectLeakNotifier(this, POISONED.get());
     // Using objectId as referent for Cleaner, because if the object itself (e. g. ByteBuffer) is leaked after taken
     // from the pool, and the ResourceHolder is not closed, Cleaner won't notify about the leak.
     return new ObjectResourceHolder(object, objectId, Cleaners.register(objectId, notifier), notifier);
@@ -252,10 +277,14 @@ public class StupidPool<T> implements NonBlockingPool<T>
     final AtomicLong leakedObjectsCounter;
     final AtomicBoolean disabled = new AtomicBoolean(false);
 
-    ObjectLeakNotifier(StupidPool<?> pool)
+    private RuntimeException except;
+
+    ObjectLeakNotifier(StupidPool<?> pool, boolean poisoned)
     {
       poolReference = new WeakReference<>(pool);
       leakedObjectsCounter = pool.leakedObjectsCounter;
+
+      except = poisoned ? new RuntimeException("drip drip") : null;
     }
 
     @Override
@@ -264,7 +293,12 @@ public class StupidPool<T> implements NonBlockingPool<T>
       try {
         if (!disabled.getAndSet(true)) {
           leakedObjectsCounter.incrementAndGet();
-          log.warn("Not closed! Object leaked from %s. Allowing gc to prevent leak.", poolReference.get());
+          final StupidPool<?> pool = poolReference.get();
+          log.warn("Not closed! Object leaked from %s. Allowing gc to prevent leak.", pool);
+          if (except != null && pool != null) {
+            log.error(except, "notifier[%s], dumping stack trace from object checkout and poisoning pool", this);
+            pool.capturedException.set(except);
+          }
         }
       }
       // Exceptions must not be thrown in Cleaner.clean(), which calls this ObjectReclaimer.run() method

@@ -17,35 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.segment;
+package org.apache.druid;
 
-import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.collections.StupidPool;
+import org.junit.Assert;
+import org.junit.Test;
 
-import javax.annotation.Nullable;
-import java.util.List;
-
-/**
- */
-public interface ColumnSelector extends ColumnInspector
+public class StupidPoolPoisonedTest
 {
-  /**
-   * This method is apparently no longer used anymore, so deprecating it.
-   */
-  @Deprecated
-  List<String> getColumnNames();
-
-  @Nullable
-  ColumnHolder getColumnHolder(String columnName);
-
-  @Nullable
-  @Override
-  default ColumnCapabilities getColumnCapabilities(String column)
+  @Test
+  public void testStupidPoolPoisoned()
   {
-    final ColumnHolder columnHolder = getColumnHolder(column);
-    if (columnHolder == null) {
-      return null;
-    }
-    return columnHolder.getCapabilities();
+    Assert.assertTrue(StupidPool.isPoisoned());
   }
 }

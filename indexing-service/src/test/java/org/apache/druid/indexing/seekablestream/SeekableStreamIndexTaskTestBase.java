@@ -325,15 +325,18 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         false
     );
     IndexIO indexIO = new TestUtils().getTestIndexIO();
-    QueryableIndex index = indexIO.loadIndex(outputLocation);
-    DictionaryEncodedColumn<String> theColumn =
-        (DictionaryEncodedColumn<String>) index.getColumnHolder(column).getColumn();
     List<String> values = new ArrayList<>();
-    for (int i = 0; i < theColumn.length(); i++) {
-      int id = theColumn.getSingleValueRow(i);
-      String value = theColumn.lookupName(id);
-      values.add(value);
+
+    QueryableIndex index = indexIO.loadIndex(outputLocation);
+    try (DictionaryEncodedColumn<String> theColumn =
+        (DictionaryEncodedColumn<String>) index.getColumnHolder(column).getColumn()) {
+      for (int i = 0; i < theColumn.length(); i++) {
+        int id = theColumn.getSingleValueRow(i);
+        String value = theColumn.lookupName(id);
+        values.add(value);
+      }
     }
+
     return values;
   }
 
