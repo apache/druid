@@ -17,42 +17,32 @@
  * under the License.
  */
 
-package org.apache.druid.server.security;
+package org.apache.druid.catalog;
 
-import org.apache.druid.java.util.common.StringUtils;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class Access
+/**
+ * Catalog definition of a measure (metric) column.
+ */
+public class MeasureColumnDefn extends DatasourceColumnDefn
 {
-  public static final Access OK = new Access(true);
-  public static final Access DENIED = new Access(false);
+  private final String aggregateFn;
 
-  private final boolean allowed;
-  private final String message;
-
-  public Access(boolean allowed)
+  @JsonCreator
+  public MeasureColumnDefn(
+      @JsonProperty("name") String name,
+      @JsonProperty("sqlType") String sqlType,
+      @JsonProperty("aggregateFn") String aggregateFn
+  )
   {
-    this(allowed, "");
+    super(name, sqlType);
+    this.aggregateFn = aggregateFn;
   }
 
-  public Access(boolean allowed, String message)
+  @JsonProperty("aggregateFn")
+  public String aggregateFn()
   {
-    this.allowed = allowed;
-    this.message = message;
-  }
-
-  public boolean isAllowed()
-  {
-    return allowed;
-  }
-
-  public String getMessage()
-  {
-    return message;
-  }
-
-  @Override
-  public String toString()
-  {
-    return StringUtils.format("Access{Allowed: %s, Message: %s}", allowed, message);
+    return aggregateFn;
   }
 }

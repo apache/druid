@@ -29,26 +29,26 @@ import java.util.Objects;
 public class AuthenticationResult
 {
   /**
-   * the identity of the requester
+   * Identity of the requester.
    */
   private final String identity;
 
   /**
-   * the name of the Authorizer that should handle the authenticated request.
+   * Name of the Authorizer that should handle the authenticated request.
    */
   private final String authorizerName;
 
-
   /**
-   * Name of authenticator whom created the results
+   * Name of authenticator whom created the results.
    *
-   * If you found your self asking why the authenticatedBy field can be null please read this
+   * If you found yourself asking why the authenticatedBy field can be null please read this
    * https://github.com/apache/druid/pull/5706#discussion_r185940889
    */
   @Nullable
   private final String authenticatedBy;
+
   /**
-   * parameter containing additional context information from an Authenticator
+   * Additional context information from an Authenticator.
    */
   @Nullable
   private final Map<String, Object> context;

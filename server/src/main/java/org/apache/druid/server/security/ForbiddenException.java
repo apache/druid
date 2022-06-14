@@ -27,8 +27,8 @@ import org.apache.druid.common.exception.SanitizableException;
 import java.util.function.Function;
 
 /**
- * Throw this when a request is unauthorized and we want to send a 403 response back, Jersey exception mapper will
- * take care of sending the response.
+ * Throw this when a request is unauthorized and we want to send a 403 response back,
+ * Jersey exception mapper will take care of sending the response.
  */
 public class ForbiddenException extends RuntimeException implements SanitizableException
 {
@@ -48,7 +48,7 @@ public class ForbiddenException extends RuntimeException implements SanitizableE
   @JsonProperty
   public String getErrorMessage()
   {
-    return super.getMessage();
+    return getMessage();
   }
 
   @Override

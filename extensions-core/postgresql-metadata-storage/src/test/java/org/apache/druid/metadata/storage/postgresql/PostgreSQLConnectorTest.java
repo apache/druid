@@ -36,19 +36,7 @@ public class PostgreSQLConnectorTest
     PostgreSQLConnector connector = new PostgreSQLConnector(
         Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
         Suppliers.ofInstance(
-            new MetadataStorageTablesConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            )
+            MetadataStorageTablesConfig.fromBase(null)
         ),
         new PostgreSQLConnectorConfig(),
         new PostgreSQLTablesConfig()

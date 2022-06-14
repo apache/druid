@@ -1227,7 +1227,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   /**
-   * Mark segments as unsed in a transaction. This method is idempotent in that if
+   * Mark segments as unused in a transaction. This method is idempotent in that if
    * the segments was already marked unused, it will return true.
    *
    * @param handle         database handle

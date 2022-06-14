@@ -17,42 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.server.security;
+package org.apache.druid.catalog;
 
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.catalog.MetadataCatalog.TableType;
 
-public class Access
+import java.util.Set;
+
+/**
+ * Defines the set of schemas available in Druid and their properties.
+ * Since Druid has a fixed set of schemas, this registry is currently
+ * hard-coded. That will change if/when Druid allows user-defined
+ * schemas.
+ */
+public interface SchemaRegistry
 {
-  public static final Access OK = new Access(true);
-  public static final Access DENIED = new Access(false);
-
-  private final boolean allowed;
-  private final String message;
-
-  public Access(boolean allowed)
+  public interface SchemaDefn
   {
-    this(allowed, "");
+    String name();
+    String securityResource();
+    boolean writable();
+    boolean accepts(TableDefn defn);
+    TableType tableType();
   }
 
-  public Access(boolean allowed, String message)
-  {
-    this.allowed = allowed;
-    this.message = message;
-  }
-
-  public boolean isAllowed()
-  {
-    return allowed;
-  }
-
-  public String getMessage()
-  {
-    return message;
-  }
-
-  @Override
-  public String toString()
-  {
-    return StringUtils.format("Access{Allowed: %s, Message: %s}", allowed, message);
-  }
+  SchemaDefn schema(String name);
+  Set<String> names();
 }

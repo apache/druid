@@ -146,12 +146,12 @@ public class DruidLeaderClient
           // Unwrap IOExceptions and ChannelExceptions, re-throw others
           Throwables.propagateIfInstanceOf(e.getCause(), IOException.class);
           Throwables.propagateIfInstanceOf(e.getCause(), ChannelException.class);
-          throw new RE(e, "HTTP request to[%s] failed", request.getUrl());
+          throw new RE(e, "HTTP request to [%s] failed", request.getUrl());
         }
       }
       catch (IOException | ChannelException ex) {
         // can happen if the node is stopped.
-        log.warn(ex, "Request[%s] failed.", request.getUrl());
+        log.warn(ex, "Request [%s] failed.", request.getUrl());
 
         try {
           if (request.getUrl().getQuery() == null) {
@@ -176,7 +176,7 @@ public class DruidLeaderClient
           // Not an IOException; this is our own fault.
           throw new ISE(
               e,
-              "failed to build url with path[%] and query string [%s].",
+              "failed to build url with path [%] and query string [%s].",
               request.getUrl().getPath(),
               request.getUrl().getQuery()
           );
@@ -186,10 +186,10 @@ public class DruidLeaderClient
       if (HttpResponseStatus.TEMPORARY_REDIRECT.equals(fullResponseHolder.getResponse().getStatus())) {
         String redirectUrlStr = fullResponseHolder.getResponse().headers().get("Location");
         if (redirectUrlStr == null) {
-          throw new IOE("No redirect location is found in response from url[%s].", request.getUrl());
+          throw new IOE("No redirect location is found in response from url [%s].", request.getUrl());
         }
 
-        log.info("Request[%s] received redirect response to location [%s].", request.getUrl(), redirectUrlStr);
+        log.info("Request [%s] received redirect response to location [%s].", request.getUrl(), redirectUrlStr);
 
         final URL redirectUrl;
         try {
@@ -245,7 +245,7 @@ public class DruidLeaderClient
         return validatedUrl.toString();
       }
       catch (MalformedURLException ex) {
-        log.error(ex, "Received malformed leader url[%s].", leaderUrl);
+        log.error(ex, "Received malformed leader url [%s].", leaderUrl);
       }
     }
 

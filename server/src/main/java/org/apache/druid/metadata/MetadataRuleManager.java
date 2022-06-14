@@ -44,7 +44,8 @@ public interface MetadataRuleManager
   boolean overrideRule(String dataSource, List<Rule> rulesConfig, AuditInfo auditInfo);
 
   /**
-   * Remove rules for non-existence datasource (datasource with no segment) created older than the given timestamp.
+   * Remove rules for a non-existent datasource (datasource with no segments)
+   * created before than the given timestamp.
    *
    * @param timestamp timestamp in milliseconds
    * @return number of rules removed

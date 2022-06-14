@@ -69,6 +69,26 @@ public class SQLMetadataConnectorTest
     tables.add(tablesConfig.getEntryTable(entryType));
     tables.add(tablesConfig.getAuditTable());
     tables.add(tablesConfig.getSupervisorTable());
+    tables.add(tablesConfig.getPendingSegmentsTable());
+    tables.add(tablesConfig.getDataSourceTable());
+
+    connector.getDBI().withHandle(
+        new HandleCallback<Void>()
+        {
+          @Override
+          public Void withHandle(Handle handle)
+          {
+            for (String table : tables) {
+              Assert.assertFalse(
+                  StringUtils.format("table %s already created!", table),
+                  connector.tableExists(handle, table)
+              );
+            }
+
+            return null;
+          }
+        }
+    );
 
     connector.createSegmentTable();
     connector.createConfigTable();
@@ -76,6 +96,8 @@ public class SQLMetadataConnectorTest
     connector.createTaskTables();
     connector.createAuditTable();
     connector.createSupervisorsTable();
+    connector.createPendingSegmentsTable();
+    connector.createDataSourceTable();
 
     connector.getDBI().withHandle(
         new HandleCallback<Void>()

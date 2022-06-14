@@ -240,7 +240,7 @@ public class AuthorizationUtils
    * If every resource-action in the iterable is authorized, the resource will be added to the filtered resources.
    *
    * If there is an authorization failure for one of the resource-actions, the resource will not be
-   * added to the returned filtered resources..
+   * added to the returned filtered resources.
    *
    * If the resourceActionGenerator returns null for a resource, that resource will not be added to the filtered
    * resources.
@@ -322,7 +322,6 @@ public class AuthorizationUtils
       final AuthorizerMapper authorizerMapper
   )
   {
-
     if (request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH) != null) {
       return unfilteredResources;
     }

@@ -33,6 +33,7 @@ import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.exceptions.UnableToExecuteStatementException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.sql.DatabaseMetaData;
@@ -180,5 +181,14 @@ public class DerbyConnector extends SQLMetadataConnector
   {
     log.info("Stopping DerbyConnector...");
     storage.stop();
+  }
+
+  @Override
+  public boolean isDuplicateRecordException(UnableToExecuteStatementException e)
+  {
+    // Done using class names to avoid a dependency on Derby for this one
+    // simple thing.
+    return e.getCause() != null &&
+           e.getCause().getClass().getSimpleName().equals("DerbySQLIntegrityConstraintViolationException");
   }
 }

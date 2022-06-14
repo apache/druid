@@ -86,18 +86,6 @@ public class MetadataStorageUpdaterJobSpec implements Supplier<MetadataStorageCo
   //by the code using this
   public MetadataStorageTablesConfig getMetadataStorageTablesConfig()
   {
-    return new MetadataStorageTablesConfig(
-        null,
-        null,
-        null,
-        segmentTable,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    return MetadataStorageTablesConfig.fromBase(null);
   }
 }

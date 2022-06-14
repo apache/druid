@@ -193,14 +193,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             public Void withHandle(Handle handle)
             {
               if (!tableExists(handle, tableName)) {
-                log.info("Creating table[%s]", tableName);
+                log.info("Creating table [%s]", tableName);
                 final Batch batch = handle.createBatch();
                 for (String s : sql) {
                   batch.add(s);
                 }
                 batch.execute();
               } else {
-                log.info("Table[%s] already exists", tableName);
+                log.info("Table [%s] already exists", tableName);
               }
               return null;
             }
@@ -794,6 +794,36 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
   }
 
+  private void createTableDefnTable(final String tableName)
+  {
+    createTable(
+        tableName,
+        ImmutableList.of(
+            StringUtils.format(
+                "CREATE TABLE %s (\n"
+                + "  schemaName VARCHAR(255) NOT NULL,\n"
+                + "  name VARCHAR(255) NOT NULL,\n"
+                + "  owner VARCHAR(255),\n"
+                + "  creationTime BIGINT NOT NULL,\n"
+                + "  updateTime BIGINT NOT NULL,\n"
+                + "  state CHAR(1) NOT NULL,\n"
+                + "  payload %s,\n"
+                + "  PRIMARY KEY(schemaName, name)\n"
+                + ")",
+                tableName, getPayloadType()
+            )
+        )
+    );
+  }
+
+  @Override
+  public void createTableDefnTable()
+  {
+    if (config.get().isCreateTables()) {
+      createTableDefnTable(tablesConfigSupplier.get().getTableDefnTable());
+    }
+  }
+
   @Override
   public void deleteAllRecords(final String tableName)
   {
@@ -820,5 +850,12 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     catch (Exception e) {
       log.warn(e, "Exception while deleting records from table");
     }
+  }
+
+  public boolean isDuplicateRecordException(UnableToExecuteStatementException e)
+  {
+    // TODO(paul): Track down how to figure this out for each supported
+    // DB.
+    return false;
   }
 }
