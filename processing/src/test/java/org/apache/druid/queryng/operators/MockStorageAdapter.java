@@ -19,6 +19,8 @@
 
 package org.apache.druid.queryng.operators;
 
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -54,7 +56,7 @@ public class MockStorageAdapter implements StorageAdapter
   @Override
   public Interval getInterval()
   {
-    return Interval.parse("2015-09-12T13:00:00.000Z/2015-09-12T14:00:00.000Z");
+    return Intervals.of("2015-09-12T13:00:00.000Z/2015-09-12T14:00:00.000Z");
   }
 
   @Override
@@ -78,13 +80,13 @@ public class MockStorageAdapter implements StorageAdapter
   @Override
   public DateTime getMinTime()
   {
-    return DateTime.parse("2015-09-12T13:00:00.000Z");
+    return DateTimes.of("2015-09-12T13:00:00.000Z");
   }
 
   @Override
   public DateTime getMaxTime()
   {
-    return DateTime.parse("2015-09-12T13:59:59.999Z");
+    return DateTimes.of("2015-09-12T13:59:59.999Z");
   }
 
   @Override
@@ -118,7 +120,6 @@ public class MockStorageAdapter implements StorageAdapter
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    // TODO Auto-generated method stub
     return null;
   }
 
@@ -137,7 +138,6 @@ public class MockStorageAdapter implements StorageAdapter
   @Override
   public Metadata getMetadata()
   {
-    // TODO Auto-generated method stub
     return null;
   }
 }

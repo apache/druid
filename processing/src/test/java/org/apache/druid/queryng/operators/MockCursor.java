@@ -19,6 +19,7 @@
 
 package org.apache.druid.queryng.operators;
 
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -170,7 +171,7 @@ public class MockCursor implements Cursor, ColumnSelectorFactory
   @Override
   public DateTime getTime()
   {
-    return new DateTime(segmentBase + posn / divideBy);
+    return DateTimes.utc(segmentBase + posn / divideBy);
   }
 
   @Override
