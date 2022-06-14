@@ -26,6 +26,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.config.NullHandlingTest;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -33,6 +34,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.TestQuery;
@@ -45,7 +47,13 @@ import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
+import org.apache.druid.segment.join.table.IndexedTable;
+import org.apache.druid.segment.join.table.IndexedTableJoinable;
+import org.apache.druid.segment.join.table.RowBasedIndexedTable;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -61,6 +69,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class JoinableFactoryWrapperTest extends NullHandlingTest
 {
@@ -80,6 +89,40 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
       NullHandling.sqlCompatible()
       ? TEST_LOOKUP.keySet()
       : Sets.difference(TEST_LOOKUP.keySet(), Collections.singleton(""));
+
+  private static final InlineDataSource INDEXED_TABLE_DS = InlineDataSource.fromIterable(
+      ImmutableList.of(
+          new Object[]{"Mexico"},
+          new Object[]{"Norway"},
+          new Object[]{"El Salvador"},
+          new Object[]{"United States"},
+          new Object[]{"United States"}
+      ),
+      RowSignature.builder().add("country", ColumnType.STRING).build()
+  );
+
+  private static final InlineDataSource NULL_INDEXED_TABLE_DS = InlineDataSource.fromIterable(
+      ImmutableList.of(
+          new Object[]{null}
+      ),
+      RowSignature.builder().add("nullCol", ColumnType.STRING).build()
+  );
+
+  private static final IndexedTable TEST_INDEXED_TABLE = new RowBasedIndexedTable<>(
+      INDEXED_TABLE_DS.getRowsAsList(),
+      INDEXED_TABLE_DS.rowAdapter(),
+      INDEXED_TABLE_DS.getRowSignature(),
+      ImmutableSet.of("country"),
+      DateTimes.nowUtc().toString()
+  );
+
+  private static final IndexedTable TEST_NULL_INDEXED_TABLE = new RowBasedIndexedTable<>(
+      NULL_INDEXED_TABLE_DS.getRowsAsList(),
+      NULL_INDEXED_TABLE_DS.rowAdapter(),
+      NULL_INDEXED_TABLE_DS.getRowSignature(),
+      ImmutableSet.of("nullCol"),
+      DateTimes.nowUtc().toString()
+  );
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -468,6 +511,33 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
   }
 
   @Test
+  public void test_convertJoinsToPartialFilters_convertInnerJoin()
+  {
+    JoinableClause joinableClause = new JoinableClause(
+        "j.",
+        new IndexedTableJoinable(TEST_INDEXED_TABLE),
+        JoinType.INNER,
+        JoinConditionAnalysis.forExpression("x == \"j.country\"", "j.", ExprMacroTable.nil())
+    );
+    final Pair<List<Filter>, List<JoinableClause>> conversion = JoinableFactoryWrapper.convertJoinsToFilters(
+        ImmutableList.of(joinableClause),
+        ImmutableSet.of("x"),
+        Integer.MAX_VALUE
+    );
+
+    Assert.assertEquals(
+        Pair.of(
+            ImmutableList.of(new InDimFilter(
+                "x",
+                INDEXED_TABLE_DS.getRowsAsList().stream().map(row -> row[0].toString()).collect(Collectors.toSet()))
+            ),
+            ImmutableList.of(joinableClause) // the joinable clause remains intact since we've duplicates in country column
+        ),
+        conversion
+    );
+  }
+
+  @Test
   public void test_convertJoinsToFilters_convertTwoInnerJoins()
   {
     final ImmutableList<JoinableClause> clauses = ImmutableList.of(
@@ -501,6 +571,51 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
         Pair.of(
             ImmutableList.of(new InDimFilter("x", TEST_LOOKUP_KEYS), new InDimFilter("x", TEST_LOOKUP_KEYS)),
             ImmutableList.of(clauses.get(2))
+        ),
+        conversion
+    );
+  }
+
+  @Test
+  public void test_convertJoinsToPartialAndFullFilters_convertMultipleInnerJoins()
+  {
+    final ImmutableList<JoinableClause> clauses = ImmutableList.of(
+        new JoinableClause(
+            "j.",
+            LookupJoinable.wrap(new MapLookupExtractor(TEST_LOOKUP, false)),
+            JoinType.INNER,
+            JoinConditionAnalysis.forExpression("x == \"j.k\"", "j.", ExprMacroTable.nil())
+        ), // this joinable will be fully converted to a filter
+        new JoinableClause(
+            "_j.",
+            new IndexedTableJoinable(TEST_INDEXED_TABLE),
+            JoinType.INNER,
+            JoinConditionAnalysis.forExpression("x == \"_j.country\"", "_j.", ExprMacroTable.nil())
+        ), // this joinable will be partially converted to a filter since we've duplicates on country column
+        new JoinableClause(
+            "__j.",
+            new IndexedTableJoinable(TEST_INDEXED_TABLE),
+            JoinType.LEFT,
+            JoinConditionAnalysis.forExpression("x == \"__j.country\"", "__j.", ExprMacroTable.nil())
+        ) // this joinable will not be converted to filter since its a LEFT join
+    );
+
+    final Pair<List<Filter>, List<JoinableClause>> conversion = JoinableFactoryWrapper.convertJoinsToFilters(
+        clauses,
+        ImmutableSet.of("x"),
+        Integer.MAX_VALUE
+    );
+
+    Assert.assertEquals(
+        Pair.of(
+            ImmutableList.of(
+                new InDimFilter("x", TEST_LOOKUP_KEYS),
+                new InDimFilter(
+                    "x",
+                    INDEXED_TABLE_DS.getRowsAsList().stream().map(row -> row[0].toString()).collect(Collectors.toSet())
+                )
+            ),
+            ImmutableList.of(clauses.get(1), clauses.get(2))
         ),
         conversion
     );
@@ -578,6 +693,31 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
         Pair.of(
             ImmutableList.of(),
             ImmutableList.of(clause)
+        ),
+        conversion
+    );
+  }
+
+  @Test
+  public void test_convertJoinsToFilters_convertToFalseFilterWhenOnlyNullValues()
+  {
+    final JoinableClause clause = new JoinableClause(
+        "j.",
+        new IndexedTableJoinable(TEST_NULL_INDEXED_TABLE),
+        JoinType.INNER,
+        JoinConditionAnalysis.forExpression("x == \"j.nullCol\"", "j.", ExprMacroTable.nil())
+    );
+
+    final Pair<List<Filter>, List<JoinableClause>> conversion = JoinableFactoryWrapper.convertJoinsToFilters(
+        ImmutableList.of(clause),
+        ImmutableSet.of("x"),
+        Integer.MAX_VALUE
+    );
+
+    Assert.assertEquals(
+        Pair.of(
+            ImmutableList.of(FalseFilter.instance()),
+            ImmutableList.of()
         ),
         conversion
     );

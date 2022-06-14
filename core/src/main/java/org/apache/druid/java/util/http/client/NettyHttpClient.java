@@ -50,6 +50,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
 import org.jboss.netty.util.Timer;
 import org.joda.time.Duration;
@@ -318,7 +319,13 @@ public class NettyHttpClient extends AbstractHttpClient
 
             // Ignore return value of setException, since exceptionCaught can be called multiple times and we
             // only want to report the first one.
-            retVal.setException(event.getCause());
+            if (event.getCause() instanceof ReadTimeoutException) {
+              // ReadTimeoutException thrown by ReadTimeoutHandler is a singleton with a misleading stack trace.
+              // No point including it: instead, we replace it with a fresh exception.
+              retVal.setException(new ReadTimeoutException(StringUtils.format("[%s] Read timed out", requestDesc)));
+            } else {
+              retVal.setException(event.getCause());
+            }
 
             // response is non-null if we received initial chunk and then exception occurs
             if (response != null) {
