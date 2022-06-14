@@ -457,32 +457,33 @@ public class QueryContexts
 
   static <T> long parseLong(Query<T> query, String key, long defaultValue)
   {
-    final Object val = query.getContextValue(key);
-    return val == null ? defaultValue : Numbers.parseLong(val);
+    return getAsLong(key, query.getContextValue(key), defaultValue);
+  }
+
+  @SuppressWarnings("unused")
+  static <T> long parseLong(Map<String, Object> context, String key, long defaultValue)
+  {
+    return getAsLong(key, context.get(key), defaultValue);
   }
 
   static <T> int parseInt(Query<T> query, String key, int defaultValue)
   {
-    final Object val = query.getContextValue(key);
-    return val == null ? defaultValue : Numbers.parseInt(val);
+    return getAsInt(key, query.getContextValue(key), defaultValue);
   }
 
   static int parseInt(Map<String, Object> context, String key, int defaultValue)
   {
-    final Object val = context.get(key);
-    return val == null ? defaultValue : Numbers.parseInt(val);
+    return getAsInt(key, context.get(key), defaultValue);
   }
 
   static <T> boolean parseBoolean(Query<T> query, String key, boolean defaultValue)
   {
-    final Object val = query.getContextValue(key);
-    return val == null ? defaultValue : Numbers.parseBoolean(val);
+    return getAsBoolean(key, query.getContextValue(key), defaultValue);
   }
 
   static boolean parseBoolean(Map<String, Object> context, String key, boolean defaultValue)
   {
-    final Object val = context.get(key);
-    return val == null ? defaultValue : Numbers.parseBoolean(val);
+    return getAsBoolean(key, context.get(key), defaultValue);
   }
 
   public static String getAsString(
@@ -500,6 +501,10 @@ public class QueryContexts
     }
   }
 
+  /**
+   * Get the value of a parameter as a {@code boolean}. The parameter is expected
+   * to be {@code null}, a string or a {@code Boolean} object.
+   */
   public static boolean getAsBoolean(
       final String parameter,
       final Object value,
@@ -513,10 +518,14 @@ public class QueryContexts
     } else if (value instanceof Boolean) {
       return (Boolean) value;
     } else {
-      throw new IAE("Expected parameter [%s] to be boolean", parameter);
+      throw new IAE("Expected parameter [%s] to be a boolean", parameter);
     }
   }
 
+  /**
+   * Get the value of a parameter as an {@code int}. The parameter is expected
+   * to be {@code null}, a string or a {@code Number} object.
+   */
   public static int getAsInt(
       final String parameter,
       final Object value,
@@ -530,10 +539,14 @@ public class QueryContexts
     } else if (value instanceof Number) {
       return ((Number) value).intValue();
     } else {
-      throw new IAE("Expected parameter [%s] to be integer", parameter);
+      throw new IAE("Expected parameter [%s] to be an integer", parameter);
     }
   }
 
+  /**
+   * Get the value of a parameter as an {@code long}. The parameter is expected
+   * to be {@code null}, a string or a {@code Number} object.
+   */
   public static long getAsLong(
       final String parameter,
       final Object value,
@@ -546,7 +559,7 @@ public class QueryContexts
     } else if (value instanceof Number) {
       return ((Number) value).longValue();
     } else {
-      throw new IAE("Expected parameter [%s] to be long", parameter);
+      throw new IAE("Expected parameter [%s] to be a long", parameter);
     }
   }
 
