@@ -62,7 +62,7 @@ public interface CatalogManager
    * catalog object being updated is not the same as that of
    * the expected version.
    */
-  public class OutOfDateException extends Exception
+  class OutOfDateException extends Exception
   {
     public OutOfDateException(String msg)
     {
@@ -70,7 +70,7 @@ public interface CatalogManager
     }
   }
 
-  public class NotFoundException extends Exception
+  class NotFoundException extends Exception
   {
     public NotFoundException(String msg)
     {
@@ -84,7 +84,7 @@ public interface CatalogManager
    * generally not retryable: it us unrealistic to expect the other
    * thread to helpfully delete the record it just added.
    */
-  public class DuplicateKeyException extends Exception
+  class DuplicateKeyException extends Exception
   {
     public DuplicateKeyException(String msg, Exception e)
     {

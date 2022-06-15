@@ -21,7 +21,7 @@ package org.apache.druid.catalog;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.curator.shaded.com.google.common.base.Strings;
+import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 

@@ -31,7 +31,7 @@ import java.util.Set;
  */
 public interface SchemaRegistry
 {
-  public interface SchemaDefn
+  interface SchemaDefn
   {
     String name();
     String securityResource();

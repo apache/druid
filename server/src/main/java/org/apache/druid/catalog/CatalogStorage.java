@@ -37,7 +37,7 @@ import java.util.List;
  */
 public class CatalogStorage implements CatalogUpdateProvider, CatalogSource
 {
-  public class ListenerAdapter implements TableDefnManager.Listener
+  public static class ListenerAdapter implements TableDefnManager.Listener
   {
     private final CatalogListener dest;
 

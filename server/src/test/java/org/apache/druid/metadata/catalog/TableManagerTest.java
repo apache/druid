@@ -48,8 +48,10 @@ import static org.junit.Assert.fail;
 public class TableManagerTest
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
+
   @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
+          new TestDerbyConnector.DerbyConnectorRule();
   private CatalogManager manager;
 
   @Before
@@ -190,7 +192,7 @@ public class TableManagerTest
     long version = tableMgr.create(table2);
     table2 = table2.fromInsert(TableId.DRUID_SCHEMA, version);
     TableSpec table1 = TableSpec.newSegmentTable("table1", defn);
-    tableMgr.create(table1);
+    version = tableMgr.create(table1);
     table1 = table1.fromInsert(TableId.DRUID_SCHEMA, version);
 
     list = tableMgr.list();

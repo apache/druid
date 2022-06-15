@@ -53,6 +53,14 @@ public class MetadataStorageUpdaterJobSpecTest
     );
   }
 
+  @Test
+  void testMetadataConfig()
+  {
+    // Fairy lame test: just makes the static checks happy.
+    MetadataStorageUpdaterJobSpec spec = new MetadataStorageUpdaterJobSpec();
+    Assert.assertNotNull(spec.getMetadataStorageTablesConfig());
+  }
+
   private void testMetadataStorageUpdaterJobSpec(
       String segmentTable,
       String type,

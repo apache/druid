@@ -31,7 +31,7 @@ import java.util.Set;
 
 /**
  * Metadata catalog which reads from the catalog storage. No caching.
- * For testing, and as the Coodinator-side implementation of the remote
+ * For testing, and as the Coordinator-side implementation of the remote
  * synchronization protocol.
  */
 public class LocalMetadataCatalog implements MetadataCatalog

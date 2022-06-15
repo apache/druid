@@ -39,7 +39,7 @@ public class MetadataStorageTablesConfig
 
   public static final String TASK_ENTRY_TYPE = "task";
 
-  private static final String DEFAULT_BASE = "druid";
+  public static final String DEFAULT_BASE = "druid";
 
   private final Map<String, String> entryTables = new HashMap<>();
   private final Map<String, String> logTables = new HashMap<>();

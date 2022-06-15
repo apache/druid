@@ -103,13 +103,13 @@ public interface MetadataCatalog
   {
   }
 
-  public interface CatalogSource
+  interface CatalogSource
   {
     List<TableSpec> tablesForSchema(String dbSchema);
     TableSpec table(TableId id);
   }
 
-  public interface CatalogListener
+  interface CatalogListener
   {
     void updated(TableSpec update);
     void deleted(TableId tableId);

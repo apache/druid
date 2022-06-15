@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.StringUtils;
  */
 public class DatasourceColumnDefn extends ColumnDefn
 {
-  private final String TIME_COLUMN = "__time";
+  private static final String TIME_COLUMN = "__time";
 
   @JsonCreator
   public DatasourceColumnDefn(

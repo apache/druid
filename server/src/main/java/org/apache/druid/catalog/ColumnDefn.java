@@ -24,8 +24,8 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
-import org.apache.commons.lang.StringUtils;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.column.ColumnType;
@@ -78,7 +78,7 @@ public abstract class ColumnDefn
 
   public void validate()
   {
-    if (StringUtils.isBlank(name)) {
+    if (Strings.isNullOrEmpty(name)) {
       throw new IAE("Column name is required");
     }
   }

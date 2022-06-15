@@ -20,7 +20,7 @@
 package org.apache.druid.metadata.catalog;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import net.thisptr.jackson.jq.internal.misc.Lists;
+import com.google.common.collect.Lists;
 import org.apache.druid.catalog.MetastoreManager;
 import org.apache.druid.catalog.TableDefn;
 import org.apache.druid.catalog.TableId;
@@ -134,7 +134,7 @@ public class SQLTableManager implements TableDefnManager
           new HandleCallback<Long>()
           {
             @Override
-            public Long withHandle(Handle handle) throws Exception
+            public Long withHandle(Handle handle) throws DuplicateKeyException
             {
               long updateTime = System.currentTimeMillis();
               Update stmt = handle.createStatement(
@@ -180,7 +180,7 @@ public class SQLTableManager implements TableDefnManager
         new HandleCallback<TableSpec>()
         {
           @Override
-          public TableSpec withHandle(Handle handle) throws Exception
+          public TableSpec withHandle(Handle handle)
           {
             Query<Map<String, Object>> query = handle.createQuery(
                 StringUtils.format(SELECT_TABLE, tableName)
@@ -217,7 +217,7 @@ public class SQLTableManager implements TableDefnManager
           new HandleCallback<Long>()
           {
             @Override
-            public Long withHandle(Handle handle) throws Exception
+            public Long withHandle(Handle handle) throws OutOfDateException
             {
               long updateTime = System.currentTimeMillis();
               int updateCount = handle.createStatement(
@@ -256,7 +256,7 @@ public class SQLTableManager implements TableDefnManager
           new HandleCallback<Long>()
           {
             @Override
-            public Long withHandle(Handle handle) throws Exception
+            public Long withHandle(Handle handle) throws NotFoundException
             {
               long updateTime = System.currentTimeMillis();
               int updateCount = handle.createStatement(
@@ -293,7 +293,7 @@ public class SQLTableManager implements TableDefnManager
         new HandleCallback<Long>()
         {
           @Override
-          public Long withHandle(Handle handle) throws Exception
+          public Long withHandle(Handle handle)
           {
             long updateTime = System.currentTimeMillis();
             int updateCount = handle.createStatement(
@@ -317,7 +317,7 @@ public class SQLTableManager implements TableDefnManager
         new HandleCallback<Boolean>()
         {
           @Override
-          public Boolean withHandle(Handle handle) throws Exception
+          public Boolean withHandle(Handle handle)
           {
             int updateCount = handle.createStatement(
                 StringUtils.format(DELETE_TABLE, tableName))
@@ -338,7 +338,7 @@ public class SQLTableManager implements TableDefnManager
         new HandleCallback<List<TableId>>()
         {
           @Override
-          public List<TableId> withHandle(Handle handle) throws Exception
+          public List<TableId> withHandle(Handle handle)
           {
             Query<Map<String, Object>> query = handle.createQuery(
                 StringUtils.format(SELECT_ALL_TABLES, tableName)
@@ -361,7 +361,7 @@ public class SQLTableManager implements TableDefnManager
         new HandleCallback<List<String>>()
         {
           @Override
-          public List<String> withHandle(Handle handle) throws Exception
+          public List<String> withHandle(Handle handle)
           {
             Query<Map<String, Object>> query = handle.createQuery(
                 StringUtils.format(SELECT_TABLES_IN_SCHEMA, tableName)
@@ -385,7 +385,7 @@ public class SQLTableManager implements TableDefnManager
         new HandleCallback<List<TableSpec>>()
         {
           @Override
-          public List<TableSpec> withHandle(Handle handle) throws Exception
+          public List<TableSpec> withHandle(Handle handle)
           {
             Query<Map<String, Object>> query = handle.createQuery(
                 StringUtils.format(SELECT_TABLE_DETAILS_IN_SCHEMA, tableName)

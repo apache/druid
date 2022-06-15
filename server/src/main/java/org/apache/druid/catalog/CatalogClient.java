@@ -21,18 +21,18 @@ package org.apache.druid.catalog;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.catalog.MetadataCatalog.CatalogSource;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.server.http.CatalogResource;
-import org.codehaus.plexus.util.StringUtils;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.inject.Inject;
 import javax.ws.rs.core.MediaType;
@@ -122,11 +122,11 @@ public class CatalogClient implements CatalogSource
       // is during shutdown.
       return null;
     }
-    if (responseHolder.getStatus().getCode() == HttpResponseStatus.NOT_FOUND.code()) {
+    if (responseHolder.getStatus().getCode() == HttpResponseStatus.NOT_FOUND.getCode()) {
       // Not found means the item disappeared. Returning null means "not found".
       return null;
     }
-    if (responseHolder.getStatus().getCode() != HttpResponseStatus.OK.code()) {
+    if (responseHolder.getStatus().getCode() != HttpResponseStatus.OK.getCode()) {
       throw new ISE("Unexpected status from catalog sync: " + responseHolder.getStatus());
     }
     try {

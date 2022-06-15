@@ -82,8 +82,8 @@ public class MetadataStorageUpdaterJobSpec implements Supplier<MetadataStorageCo
     };
   }
 
-  //Note: Currently it only supports configured segmentTable, other tables should be added if needed
-  //by the code using this
+  // Note: Currently it only supports configured segmentTable, other tables
+  // should be added if needed by the code using this
   public MetadataStorageTablesConfig getMetadataStorageTablesConfig()
   {
     return MetadataStorageTablesConfig.fromBase(null);

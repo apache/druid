@@ -80,8 +80,6 @@ public class CatalogResource
   /**
    * Create a new table within the indicated schema.
    *
-   * @param dbSchema Druid schema. Must be a valid, writable schema
-   *        for which the user has write access.
    * @param table The table definition to create.
    * @param ifNew Whether to skip the action if the table already exists.
    *        This is the same as the SQL IF NOT EXISTS clause. If {@code false},

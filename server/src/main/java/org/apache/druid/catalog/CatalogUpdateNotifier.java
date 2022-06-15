@@ -36,7 +36,7 @@ import org.joda.time.Duration;
 
 import javax.inject.Inject;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.function.Supplier;
 
 /**
@@ -69,7 +69,7 @@ public class CatalogUpdateNotifier implements CatalogListener
     long timeoutMs = TIMEOUT_MS;
     this.smileMapper = smileMapper;
     Supplier<Iterable<DruidNode>> nodeSupplier = new ListeningNodeSupplier(
-        Arrays.asList(NodeRole.BROKER),
+        Collections.singletonList(NodeRole.BROKER),
         discoveryProvider);
     RestSender restSender = RestUpdateSender.httpClientSender(httpClient, Duration.millis(timeoutMs));
     RestUpdateSender sender = new RestUpdateSender(

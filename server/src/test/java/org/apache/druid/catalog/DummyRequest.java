@@ -33,7 +33,6 @@ import javax.servlet.AsyncContext;
 import javax.servlet.DispatcherType;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
 import javax.servlet.ServletInputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
@@ -45,8 +44,6 @@ import javax.servlet.http.HttpUpgradeHandler;
 import javax.servlet.http.Part;
 
 import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.security.Principal;
 import java.util.Collection;
 import java.util.Enumeration;
@@ -74,7 +71,11 @@ public class DummyRequest implements HttpServletRequest
   private static class TestAuthorizer implements Authorizer
   {
     @Override
-    public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
+    public Access authorize(
+        AuthenticationResult authenticationResult,
+        Resource resource,
+        Action action
+    )
     {
       final String userName = authenticationResult.getIdentity();
       if (DummyRequest.SUPER_USER.equals(userName)) {
@@ -107,7 +108,8 @@ public class DummyRequest implements HttpServletRequest
   public DummyRequest(String method, String userName, String contentType)
   {
     this.method = method;
-    AuthenticationResult authResult = new AuthenticationResult(userName, TEST_AUTHORITY, null, null);
+    AuthenticationResult authResult =
+        new AuthenticationResult(userName, TEST_AUTHORITY, null, null);
     attribs.put(AuthConfig.DRUID_AUTHENTICATION_RESULT, authResult);
     this.contentType = contentType;
   }
@@ -146,7 +148,7 @@ public class DummyRequest implements HttpServletRequest
   }
 
   @Override
-  public void setCharacterEncoding(String env) throws UnsupportedEncodingException
+  public void setCharacterEncoding(String env)
   {
   }
 
@@ -169,7 +171,7 @@ public class DummyRequest implements HttpServletRequest
   }
 
   @Override
-  public ServletInputStream getInputStream() throws IOException
+  public ServletInputStream getInputStream()
   {
     return null;
   }
@@ -223,7 +225,7 @@ public class DummyRequest implements HttpServletRequest
   }
 
   @Override
-  public BufferedReader getReader() throws IOException
+  public BufferedReader getReader()
   {
     return null;
   }
@@ -312,14 +314,13 @@ public class DummyRequest implements HttpServletRequest
   }
 
   @Override
-  public AsyncContext startAsync() throws IllegalStateException
+  public AsyncContext startAsync()
   {
     return null;
   }
 
   @Override
   public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse)
-      throws IllegalStateException
   {
     return null;
   }
@@ -505,35 +506,35 @@ public class DummyRequest implements HttpServletRequest
   }
 
   @Override
-  public boolean authenticate(HttpServletResponse response) throws IOException, ServletException
+  public boolean authenticate(HttpServletResponse response)
   {
     return false;
   }
 
   @Override
-  public void login(String username, String password) throws ServletException
+  public void login(String username, String password)
   {
   }
 
   @Override
-  public void logout() throws ServletException
+  public void logout()
   {
   }
 
   @Override
-  public Collection<Part> getParts() throws IOException, ServletException
-  {
-    return null;
-  }
-
-  @Override
-  public Part getPart(String name) throws IOException, ServletException
+  public Collection<Part> getParts()
   {
     return null;
   }
 
   @Override
-  public <T extends HttpUpgradeHandler> T upgrade(Class<T> handlerClass) throws IOException, ServletException
+  public Part getPart(String name)
+  {
+    return null;
+  }
+
+  @Override
+  public <T extends HttpUpgradeHandler> T upgrade(Class<T> handlerClass)
   {
     return null;
   }

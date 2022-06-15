@@ -51,9 +51,9 @@ public interface TableDefnManager
    * Create a table entry.
    *
    * @return the version of the newly created table. Call
-   * {@link TableDefnRecord#asUpdate(long)} if you want a new
-   * {@link TableDefnRecord} with the new version.
-   * @throws DuplicateKeyException if the row is a duplicate
+   * {@link TableSpec#asUpdate(long)} if you want a new
+   * {@link TableSpec} with the new version.
+   * @throws {@link DuplicateKeyException} if the row is a duplicate
    * (schema, name) pair. This generally indicates a code error,
    * or since our code is perfect, a race condition or a DB
    * update outside of Druid. In any event, the error is not
