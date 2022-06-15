@@ -41,6 +41,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.column.ArrayDoubleGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.ArrayLongGroupByColumnSelectorStrategy;
@@ -90,7 +91,7 @@ import java.util.stream.Stream;
  * This code runs on data servers, like Historicals.
  *
  * Used by
- * {@link GroupByStrategyV2#process(GroupByQuery, StorageAdapter)}.
+ * {@link GroupByStrategyV2#process(GroupByQuery, StorageAdapter, GroupByQueryMetrics)}.
  */
 public class GroupByQueryEngineV2
 {
@@ -119,7 +120,8 @@ public class GroupByQueryEngineV2
       final GroupByQuery query,
       @Nullable final StorageAdapter storageAdapter,
       final NonBlockingPool<ByteBuffer> intermediateResultsBufferPool,
-      final GroupByQueryConfig querySpecificConfig
+      final GroupByQueryConfig querySpecificConfig,
+      @Nullable final GroupByQueryMetrics groupByQueryMetrics
   )
   {
     if (storageAdapter == null) {
@@ -161,7 +163,8 @@ public class GroupByQueryEngineV2
             fudgeTimestamp,
             filter,
             interval,
-            querySpecificConfig
+            querySpecificConfig,
+            groupByQueryMetrics
         );
       } else {
         result = processNonVectorized(
@@ -171,7 +174,8 @@ public class GroupByQueryEngineV2
             fudgeTimestamp,
             querySpecificConfig,
             filter,
-            interval
+            interval,
+            groupByQueryMetrics
         );
       }
 
@@ -190,7 +194,8 @@ public class GroupByQueryEngineV2
       @Nullable final DateTime fudgeTimestamp,
       final GroupByQueryConfig querySpecificConfig,
       @Nullable final Filter filter,
-      final Interval interval
+      final Interval interval,
+      @Nullable final GroupByQueryMetrics groupByQueryMetrics
   )
   {
     final Sequence<Cursor> cursors = storageAdapter.makeCursors(
@@ -199,7 +204,7 @@ public class GroupByQueryEngineV2
         query.getVirtualColumns(),
         query.getGranularity(),
         false,
-        null
+        groupByQueryMetrics
     );
 
     return cursors.flatMap(
@@ -851,7 +856,7 @@ public class GroupByQueryEngineV2
     }
   }
 
-  private static class ArrayAggregateIterator extends GroupByEngineIterator<Integer>
+  private static class ArrayAggregateIterator extends GroupByEngineIterator<IntKey>
   {
     private final int cardinality;
 
@@ -895,13 +900,13 @@ public class GroupByQueryEngineV2
     }
 
     @Override
-    protected void aggregateSingleValueDims(Grouper<Integer> grouper)
+    protected void aggregateSingleValueDims(Grouper<IntKey> grouper)
     {
       aggregateSingleValueDims((IntGrouper) grouper);
     }
 
     @Override
-    protected void aggregateMultiValueDims(Grouper<Integer> grouper)
+    protected void aggregateMultiValueDims(Grouper<IntKey> grouper)
     {
       aggregateMultiValueDims((IntGrouper) grouper);
     }
@@ -971,11 +976,12 @@ public class GroupByQueryEngineV2
     }
 
     @Override
-    protected void putToRow(Integer key, ResultRow resultRow)
+    protected void putToRow(IntKey key, ResultRow resultRow)
     {
+      final int intKey = key.intValue();
       if (dim != null) {
-        if (key != GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE) {
-          resultRow.set(dim.getResultRowPosition(), ((DimensionSelector) dim.getSelector()).lookupName(key));
+        if (intKey != GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE) {
+          resultRow.set(dim.getResultRowPosition(), ((DimensionSelector) dim.getSelector()).lookupName(intKey));
         } else {
           resultRow.set(dim.getResultRowPosition(), NullHandling.defaultStringValue());
         }
@@ -1020,17 +1026,26 @@ public class GroupByQueryEngineV2
     }
 
     @Override
+    public ByteBuffer createKey()
+    {
+      return ByteBuffer.allocate(keySize);
+    }
+
+    @Override
     public ByteBuffer toByteBuffer(ByteBuffer key)
     {
       return key;
     }
 
     @Override
-    public ByteBuffer fromByteBuffer(ByteBuffer buffer, int position)
+    public void readFromByteBuffer(ByteBuffer dstBuffer, ByteBuffer srcBuffer, int position)
     {
-      final ByteBuffer dup = buffer.duplicate();
-      dup.position(position).limit(position + keySize);
-      return dup.slice();
+      dstBuffer.limit(keySize);
+      dstBuffer.position(0);
+
+      for (int i = 0; i < keySize; i++) {
+        dstBuffer.put(i, srcBuffer.get(position + i));
+      }
     }
 
     @Override

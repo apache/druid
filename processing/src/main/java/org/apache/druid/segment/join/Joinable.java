@@ -71,10 +71,10 @@ public interface Joinable extends ReferenceCountedObject
    * @param condition                 join condition for the matcher
    * @param remainderNeeded           whether or not {@link JoinMatcher#matchRemainder()} will ever be called on the
    *                                  matcher. If we know it will not, additional optimizations are often possible.
-   *
    * @param descending                true if join cursor is iterated in descending order
    * @param closer                    closer that will run after join cursor has completed to clean up any per query
    *                                  resources the joinable uses
+   *
    * @return the matcher
    */
   JoinMatcher makeJoinMatcher(
@@ -89,6 +89,10 @@ public interface Joinable extends ReferenceCountedObject
    * Returns all nonnull values from a particular column if they are all unique, if there are "maxNumValues" or fewer,
    * and if the column exists and supports this operation. Otherwise, returns an empty Optional.
    *
+   * The returned set may be passed to {@link org.apache.druid.query.filter.InDimFilter}. For efficiency,
+   * implementations should prefer creating the returned set with
+   * {@code new TreeSet<String>(Comparators.naturalNullsFirst()}}. This avoids a copy in the filter's constructor.
+   *
    * @param columnName   name of the column
    * @param maxNumValues maximum number of values to return
    */
@@ -98,13 +102,18 @@ public interface Joinable extends ReferenceCountedObject
    * Searches a column from this Joinable for a particular value, finds rows that match,
    * and returns values of a second column for those rows.
    *
-   * @param searchColumnName Name of the search column. This is the column that is being used in the filter
-   * @param searchColumnValue Target value of the search column. This is the value that is being filtered on.
-   * @param retrievalColumnName The column to retrieve values from. This is the column that is being joined against.
-   * @param maxCorrelationSetSize Maximum number of values to retrieve. If we detect that more values would be
-   *                              returned than this limit, return absent.
+   * The returned set may be passed to {@link org.apache.druid.query.filter.InDimFilter}. For efficiency,
+   * implementations should prefer creating the returned set with
+   * {@code new TreeSet<String>(Comparators.naturalNullsFirst()}}. This avoids a copy in the filter's constructor.
+   *
+   * @param searchColumnName        Name of the search column. This is the column that is being used in the filter
+   * @param searchColumnValue       Target value of the search column. This is the value that is being filtered on.
+   * @param retrievalColumnName     The column to retrieve values from. This is the column that is being joined against.
+   * @param maxCorrelationSetSize   Maximum number of values to retrieve. If we detect that more values would be
+   *                                returned than this limit, return absent.
    * @param allowNonKeyColumnSearch If true, allow searchs on non-key columns. If this is false,
    *                                a search on a non-key column returns absent.
+   *
    * @return The set of correlated column values. If we cannot determine correlated values, return absent.
    *
    * In case either the search or retrieval column names are not found, this will return absent.

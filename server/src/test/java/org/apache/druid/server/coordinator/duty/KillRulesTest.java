@@ -79,7 +79,8 @@ public class KillRulesTest
         null,
         null,
         10,
-        null
+        null,
+        false
     );
     killRules = new KillRules(druidCoordinatorConfig);
     killRules.run(mockDruidCoordinatorRuntimeParams);
@@ -108,7 +109,8 @@ public class KillRulesTest
         null,
         null,
         10,
-        null
+        null,
+        false
     );
     killRules = new KillRules(druidCoordinatorConfig);
     killRules.run(mockDruidCoordinatorRuntimeParams);
@@ -137,7 +139,8 @@ public class KillRulesTest
         null,
         null,
         10,
-        null
+        null,
+        false
     );
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage("coordinator rule kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod");
@@ -165,7 +168,8 @@ public class KillRulesTest
         null,
         null,
         10,
-        null
+        null,
+        false
     );
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage("coordinator rule kill retainDuration must be >= 0");

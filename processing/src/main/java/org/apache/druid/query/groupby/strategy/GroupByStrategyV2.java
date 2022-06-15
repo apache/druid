@@ -59,6 +59,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GroupByBinaryFnV2;
 import org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
@@ -73,6 +74,7 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.utils.CloseableUtils;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -690,13 +692,18 @@ public class GroupByStrategyV2 implements GroupByStrategy
   }
 
   @Override
-  public Sequence<ResultRow> process(GroupByQuery query, StorageAdapter storageAdapter)
+  public Sequence<ResultRow> process(
+      GroupByQuery query,
+      StorageAdapter storageAdapter,
+      @Nullable GroupByQueryMetrics groupByQueryMetrics
+  )
   {
     return GroupByQueryEngineV2.process(
         query,
         storageAdapter,
         bufferPool,
-        configSupplier.get().withOverrides(query)
+        configSupplier.get().withOverrides(query),
+        groupByQueryMetrics
     );
   }
 

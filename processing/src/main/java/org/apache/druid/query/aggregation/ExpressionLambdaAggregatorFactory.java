@@ -93,9 +93,9 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   private final Supplier<Expr> finalizeExpression;
   private final HumanReadableBytes maxSizeBytes;
 
-  private final Supplier<SettableObjectBinding> compareBindings;
-  private final Supplier<SettableObjectBinding> combineBindings;
-  private final Supplier<SettableObjectBinding> finalizeBindings;
+  private final ThreadLocal<SettableObjectBinding> compareBindings;
+  private final ThreadLocal<SettableObjectBinding> combineBindings;
+  private final ThreadLocal<SettableObjectBinding> finalizeBindings;
   private final Supplier<Expr.InputBindingInspector> finalizeInspector;
 
   @JsonCreator
@@ -166,7 +166,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
             ImmutableMap.of(FINALIZE_IDENTIFIER, this.initialCombineValue.get().type())
         )
     );
-    this.compareBindings = Suppliers.memoize(
+    this.compareBindings = ThreadLocal.withInitial(
         () -> new SettableObjectBinding(2).withInspector(
             InputBindings.inspectorFromTypeMap(
                 ImmutableMap.of(
@@ -176,7 +176,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
             )
         )
     );
-    this.combineBindings = Suppliers.memoize(
+    this.combineBindings = ThreadLocal.withInitial(
         () -> new SettableObjectBinding(2).withInspector(
             InputBindings.inspectorFromTypeMap(
                 ImmutableMap.of(
@@ -186,7 +186,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
             )
         )
     );
-    this.finalizeBindings = Suppliers.memoize(
+    this.finalizeBindings = ThreadLocal.withInitial(
         () -> new SettableObjectBinding(1).withInspector(finalizeInspector.get())
     );
     this.finalizeExpression = Parser.lazyParse(finalizeExpressionString, macroTable);
@@ -302,7 +302,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     FactorizePlan thePlan = new FactorizePlan(metricFactory);
     return new ExpressionLambdaAggregator(
         thePlan,
-        maxSizeBytes.getBytesInInt()
+        getMaxIntermediateSize()
     );
   }
 
@@ -312,7 +312,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     FactorizePlan thePlan = new FactorizePlan(metricFactory);
     return new ExpressionLambdaBufferAggregator(
         thePlan,
-        maxSizeBytes.getBytesInInt()
+        getMaxIntermediateSize()
     );
   }
 

@@ -314,59 +314,41 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             StringUtils.format("ingestionTestBase-%s.json", System.currentTimeMillis())
         );
 
-        final TaskToolbox box = new TaskToolbox(
-            new TaskConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                false,
-                null,
-                null,
-                null,
-                false,
-                false,
-                TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-                null
-            ),
-            new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
-            taskActionClient,
-            null,
-            new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()),
-            new NoopDataSegmentKiller(),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            NoopJoinableFactory.INSTANCE,
-            null,
-            null,
-            objectMapper,
-            temporaryFolder.newFolder(),
-            getIndexIO(),
-            null,
-            null,
-            null,
-            testUtils.getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)),
-            null,
-            null,
-            null,
-            null,
-            new SingleFileTaskReportFileWriter(taskReportsFile),
-            null,
-            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            new NoopChatHandlerProvider(),
-            testUtils.getRowIngestionMetersFactory(),
-            new TestAppenderatorsManager(),
-            new NoopIndexingServiceClient(),
-            null,
-            null,
-            null
-        );
+        final TaskToolbox box = new TaskToolbox.Builder()
+            .config(
+                new TaskConfig(
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    false,
+                    null,
+                    null,
+                    null,
+                    false,
+                    false,
+                    TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+                    null
+                )
+            )
+            .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
+            .taskActionClient(taskActionClient)
+            .segmentPusher(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()))
+            .dataSegmentKiller(new NoopDataSegmentKiller())
+            .joinableFactory(NoopJoinableFactory.INSTANCE)
+            .jsonMapper(objectMapper)
+            .taskWorkDir(temporaryFolder.newFolder())
+            .indexIO(getIndexIO())
+            .indexMergerV9(testUtils.getIndexMergerV9Factory()
+                                    .create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
+            .taskReportFileWriter(new SingleFileTaskReportFileWriter(taskReportsFile))
+            .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
+            .chatHandlerProvider(new NoopChatHandlerProvider())
+            .rowIngestionMetersFactory(testUtils.getRowIngestionMetersFactory())
+            .appenderatorsManager(new TestAppenderatorsManager())
+            .indexingServiceClient(new NoopIndexingServiceClient())
+            .build();
 
         if (task.isReady(box.getTaskActionClient())) {
           return Futures.immediateFuture(task.run(box));

@@ -356,6 +356,9 @@ You can override the task priority by setting your priority in the task context 
 
 The task context is used for various individual task configuration.
 Specify task context configurations in the `context` field of the ingestion spec.
+When configuring [automatic compaction](../configuration/index.md#automatic-compaction-dynamic-configuration), set the task context configurations in `taskContext` rather than in `context`.
+The settings get passed into the `context` field of the compaction tasks issued to MiddleManagers.
+
 The following parameters apply to all task types.
 
 |property|default|description|

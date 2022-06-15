@@ -126,6 +126,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
         RowAdapters.standardRow(),
         in::get,
         RowSignature.empty(),
+        true,
         true
     );
 

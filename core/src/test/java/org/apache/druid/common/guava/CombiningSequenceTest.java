@@ -26,6 +26,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.ExplodingSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -254,6 +255,8 @@ public class CombiningSequenceTest
       int limit
   ) throws Exception
   {
+    final String prefix = StringUtils.format("yieldEvery[%d], limit[%d]", yieldEvery, limit);
+
     // Test that closing works too
     final CountDownLatch closed = new CountDownLatch(1);
     final Closeable closeable = closed::countDown;
@@ -276,7 +279,7 @@ public class CombiningSequenceTest
 
     List<Pair<Integer, Integer>> merged = seq.toList();
 
-    Assert.assertEquals(expected, merged);
+    Assert.assertEquals(prefix, expected, merged);
 
     Yielder<Pair<Integer, Integer>> yielder = seq.toYielder(
         null,
@@ -318,16 +321,17 @@ public class CombiningSequenceTest
         }
     );
 
+    int i = 0;
     if (expectedVals.hasNext()) {
       while (!yielder.isDone()) {
         final Pair<Integer, Integer> expectedVal = expectedVals.next();
         final Pair<Integer, Integer> actual = yielder.get();
-        Assert.assertEquals(expectedVal, actual);
+        Assert.assertEquals(StringUtils.format("%s, i[%s]", prefix, i++), expectedVal, actual);
         yielder = yielder.next(actual);
       }
     }
-    Assert.assertTrue(yielder.isDone());
-    Assert.assertFalse(expectedVals.hasNext());
+    Assert.assertTrue(prefix, yielder.isDone());
+    Assert.assertFalse(prefix, expectedVals.hasNext());
     yielder.close();
 
     Assert.assertTrue("resource closed", closed.await(10000, TimeUnit.MILLISECONDS));

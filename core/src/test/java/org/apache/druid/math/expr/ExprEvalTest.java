@@ -368,13 +368,27 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     ExprEval.serialize(buffer, position, expected.type(), expected, maxSizeBytes);
     if (expected.type().isArray()) {
       Assert.assertArrayEquals(
+          "deserialized value with buffer references allowed",
           expected.asArray(),
-          ExprEval.deserialize(buffer, position, expected.type()).asArray()
+          ExprEval.deserialize(buffer, position, MAX_SIZE_BYTES, expected.type(), true).asArray()
+      );
+
+      Assert.assertArrayEquals(
+          "deserialized value with buffer references not allowed",
+          expected.asArray(),
+          ExprEval.deserialize(buffer, position, MAX_SIZE_BYTES, expected.type(), false).asArray()
       );
     } else {
       Assert.assertEquals(
+          "deserialized value with buffer references allowed",
           expected.value(),
-          ExprEval.deserialize(buffer, position, expected.type()).value()
+          ExprEval.deserialize(buffer, position, MAX_SIZE_BYTES, expected.type(), true).value()
+      );
+
+      Assert.assertEquals(
+          "deserialized value with buffer references not allowed",
+          expected.value(),
+          ExprEval.deserialize(buffer, position, MAX_SIZE_BYTES, expected.type(), false).value()
       );
     }
   }

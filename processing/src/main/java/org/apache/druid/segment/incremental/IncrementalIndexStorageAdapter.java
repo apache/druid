@@ -262,6 +262,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       return Sequences.empty();
     }
 
+    if (queryMetrics != null) {
+      queryMetrics.vectorized(false);
+    }
+
     final Interval dataInterval = new Interval(getMinTime(), gran.bucketEnd(getMaxTime()));
 
     if (!interval.overlaps(dataInterval)) {

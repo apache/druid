@@ -28,7 +28,7 @@ Query performance in Apache Druid depends on optimally sized segments. Compactio
 
 There are several cases to consider compaction for segment optimization:
 
-- With streaming ingestion, data can arrive out of chronological order creating lots of small segments.
+- With streaming ingestion, data can arrive out of chronological order creating many small segments.
 - If you append data using `appendToExisting` for [native batch](native-batch.md) ingestion creating suboptimal segments.
 - When you use `index_parallel` for parallel batch indexing and the parallel ingestion tasks create many small segments.
 - When a misconfigured ingestion task creates oversized segments.
@@ -36,7 +36,7 @@ There are several cases to consider compaction for segment optimization:
 By default, compaction does not modify the underlying data of the segments. However, there are cases when you may want to modify data during compaction to improve query performance:
 
 - If, after ingestion, you realize that data for the time interval is sparse, you can use compaction to increase the segment granularity.
-- Over time you don't need fine-grained granularity for older data so you want use compaction to change older segments to a coarser query granularity. This reduces the storage space required for older data. For example from `minute` to `hour`, or `hour` to `day`. 
+- If you don't need fine-grained granularity for older data, you can use compaction to change older segments to a coarser query granularity. For example, from `minute` to `hour` or `hour` to `day`. This reduces the storage space required for older data.
 - You can change the dimension order to improve sorting and reduce segment size.
 - You can remove unused columns in compaction or implement an aggregation metric for older data.
 - You can change segment rollup from dynamic partitioning with best-effort rollup to hash or range partitioning with perfect rollup. For more information on rollup, see [perfect vs best-effort rollup](./rollup.md#perfect-rollup-vs-best-effort-rollup).
@@ -44,9 +44,10 @@ By default, compaction does not modify the underlying data of the segments. Howe
 Compaction does not improve performance in all situations. For example, if you rewrite your data with each ingestion task, you don't need to use compaction. See [Segment optimization](../operations/segment-optimization.md) for additional guidance to determine if compaction will help in your environment.
 
 ## Types of compaction
-You can configure the Druid Coordinator to perform automatic compaction, also called auto-compaction, for a datasource. Using a segment search policy, the coordinator periodically identifies segments for compaction starting with the newest to oldest. When it discovers segments that have not been compacted or segments that were compacted with a different or changed spec, it submits compaction task for those segments and only those segments.
 
-Automatic compaction works in most use cases and should be your first option. To learn more about automatic compaction, see [Compacting Segments](../design/coordinator.md#compacting-segments).
+You can configure the Druid Coordinator to perform automatic compaction, also called auto-compaction, for a datasource. Using its [segment search policy](../design/coordinator.md#segment-search-policy-in-automatic-compaction), the Coordinator periodically identifies segments for compaction starting from newest to oldest. When the Coordinator discovers segments that have not been compacted or segments that were compacted with a different or changed spec, it submits compaction tasks for the time interval covering those segments.
+
+Automatic compaction works in most use cases and should be your first option. To learn more about automatic compaction, see [Compacting Segments](../design/coordinator.md#automatic-compaction).
 
 In cases where you require more control over compaction, you can manually submit compaction tasks. For example:
 
@@ -62,7 +63,7 @@ During compaction, Druid overwrites the original set of segments with the compac
 You can set `dropExisting` in `ioConfig` to "true" in the compaction task to configure Druid to replace all existing segments fully contained by the interval. See the suggestion for reindexing with finer granularity under [Implementation considerations](native-batch.md#implementation-considerations) for an example.
 > WARNING: `dropExisting` in `ioConfig` is a beta feature.
 
-If an ingestion task needs to write data to a segment for a time interval locked for compaction, by default the ingestion task supersedes the compaction task and the compaction task fails without finishing. For manual compaction tasks you can adjust the input spec interval to avoid conflicts between ingestion and compaction. For automatic compaction, you can set the `skipOffsetFromLatest` key to adjust the auto compaction starting point from the current time to reduce the chance of conflicts between ingestion and compaction. See [Compaction dynamic configuration](../configuration/index.md#compaction-dynamic-configuration) for more information. Another option is to set the compaction task to higher priority than the ingestion task.
+If an ingestion task needs to write data to a segment for a time interval locked for compaction, by default the ingestion task supersedes the compaction task and the compaction task fails without finishing. For manual compaction tasks, you can adjust the input spec interval to avoid conflicts between ingestion and compaction. For automatic compaction, you can set the `skipOffsetFromLatest` key to adjust the auto-compaction starting point from the current time to reduce the chance of conflicts between ingestion and compaction. See [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for more information. Another option is to set the compaction task to higher priority than the ingestion task.
 
 ### Segment granularity handling
 
@@ -82,13 +83,14 @@ If you configure query granularity in compaction to go from a finer granularity 
 
 ### Dimension handling
 
-Apache Druid supports schema changes. Therefore, dimensions can be different across segments even if they are a part of the same data source. See [Different schemas among segments](../design/segments.md#different-schemas-among-segments). If the input segments have different dimensions, the resulting compacted segment include all dimensions of the input segments. 
+Apache Druid supports schema changes. Therefore, dimensions can be different across segments even if they are a part of the same data source. See [Different schemas among segments](../design/segments.md#different-schemas-among-segments). If the input segments have different dimensions, the resulting compacted segment includes all dimensions of the input segments.
 
 Even when the input segments have the same set of dimensions, the dimension order or the data type of dimensions can be different. The dimensions of recent segments precede that of old segments in terms of data types and the ordering because more recent segments are more likely to have the preferred order and data types.
 
 If you want to control dimension ordering or ensure specific values for dimension types, you can configure a custom `dimensionsSpec` in the compaction task spec.
 
 ### Rollup
+
 Druid only rolls up the output segment when `rollup` is set for all input segments.
 See [Roll-up](../ingestion/rollup.md) for more details.
 You can check that your segments are rolled up or not by using [Segment Metadata Queries](../querying/segmentmetadataquery.md#analysistypes).
@@ -104,6 +106,7 @@ To perform a manual compaction, you submit a compaction task. Compaction tasks m
     "dataSource": <task_datasource>,
     "ioConfig": <IO config>,
     "dimensionsSpec": <custom dimensionsSpec>,
+    "transformSpec": <custom transformSpec>,
     "metricsSpec": <custom metricsSpec>,
     "tuningConfig": <parallel indexing task tuningConfig>,
     "granularitySpec": <compaction task granularitySpec>,
@@ -120,14 +123,14 @@ To perform a manual compaction, you submit a compaction task. Compaction tasks m
 |`dimensionsSpec`|Custom `dimensionsSpec`. The compaction task uses the specified `dimensionsSpec` if it exists instead of generating one. See [Compaction dimensionsSpec](#compaction-dimensions-spec) for details.|No|
 |`transformSpec`|Custom `transformSpec`. The compaction task uses the specified `transformSpec` rather than using `null`. See [Compaction transformSpec](#compaction-transform-spec) for details.|No|
 |`metricsSpec`|Custom `metricsSpec`. The compaction task uses the specified `metricsSpec` rather than generating one.|No|
-|`segmentGranularity`|When set, the compaction task changes the segment granularity for the given interval.  Deprecated. Use `granularitySpec`. |No.|
-|`tuningConfig`|[Parallel indexing task tuningConfig](native-batch.md#tuningconfig). `awaitSegmentAvailabilityTimeoutMillis` in the tuning config is not currently supported for compaction tasks. Do not set it to a non-zero value.|No|
-|`context`|[Task context](./tasks.md#context)|No|
+|`segmentGranularity`|When set, the compaction task changes the segment granularity for the given interval.  Deprecated. Use `granularitySpec`. |No|
+|`tuningConfig`|[Parallel indexing task tuningConfig](native-batch.md#tuningconfig). `awaitSegmentAvailabilityTimeoutMillis` in the tuning config is not supported for compaction tasks. Leave this parameter at the default value, 0.|No|
 |`granularitySpec`|Custom `granularitySpec`. The compaction task uses the specified `granularitySpec` rather than generating one. See [Compaction `granularitySpec`](#compaction-granularity-spec) for details.|No|
+|`context`|[Task context](./tasks.md#context).|No|
 
 > Note: Use `granularitySpec` over `segmentGranularity` and only set one of these values. If you specify different values for these in the same compaction spec, the task fails.
 
-To control the number of result segments per time chunk, you can set [`maxRowsPerSegment`](../configuration/index.md#compaction-dynamic-configuration) or [`numShards`](../ingestion/native-batch.md#tuningconfig).
+To control the number of result segments per time chunk, you can set [`maxRowsPerSegment`](../configuration/index.md#automatic-compaction-dynamic-configuration) or [`numShards`](../ingestion/native-batch.md#tuningconfig).
 
 > You can run multiple compaction tasks in parallel. For example, if you want to compact the data for a year, you are not limited to running a single task for the entire year. You can run 12 compaction tasks with month-long intervals.
 
@@ -174,7 +177,7 @@ The compaction `ioConfig` requires specifying `inputSpec` as follows:
 |-----|-----------|-------|--------|
 |`type`|Task type: `compact`|none|Yes|
 |`inputSpec`|Specification of the target [intervals](#interval-inputspec) or [segments](#segments-inputspec).|none|Yes|
-|`dropExisting`|If `true` the task replaces all existing segments fully contained by either of the following:<br>- the `interval` in the `interval` type `inputSpec`.<br>- the umbrella interval of the `segments` in the `segment` type `inputSpec`.<br>If compaction fails, Druid does change any of the existing segments.<br>**WARNING**: `dropExisting` in `ioConfig` is a beta feature. |false|no|
+|`dropExisting`|If `true`, the task replaces all existing segments fully contained by either of the following:<br>- the `interval` in the `interval` type `inputSpec`.<br>- the umbrella interval of the `segments` in the `segment` type `inputSpec`.<br>If compaction fails, Druid does not change any of the existing segments.<br>**WARNING**: `dropExisting` in `ioConfig` is a beta feature. |false|No|
 
 
 Druid supports two supported `inputSpec` formats:
@@ -214,31 +217,10 @@ Druid supports two supported `inputSpec` formats:
 |`queryGranularity`|The resolution of timestamp storage within each segment. Defaults to 'null', which preserves the original query granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
 |`rollup`|Whether to enable ingestion-time rollup or not. Defaults to 'null', which preserves the original setting. Note that once data is rollup, individual records can no longer be recovered. |No|
 
-For example, to set the segment granularity to "day", the query granularity to "hour", and enabling rollup:
-
-```json
-{
-  "type": "compact",
-  "dataSource": "wikipedia",
-  "ioConfig": {
-    "type": "compact",
-    "inputSpec": {
-      "type": "interval",
-      "interval": "2017-01-01/2018-01-01"
-    },
-    "granularitySpec": {
-      "segmentGranularity": "day",
-      "queryGranularity": "hour",
-      "rollup": true
-    }
-  }
-}
-```
-
 ## Learn more
 
 See the following topics for more information:
 - [Segment optimization](../operations/segment-optimization.md) for guidance to determine if compaction will help in your case.
-- [Compacting Segments](../design/coordinator.md#compacting-segments) for more on automatic compaction.
-- [Compaction Configuration API](../operations/api-reference.md#compaction-configuration)
-and [Compaction Configuration](../configuration/index.md#compaction-dynamic-configuration) for automatic compaction configuration information.
+- [Compacting Segments](../design/coordinator.md#automatic-compaction) for details on how the Coordinator manages automatic compaction.
+- [Automatic compaction configuration API](../operations/api-reference.md#automatic-compaction-configuration)
+and [Automatic compaction configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for automatic compaction configuration information.

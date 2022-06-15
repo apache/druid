@@ -36,6 +36,7 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
@@ -63,6 +64,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -186,11 +188,18 @@ public class QueryLifecycle
   {
     transition(State.NEW, State.INITIALIZED);
 
-    baseQuery.getQueryContext().addDefaultParam(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
-    baseQuery.getQueryContext().addDefaultParams(defaultQueryConfig.getContext());
+    if (baseQuery.getQueryContext() == null) {
+      QueryContext context = new QueryContext(baseQuery.getContext());
+      context.addDefaultParam(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
+      context.addDefaultParams(defaultQueryConfig.getContext());
 
-    this.baseQuery = baseQuery;
-    this.toolChest = warehouse.getToolChest(baseQuery);
+      this.baseQuery = baseQuery.withOverriddenContext(context.getMergedParams());
+    } else {
+      baseQuery.getQueryContext().addDefaultParam(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
+      baseQuery.getQueryContext().addDefaultParams(defaultQueryConfig.getContext());
+      this.baseQuery = baseQuery;
+    }
+    this.toolChest = warehouse.getToolChest(this.baseQuery);
   }
 
   /**
@@ -204,6 +213,12 @@ public class QueryLifecycle
   public Access authorize(HttpServletRequest req)
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
+    final Set<String> contextKeys;
+    if (baseQuery.getQueryContext() == null) {
+      contextKeys = baseQuery.getContext().keySet();
+    } else {
+      contextKeys = baseQuery.getQueryContext().getUserParams().keySet();
+    }
     final Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
         Iterables.transform(
             baseQuery.getDataSource().getTableNames(),
@@ -211,7 +226,7 @@ public class QueryLifecycle
         ),
         authConfig.authorizeQueryContextParams()
         ? Iterables.transform(
-            baseQuery.getQueryContext().getUserParams().keySet(),
+            contextKeys,
             contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
         )
         : Collections.emptyList()

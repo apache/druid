@@ -648,10 +648,41 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testLatestVectorAggregators() throws Exception
+  {
+    testQuery(
+        "SELECT "
+        + "LATEST(cnt), LATEST(cnt + 1), LATEST(m1), LATEST(m1+1) "
+        + "FROM druid.numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "(\"cnt\" + 1)", ColumnType.LONG),
+                      expressionVirtualColumn("v1", "(\"m1\" + 1)", ColumnType.FLOAT)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new LongLastAggregatorFactory("a0", "cnt", null),
+                          new LongLastAggregatorFactory("a1", "v0", null),
+                          new FloatLastAggregatorFactory("a2", "m1", null),
+                          new FloatLastAggregatorFactory("a3", "v1", null)
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 2L, 6.0f, 7.0f}
+        )
+    );
+  }
+
+  @Test
   public void testLatestAggregators() throws Exception
   {
-    // Cannot vectorize LATEST aggregator.
-    skipVectorize();
 
     testQuery(
         "SELECT "
@@ -834,9 +865,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPrimitiveLatestInSubquery() throws Exception
   {
-    // Cannot vectorize LATEST aggregator.
-    skipVectorize();
-
     testQuery(
         "SELECT SUM(val1), SUM(val2), SUM(val3) FROM (SELECT dim2, LATEST(m1) AS val1, LATEST(cnt) AS val2, LATEST(m2) AS val3 FROM foo GROUP BY dim2)",
         ImmutableList.of(
@@ -878,6 +906,73 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         NullHandling.sqlCompatible()
         ? ImmutableList.of(new Object[]{18.0, 4L, 18.0})
         : ImmutableList.of(new Object[]{15.0, 3L, 15.0})
+    );
+  }
+
+  @Test
+  public void testPrimitiveLatestInSubqueryGroupBy() throws Exception
+  {
+    testQuery(
+        "SELECT dim2, LATEST(m1) AS val1 FROM foo GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                        .setAggregatorSpecs(aggregators(
+                                                new FloatLastAggregatorFactory("a0", "m1", null)
+                                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{null, 6.0f},
+            new Object[]{"", 3.0f},
+            new Object[]{"a", 4.0f},
+            new Object[]{"abc", 5.0f}
+        )
+        : ImmutableList.of(
+            new Object[]{"", 6.0f},
+            new Object[]{"a", 4.0f},
+            new Object[]{"abc", 5.0f}
+
+        )
+    );
+  }
+
+  @Test
+  public void testStringLatestGroupBy() throws Exception
+  {
+    testQuery(
+        "SELECT dim2, LATEST(dim4,10) AS val1 FROM druid.numfoo GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "_d0")))
+                        .setAggregatorSpecs(aggregators(
+                                                new StringLastAggregatorFactory("a0", "dim4", null, 10)
+                                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{null, "b"},
+            new Object[]{"", "a"},
+            new Object[]{"a", "b"},
+            new Object[]{"abc", "b"}
+        )
+        : ImmutableList.of(
+            new Object[]{"", "b"},
+            new Object[]{"a", "b"},
+            new Object[]{"abc", "b"}
+        )
     );
   }
 
@@ -936,9 +1031,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringLatestInSubquery() throws Exception
   {
-    // Cannot vectorize LATEST aggregator.
-    skipVectorize();
-
     testQuery(
         "SELECT SUM(val) FROM (SELECT dim2, LATEST(dim1, 10) AS val FROM foo GROUP BY dim2)",
         ImmutableList.of(
@@ -1176,9 +1268,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testLatestAggregatorsNumericNull() throws Exception
   {
-    // Cannot vectorize LATEST aggregator.
-    skipVectorize();
-
     testQuery(
         "SELECT LATEST(l1), LATEST(d1), LATEST(f1) FROM druid.numfoo",
         ImmutableList.of(
@@ -1209,7 +1298,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFirstLatestAggregatorsSkipNulls() throws Exception
   {
-    // Cannot vectorize LATEST aggregator.
+    // Cannot vectorize EARLIEST aggregator.
     skipVectorize();
 
     final DimFilter filter;
@@ -1465,8 +1554,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByLatestFloat() throws Exception
   {
-    // Cannot vectorize LATEST aggregator.
-    skipVectorize();
+
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
@@ -1513,8 +1601,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByLatestDouble() throws Exception
   {
-    // Cannot vectorize LATEST aggregator.
-    skipVectorize();
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
@@ -1560,8 +1646,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByLatestLong() throws Exception
   {
-    // Cannot vectorize LATEST aggregator.
-    skipVectorize();
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
@@ -5470,6 +5554,48 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT COUNT(*) FROM druid.foo "
         + "WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2001-01-01 00:00:00'",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Intervals.of("2000-01-01/2001-01-01")))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
+        )
+    );
+  }
+
+  @Test
+  public void testCountStarWithBetweenTimeFilterUsingMilliseconds() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo "
+        + "WHERE __time BETWEEN TIMESTAMP '2000-01-01 00:00:00' AND TIMESTAMP '2000-12-31 23:59:59.999'",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Intervals.of("2000-01-01/2001-01-01")))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
+        )
+    );
+  }
+
+  @Test
+  public void testCountStarWithBetweenTimeFilterUsingMillisecondsInStringLiterals() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo "
+        + "WHERE __time BETWEEN '2000-01-01 00:00:00' AND '2000-12-31 23:59:59.999'",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
