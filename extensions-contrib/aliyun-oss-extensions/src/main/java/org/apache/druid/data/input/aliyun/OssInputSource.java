@@ -140,7 +140,7 @@ public class OssInputSource extends CloudObjectInputSource
         null,
         null,
         split.get(),
-        null,
+        getFilter(),
         getOssInputSourceConfig()
     );
   }
