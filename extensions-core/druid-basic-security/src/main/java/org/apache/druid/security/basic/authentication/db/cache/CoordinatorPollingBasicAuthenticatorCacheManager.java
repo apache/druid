@@ -195,17 +195,17 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
           commonCacheConfig.getMaxSyncRetries()
       );
     }
-    catch (Exception e) {
-      LOG.makeAlert(e, "Encountered exception while fetching user map for authenticator [%s]", prefix).emit();
+    catch (Throwable t) {
+      LOG.makeAlert(t, "Encountered exception while fetching user map for authenticator [%s]", prefix).emit();
       if (isInit) {
         if (commonCacheConfig.getCacheDirectory() != null) {
           try {
             LOG.info("Attempting to load user map snapshot from disk.");
             return loadUserMapFromDisk(prefix);
           }
-          catch (Exception e2) {
-            e2.addSuppressed(e);
-            LOG.makeAlert(e2, "Encountered exception while loading user map snapshot for authenticator [%s]", prefix)
+          catch (Throwable t2) {
+            t2.addSuppressed(t);
+            LOG.makeAlert(t2, "Encountered exception while loading user map snapshot for authenticator [%s]", prefix)
                .emit();
           }
         }
