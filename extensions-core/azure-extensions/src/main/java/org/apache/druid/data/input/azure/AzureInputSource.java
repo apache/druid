@@ -69,9 +69,10 @@ public class AzureInputSource extends CloudObjectInputSource
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects
+      @JsonProperty("filter") @Nullable String filter
   )
   {
-    super(SCHEME, uris, prefixes, objects);
+    super(SCHEME, uris, prefixes, objects, filter);
     this.storage = Preconditions.checkNotNull(storage, "AzureStorage");
     this.entityFactory = Preconditions.checkNotNull(entityFactory, "AzureEntityFactory");
     this.azureCloudBlobIterableFactory = Preconditions.checkNotNull(
@@ -96,7 +97,8 @@ public class AzureInputSource extends CloudObjectInputSource
         inputDataConfig,
         null,
         null,
-        split.get()
+        split.get(),
+        getFilter()
     );
   }
 
@@ -113,6 +115,16 @@ public class AzureInputSource extends CloudObjectInputSource
         getIterableObjectsFromPrefixes().iterator(),
         blobHolder -> new InputFileAttribute(blobHolder.getBlobLength())
     );
+
+    if(org.apache.commons.lang.StringUtils.isNotBlank(getFilter())) {
+      return Streams.sequentialStreamFrom(splitIterator)
+      .map(objects -> objects.stream()
+                             .map(azureCloudBlobToLocationConverter::createCloudObjectLocation)
+                             .filter(object -> FilenameUtils.wildcardMatch(object.getPath(), getFilter()))
+                             .collect(Collectors.toList()))
+      .map(InputSplit::new);
+    }
+
     return Streams.sequentialStreamFrom(splitIterator)
                   .map(objects -> objects.stream()
                                          .map(azureCloudBlobToLocationConverter::createCloudObjectLocation)
@@ -165,6 +177,7 @@ public class AzureInputSource extends CloudObjectInputSource
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
+           ", filter=" + getFilter() +
            '}';
   }
 }

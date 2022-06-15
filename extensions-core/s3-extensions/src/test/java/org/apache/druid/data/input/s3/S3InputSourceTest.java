@@ -157,6 +157,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         EXPECTED_URIS,
         null,
         null,
+        null,
         null
     );
     final S3InputSource serdeWithUris = MAPPER.readValue(MAPPER.writeValueAsString(withUris), S3InputSource.class);
@@ -172,6 +173,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         PREFIXES,
+        null,
         null,
         null
     );
@@ -190,6 +192,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         EXPECTED_LOCATION,
+        null,
         null
     );
     final S3InputSource serdeWithPrefixes =
@@ -213,6 +216,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         EXPECTED_LOCATION,
+        null,
         CLOUD_CONFIG_PROPERTIES
     );
     final S3InputSource serdeWithPrefixes =
@@ -243,6 +247,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         EXPECTED_LOCATION,
+        null,
         mockConfigPropertiesWithoutKeyAndSecret
     );
     Assert.assertNotNull(withPrefixes);
@@ -265,6 +270,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         EXPECTED_LOCATION,
+        null,
         CLOUD_CONFIG_PROPERTIES
     );
     final S3InputSource serdeWithPrefixes =
@@ -286,6 +292,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         EXPECTED_LOCATION,
+        null,
         null
 
     );
@@ -305,6 +312,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         ImmutableList.of(),
         ImmutableList.of(),
         EXPECTED_LOCATION,
+        null,
         null
     );
     final S3InputSource serdeWithPrefixes =
@@ -340,6 +348,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         EXPECTED_URIS,
         PREFIXES,
         ImmutableList.of(),
+        null,
         null
     );
   }
@@ -356,6 +365,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         ImmutableList.of(),
         PREFIXES,
         EXPECTED_LOCATION,
+        null,
         null
     );
   }
@@ -368,6 +378,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
         EXPECTED_URIS,
+        null,
         null,
         null,
         null
@@ -396,6 +407,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         PREFIXES,
         null,
+        null,
         null
     );
 
@@ -422,6 +434,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         PREFIXES,
+        null,
         null,
         null
     );
@@ -453,6 +466,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         PREFIXES,
         null,
+        null,
         null
     );
 
@@ -481,6 +495,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
+        null,
         null,
         null
     );
@@ -512,6 +527,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
+        null,
         null,
         null
     );
@@ -554,6 +570,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0)),
+        null,
         null,
         null,
         3 // only have three retries since they are slow

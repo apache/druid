@@ -21,6 +21,8 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Ints;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFormat;
@@ -44,17 +46,20 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   private final List<URI> uris;
   private final List<URI> prefixes;
   private final List<CloudObjectLocation> objects;
+  private final String filter;
 
   public CloudObjectInputSource(
       String scheme,
       @Nullable List<URI> uris,
       @Nullable List<URI> prefixes,
       @Nullable List<CloudObjectLocation> objects
+      @Nullable String filter
   )
   {
     this.uris = uris;
     this.prefixes = prefixes;
     this.objects = objects;
+    this.filter = filter;
 
     if (!CollectionUtils.isNullOrEmpty(objects)) {
       throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(uris) || !CollectionUtils.isNullOrEmpty(prefixes));
@@ -87,6 +92,13 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     return objects;
   }
 
+  @Nullable
+  @JsonProperty
+  public String getFilter()
+  {
+    return filter;
+  }
+
   /**
    * Create the correct {@link InputEntity} for this input source given a split on a {@link CloudObjectLocation}. This
    * is called internally by {@link #formattableReader} and operates on the output of {@link #createSplits}.
@@ -108,12 +120,26 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   )
   {
     if (!CollectionUtils.isNullOrEmpty(objects)) {
-      return objects.stream().map(object -> new InputSplit<>(Collections.singletonList(object)));
+      if(StringUtils.isNotBlank(filter)) {
+        return objects.stream()
+                      .filter(object -> FilenameUtils.wildcardMatch(object.getPath(), filter))
+                      .map(object -> new InputSplit<>(Collections.singletonList(object)));
+      } else {
+        return objects.stream().map(object -> new InputSplit<>(Collections.singletonList(object)));
+      }
     }
+
     if (!CollectionUtils.isNullOrEmpty(uris)) {
-      return uris.stream()
-                 .map(CloudObjectLocation::new)
-                 .map(object -> new InputSplit<>(Collections.singletonList(object)));
+      if(StringUtils.isNotBlank(filter)) {
+        return uris.stream()
+                   .filter(uri -> FilenameUtils.wildcardMatch(uri.toString(), filter))
+                   .map(CloudObjectLocation::new)
+                   .map(object -> new InputSplit<>(Collections.singletonList(object)));
+      } else {
+        return uris.stream()
+                   .map(CloudObjectLocation::new)
+                   .map(object -> new InputSplit<>(Collections.singletonList(object)));
+      }
     }
 
     return getPrefixesSplitStream(getSplitHintSpecOrDefault(splitHintSpec));

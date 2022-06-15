@@ -60,9 +60,10 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects
+      @JsonProperty("filter") @Nullable String filter
   )
   {
-    super(GoogleStorageDruidModule.SCHEME_GS, uris, prefixes, objects);
+    super(GoogleStorageDruidModule.SCHEME_GS, uris, prefixes, objects, filter);
     this.storage = storage;
     this.inputDataConfig = inputDataConfig;
   }
@@ -103,6 +104,14 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
         }
     );
 
+    if(org.apache.commons.lang.StringUtils.isNotBlank(getFilter())) {
+      return Streams.sequentialStreamFrom(splitIterator)
+                    .map(objects -> objects.stream().map(this::byteSourceFromStorageObject)
+                    .filter(object -> FilenameUtils.wildcardMatch(object.getPath(), getFilter()))
+                    .collect(Collectors.toList()))
+                    .map(InputSplit::new);
+    }
+
     return Streams.sequentialStreamFrom(splitIterator)
                   .map(objects -> objects.stream().map(this::byteSourceFromStorageObject).collect(Collectors.toList()))
                   .map(InputSplit::new);
@@ -111,7 +120,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
   @Override
   public SplittableInputSource<List<CloudObjectLocation>> withSplit(InputSplit<List<CloudObjectLocation>> split)
   {
-    return new GoogleCloudStorageInputSource(storage, inputDataConfig, null, null, split.get());
+    return new GoogleCloudStorageInputSource(storage, inputDataConfig, null, null, split.get(), getFilter());
   }
 
   private CloudObjectLocation byteSourceFromStorageObject(final StorageObject storageObject)
@@ -136,6 +145,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
+           ", filter=" + getFilter() +
            '}';
   }
 }

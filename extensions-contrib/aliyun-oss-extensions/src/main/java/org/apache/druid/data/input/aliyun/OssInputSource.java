@@ -74,10 +74,11 @@ public class OssInputSource extends CloudObjectInputSource
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
+      @JsonProperty("filter") @Nullable String filter,
       @JsonProperty("properties") @Nullable OssClientConfig inputSourceConfig
   )
   {
-    super(OssStorageDruidModule.SCHEME, uris, prefixes, objects);
+    super(OssStorageDruidModule.SCHEME, uris, prefixes, objects, filter);
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "inputDataConfig");
     Preconditions.checkNotNull(client, "client");
     this.inputSourceConfig = inputSourceConfig;
@@ -114,6 +115,15 @@ public class OssInputSource extends CloudObjectInputSource
         object -> new InputFileAttribute(object.getSize())
     );
 
+    if(org.apache.commons.lang.StringUtils.isNotBlank(getFilter())) {
+      return Streams.sequentialStreamFrom(splitIterator)
+      .map(objects -> objects.stream()
+                             .map(OssUtils::summaryToCloudObjectLocation)
+                             .filter(object -> FilenameUtils.wildcardMatch(object.getPath(), getFilter()))
+                             .collect(Collectors.toList()))
+      .map(InputSplit::new);
+    }
+
     return Streams.sequentialStreamFrom(splitIterator)
                   .map(objects -> objects.stream()
                                          .map(OssUtils::summaryToCloudObjectLocation)
@@ -130,6 +140,7 @@ public class OssInputSource extends CloudObjectInputSource
         null,
         null,
         split.get(),
+        null,
         getOssInputSourceConfig()
     );
   }
@@ -163,6 +174,7 @@ public class OssInputSource extends CloudObjectInputSource
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
+           ", filter=" + getFilter() +
            ", ossInputSourceConfig=" + getOssInputSourceConfig() +
            '}';
   }

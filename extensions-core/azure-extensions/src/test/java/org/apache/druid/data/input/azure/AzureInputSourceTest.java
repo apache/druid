@@ -106,7 +106,8 @@ public class AzureInputSourceTest extends EasyMockSupport
         inputDataConfig,
         EMPTY_URIS,
         EMPTY_PREFIXES,
-        EMPTY_OBJECTS
+        EMPTY_OBJECTS,
+        null
     );
   }
 
@@ -126,7 +127,8 @@ public class AzureInputSourceTest extends EasyMockSupport
         inputDataConfig,
         EMPTY_URIS,
         EMPTY_PREFIXES,
-        objects
+        objects,
+        null
     );
 
     Assert.assertEquals(1, inputSplit.get().size());
@@ -159,7 +161,8 @@ public class AzureInputSourceTest extends EasyMockSupport
         inputDataConfig,
         EMPTY_URIS,
         prefixes,
-        EMPTY_OBJECTS
+        EMPTY_OBJECTS,
+        null
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> cloudObjectStream = azureInputSource.getPrefixesSplitStream(
@@ -187,7 +190,8 @@ public class AzureInputSourceTest extends EasyMockSupport
         inputDataConfig,
         EMPTY_URIS,
         prefixes,
-        EMPTY_OBJECTS
+        EMPTY_OBJECTS,
+        null
     );
 
     SplittableInputSource<List<CloudObjectLocation>> newInputSource = azureInputSource.withSplit(inputSplit);
@@ -207,7 +211,8 @@ public class AzureInputSourceTest extends EasyMockSupport
         inputDataConfig,
         EMPTY_URIS,
         prefixes,
-        EMPTY_OBJECTS
+        EMPTY_OBJECTS,
+        null
     );
 
     String actualToString = azureInputSource.toString();
