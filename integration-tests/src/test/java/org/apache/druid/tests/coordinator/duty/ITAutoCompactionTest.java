@@ -117,7 +117,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   @BeforeMethod
   public void setup() throws Exception
   {
-    // Set comapction slot to 5
+    // Set compaction slot to 5
     updateCompactionTaskSlot(0.5, 10, null);
     fullDatasourceName = "wikipedia_index_test_" + UUID.randomUUID() + config.getExtraDatasourceNameSuffix();
   }
@@ -476,7 +476,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
           0,
-          23372,
+          23156,
           0,
           0,
           3,
@@ -612,7 +612,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
           0,
-          23372,
+          23156,
           0,
           0,
           3,
