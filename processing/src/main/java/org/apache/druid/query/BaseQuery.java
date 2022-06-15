@@ -35,10 +35,10 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
 
 /**
  *
@@ -210,13 +210,7 @@ public abstract class BaseQuery<T> implements Query<T>
       final Map<String, Object> overrides
   )
   {
-    Map<String, Object> overridden = new TreeMap<>();
-    if (context != null) {
-      overridden.putAll(context);
-    }
-    overridden.putAll(overrides);
-
-    return overridden;
+    return QueryContexts.override(context, overrides);
   }
 
   /**
