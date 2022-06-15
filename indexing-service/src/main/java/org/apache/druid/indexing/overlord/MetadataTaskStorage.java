@@ -27,8 +27,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
-import org.apache.druid.indexer.TaskMetadata;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskLock;
@@ -126,7 +126,7 @@ public class MetadataTaskStorage implements TaskStorage
     metadataStorageConnector.createTaskTables();
     ExecutorService executorService = Executors.newSingleThreadExecutor();
     taskMigrationCompleteFuture = executorService.submit(
-        () -> handler.migrateTaskTable(metadataStorageConnector.getTaskTableName())
+        () -> handler.populateTaskTypeAndGroupId()
     );
   }
 
@@ -261,12 +261,12 @@ public class MetadataTaskStorage implements TaskStorage
         log.info(e, "Exception getting task migration future");
       }
     }
-    List<TaskInfo<TaskMetadata, TaskStatus>> taskMetadataInfos = fetchPayload
-        ? handler.getTaskMetadataInfosFromPayload(processedTaskLookups, datasource)
-        : handler.getTaskMetadataInfos(processedTaskLookups, datasource);
+    List<TaskInfo<TaskIdentifier, TaskStatus>> taskMetadataInfos = fetchPayload
+        ? handler.getTaskStatusListFromPayload(processedTaskLookups, datasource)
+        : handler.getTaskStatusList(processedTaskLookups, datasource);
     return Collections.unmodifiableList(
         taskMetadataInfos.stream()
-                         .map(TaskStatusPlus::fromTaskMetadataInfo)
+                         .map(TaskStatusPlus::fromTaskIdentifierInfo)
                          .collect(Collectors.toList())
     );
   }

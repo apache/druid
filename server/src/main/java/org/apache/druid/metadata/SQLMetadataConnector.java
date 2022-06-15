@@ -377,7 +377,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
-  public void alterEntryTable(final String tableName)
+  private void alterEntryTable(final String tableName)
   {
     try {
       retryWithHandle(
@@ -404,14 +404,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     catch (Exception e) {
       log.warn(e, "Exception altering table");
     }
-  }
-
-  @Override
-  public String getTaskTableName()
-  {
-    final MetadataStorageTablesConfig tablesConfig = tablesConfigSupplier.get();
-    final String entryType = tablesConfig.getTaskEntryType();
-    return tablesConfig.getEntryTable(entryType);
   }
 
   public void createLogTable(final String tableName, final String entryTypeName)

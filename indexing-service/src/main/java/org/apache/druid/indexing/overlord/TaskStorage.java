@@ -152,8 +152,8 @@ public interface TaskStorage
   List<Task> getActiveTasksByDatasource(String datasource);
 
   /**
-   * Returns tasks stored in the storage facility as a List of TaskStatusPlus
-   * particular order is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
+   * Returns the status of tasks in metadata storage as TaskStatusPlus
+   * No particular order is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
    *
    * The returned list can contain active tasks and complete tasks depending on the {@code taskLookups} parameter.
    * See {@link TaskLookup} for more details of active and complete tasks.

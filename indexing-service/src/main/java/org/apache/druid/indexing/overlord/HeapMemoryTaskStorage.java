@@ -241,8 +241,8 @@ public class HeapMemoryTaskStorage implements TaskStorage
   )
   {
     return getTaskInfos(taskLookups, datasource).stream()
-                                                .map(Task::toTaskMetadataInfo)
-                                                .map(TaskStatusPlus::fromTaskMetadataInfo)
+                                                .map(Task::toTaskIdentifierInfo)
+                                                .map(TaskStatusPlus::fromTaskIdentifierInfo)
                                                 .collect(Collectors.toList());
   }
 

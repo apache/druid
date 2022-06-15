@@ -25,9 +25,9 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
-import org.apache.druid.indexer.TaskMetadata;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -52,6 +52,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
@@ -484,7 +485,7 @@ public class SQLMetadataStorageActionHandlerTest
 
     Assert.assertEquals(active + completed, getUnmigratedTaskCount().intValue());
 
-    handler.migrateTaskTable(entryTable);
+    handler.populateTaskTypeAndGroupId();
 
     Assert.assertEquals(0, getUnmigratedTaskCount().intValue());
   }
@@ -509,12 +510,12 @@ public class SQLMetadataStorageActionHandlerTest
     taskLookups.put(TaskLookup.TaskLookupType.ACTIVE, ActiveTaskLookup.getInstance());
     taskLookups.put(TaskLookup.TaskLookupType.COMPLETE, CompleteTaskLookup.of(null, Duration.millis(86400000)));
 
-    List<TaskInfo<TaskMetadata, Map<String, Object>>> taskMetadataInfos;
+    List<TaskInfo<TaskIdentifier, Map<String, Object>>> taskMetadataInfos;
 
     // BEFORE MIGRATION
 
     // Payload based fetch. task type and groupid will be populated
-    taskMetadataInfos = handler.getTaskMetadataInfos(taskLookups, null, true);
+    taskMetadataInfos = handler.getTaskStatusList(taskLookups, null, true);
     Assert.assertEquals(4, taskMetadataInfos.size());
     verifyTaskInfoToMetadataInfo(completedUnaltered, taskMetadataInfos, false);
     verifyTaskInfoToMetadataInfo(completedAltered, taskMetadataInfos, false);
@@ -522,7 +523,7 @@ public class SQLMetadataStorageActionHandlerTest
     verifyTaskInfoToMetadataInfo(activeAltered, taskMetadataInfos, false);
 
     // New columns based fetch before migration is complete. type and payload are null when altered = false
-    taskMetadataInfos = handler.getTaskMetadataInfos(taskLookups, null, false);
+    taskMetadataInfos = handler.getTaskStatusList(taskLookups, null, false);
     Assert.assertEquals(4, taskMetadataInfos.size());
     verifyTaskInfoToMetadataInfo(completedUnaltered, taskMetadataInfos, true);
     verifyTaskInfoToMetadataInfo(completedAltered, taskMetadataInfos, false);
@@ -530,10 +531,10 @@ public class SQLMetadataStorageActionHandlerTest
     verifyTaskInfoToMetadataInfo(activeAltered, taskMetadataInfos, false);
 
     // MIGRATION
-    handler.migrateTaskTable(entryTable);
+    handler.populateTaskTypeAndGroupId();
 
     // Payload based fetch. task type and groupid will still be populated in tasks tab
-    taskMetadataInfos = handler.getTaskMetadataInfos(taskLookups, null, true);
+    taskMetadataInfos = handler.getTaskStatusList(taskLookups, null, true);
     Assert.assertEquals(4, taskMetadataInfos.size());
     verifyTaskInfoToMetadataInfo(completedUnaltered, taskMetadataInfos, false);
     verifyTaskInfoToMetadataInfo(completedAltered, taskMetadataInfos, false);
@@ -541,7 +542,7 @@ public class SQLMetadataStorageActionHandlerTest
     verifyTaskInfoToMetadataInfo(activeAltered, taskMetadataInfos, false);
 
     // New columns based fetch after migration is complete. All data must be populated in the tasks table
-    taskMetadataInfos = handler.getTaskMetadataInfos(taskLookups, null, false);
+    taskMetadataInfos = handler.getTaskStatusList(taskLookups, null, false);
     Assert.assertEquals(4, taskMetadataInfos.size());
     verifyTaskInfoToMetadataInfo(completedUnaltered, taskMetadataInfos, false);
     verifyTaskInfoToMetadataInfo(completedAltered, taskMetadataInfos, false);
@@ -557,7 +558,9 @@ public class SQLMetadataStorageActionHandlerTest
           @Override
           public Integer withHandle(Handle handle) throws SQLException
           {
-            String sql = String.format("SELECT COUNT(*) FROM %s WHERE type is NULL or group_id is NULL", entryTable);
+            String sql = String.format(Locale.ENGLISH,
+                                       "SELECT COUNT(*) FROM %s WHERE type is NULL or group_id is NULL",
+                                       entryTable);
             ResultSet resultSet = handle.getConnection().createStatement().executeQuery(sql);
             resultSet.next();
             return resultSet.getInt(1);
@@ -616,10 +619,10 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   private void verifyTaskInfoToMetadataInfo(TaskInfo<Map<String, Object>, Map<String, Object>> taskInfo,
-                                            List<TaskInfo<TaskMetadata, Map<String, Object>>> taskMetadataInfos,
+                                            List<TaskInfo<TaskIdentifier, Map<String, Object>>> taskMetadataInfos,
                                             boolean nullNewColumns)
   {
-    for (TaskInfo<TaskMetadata, Map<String, Object>> taskMetadataInfo : taskMetadataInfos) {
+    for (TaskInfo<TaskIdentifier, Map<String, Object>> taskMetadataInfo : taskMetadataInfos) {
       if (taskMetadataInfo.getId().equals(taskInfo.getId())) {
         verifyTaskInfoToMetadataInfo(taskInfo, taskMetadataInfo, nullNewColumns);
       }
@@ -629,7 +632,7 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   private void verifyTaskInfoToMetadataInfo(TaskInfo<Map<String, Object>, Map<String, Object>> taskInfo,
-                                            TaskInfo<TaskMetadata, Map<String, Object>> taskMetadataInfo,
+                                            TaskInfo<TaskIdentifier, Map<String, Object>> taskMetadataInfo,
                                             boolean nullNewColumns)
   {
     Assert.assertEquals(taskInfo.getId(), taskMetadataInfo.getId());
@@ -639,14 +642,14 @@ public class SQLMetadataStorageActionHandlerTest
     verifyTaskStatus(taskInfo.getStatus(), taskMetadataInfo.getStatus());
 
     Map<String, Object> task = taskInfo.getTask();
-    TaskMetadata taskMetadata = taskMetadataInfo.getTask();
-    Assert.assertEquals(task.get("id"), taskMetadata.getId());
+    TaskIdentifier taskIdentifier = taskMetadataInfo.getTask();
+    Assert.assertEquals(task.get("id"), taskIdentifier.getId());
     if (nullNewColumns) {
-      Assert.assertNull(taskMetadata.getGroupId());
-      Assert.assertNull(taskMetadata.getType());
+      Assert.assertNull(taskIdentifier.getGroupId());
+      Assert.assertNull(taskIdentifier.getType());
     } else {
-      Assert.assertEquals(task.get("groupId"), taskMetadata.getGroupId());
-      Assert.assertEquals(task.get("type"), taskMetadata.getType());
+      Assert.assertEquals(task.get("groupId"), taskIdentifier.getGroupId());
+      Assert.assertEquals(task.get("type"), taskIdentifier.getType());
     }
   }
 

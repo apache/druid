@@ -27,8 +27,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
-import org.apache.druid.indexer.TaskMetadata;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
@@ -76,9 +76,9 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   private final String lockTable;
 
   private final TaskInfoMapper<EntryType, StatusType> taskInfoMapper;
-  private final TaskMetadataInfoMapper taskMetadataInfoMapper;
-  private final TaskMetadataInfoMapperFromPayload taskMetadataInfoMapperFromPayload;
-  private final TaskMetadataMapper taskMetadataMapper;
+  private final TaskStatusMapper taskStatusMapper;
+  private final TaskStatusMapperFromPayload taskStatusMapperFromPayload;
+  private final TaskIdentifierMapper taskIdentifierMapper;
 
   @SuppressWarnings("PMD.UnnecessaryFullyQualifiedName")
   public SQLMetadataStorageActionHandler(
@@ -105,9 +105,9 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     this.logTable = logTable;
     this.lockTable = lockTable;
     this.taskInfoMapper = new TaskInfoMapper<>(jsonMapper, entryType, statusType);
-    this.taskMetadataInfoMapper = new TaskMetadataInfoMapper(jsonMapper);
-    this.taskMetadataInfoMapperFromPayload = new TaskMetadataInfoMapperFromPayload(jsonMapper);
-    this.taskMetadataMapper = new TaskMetadataMapper(jsonMapper);
+    this.taskStatusMapper = new TaskStatusMapper(jsonMapper);
+    this.taskStatusMapperFromPayload = new TaskStatusMapperFromPayload(jsonMapper);
+    this.taskIdentifierMapper = new TaskIdentifierMapper(jsonMapper);
   }
 
   protected SQLMetadataConnector getConnector()
@@ -326,60 +326,56 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   @Override
-  public List<TaskInfo<TaskMetadata, StatusType>> getTaskMetadataInfosFromPayload(
+  public List<TaskInfo<TaskIdentifier, StatusType>> getTaskStatusListFromPayload(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String dataSource
   )
   {
-    return getTaskMetadataInfos(taskLookups, dataSource, true);
+    return getTaskStatusList(taskLookups, dataSource, true);
   }
 
   @Override
-  public List<TaskInfo<TaskMetadata, StatusType>> getTaskMetadataInfos(
+  public List<TaskInfo<TaskIdentifier, StatusType>> getTaskStatusList(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String dataSource
   )
   {
-    return getTaskMetadataInfos(taskLookups, dataSource, false);
+    return getTaskStatusList(taskLookups, dataSource, false);
   }
 
-  public List<TaskInfo<TaskMetadata, StatusType>> getTaskMetadataInfos(
+  public List<TaskInfo<TaskIdentifier, StatusType>> getTaskStatusList(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String dataSource,
       boolean fetchPayload
   )
   {
-    ResultSetMapper<TaskInfo<TaskMetadata, StatusType>> resultSetMapper =
-        fetchPayload ? taskMetadataInfoMapperFromPayload : taskMetadataInfoMapper;
+    ResultSetMapper<TaskInfo<TaskIdentifier, StatusType>> resultSetMapper =
+        fetchPayload ? taskStatusMapperFromPayload : taskStatusMapper;
     return getConnector().retryTransaction(
         (handle, status) -> {
-          final List<TaskInfo<TaskMetadata, StatusType>> taskMetadataInfos = new ArrayList<>();
+          final List<TaskInfo<TaskIdentifier, StatusType>> taskMetadataInfos = new ArrayList<>();
           for (Entry<TaskLookupType, TaskLookup> entry : taskLookups.entrySet()) {
             final Query<Map<String, Object>> query;
             switch (entry.getKey()) {
               case ACTIVE:
-                query = !fetchPayload
-                        ? createActiveTaskSummaryStreamingQuery(handle, dataSource)
-                        : createActiveTaskStreamingQuery(handle, dataSource);
+                query = fetchPayload
+                        ? createActiveTaskStreamingQuery(handle, dataSource)
+                        : createActiveTaskSummaryStreamingQuery(handle, dataSource);
                 taskMetadataInfos.addAll(query.map(resultSetMapper).list());
                 break;
               case COMPLETE:
                 CompleteTaskLookup completeTaskLookup = (CompleteTaskLookup) entry.getValue();
                 DateTime priorTo = completeTaskLookup.getTasksCreatedPriorTo();
                 Integer limit = completeTaskLookup.getMaxTaskStatuses();
-                query = !fetchPayload
-                        ? createCompletedTaskSummaryStreamingQuery(handle, priorTo, limit, dataSource)
-                        : createCompletedTaskStreamingQuery(handle, priorTo, limit, dataSource);
+                query = fetchPayload
+                        ? createCompletedTaskStreamingQuery(handle, priorTo, limit, dataSource)
+                        : createCompletedTaskSummaryStreamingQuery(handle, priorTo, limit, dataSource);
                 taskMetadataInfos.addAll(query.map(resultSetMapper).list());
                 break;
               default:
                 throw new IAE("Unknown TaskLookupType: [%s]", entry.getKey());
             }
           }
-          for (TaskInfo<TaskMetadata, StatusType> taskMetadataInfo : taskMetadataInfos) {
-            System.out.println(taskMetadataInfo.getTask());
-          }
-          System.out.println("-------------------");
           return taskMetadataInfos;
         },
         3,
@@ -396,7 +392,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
    * @param dataSource datasource to which the tasks belong. null if we don't want to filter
    * @return Query object for TaskStatusPlus for completed tasks of interest
    */
-  protected Query<Map<String, Object>> createCompletedTaskSummaryStreamingQuery(
+  private Query<Map<String, Object>> createCompletedTaskSummaryStreamingQuery(
       Handle handle,
       DateTime timestamp,
       @Nullable Integer maxNumStatuses,
@@ -444,7 +440,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
    * @param dataSource datasource to which the tasks belong. null if we don't want to filter
    * @return Query object for completed TaskInfos of interest
    */
-  protected Query<Map<String, Object>> createCompletedTaskStreamingQuery(
+  private Query<Map<String, Object>> createCompletedTaskStreamingQuery(
       Handle handle,
       DateTime timestamp,
       @Nullable Integer maxNumStatuses,
@@ -571,43 +567,43 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     return sql;
   }
 
-  class TaskMetadataInfoMapperFromPayload implements ResultSetMapper<TaskInfo<TaskMetadata, StatusType>>
+  private class TaskStatusMapperFromPayload implements ResultSetMapper<TaskInfo<TaskIdentifier, StatusType>>
   {
     private final ObjectMapper objectMapper;
 
-    TaskMetadataInfoMapperFromPayload(ObjectMapper objectMapper)
+    TaskStatusMapperFromPayload(ObjectMapper objectMapper)
     {
       this.objectMapper = objectMapper;
     }
 
     @Override
-    public TaskInfo<TaskMetadata, StatusType> map(int index, ResultSet resultSet, StatementContext context)
+    public TaskInfo<TaskIdentifier, StatusType> map(int index, ResultSet resultSet, StatementContext context)
         throws SQLException
     {
-      return toTaskMetadataInfo(objectMapper, resultSet, true);
+      return toTaskIdentifierInfo(objectMapper, resultSet, true);
     }
   }
 
-  class TaskMetadataInfoMapper implements ResultSetMapper<TaskInfo<TaskMetadata, StatusType>>
+  private class TaskStatusMapper implements ResultSetMapper<TaskInfo<TaskIdentifier, StatusType>>
   {
     private final ObjectMapper objectMapper;
 
-    TaskMetadataInfoMapper(ObjectMapper objectMapper)
+    TaskStatusMapper(ObjectMapper objectMapper)
     {
       this.objectMapper = objectMapper;
     }
 
     @Override
-    public TaskInfo<TaskMetadata, StatusType> map(int index, ResultSet resultSet, StatementContext context)
+    public TaskInfo<TaskIdentifier, StatusType> map(int index, ResultSet resultSet, StatementContext context)
         throws SQLException
     {
-      return toTaskMetadataInfo(objectMapper, resultSet, false);
+      return toTaskIdentifierInfo(objectMapper, resultSet, false);
     }
   }
 
-  private TaskInfo<TaskMetadata, StatusType> toTaskMetadataInfo(ObjectMapper objectMapper,
-                                                                       ResultSet resultSet,
-                                                                       boolean usePayload
+  private TaskInfo<TaskIdentifier, StatusType> toTaskIdentifierInfo(ObjectMapper objectMapper,
+                                                                    ResultSet resultSet,
+                                                                    boolean usePayload
   ) throws SQLException
   {
     String type;
@@ -638,22 +634,22 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
       throw new SQLException(e);
     }
     String datasource = resultSet.getString("datasource");
-    TaskMetadata taskMetadata = new TaskMetadata(id, groupId, type);
+    TaskIdentifier taskIdentifier = new TaskIdentifier(id, groupId, type);
 
-    return new TaskInfo<>(id, createdTime, status, datasource, taskMetadata);
+    return new TaskInfo<>(id, createdTime, status, datasource, taskIdentifier);
   }
 
-  static class TaskMetadataMapper implements ResultSetMapper<TaskMetadata>
+  static class TaskIdentifierMapper implements ResultSetMapper<TaskIdentifier>
   {
     private final ObjectMapper objectMapper;
 
-    TaskMetadataMapper(ObjectMapper objectMapper)
+    TaskIdentifierMapper(ObjectMapper objectMapper)
     {
       this.objectMapper = objectMapper;
     }
 
     @Override
-    public TaskMetadata map(int index, ResultSet resultSet, StatementContext context)
+    public TaskIdentifier map(int index, ResultSet resultSet, StatementContext context)
         throws SQLException
     {
       try {
@@ -661,7 +657,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         // If field is absent (older task version), use blank string to avoid a loop of migration of such tasks.
         JsonNode type = payload.get("type");
         JsonNode groupId = payload.get("groupId");
-        return new TaskMetadata(
+        return new TaskIdentifier(
             resultSet.getString("id"),
             groupId == null ? "" : groupId.asText(),
             type == null ? "" : type.asText()
@@ -963,9 +959,9 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                             .orElse(null);
   }
 
-  private List<TaskMetadata> fetchTaskMetadatas(String tableName, String id, int limit)
+  private List<TaskIdentifier> fetchTaskMetadatas(String tableName, String id, int limit)
   {
-    List<TaskMetadata> taskMetadatas = new ArrayList<>();
+    List<TaskIdentifier> taskIdentifiers = new ArrayList<>();
     connector.retryWithHandle(
         new HandleCallback<Void>()
         {
@@ -979,15 +975,15 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                 connector.limitClause(limit)
             );
             Query<Map<String, Object>> query = handle.createQuery(sql);
-            taskMetadatas.addAll(query.map(taskMetadataMapper).list());
+            taskIdentifiers.addAll(query.map(taskIdentifierMapper).list());
             return null;
           }
         }
     );
-    return taskMetadatas;
+    return taskIdentifiers;
   }
 
-  private void updateTaskMetadatas(String tasksTable, List<TaskMetadata> taskMetadatas)
+  private void updateTaskMetadatas(String tasksTable, List<TaskIdentifier> taskIdentifiers)
   {
     connector.retryWithHandle(
         new HandleCallback<Void>()
@@ -997,7 +993,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
           {
             Batch batch = handle.createBatch();
             String sql = "UPDATE %1$s SET type = '%2$s', group_id = '%3$s' WHERE id = '%4$s'";
-            for (TaskMetadata metadata : taskMetadatas) {
+            for (TaskIdentifier metadata : taskIdentifiers) {
               batch.add(StringUtils.format(sql, tasksTable, metadata.getType(), metadata.getGroupId(), metadata.getId())
               );
             }
@@ -1010,33 +1006,44 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
 
 
   @Override
-  public boolean migrateTaskTable(String tableName)
+  public boolean populateTaskTypeAndGroupId()
   {
-    log.info("Populate fields task and group_id of task entry table [%s] from payload", tableName);
+    log.info("Populate fields task and group_id of task entry table [%s] from payload", entryTable);
     String id = "";
     int limit = 100;
+    int count = 0;
     while (true) {
-      List<TaskMetadata> taskMetadatas;
+      List<TaskIdentifier> taskIdentifiers;
       try {
-        taskMetadatas = fetchTaskMetadatas(tableName, id, limit);
+        taskIdentifiers = fetchTaskMetadatas(entryTable, id, limit);
       }
       catch (Exception e) {
         log.warn(e, "Task migration failed while reading entries from task table");
         return false;
       }
-      if (taskMetadatas.isEmpty()) {
+      if (taskIdentifiers.isEmpty()) {
         break;
       }
       try {
-        updateTaskMetadatas(tableName, taskMetadatas);
+        updateTaskMetadatas(entryTable, taskIdentifiers);
+        count += taskIdentifiers.size();
+        log.info("Successfully updated type and groupId for [%d] tasks", count);
       }
       catch (Exception e) {
         log.warn(e, "Task migration failed while updating entries in task table");
         return false;
       }
-      id = taskMetadatas.get(taskMetadatas.size() - 1).getId();
+      id = taskIdentifiers.get(taskIdentifiers.size() - 1).getId();
+
+      try {
+        Thread.sleep(1000);
+      }
+      catch (InterruptedException e) {
+        log.info("Interrupted, exiting!");
+        Thread.currentThread().interrupt();
+      }
     }
-    log.info("Task migration for table [%s] successful", tableName);
+    log.info("Task migration for table [%s] successful", entryTable);
     return true;
   }
 }

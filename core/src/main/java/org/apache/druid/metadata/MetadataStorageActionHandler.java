@@ -20,8 +20,8 @@
 package org.apache.druid.metadata;
 
 import com.google.common.base.Optional;
+import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
-import org.apache.druid.indexer.TaskMetadata;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.joda.time.DateTime;
 
@@ -104,49 +104,37 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   );
 
   /**
-   * This is the recommended method to fetch Tasks for the task view
-   * This utilizes the new type and group_id columns and should be utilized after migration
-   * Returns a list of TaskInfo for the tasks corresponding to the given filters
-   * The TaskInfo comprises the TaskMetadata which is significantly smaller than a Task, and the TaskStatus
-   * These are sufficient to create the TaskStatusPlus for a given Task, and prevent unnecessary memory usage
+   * Returns the statuses of the specified tasks. Implementations of this method must not
+   * read the task payload from the underlying storage as it may increase memory usage.
    *
    * If {@code taskLookups} includes {@link TaskLookupType#ACTIVE}, it returns all active tasks in the metadata store.
    * If {@code taskLookups} includes {@link TaskLookupType#COMPLETE}, it returns all complete tasks in the metadata
    * store. For complete tasks, additional filters in {@code CompleteTaskLookup} can be applied.
    * All lookups should be processed atomically if more than one lookup is given.
    *
-   * fetchPayload determines the query used to fetch from the tasks table
-   * If true, fetch the payload and deserialize it to obtain the above fields
-   * Else, use the newly created type and group_id columns in the query for task summaries
-   *
    * @param taskLookups task lookup type and filters.
    * @param datasource  datasource filter
    */
-  List<TaskInfo<TaskMetadata, StatusType>> getTaskMetadataInfos(
+  List<TaskInfo<TaskIdentifier, StatusType>> getTaskStatusList(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource
   );
 
   /**
-   * Please use this method to fetch task for viewing on ingestion tab only before task migration
-   * This deserializes the payload column to get the required fields, and has a greater overhead
-   * Returns a list of TaskInfo for the tasks corresponding to the given filters
-   * The TaskInfo comprises the TaskMetadata which is significantly smaller than a Task, and the TaskStatus
-   * These are sufficient to create the TaskStatusPlus for a given Task, and prevent unnecessary memory usage
+   * Returns the statuses of the specified tasks. Implementations of this method may
+   * read from the corresponding task payloads to retrieve task information.
+   *
+   * This method is deprecated and {@link #getTaskStatusList} should be used instead.
    *
    * If {@code taskLookups} includes {@link TaskLookupType#ACTIVE}, it returns all active tasks in the metadata store.
    * If {@code taskLookups} includes {@link TaskLookupType#COMPLETE}, it returns all complete tasks in the metadata
    * store. For complete tasks, additional filters in {@code CompleteTaskLookup} can be applied.
    * All lookups should be processed atomically if more than one lookup is given.
    *
-   * fetchPayload determines the query used to fetch from the tasks table
-   * If true, fetch the payload and deserialize it to obtain the above fields
-   * Else, use the newly created type and group_id columns in the query for task summaries
-   *
    * @param taskLookups task lookup type and filters.
    * @param datasource  datasource filter
    */
-  List<TaskInfo<TaskMetadata, StatusType>> getTaskMetadataInfosFromPayload(
+  List<TaskInfo<TaskIdentifier, StatusType>> getTaskStatusListFromPayload(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource
   );
@@ -227,11 +215,11 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   Long getLockId(String entryId, LockType lock);
 
   /**
-   * Utility to migrate existing tasks to the new schema
+   * Utility to migrate existing tasks to the new schema by populating type and groupId
    *
    * To be kicked off in a separate thread at MetadataTaskStorage startup.
-   * @param tasksTable
-   * @return
+   *
+   * @return true if migration was successful
    */
-  boolean migrateTaskTable(String tasksTable);
+  boolean populateTaskTypeAndGroupId();
 }

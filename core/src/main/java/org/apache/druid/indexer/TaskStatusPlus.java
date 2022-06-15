@@ -256,26 +256,26 @@ public class TaskStatusPlus
   }
 
   /**
-   * Convert a TaskInfo pair of TaskMetadata and TaskStatus to a TaskStatusPlus
-   * Applicable only for completed or waiting tasks
+   * Convert a TaskInfo class of TaskIdentifier and TaskStatus to a TaskStatusPlus
+   * Applicable only for completed or waiting tasks since a TaskInfo doesn't have the exhaustive info for running tasks
    *
-   * @param taskMetadataInfo TaskInfo pair
+   * @param taskIdentifierInfo TaskInfo pair
    * @return corresponding TaskStatusPlus
    */
-  public static TaskStatusPlus fromTaskMetadataInfo(TaskInfo<TaskMetadata, TaskStatus> taskMetadataInfo)
+  public static TaskStatusPlus fromTaskIdentifierInfo(TaskInfo<TaskIdentifier, TaskStatus> taskIdentifierInfo)
   {
-    TaskStatus status = taskMetadataInfo.getStatus();
+    TaskStatus status = taskIdentifierInfo.getStatus();
     return new TaskStatusPlus(
-        taskMetadataInfo.getId(),
-        taskMetadataInfo.getTask().getGroupId(),
-        taskMetadataInfo.getTask().getType(),
-        taskMetadataInfo.getCreatedTime(),
+        taskIdentifierInfo.getId(),
+        taskIdentifierInfo.getTask().getGroupId(),
+        taskIdentifierInfo.getTask().getType(),
+        taskIdentifierInfo.getCreatedTime(),
         DateTimes.EPOCH,
         status.getStatusCode(),
         status.getStatusCode().isComplete() ? RunnerTaskState.NONE : RunnerTaskState.WAITING,
         status.getDuration(),
         status.getLocation(),
-        taskMetadataInfo.getDataSource(),
+        taskIdentifierInfo.getDataSource(),
         status.getErrorMsg()
     );
   }

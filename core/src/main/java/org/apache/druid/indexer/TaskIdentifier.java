@@ -27,10 +27,10 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * Model class containing the fields relevant to view tasks in the ingestion tab.
+ * Model class containing the id, type and groupId of a task
  * These fields are extracted from the task payload for the new schema and this model can be used for migration as well.
  */
-public class TaskMetadata
+public class TaskIdentifier
 {
 
   private final String id;
@@ -42,7 +42,7 @@ public class TaskMetadata
   private final String groupId;
 
   @JsonCreator
-  public TaskMetadata(
+  public TaskIdentifier(
       @JsonProperty("id") String id,
       @JsonProperty("groupId") @Nullable String groupId,
       @JsonProperty("type") @Nullable String type // nullable for backward compatibility
@@ -82,7 +82,7 @@ public class TaskMetadata
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    TaskMetadata that = (TaskMetadata) o;
+    TaskIdentifier that = (TaskIdentifier) o;
     return Objects.equals(getId(), that.getId()) &&
            Objects.equals(getGroupId(), that.getGroupId()) &&
            Objects.equals(getType(), that.getType());
@@ -101,7 +101,7 @@ public class TaskMetadata
   @Override
   public String toString()
   {
-    return "TaskMetadata{" +
+    return "TaskIdentifier{" +
            "id='" + id + '\'' +
            ", groupId='" + groupId + '\'' +
            ", type='" + type + '\'' +
