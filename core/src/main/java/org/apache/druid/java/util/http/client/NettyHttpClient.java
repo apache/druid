@@ -317,6 +317,8 @@ public class NettyHttpClient extends AbstractHttpClient
               }
             }
 
+            // Ignore return value of setException, since exceptionCaught can be called multiple times and we
+            // only want to report the first one.
             if (event.getCause() instanceof ReadTimeoutException) {
               // ReadTimeoutException thrown by ReadTimeoutHandler is a singleton with a misleading stack trace.
               // No point including it: instead, we replace it with a fresh exception.
@@ -338,7 +340,11 @@ public class NettyHttpClient extends AbstractHttpClient
               log.warn(e, "Error while closing channel");
             }
             finally {
-              channelResourceContainer.returnResource();
+              if (channelResourceContainer.isPresent()) {
+                // exceptionCaught can be called multiple times: we only want to return the channel if it hasn't
+                // already been returned.
+                channelResourceContainer.returnResource();
+              }
             }
           }
 
