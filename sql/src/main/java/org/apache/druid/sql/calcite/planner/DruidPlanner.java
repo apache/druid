@@ -140,7 +140,7 @@ public class DruidPlanner implements Closeable
    * Prepare a SQL query for execution to support prepared statements via JDBC.
    * The statement must have already been validated.
    */
-  public PrepareResult prepare() throws ValidationException, RelConversionException
+  public PrepareResult prepare() throws ValidationException
   {
     Preconditions.checkState(state == State.VALIDATED);
     state = State.PREPARED;
@@ -151,7 +151,7 @@ public class DruidPlanner implements Closeable
    * Plan an SQL query for execution, returning a {@link PlannerResult} which
    * can be used to actually execute the query.
    */
-  public PlannerResult plan() throws ValidationException, RelConversionException
+  public PlannerResult plan() throws ValidationException
   {
     Preconditions.checkState(state == State.VALIDATED || state == State.PREPARED);
     state = State.PLANNED;

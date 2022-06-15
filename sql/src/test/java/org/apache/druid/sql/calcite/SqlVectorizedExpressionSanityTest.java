@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.StringUtils;
@@ -59,6 +58,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -172,7 +172,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   }
 
   @Test
-  public void testQuery() throws SqlParseException, RelConversionException, ValidationException
+  public void testQuery() throws RelConversionException, ValidationException
   {
     sanityTestVectorizedSqlQueries(PLANNER_FACTORY, query);
   }

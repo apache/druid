@@ -287,7 +287,7 @@ public class SqlLifecycle
    * The planner must have already performed the validation step: the planner
    * state is reused here.
    */
-  public PrepareResult prepare() throws RelConversionException
+  public PrepareResult prepare()
   {
     synchronized (stateLock) {
       if (state != State.AUTHORIZED) {

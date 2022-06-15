@@ -109,7 +109,7 @@ abstract class QueryHandler extends BaseStatementHandler
   }
 
   @Override
-  public PrepareResult prepare() throws RelConversionException, ValidationException
+  public PrepareResult prepare() throws ValidationException
   {
     rootQueryRel = handlerContext.planner().rel(validatedQueryNode);
 
@@ -196,7 +196,7 @@ abstract class QueryHandler extends BaseStatementHandler
   private PlannerResult planWithDruidConvention(
       final RelRoot root,
       final RexBuilder rexBuilder
-  ) throws ValidationException, RelConversionException
+  ) throws ValidationException
   {
     CalcitePlanner planner = handlerContext.planner();
     final RelRoot possiblyLimitedRoot = possiblyWrapRootWithOuterLimitFromContext(root, rexBuilder);
@@ -328,7 +328,7 @@ abstract class QueryHandler extends BaseStatementHandler
    */
   private PlannerResult planWithBindableConvention(
       final RelRoot root
-  ) throws RelConversionException
+  )
   {
     CalcitePlanner planner = handlerContext.planner();
     BindableRel bindableRel = (BindableRel) planner.transform(
