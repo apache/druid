@@ -242,6 +242,7 @@ public class ForkingTaskRunnerTest
       }
     };
 
+    forkingTaskRunner.setNumProcessorsPerTask();
     final TaskStatus status = forkingTaskRunner.run(NoopTask.create()).get();
     Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
     Assert.assertEquals(
@@ -312,6 +313,7 @@ public class ForkingTaskRunnerTest
       }
     };
 
+    forkingTaskRunner.setNumProcessorsPerTask();
     final TaskStatus status = forkingTaskRunner.run(task).get();
     Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
     Assert.assertNull(status.getErrorMsg());
@@ -373,6 +375,7 @@ public class ForkingTaskRunnerTest
       }
     };
 
+    forkingTaskRunner.setNumProcessorsPerTask();
     final TaskStatus status = forkingTaskRunner.run(task).get();
     Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
     Assert.assertEquals("task failure test", status.getErrorMsg());
@@ -441,6 +444,7 @@ public class ForkingTaskRunnerTest
       }
     };
 
+    forkingTaskRunner.setNumProcessorsPerTask();
     forkingTaskRunner.run(task).get();
     Assert.assertTrue(xmxJavaOptsArrayIndex.get() > xmxJavaOptsIndex.get());
     Assert.assertTrue(xmxJavaOptsIndex.get() >= 0);
@@ -509,6 +513,7 @@ public class ForkingTaskRunnerTest
       }
     };
 
+    forkingTaskRunner.setNumProcessorsPerTask();
     ExecutionException e = Assert.assertThrows(ExecutionException.class, () -> forkingTaskRunner.run(task).get());
     Assert.assertTrue(e.getMessage().endsWith(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY
                                               + " in context of task: " + task.getId() + " must be an array of strings.")
