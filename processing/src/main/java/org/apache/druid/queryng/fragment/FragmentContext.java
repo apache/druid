@@ -19,7 +19,6 @@
 
 package org.apache.druid.queryng.fragment;
 
-import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
 
 /**
@@ -46,8 +45,6 @@ public interface FragmentContext extends DAGBuilder
    * call each operator's {@code close()} method on timeout.
    */
   void checkTimeout();
-
-  void missingSegment(SegmentDescriptor descriptor);
 
   /**
    * Reports the exception, if any, that terminated the fragment.

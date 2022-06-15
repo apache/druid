@@ -32,14 +32,12 @@ import java.util.Iterator;
  */
 public abstract class MappingOperator<IN, OUT> implements IterableOperator<OUT>
 {
-  protected final FragmentContext context;
   private final Operator<IN> input;
   protected Iterator<IN> inputIter;
   protected State state = State.START;
 
   public MappingOperator(FragmentContext context, Operator<IN> input)
   {
-    this.context = context;
     this.input = input;
     context.register(this);
   }

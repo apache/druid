@@ -55,8 +55,11 @@ public abstract class WrappingOperator<T> implements Operator<T>
   @Override
   public void close(boolean cascade)
   {
+    if (state != State.RUN) {
+      return;
+    }
     try {
-      if (state == State.RUN && cascade) {
+      if (cascade) {
         input.close(cascade);
       }
     }

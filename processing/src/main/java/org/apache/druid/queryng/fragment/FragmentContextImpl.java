@@ -23,13 +23,10 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryTimeoutException;
-import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.queryng.operators.Operator;
 
-import java.util.ArrayList;
 import java.util.Deque;
-import java.util.List;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 public class FragmentContextImpl implements FragmentContext
@@ -41,7 +38,7 @@ public class FragmentContextImpl implements FragmentContext
   private final long startTimeMillis;
   private final long timeoutAt;
   protected State state = State.START;
-  private Exception exception;
+  private Deque<Exception> exceptions = new ConcurrentLinkedDeque<>();
 
   protected FragmentContextImpl(
       final String queryId,
@@ -81,7 +78,7 @@ public class FragmentContextImpl implements FragmentContext
   @Override
   public Exception exception()
   {
-    return exception;
+    return exceptions.peek();
   }
 
   @Override
@@ -98,7 +95,7 @@ public class FragmentContextImpl implements FragmentContext
 
   public void failed(Exception exception)
   {
-    this.exception = exception;
+    this.exceptions.add(exception);
     this.state = State.FAILED;
   }
 
@@ -110,24 +107,6 @@ public class FragmentContextImpl implements FragmentContext
           StringUtils.nonStrictFormat("Query [%s] timed out after [%d] ms",
               queryId, timeoutMs));
     }
-  }
-
-  protected void recordRunTime()
-  {
-    if (timeoutAt == 0) {
-      return;
-    }
-    // This is very likely wrong
-    responseContext.put(
-        ResponseContext.Keys.TIMEOUT_AT,
-        timeoutAt - (System.currentTimeMillis() - startTimeMillis)
-    );
-  }
-
-  @Override
-  public void missingSegment(SegmentDescriptor descriptor)
-  {
-    responseContext.add(ResponseContext.Keys.MISSING_SEGMENTS, descriptor);
   }
 
   /**
@@ -144,7 +123,6 @@ public class FragmentContextImpl implements FragmentContext
     if (state == State.CLOSED) {
       return;
     }
-    List<Exception> exceptions = new ArrayList<>();
     Operator<?> op;
     while ((op = operators.pollFirst()) != null) {
       try {
@@ -154,8 +132,6 @@ public class FragmentContextImpl implements FragmentContext
         exceptions.add(e);
       }
     }
-    // TODO: Do something with the exceptions
-    recordRunTime();
     state = State.CLOSED;
   }
 }

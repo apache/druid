@@ -19,7 +19,6 @@
 
 package org.apache.druid.queryng.operators;
 
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.queryng.fragment.FragmentBuilder;
 import org.apache.druid.queryng.fragment.FragmentHandle;
 import org.apache.druid.queryng.fragment.FragmentRun;
@@ -64,42 +63,6 @@ public class MockOperatorTest
     List<Integer> results = builder.run(op).toList();
     assertEquals(0, (int) results.get(0));
     assertEquals(1, (int) results.get(1));
-    assertEquals(Operator.State.CLOSED, op.state);
-  }
-
-  /**
-   * Getting weird: an operator that wraps a sequence that wraps an operator.
-   */
-  @Test
-  public void testSequenceOperator()
-  {
-    FragmentBuilder builder = FragmentBuilder.defaultBuilder();
-    MockOperator<String> op = MockOperator.strings(builder.context(), 2);
-    Sequence<String> seq = Operators.toSequence(op);
-    Operator<String> outer = Operators.toOperator(builder, seq);
-    FragmentRun<String> run = builder.run(outer);
-    Iterator<String> iter = run.iterator();
-    assertTrue(iter.hasNext());
-    assertEquals("Mock row 0", iter.next());
-    assertTrue(iter.hasNext());
-    assertEquals("Mock row 1", iter.next());
-    assertFalse(iter.hasNext());
-    run.close();
-    assertEquals(Operator.State.CLOSED, op.state);
-  }
-
-  @Test
-  public void testMockFilter()
-  {
-    FragmentBuilder builder = FragmentBuilder.defaultBuilder();
-    MockOperator<Integer> op = MockOperator.ints(builder.context(), 4);
-    Operator<Integer> op2 = new MockFilterOperator<Integer>(
-        builder.context(),
-        op,
-        x -> x % 2 == 0);
-    List<Integer> results = builder.run(op2).toList();
-    assertEquals(0, (int) results.get(0));
-    assertEquals(2, (int) results.get(1));
     assertEquals(Operator.State.CLOSED, op.state);
   }
 }

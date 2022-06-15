@@ -37,6 +37,7 @@ public class QueryNGConfig
   /**
    * Create an instance for testing.
    */
+  @SuppressWarnings("unused") // To be used later
   public static QueryNGConfig create(boolean enabled)
   {
     QueryNGConfig config = new QueryNGConfig();

@@ -74,7 +74,8 @@ public class MockCursor implements Cursor, ColumnSelectorFactory
     }
   }
 
-  private class MockStringColumn implements ColumnValueSelector<String>
+  // Must be static to avoid Java 11 compile errors.
+  private static class MockStringColumn implements ColumnValueSelector<String>
   {
     @Override
     public long getLong()

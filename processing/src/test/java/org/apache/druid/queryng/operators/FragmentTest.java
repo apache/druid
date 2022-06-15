@@ -19,12 +19,23 @@
 
 package org.apache.druid.queryng.operators;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceTestHelper;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.queryng.config.QueryNGConfig;
 import org.apache.druid.queryng.fragment.FragmentBuilder;
+import org.apache.druid.queryng.fragment.FragmentBuilderFactory;
+import org.apache.druid.queryng.fragment.FragmentBuilderFactoryImpl;
+import org.apache.druid.queryng.fragment.FragmentContext;
+import org.apache.druid.queryng.fragment.FragmentContextImpl;
 import org.apache.druid.queryng.fragment.FragmentHandle;
 import org.apache.druid.queryng.fragment.FragmentRun;
+import org.apache.druid.queryng.fragment.NullFragmentBuilderFactory;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -59,12 +70,13 @@ public class FragmentTest
     assertTrue(handle.rootIsOperator());
     assertFalse(handle.rootIsSequence());
     assertSame(op, handle.rootOperator());
+    assertSame(builder, handle.builder());
     assertNull(handle.rootSequence());
     assertSame(handle, handle.toOperator());
     assertSame(builder.context(), handle.context());
 
     // Add another operator to the DAG.
-    Operator<Integer> op2 = new MockFilterOperator<Integer>(builder.context(), op, x -> x < 3);
+    Operator<Integer> op2 = new FilterOperator<Integer>(builder.context(), op, x -> x < 3);
     FragmentHandle<Integer> handle2 = handle.compose(op2);
     assertTrue(handle2.rootIsOperator());
     assertFalse(handle2.rootIsSequence());
@@ -112,7 +124,7 @@ public class FragmentTest
   public void testSequenceBasics()
   {
     FragmentBuilder builder = FragmentBuilder.defaultBuilder();
-    MockOperator<Integer> op = MockOperator.ints(builder.context(), 2);
+    MockOperator<Integer> op = MockOperator.ints(builder.context(), 4);
     Sequence<Integer> seq = Operators.toSequence(op);
 
     // Handle for the leaf sequence
@@ -128,7 +140,7 @@ public class FragmentTest
 
     // Add another operator to the DAG by unwrapping the above
     // sequence.
-    Operator<Integer> op2 = new MockFilterOperator<Integer>(
+    Operator<Integer> op2 = new FilterOperator<Integer>(
         builder.context(),
         handle.toOperator().rootOperator(),
         x -> x < 3);
@@ -142,6 +154,18 @@ public class FragmentTest
     assertNotNull(handle2.rootSequence());
     assertSame(handle2, handle2.toSequence());
     assertSame(builder.context(), handle2.context());
+
+    // Add a sequence.
+    Operator<Integer> op3 = new FilterOperator<Integer>(
+        builder.context(),
+        handle2.toOperator().rootOperator(),
+        x -> x > 1);
+    FragmentHandle<Integer> handle3 = handle2.compose(Operators.toSequence(op3));
+    assertFalse(handle3.rootIsOperator());
+    assertTrue(handle3.rootIsSequence());
+    List<Integer> results = handle3.runAsSequence().toList();
+    assertEquals(1, results.size());
+    assertEquals(2, (int) results.get(0));
   }
 
   @Test
@@ -149,13 +173,18 @@ public class FragmentTest
   {
     FragmentBuilder builder = FragmentBuilder.defaultBuilder();
     MockOperator<Integer> op = MockOperator.ints(builder.context(), 2);
+    FragmentContext context = builder.context();
+    assertEquals(FragmentContext.State.START, context.state());
     FragmentHandle<Integer> handle = builder.handle(op);
     int i = 0;
     try (FragmentRun<Integer> run = handle.run()) {
+      assertEquals(FragmentContext.State.RUN, context.state());
+      assertSame(context, run.context());
       for (Integer value : run) {
         assertEquals(i++, (int) value);
       }
     }
+    assertEquals(FragmentContext.State.CLOSED, context.state());
     assertEquals(Operator.State.CLOSED, op.state);
   }
 
@@ -235,7 +264,7 @@ public class FragmentTest
   }
 
   @Test
-  public void testSequenceAccum() throws IOException
+  public void testSequenceAccum()
   {
     FragmentBuilder builder = FragmentBuilder.defaultBuilder();
     MockOperator<Integer> op = MockOperator.ints(builder.context(), 4);
@@ -261,5 +290,66 @@ public class FragmentTest
     FragmentHandle<Integer> emptyHandle = builder.emptyHandle();
     Sequence<Integer> seq = emptyHandle.runAsSequence();
     SequenceTestHelper.testAccumulation("empty", seq, Collections.emptyList());
+  }
+
+  @Test
+  public void testFactory()
+  {
+    Query<?> query = new Druids.ScanQueryBuilder()
+        .dataSource("foo")
+        .eternityInterval()
+        .build();
+
+    // Operators blocked by query: no gating context variable
+    QueryNGConfig enableConfig = QueryNGConfig.create(true);
+    assertTrue(enableConfig.enabled());
+    FragmentBuilderFactory enableFactory = new FragmentBuilderFactoryImpl(enableConfig);
+    assertNull(enableFactory.create(query, ResponseContext.createEmpty()));
+    FragmentBuilderFactory nullFactory = new NullFragmentBuilderFactory();
+
+    QueryNGConfig disableConfig = QueryNGConfig.create(false);
+    assertFalse(disableConfig.enabled());
+    FragmentBuilderFactory disableFactory = new FragmentBuilderFactoryImpl(disableConfig);
+    assertNull(disableFactory.create(query, ResponseContext.createEmpty()));
+    assertNull(nullFactory.create(query, ResponseContext.createEmpty()));
+
+    // Enable at query level. Use of operators gated by config.
+    query = query.withOverriddenContext(
+        ImmutableMap.of(Operators.CONTEXT_VAR, true));
+    assertNotNull(enableFactory.create(query, ResponseContext.createEmpty()));
+    assertNull(disableFactory.create(query, ResponseContext.createEmpty()));
+    assertNull(nullFactory.create(query, ResponseContext.createEmpty()));
+  }
+
+  @Test
+  public void testQueryPlus()
+  {
+    FragmentBuilder builder = FragmentBuilder.defaultBuilder();
+    Query<?> query = new Druids.ScanQueryBuilder()
+        .dataSource("foo")
+        .eternityInterval()
+        .build();
+    QueryPlus<?> queryPlus = QueryPlus.wrap(query).withFragmentBuilder(builder);
+    assertSame(builder, queryPlus.fragmentBuilder());
+  }
+
+  @Test
+  public void testFragmentContext()
+  {
+    FragmentBuilder builder = FragmentBuilder.defaultBuilder();
+    FragmentContext context = builder.context();
+    assertEquals(FragmentContext.State.START, context.state());
+    assertEquals("unknown", context.queryId());
+    assertNotNull(context.responseContext());
+    context.checkTimeout(); // Useless here, just prevents a "not used" error
+    assertNull(context.exception());
+    MockOperator<Integer> op = MockOperator.ints(builder.context(), 4);
+    FragmentHandle<Integer> handle = builder.handle(op);
+    handle.run().iterator();
+    assertEquals(FragmentContext.State.RUN, context.state());
+    ISE ex = new ISE("oops");
+    ((FragmentContextImpl) context).failed(ex);
+    assertEquals(FragmentContext.State.FAILED, context.state());
+    assertSame(ex, context.exception());
   }
 }

@@ -29,6 +29,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 public class ConcatOperatorTest
@@ -47,9 +48,20 @@ public class ConcatOperatorTest
   {
     FragmentContext context = FragmentContext.defaultContext();
     Operator<String> input = new NullOperator<String>(context);
-    Operator<String> op = new ConcatOperator<String>(context, Arrays.asList(input));
+    Operator<String> op = new ConcatOperator<String>(
+        context,
+        Collections.singletonList(input));
     List<String> results = Operators.toList(op);
     assertTrue(results.isEmpty());
+  }
+
+  @Test
+  public void testHelperNoConcat()
+  {
+    FragmentContext context = FragmentContext.defaultContext();
+    MockOperator<Integer> input1 = MockOperator.ints(context, 2);
+    Operator<Integer> op = ConcatOperator.concatOrNot(context, Collections.singletonList(input1));
+    assertSame(input1, op);
   }
 
   @Test
@@ -58,7 +70,9 @@ public class ConcatOperatorTest
     FragmentContext context = FragmentContext.defaultContext();
     Operator<String> input1 = new NullOperator<String>(context);
     Operator<String> input2 = new NullOperator<String>(context);
-    Operator<String> op = new ConcatOperator<String>(context, Arrays.asList(input1, input2));
+    Operator<String> op = new ConcatOperator<String>(
+        context,
+        Arrays.asList(input1, input2));
     List<String> results = Operators.toList(op);
     assertTrue(results.isEmpty());
   }
@@ -68,7 +82,9 @@ public class ConcatOperatorTest
   {
     FragmentContext context = FragmentContext.defaultContext();
     Operator<Integer> input = MockOperator.ints(context, 2);
-    Operator<Integer> op = new ConcatOperator<Integer>(context, Arrays.asList(input));
+    Operator<Integer> op = new ConcatOperator<Integer>(
+        context,
+        Collections.singletonList(input));
     List<Integer> results = Operators.toList(op);
     List<Integer> expected = Arrays.asList(0, 1);
     assertEquals(expected, results);
@@ -80,7 +96,9 @@ public class ConcatOperatorTest
     FragmentContext context = FragmentContext.defaultContext();
     Operator<Integer> input1 = new NullOperator<Integer>(context);
     Operator<Integer> input2 = MockOperator.ints(context, 2);
-    Operator<Integer> op = new ConcatOperator<Integer>(context, Arrays.asList(input1, input2));
+    Operator<Integer> op = ConcatOperator.concatOrNot(
+        context,
+        Arrays.asList(input1, input2));
     List<Integer> results = Operators.toList(op);
     List<Integer> expected = Arrays.asList(0, 1);
     assertEquals(expected, results);
@@ -92,7 +110,9 @@ public class ConcatOperatorTest
     FragmentContext context = FragmentContext.defaultContext();
     Operator<Integer> input1 = MockOperator.ints(context, 2);
     Operator<Integer> input2 = new NullOperator<Integer>(context);
-    Operator<Integer> op = new ConcatOperator<Integer>(context, Arrays.asList(input1, input2));
+    Operator<Integer> op = ConcatOperator.concatOrNot(
+        context,
+        Arrays.asList(input1, input2));
     List<Integer> results = Operators.toList(op);
     List<Integer> expected = Arrays.asList(0, 1);
     assertEquals(expected, results);
@@ -104,7 +124,9 @@ public class ConcatOperatorTest
     FragmentContext context = FragmentContext.defaultContext();
     Operator<Integer> input1 = MockOperator.ints(context, 2);
     Operator<Integer> input2 = MockOperator.ints(context, 2);
-    Operator<Integer> op = new ConcatOperator<Integer>(context, Arrays.asList(input1, input2));
+    Operator<Integer> op = ConcatOperator.concatOrNot(
+        context,
+        Arrays.asList(input1, input2));
     List<Integer> results = Operators.toList(op);
     List<Integer> expected = Arrays.asList(0, 1, 0, 1);
     assertEquals(expected, results);
@@ -116,7 +138,9 @@ public class ConcatOperatorTest
     FragmentContext context = FragmentContext.defaultContext();
     MockOperator<Integer> input1 = MockOperator.ints(context, 2);
     MockOperator<Integer> input2 = MockOperator.ints(context, 2);
-    Operator<Integer> op = new ConcatOperator<Integer>(context, Arrays.asList(input1, input2));
+    Operator<Integer> op = ConcatOperator.concatOrNot(
+        context,
+        Arrays.asList(input1, input2));
     Iterator<Integer> iter = op.open();
     assertTrue(iter.hasNext());
     assertEquals(0, (int) iter.next());

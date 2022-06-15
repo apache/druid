@@ -50,7 +50,7 @@ public class MockOperator<T> implements IterableOperator<T>
 
   public static MockOperator<String> strings(FragmentContext context, int rowCount)
   {
-    return new MockOperator<String>(context, rowCount, rid -> "Mock row " + Integer.toString(rid));
+    return new MockOperator<String>(context, rowCount, rid -> "Mock row " + rid);
   }
 
   @Override

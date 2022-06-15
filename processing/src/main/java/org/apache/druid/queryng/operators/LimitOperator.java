@@ -25,18 +25,18 @@ import org.apache.druid.queryng.fragment.FragmentContext;
  * Limits the results from the input operator to the given number
  * of rows.
  */
-public abstract class LimitOperator<T> extends MappingOperator<T, T>
+public class LimitOperator<T> extends MappingOperator<T, T>
 {
   public static final long UNLIMITED = Long.MAX_VALUE;
 
   protected final long limit;
   protected long rowCount;
-  protected int batchCount;
 
-  public LimitOperator(FragmentContext context, long limit, Operator<T> input)
+  public LimitOperator(FragmentContext context, Operator<T> input, long limit)
   {
     super(context, input);
     this.limit = limit;
+    context.register(this);
   }
 
   @Override

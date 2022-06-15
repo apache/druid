@@ -17,16 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.queryng.operators.general;
+package org.apache.druid.queryng.operators;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import org.apache.druid.queryng.fragment.FragmentContext;
-import org.apache.druid.queryng.operators.MockOperator;
-import org.apache.druid.queryng.operators.NullOperator;
-import org.apache.druid.queryng.operators.Operator;
 import org.apache.druid.queryng.operators.Operator.State;
-import org.apache.druid.queryng.operators.OrderedMergeOperator;
 import org.apache.druid.queryng.operators.OrderedMergeOperator.Input;
 import org.junit.Test;
 
@@ -38,6 +34,7 @@ import java.util.function.Supplier;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class OrderedMergeOperatorTest
@@ -81,7 +78,7 @@ public class OrderedMergeOperatorTest
   {
     FragmentContext context = FragmentContext.defaultContext();
     Supplier<Iterable<Input<Integer>>> inputs =
-        () -> Arrays.asList(
+        () -> Collections.singletonList(
             new Input<Integer>(MockOperator.ints(context, 3)));
     Operator<Integer> op = new OrderedMergeOperator<>(
         context,
@@ -136,5 +133,40 @@ public class OrderedMergeOperatorTest
     assertTrue(input1.state == State.CLOSED);
     assertTrue(input2.state == State.CLOSED);
     op.close(true);
+  }
+
+  /**
+   * Test the case where the input to the ordered merge is, instead,
+   * used directly as an operator (because it turns out there is only
+   * one such input, so a merge is unnecessary).
+   */
+  @Test
+  public void testInput()
+  {
+    FragmentContext context = FragmentContext.defaultContext();
+    MockOperator<Integer> input1 = MockOperator.ints(context, 2);
+    Input<Integer> input = new Input<>(input1);
+    assertFalse(input.eof());
+    assertEquals(0, (int) input.get());
+    Operator<Integer> op2 = input.toOperator(context);
+    List<Integer> results = Operators.toList(op2);
+    assertEquals(Arrays.asList(0, 1), results);
+    assertTrue(input1.state == State.CLOSED);
+  }
+
+  /**
+   * As above, but with a no-rows input.
+   */
+  @Test
+  public void testEmptyInput()
+  {
+    FragmentContext context = FragmentContext.defaultContext();
+    Operator<Integer> input1 = new NullOperator<>(context);
+    Input<Integer> input = new Input<>(input1);
+    assertTrue(input.eof());
+    assertNull(input.get());
+    Operator<Integer> op2 = input.toOperator(context);
+    List<Integer> results = Operators.toList(op2);
+    assertTrue(results.isEmpty());
   }
 }
