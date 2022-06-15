@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.join.table;
 
+import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -92,35 +93,36 @@ public class IndexedTableJoinable implements Joinable
   }
 
   @Override
-  public Optional<Set<String>> getNonNullColumnValuesIfAllUnique(final String columnName, final int maxNumValues)
+  public ColumnValuesWithUniqueFlag getNonNullColumnValues(String columnName, final int maxNumValues)
   {
     final int columnPosition = table.rowSignature().indexOf(columnName);
 
     if (columnPosition < 0) {
-      return Optional.empty();
+      return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
     }
 
     try (final IndexedTable.Reader reader = table.columnReader(columnPosition)) {
       // Sorted set to encourage "in" filters that result from this method to do dictionary lookups in order.
       // The hopes are that this will improve locality and therefore improve performance.
       final Set<String> allValues = createValuesSet();
+      boolean allUnique = true;
 
       for (int i = 0; i < table.numRows(); i++) {
         final String s = DimensionHandlerUtils.convertObjectToString(reader.read(i));
 
         if (!NullHandling.isNullOrEquivalent(s)) {
           if (!allValues.add(s)) {
-            // Duplicate found. Since the values are not all unique, we must return an empty Optional.
-            return Optional.empty();
+            // Duplicate found
+            allUnique = false;
           }
 
           if (allValues.size() > maxNumValues) {
-            return Optional.empty();
+            return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
           }
         }
       }
 
-      return Optional.of(allValues);
+      return new ColumnValuesWithUniqueFlag(allValues, allUnique);
     }
     catch (IOException e) {
       throw new RuntimeException(e);
