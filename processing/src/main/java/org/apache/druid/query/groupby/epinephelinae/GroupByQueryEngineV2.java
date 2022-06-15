@@ -95,9 +95,9 @@ import java.util.stream.Stream;
  */
 public class GroupByQueryEngineV2
 {
-  private static final GroupByStrategyFactory STRATEGY_FACTORY = new GroupByStrategyFactory();
+  public static final GroupByStrategyFactory STRATEGY_FACTORY = new GroupByStrategyFactory();
 
-  private static GroupByColumnSelectorPlus[] createGroupBySelectorPlus(
+  public static GroupByColumnSelectorPlus[] createGroupBySelectorPlus(
       ColumnSelectorPlus<GroupByColumnSelectorStrategy>[] baseSelectorPlus,
       int dimensionStart
   )
@@ -451,7 +451,7 @@ public class GroupByQueryEngineV2
     }
   }
 
-  private abstract static class GroupByEngineIterator<KeyType> implements Iterator<ResultRow>, Closeable
+  public abstract static class GroupByEngineIterator<KeyType> implements Iterator<ResultRow>, Closeable
   {
     protected final GroupByQuery query;
     protected final GroupByQueryConfig querySpecificConfig;
@@ -615,13 +615,13 @@ public class GroupByQueryEngineV2
     }
   }
 
-  private static class HashAggregateIterator extends GroupByEngineIterator<ByteBuffer>
+  public static class HashAggregateIterator extends GroupByEngineIterator<ByteBuffer>
   {
     private static final Logger LOGGER = new Logger(HashAggregateIterator.class);
 
     private final int[] stack;
     private final Object[] valuess;
-    private final ByteBuffer keyBuffer;
+    protected final ByteBuffer keyBuffer;
 
     private int stackPointer = Integer.MIN_VALUE;
     private boolean currentRowWasPartiallyAggregated = false;
