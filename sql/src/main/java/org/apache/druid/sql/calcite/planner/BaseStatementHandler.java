@@ -66,6 +66,14 @@ abstract class BaseStatementHandler implements SqlStatementHandler
       return parsed;
     }
     try {
+      // Uses {@link SqlParameterizerShuttle} to rewrite {@link SqlNode} to swap out any
+      // {@link org.apache.calcite.sql.SqlDynamicParam} early for their {@link SqlLiteral}
+      // replacement.
+      //
+      // Parameter replacement is done only if the client provides parameter values.
+      // If this is a PREPARE-only, then there will be no values even if the statement contains
+      // parameters. If this is a PLAN, then we'll catch later the case that the statement
+      // contains parameters, but no values were provided.
       return parsed.accept(
           new SqlParameterizerShuttle(
               handlerContext.plannerContext()));

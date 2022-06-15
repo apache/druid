@@ -123,7 +123,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     @Override
     public int getMaxConnections()
     {
-      // This must match the number of Connection objects created in setUp()
+      // This must match the number of Connection objects created in testTooManyStatements()
       return 4;
     }
 
@@ -241,8 +241,6 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     propertiesLosAngeles.setProperty(BaseQuery.SQL_QUERY_ID, DUMMY_SQL_QUERY_ID);
     clientLosAngeles = DriverManager.getConnection(url, propertiesLosAngeles);
   }
-
-
 
   @After
   public void tearDown() throws Exception

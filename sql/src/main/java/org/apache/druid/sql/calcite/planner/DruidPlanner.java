@@ -26,7 +26,6 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.FrameworkConfig;
-import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -58,8 +57,8 @@ public class DruidPlanner implements Closeable
   {
     void analyze() throws ValidationException;
     Set<ResourceAction> resourceActions();
-    PrepareResult prepare() throws RelConversionException, ValidationException;
-    PlannerResult plan() throws ValidationException, RelConversionException;
+    PrepareResult prepare() throws ValidationException;
+    PlannerResult plan() throws ValidationException;
   }
 
   static final EmittingLogger log = new EmittingLogger(DruidPlanner.class);

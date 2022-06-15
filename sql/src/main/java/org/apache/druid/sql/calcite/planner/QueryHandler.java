@@ -48,7 +48,6 @@ import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
-import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -148,7 +147,7 @@ abstract class QueryHandler extends BaseStatementHandler
    * {@link #planWithBindableConvention} if this is not possible.
    */
   @Override
-  public PlannerResult plan() throws ValidationException, RelConversionException
+  public PlannerResult plan() throws ValidationException
   {
     CalcitePlanner planner = handlerContext.planner();
     if (rootQueryRel == null) {
@@ -156,7 +155,7 @@ abstract class QueryHandler extends BaseStatementHandler
       rootQueryRel = planner.rel(validatedQueryNode);
     }
 
-    // the planner's type factory is not available until after parsing
+    // The planner's type factory is not available until after parsing.
     RexBuilder rexBuilder = new RexBuilder(planner.getTypeFactory());
 
     try {
@@ -169,8 +168,8 @@ abstract class QueryHandler extends BaseStatementHandler
         throw e;
       }
 
-      // If there isn't any ingestion clause, then we should try again with BINDABLE convention. And return without
-      // any error, if it is plannable by the bindable convention
+      // If there isn't any ingestion clause, then we should try again with BINDABLE convention.
+      // And return without any error, if it is plannable by the bindable convention.
       if (allowsBindableExec()) {
         // Try again with BINDABLE convention. Used for querying Values and metadata tables.
         try {
@@ -206,7 +205,17 @@ abstract class QueryHandler extends BaseStatementHandler
     final QueryMaker queryMaker = buildQueryMaker(possiblyLimitedRoot);
     handlerContext.plannerContext().setQueryMaker(queryMaker);
 
-    RelNode parameterized = rewriteRelDynamicParameters(possiblyLimitedRoot.rel);
+    // Fall-back dynamic parameter substitution using {@link RelParameterizerShuttle}
+    // in the event that {@link #rewriteDynamicParameters(SqlNode)} was unable to
+    // successfully substitute all parameter values, and will cause a failure if any
+    // dynamic a parameters are not bound. This occurs at least for DATE parameters
+    // with integer values.
+    //
+    // This check also catches the case where we did not do a parameter check earlier
+    // because no values were provided. (Values are not required in the PREPARE case
+    // but now that we're planning, we require them.)
+    RelNode parameterized = possiblyLimitedRoot.rel.accept(
+        new RelParameterizerShuttle(handlerContext.plannerContext()));
     final DruidRel<?> druidRel = (DruidRel<?>) planner.transform(
         Rules.DRUID_CONVENTION_RULES,
         planner.getEmptyTraitSet()
@@ -223,15 +232,18 @@ abstract class QueryHandler extends BaseStatementHandler
   }
 
   /**
-   * This method wraps the root with a {@link LogicalSort} that applies a limit (no ordering change). If the outer rel
-   * is already a {@link Sort}, we can merge our outerLimit into it, similar to what is going on in
+   * This method wraps the root with a {@link LogicalSort} that applies a limit
+   * (no ordering change). If the outer rel is already a {@link Sort}, we can
+   * merge our outerLimit into it, similar to what is going on in
    * {@link org.apache.druid.sql.calcite.rule.SortCollapseRule}.
    *
-   * The {@link PlannerContext#CTX_SQL_OUTER_LIMIT} flag that controls this wrapping is meant for internal use only by
-   * the web console, allowing it to apply a limit to queries without rewriting the original SQL.
+   * The {@link PlannerContext#CTX_SQL_OUTER_LIMIT} flag that controls this
+   * wrapping is meant for internal use only by the web console, allowing it
+   * to apply a limit to queries without rewriting the original SQL.
    *
    * @param root root node
-   * @return root node wrapped with a limiting logical sort if a limit is specified in the query context.
+   * @return root node wrapped with a limiting logical sort if a limit is
+   * specified in the query context.
    */
   @Nullable
   private RelRoot possiblyWrapRootWithOuterLimitFromContext(RelRoot root, RexBuilder rexBuilder)
@@ -273,18 +285,6 @@ abstract class QueryHandler extends BaseStatementHandler
     return new RelRoot(newRootRel, root.validatedRowType, root.kind, root.fields, root.collation);
   }
 
-  /**
-   * Fall-back dynamic parameter substitution using {@link RelParameterizerShuttle} in the event that
-   * {@link #rewriteDynamicParameters(SqlNode)} was unable to successfully substitute all parameter values, and will
-   * cause a failure if any dynamic a parameters are not bound.
-   */
-  private RelNode rewriteRelDynamicParameters(RelNode rootRel)
-  {
-    RelParameterizerShuttle parameterizer = new RelParameterizerShuttle(
-        handlerContext.plannerContext());
-    return rootRel.accept(parameterizer);
-  }
-
   private PlannerResult planDruidExecution(
       final DruidRel<?> druidRel,
       RelRoot possiblyLimitedRoot,
@@ -320,11 +320,16 @@ abstract class QueryHandler extends BaseStatementHandler
   }
 
   /**
-   * Construct a {@link PlannerResult} for a fall-back 'bindable' rel, for things that are not directly translatable
-   * to native Druid queries such as system tables and just a general purpose (but definitely not optimized) fall-back.
+   * Construct a {@link PlannerResult} for a fall-back 'bindable' rel, for
+   * things that are not directly translatable to native Druid queries such
+   * as system tables and just a general purpose (but definitely not optimized)
+   * fall-back.
    *
-   * See {@link #planWithDruidConvention} which will handle things which are directly translatable
-   * to native Druid queries.
+   * See {@link #planWithDruidConvention} which will handle things which are
+   * directly translatable to native Druid queries.
+   *
+   * The bindable path handles parameter substitution of any values not
+   * bound by the earlier steps.
    */
   private PlannerResult planWithBindableConvention(
       final RelRoot root
@@ -400,12 +405,15 @@ abstract class QueryHandler extends BaseStatementHandler
 
 
   /**
-   * This method doesn't utilize the Calcite's internal {@link RelOptUtil#dumpPlan} since that tends to be verbose
-   * and not indicative of the native Druid Queries which will get executed
-   * This method assumes that the Planner has converted the RelNodes to DruidRels, and thereby we can implicitly cast it
+   * This method doesn't utilize the Calcite's internal {@link RelOptUtil#dumpPlan}
+   * since that tends to be verbose and not indicative of the native Druid Queries
+   * which will get executed. This method assumes that the Planner has converted
+   * the RelNodes to DruidRels, and thereby we can implicitly cast it.
    *
-   * @param rel Instance of the root {@link DruidRel} which is formed by running the planner transformations on it
-   * @return A string representing an array of native queries that correspond to the given SQL query, in JSON format
+   * @param rel Instance of the root {@link DruidRel} which is formed by running
+   * the planner transformations on it
+   * @return A string representing an array of native queries that correspond to the
+   * given SQL query, in JSON format
    * @throws JsonProcessingException
    */
   private String explainSqlPlanAsNativeQueries(DruidRel<?> rel) throws JsonProcessingException
@@ -418,9 +426,10 @@ abstract class QueryHandler extends BaseStatementHandler
         .collect(Collectors.toList());
 
 
-    // Putting the queries as object node in an ArrayNode, since directly returning a list causes issues when
-    // serializing the "queryType". Another method would be to create a POJO containing query and signature, and then
-    // serializing it using normal list method.
+    // Putting the queries as object node in an ArrayNode, since directly
+    // returning a list causes issues when serializing the "queryType".
+    // Another method would be to create a POJO containing query and signature,
+    // and then serializing it using normal list method.
     ArrayNode nativeQueriesArrayNode = jsonMapper.createArrayNode();
 
     for (DruidQuery druidQuery : druidQueryList) {
@@ -435,9 +444,11 @@ abstract class QueryHandler extends BaseStatementHandler
   }
 
   /**
-   * Given a {@link DruidRel}, this method recursively flattens the Rels if they are of the type {@link DruidUnionRel}
-   * It is implicitly assumed that the {@link DruidUnionRel} can never be the child of a non {@link DruidUnionRel}
-   * node
+   * Given a {@link DruidRel}, this method recursively flattens the Rels if
+   * they are of the type {@link DruidUnionRel}. It is implicitly assumed
+   * that the {@link DruidUnionRel} can never be the child of a non
+   * {@link DruidUnionRel} node.
+   *
    * For eg, a DruidRel structure of kind:
    * DruidUnionRel
    *  DruidUnionRel
@@ -457,9 +468,12 @@ abstract class QueryHandler extends BaseStatementHandler
   }
 
   /**
-   * Recursive function (DFS) which traverses the nodes and collects the corresponding {@link DruidRel} into a list if
-   * they are not of the type {@link DruidUnionRel} or else calls the method with the child nodes. The DFS order of the
-   * nodes are retained, since that is the order in which they will actually be called in {@link DruidUnionRel#runQuery()}
+   * Recursive function (DFS) which traverses the nodes and collects the
+   * corresponding {@link DruidRel} into a list if they are not of the
+   * type {@link DruidUnionRel} or else calls the method with the child
+   * nodes. The DFS order of the nodes are retained, since that is the
+   * order in which they will actually be called in
+   * {@link DruidUnionRel#runQuery()}.
    *
    * @param druidRel                The current relNode
    * @param flattendListAccumulator Accumulator list which needs to be appended by this method
