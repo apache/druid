@@ -117,7 +117,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   @BeforeMethod
   public void setup() throws Exception
   {
-    // Set comapction slot to 5
+    // Set compaction slot to 5
     updateCompactionTaskSlot(0.5, 10, null);
     fullDatasourceName = "wikipedia_index_test_" + UUID.randomUUID() + config.getExtraDatasourceNameSuffix();
   }
@@ -458,8 +458,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
           0,
-          14906,
-          14905,
+          14762,
+          14761,
           0,
           2,
           2,
@@ -476,7 +476,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
           0,
-          23372,
+          23156,
           0,
           0,
           3,
@@ -592,8 +592,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       getAndAssertCompactionStatus(
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
-          14906,
-          14905,
+          14762,
+          14761,
           0,
           2,
           2,
@@ -601,7 +601,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           1,
           1,
           0);
-      Assert.assertEquals(compactionResource.getCompactionProgress(fullDatasourceName).get("remainingSegmentSize"), "14906");
+      Assert.assertEquals(compactionResource.getCompactionProgress(fullDatasourceName).get("remainingSegmentSize"), "14762");
       // Run compaction again to compact the remaining day
       // Remaining day compacted (1 new segment). Now both days compacted (2 total)
       forceTriggerAutoCompaction(2);
@@ -612,7 +612,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
           0,
-          23372,
+          23156,
           0,
           0,
           3,
@@ -645,7 +645,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     //                             Four data segments (two months) and 10 tombstones for remaining months
     //      3d compaction: SEMESTER:  5 rows @ 2013-08-31 (two segments), 5 rows @ 2013-09-01 (two segments),
     //               2 compactions were generated for year 2013; one for each semester to be compacted of the whole year.
-    //               
+    //
     loadData(INDEX_TASK);
 
     try (final Closeable ignored = unloader(fullDatasourceName)) {

@@ -115,9 +115,6 @@ public class RemoteTaskRunnerTest
     }
   };
 
-
-
-
   @Rule
   public final TestRule timeout = new DeadlockDetectingTimeout(60, TimeUnit.SECONDS);
 

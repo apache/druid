@@ -73,6 +73,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -271,6 +272,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
   @JsonProperty
   @Override
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = VirtualColumns.JsonIncludeFilter.class)
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;
@@ -278,6 +280,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
   @Nullable
   @JsonProperty("filter")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public DimFilter getDimFilter()
   {
     return dimFilter;
@@ -290,18 +293,21 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   }
 
   @JsonProperty("aggregations")
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<AggregatorFactory> getAggregatorSpecs()
   {
     return aggregatorSpecs;
   }
 
   @JsonProperty("postAggregations")
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<PostAggregator> getPostAggregatorSpecs()
   {
     return postAggregatorSpecs;
   }
 
   @JsonProperty("having")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public HavingSpec getHavingSpec()
   {
     return havingSpec;
@@ -313,9 +319,12 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return limitSpec;
   }
 
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  @JsonProperty("subtotalsSpec")
+  /**
+   * Subtotals spec may be empty which has a distinct meaning from {@code null}.
+   */
   @Nullable
+  @JsonProperty("subtotalsSpec")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public List<List<String>> getSubtotalsSpec()
   {
     return subtotalsSpec;

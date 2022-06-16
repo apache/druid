@@ -34,6 +34,7 @@ import org.apache.druid.segment.filter.DimensionPredicateFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
 
 import javax.annotation.Nullable;
+
 import java.util.Objects;
 import java.util.Set;
 
@@ -116,6 +117,9 @@ public class SelectorDimFilter extends AbstractOptimizableDimFilter implements D
     return dimension;
   }
 
+  /**
+   * Value to filter against. If {@code null}, then the meaning is `is null`.
+   */
   @Nullable
   @JsonProperty
   public String getValue()
@@ -125,14 +129,15 @@ public class SelectorDimFilter extends AbstractOptimizableDimFilter implements D
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
   }
 
   @Nullable
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public FilterTuning getFilterTuning()
   {
     return filterTuning;
