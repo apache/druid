@@ -86,6 +86,12 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
       URI.create("gs://bar/foo/file2.csv.gz")
   );
 
+  private static final List<URI> URIS_BEFORE_FILTER = Arrays.asList(
+    URI.create("s3://foo/bar/file.csv"),
+    URI.create("s3://bar/foo/file2.csv"),
+    URI.create("s3://bar/foo/file3.txt")
+  );
+
   private static final List<List<CloudObjectLocation>> EXPECTED_OBJECTS =
       EXPECTED_URIS.stream()
                    .map(uri -> Collections.singletonList(new CloudObjectLocation(uri)))
@@ -95,9 +101,6 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
       URI.create("gs://foo/bar"),
       URI.create("gs://bar/foo")
   );
-
-  private static final List<CloudObjectLocation> EXPECTED_LOCATION =
-      ImmutableList.of(new CloudObjectLocation("foo", "bar/file.csv"));
 
   private static final DateTime NOW = DateTimes.nowUtc();
   private static final byte[] CONTENT =
@@ -156,6 +159,26 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
     );
     Assert.assertEquals(EXPECTED_OBJECTS, splits.map(InputSplit::get).collect(Collectors.toList()));
   }
+
+  @Test
+  public void testWithUrisFilter()
+  {
+    GoogleCloudStorageInputSource inputSource = new GoogleCloudStorageInputSource(
+        STORAGE,
+        INPUT_DATA_CONFIG,
+        URIS_BEFORE_FILTER,
+        null,
+        null,
+        "*.csv"
+    );
+
+    Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+        null
+    );
+    Assert.assertEquals(EXPECTED_OBJECTS, splits.map(InputSplit::get).collect(Collectors.toList()));
+  }
+
 
   @Test
   public void testWithPrefixesSplit() throws IOException

@@ -116,6 +116,12 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
       URI.create("s3://bar/foo/file2.csv.gz")
   );
 
+  private static final List<URI> URIS_BEFORE_FILTER = Arrays.asList(
+      URI.create("s3://foo/bar/file.csv"),
+      URI.create("s3://bar/foo/file2.csv"),
+      URI.create("s3://bar/foo/file3.txt")
+  );
+
   private static final List<List<CloudObjectLocation>> EXPECTED_COORDS =
       EXPECTED_URIS.stream()
                    .map(uri -> Collections.singletonList(new CloudObjectLocation(uri)))
@@ -382,6 +388,28 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null
+    );
+
+    Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+        null
+    );
+
+    Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
+  }
+
+  @Test
+  public void testWithUrisFilter()
+  {
+    S3InputSource inputSource = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        URIS_BEFORE_FILTER,
+        null,
+        null,
+        "*.csv",
         null
     );
 
