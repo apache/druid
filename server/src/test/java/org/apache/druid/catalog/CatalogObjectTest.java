@@ -49,7 +49,7 @@ public class CatalogObjectTest
     assertEquals(10, table.creationTime());
     assertEquals(20, table.updateTime());
     assertEquals(TableState.ACTIVE, table.state());
-    assertNull(table.defn());
+    assertNull(table.spec());
 
     try {
       table = new TableMetadata(
@@ -85,9 +85,9 @@ public class CatalogObjectTest
   }
 
   @Test
-  public void testDefn()
+  public void testSpec()
   {
-    DatasourceSpec defn = DatasourceSpec.builder()
+    DatasourceSpec spec = DatasourceSpec.builder()
         .segmentGranularity("PT1D")
         .build();
     TableMetadata table = new TableMetadata(
@@ -97,11 +97,14 @@ public class CatalogObjectTest
         10,
         20,
         TableState.ACTIVE,
-        defn);
+        spec);
     table.validate();
-    assertSame(defn, table.defn());
+    assertSame(spec, table.spec());
 
+    // Segment grain is required.
     try {
+      spec = DatasourceSpec.builder()
+          .build();
       table = new TableMetadata(
           "wrong",
           "foo",
@@ -109,7 +112,7 @@ public class CatalogObjectTest
           10,
           20,
           TableState.ACTIVE,
-          defn);
+          spec);
       table.validate();
       fail();
     }
@@ -121,18 +124,18 @@ public class CatalogObjectTest
   @Test
   public void testConversions()
   {
-    DatasourceSpec defn = DatasourceSpec.builder()
+    DatasourceSpec spec = DatasourceSpec.builder()
         .segmentGranularity("PT1D")
         .build();
     TableMetadata table = TableMetadata.newSegmentTable(
         "ds",
-        defn);
+        spec);
     assertEquals(TableId.datasource("ds"), table.id());
     assertEquals(TableState.ACTIVE, table.state());
     assertEquals(0, table.updateTime());
-    assertSame(defn, table.defn());
+    assertSame(spec, table.spec());
 
-    TableMetadata table2 = TableMetadata.newSegmentTable("ds", defn);
+    TableMetadata table2 = TableMetadata.newSegmentTable("ds", spec);
     assertEquals(table, table2);
 
     TableMetadata table3 = table2.asUpdate(20);

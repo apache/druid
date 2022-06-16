@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -60,6 +61,7 @@ public interface InputSource
    * Returns true if this inputSource can be processed in parallel using ParallelIndexSupervisorTask. It must be
    * castable to SplittableInputSource and the various SplittableInputSource methods must work as documented.
    */
+  @JsonIgnore
   boolean isSplittable();
 
   /**

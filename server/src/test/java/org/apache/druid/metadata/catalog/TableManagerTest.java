@@ -126,7 +126,7 @@ public class TableManagerTest
         .build();
 
     try {
-      manager.updateDefn(table.id(), defn2, 3);
+      manager.updateSpec(table.id(), defn2, 3);
       fail();
     }
     catch (OutOfDateException e) {
@@ -134,9 +134,9 @@ public class TableManagerTest
     }
 
     assertEquals(version, manager.read(table.id()).updateTime());
-    long newVersion = manager.updateDefn(table.id(), defn2, version);
+    long newVersion = manager.updateSpec(table.id(), defn2, version);
     TableMetadata table3 = manager.read(table.id());
-    assertEquals(defn2, table3.defn());
+    assertEquals(defn2, table3.spec());
     assertEquals(newVersion, table3.updateTime());
 
     // Changing the state requires no version check

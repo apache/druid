@@ -161,7 +161,7 @@ public class SQLCatalogManager implements CatalogManager
                   .bind("creationTime", updateTime)
                   .bind("updateTime", updateTime)
                   .bind("state", TableState.ACTIVE.code())
-                  .bind("payload", table.defn().toBytes(jsonMapper));
+                  .bind("payload", table.spec().toBytes(jsonMapper));
               try {
                 stmt.execute();
               }
@@ -225,7 +225,7 @@ public class SQLCatalogManager implements CatalogManager
   }
 
   @Override
-  public long updateDefn(TableId id, TableSpec defn, long oldVersion) throws OutOfDateException
+  public long updateSpec(TableId id, TableSpec defn, long oldVersion) throws OutOfDateException
   {
     try {
       return dbi.withHandle(

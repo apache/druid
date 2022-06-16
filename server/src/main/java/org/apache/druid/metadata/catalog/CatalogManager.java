@@ -134,7 +134,7 @@ public interface CatalogManager
    * Update a table definition, but only if the database entry is at
    * the given {@code oldVersion}.
    */
-  long updateDefn(TableId id, TableSpec defn, long oldVersion) throws OutOfDateException;
+  long updateSpec(TableId id, TableSpec defn, long oldVersion) throws OutOfDateException;
 
   /**
    * Update a table definition, overwriting any current content.

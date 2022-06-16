@@ -448,7 +448,7 @@ public class CatalogResourceTest
     read = (TableMetadata) resp.getEntity();
     assertEquals(table.creationTime(), read.creationTime());
     assertEquals(version, read.updateTime());
-    assertEquals(defn2, read.defn());
+    assertEquals(defn2, read.spec());
 
     // add second table
     String table2Name = "lifecycle2";

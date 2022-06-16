@@ -42,31 +42,31 @@ public class InputTableSpecTest
     // Minimum possible definition
     InputSource inputSource = new InlineInputSource("a,b,1\nc,d,2\n");
     InputFormat inputFormat = CatalogTests.csvFormat();
-    InputTableSpec defn = InputTableSpec
+    InputTableSpec spec = InputTableSpec
         .builder()
         .source(inputSource)
         .format(inputFormat)
         .column("a", "varchar")
         .build();
 
-    defn.validate();
-    assertSame(inputSource, defn.inputSource());
-    assertSame(inputFormat, defn.format());
-    List<InputColumnSpec> columns = defn.columns();
+    spec.validate();
+    assertSame(inputSource, spec.inputSource());
+    assertSame(inputFormat, spec.format());
+    List<InputColumnSpec> columns = spec.columns();
     assertEquals(1, columns.size());
     assertEquals("a", columns.get(0).name());
     assertEquals("varchar", columns.get(0).sqlType());
 
-    InputTableSpec copy = defn.toBuilder().build();
-    assertEquals(defn, copy);
+    InputTableSpec copy = spec.toBuilder().build();
+    assertEquals(spec, copy);
   }
 
   @Test
   public void testValidation()
   {
-    InputTableSpec defn = InputTableSpec.builder().build();
+    InputTableSpec spec = InputTableSpec.builder().build();
     try {
-      defn.validate();
+      spec.validate();
       fail();
     }
     catch (IAE e) {
@@ -74,12 +74,12 @@ public class InputTableSpecTest
     }
 
     InputSource inputSource = new InlineInputSource("a,b,1\nc,d,2\n");
-    defn = InputTableSpec
+    spec = InputTableSpec
         .builder()
         .source(inputSource)
         .build();
     try {
-      defn.validate();
+      spec.validate();
       fail();
     }
     catch (IAE e) {
@@ -87,13 +87,13 @@ public class InputTableSpecTest
     }
 
     InputFormat inputFormat = CatalogTests.csvFormat();
-    defn = InputTableSpec
+    spec = InputTableSpec
         .builder()
         .source(inputSource)
         .format(inputFormat)
         .build();
     try {
-      defn.validate();
+      spec.validate();
       fail();
     }
     catch (IAE e) {
@@ -101,34 +101,34 @@ public class InputTableSpecTest
     }
 
     try {
-      defn = InputTableSpec
+      spec = InputTableSpec
           .builder()
           .source(inputSource)
           .format(inputFormat)
           .column(null, "VARCHAR")
           .build();
-      defn.validate();
+      spec.validate();
       fail();
     }
     catch (IAE e) {
       // Expected
     }
 
-    defn = InputTableSpec
+    spec = InputTableSpec
         .builder()
         .source(inputSource)
         .format(inputFormat)
         .column("a", null)
         .build();
     try {
-      defn.validate();
+      spec.validate();
       fail();
     }
     catch (IAE e) {
       // Expected
     }
 
-    defn = InputTableSpec
+    spec = InputTableSpec
         .builder()
         .source(inputSource)
         .format(inputFormat)
@@ -136,7 +136,7 @@ public class InputTableSpecTest
         .column("a", "varchar")
         .build();
     try {
-      defn.validate();
+      spec.validate();
       fail();
     }
     catch (IAE e) {
@@ -150,7 +150,7 @@ public class InputTableSpecTest
     ObjectMapper mapper = new ObjectMapper();
     InputSource inputSource = new InlineInputSource("a,b,1\nc,d,2\n");
     InputFormat inputFormat = CatalogTests.csvFormat();
-    InputTableSpec defn = InputTableSpec
+    InputTableSpec spec1 = InputTableSpec
         .builder()
         .source(inputSource)
         .format(inputFormat)
@@ -158,11 +158,11 @@ public class InputTableSpecTest
         .build();
 
     // Round-trip
-    TableSpec defn2 = TableSpec.fromBytes(mapper, defn.toBytes(mapper));
-    assertEquals(defn, defn2);
+    TableSpec spec2 = TableSpec.fromBytes(mapper, spec1.toBytes(mapper));
+    assertEquals(spec1, spec2);
 
     // Sanity check of toString, which uses JSON
-    assertNotNull(defn.toString());
+    assertNotNull(spec1.toString());
   }
 
   @Test

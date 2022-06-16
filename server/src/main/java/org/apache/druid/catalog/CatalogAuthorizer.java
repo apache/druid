@@ -19,7 +19,7 @@
 
 package org.apache.druid.catalog;
 
-import org.apache.druid.catalog.SchemaRegistry.SchemaDefn;
+import org.apache.druid.catalog.SchemaRegistry.SchemaSpec;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -50,7 +50,7 @@ public class CatalogAuthorizer
     return authorizerMapper;
   }
 
-  public void authorizeTable(SchemaDefn schema, String name, Action action, HttpServletRequest request)
+  public void authorizeTable(SchemaSpec schema, String name, Action action, HttpServletRequest request)
   {
     if (action == Action.WRITE && !schema.writable()) {
       throw new ForbiddenException(
@@ -82,7 +82,7 @@ public class CatalogAuthorizer
     );
   }
 
-  public ResourceAction resourceAction(SchemaDefn schema, String name, Action action)
+  public ResourceAction resourceAction(SchemaSpec schema, String name, Action action)
   {
     return new ResourceAction(new Resource(name, schema.securityResource()), action);
   }

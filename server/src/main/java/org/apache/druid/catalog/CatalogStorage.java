@@ -22,7 +22,7 @@ package org.apache.druid.catalog;
 import org.apache.druid.catalog.MetadataCatalog.CatalogListener;
 import org.apache.druid.catalog.MetadataCatalog.CatalogSource;
 import org.apache.druid.catalog.MetadataCatalog.CatalogUpdateProvider;
-import org.apache.druid.catalog.SchemaRegistry.SchemaDefn;
+import org.apache.druid.catalog.SchemaRegistry.SchemaSpec;
 import org.apache.druid.metadata.catalog.CatalogManager;
 import org.apache.druid.server.security.AuthorizerMapper;
 
@@ -94,7 +94,7 @@ public class CatalogStorage implements CatalogUpdateProvider, CatalogSource
     return schemaRegistry;
   }
 
-  public SchemaDefn resolveSchema(String dbSchema)
+  public SchemaSpec resolveSchema(String dbSchema)
   {
     return schemaRegistry.schema(dbSchema);
   }

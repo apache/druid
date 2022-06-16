@@ -23,7 +23,7 @@ import com.google.common.base.Strings;
 import org.apache.curator.shaded.com.google.common.collect.Lists;
 import org.apache.druid.catalog.Actions;
 import org.apache.druid.catalog.CatalogStorage;
-import org.apache.druid.catalog.SchemaRegistry.SchemaDefn;
+import org.apache.druid.catalog.SchemaRegistry.SchemaSpec;
 import org.apache.druid.catalog.TableId;
 import org.apache.druid.catalog.TableMetadata;
 import org.apache.druid.catalog.TableSpec;
@@ -99,11 +99,11 @@ public class CatalogResource
       @Context final HttpServletRequest req)
   {
     String dbSchema = table.resolveDbSchema();
-    Pair<Response, SchemaDefn> result = validateSchema(dbSchema);
+    Pair<Response, SchemaSpec> result = validateSchema(dbSchema);
     if (result.lhs != null) {
       return result.lhs;
     }
-    SchemaDefn schema = result.rhs;
+    SchemaSpec schema = result.rhs;
     if (!schema.writable()) {
       return Actions.badRequest(
           Actions.INVALID,
@@ -116,13 +116,13 @@ public class CatalogResource
     catch (IAE e) {
       return Actions.badRequest(Actions.INVALID, e.getMessage());
     }
-    TableSpec defn = table.defn();
-    if (!schema.accepts(defn)) {
+    TableSpec spec = table.spec();
+    if (!schema.accepts(spec)) {
       return Actions.badRequest(
           Actions.INVALID,
           StringUtils.format(
               "Cannot create tables of type %s in schema %s",
-              defn == null ? "null" : defn.getClass().getSimpleName(),
+              spec == null ? "null" : spec.getClass().getSimpleName(),
               dbSchema));
     }
     try {
@@ -159,7 +159,7 @@ public class CatalogResource
    *        and the user must have at least read access.
    * @param name The name of the table definition to modify. The user must
    *        have write access to the table.
-   * @param defn The new table definition.
+   * @param spec The new table definition.
    * @param version An optional table version. If provided, the metadata DB
    *        entry for the table must be at this exact version or the update
    *        will fail. (Provides "optimistic locking.") If omitted (that is,
@@ -174,37 +174,37 @@ public class CatalogResource
   public Response updateTableDefn(
       @PathParam("dbSchema") String dbSchema,
       @PathParam("name") String name,
-      TableSpec defn,
+      TableSpec spec,
       @QueryParam("version") long version,
       @Context final HttpServletRequest req)
   {
     try {
-      if (defn != null) {
-        defn.validate();
+      if (spec != null) {
+        spec.validate();
       }
     }
     catch (IAE e) {
       return Actions.badRequest(Actions.INVALID, e.getMessage());
     }
-    Pair<Response, SchemaDefn> result = validateSchema(dbSchema);
+    Pair<Response, SchemaSpec> result = validateSchema(dbSchema);
     if (result.lhs != null) {
       return result.lhs;
     }
     if (Strings.isNullOrEmpty(name)) {
       return Actions.badRequest(Actions.INVALID, "Table name is required");
     }
-    SchemaDefn schema = result.rhs;
+    SchemaSpec schema = result.rhs;
     if (!schema.writable()) {
       return Actions.badRequest(
           Actions.INVALID,
           StringUtils.format("Cannot update tables in schema %s", dbSchema));
     }
-    if (!schema.accepts(defn)) {
+    if (!schema.accepts(spec)) {
       return Actions.badRequest(
           Actions.INVALID,
           StringUtils.format(
               "Cannot update tables to type %s in schema %s",
-              defn == null ? "null" : defn.getClass().getSimpleName(),
+              spec == null ? "null" : spec.getClass().getSimpleName(),
               dbSchema));
     }
     try {
@@ -218,9 +218,9 @@ public class CatalogResource
       TableId tableId = new TableId(dbSchema, name);
       long newVersion;
       if (version == 0) {
-        newVersion = tableMgr.updateDefn(tableId, defn);
+        newVersion = tableMgr.updateDefn(tableId, spec);
       } else {
-        newVersion = tableMgr.updateDefn(tableId, defn, version);
+        newVersion = tableMgr.updateSpec(tableId, spec, version);
       }
       return Actions.okWithVersion(newVersion);
     }
@@ -264,7 +264,7 @@ public class CatalogResource
       @PathParam("name") String name,
       @Context final HttpServletRequest req)
   {
-    Pair<Response, SchemaDefn> result = validateSchema(dbSchema);
+    Pair<Response, SchemaSpec> result = validateSchema(dbSchema);
     if (result.lhs != null) {
       return result.lhs;
     }
@@ -320,7 +320,7 @@ public class CatalogResource
         req,
         tables,
         tableId -> {
-          SchemaDefn schema = catalog.resolveSchema(tableId.schema());
+          SchemaSpec schema = catalog.resolveSchema(tableId.schema());
           if (schema == null) {
             // Should never occur.
             return null;
@@ -351,11 +351,11 @@ public class CatalogResource
       @PathParam("dbSchema") String dbSchema,
       @Context final HttpServletRequest req)
   {
-    Pair<Response, SchemaDefn> result = validateSchema(dbSchema);
+    Pair<Response, SchemaSpec> result = validateSchema(dbSchema);
     if (result.lhs != null) {
       return result.lhs;
     }
-    SchemaDefn schema = result.rhs;
+    SchemaSpec schema = result.rhs;
     List<String> tables = catalog.tables().list(dbSchema);
     Iterable<String> filtered = AuthorizationUtils.filterAuthorizedResources(
         req,
@@ -389,11 +389,11 @@ public class CatalogResource
       @Context final HttpServletRequest req)
   {
     TableId tableId = new TableId(dbSchema, name);
-    Pair<Response, SchemaDefn> result = validateSchema(tableId.schema());
+    Pair<Response, SchemaSpec> result = validateSchema(tableId.schema());
     if (result.lhs != null) {
       return result.lhs;
     }
-    SchemaDefn schema = result.rhs;
+    SchemaSpec schema = result.rhs;
     if (!schema.writable()) {
       return Actions.badRequest(
           Actions.INVALID,
@@ -438,11 +438,11 @@ public class CatalogResource
       @Context final HttpServletRequest req
   )
   {
-    Pair<Response, SchemaDefn> result = validateSchema(dbSchema);
+    Pair<Response, SchemaSpec> result = validateSchema(dbSchema);
     if (result.lhs != null) {
       return result.lhs;
     }
-    SchemaDefn schema = result.rhs;
+    SchemaSpec schema = result.rhs;
     List<TableMetadata> tables = catalog.tables().listDetails(dbSchema);
     Iterable<TableMetadata> filtered = AuthorizationUtils.filterAuthorizedResources(
         req,
@@ -472,12 +472,12 @@ public class CatalogResource
     return getTable(dbSchema, name, req);
   }
 
-  private Pair<Response, SchemaDefn> validateSchema(String dbSchema)
+  private Pair<Response, SchemaSpec> validateSchema(String dbSchema)
   {
     if (Strings.isNullOrEmpty(dbSchema)) {
       return Pair.of(Actions.badRequest(Actions.INVALID, "Schema name is required"), null);
     }
-    SchemaDefn schema = catalog.resolveSchema(dbSchema);
+    SchemaSpec schema = catalog.resolveSchema(dbSchema);
     if (schema == null) {
       return Pair.of(Actions.notFound(
           StringUtils.format("Unknown schema %s", dbSchema)),

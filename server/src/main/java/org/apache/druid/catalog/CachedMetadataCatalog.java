@@ -20,7 +20,7 @@
 package org.apache.druid.catalog;
 
 import org.apache.druid.catalog.MetadataCatalog.CatalogListener;
-import org.apache.druid.catalog.SchemaRegistry.SchemaDefn;
+import org.apache.druid.catalog.SchemaRegistry.SchemaSpec;
 
 import javax.inject.Inject;
 
@@ -60,7 +60,7 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogListener
   {
     private final TableMetadata table;
 
-    protected TableEntry(SchemaDefn schema, TableMetadata table)
+    protected TableEntry(SchemaSpec schema, TableMetadata table)
     {
       this.table = table;
     }
@@ -73,11 +73,11 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogListener
 
   private class SchemaEntry
   {
-    private final SchemaDefn schema;
+    private final SchemaSpec schema;
     private long version = NOT_FETCHED;
     private final ConcurrentHashMap<String, TableEntry> cache = new ConcurrentHashMap<>();
 
-    protected SchemaEntry(SchemaDefn schema)
+    protected SchemaEntry(SchemaSpec schema)
     {
       this.schema = schema;
     }
@@ -205,7 +205,7 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogListener
     return schemaCache.computeIfAbsent(
         schemaName,
         k -> {
-          SchemaDefn schema = schemaRegistry.schema(k);
+          SchemaSpec schema = schemaRegistry.schema(k);
           return schema == null ? null : new SchemaEntry(schema);
         });
   }

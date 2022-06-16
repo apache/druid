@@ -138,7 +138,7 @@ public class MetadataCatalogTest
    */
   private void populateCatalog() throws DuplicateKeyException
   {
-    DatasourceSpec defn = DatasourceSpec.builder()
+    DatasourceSpec spec = DatasourceSpec.builder()
         .segmentGranularity("PT1D")
         .timeColumn()
         .column("a", "VARCHAR")
@@ -146,10 +146,10 @@ public class MetadataCatalogTest
     TableMetadata table = TableMetadata.newTable(
         TableId.DRUID_SCHEMA,
         "table1",
-        defn);
+        spec);
     storage.tables().create(table);
 
-    defn = DatasourceSpec.builder()
+    spec = DatasourceSpec.builder()
         .segmentGranularity("PT1D")
         .rollupGranularity("PT1H")
         .timeColumn()
@@ -159,12 +159,12 @@ public class MetadataCatalogTest
     table = TableMetadata.newTable(
         TableId.DRUID_SCHEMA,
         "table2",
-        defn);
+        spec);
     storage.tables().create(table);
 
     InputSource inputSource = new InlineInputSource("a,b,1\nc,d,2\n");
     InputFormat inputFormat = CatalogTests.csvFormat();
-    InputTableSpec inputDefn = InputTableSpec
+    InputTableSpec inputSpec = InputTableSpec
         .builder()
         .source(inputSource)
         .format(inputFormat)
@@ -173,7 +173,7 @@ public class MetadataCatalogTest
     table = TableMetadata.newTable(
         TableId.INPUT_SCHEMA,
         "input",
-        inputDefn);
+        inputSpec);
     storage.tables().create(table);
   }
 
@@ -186,8 +186,8 @@ public class MetadataCatalogTest
       assertTrue(table.updateTime() > 0);
       assertEquals(TableType.DATASOURCE, table.type());
 
-      DatasourceSpec dsDefn = (DatasourceSpec) table.defn();
-      List<DatasourceColumnSpec> cols = dsDefn.columns();
+      DatasourceSpec dsSpec = (DatasourceSpec) table.spec();
+      List<DatasourceColumnSpec> cols = dsSpec.columns();
       assertEquals(2, cols.size());
       assertEquals("__time", cols.get(0).name());
       assertEquals("TIMESTAMP", cols.get(0).sqlType());
@@ -196,10 +196,10 @@ public class MetadataCatalogTest
       assertEquals("VARCHAR", cols.get(1).sqlType());
       assertEquals(ColumnKind.DETAIL, cols.get(0).kind());
 
-      assertEquals("PT1D", dsDefn.segmentGranularity());
-      assertTrue(dsDefn.isDetail());
-      assertFalse(dsDefn.isRollup());
-      assertNull(dsDefn.rollupGranularity());
+      assertEquals("PT1D", dsSpec.segmentGranularity());
+      assertTrue(dsSpec.isDetail());
+      assertFalse(dsSpec.isRollup());
+      assertNull(dsSpec.rollupGranularity());
     }
     {
       TableId id = TableId.datasource("table2");
@@ -208,8 +208,8 @@ public class MetadataCatalogTest
       assertTrue(table.updateTime() > 0);
       assertEquals(TableType.DATASOURCE, table.type());
 
-      DatasourceSpec dsDefn = (DatasourceSpec) table.defn();
-      List<DatasourceColumnSpec> cols = dsDefn.columns();
+      DatasourceSpec dsSpec = (DatasourceSpec) table.spec();
+      List<DatasourceColumnSpec> cols = dsSpec.columns();
       assertEquals(3, cols.size());
       assertEquals("__time", cols.get(0).name());
       assertEquals("TIMESTAMP", cols.get(0).sqlType());
@@ -222,10 +222,10 @@ public class MetadataCatalogTest
       assertEquals(ColumnKind.MEASURE, cols.get(2).kind());
       assertEquals("SUM", ((MeasureSpec) cols.get(2)).aggregateFn());
 
-      assertEquals("PT1D", dsDefn.segmentGranularity());
-      assertFalse(dsDefn.isDetail());
-      assertTrue(dsDefn.isRollup());
-      assertEquals("PT1H", dsDefn.rollupGranularity());
+      assertEquals("PT1D", dsSpec.segmentGranularity());
+      assertFalse(dsSpec.isDetail());
+      assertTrue(dsSpec.isRollup());
+      assertEquals("PT1H", dsSpec.rollupGranularity());
     }
     assertNull(catalog.resolveTable(TableId.datasource("table3")));
     {
@@ -235,15 +235,15 @@ public class MetadataCatalogTest
       assertTrue(table.updateTime() > 0);
       assertEquals(TableType.INPUT, table.type());
 
-      InputTableSpec inputDefn = (InputTableSpec) table.defn();
-      List<InputColumnSpec> cols = inputDefn.columns();
+      InputTableSpec inputSpec = (InputTableSpec) table.spec();
+      List<InputColumnSpec> cols = inputSpec.columns();
       assertEquals(1, cols.size());
       assertEquals("a", cols.get(0).name());
       assertEquals("varchar", cols.get(0).sqlType());
       assertEquals(ColumnKind.INPUT, cols.get(0).kind());
 
-      assertNotNull(inputDefn.inputSource());
-      assertNotNull(inputDefn.format());
+      assertNotNull(inputSpec.inputSource());
+      assertNotNull(inputSpec.format());
     }
 
     List<TableMetadata> tables = catalog.tables(TableId.DRUID_SCHEMA);
@@ -263,14 +263,14 @@ public class MetadataCatalogTest
     TableMetadata table1 = storage.tables().read(id1);
     assertNotNull(table1);
 
-    DatasourceSpec defn = (DatasourceSpec) table1.defn();
-    defn = defn.toBuilder()
+    DatasourceSpec spec = (DatasourceSpec) table1.spec();
+    spec = spec.toBuilder()
         .column("b", "DOUBLE")
         .build();
-    storage.tables().updateDefn(id1, defn, table1.updateTime());
+    storage.tables().updateSpec(id1, spec, table1.updateTime());
 
     // Create a table 3
-    defn = DatasourceSpec.builder()
+    spec = DatasourceSpec.builder()
         .segmentGranularity("PT1D")
         .timeColumn()
         .column("x", "FLOAT")
@@ -278,7 +278,7 @@ public class MetadataCatalogTest
     TableMetadata table = TableMetadata.newTable(
         TableId.DRUID_SCHEMA,
         "table3",
-        defn);
+        spec);
     storage.tables().create(table);
   }
 
@@ -288,8 +288,8 @@ public class MetadataCatalogTest
       TableId id = TableId.datasource("table1");
       TableMetadata table = catalog.resolveTable(id);
 
-      DatasourceSpec dsDefn = (DatasourceSpec) table.defn();
-      List<DatasourceColumnSpec> cols = dsDefn.columns();
+      DatasourceSpec dsSpec = (DatasourceSpec) table.spec();
+      List<DatasourceColumnSpec> cols = dsSpec.columns();
       assertEquals(3, cols.size());
       assertEquals("__time", cols.get(0).name());
       assertEquals("a", cols.get(1).name());
@@ -301,8 +301,8 @@ public class MetadataCatalogTest
       TableId id = TableId.datasource("table3");
       TableMetadata table = catalog.resolveTable(id);
 
-      DatasourceSpec dsDefn = (DatasourceSpec) table.defn();
-      List<DatasourceColumnSpec> cols = dsDefn.columns();
+      DatasourceSpec dsSpec = (DatasourceSpec) table.spec();
+      List<DatasourceColumnSpec> cols = dsSpec.columns();
       assertEquals(2, cols.size());
       assertEquals("__time", cols.get(0).name());
       assertEquals("x", cols.get(1).name());

@@ -193,7 +193,7 @@ public class TableMetadata
   }
 
   @JsonProperty("defn")
-  public TableSpec defn()
+  public TableSpec spec()
   {
     return defn;
   }

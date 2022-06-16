@@ -31,15 +31,15 @@ import java.util.Set;
  */
 public interface SchemaRegistry
 {
-  interface SchemaDefn
+  interface SchemaSpec
   {
     String name();
     String securityResource();
     boolean writable();
-    boolean accepts(TableSpec defn);
+    boolean accepts(TableSpec spec);
     TableType tableType();
   }
 
-  SchemaDefn schema(String name);
+  SchemaSpec schema(String name);
   Set<String> names();
 }

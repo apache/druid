@@ -92,7 +92,7 @@ public class CatalogListenerResource
     catch (IOException e) {
       return Response.serverError().entity(e.getMessage()).build();
     }
-    TableSpec defn = tableSpec.defn();
+    TableSpec defn = tableSpec.spec();
     if (defn instanceof TableSpec.Tombstone) {
       listener.deleted(tableSpec.id());
     } else {

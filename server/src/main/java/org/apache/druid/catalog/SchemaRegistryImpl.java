@@ -38,7 +38,7 @@ public class SchemaRegistryImpl implements SchemaRegistry
   // TODO: Change this when ExternalOperatorConvertion changes
   private String EXTERNAL_RESOURCE = "EXTERNAL";
 
-  public static class SchemaDefnImpl implements SchemaDefn
+  public static class SchemaDefnImpl implements SchemaSpec
   {
     private final String name;
     private final String resource;
@@ -76,15 +76,15 @@ public class SchemaRegistryImpl implements SchemaRegistry
     }
 
     @Override
-    public boolean accepts(TableSpec defn)
+    public boolean accepts(TableSpec spec)
     {
       if (acceptedClass == null) {
         return false;
       }
-      if (defn == null) {
+      if (spec == null) {
         return false;
       }
-      return acceptedClass.isAssignableFrom(defn.getClass());
+      return acceptedClass.isAssignableFrom(spec.getClass());
     }
 
     @Override
@@ -94,7 +94,7 @@ public class SchemaRegistryImpl implements SchemaRegistry
     }
   }
 
-  private final Map<String, SchemaDefn> builtIns;
+  private final Map<String, SchemaSpec> builtIns;
 
   public SchemaRegistryImpl()
   {
@@ -131,13 +131,13 @@ public class SchemaRegistryImpl implements SchemaRegistry
         null)); // TODO
   }
 
-  private void register(SchemaDefn schemaDefn)
+  private void register(SchemaSpec schemaDefn)
   {
     builtIns.put(schemaDefn.name(), schemaDefn);
   }
 
   @Override
-  public SchemaDefn schema(String name)
+  public SchemaSpec schema(String name)
   {
     return builtIns.get(name);
   }
