@@ -57,16 +57,10 @@ public class OrcExtensionsModule implements DruidModule
     );
   }
 
-  @Override
-  public void configure(Binder binder)
+  public void initialize(Configuration conf)
   {
-    // this block of code is common among extensions that use Hadoop things but are not running in Hadoop, in order
-    // to properly initialize everything
-
-    final Configuration conf = new Configuration();
-
-    // Set explicit CL. Otherwise it'll try to use thread context CL, which may not have all of our dependencies.
-    conf.setClassLoader(getClass().getClassLoader());
+    //Lazy initializing here since while eager initialization resolving namenode address
+    //throws an error if the hadoop nodes aren't up
 
     // Ensure that FileSystem class level initialization happens with correct CL
     // See https://github.com/apache/druid/issues/1714
@@ -81,7 +75,15 @@ public class OrcExtensionsModule implements DruidModule
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
     }
+  }
 
+  @Override
+  public void configure(Binder binder)
+  {
+    // this block of code is common among extensions that use Hadoop things but are not running in Hadoop, in order
+    // to properly initialize everything
+
+    final Configuration conf = new Configuration();
     if (props != null) {
       for (String propName : props.stringPropertyNames()) {
         if (propName.startsWith("hadoop.")) {

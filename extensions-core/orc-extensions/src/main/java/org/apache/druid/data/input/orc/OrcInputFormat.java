@@ -60,6 +60,8 @@ public class OrcInputFormat extends NestedInputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
+    OrcExtensionsModule orcExtensionsModule = new OrcExtensionsModule();
+    orcExtensionsModule.initialize(conf);
     return new OrcReader(conf, inputRowSchema, source, temporaryDirectory, getFlattenSpec(), binaryAsString);
   }
 
