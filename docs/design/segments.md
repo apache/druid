@@ -104,7 +104,7 @@ A `ColumnDescriptor` is  Jackson-serialized instance of the internal Druid `Colu
 
 ### Multi-value columns
 
-A multi-value column allows a single row to contain multiple strings for a column. You can think of it as an array of strings. If a data source uses multi-value columns, then the data structures within the segment files look a bit different. Let's imagine that in the example above, the second row is tagged with both the `Ke$ha` *and* `Justin Bieber` topics, as follows:
+A multi-value column allows a single row to contain multiple strings for a column. You can think of it as an array of strings. If a datasource uses multi-value columns, then the data structures within the segment files look a bit different. Let's imagine that in the example above, the second row is tagged with both the `Ke$ha` *and* `Justin Bieber` topics, as follows:
 
 ```
 1: Dictionary
