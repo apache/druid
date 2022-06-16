@@ -115,6 +115,37 @@ public class MetadataStorageTablesConfig
     this.tableDefnTable = makeTableName(tablesTable, "tableDefn");
   }
 
+  /**
+   * Shim constructor for backwards compatibility with code that
+   * cannot be changed due to missing unit tests.
+   */
+  public MetadataStorageTablesConfig(
+      String base,
+      String dataSourceTable,
+      String pendingSegmentsTable,
+      String segmentsTable,
+      String rulesTable,
+      String configTable,
+      String tasksTable,
+      String taskLogTable,
+      String taskLockTable,
+      String auditTable,
+      String supervisorTable
+  )
+  {
+    this(
+        base,
+        dataSourceTable,
+        pendingSegmentsTable,
+        segmentsTable, rulesTable,
+        configTable,
+        tasksTable,
+        taskLogTable,
+        taskLockTable,
+        auditTable,
+        supervisorTable,
+        null);
+  }
   private String makeTableName(String explicitTableName, String defaultSuffix)
   {
     if (explicitTableName == null) {

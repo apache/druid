@@ -36,7 +36,7 @@ public interface CatalogManager
 
     private final String code;
 
-    private TableState(String code)
+    TableState(String code)
     {
       this.code = code;
     }

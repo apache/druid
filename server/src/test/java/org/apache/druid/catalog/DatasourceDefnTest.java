@@ -80,7 +80,7 @@ public class DatasourceDefnTest
     Map<String, Object> props = ImmutableMap.of(
         "foo", 10, "bar", "mumble");
     DatasourceDefn defn = DatasourceDefn.builder()
-        .rollupGranularity("PT1M")
+        .segmentGranularity("PT1D")
         .properties(props)
         .build();
 
