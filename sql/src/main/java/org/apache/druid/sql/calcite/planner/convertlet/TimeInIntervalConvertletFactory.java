@@ -83,7 +83,7 @@ public class TimeInIntervalConvertletFactory implements DruidConvertletFactory
   }
 
   private static Interval intervalFromStringArgument(
-      @Nullable final SqlParserPos parserPos,
+      final SqlParserPos parserPos,
       final String intervalString,
       final DateTimeZone sessionTimeZone
   )
@@ -95,16 +95,12 @@ public class TimeInIntervalConvertletFactory implements DruidConvertletFactory
       final RuntimeException ex =
           new IAE("Function '%s' second argument is not a valid ISO8601 interval: %s", NAME, e.getMessage());
 
-      if (parserPos == null) {
-        throw ex;
-      } else {
-        throw Static.RESOURCE.validatorContext(
-            parserPos.getLineNum(),
-            parserPos.getColumnNum(),
-            parserPos.getEndLineNum(),
-            parserPos.getEndColumnNum()
-        ).ex(ex);
-      }
+      throw Static.RESOURCE.validatorContext(
+          parserPos.getLineNum(),
+          parserPos.getColumnNum(),
+          parserPos.getEndLineNum(),
+          parserPos.getEndColumnNum()
+      ).ex(ex);
     }
   }
 
