@@ -59,8 +59,8 @@ public class OrcExtensionsModule implements DruidModule
 
   public void initialize(Configuration conf)
   {
-    //Lazy initializing here since while eager initialization resolving namenode address
-    //throws an error if the hadoop nodes aren't up
+    //Initializing seperately since during eager initialization, resolving
+    //namenode hostname throws an error if nodes are ephemeral
 
     // Ensure that FileSystem class level initialization happens with correct CL
     // See https://github.com/apache/druid/issues/1714
