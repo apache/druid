@@ -59,7 +59,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
       @JacksonInject GoogleInputDataConfig inputDataConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
-      @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects
+      @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
       @JsonProperty("filter") @Nullable String filter
   )
   {

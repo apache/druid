@@ -332,6 +332,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         EXPECTED_URIS,
         PREFIXES,
         EXPECTED_LOCATION,
+        null,
         null
     );
   }
@@ -615,6 +616,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_COMPRESSED_URIS.get(1)),
+        null,
         null,
         null
     );

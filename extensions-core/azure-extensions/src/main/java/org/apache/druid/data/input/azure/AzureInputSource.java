@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
@@ -68,7 +69,7 @@ public class AzureInputSource extends CloudObjectInputSource
       @JacksonInject AzureInputDataConfig inputDataConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
-      @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects
+      @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
       @JsonProperty("filter") @Nullable String filter
   )
   {

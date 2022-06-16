@@ -257,6 +257,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         ImmutableList.of(),
         ImmutableList.of(),
         EXPECTED_LOCATION,
+        null,
         null
     );
     final OssInputSource serdeWithPrefixes =
@@ -346,6 +347,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         PREFIXES,
+        null,
         null,
         null
     );

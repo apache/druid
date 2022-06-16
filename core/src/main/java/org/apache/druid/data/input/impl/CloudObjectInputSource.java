@@ -53,6 +53,30 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       @Nullable List<URI> uris,
       @Nullable List<URI> prefixes,
       @Nullable List<CloudObjectLocation> objects
+  )
+  {
+    this.uris = uris;
+    this.prefixes = prefixes;
+    this.objects = objects;
+    this.filter = null;
+
+    if (!CollectionUtils.isNullOrEmpty(objects)) {
+      throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(uris) || !CollectionUtils.isNullOrEmpty(prefixes));
+    } else if (!CollectionUtils.isNullOrEmpty(uris)) {
+      throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(prefixes));
+      uris.forEach(uri -> CloudObjectLocation.validateUriScheme(scheme, uri));
+    } else if (!CollectionUtils.isNullOrEmpty(prefixes)) {
+      prefixes.forEach(uri -> CloudObjectLocation.validateUriScheme(scheme, uri));
+    } else {
+      throwIfIllegalArgs(true);
+    }
+  }
+
+  public CloudObjectInputSource(
+      String scheme,
+      @Nullable List<URI> uris,
+      @Nullable List<URI> prefixes,
+      @Nullable List<CloudObjectLocation> objects,
       @Nullable String filter
   )
   {
