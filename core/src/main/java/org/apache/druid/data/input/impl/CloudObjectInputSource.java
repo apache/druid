@@ -216,7 +216,8 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     CloudObjectInputSource that = (CloudObjectInputSource) o;
     return Objects.equals(uris, that.uris) &&
            Objects.equals(prefixes, that.prefixes) &&
-           Objects.equals(objects, that.objects);
+           Objects.equals(objects, that.objects) &&
+           Objects.equals(filter, that.filter);
   }
 
   @Override
