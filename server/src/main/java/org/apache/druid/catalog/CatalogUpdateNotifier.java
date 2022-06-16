@@ -53,9 +53,9 @@ public class CatalogUpdateNotifier implements CatalogListener
 {
   private final String CALLER_NAME = "Catalog Sync";
   private final long TIMEOUT_MS = 5000;
-  private final TableDefn TABLE_TOMBSTONE = new TableDefn.Tombstone();
+  private final TableSpec TABLE_TOMBSTONE = new TableSpec.Tombstone();
 
-  private final CommonCacheNotifierEx notifier;
+  private final CacheNotifier notifier;
   private final ObjectMapper smileMapper;
 
   @Inject
@@ -78,7 +78,7 @@ public class CatalogUpdateNotifier implements CatalogListener
         restSender,
         CatalogListenerResource.BASE_URL + CatalogListenerResource.SYNC_URL,
         timeoutMs);
-    this.notifier = new CommonCacheNotifierEx(
+    this.notifier = new CacheNotifier(
         CALLER_NAME,
         sender);
     catalog.register(this);
@@ -97,7 +97,7 @@ public class CatalogUpdateNotifier implements CatalogListener
   }
 
   @Override
-  public void updated(TableSpec update)
+  public void updated(TableMetadata update)
   {
     notifier.send(update.toBytes(smileMapper));
   }
@@ -105,7 +105,7 @@ public class CatalogUpdateNotifier implements CatalogListener
   @Override
   public void deleted(TableId tableId)
   {
-    TableSpec spec = TableSpec.newTable(tableId, TABLE_TOMBSTONE);
+    TableMetadata spec = TableMetadata.newTable(tableId, TABLE_TOMBSTONE);
     notifier.send(spec.toBytes(smileMapper));
   }
 }

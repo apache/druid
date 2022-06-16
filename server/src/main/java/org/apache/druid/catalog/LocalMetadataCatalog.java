@@ -23,7 +23,6 @@ import org.apache.druid.catalog.SchemaRegistry.SchemaDefn;
 
 import javax.inject.Inject;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -52,12 +51,7 @@ public class LocalMetadataCatalog implements MetadataCatalog
   @Override
   public TableMetadata resolveTable(TableId tableId)
   {
-    TableSpec table = catalog.table(tableId);
-    if (table == null) {
-      return null;
-    }
-    SchemaDefn schema = schemaRegistry.schema(table.dbSchema());
-    return AbstractTableMetadata.fromCatalogTable(schema, table);
+    return catalog.table(tableId);
   }
 
   @Override
@@ -67,12 +61,7 @@ public class LocalMetadataCatalog implements MetadataCatalog
     if (schema == null || !schema.writable()) {
       return Collections.emptyList();
     }
-    List<TableSpec> catalogTables = catalog.tablesForSchema(schemaName);
-    List<TableMetadata> tables = new ArrayList<>();
-    for (TableSpec table : catalogTables) {
-      tables.add(AbstractTableMetadata.fromCatalogTable(schema, table));
-    }
-    return tables;
+    return catalog.tablesForSchema(schemaName);
   }
 
   @Override
@@ -82,9 +71,9 @@ public class LocalMetadataCatalog implements MetadataCatalog
     if (schema == null || !schema.writable()) {
       return Collections.emptySet();
     }
-    List<TableSpec> catalogTables = catalog.tablesForSchema(schemaName);
+    List<TableMetadata> catalogTables = catalog.tablesForSchema(schemaName);
     Set<String> tables = new HashSet<>();
-    for (TableSpec table : catalogTables) {
+    for (TableMetadata table : catalogTables) {
       tables.add(table.name());
     }
     return tables;

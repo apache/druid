@@ -146,6 +146,7 @@ public class MetadataStorageTablesConfig
         supervisorTable,
         null);
   }
+
   private String makeTableName(String explicitTableName, String defaultSuffix)
   {
     if (explicitTableName == null) {

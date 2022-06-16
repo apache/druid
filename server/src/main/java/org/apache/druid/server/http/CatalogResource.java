@@ -24,16 +24,16 @@ import org.apache.curator.shaded.com.google.common.collect.Lists;
 import org.apache.druid.catalog.Actions;
 import org.apache.druid.catalog.CatalogStorage;
 import org.apache.druid.catalog.SchemaRegistry.SchemaDefn;
-import org.apache.druid.catalog.TableDefn;
 import org.apache.druid.catalog.TableId;
+import org.apache.druid.catalog.TableMetadata;
 import org.apache.druid.catalog.TableSpec;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.metadata.catalog.CatalogManager;
 import org.apache.druid.metadata.catalog.CatalogManager.DuplicateKeyException;
 import org.apache.druid.metadata.catalog.CatalogManager.NotFoundException;
 import org.apache.druid.metadata.catalog.CatalogManager.OutOfDateException;
-import org.apache.druid.metadata.catalog.TableDefnManager;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ForbiddenException;
@@ -94,7 +94,7 @@ public class CatalogResource
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   public Response createTable(
-      TableSpec table,
+      TableMetadata table,
       @QueryParam("ifnew") boolean ifNew,
       @Context final HttpServletRequest req)
   {
@@ -116,7 +116,7 @@ public class CatalogResource
     catch (IAE e) {
       return Actions.badRequest(Actions.INVALID, e.getMessage());
     }
-    TableDefn defn = table.defn();
+    TableSpec defn = table.defn();
     if (!schema.accepts(defn)) {
       return Actions.badRequest(
           Actions.INVALID,
@@ -174,7 +174,7 @@ public class CatalogResource
   public Response updateTableDefn(
       @PathParam("dbSchema") String dbSchema,
       @PathParam("name") String name,
-      TableDefn defn,
+      TableSpec defn,
       @QueryParam("version") long version,
       @Context final HttpServletRequest req)
   {
@@ -214,7 +214,7 @@ public class CatalogResource
       return Actions.forbidden(e);
     }
     try {
-      TableDefnManager tableMgr = catalog.tables();
+      CatalogManager tableMgr = catalog.tables();
       TableId tableId = new TableId(dbSchema, name);
       long newVersion;
       if (version == 0) {
@@ -279,7 +279,7 @@ public class CatalogResource
     }
     try {
       TableId tableId = new TableId(dbSchema, name);
-      TableSpec table = catalog.tables().read(tableId);
+      TableMetadata table = catalog.tables().read(tableId);
       if (table == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
@@ -443,8 +443,8 @@ public class CatalogResource
       return result.lhs;
     }
     SchemaDefn schema = result.rhs;
-    List<TableSpec> tables = catalog.tables().listDetails(dbSchema);
-    Iterable<TableSpec> filtered = AuthorizationUtils.filterAuthorizedResources(
+    List<TableMetadata> tables = catalog.tables().listDetails(dbSchema);
+    Iterable<TableMetadata> filtered = AuthorizationUtils.filterAuthorizedResources(
         req,
         tables,
         table ->

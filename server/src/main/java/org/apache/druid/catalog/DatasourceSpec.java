@@ -24,6 +24,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Strings;
+import org.apache.druid.catalog.DatasourceColumnSpec.DetailColumnSpec;
+import org.apache.druid.catalog.DatasourceColumnSpec.DimensionSpec;
+import org.apache.druid.catalog.DatasourceColumnSpec.MeasureSpec;
+import org.apache.druid.catalog.TableMetadata.TableType;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 
@@ -40,7 +44,7 @@ import java.util.Set;
  * Datasource metadata exchanged via the REST API and stored
  * in the catalog.
  */
-public class DatasourceDefn extends TableDefn
+public class DatasourceSpec extends TableSpec
 {
   /**
    * Segment grain at ingestion and initial compaction. Aging rules
@@ -77,16 +81,16 @@ public class DatasourceDefn extends TableDefn
    */
   private final String autoCompactionDelay;
 
-  private final List<ColumnDefn> columns;
+  private final List<DatasourceColumnSpec> columns;
 
-  public DatasourceDefn(
+  public DatasourceSpec(
       @JsonProperty("segmentGranularity") String segmentGranularity,
       @JsonProperty("rollupGranularity") String rollupGranularity,
       @JsonProperty("targetSegmentRows") int targetSegmentRows,
       @JsonProperty("enableAutoCompaction") boolean enableAutoCompaction,
       @JsonProperty("autoCompactionDelay") String autoCompactionDelay,
       @JsonProperty("properties") Map<String, Object> properties,
-      @JsonProperty("columns") List<ColumnDefn> columns
+      @JsonProperty("columns") List<DatasourceColumnSpec> columns
   )
   {
     super(properties);
@@ -100,6 +104,12 @@ public class DatasourceDefn extends TableDefn
     this.enableAutoCompaction = enableAutoCompaction;
     this.autoCompactionDelay = autoCompactionDelay;
     this.columns = columns == null ? Collections.emptyList() : columns;
+  }
+
+  @Override
+  public TableType type()
+  {
+    return TableType.DATASOURCE;
   }
 
   @JsonProperty("rollupGranularity")
@@ -139,7 +149,7 @@ public class DatasourceDefn extends TableDefn
 
   @JsonProperty("columns")
   @JsonInclude(Include.NON_EMPTY)
-  public List<ColumnDefn> columns()
+  public List<DatasourceColumnSpec> columns()
   {
     return columns;
   }
@@ -155,15 +165,15 @@ public class DatasourceDefn extends TableDefn
   }
 
   @JsonIgnore
-  public boolean isDetailTable()
+  public boolean isDetail()
   {
     return Strings.isNullOrEmpty(rollupGranularity);
   }
 
   @JsonIgnore
-  public boolean isRollupTable()
+  public boolean isRollup()
   {
-    return !isDetailTable();
+    return !isDetail();
   }
 
   @Override
@@ -173,16 +183,22 @@ public class DatasourceDefn extends TableDefn
     if (Strings.isNullOrEmpty(segmentGranularity)) {
       throw new IAE("Segment granularity is required.");
     }
-    boolean isDetail = isDetailTable();
+    boolean isDetail = isDetail();
     Set<String> names = new HashSet<>();
-    for (ColumnDefn col : columns) {
-      if (!(col instanceof DatasourceColumnDefn)) {
-        throw new IAE(
-            StringUtils.format("Column %s is not a segment column", col.name()));
-      }
-      if (isDetail && col instanceof MeasureColumnDefn) {
+    for (ColumnSpec col : columns) {
+      if (isDetail && col instanceof MeasureSpec) {
         throw new IAE(StringUtils.format(
             "Measure column %s not allowed for a detail table",
+            col.name()));
+      }
+      if (isDetail && col instanceof DimensionSpec) {
+        throw new IAE(StringUtils.format(
+            "Dimension column %s not allowed for a detail table",
+            col.name()));
+      }
+      if (!isDetail && col instanceof DetailColumnSpec) {
+        throw new IAE(StringUtils.format(
+            "Detail column %s not allowed for a rollup table",
             col.name()));
       }
       col.validate();
@@ -207,7 +223,7 @@ public class DatasourceDefn extends TableDefn
     if (o == null || o.getClass() != getClass()) {
       return false;
     }
-    DatasourceDefn other = (DatasourceDefn) o;
+    DatasourceSpec other = (DatasourceSpec) o;
     return Objects.equals(this.segmentGranularity, other.segmentGranularity)
         && Objects.equals(this.rollupGranularity, other.rollupGranularity)
         && this.targetSegmentRows == other.targetSegmentRows
@@ -237,7 +253,7 @@ public class DatasourceDefn extends TableDefn
     private int targetSegmentRows;
     private boolean enableAutoCompaction;
     private String autoCompactionDelay;
-    private List<ColumnDefn> columns;
+    private List<DatasourceColumnSpec> columns;
     private Map<String, Object> properties;
 
     public Builder()
@@ -246,7 +262,7 @@ public class DatasourceDefn extends TableDefn
       this.properties = new HashMap<>();
     }
 
-    public Builder(DatasourceDefn defn)
+    public Builder(DatasourceSpec defn)
     {
       this.segmentGranularity = defn.segmentGranularity;
       this.rollupGranularity = defn.rollupGranularity;
@@ -287,12 +303,12 @@ public class DatasourceDefn extends TableDefn
       return this;
     }
 
-    public List<ColumnDefn> columns()
+    public List<DatasourceColumnSpec> columns()
     {
       return columns;
     }
 
-    public Builder column(DatasourceColumnDefn column)
+    public Builder column(DatasourceColumnSpec column)
     {
       if (Strings.isNullOrEmpty(column.name())) {
         throw new IAE("Column name is required");
@@ -308,21 +324,17 @@ public class DatasourceDefn extends TableDefn
 
     public Builder column(String name, String sqlType)
     {
-      return column(
-          DatasourceColumnDefn
-            .builder(name)
-            .sqlType(sqlType)
-            .build());
+      if (rollupGranularity == null) {
+        column(new DetailColumnSpec(name, sqlType));
+      } else {
+        column(new DimensionSpec(name, sqlType));
+      }
+      return this;
     }
 
     public Builder measure(String name, String sqlType, String aggFn)
     {
-      return column(
-          DatasourceColumnDefn
-            .builder(name)
-            .sqlType(sqlType)
-            .measure(aggFn)
-            .build());
+      return column(new MeasureSpec(name, sqlType, aggFn));
     }
 
     public Builder properties(Map<String, Object> properties)
@@ -345,13 +357,13 @@ public class DatasourceDefn extends TableDefn
       return properties;
     }
 
-    public DatasourceDefn build()
+    public DatasourceSpec build()
     {
       if (targetSegmentRows < 0) {
         targetSegmentRows = 0;
       }
       // TODO(paul): validate upper bound
-      return new DatasourceDefn(
+      return new DatasourceSpec(
           segmentGranularity,
           rollupGranularity,
           targetSegmentRows,

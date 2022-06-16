@@ -22,6 +22,7 @@ package org.apache.druid.catalog;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.catalog.DatasourceColumnSpec.MeasureSpec;
 import org.apache.druid.java.util.common.IAE;
 import org.junit.Test;
 
@@ -37,13 +38,13 @@ import static org.junit.Assert.fail;
 /**
  * Test of validation and serialization of the catalog table definitions.
  */
-public class DatasourceDefnTest
+public class DatasourceSpecTest
 {
   @Test
   public void testMinimalBuilder()
   {
     // Minimum possible definition
-    DatasourceDefn defn = DatasourceDefn.builder()
+    DatasourceSpec defn = DatasourceSpec.builder()
         .segmentGranularity("PT1D")
         .build();
 
@@ -52,14 +53,14 @@ public class DatasourceDefnTest
     assertNull(defn.rollupGranularity());
     assertEquals(0, defn.targetSegmentRows());
 
-    DatasourceDefn copy = defn.toBuilder().build();
+    DatasourceSpec copy = defn.toBuilder().build();
     assertEquals(defn, copy);
   }
 
   @Test
   public void testFullBuilder()
   {
-    DatasourceDefn defn = DatasourceDefn.builder()
+    DatasourceSpec defn = DatasourceSpec.builder()
         .segmentGranularity("PT1H")
         .rollupGranularity("PT1M")
         .targetSegmentRows(1_000_000)
@@ -70,7 +71,7 @@ public class DatasourceDefnTest
     assertEquals("PT1M", defn.rollupGranularity());
     assertEquals(1_000_000, defn.targetSegmentRows());
 
-    DatasourceDefn copy = defn.toBuilder().build();
+    DatasourceSpec copy = defn.toBuilder().build();
     assertEquals(defn, copy);
   }
 
@@ -79,48 +80,48 @@ public class DatasourceDefnTest
   {
     Map<String, Object> props = ImmutableMap.of(
         "foo", 10, "bar", "mumble");
-    DatasourceDefn defn = DatasourceDefn.builder()
-        .segmentGranularity("PT1D")
+    DatasourceSpec defn = DatasourceSpec.builder()
+        .segmentGranularity("PT1M")
         .properties(props)
         .build();
 
     defn.validate();
     assertEquals(props, defn.properties());
 
-    DatasourceDefn copy = defn.toBuilder().build();
+    DatasourceSpec copy = defn.toBuilder().build();
     assertEquals(defn, copy);
   }
 
   @Test
   public void testColumns()
   {
-    DatasourceDefn defn = DatasourceDefn.builder()
+    DatasourceSpec defn = DatasourceSpec.builder()
         .segmentGranularity("PT1D")
         .rollupGranularity("PT1M")
-        .column(DatasourceColumnDefn.builder("a").build())
-        .column(DatasourceColumnDefn.builder("b").sqlType("VARCHAR").build())
-        .column(DatasourceColumnDefn.builder("c").sqlType("BIGINT").measure("SUM").build())
+        .column("a", null)
+        .column("b", "VARCHAR")
+        .measure("c", "BIGINT", "SUM")
         .build();
 
     defn.validate();
-    List<ColumnDefn> columns = defn.columns();
+    List<DatasourceColumnSpec> columns = defn.columns();
     assertEquals(3, columns.size());
-    assertTrue(columns.get(0) instanceof DatasourceColumnDefn);
+    assertTrue(columns.get(0) instanceof DatasourceColumnSpec);
     assertEquals("a", columns.get(0).name());
     assertNull(columns.get(0).sqlType());
-    assertTrue(columns.get(1) instanceof DatasourceColumnDefn);
+    assertTrue(columns.get(1) instanceof DatasourceColumnSpec);
     assertEquals("b", columns.get(1).name());
     assertEquals("VARCHAR", columns.get(1).sqlType());
-    assertTrue(columns.get(2) instanceof MeasureColumnDefn);
+    assertTrue(columns.get(2) instanceof MeasureSpec);
     assertEquals("c", columns.get(2).name());
     assertEquals("BIGINT", columns.get(2).sqlType());
-    assertEquals("SUM", ((MeasureColumnDefn) columns.get(2)).aggregateFn());
+    assertEquals("SUM", ((MeasureSpec) columns.get(2)).aggregateFn());
 
-    DatasourceDefn copy = defn.toBuilder().build();
+    DatasourceSpec copy = defn.toBuilder().build();
     assertEquals(defn, copy);
 
     try {
-      defn = DatasourceDefn.builder()
+      defn = DatasourceSpec.builder()
           .segmentGranularity("PT1D")
           .column("c", "FOO")
           .build();
@@ -132,9 +133,9 @@ public class DatasourceDefnTest
     }
 
     try {
-      defn = DatasourceDefn.builder()
+      defn = DatasourceSpec.builder()
           .segmentGranularity("PT1D")
-          .column(DatasourceColumnDefn.builder("c").sqlType("BIGINT").measure("SUM").build())
+          .measure("c", "BIGINT", "SUM")
           .build();
       defn.validate();
       fail();
@@ -144,10 +145,10 @@ public class DatasourceDefnTest
     }
 
     try {
-      defn = DatasourceDefn.builder()
+      defn = DatasourceSpec.builder()
           .segmentGranularity("PT1D")
-          .column(DatasourceColumnDefn.builder("a").build())
-          .column(DatasourceColumnDefn.builder("a").build())
+          .column("a", null)
+          .column("a", null)
           .build();
       defn.validate();
       fail();
@@ -161,7 +162,7 @@ public class DatasourceDefnTest
   public void testValidation()
   {
     // Ignore rollup grain for detail table
-    DatasourceDefn defn = DatasourceDefn.builder()
+    DatasourceSpec defn = DatasourceSpec.builder()
         .segmentGranularity("PT1H")
         .build();
 
@@ -169,7 +170,7 @@ public class DatasourceDefnTest
     assertEquals("PT1H", defn.segmentGranularity());
 
     // Negative segment size mapped to 0
-    defn = DatasourceDefn.builder()
+    defn = DatasourceSpec.builder()
         .segmentGranularity("PT1H")
         .targetSegmentRows(-1)
         .build();
@@ -180,14 +181,14 @@ public class DatasourceDefnTest
   public void testSerialization()
   {
     ObjectMapper mapper = new ObjectMapper();
-    DatasourceDefn defn = DatasourceDefn.builder()
+    DatasourceSpec defn = DatasourceSpec.builder()
         .segmentGranularity("PT1H")
         .rollupGranularity("PT1M")
         .targetSegmentRows(1_000_000)
         .build();
 
     // Round-trip
-    TableDefn defn2 = TableDefn.fromBytes(mapper, defn.toBytes(mapper));
+    TableSpec defn2 = TableSpec.fromBytes(mapper, defn.toBytes(mapper));
     assertEquals(defn, defn2);
 
     // Sanity check of toString, which uses JSON
@@ -197,7 +198,7 @@ public class DatasourceDefnTest
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(DatasourceDefn.class)
+    EqualsVerifier.forClass(DatasourceSpec.class)
                   .usingGetClass()
                   .verify();
   }

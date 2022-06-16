@@ -52,7 +52,7 @@ public class CacheNotifierTest
   public void testNotifier()
   {
     MockSender sender = new MockSender();
-    CommonCacheNotifierEx notifier = new CommonCacheNotifierEx("test", sender);
+    CacheNotifier notifier = new CacheNotifier("test", sender);
     notifier.start();
     for (int i = 0; i < 100; i++) {
       byte[] msg = new byte[] {(byte) i};
@@ -110,7 +110,7 @@ public class CacheNotifierTest
         restSender,
         "/test/foo",
         1000);
-    CommonCacheNotifierEx notifier = new CommonCacheNotifierEx("test", updateSender);
+    CacheNotifier notifier = new CacheNotifier("test", updateSender);
     notifier.start();
     for (int i = 0; i < 100; i++) {
       byte[] msg = new byte[] {(byte) i};

@@ -24,7 +24,6 @@ import org.apache.druid.catalog.MetadataCatalog.CatalogSource;
 import org.apache.druid.catalog.MetadataCatalog.CatalogUpdateProvider;
 import org.apache.druid.catalog.SchemaRegistry.SchemaDefn;
 import org.apache.druid.metadata.catalog.CatalogManager;
-import org.apache.druid.metadata.catalog.TableDefnManager;
 import org.apache.druid.server.security.AuthorizerMapper;
 
 import javax.inject.Inject;
@@ -37,7 +36,7 @@ import java.util.List;
  */
 public class CatalogStorage implements CatalogUpdateProvider, CatalogSource
 {
-  public static class ListenerAdapter implements TableDefnManager.Listener
+  public static class ListenerAdapter implements CatalogManager.Listener
   {
     private final CatalogListener dest;
 
@@ -47,13 +46,13 @@ public class CatalogStorage implements CatalogUpdateProvider, CatalogSource
     }
 
     @Override
-    public void added(TableSpec table)
+    public void added(TableMetadata table)
     {
       dest.updated(table);
     }
 
     @Override
-    public void updated(TableSpec table)
+    public void updated(TableMetadata table)
     {
       dest.updated(table);
     }
@@ -85,9 +84,9 @@ public class CatalogStorage implements CatalogUpdateProvider, CatalogSource
     return authorizer;
   }
 
-  public TableDefnManager tables()
+  public CatalogManager tables()
   {
-    return catalogMgr.tables();
+    return catalogMgr;
   }
 
   public SchemaRegistry schemaRegistry()
@@ -107,13 +106,13 @@ public class CatalogStorage implements CatalogUpdateProvider, CatalogSource
   }
 
   @Override
-  public List<TableSpec> tablesForSchema(String dbSchema)
+  public List<TableMetadata> tablesForSchema(String dbSchema)
   {
     return tables().listDetails(dbSchema);
   }
 
   @Override
-  public TableSpec table(TableId id)
+  public TableMetadata table(TableId id)
   {
     return tables().read(id);
   }

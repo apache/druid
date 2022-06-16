@@ -34,7 +34,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
 
-public class InputSourceDefnTest
+public class InputTableSpecTest
 {
   @Test
   public void testMinimalBuilder()
@@ -42,7 +42,7 @@ public class InputSourceDefnTest
     // Minimum possible definition
     InputSource inputSource = new InlineInputSource("a,b,1\nc,d,2\n");
     InputFormat inputFormat = CatalogTests.csvFormat();
-    InputSourceDefn defn = InputSourceDefn
+    InputTableSpec defn = InputTableSpec
         .builder()
         .source(inputSource)
         .format(inputFormat)
@@ -52,19 +52,19 @@ public class InputSourceDefnTest
     defn.validate();
     assertSame(inputSource, defn.inputSource());
     assertSame(inputFormat, defn.format());
-    List<InputColumnDefn> columns = defn.columns();
+    List<InputColumnSpec> columns = defn.columns();
     assertEquals(1, columns.size());
     assertEquals("a", columns.get(0).name());
     assertEquals("varchar", columns.get(0).sqlType());
 
-    InputSourceDefn copy = defn.toBuilder().build();
+    InputTableSpec copy = defn.toBuilder().build();
     assertEquals(defn, copy);
   }
 
   @Test
   public void testValidation()
   {
-    InputSourceDefn defn = InputSourceDefn.builder().build();
+    InputTableSpec defn = InputTableSpec.builder().build();
     try {
       defn.validate();
       fail();
@@ -74,7 +74,7 @@ public class InputSourceDefnTest
     }
 
     InputSource inputSource = new InlineInputSource("a,b,1\nc,d,2\n");
-    defn = InputSourceDefn
+    defn = InputTableSpec
         .builder()
         .source(inputSource)
         .build();
@@ -87,7 +87,7 @@ public class InputSourceDefnTest
     }
 
     InputFormat inputFormat = CatalogTests.csvFormat();
-    defn = InputSourceDefn
+    defn = InputTableSpec
         .builder()
         .source(inputSource)
         .format(inputFormat)
@@ -101,7 +101,7 @@ public class InputSourceDefnTest
     }
 
     try {
-      defn = InputSourceDefn
+      defn = InputTableSpec
           .builder()
           .source(inputSource)
           .format(inputFormat)
@@ -114,7 +114,7 @@ public class InputSourceDefnTest
       // Expected
     }
 
-    defn = InputSourceDefn
+    defn = InputTableSpec
         .builder()
         .source(inputSource)
         .format(inputFormat)
@@ -128,7 +128,7 @@ public class InputSourceDefnTest
       // Expected
     }
 
-    defn = InputSourceDefn
+    defn = InputTableSpec
         .builder()
         .source(inputSource)
         .format(inputFormat)
@@ -150,7 +150,7 @@ public class InputSourceDefnTest
     ObjectMapper mapper = new ObjectMapper();
     InputSource inputSource = new InlineInputSource("a,b,1\nc,d,2\n");
     InputFormat inputFormat = CatalogTests.csvFormat();
-    InputSourceDefn defn = InputSourceDefn
+    InputTableSpec defn = InputTableSpec
         .builder()
         .source(inputSource)
         .format(inputFormat)
@@ -158,7 +158,7 @@ public class InputSourceDefnTest
         .build();
 
     // Round-trip
-    TableDefn defn2 = TableDefn.fromBytes(mapper, defn.toBytes(mapper));
+    TableSpec defn2 = TableSpec.fromBytes(mapper, defn.toBytes(mapper));
     assertEquals(defn, defn2);
 
     // Sanity check of toString, which uses JSON
@@ -168,7 +168,7 @@ public class InputSourceDefnTest
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(InputSourceDefn.class)
+    EqualsVerifier.forClass(InputTableSpec.class)
                   .usingGetClass()
                   .verify();
   }

@@ -54,11 +54,11 @@ public class CatalogClient implements CatalogSource
 {
   public static final String SCHEMA_SYNC_PATH = CatalogResource.ROOT_PATH + CatalogResource.SCHEMA_SYNC;
   public static final String TABLE_SYNC_PATH = CatalogResource.ROOT_PATH + CatalogResource.TABLE_SYNC;
-  private static final TypeReference<List<TableSpec>> LIST_OF_TABLE_SPECS_TYPE = new TypeReference<List<TableSpec>>()
+  private static final TypeReference<List<TableMetadata>> LIST_OF_TABLE_SPECS_TYPE = new TypeReference<List<TableMetadata>>()
   {
   };
   // Not strictly needed as a TypeReference, but doing so makes the code simpler.
-  private static final TypeReference<TableSpec> TABLE_SPEC_TYPE = new TypeReference<TableSpec>()
+  private static final TypeReference<TableMetadata> TABLE_SPEC_TYPE = new TypeReference<TableMetadata>()
   {
   };
 
@@ -76,17 +76,17 @@ public class CatalogClient implements CatalogSource
   }
 
   @Override
-  public List<TableSpec> tablesForSchema(String dbSchema)
+  public List<TableMetadata> tablesForSchema(String dbSchema)
   {
     String url = StringUtils.replace(SCHEMA_SYNC_PATH, "{dbSchema}", dbSchema);
-    List<TableSpec> results = send(url, LIST_OF_TABLE_SPECS_TYPE);
+    List<TableMetadata> results = send(url, LIST_OF_TABLE_SPECS_TYPE);
 
     // Not found for a list is an empty list.
     return results == null ? Collections.emptyList() : results;
   }
 
   @Override
-  public TableSpec table(TableId id)
+  public TableMetadata table(TableId id)
   {
     String url = StringUtils.replace(SCHEMA_SYNC_PATH, "{dbSchema}", id.schema());
     url = StringUtils.replace(url, "{table}", id.name());

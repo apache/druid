@@ -20,9 +20,6 @@
 package org.apache.druid.catalog;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -37,13 +34,16 @@ import java.util.Map;
  * represented as subclasses.
  */
 @PublicApi
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @Type(name = "column", value = DatasourceColumnDefn.class),
-    @Type(name = "measure", value = MeasureColumnDefn.class),
-})
-public abstract class ColumnDefn
+public abstract class ColumnSpec
 {
+  enum ColumnKind
+  {
+    DETAIL,
+    DIMENSION,
+    MEASURE,
+    INPUT
+  }
+
   public static final Map<String, ColumnType> VALID_SQL_TYPES =
       new ImmutableMap.Builder<String, ColumnType>()
         .put("BIGINT", ColumnType.LONG)
@@ -55,7 +55,7 @@ public abstract class ColumnDefn
   protected final String name;
   protected final String sqlType;
 
-  public ColumnDefn(
+  public ColumnSpec(
       String name,
       String sqlType
   )
@@ -63,6 +63,8 @@ public abstract class ColumnDefn
     this.name = name;
     this.sqlType = sqlType;
   }
+
+  protected abstract ColumnKind kind();
 
   @JsonProperty("name")
   public String name()
@@ -85,17 +87,17 @@ public abstract class ColumnDefn
 
   public byte[] toBytes(ObjectMapper jsonMapper)
   {
-    return CatalogDefns.toBytes(jsonMapper, this);
+    return CatalogSpecs.toBytes(jsonMapper, this);
   }
 
-  public static ColumnDefn fromBytes(ObjectMapper jsonMapper, byte[] bytes)
+  public static ColumnSpec fromBytes(ObjectMapper jsonMapper, byte[] bytes)
   {
-    return CatalogDefns.fromBytes(jsonMapper, bytes, ColumnDefn.class);
+    return CatalogSpecs.fromBytes(jsonMapper, bytes, ColumnSpec.class);
   }
 
   @Override
   public String toString()
   {
-    return CatalogDefns.toString(this);
+    return CatalogSpecs.toString(this);
   }
 }

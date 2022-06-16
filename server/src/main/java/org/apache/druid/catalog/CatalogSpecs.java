@@ -25,7 +25,7 @@ import org.apache.druid.java.util.common.ISE;
 
 import java.io.IOException;
 
-public class CatalogDefns
+public class CatalogSpecs
 {
   public static byte[] toBytes(ObjectMapper jsonMapper, Object obj)
   {

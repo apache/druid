@@ -22,7 +22,7 @@ package org.apache.druid.server.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import org.apache.druid.catalog.MetadataCatalog.CatalogListener;
-import org.apache.druid.catalog.TableDefn;
+import org.apache.druid.catalog.TableMetadata;
 import org.apache.druid.catalog.TableSpec;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
@@ -85,15 +85,15 @@ public class CatalogListenerResource
     final String reqContentType = req.getContentType();
     final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(reqContentType);
     final ObjectMapper mapper = isSmile ? smileMapper : jsonMapper;
-    TableSpec tableSpec;
+    TableMetadata tableSpec;
     try {
-      tableSpec = mapper.readValue(inputStream, TableSpec.class);
+      tableSpec = mapper.readValue(inputStream, TableMetadata.class);
     }
     catch (IOException e) {
       return Response.serverError().entity(e.getMessage()).build();
     }
-    TableDefn defn = tableSpec.defn();
-    if (defn instanceof TableDefn.Tombstone) {
+    TableSpec defn = tableSpec.defn();
+    if (defn instanceof TableSpec.Tombstone) {
       listener.deleted(tableSpec.id());
     } else {
       listener.updated(tableSpec);

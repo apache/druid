@@ -57,12 +57,12 @@ public class MockCatalogSync implements CatalogListener
   }
 
   @Override
-  public void updated(TableSpec update)
+  public void updated(TableMetadata update)
   {
     doSync(update);
   }
 
-  private void doSync(TableSpec update)
+  private void doSync(TableMetadata update)
   {
     byte[] encoded = update.toBytes(useSmile ? smileMapper : jsonMapper);
     listenerResource.syncTable(
@@ -76,10 +76,10 @@ public class MockCatalogSync implements CatalogListener
   @Override
   public void deleted(TableId tableId)
   {
-    TableSpec spec = TableSpec.newTable(
+    TableMetadata spec = TableMetadata.newTable(
         tableId.schema(),
         tableId.name(),
-        new TableDefn.Tombstone());
+        new TableSpec.Tombstone());
     doSync(spec);
   }
 

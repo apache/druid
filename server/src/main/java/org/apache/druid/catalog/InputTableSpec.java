@@ -21,6 +21,7 @@ package org.apache.druid.catalog;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Strings;
+import org.apache.druid.catalog.TableMetadata.TableType;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.java.util.common.IAE;
@@ -39,16 +40,16 @@ import java.util.Set;
  * input source, a format and a set of columns. Also provides
  * properties, as do all table definitions.
  */
-public class InputSourceDefn extends TableDefn
+public class InputTableSpec extends TableSpec
 {
   private final InputSource inputSource;
   private final InputFormat format;
-  private final List<InputColumnDefn> columns;
+  private final List<InputColumnSpec> columns;
 
-  public InputSourceDefn(
+  public InputTableSpec(
       @JsonProperty("inputSource") InputSource inputSource,
       @JsonProperty("format") InputFormat format,
-      @JsonProperty("columns") List<InputColumnDefn> columns,
+      @JsonProperty("columns") List<InputColumnSpec> columns,
       @JsonProperty("properties") Map<String, Object> properties
   )
   {
@@ -56,6 +57,12 @@ public class InputSourceDefn extends TableDefn
     this.inputSource = inputSource;
     this.format = format;
     this.columns = columns;
+  }
+
+  @Override
+  public TableType type()
+  {
+    return TableType.INPUT;
   }
 
   @JsonProperty("inputSource")
@@ -71,7 +78,7 @@ public class InputSourceDefn extends TableDefn
   }
 
   @JsonProperty("columns")
-  public List<InputColumnDefn> columns()
+  public List<InputColumnSpec> columns()
   {
     return columns;
   }
@@ -90,7 +97,7 @@ public class InputSourceDefn extends TableDefn
       throw new IAE("An input source must specify one or more columns");
     }
     Set<String> names = new HashSet<>();
-    for (ColumnDefn col : columns) {
+    for (ColumnSpec col : columns) {
       if (!names.add(col.name())) {
         throw new IAE("Duplicate column name: " + col.name());
       }
@@ -123,7 +130,7 @@ public class InputSourceDefn extends TableDefn
     if (o == null || o.getClass() != getClass()) {
       return false;
     }
-    InputSourceDefn other = (InputSourceDefn) o;
+    InputTableSpec other = (InputTableSpec) o;
     return Objects.equals(this.inputSource, other.inputSource)
         && Objects.equals(this.format, other.format)
         && Objects.equals(this.columns, other.columns)
@@ -144,7 +151,7 @@ public class InputSourceDefn extends TableDefn
   {
     private InputSource inputSource;
     private InputFormat format;
-    private List<InputColumnDefn> columns;
+    private List<InputColumnSpec> columns;
     private Map<String, Object> properties;
 
     public Builder()
@@ -153,7 +160,7 @@ public class InputSourceDefn extends TableDefn
       this.properties = new HashMap<>();
     }
 
-    public Builder(InputSourceDefn defn)
+    public Builder(InputTableSpec defn)
     {
       this.inputSource = defn.inputSource;
       this.format = defn.format;
@@ -173,12 +180,12 @@ public class InputSourceDefn extends TableDefn
       return this;
     }
 
-    public List<InputColumnDefn> columns()
+    public List<InputColumnSpec> columns()
     {
       return columns;
     }
 
-    public Builder column(InputColumnDefn column)
+    public Builder column(InputColumnSpec column)
     {
       if (Strings.isNullOrEmpty(column.name())) {
         throw new IAE("Column name is required");
@@ -189,7 +196,7 @@ public class InputSourceDefn extends TableDefn
 
     public Builder column(String name, String sqlType)
     {
-      return column(new InputColumnDefn(name, sqlType));
+      return column(new InputColumnSpec(name, sqlType));
     }
 
     public Builder properties(Map<String, Object> properties)
@@ -212,9 +219,9 @@ public class InputSourceDefn extends TableDefn
       return properties;
     }
 
-    public InputSourceDefn build()
+    public InputTableSpec build()
     {
-      return new InputSourceDefn(
+      return new InputTableSpec(
           inputSource,
           format,
           columns,

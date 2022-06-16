@@ -21,84 +21,67 @@ package org.apache.druid.catalog;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 
-/**
- * Description of a detail datasource column and a rollup
- * dimension column.
- */
-public class DatasourceColumnDefn extends ColumnDefn
-{
-  private static final String TIME_COLUMN = "__time";
+import java.util.Objects;
 
+/**
+ * Definition of a column within an input source. Columns here describe
+ * the "as created" form of the columns: what is actually in the input.
+ * Column definitions are descriptive (of the data we already have), not
+ * proscriptive (of the columns we'd like to have, since Druid does not
+ * create input columns.)
+ */
+public class InputColumnSpec extends ColumnSpec
+{
   @JsonCreator
-  public DatasourceColumnDefn(
+  public InputColumnSpec(
       @JsonProperty("name") String name,
-      @JsonProperty("sqlType") String sqlType
-  )
+      @JsonProperty("sqlType") String sqlType)
   {
     super(name, sqlType);
   }
 
-  public static Builder builder(String name)
+  @Override
+  protected ColumnKind kind()
   {
-    return new Builder(name);
+    return ColumnKind.INPUT;
   }
 
   @Override
   public void validate()
   {
     super.validate();
-    if (sqlType == null) {
-      return;
+    if (Strings.isNullOrEmpty(name)) {
+      throw new IAE("Columns names cannot be empty");
     }
-    if (TIME_COLUMN.equals(name)) {
-      if (!"TIMESTAMP".equalsIgnoreCase(sqlType)) {
-        throw new IAE("__time column must have type TIMESTAMP");
-      }
-    } else if (!VALID_SQL_TYPES.containsKey(StringUtils.toUpperCase(sqlType))) {
+    if (Strings.isNullOrEmpty(sqlType)) {
+      throw new IAE("Columns type is required: " + name);
+    }
+    if (!VALID_SQL_TYPES.containsKey(StringUtils.toUpperCase(sqlType))) {
       throw new IAE("Not a supported SQL type: " + sqlType);
     }
   }
 
-  public static class Builder
+  @Override
+  public boolean equals(Object o)
   {
-    private final String name;
-    private String sqlType;
-    private String aggFn;
-
-    public Builder(String name)
-    {
-      this.name = name;
+    if (this == o) {
+      return true;
     }
-
-    public Builder sqlType(String type)
-    {
-      this.sqlType = type;
-      return this;
+    if (o == null || getClass() != o.getClass()) {
+      return false;
     }
+    InputColumnSpec other = (InputColumnSpec) o;
+    return Objects.equals(this.name, other.name)
+        && Objects.equals(this.sqlType, other.sqlType);
+  }
 
-    public Builder measure(String aggFn)
-    {
-      this.aggFn = aggFn;
-      return this;
-    }
-
-    public DatasourceColumnDefn build()
-    {
-      if (aggFn == null) {
-        return new DatasourceColumnDefn(
-            name,
-            sqlType
-            );
-      } else {
-        return new MeasureColumnDefn(
-            name,
-            sqlType,
-            aggFn
-            );
-      }
-    }
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(name, sqlType);
   }
 }

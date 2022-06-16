@@ -51,16 +51,16 @@ import java.util.function.Consumer;
  * Defined by composition so it can be tested and reused in other
  * contexts.
  */
-public class CommonCacheNotifierEx
+public class CacheNotifier
 {
-  private static final EmittingLogger LOG = new EmittingLogger(CommonCacheNotifierEx.class);
+  private static final EmittingLogger LOG = new EmittingLogger(CacheNotifier.class);
 
   private final ExecutorService exec;
   private final String callerName;
   private final BlockingQueue<byte[]> updates = new LinkedBlockingQueue<>();
   private final Consumer<byte[]> sender;
 
-  public CommonCacheNotifierEx(
+  public CacheNotifier(
       final String callerName,
       final Consumer<byte[]> sender
   )

@@ -19,7 +19,7 @@
 
 package org.apache.druid.catalog;
 
-import org.apache.druid.catalog.MetadataCatalog.TableType;
+import org.apache.druid.catalog.TableMetadata.TableType;
 
 import java.util.Set;
 
@@ -36,7 +36,7 @@ public interface SchemaRegistry
     String name();
     String securityResource();
     boolean writable();
-    boolean accepts(TableDefn defn);
+    boolean accepts(TableSpec defn);
     TableType tableType();
   }
 

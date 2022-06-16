@@ -19,7 +19,7 @@
 
 package org.apache.druid.catalog;
 
-import org.apache.druid.catalog.MetadataCatalog.TableType;
+import org.apache.druid.catalog.TableMetadata.TableType;
 import org.apache.druid.server.security.ResourceType;
 
 import java.util.HashMap;
@@ -43,13 +43,13 @@ public class SchemaRegistryImpl implements SchemaRegistry
     private final String name;
     private final String resource;
     private final TableType tableType;
-    private Class<? extends TableDefn> acceptedClass;
+    private Class<? extends TableSpec> acceptedClass;
 
     public SchemaDefnImpl(
         String name,
         String resource,
         TableType tableType,
-        Class<? extends TableDefn> acceptedClass)
+        Class<? extends TableSpec> acceptedClass)
     {
       this.name = name;
       this.resource = resource;
@@ -76,7 +76,7 @@ public class SchemaRegistryImpl implements SchemaRegistry
     }
 
     @Override
-    public boolean accepts(TableDefn defn)
+    public boolean accepts(TableSpec defn)
     {
       if (acceptedClass == null) {
         return false;
@@ -103,7 +103,7 @@ public class SchemaRegistryImpl implements SchemaRegistry
         TableId.DRUID_SCHEMA,
         ResourceType.DATASOURCE,
         TableType.DATASOURCE,
-        DatasourceDefn.class));
+        DatasourceSpec.class));
     register(new SchemaDefnImpl(
         TableId.LOOKUP_SCHEMA,
         ResourceType.CONFIG,
@@ -123,7 +123,7 @@ public class SchemaRegistryImpl implements SchemaRegistry
         TableId.INPUT_SCHEMA,
         EXTERNAL_RESOURCE,
         TableType.INPUT,
-        InputSourceDefn.class));
+        InputTableSpec.class));
     register(new SchemaDefnImpl(
         TableId.VIEW_SCHEMA,
         ResourceType.VIEW,

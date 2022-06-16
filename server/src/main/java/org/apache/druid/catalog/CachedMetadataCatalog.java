@@ -60,13 +60,9 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogListener
   {
     private final TableMetadata table;
 
-    protected TableEntry(SchemaDefn schema, TableSpec table)
+    protected TableEntry(SchemaDefn schema, TableMetadata table)
     {
-      this.table = table == null
-          ? null
-          : AbstractTableMetadata.fromCatalogTable(
-            schema,
-            table);
+      this.table = table;
     }
 
     protected long version()
@@ -101,8 +97,8 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogListener
         return Collections.emptyList();
       }
       if (version == NOT_FETCHED) {
-        List<TableSpec> catalogTables = base.tablesForSchema(schema.name());
-        for (TableSpec table : catalogTables) {
+        List<TableMetadata> catalogTables = base.tablesForSchema(schema.name());
+        for (TableMetadata table : catalogTables) {
           update(table);
         }
       }
@@ -118,7 +114,7 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogListener
       return orderedTables;
     }
 
-    public synchronized void update(TableSpec table)
+    public synchronized void update(TableMetadata table)
     {
       cache.compute(
           table.name(),
@@ -175,7 +171,7 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogListener
   }
 
   @Override
-  public void updated(TableSpec table)
+  public void updated(TableMetadata table)
   {
     SchemaEntry schemaEntry = entryFor(table.dbSchema());
     if (schemaEntry != null) {

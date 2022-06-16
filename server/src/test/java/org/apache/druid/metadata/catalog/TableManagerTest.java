@@ -20,11 +20,11 @@
 package org.apache.druid.metadata.catalog;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.catalog.DatasourceDefn;
+import org.apache.druid.catalog.DatasourceSpec;
 import org.apache.druid.catalog.MetastoreManager;
 import org.apache.druid.catalog.MetastoreManagerImpl;
 import org.apache.druid.catalog.TableId;
-import org.apache.druid.catalog.TableSpec;
+import org.apache.druid.catalog.TableMetadata;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.catalog.CatalogManager.DuplicateKeyException;
@@ -79,29 +79,27 @@ public class TableManagerTest
   @Test
   public void testCreate() throws DuplicateKeyException
   {
-    TableDefnManager tableMgr = manager.tables();
-
-    DatasourceDefn defn = DatasourceDefn.builder()
+    DatasourceSpec defn = DatasourceSpec.builder()
         .segmentGranularity("PT1H")
         .rollupGranularity("PT1M")
         .targetSegmentRows(1_000_000)
         .build();
-    TableSpec table = TableSpec.newSegmentTable("table1", defn);
+    TableMetadata table = TableMetadata.newSegmentTable("table1", defn);
 
     // Table does not exist, read returns nothing.
-    assertNull(tableMgr.read(table.id()));
+    assertNull(manager.read(table.id()));
 
     // Create the table
-    long version = tableMgr.create(table);
-    TableSpec created = table.fromInsert(table.dbSchema(), version);
+    long version = manager.create(table);
+    TableMetadata created = table.fromInsert(table.dbSchema(), version);
 
     // Read the record
-    TableSpec read = tableMgr.read(table.id());
+    TableMetadata read = manager.read(table.id());
     assertEquals(created, read);
 
     // Try to create a second time
     try {
-      tableMgr.create(table);
+      manager.create(table);
       fail();
     }
     catch (DuplicateKeyException e) {
@@ -112,90 +110,84 @@ public class TableManagerTest
   @Test
   public void testUpdate() throws DuplicateKeyException, OutOfDateException, NotFoundException
   {
-    TableDefnManager tableMgr = manager.tables();
-
-    DatasourceDefn defn = DatasourceDefn.builder()
+    DatasourceSpec defn = DatasourceSpec.builder()
         .segmentGranularity("PT1H")
         .rollupGranularity("PT1M")
         .targetSegmentRows(1_000_000)
         .build();
-    TableSpec table = TableSpec.newSegmentTable("table1", defn);
-    long version = tableMgr.create(table);
+    TableMetadata table = TableMetadata.newSegmentTable("table1", defn);
+    long version = manager.create(table);
 
     // Change the definition
-    DatasourceDefn defn2 = DatasourceDefn.builder()
+    DatasourceSpec defn2 = DatasourceSpec.builder()
         .segmentGranularity("PT1D")
         .rollupGranularity("PT1H")
         .targetSegmentRows(2_000_000)
         .build();
 
     try {
-      tableMgr.updateDefn(table.id(), defn2, 3);
+      manager.updateDefn(table.id(), defn2, 3);
       fail();
     }
     catch (OutOfDateException e) {
       // expected
     }
 
-    assertEquals(version, tableMgr.read(table.id()).updateTime());
-    long newVersion = tableMgr.updateDefn(table.id(), defn2, version);
-    TableSpec table3 = tableMgr.read(table.id());
+    assertEquals(version, manager.read(table.id()).updateTime());
+    long newVersion = manager.updateDefn(table.id(), defn2, version);
+    TableMetadata table3 = manager.read(table.id());
     assertEquals(defn2, table3.defn());
     assertEquals(newVersion, table3.updateTime());
 
     // Changing the state requires no version check
     assertEquals(TableState.ACTIVE, table3.state());
-    newVersion = tableMgr.markDeleting(table.id());
-    TableSpec table4 = tableMgr.read(table.id());
+    newVersion = manager.markDeleting(table.id());
+    TableMetadata table4 = manager.read(table.id());
     assertEquals(TableState.DELETING, table4.state());
     assertEquals(newVersion, table4.updateTime());
 
     // Update: no version check)
-    long newerVersion = tableMgr.updateDefn(table.id(), defn2);
+    long newerVersion = manager.updateDefn(table.id(), defn2);
     assertTrue(newerVersion > newVersion);
   }
 
   @Test
   public void testDelete() throws DuplicateKeyException
   {
-    TableDefnManager tableMgr = manager.tables();
-
-    DatasourceDefn defn = DatasourceDefn.builder()
+    DatasourceSpec defn = DatasourceSpec.builder()
         .segmentGranularity("PT1H")
         .rollupGranularity("PT1M")
         .targetSegmentRows(1_000_000)
         .build();
-    TableSpec table = TableSpec.newSegmentTable("table1", defn);
+    TableMetadata table = TableMetadata.newSegmentTable("table1", defn);
 
-    assertFalse(tableMgr.delete(table.id()));
-    tableMgr.create(table);
-    assertTrue(tableMgr.delete(table.id()));
-    assertFalse(tableMgr.delete(table.id()));
+    assertFalse(manager.delete(table.id()));
+    manager.create(table);
+    assertTrue(manager.delete(table.id()));
+    assertFalse(manager.delete(table.id()));
   }
 
   @Test
   public void testList() throws DuplicateKeyException
   {
-    TableDefnManager tableMgr = manager.tables();
-
-    List<TableId> list = tableMgr.list();
+    List<TableId> list = manager.list();
     assertTrue(list.isEmpty());
 
-    DatasourceDefn defn = DatasourceDefn.builder()
+    DatasourceSpec defn = DatasourceSpec.builder()
         .segmentGranularity("PT1H")
         .rollupGranularity("PT1M")
         .targetSegmentRows(1_000_000)
         .build();
 
     // Create tables in inverse order
-    TableSpec table2 = TableSpec.newSegmentTable("table2", defn);
-    long version = tableMgr.create(table2);
+    TableMetadata table2 = TableMetadata.newSegmentTable("table2", defn);
+    long version = manager.create(table2);
     table2 = table2.fromInsert(TableId.DRUID_SCHEMA, version);
-    TableSpec table1 = TableSpec.newSegmentTable("table1", defn);
-    version = tableMgr.create(table1);
+    TableMetadata table1 = TableMetadata.newSegmentTable("table1", defn);
+    version = manager.create(table1);
     table1 = table1.fromInsert(TableId.DRUID_SCHEMA, version);
 
-    list = tableMgr.list();
+    list = manager.list();
     assertEquals(2, list.size());
     TableId id = list.get(0);
     assertEquals(TableId.DRUID_SCHEMA, id.schema());
@@ -204,13 +196,13 @@ public class TableManagerTest
     assertEquals(TableId.DRUID_SCHEMA, id.schema());
     assertEquals("table2", id.name());
 
-    List<String> names = tableMgr.list(TableId.DRUID_SCHEMA);
+    List<String> names = manager.list(TableId.DRUID_SCHEMA);
     assertEquals(2, names.size());
 
-    names = tableMgr.list(TableId.SYSTEM_SCHEMA);
+    names = manager.list(TableId.SYSTEM_SCHEMA);
     assertEquals(0, names.size());
 
-    List<TableSpec> details = tableMgr.listDetails(TableId.DRUID_SCHEMA);
+    List<TableMetadata> details = manager.listDetails(TableId.DRUID_SCHEMA);
     assertEquals(Arrays.asList(table1, table2), details);
   }
 }

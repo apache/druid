@@ -34,7 +34,7 @@ public class CatalogObjectTest
   @Test
   public void testMinimalTable()
   {
-    TableSpec table = new TableSpec(
+    TableMetadata table = new TableMetadata(
         TableId.DRUID_SCHEMA,
         "foo",
         "bob",
@@ -52,7 +52,7 @@ public class CatalogObjectTest
     assertNull(table.defn());
 
     try {
-      table = new TableSpec(
+      table = new TableMetadata(
           null,
           "foo",
           "bob",
@@ -68,7 +68,7 @@ public class CatalogObjectTest
     }
 
     try {
-      table = new TableSpec(
+      table = new TableMetadata(
           TableId.DRUID_SCHEMA,
           null,
           "bob",
@@ -87,10 +87,10 @@ public class CatalogObjectTest
   @Test
   public void testDefn()
   {
-    DatasourceDefn defn = DatasourceDefn.builder()
+    DatasourceSpec defn = DatasourceSpec.builder()
         .segmentGranularity("PT1D")
         .build();
-    TableSpec table = new TableSpec(
+    TableMetadata table = new TableMetadata(
         TableId.DRUID_SCHEMA,
         "foo",
         "bob",
@@ -102,7 +102,7 @@ public class CatalogObjectTest
     assertSame(defn, table.defn());
 
     try {
-      table = new TableSpec(
+      table = new TableMetadata(
           "wrong",
           "foo",
           "bob",
@@ -121,10 +121,10 @@ public class CatalogObjectTest
   @Test
   public void testConversions()
   {
-    DatasourceDefn defn = DatasourceDefn.builder()
+    DatasourceSpec defn = DatasourceSpec.builder()
         .segmentGranularity("PT1D")
         .build();
-    TableSpec table = TableSpec.newSegmentTable(
+    TableMetadata table = TableMetadata.newSegmentTable(
         "ds",
         defn);
     assertEquals(TableId.datasource("ds"), table.id());
@@ -132,17 +132,17 @@ public class CatalogObjectTest
     assertEquals(0, table.updateTime());
     assertSame(defn, table.defn());
 
-    TableSpec table2 = TableSpec.newSegmentTable("ds", defn);
+    TableMetadata table2 = TableMetadata.newSegmentTable("ds", defn);
     assertEquals(table, table2);
 
-    TableSpec table3 = table2.asUpdate(20);
+    TableMetadata table3 = table2.asUpdate(20);
     assertEquals(20, table3.updateTime());
   }
 
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(TableSpec.class)
+    EqualsVerifier.forClass(TableMetadata.class)
                   .usingGetClass()
                   .verify();
   }

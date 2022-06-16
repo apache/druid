@@ -19,8 +19,6 @@
 
 package org.apache.druid.catalog;
 
-import org.apache.druid.segment.column.ColumnType;
-
 import java.util.List;
 import java.util.Set;
 
@@ -35,83 +33,15 @@ import java.util.Set;
  */
 public interface MetadataCatalog
 {
-  enum TableType
-  {
-    DATASOURCE,
-    INPUT,
-    VIEW
-  }
-
-  enum ColumnKind
-  {
-    SIMPLE,
-    DIMENSION,
-    MEASURE,
-    INPUT
-  }
-
-  /**
-   * Facade over a column definition for the convenience of Broker clients.
-   */
-  interface ColumnMetadata
-  {
-    String name();
-    ColumnKind kind();
-    String sqlType();
-  }
-
-  interface MeasureMetadata extends ColumnMetadata
-  {
-    String aggFn();
-  }
-
-  interface InputColumnMetadata extends ColumnMetadata
-  {
-    ColumnType druidType();
-  }
-
-  /**
-   * Facade over a table definition for the convenience of Broker clients.
-   */
-  interface TableMetadata
-  {
-    TableId id();
-    TableType type();
-    long updateTime();
-
-    /**
-     * List of known columns, in user-defined order.
-     */
-    List<ColumnMetadata> columns();
-
-    /**
-     * Look up a column by name. Returns null if no such column
-     * exists in metadata.
-     */
-    ColumnMetadata column(String name);
-  }
-
-  interface DatasourceMetadata extends TableMetadata
-  {
-    String segmentGranularity();
-    String rollupGranularity();
-    boolean isRollup();
-    boolean isDetail();
-  }
-
-  interface InputSourceMetadata extends TableMetadata
-  {
-  }
-
   interface CatalogSource
   {
-    List<TableSpec> tablesForSchema(String dbSchema);
-    TableSpec table(TableId id);
+    List<TableMetadata> tablesForSchema(String dbSchema);
+    TableMetadata table(TableId id);
   }
 
   interface CatalogListener
   {
-    void updated(TableSpec update);
+    void updated(TableMetadata update);
     void deleted(TableId tableId);
   }
 

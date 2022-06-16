@@ -74,13 +74,13 @@ public class CatalogResourceTest
   @Test
   public void testCreate()
   {
-    DatasourceDefn defn = DatasourceDefn.builder()
+    DatasourceSpec defn = DatasourceSpec.builder()
         .segmentGranularity("PT1D")
         .build();
 
     // Missing schema name: infer the schema.
     String tableName = "create";
-    TableSpec table = TableSpec.newTable(
+    TableMetadata table = TableMetadata.newTable(
         null,
         "create1",
         defn);
@@ -88,7 +88,7 @@ public class CatalogResourceTest
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
     // Blank schema name: infer the schema.
-    table = TableSpec.newTable(
+    table = TableMetadata.newTable(
         "",
         "create2",
         defn);
@@ -96,27 +96,27 @@ public class CatalogResourceTest
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
     // Missing table name
-    table = TableSpec.newTable(TableId.DRUID_SCHEMA, null, defn);
+    table = TableMetadata.newTable(TableId.DRUID_SCHEMA, null, defn);
     resp = resource.createTable(table, false, postBy(DummyRequest.SUPER_USER));
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
 
     // Unknown schema
-    table = TableSpec.newTable("bogus", tableName, defn);
+    table = TableMetadata.newTable("bogus", tableName, defn);
     resp = resource.createTable(table, false, postBy(DummyRequest.SUPER_USER));
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), resp.getStatus());
 
     // Immutable schema
-    table = TableSpec.newTable(TableId.CATALOG_SCHEMA, tableName, defn);
+    table = TableMetadata.newTable(TableId.CATALOG_SCHEMA, tableName, defn);
     resp = resource.createTable(table, false, postBy(DummyRequest.SUPER_USER));
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
 
     // Wrong definition type.
-    table = TableSpec.newTable(TableId.INPUT_SCHEMA, tableName, defn);
+    table = TableMetadata.newTable(TableId.INPUT_SCHEMA, tableName, defn);
     resp = resource.createTable(table, false, postBy(DummyRequest.DENY_USER));
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
 
     // No permissions
-    table = TableSpec.newTable(TableId.DRUID_SCHEMA, tableName, defn);
+    table = TableMetadata.newTable(TableId.DRUID_SCHEMA, tableName, defn);
     resp = resource.createTable(table, false, postBy(DummyRequest.DENY_USER));
     assertEquals(Response.Status.FORBIDDEN.getStatusCode(), resp.getStatus());
 
@@ -141,13 +141,13 @@ public class CatalogResourceTest
     // Input source
     InputSource inputSource = new InlineInputSource("a,b,1\nc,d,2\n");
     InputFormat inputFormat = CatalogTests.csvFormat();
-    InputSourceDefn inputDefn = InputSourceDefn
+    InputTableSpec inputDefn = InputTableSpec
         .builder()
         .source(inputSource)
         .format(inputFormat)
         .column("a", "varchar")
         .build();
-    table = TableSpec.newTable(TableId.INPUT_SCHEMA, "input", inputDefn);
+    table = TableMetadata.newTable(TableId.INPUT_SCHEMA, "input", inputDefn);
     resp = resource.createTable(table, true, postBy(DummyRequest.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
   }
@@ -155,7 +155,7 @@ public class CatalogResourceTest
   @Test
   public void testUpdate()
   {
-    DatasourceDefn defn = DatasourceDefn.builder()
+    DatasourceSpec defn = DatasourceSpec.builder()
         .segmentGranularity("PT1D")
         .build();
 
@@ -183,7 +183,7 @@ public class CatalogResourceTest
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), resp.getStatus());
 
     // Create the table
-    TableSpec table = TableSpec.newTable(
+    TableMetadata table = TableMetadata.newTable(
         TableId.DRUID_SCHEMA,
         "update",
         defn);
@@ -214,7 +214,7 @@ public class CatalogResourceTest
   @Test
   public void testRead()
   {
-    DatasourceDefn defn = DatasourceDefn.builder()
+    DatasourceSpec defn = DatasourceSpec.builder()
         .segmentGranularity("PT1D")
         .build();
 
@@ -236,7 +236,7 @@ public class CatalogResourceTest
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), resp.getStatus());
 
     // Create the table
-    TableSpec table = TableSpec.newTable(
+    TableMetadata table = TableMetadata.newTable(
         TableId.DRUID_SCHEMA,
         tableName,
         defn);
@@ -251,13 +251,13 @@ public class CatalogResourceTest
     // Valid
     resp = resource.getTable(TableId.DRUID_SCHEMA, tableName, getBy(DummyRequest.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
-    TableSpec read = (TableSpec) resp.getEntity();
+    TableMetadata read = (TableMetadata) resp.getEntity();
     assertEquals(table, read);
 
     // Internal sync API
     resp = resource.syncTable(TableId.DRUID_SCHEMA, tableName, getBy(DummyRequest.SUPER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
-    read = (TableSpec) resp.getEntity();
+    read = (TableMetadata) resp.getEntity();
     assertEquals(table, read);
   }
 
@@ -274,9 +274,9 @@ public class CatalogResourceTest
   }
 
   @SuppressWarnings("unchecked")
-  private List<TableSpec> getDetailsList(Response resp)
+  private List<TableMetadata> getDetailsList(Response resp)
   {
-    return (List<TableSpec>) resp.getEntity();
+    return (List<TableMetadata>) resp.getEntity();
   }
 
   @Test
@@ -302,10 +302,10 @@ public class CatalogResourceTest
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), resp.getStatus());
 
     // Create a table
-    DatasourceDefn defn = DatasourceDefn.builder()
+    DatasourceSpec defn = DatasourceSpec.builder()
         .segmentGranularity("PT1D")
         .build();
-    TableSpec table = TableSpec.newTable(TableId.DRUID_SCHEMA, "list", defn);
+    TableMetadata table = TableMetadata.newTable(TableId.DRUID_SCHEMA, "list", defn);
     resp = resource.createTable(table, false, postBy(DummyRequest.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
@@ -343,7 +343,7 @@ public class CatalogResourceTest
 
     resp = resource.syncSchema(TableId.DRUID_SCHEMA, getBy(DummyRequest.SUPER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
-    List<TableSpec> details = getDetailsList(resp);
+    List<TableMetadata> details = getDetailsList(resp);
     assertEquals(1, details.size());
   }
 
@@ -375,10 +375,10 @@ public class CatalogResourceTest
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
     // Create the table
-    DatasourceDefn defn = DatasourceDefn.builder()
+    DatasourceSpec defn = DatasourceSpec.builder()
         .segmentGranularity("PT1D")
         .build();
-    TableSpec table = TableSpec.newTable(
+    TableMetadata table = TableMetadata.newTable(
         TableId.DRUID_SCHEMA,
         tableName,
         defn);
@@ -405,10 +405,10 @@ public class CatalogResourceTest
   {
     // Operations for one table - create
     String table1Name = "lifecycle1";
-    DatasourceDefn defn = DatasourceDefn.builder()
+    DatasourceSpec defn = DatasourceSpec.builder()
         .segmentGranularity("PT1D")
         .build();
-    TableSpec table = TableSpec.newTable(TableId.DRUID_SCHEMA, table1Name, defn);
+    TableMetadata table = TableMetadata.newTable(TableId.DRUID_SCHEMA, table1Name, defn);
     Response resp = resource.createTable(table, false, postBy(DummyRequest.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     long version = getVersion(resp);
@@ -417,7 +417,7 @@ public class CatalogResourceTest
     // read
     resp = resource.getTable(TableId.DRUID_SCHEMA, table1Name, postBy(DummyRequest.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
-    TableSpec read = (TableSpec) resp.getEntity();
+    TableMetadata read = (TableMetadata) resp.getEntity();
     assertEquals(table, read);
 
     // list
@@ -434,7 +434,7 @@ public class CatalogResourceTest
     assertEquals(table.name(), tables.get(0));
 
     // update
-    DatasourceDefn defn2 = DatasourceDefn.builder()
+    DatasourceSpec defn2 = DatasourceSpec.builder()
         .segmentGranularity("PT1H")
         .build();
     resp = resource.updateTableDefn(TableId.DRUID_SCHEMA, table1Name, defn2, version, postBy(DummyRequest.WRITER_USER));
@@ -445,14 +445,14 @@ public class CatalogResourceTest
     // verify update
     resp = resource.getTable(TableId.DRUID_SCHEMA, table1Name, getBy(DummyRequest.READER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
-    read = (TableSpec) resp.getEntity();
+    read = (TableMetadata) resp.getEntity();
     assertEquals(table.creationTime(), read.creationTime());
     assertEquals(version, read.updateTime());
     assertEquals(defn2, read.defn());
 
     // add second table
     String table2Name = "lifecycle2";
-    TableSpec table2 = TableSpec.newTable(TableId.DRUID_SCHEMA, table2Name, defn);
+    TableMetadata table2 = TableMetadata.newTable(TableId.DRUID_SCHEMA, table2Name, defn);
     resp = resource.createTable(table2, false, postBy(DummyRequest.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
