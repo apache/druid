@@ -178,7 +178,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   }
 
   public static void sanityTestVectorizedSqlQueries(PlannerFactory plannerFactory, String query)
-      throws ValidationException, RelConversionException
+      throws ValidationException
   {
     final Map<String, Object> vector = ImmutableMap.of(
         QueryContexts.VECTORIZE_KEY, "force",
