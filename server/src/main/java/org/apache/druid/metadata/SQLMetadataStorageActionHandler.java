@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
@@ -57,6 +58,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
     implements MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
@@ -79,6 +83,8 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   private final TaskStatusMapper taskStatusMapper;
   private final TaskStatusMapperFromPayload taskStatusMapperFromPayload;
   private final TaskIdentifierMapper taskIdentifierMapper;
+
+  private Future<Boolean> taskMigrationCompleteFuture;
 
   @SuppressWarnings("PMD.UnnecessaryFullyQualifiedName")
   public SQLMetadataStorageActionHandler(
@@ -326,24 +332,31 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   @Override
-  public List<TaskInfo<TaskIdentifier, StatusType>> getTaskStatusListFromPayload(
-      Map<TaskLookupType, TaskLookup> taskLookups,
-      @Nullable String dataSource
-  )
-  {
-    return getTaskStatusList(taskLookups, dataSource, true);
-  }
-
-  @Override
   public List<TaskInfo<TaskIdentifier, StatusType>> getTaskStatusList(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String dataSource
   )
   {
-    return getTaskStatusList(taskLookups, dataSource, false);
+    if (taskMigrationCompleteFuture == null) {
+      ExecutorService executorService = Executors.newSingleThreadExecutor();
+      taskMigrationCompleteFuture = executorService.submit(
+          () -> populateTaskTypeAndGroupId()
+      );
+    }
+    boolean fetchPayload = true;
+    if (taskMigrationCompleteFuture.isDone()) {
+      try {
+        fetchPayload = !taskMigrationCompleteFuture.get();
+      }
+      catch (Exception e) {
+        log.info(e, "Exception getting task migration future");
+      }
+    }
+    return getTaskStatusList(taskLookups, dataSource, fetchPayload);
   }
 
-  public List<TaskInfo<TaskIdentifier, StatusType>> getTaskStatusList(
+  @VisibleForTesting
+  List<TaskInfo<TaskIdentifier, StatusType>> getTaskStatusList(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String dataSource,
       boolean fetchPayload
@@ -1004,9 +1017,13 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     );
   }
 
-
-  @Override
-  public boolean populateTaskTypeAndGroupId()
+  /**
+   * Utility to migrate existing tasks to the new schema by populating type and groupId synchronously
+   *
+   * @return true if successful
+   */
+  @VisibleForTesting
+  boolean populateTaskTypeAndGroupId()
   {
     log.info("Populate fields task and group_id of task entry table [%s] from payload", entryTable);
     String id = "";

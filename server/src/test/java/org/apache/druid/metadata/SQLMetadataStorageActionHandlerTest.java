@@ -490,8 +490,13 @@ public class SQLMetadataStorageActionHandlerTest
     Assert.assertEquals(0, getUnmigratedTaskCount().intValue());
   }
 
-  @Test
   public void testGetTaskStatusPlusList()
+  {
+
+  }
+
+  @Test
+  public void testGetTaskStatusPlusListInternal()
   {
     // SETUP
     TaskInfo<Map<String, Object>, Map<String, Object>> activeUnaltered = createRandomTaskInfo(true);

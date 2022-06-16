@@ -64,8 +64,6 @@ import java.util.stream.Collectors;
 public class MetadataTaskStorage implements TaskStorage
 {
 
-  private Future<Boolean> taskMigrationCompleteFuture;
-
   private static final MetadataStorageActionHandlerTypes<Task, TaskStatus, TaskAction, TaskLock> TASK_TYPES = new MetadataStorageActionHandlerTypes<Task, TaskStatus, TaskAction, TaskLock>()
   {
     @Override
@@ -124,10 +122,6 @@ public class MetadataTaskStorage implements TaskStorage
   {
     // Case where active tasks
     metadataStorageConnector.createTaskTables();
-    ExecutorService executorService = Executors.newSingleThreadExecutor();
-    taskMigrationCompleteFuture = executorService.submit(
-        () -> handler.populateTaskTypeAndGroupId()
-    );
   }
 
   @LifecycleStop
@@ -252,22 +246,11 @@ public class MetadataTaskStorage implements TaskStorage
   )
   {
     Map<TaskLookupType, TaskLookup> processedTaskLookups = processTaskLookups(taskLookups);
-    boolean fetchPayload = true;
-    if (taskMigrationCompleteFuture.isDone()) {
-      try {
-        fetchPayload = !taskMigrationCompleteFuture.get();
-      }
-      catch (Exception e) {
-        log.info(e, "Exception getting task migration future");
-      }
-    }
-    List<TaskInfo<TaskIdentifier, TaskStatus>> taskMetadataInfos = fetchPayload
-        ? handler.getTaskStatusListFromPayload(processedTaskLookups, datasource)
-        : handler.getTaskStatusList(processedTaskLookups, datasource);
     return Collections.unmodifiableList(
-        taskMetadataInfos.stream()
-                         .map(TaskStatusPlus::fromTaskIdentifierInfo)
-                         .collect(Collectors.toList())
+        handler.getTaskStatusList(processedTaskLookups, datasource)
+               .stream()
+               .map(TaskStatusPlus::fromTaskIdentifierInfo)
+               .collect(Collectors.toList())
     );
   }
 
