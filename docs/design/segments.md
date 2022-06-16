@@ -53,9 +53,9 @@ Dimension columns are different because they support filter and
 group-by operations, so each dimension requires the following
 three data structures:
 
-- Dictionary: Maps values (which are always treated as strings) to integer IDs, allowing compact representation of the list and bitmap values.
-- List: The column’s values, encoded using the dictionary. Required for GroupBy and TopN queries. These operators allow queries that solely aggregate metrics based on filters to run without accessing the list of values.
-- Bitmap: One bitmap for each distinct value in the column, to indicate which rows contain that value. Bitmaps allow for quick filtering operations because they are convenient for quickly applying AND and OR operators. Also known as inverted indexes.
+- __Dictionary__: Maps values (which are always treated as strings) to integer IDs, allowing compact representation of the list and bitmap values.
+- __List__: The column’s values, encoded using the dictionary. Required for GroupBy and TopN queries. These operators allow queries that solely aggregate metrics based on filters to run without accessing the list of values.
+- __Bitmap__: One bitmap for each distinct value in the column, to indicate which rows contain that value. Bitmaps allow for quick filtering operations because they are convenient for quickly applying AND and OR operators. Also known as inverted indexes.
 
 To get a better sense of these data structures, consider the ‘page’ column from the given example data as represented by the following data structures:
 
