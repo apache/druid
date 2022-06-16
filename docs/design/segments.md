@@ -174,7 +174,7 @@ sampleData_2011-01-01T02:00:00:00Z_2011-01-01T03:00:00:00Z_v1_2
 
 All three segments must load before a query for the interval `2011-01-01T02:00:00:00Z_2011-01-01T03:00:00:00Z` can complete.
 
-Linear shard specs are an exception to this rule. Linear shard specs do not enforce 'completeness' so queries can complete even if shards are not completely loaded.
+Linear shard specs are an exception to this rule. Linear shard specs do not enforce "completeness" so queries can complete even if shards are not completely loaded.
 
 For example, if a real-time ingestion creates three segments that were sharded with linear shard spec, and only two of the segments are loaded, queries return results for those two segments.
 
