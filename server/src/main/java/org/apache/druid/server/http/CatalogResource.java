@@ -80,7 +80,7 @@ public class CatalogResource
   /**
    * Create a new table within the indicated schema.
    *
-   * @param table The table definition to create.
+   * @param table The table specification to create.
    * @param ifNew Whether to skip the action if the table already exists.
    *        This is the same as the SQL IF NOT EXISTS clause. If {@code false},
    *        then an error is raised if the table exists. If {@code true}, then
