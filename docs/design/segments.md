@@ -57,7 +57,7 @@ three data structures:
 - __List__: The column’s values, encoded using the dictionary. Required for GroupBy and TopN queries. These operators allow queries that solely aggregate metrics based on filters to run without accessing the list of values.
 - __Bitmap__: One bitmap for each distinct value in the column, to indicate which rows contain that value. Bitmaps allow for quick filtering operations because they are convenient for quickly applying AND and OR operators. Also known as inverted indexes.
 
-To get a better sense of these data structures, consider the ‘page’ column from the given example data as represented by the following data structures:
+To get a better sense of these data structures, consider the "Page" column from the example data above, represented by the following data structures:
 
 ```
 1: Dictionary
