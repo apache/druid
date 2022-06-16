@@ -159,7 +159,7 @@ Here is a collection of queries to try out:
 
 ```sql
 SELECT FLOOR(__time to HOUR) AS HourTime, SUM(deleted) AS LinesDeleted
-FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00'
+FROM wikipedia WHERE TIME_IN_INTERVAL("__time", '2015-09-12/2015-09-13')
 GROUP BY 1
 ```
 
@@ -169,7 +169,7 @@ GROUP BY 1
 
 ```sql
 SELECT channel, page, SUM(added)
-FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00'
+FROM wikipedia WHERE TIME_IN_INTERVAL("__time", '2015-09-12/2015-09-13')
 GROUP BY channel, page
 ORDER BY SUM(added) DESC
 ```
@@ -194,7 +194,7 @@ dsql>
 To submit the query, paste it to the `dsql` prompt and press enter:
 
 ```bash
-dsql> SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY page ORDER BY Edits DESC LIMIT 10;
+dsql> SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE TIME_IN_INTERVAL("__time", '2015-09-12/2015-09-13') GROUP BY page ORDER BY Edits DESC LIMIT 10;
 ┌──────────────────────────────────────────────────────────┬───────┐
 │ page                                                     │ Edits │
 ├──────────────────────────────────────────────────────────┼───────┤
@@ -220,7 +220,7 @@ You can submit native queries [directly to the Druid Broker over HTTP](../queryi
 
 ```json
 {
-  "query": "SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE \"__time\" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY page ORDER BY Edits DESC LIMIT 10"
+  "query": "SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE TIME_IN_INTERVAL(\"__time\", '2015-09-12/2015-09-13') GROUP BY page ORDER BY Edits DESC LIMIT 10"
 }
 ```
 
