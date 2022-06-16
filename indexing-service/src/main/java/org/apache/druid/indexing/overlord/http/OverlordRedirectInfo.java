@@ -21,11 +21,13 @@ package org.apache.druid.indexing.overlord.http;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.http.RedirectInfo;
 
 import java.net.URL;
+import java.util.Iterator;
 import java.util.Set;
 
 /**
@@ -35,6 +37,12 @@ public class OverlordRedirectInfo implements RedirectInfo
   private static final Set<String> LOCAL_PATHS = ImmutableSet.of(
       "/druid/indexer/v1/leader",
       "/druid/indexer/v1/isLeader"
+  );
+
+  private static final Set<String> LOCAL_GET_PATHS = ImmutableSet.of(
+      "/druid/indexer/v1/task/*/log",
+      "/druid/indexer/v1/task/*/reports",
+      "/druid/indexer/v1/task/*/segments"
   );
 
   private final TaskMaster taskMaster;
@@ -49,6 +57,31 @@ public class OverlordRedirectInfo implements RedirectInfo
   public boolean doLocal(String requestURI)
   {
     return (requestURI != null && LOCAL_PATHS.contains(requestURI)) || taskMaster.isLeader();
+  }
+
+  @Override
+  public boolean doLocalGet(String requestURI)
+  {
+    if (taskMaster.isLeader()) {
+      return true;
+    }
+
+    if (requestURI != null) {
+      // If the pattern matched exactly, return true
+      if (LOCAL_GET_PATHS.contains(requestURI)) {
+        return true;
+      }
+
+      // If the glob pattern matched, return true
+      Iterator<String> it = LOCAL_GET_PATHS.iterator();
+
+      while (it.hasNext()) {
+        if (FilenameUtils.wildcardMatch(requestURI, it.next())) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   @Override

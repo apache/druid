@@ -51,6 +51,14 @@ public class CoordinatorOverlordRedirectInfo implements RedirectInfo
   }
 
   @Override
+  public boolean doLocalGet(String requestURI)
+  {
+    return isOverlordRequest(requestURI) ?
+           overlordRedirectInfo.doLocalGet(requestURI) :
+           coordinatorRedirectInfo.doLocalGet(requestURI);
+  }
+
+  @Override
   public URL getRedirectURL(String queryString, String requestURI)
   {
     return isOverlordRequest(requestURI) ?

@@ -21,10 +21,12 @@ package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 
 import java.net.URL;
+import java.util.Iterator;
 import java.util.Set;
 
 /**
@@ -34,6 +36,11 @@ public class CoordinatorRedirectInfo implements RedirectInfo
   private static final Set<String> LOCAL_PATHS = ImmutableSet.of(
       "/druid/coordinator/v1/leader",
       "/druid/coordinator/v1/isLeader"
+  );
+
+  private static final Set<String> LOCAL_GET_PATHS = ImmutableSet.of(
+    "/druid-ext/basic-security/authentication/db",
+    "/druid-ext/basic-security/authorization/db"
   );
 
   private final DruidCoordinator coordinator;
@@ -48,6 +55,31 @@ public class CoordinatorRedirectInfo implements RedirectInfo
   public boolean doLocal(String requestURI)
   {
     return (requestURI != null && LOCAL_PATHS.contains(requestURI)) || coordinator.isLeader();
+  }
+
+  @Override
+  public boolean doLocalGet(String requestURI)
+  {
+    if (coordinator.isLeader()) {
+      return true;
+    }
+
+    if (requestURI != null) {
+      // If the pattern matched exactly, return true
+      if (LOCAL_GET_PATHS.contains(requestURI)) {
+        return true;
+      }
+
+      // If the glob pattern matched, return true
+      Iterator<String> it = LOCAL_GET_PATHS.iterator();
+
+      while (it.hasNext()) {
+        if (FilenameUtils.wildcardMatch(requestURI, it.next())) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   @Override
