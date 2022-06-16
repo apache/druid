@@ -53,7 +53,7 @@ public class Operators
    * iterator mechanism (since an operator looks like an iterator.)
    *
    * This is a named class so we can unwrap the operator in
-   * {@link #toOperator()} below.
+   * {@link static <T> Operator<T> #toOperator(DAGBuilder, Sequence<T>)}.
    */
   public static class OperatorWrapperSequence<T> extends BaseSequence<T, Iterator<T>>
   {

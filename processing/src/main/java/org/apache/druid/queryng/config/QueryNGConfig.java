@@ -29,6 +29,7 @@ import org.apache.druid.query.scan.ScanQuery;
  */
 public class QueryNGConfig
 {
+  @SuppressWarnings("unused") // To be used later
   public static final String CONFIG_ROOT = "druid.queryng";
 
   /**

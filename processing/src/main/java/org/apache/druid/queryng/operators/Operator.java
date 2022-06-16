@@ -19,6 +19,8 @@
 
 package org.apache.druid.queryng.operators;
 
+import java.util.Iterator;
+
 /**
  * An operator is a data pipeline transform: something that operates on
  * a stream of results in some way. An operator has a very simple lifecycle:
@@ -147,7 +149,8 @@ public interface Operator<T>
    * {@code Iterator} class: the simpler implementation here
    * minimizes per-row overhead. An {@code OperatorIterator} can
    * be converted to a Java {@code Iterator} by calling
-   * {@link Operators#toIterator()}#, but that adds overhead.
+   * {@link static <T> Iterator<T> Operators#toIterator(Operator<T>)},
+   * but that approach adds overhead.
    */
   interface RowIterator<T>
   {
