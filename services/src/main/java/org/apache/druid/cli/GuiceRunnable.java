@@ -125,6 +125,11 @@ public abstract class GuiceRunnable implements Runnable
 
   public Lifecycle initLifecycle(Injector injector)
   {
+    return initLifecycle(injector, log);
+  }
+
+  public static Lifecycle initLifecycle(Injector injector, Logger log)
+  {
     try {
       final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
       final StartupLoggingConfig startupLoggingConfig = injector.getInstance(StartupLoggingConfig.class);

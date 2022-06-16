@@ -48,10 +48,10 @@ import java.util.Properties;
 
 public final class CuratorModuleTest
 {
-  private static final String CURATOR_HOST_KEY = CuratorModule.CURATOR_CONFIG_PREFIX + "." + CuratorConfig.HOST;
+  private static final String CURATOR_HOST_KEY = CuratorConfig.CONFIG_PREFIX + "." + CuratorConfig.HOST;
   private static final String CURATOR_CONNECTION_TIMEOUT_MS_KEY =
-      CuratorModule.CURATOR_CONFIG_PREFIX + "." + CuratorConfig.CONNECTION_TIMEOUT_MS;
-  private static final String EXHIBITOR_HOSTS_KEY = CuratorModule.EXHIBITOR_CONFIG_PREFIX + ".hosts";
+      CuratorConfig.CONFIG_PREFIX + "." + CuratorConfig.CONNECTION_TIMEOUT_MS;
+  private static final String EXHIBITOR_HOSTS_KEY = ExhibitorConfig.CONFIG_PREFIX + ".hosts";
 
   @Rule
   public final ExpectedSystemExit exit = ExpectedSystemExit.none();
@@ -164,7 +164,7 @@ public final class CuratorModuleTest
   public void ignoresDeprecatedCuratorConfigProperties()
   {
     Properties props = new Properties();
-    String deprecatedPropName = CuratorModule.CURATOR_CONFIG_PREFIX + ".terminateDruidProcessOnConnectFail";
+    String deprecatedPropName = CuratorConfig.CONFIG_PREFIX + ".terminateDruidProcessOnConnectFail";
     props.setProperty(deprecatedPropName, "true");
     Injector injector = newInjector(props);
 

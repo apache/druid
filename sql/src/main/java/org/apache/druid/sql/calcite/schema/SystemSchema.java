@@ -1074,7 +1074,7 @@ public class SystemSchema extends AbstractSchema
 
       if (responseHolder.getStatus().getCode() != HttpServletResponse.SC_OK) {
         throw new RE(
-            "Failed to talk to leader node at [%s]. Error code[%d], description[%s].",
+            "Failed to talk to leader node at [%s]. Error code [%d], description [%s].",
             query,
             responseHolder.getStatus().getCode(),
             responseHolder.getStatus().getReasonPhrase()
