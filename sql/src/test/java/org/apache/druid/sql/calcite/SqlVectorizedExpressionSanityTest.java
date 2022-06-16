@@ -172,7 +172,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   }
 
   @Test
-  public void testQuery() throws RelConversionException, ValidationException
+  public void testQuery() throws ValidationException
   {
     sanityTestVectorizedSqlQueries(PLANNER_FACTORY, query);
   }
