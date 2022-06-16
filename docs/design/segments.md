@@ -202,7 +202,7 @@ In the codebase, segments have an internal format version. The current segment f
 
 ## Implications of updating segments
 
-Druid uses versioning to manage updates to create a form of MVCC (multi-version concurrency control.) These MVCC versions are distinct from the segment format version discussed above.
+Druid uses versioning to manage updates to create a form of multi-version concurrency control (MVCC). These MVCC versions are distinct from the segment format version discussed above.
 
 Note that updates that span multiple segment intervals are only atomic within each interval. They are not atomic across the entire update. For example, if you have the following segments:
 
