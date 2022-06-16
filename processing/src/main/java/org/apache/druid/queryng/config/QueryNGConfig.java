@@ -20,6 +20,9 @@
 package org.apache.druid.queryng.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.scan.ScanQuery;
 
 /**
  * Configuration for the "NG" query engine.
@@ -33,6 +36,8 @@ public class QueryNGConfig
    */
   @JsonProperty("enabled")
   private boolean enabled;
+
+  public static final String CONTEXT_VAR = "queryng";
 
   /**
    * Create an instance for testing.
@@ -48,5 +53,33 @@ public class QueryNGConfig
   public boolean enabled()
   {
     return enabled;
+  }
+
+  /**
+   * Determine if Query NG should be enabled for the given query;
+   * that is, if the query should have a fragment context attached.
+   * At present, Query NG is enabled if the query is a scan query and
+   * the query has the "queryng" context variable set. The caller
+   * should already have checked if the Query NG engine is enabled
+   * globally. If Query NG is enabled for a query, then the caller
+   * will attach a fragment context to the query's QueryPlus.
+   */
+  public static boolean isEnabled(Query<?> query)
+  {
+    // Query has to be of the currently-supported type
+    if (!(query instanceof ScanQuery)) {
+      return false;
+    }
+    return query.getContextBoolean(CONTEXT_VAR, false);
+  }
+
+  /**
+   * Determine if the Query NG (operator-based) engine is enabled for the
+   * given query (given as a QueryPlus). Query NG is enabled if the QueryPlus
+   * includes the fragment context needed by the Query NG engine.
+   */
+  public static boolean enabledFor(final QueryPlus<?> queryPlus)
+  {
+    return queryPlus.fragmentBuilder() != null;
   }
 }

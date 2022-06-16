@@ -19,8 +19,6 @@
 
 package org.apache.druid.queryng.operators;
 
-import java.util.Iterator;
-
 /**
  * An operator is a data pipeline transform: something that operates on
  * a stream of results in some way. An operator has a very simple lifecycle:
@@ -31,6 +29,15 @@ import java.util.Iterator;
  * iterator over the results to this operator.</li>
  * <li>Closed.</li>
  * </ul>
+ * <p>
+ * Opening an operator returns a {@link Operator.RowIterator RowIterator}
+ * which returns rows. The Java {@code Iterator} class has extra overhead
+ * which we want to avoid on the per-row inner loop code path. A
+ * {@code RowIterator} has one method: {@link Operator.RowIterator#next() next()},
+ * which either returns a row (however the operator defines it), or throws an
+ * {@link Operator.EofException EofException} when there are no more rows.
+ * Downstream operators need not do any conditional checking: they can just
+ * propagate the exception if they have nothing to add at EOF.
  * <p>
  * Leaf operators produce results, internal operators transform them, and root
  * operators deliver results to some consumer. Operators know nothing about their
@@ -129,9 +136,28 @@ import java.util.Iterator;
 public interface Operator<T>
 {
   /**
+   * Exception thrown at EOF.
+   */
+  class EofException extends Exception
+  {
+  }
+
+  /**
+   * Iterator over operator results. Operators do not use the Java
+   * {@code Iterator} class: the simpler implementation here
+   * minimizes per-row overhead. An {@code OperatorIterator} can
+   * be converted to a Java {@code Iterator} by calling
+   * {@link Operators#toIterator()}#, but that adds overhead.
+   */
+  interface RowIterator<T>
+  {
+    T next() throws EofException;
+  }
+
+  /**
    * Convenience interface for an operator which is its own iterator.
    */
-  interface IterableOperator<T> extends Operator<T>, Iterator<T>
+  interface IterableOperator<T> extends Operator<T>, RowIterator<T>
   {
   }
 
@@ -151,7 +177,7 @@ public interface Operator<T>
    * in the {@code open()} call for simple operators,or later, on demand, for more
    * complex operators such as in a merge or union.
    */
-  Iterator<T> open();
+  RowIterator<T> open();
 
   /**
    * Called at two distinct times. An operator may choose to close a child

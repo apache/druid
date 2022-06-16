@@ -20,17 +20,17 @@
 package org.apache.druid.queryng.fragment;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import org.apache.druid.queryng.fragment.FragmentContext.State;
+import org.apache.druid.queryng.operators.Iterators;
 import org.apache.druid.queryng.operators.Operator;
+import org.apache.druid.queryng.operators.Operator.RowIterator;
 
-import java.util.Iterator;
 import java.util.List;
 
 public class FragmentRunImpl<T> implements FragmentRun<T>
 {
   private final FragmentContextImpl context;
-  private Iterator<T> rootIter;
+  private RowIterator<T> rootIter;
 
   public FragmentRunImpl(FragmentContextImpl context, Operator<T> root)
   {
@@ -48,7 +48,7 @@ public class FragmentRunImpl<T> implements FragmentRun<T>
   }
 
   @Override
-  public Iterator<T> iterator()
+  public RowIterator<T> iterator()
   {
     Preconditions.checkState(context.state == State.RUN);
     return rootIter;
@@ -64,7 +64,7 @@ public class FragmentRunImpl<T> implements FragmentRun<T>
   public List<T> toList()
   {
     try {
-      return Lists.newArrayList(this);
+      return Iterators.toList(rootIter);
     }
     finally {
       close();

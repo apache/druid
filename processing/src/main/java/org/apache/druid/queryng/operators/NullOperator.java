@@ -21,9 +21,7 @@ package org.apache.druid.queryng.operators;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.queryng.fragment.FragmentContext;
-
-import java.util.Collections;
-import java.util.Iterator;
+import org.apache.druid.queryng.operators.Operator.IterableOperator;
 
 /**
  * World's simplest operator: does absolutely nothing
@@ -31,7 +29,7 @@ import java.util.Iterator;
  * tests when we want an empty input, and for a fragment that
  * somehow ended up with no operators.
  */
-public class NullOperator<T> implements Operator<T>
+public class NullOperator<T> implements IterableOperator<T>
 {
   public State state = State.START;
 
@@ -41,11 +39,17 @@ public class NullOperator<T> implements Operator<T>
   }
 
   @Override
-  public Iterator<T> open()
+  public RowIterator<T> open()
   {
     Preconditions.checkState(state == State.START);
     state = State.RUN;
-    return Collections.emptyIterator();
+    return this;
+  }
+
+  @Override
+  public T next() throws EofException
+  {
+    throw Operators.eof();
   }
 
   @Override

@@ -22,7 +22,6 @@ package org.apache.druid.queryng.fragment;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.queryng.config.QueryNGConfig;
-import org.apache.druid.queryng.operators.Operators;
 
 import javax.inject.Inject;
 
@@ -52,7 +51,7 @@ public class FragmentBuilderFactoryImpl implements FragmentBuilderFactory
       return null;
     }
     // Client must explicitly ask for the engine
-    if (!Operators.isEnabled(query)) {
+    if (!QueryNGConfig.isEnabled(query)) {
       return null;
     }
     // Only then do we create a fragment builder which, implicitly,

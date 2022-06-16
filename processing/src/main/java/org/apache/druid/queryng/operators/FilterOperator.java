@@ -30,7 +30,6 @@ import java.util.function.Predicate;
 public class FilterOperator<T> extends MappingOperator<T, T>
 {
   private final Predicate<T> predicate;
-  private T nextValue;
 
   public FilterOperator(FragmentContext context, Operator<T> input, Predicate<T> pred)
   {
@@ -39,20 +38,13 @@ public class FilterOperator<T> extends MappingOperator<T, T>
   }
 
   @Override
-  public boolean hasNext()
+  public T next() throws EofException
   {
-    while (super.hasNext()) {
-      nextValue = inputIter.next();
+    while (true) {
+      T nextValue = inputIter.next();
       if (predicate.test(nextValue)) {
-        return true;
+        return nextValue;
       }
     }
-    return false;
-  }
-
-  @Override
-  public T next()
-  {
-    return nextValue;
   }
 }

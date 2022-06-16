@@ -19,16 +19,15 @@
 
 package org.apache.druid.queryng.operators;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import org.apache.druid.queryng.fragment.FragmentContext;
+import org.apache.druid.queryng.operators.Operator.RowIterator;
 import org.apache.druid.queryng.operators.Operator.State;
 import org.apache.druid.queryng.operators.OrderedMergeOperator.Input;
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -50,8 +49,8 @@ public class OrderedMergeOperatorTest
         Ordering.natural(),
         0,
         inputs);
-    Iterator<Integer> iter = op.open();
-    assertFalse(iter.hasNext());
+    RowIterator<Integer> iter = op.open();
+    OperatorTests.assertEof(iter);
     op.close(true);
   }
 
@@ -68,8 +67,8 @@ public class OrderedMergeOperatorTest
         Ordering.natural(),
         2,
         inputs);
-    Iterator<Integer> iter = op.open();
-    assertFalse(iter.hasNext());
+    RowIterator<Integer> iter = op.open();
+    OperatorTests.assertEof(iter);
     op.close(true);
   }
 
@@ -85,8 +84,8 @@ public class OrderedMergeOperatorTest
         Ordering.natural(),
         1,
         inputs);
-    Iterator<Integer> iter = op.open();
-    List<Integer> results = Lists.newArrayList(iter);
+    RowIterator<Integer> iter = op.open();
+    List<Integer> results = Iterators.toList(iter);
     op.close(true);
     assertEquals(Arrays.asList(0, 1, 2), results);
   }
@@ -104,8 +103,8 @@ public class OrderedMergeOperatorTest
         Ordering.natural(),
         2,
         inputs);
-    Iterator<Integer> iter = op.open();
-    List<Integer> results = Lists.newArrayList(iter);
+    RowIterator<Integer> iter = op.open();
+    List<Integer> results = Iterators.toList(iter);
     op.close(true);
     assertEquals(Arrays.asList(0, 0, 1, 1, 2, 2, 3, 4), results);
   }
@@ -125,8 +124,8 @@ public class OrderedMergeOperatorTest
         Ordering.natural(),
         2,
         inputs);
-    Iterator<Integer> iter = op.open();
-    List<Integer> results = Lists.newArrayList(iter);
+    RowIterator<Integer> iter = op.open();
+    List<Integer> results = Iterators.toList(iter);
     assertEquals(Arrays.asList(0, 0, 1, 1), results);
 
     // Inputs are closed as exhausted.

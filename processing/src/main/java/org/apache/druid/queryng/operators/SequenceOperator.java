@@ -27,7 +27,6 @@ import org.apache.druid.queryng.fragment.FragmentContext;
 import org.apache.druid.queryng.operators.Operator.IterableOperator;
 
 import java.io.IOException;
-import java.util.Iterator;
 
 /**
  * The <code>SequenceOperator</code> wraps a {@link Sequence} in the
@@ -53,7 +52,7 @@ public class SequenceOperator<T> implements IterableOperator<T>
   }
 
   @Override
-  public Iterator<T> open()
+  public RowIterator<T> open()
   {
     Preconditions.checkState(yielder == null);
     yielder = sequence.toYielder(
@@ -72,14 +71,15 @@ public class SequenceOperator<T> implements IterableOperator<T>
   }
 
   @Override
-  public boolean hasNext()
+  public T next() throws EofException
   {
-    return yielder != null && !yielder.isDone();
-  }
-
-  @Override
-  public T next()
-  {
+    if (yielder == null && yielder.isDone()) {
+      throw Operators.eof();
+    }
+    if (yielder.isDone()) {
+      closeYielder();
+      throw Operators.eof();
+    }
     Preconditions.checkState(yielder != null);
     T value = yielder.get();
     yielder = yielder.next(null);
@@ -89,9 +89,13 @@ public class SequenceOperator<T> implements IterableOperator<T>
   @Override
   public void close(boolean cascade)
   {
-    if (yielder == null) {
-      return;
+    if (yielder != null) {
+      closeYielder();
     }
+  }
+
+  private void closeYielder()
+  {
     try {
       yielder.close();
     }

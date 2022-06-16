@@ -23,7 +23,6 @@ import com.google.common.collect.Ordering;
 import org.apache.druid.queryng.fragment.FragmentContext;
 import org.apache.druid.queryng.operators.Operator.IterableOperator;
 
-import java.util.Iterator;
 import java.util.PriorityQueue;
 import java.util.function.Supplier;
 
@@ -46,16 +45,17 @@ public class OrderedMergeOperator<T> implements IterableOperator<T>
   public static class Input<T>
   {
     private final Operator<T> input;
-    private final Iterator<T> iter;
+    private final RowIterator<T> iter;
     private T currentValue;
 
     public Input(Operator<T> input)
     {
       this.input = input;
       this.iter = input.open();
-      if (iter.hasNext()) {
+      try {
         currentValue = iter.next();
-      } else {
+      }
+      catch (EofException e) {
         currentValue = null;
         input.close(true);
       }
@@ -77,10 +77,11 @@ public class OrderedMergeOperator<T> implements IterableOperator<T>
 
     public boolean next()
     {
-      if (iter.hasNext()) {
+      try {
         currentValue = iter.next();
         return true;
-      } else {
+      }
+      catch (EofException e) {
         currentValue = null;
         input.close(true);
         return false;
@@ -129,7 +130,7 @@ public class OrderedMergeOperator<T> implements IterableOperator<T>
   }
 
   @Override
-  public Iterator<T> open()
+  public RowIterator<T> open()
   {
     for (Input<T> input : inputs.get()) {
       if (!input.eof()) {
@@ -140,14 +141,11 @@ public class OrderedMergeOperator<T> implements IterableOperator<T>
   }
 
   @Override
-  public boolean hasNext()
+  public T next() throws EofException
   {
-    return !pQueue.isEmpty();
-  }
-
-  @Override
-  public T next()
-  {
+    if (pQueue.isEmpty()) {
+      throw Operators.eof();
+    }
     Input<T> input = pQueue.remove();
     T result = input.get();
     if (input.next()) {

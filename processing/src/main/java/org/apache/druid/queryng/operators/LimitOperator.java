@@ -27,8 +27,6 @@ import org.apache.druid.queryng.fragment.FragmentContext;
  */
 public class LimitOperator<T> extends MappingOperator<T, T>
 {
-  public static final long UNLIMITED = Long.MAX_VALUE;
-
   protected final long limit;
   protected long rowCount;
 
@@ -40,15 +38,13 @@ public class LimitOperator<T> extends MappingOperator<T, T>
   }
 
   @Override
-  public boolean hasNext()
+  public T next() throws EofException
   {
-    return rowCount < limit && super.hasNext();
-  }
-
-  @Override
-  public T next()
-  {
+    if (rowCount >= limit) {
+      throw Operators.eof();
+    }
+    T item = inputIter.next();
     rowCount++;
-    return inputIter.next();
+    return item;
   }
 }

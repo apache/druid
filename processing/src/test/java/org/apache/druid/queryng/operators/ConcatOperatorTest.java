@@ -20,12 +20,13 @@
 package org.apache.druid.queryng.operators;
 
 import org.apache.druid.queryng.fragment.FragmentContext;
+import org.apache.druid.queryng.operators.Operator.EofException;
+import org.apache.druid.queryng.operators.Operator.RowIterator;
 import org.apache.druid.queryng.operators.Operator.State;
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -133,7 +134,7 @@ public class ConcatOperatorTest
   }
 
   @Test
-  public void testClose()
+  public void testClose() throws EofException
   {
     FragmentContext context = FragmentContext.defaultContext();
     MockOperator<Integer> input1 = MockOperator.ints(context, 2);
@@ -141,8 +142,7 @@ public class ConcatOperatorTest
     Operator<Integer> op = ConcatOperator.concatOrNot(
         context,
         Arrays.asList(input1, input2));
-    Iterator<Integer> iter = op.open();
-    assertTrue(iter.hasNext());
+    RowIterator<Integer> iter = op.open();
     assertEquals(0, (int) iter.next());
 
     // Only first input has been opened.

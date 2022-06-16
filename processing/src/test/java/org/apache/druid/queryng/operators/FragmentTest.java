@@ -36,6 +36,8 @@ import org.apache.druid.queryng.fragment.FragmentContextImpl;
 import org.apache.druid.queryng.fragment.FragmentHandle;
 import org.apache.druid.queryng.fragment.FragmentRun;
 import org.apache.druid.queryng.fragment.NullFragmentBuilderFactory;
+import org.apache.druid.queryng.operators.Operator.EofException;
+import org.apache.druid.queryng.operators.Operator.RowIterator;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -180,7 +182,7 @@ public class FragmentTest
     try (FragmentRun<Integer> run = handle.run()) {
       assertEquals(FragmentContext.State.RUN, context.state());
       assertSame(context, run.context());
-      for (Integer value : run) {
+      for (Integer value : Iterators.toIterable(run.iterator())) {
         assertEquals(i++, (int) value);
       }
     }
@@ -315,7 +317,7 @@ public class FragmentTest
 
     // Enable at query level. Use of operators gated by config.
     query = query.withOverriddenContext(
-        ImmutableMap.of(Operators.CONTEXT_VAR, true));
+        ImmutableMap.of(QueryNGConfig.CONTEXT_VAR, true));
     assertNotNull(enableFactory.create(query, ResponseContext.createEmpty()));
     assertNull(disableFactory.create(query, ResponseContext.createEmpty()));
     assertNull(nullFactory.create(query, ResponseContext.createEmpty()));
@@ -329,12 +331,15 @@ public class FragmentTest
         .dataSource("foo")
         .eternityInterval()
         .build();
-    QueryPlus<?> queryPlus = QueryPlus.wrap(query).withFragmentBuilder(builder);
+    QueryPlus<?> queryPlus = QueryPlus.wrap(query);
+    assertFalse(QueryNGConfig.enabledFor(queryPlus));
+    queryPlus = queryPlus.withFragmentBuilder(builder);
+    assertTrue(QueryNGConfig.enabledFor(queryPlus));
     assertSame(builder, queryPlus.fragmentBuilder());
   }
 
   @Test
-  public void testFragmentContext()
+  public void testFragmentContext() throws EofException
   {
     FragmentBuilder builder = FragmentBuilder.defaultBuilder();
     FragmentContext context = builder.context();
@@ -345,8 +350,10 @@ public class FragmentTest
     assertNull(context.exception());
     MockOperator<Integer> op = MockOperator.ints(builder.context(), 4);
     FragmentHandle<Integer> handle = builder.handle(op);
-    handle.run().iterator();
+    RowIterator<Integer> iter = handle.run().iterator();
     assertEquals(FragmentContext.State.RUN, context.state());
+    // Read from the iterator, just to keep Java 11 happy.
+    assertNotNull(iter.next());
     ISE ex = new ISE("oops");
     ((FragmentContextImpl) context).failed(ex);
     assertEquals(FragmentContext.State.FAILED, context.state());

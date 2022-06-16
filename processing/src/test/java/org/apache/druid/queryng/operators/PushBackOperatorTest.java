@@ -20,10 +20,11 @@
 package org.apache.druid.queryng.operators;
 
 import org.apache.druid.queryng.fragment.FragmentContext;
+import org.apache.druid.queryng.operators.Operator.EofException;
+import org.apache.druid.queryng.operators.Operator.RowIterator;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -52,13 +53,12 @@ public class PushBackOperatorTest
   }
 
   @Test
-  public void testPush()
+  public void testPush() throws EofException
   {
     FragmentContext context = FragmentContext.defaultContext();
     Operator<Integer> input = MockOperator.ints(context, 2);
     PushBackOperator<Integer> op = new PushBackOperator<Integer>(context, input);
-    Iterator<Integer> iter = op.open();
-    assertTrue(iter.hasNext());
+    RowIterator<Integer> iter = op.open();
     Integer item = iter.next();
     op.push(item);
     List<Integer> results = Operators.toList(op);
@@ -67,12 +67,11 @@ public class PushBackOperatorTest
   }
 
   @Test
-  public void testInitialPush()
+  public void testInitialPush() throws EofException
   {
     FragmentContext context = FragmentContext.defaultContext();
     Operator<Integer> input = MockOperator.ints(context, 2);
-    Iterator<Integer> iter = input.open();
-    assertTrue(iter.hasNext());
+    RowIterator<Integer> iter = input.open();
     Integer item = iter.next();
     PushBackOperator<Integer> op = new PushBackOperator<Integer>(context, input, iter, item);
     List<Integer> results = Operators.toList(op);

@@ -23,19 +23,32 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.queryng.fragment.FragmentBuilder;
 import org.apache.druid.queryng.fragment.FragmentContext;
 import org.apache.druid.queryng.fragment.FragmentRun;
+import org.apache.druid.queryng.operators.Operator.EofException;
+import org.apache.druid.queryng.operators.Operator.RowIterator;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class BasicOperatorTest
 {
+  @Test
+  public void testToIterable()
+  {
+    FragmentBuilder builder = FragmentBuilder.defaultBuilder();
+    MockOperator<Integer> op = MockOperator.ints(builder.context(), 2);
+    int count = 0;
+    for (Integer row : Operators.toIterable(op)) {
+      assertEquals(count++, (int) row);
+    }
+    assertEquals(2, count);
+    op.close(false);
+  }
+
   @Test
   public void testFilter()
   {
@@ -145,21 +158,20 @@ public class BasicOperatorTest
 
   /**
    * Getting weird: an operator that wraps a sequence that wraps an operator.
+   * @throws EofException
    */
   @Test
-  public void testSequenceOperator()
+  public void testSequenceOperator() throws EofException
   {
     FragmentBuilder builder = FragmentBuilder.defaultBuilder();
     MockOperator<String> op = MockOperator.strings(builder.context(), 2);
     Sequence<String> seq = Operators.toSequence(op);
     Operator<String> outer = Operators.toOperator(builder, seq);
     FragmentRun<String> run = builder.run(outer);
-    Iterator<String> iter = run.iterator();
-    assertTrue(iter.hasNext());
+    RowIterator<String> iter = run.iterator();
     assertEquals("Mock row 0", iter.next());
-    assertTrue(iter.hasNext());
     assertEquals("Mock row 1", iter.next());
-    assertFalse(iter.hasNext());
+    OperatorTests.assertEof(iter);
     run.close();
     assertEquals(Operator.State.CLOSED, op.state);
   }

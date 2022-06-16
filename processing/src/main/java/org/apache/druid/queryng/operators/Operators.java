@@ -22,10 +22,8 @@ package org.apache.druid.queryng.operators;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryPlus;
-import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.queryng.fragment.DAGBuilder;
+import org.apache.druid.queryng.operators.Operator.EofException;
 
 import java.util.Iterator;
 import java.util.List;
@@ -35,36 +33,6 @@ import java.util.List;
  */
 public class Operators
 {
-  public static final String CONTEXT_VAR = "queryng";
-
-  /**
-   * Determine if the Query NG (operator-based) engine is enabled for the
-   * given query (given as a QueryPlus). Query NG is enabled if the QueryPlus
-   * includes the fragment context needed by the Query NG engine.
-   */
-  public static boolean enabledFor(final QueryPlus<?> queryPlus)
-  {
-    return queryPlus.fragmentBuilder() != null;
-  }
-
-  /**
-   * Determine if Query NG should be enabled for the given query;
-   * that is, if the query should have a fragment context attached.
-   * At present, Query NG is enabled if the query is a scan query and
-   * the query has the "queryng" context variable set. The caller
-   * should already have checked if the Query NG engine is enabled
-   * globally. If Query NG is enabled for a query, then the caller
-   * will attach a fragment context to the query's QueryPlus.
-   */
-  public static boolean isEnabled(Query<?> query)
-  {
-    // Query has to be of the currently-supported type
-    if (!(query instanceof ScanQuery)) {
-      return false;
-    }
-    return query.getContextBoolean(CONTEXT_VAR, false);
-  }
-
   /**
    * Convenience function to open the operator and return its
    * iterator as an {@code Iterable}.
@@ -75,18 +43,7 @@ public class Operators
       @Override
       public Iterator<T> iterator()
       {
-        return op.open();
-      }
-    };
-  }
-
-  public static <T> Iterable<T> toIterable(Iterator<T> iter)
-  {
-    return new Iterable<T>() {
-      @Override
-      public Iterator<T> iterator()
-      {
-        return iter;
+        return new Iterators.ShimIterator<T>(op.open());
       }
     };
   }
@@ -96,7 +53,7 @@ public class Operators
    * iterator mechanism (since an operator looks like an iterator.)
    *
    * This is a named class so we can unwrap the operator in
-   * {@link #runToProducer()} below.
+   * {@link #toOperator()} below.
    */
   public static class OperatorWrapperSequence<T> extends BaseSequence<T, Iterator<T>>
   {
@@ -109,7 +66,7 @@ public class Operators
         @Override
         public Iterator<T> make()
         {
-          return (Iterator<T>) op.open();
+          return toIterator(op);
         }
 
         @Override
@@ -168,14 +125,24 @@ public class Operators
     return null;
   }
 
+  public static <T> Iterator<T> toIterator(Operator<T> op)
+  {
+    return new Iterators.ShimIterator<T>(op.open());
+  }
+
   /**
    * This will materialize the entire sequence from the wrapped
    * operator.  Use at your own risk.
    */
   public static <T> List<T> toList(Operator<T> op)
   {
-    List<T> results = Lists.newArrayList(Operators.toIterable(op));
+    List<T> results = Lists.newArrayList(toIterator(op));
     op.close(true);
     return results;
+  }
+
+  public static EofException eof()
+  {
+    return new EofException();
   }
 }

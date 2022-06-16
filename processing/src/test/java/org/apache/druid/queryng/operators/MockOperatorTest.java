@@ -22,14 +22,13 @@ package org.apache.druid.queryng.operators;
 import org.apache.druid.queryng.fragment.FragmentBuilder;
 import org.apache.druid.queryng.fragment.FragmentHandle;
 import org.apache.druid.queryng.fragment.FragmentRun;
+import org.apache.druid.queryng.operators.Operator.EofException;
+import org.apache.druid.queryng.operators.Operator.RowIterator;
 import org.junit.Test;
 
-import java.util.Iterator;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Use a mock operator to test (and illustrate) the basic operator
@@ -38,18 +37,16 @@ import static org.junit.Assert.assertTrue;
 public class MockOperatorTest
 {
   @Test
-  public void testMockStringOperator()
+  public void testMockStringOperator() throws EofException
   {
     FragmentBuilder builder = FragmentBuilder.defaultBuilder();
     MockOperator<String> op = MockOperator.strings(builder.context(), 2);
     FragmentHandle<String> handle = builder.handle(op);
     try (FragmentRun<String> run = handle.run()) {
-      Iterator<String> iter = run.iterator();
-      assertTrue(iter.hasNext());
+      RowIterator<String> iter = run.iterator();
       assertEquals("Mock row 0", iter.next());
-      assertTrue(iter.hasNext());
       assertEquals("Mock row 1", iter.next());
-      assertFalse(iter.hasNext());
+      OperatorTests.assertEof(iter);
     }
     assertEquals(Operator.State.CLOSED, op.state);
   }

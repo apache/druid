@@ -17,34 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.queryng.fragment;
+package org.apache.druid.queryng.operators;
 
+import org.apache.druid.queryng.operators.Operator.EofException;
 import org.apache.druid.queryng.operators.Operator.RowIterator;
 
-import java.util.List;
+import static org.junit.Assert.fail;
 
-/**
- * Runs the DAG. The fragment is opened (open is called on the root
- * operator) upon construction. Callers can then obtain the iterator,
- * or convert the DAG to a sequence or list. Callers <b>must</b> close
- * this object at the end of the run.
- *
- * Callers should generally use only one of the access methods: obtain
- * the iterator, a sequence, or convert the results to a list. The
- * fragment is not reentrant: results can be obtained only once.
- */
-public interface FragmentRun<T> extends AutoCloseable
+public class OperatorTests
 {
-  FragmentContext context();
-
-  RowIterator<T> iterator();
-
-  /**
-   * Materializes the entire result set as a list. Primarily for testing.
-   * Opens the fragment, reads results, and closes the fragment.
-   */
-  List<T> toList();
-
-  @Override
-  void close();
+  public static void assertEof(RowIterator<?> operIter)
+  {
+    try {
+      operIter.next();
+      fail();
+    }
+    catch (EofException e) {
+      // Expected
+    }
+  }
 }

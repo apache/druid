@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.queryng.fragment.FragmentContext;
 import org.apache.druid.queryng.operators.Operator.IterableOperator;
 
-import java.util.Iterator;
 import java.util.function.Function;
 
 public class MockOperator<T> implements IterableOperator<T>
@@ -54,7 +53,7 @@ public class MockOperator<T> implements IterableOperator<T>
   }
 
   @Override
-  public Iterator<T> open()
+  public RowIterator<T> open()
   {
     Preconditions.checkState(state == State.START);
     state = State.RUN;
@@ -62,14 +61,11 @@ public class MockOperator<T> implements IterableOperator<T>
   }
 
   @Override
-  public boolean hasNext()
+  public T next() throws EofException
   {
-    return rowPosn < targetCount;
-  }
-
-  @Override
-  public T next()
-  {
+    if (rowPosn >= targetCount) {
+      throw Operators.eof();
+    }
     return generator.apply(rowPosn++);
   }
 

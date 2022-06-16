@@ -22,8 +22,6 @@ package org.apache.druid.queryng.operators;
 import com.google.common.base.Preconditions;
 import org.apache.druid.queryng.fragment.FragmentContext;
 
-import java.util.Iterator;
-
 /**
  * Operator which "wraps" another operator where the only behavior of
  * interest is at the start or end of the run. The iterator from the
@@ -43,10 +41,10 @@ public abstract class WrappingOperator<T> implements Operator<T>
   }
 
   @Override
-  public Iterator<T> open()
+  public RowIterator<T> open()
   {
     Preconditions.checkState(state == State.START);
-    Iterator<T> inputIter = input.open();
+    RowIterator<T> inputIter = input.open();
     state = State.RUN;
     onOpen();
     return inputIter;

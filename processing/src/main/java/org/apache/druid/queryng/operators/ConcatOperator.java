@@ -19,7 +19,6 @@
 
 package org.apache.druid.queryng.operators;
 
-import com.google.common.base.Preconditions;
 import org.apache.druid.queryng.fragment.FragmentContext;
 import org.apache.druid.queryng.operators.Operator.IterableOperator;
 
@@ -47,7 +46,7 @@ public class ConcatOperator<T> implements IterableOperator<T>
 
   private final Iterator<Operator<T>> childIter;
   private Operator<T> current;
-  private Iterator<T> currentIter;
+  private RowIterator<T> currentIter;
 
   public ConcatOperator(FragmentContext context, List<Operator<T>> children)
   {
@@ -56,36 +55,31 @@ public class ConcatOperator<T> implements IterableOperator<T>
   }
 
   @Override
-  public Iterator<T> open()
+  public RowIterator<T> open()
   {
     return this;
   }
 
   @Override
-  public boolean hasNext()
+  public T next() throws EofException
   {
     while (true) {
       if (current != null) {
-        if (currentIter.hasNext()) {
-          return true;
+        try {
+          return currentIter.next();
         }
-        current.close(true);
-        current = null;
-        currentIter = null;
+        catch (EofException e) {
+          current.close(true);
+          current = null;
+          currentIter = null;
+        }
       }
       if (!childIter.hasNext()) {
-        return false;
+        throw Operators.eof();
       }
       current = childIter.next();
       currentIter = current.open();
     }
-  }
-
-  @Override
-  public T next()
-  {
-    Preconditions.checkState(currentIter != null, "Missing call to hasNext()?");
-    return currentIter.next();
   }
 
   @Override

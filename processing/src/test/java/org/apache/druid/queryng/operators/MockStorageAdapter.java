@@ -68,7 +68,7 @@ public class MockStorageAdapter implements StorageAdapter
   @Override
   public Iterable<String> getAvailableMetrics()
   {
-    return Arrays.asList("delta");
+    return Collections.singletonList("delta");
   }
 
   @Override

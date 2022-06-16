@@ -55,7 +55,7 @@ public class TransformOperator<IN, OUT> extends MappingOperator<IN, OUT>
   }
 
   @Override
-  public OUT next()
+  public OUT next() throws EofException
   {
     return transformFn.apply(inputIter.next());
   }
