@@ -38,11 +38,12 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
@@ -96,11 +97,12 @@ public class RouterResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCluster(@QueryParam("full") boolean full)
   {
-    List<NodeRole> roles = new ArrayList<>(nodeRoles);
-    roles.sort((r1, r2) -> r1.getJsonName().compareTo(r2.getJsonName()));
+    SortedSet<NodeRole> roles = new TreeSet<>(
+        (r1, r2) -> r1.getJsonName().compareTo(r2.getJsonName()));
+    roles.addAll(nodeRoles);
     ImmutableMap.Builder<NodeRole, Object> entityBuilder = new ImmutableMap.Builder<>();
     for (NodeRole role : roles) {
-      Collection<Object> services = NodeRoles.getNodes(druidNodeDiscoveryProvider, role, full);
+      Collection<?> services = NodeRoles.getNodes(druidNodeDiscoveryProvider, role, full);
       if (!services.isEmpty()) {
         entityBuilder.put(role, services);
       }

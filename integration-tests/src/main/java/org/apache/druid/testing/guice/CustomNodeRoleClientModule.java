@@ -38,7 +38,7 @@ public class CustomNodeRoleClientModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    NodeRoles.addRole(binder, CliCustomNodeRole.NODE_ROLE);
+    NodeRoles.bindRole(binder, CliCustomNodeRole.NODE_ROLE);
   }
 
   @Override

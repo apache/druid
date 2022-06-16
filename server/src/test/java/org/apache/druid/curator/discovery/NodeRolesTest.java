@@ -54,8 +54,8 @@ public class NodeRolesTest
     NodeRole customRole = new NodeRole("custom");
     Injector injector = Guice.createInjector(
         binder -> {
-          NodeRoles.addKnownRoles(binder);
-          NodeRoles.addRole(binder, customRole);
+          NodeRoles.bindKnownRoles(binder);
+          NodeRoles.bindRole(binder, customRole);
         });
     Set<NodeRole> roles = injector.getInstance(
         Key.get(new TypeLiteral<Set<NodeRole>>(){}, Global.class));

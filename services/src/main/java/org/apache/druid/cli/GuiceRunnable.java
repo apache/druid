@@ -121,7 +121,7 @@ public abstract class GuiceRunnable implements Runnable
             new TypeLiteral<Set<Class<? extends DruidService>>>(){}
         );
 
-        NodeRoles.addKnownRoles(binder);
+        NodeRoles.bindKnownRoles(binder);
       };
     }
   }

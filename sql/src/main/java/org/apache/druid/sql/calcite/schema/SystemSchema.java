@@ -711,16 +711,19 @@ public class SystemSchema extends AbstractSchema
      */
     private List<NodeRole> orderedNodeRoles()
     {
-      List<NodeRole> roles = new ArrayList<>(Arrays.asList(NodeRole.values()));
-      Set<NodeRole> stockRoles = new HashSet<>(roles);
-      List<NodeRole> customRoles = new ArrayList<>();
-      for (NodeRole role : allNodeRoles) {
-        if (!stockRoles.contains(role)) {
-          customRoles.add(role);
-        }
-      }
-      customRoles.sort((o1, o2) -> o1.getJsonName().compareTo(o2.getJsonName()));
-      roles.addAll(customRoles);
+      // Add known roles in the order defined by the enum.
+      List<NodeRole> roles = Arrays.asList(NodeRole.values());
+
+      // Compute the set of roles which are not known in the enum.
+      Set<NodeRole> customRoles = new HashSet<>(allNodeRoles);
+      customRoles.removeAll(roles);
+
+      // Sort the "extra" (extension) roles.
+      List<NodeRole> extras = new ArrayList<>(customRoles);
+      extras.sort((o1, o2) -> o1.getJsonName().compareTo(o2.getJsonName()));
+
+      // Extension roles go after the known roles.
+      roles.addAll(extras);
       return roles;
     }
   }

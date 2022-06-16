@@ -44,7 +44,7 @@ public class NodeRoles
     return new HashSet<>(Arrays.asList(NodeRole.values()));
   }
 
-  public static void addKnownRoles(Binder binder)
+  public static void bindKnownRoles(Binder binder)
   {
     Multibinder<NodeRole> roleBinder = binder(binder);
     for (NodeRole role : NodeRole.values()) {
@@ -53,9 +53,9 @@ public class NodeRoles
   }
 
   /**
-   * Add a node role for an extension service.
+   * Bind a node role for an extension service.
    */
-  public static void addRole(Binder binder, NodeRole role)
+  public static void bindRole(Binder binder, NodeRole role)
   {
     log.debug("Adding node role: %s", role.getJsonName());
     binder(binder)
@@ -68,16 +68,15 @@ public class NodeRoles
     return Multibinder.newSetBinder(binder, NodeRole.class, Global.class);
   }
 
-  @SuppressWarnings("unchecked")
-  public static Collection<Object> getNodes(
+  public static Collection<?> getNodes(
       DruidNodeDiscoveryProvider provider,
       NodeRole nodeRole,
       boolean full)
   {
     if (full) {
-      return (Collection<Object>) (Collection<?>) getDiscoveryNodesForRole(provider, nodeRole);
+      return getDiscoveryNodesForRole(provider, nodeRole);
     } else {
-      return (Collection<Object>) (Collection<?>) getNodesForRole(provider, nodeRole);
+      return getNodesForRole(provider, nodeRole);
     }
   }
 

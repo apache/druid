@@ -521,7 +521,7 @@ public class Initialization
                                            .collect(Collectors.toSet());
       boolean shouldLoad = rolesPredicate.stream().anyMatch(nodeRoles::contains);
       if (!shouldLoad) {
-        log.debug(
+        log.info(
             "Not loading module [%s] - excluded per LoadScope",
             object.getClass().getName());
       }

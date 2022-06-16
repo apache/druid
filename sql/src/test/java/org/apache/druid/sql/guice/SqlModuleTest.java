@@ -199,7 +199,7 @@ public class SqlModuleTest
               binder.bind(QueryScheduler.class)
                     .toProvider(QuerySchedulerProvider.class)
                     .in(LazySingleton.class);
-              NodeRoles.addKnownRoles(binder);
+              NodeRoles.bindKnownRoles(binder);
             },
             new SqlModule(props),
             new TestViewManagerModule()

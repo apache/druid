@@ -51,7 +51,7 @@ import java.util.stream.Collectors;
  *
  * Extensions can define a custom node role. By default, such roles are not visible from the
  * REST APIs or in the system tables. To make a custom role visible, register it using
- * {@link NodeRoles#addRole(com.google.inject.Binder, NodeRole)}. The extension must be loaded
+ * {@link NodeRoles#bindRole(com.google.inject.Binder, NodeRole)}. The extension must be loaded
  * in the Broker, Coordinator and Router for the API code to see the custom node role defined
  * above.
  */

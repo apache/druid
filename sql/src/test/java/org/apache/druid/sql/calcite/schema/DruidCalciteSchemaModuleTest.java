@@ -124,7 +124,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
           binder.bind(ObjectMapper.class).annotatedWith(Json.class).toInstance(objectMapper);
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
           binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupReferencesManager);
-          NodeRoles.addKnownRoles(binder);
+          NodeRoles.bindKnownRoles(binder);
         },
         new LifecycleModule(),
         target);

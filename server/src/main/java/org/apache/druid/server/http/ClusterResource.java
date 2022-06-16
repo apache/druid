@@ -86,7 +86,7 @@ public class ClusterResource
 
     ImmutableMap.Builder<NodeRole, Object> entityBuilder = new ImmutableMap.Builder<>();
     for (NodeRole role : definedOrder) {
-      Collection<Object> services = NodeRoles.getNodes(druidNodeDiscoveryProvider, role, full);
+      Collection<?> services = NodeRoles.getNodes(druidNodeDiscoveryProvider, role, full);
       if (!omitIfEmpty.contains(role) || !services.isEmpty()) {
         entityBuilder.put(role, services);
       }
@@ -98,7 +98,7 @@ public class ClusterResource
       if (stockRoles.contains(role)) {
         continue;
       }
-      Collection<Object> services = NodeRoles.getNodes(druidNodeDiscoveryProvider, role, full);
+      Collection<?> services = NodeRoles.getNodes(druidNodeDiscoveryProvider, role, full);
       if (!services.isEmpty()) {
         entityBuilder.put(role, services);
       }
