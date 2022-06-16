@@ -194,4 +194,9 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   @Nullable
   Long getLockId(String entryId, LockType lock);
 
+  /**
+   * Utility to migrate existing tasks to the new schema by populating type and groupId asynchronously
+   */
+  void populateTaskTypeAndGroupIdAsync();
+
 }

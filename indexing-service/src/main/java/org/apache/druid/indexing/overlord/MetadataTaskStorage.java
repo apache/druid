@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -56,9 +55,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 public class MetadataTaskStorage implements TaskStorage
@@ -120,8 +116,9 @@ public class MetadataTaskStorage implements TaskStorage
   @LifecycleStart
   public void start()
   {
-    // Case where active tasks
     metadataStorageConnector.createTaskTables();
+    // begins migration of existing tasks to new schema
+    handler.populateTaskTypeAndGroupIdAsync();
   }
 
   @LifecycleStop

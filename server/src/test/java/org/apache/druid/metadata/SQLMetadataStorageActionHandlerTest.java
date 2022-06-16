@@ -490,11 +490,6 @@ public class SQLMetadataStorageActionHandlerTest
     Assert.assertEquals(0, getUnmigratedTaskCount().intValue());
   }
 
-  public void testGetTaskStatusPlusList()
-  {
-
-  }
-
   @Test
   public void testGetTaskStatusPlusListInternal()
   {

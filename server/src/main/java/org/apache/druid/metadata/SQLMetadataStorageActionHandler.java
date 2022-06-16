@@ -337,14 +337,8 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
       @Nullable String dataSource
   )
   {
-    if (taskMigrationCompleteFuture == null) {
-      ExecutorService executorService = Executors.newSingleThreadExecutor();
-      taskMigrationCompleteFuture = executorService.submit(
-          () -> populateTaskTypeAndGroupId()
-      );
-    }
     boolean fetchPayload = true;
-    if (taskMigrationCompleteFuture.isDone()) {
+    if (taskMigrationCompleteFuture != null && taskMigrationCompleteFuture.isDone()) {
       try {
         fetchPayload = !taskMigrationCompleteFuture.get();
       }
@@ -1014,6 +1008,15 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
             return null;
           }
         }
+    );
+  }
+
+  @Override
+  public void populateTaskTypeAndGroupIdAsync()
+  {
+    ExecutorService executorService = Executors.newSingleThreadExecutor();
+    taskMigrationCompleteFuture = executorService.submit(
+        () -> populateTaskTypeAndGroupId()
     );
   }
 
