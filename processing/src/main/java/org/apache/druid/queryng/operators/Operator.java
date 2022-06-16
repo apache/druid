@@ -19,8 +19,6 @@
 
 package org.apache.druid.queryng.operators;
 
-import java.util.Iterator;
-
 /**
  * An operator is a data pipeline transform: something that operates on
  * a stream of results in some way. An operator has a very simple lifecycle:
