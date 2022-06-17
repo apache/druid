@@ -64,7 +64,7 @@ public class HttpEntityTest
   @Test
   public void testOpenInputStream() throws IOException, URISyntaxException
   {
-    URI url = new URI("https://druid.apache.org/data/wikipedia.json.gz");
+    URI url = this.getClass().getClassLoader().getResource("white-rabbit.txt").toURI();
     final InputStream inputStream = HttpEntity.openInputStream(url, "", null, 0);
     final InputStream inputStreamPartial = HttpEntity.openInputStream(url, "", null, 5);
     inputStream.skip(5);
