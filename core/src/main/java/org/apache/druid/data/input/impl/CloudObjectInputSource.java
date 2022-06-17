@@ -43,6 +43,7 @@ import java.util.stream.Stream;
 public abstract class CloudObjectInputSource extends AbstractInputSource
     implements SplittableInputSource<List<CloudObjectLocation>>
 {
+  private final String scheme;
   private final List<URI> uris;
   private final List<URI> prefixes;
   private final List<CloudObjectLocation> objects;
@@ -55,21 +56,13 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       @Nullable List<CloudObjectLocation> objects
   )
   {
+    this.scheme = scheme;
     this.uris = uris;
     this.prefixes = prefixes;
     this.objects = objects;
     this.filter = null;
 
-    if (!CollectionUtils.isNullOrEmpty(objects)) {
-      throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(uris) || !CollectionUtils.isNullOrEmpty(prefixes));
-    } else if (!CollectionUtils.isNullOrEmpty(uris)) {
-      throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(prefixes));
-      uris.forEach(uri -> CloudObjectLocation.validateUriScheme(scheme, uri));
-    } else if (!CollectionUtils.isNullOrEmpty(prefixes)) {
-      prefixes.forEach(uri -> CloudObjectLocation.validateUriScheme(scheme, uri));
-    } else {
-      throwIfIllegalArgs(true);
-    }
+    illegalArgsChecker();
   }
 
   public CloudObjectInputSource(
@@ -80,21 +73,13 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       @Nullable String filter
   )
   {
+    this.scheme = scheme;
     this.uris = uris;
     this.prefixes = prefixes;
     this.objects = objects;
     this.filter = filter;
 
-    if (!CollectionUtils.isNullOrEmpty(objects)) {
-      throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(uris) || !CollectionUtils.isNullOrEmpty(prefixes));
-    } else if (!CollectionUtils.isNullOrEmpty(uris)) {
-      throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(prefixes));
-      uris.forEach(uri -> CloudObjectLocation.validateUriScheme(scheme, uri));
-    } else if (!CollectionUtils.isNullOrEmpty(prefixes)) {
-      prefixes.forEach(uri -> CloudObjectLocation.validateUriScheme(scheme, uri));
-    } else {
-      throwIfIllegalArgs(true);
-    }
+    illegalArgsChecker();
   }
 
   @JsonProperty
@@ -224,6 +209,20 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   public int hashCode()
   {
     return Objects.hash(uris, prefixes, objects);
+  }
+
+  private void illegalArgsChecker() throws IllegalArgumentException
+  {
+    if (!CollectionUtils.isNullOrEmpty(objects)) {
+      throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(uris) || !CollectionUtils.isNullOrEmpty(prefixes));
+    } else if (!CollectionUtils.isNullOrEmpty(uris)) {
+      throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(prefixes));
+      uris.forEach(uri -> CloudObjectLocation.validateUriScheme(scheme, uri));
+    } else if (!CollectionUtils.isNullOrEmpty(prefixes)) {
+      prefixes.forEach(uri -> CloudObjectLocation.validateUriScheme(scheme, uri));
+    } else {
+      throwIfIllegalArgs(true);
+    }
   }
 
   private void throwIfIllegalArgs(boolean clause) throws IllegalArgumentException
