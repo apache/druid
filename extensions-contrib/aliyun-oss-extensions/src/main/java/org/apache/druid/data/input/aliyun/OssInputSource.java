@@ -116,7 +116,7 @@ public class OssInputSource extends CloudObjectInputSource
         object -> new InputFileAttribute(object.getSize())
     );
 
-    if(org.apache.commons.lang.StringUtils.isNotBlank(getFilter())) {
+    if (org.apache.commons.lang.StringUtils.isNotBlank(getFilter())) {
       return Streams.sequentialStreamFrom(splitIterator)
       .map(objects -> objects.stream()
                              .map(OssUtils::summaryToCloudObjectLocation)

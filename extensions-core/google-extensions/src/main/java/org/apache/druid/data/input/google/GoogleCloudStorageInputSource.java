@@ -105,7 +105,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
         }
     );
 
-    if(org.apache.commons.lang.StringUtils.isNotBlank(getFilter())) {
+    if (org.apache.commons.lang.StringUtils.isNotBlank(getFilter())) {
       return Streams.sequentialStreamFrom(splitIterator)
                     .map(objects -> objects.stream().map(this::byteSourceFromStorageObject)
                     .filter(object -> FilenameUtils.wildcardMatch(object.getPath(), getFilter()))

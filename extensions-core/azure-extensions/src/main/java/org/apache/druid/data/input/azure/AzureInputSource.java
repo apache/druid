@@ -117,7 +117,7 @@ public class AzureInputSource extends CloudObjectInputSource
         blobHolder -> new InputFileAttribute(blobHolder.getBlobLength())
     );
 
-    if(org.apache.commons.lang.StringUtils.isNotBlank(getFilter())) {
+    if (org.apache.commons.lang.StringUtils.isNotBlank(getFilter())) {
       return Streams.sequentialStreamFrom(splitIterator)
       .map(objects -> objects.stream()
                              .map(azureCloudBlobToLocationConverter::createCloudObjectLocation)
