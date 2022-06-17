@@ -414,10 +414,14 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
 
   /**
    * Compatibility mode with the legacy scan-query extension.
+   *
+   * True, false, and null have different meanings: true/false mean "legacy" and "not legacy"; null means use the
+   * default set by {@link ScanQueryConfig#isLegacy()}. The method {@link #withNonNullLegacy} is provided to help
+   * with this.
    */
   @Nullable
   @JsonProperty
-  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = IsLegacyJsonIncludeFilter.class)
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Boolean isLegacy()
   {
     return legacy;
@@ -661,23 +665,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     public boolean equals(Object obj)
     {
       return obj instanceof Integer && (int) obj == DEFAULT_BATCH_SIZE;
-    }
-  }
-
-  /**
-   * {@link JsonInclude} filter for {@link #isLegacy()}.
-   *
-   * This API works by "creative" use of equals. It requires warnings to be suppressed and also requires spotbugs
-   * exclusions (see spotbugs-exclude.xml).
-   */
-  @SuppressWarnings({"EqualsAndHashcode", "EqualsHashCode"})
-  static class IsLegacyJsonIncludeFilter // lgtm [java/inconsistent-equals-and-hashcode]
-  {
-    @Override
-    public boolean equals(Object obj)
-    {
-      return obj == null ||
-             obj instanceof Boolean && !(Boolean) obj;
     }
   }
 }
