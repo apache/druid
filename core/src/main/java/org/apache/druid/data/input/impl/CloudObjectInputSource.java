@@ -129,7 +129,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   )
   {
     if (!CollectionUtils.isNullOrEmpty(objects)) {
-      if(StringUtils.isNotBlank(filter)) {
+      if (StringUtils.isNotBlank(filter)) {
         return objects.stream()
                       .filter(object -> FilenameUtils.wildcardMatch(object.getPath(), filter))
                       .map(object -> new InputSplit<>(Collections.singletonList(object)));
@@ -139,7 +139,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     }
 
     if (!CollectionUtils.isNullOrEmpty(uris)) {
-      if(StringUtils.isNotBlank(filter)) {
+      if (StringUtils.isNotBlank(filter)) {
         return uris.stream()
                    .filter(uri -> FilenameUtils.wildcardMatch(uri.toString(), filter))
                    .map(CloudObjectLocation::new)
