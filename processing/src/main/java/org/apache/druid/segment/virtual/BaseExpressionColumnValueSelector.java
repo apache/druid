@@ -86,7 +86,7 @@ public abstract class BaseExpressionColumnValueSelector implements ColumnValueSe
   @Override
   public void inspectRuntimeShape(final RuntimeShapeInspector inspector)
   {
-    inspector.visit("rowIdSupplier", this);
+    inspector.visit("rowIdSupplier", rowIdSupplier);
   }
 
   /**
