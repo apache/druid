@@ -276,7 +276,7 @@ public final class SegmentId implements Comparable<SegmentId>
   private SegmentId(String dataSource, Interval interval, String version, int partitionNum)
   {
     this.dataSource = STRING_INTERNER.intern(Objects.requireNonNull(dataSource));
-    this.interval = INTERVAL_INTERNER.intern(interval);
+    this.interval = INTERVAL_INTERNER.intern(Objects.requireNonNull(interval));
     // Versions are timestamp-based Strings, interning of them doesn't make sense. If this is not the case, interning
     // could be conditionally allowed via a system property.
     this.version = Objects.requireNonNull(version);
