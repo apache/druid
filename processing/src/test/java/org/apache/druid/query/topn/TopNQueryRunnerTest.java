@@ -4542,28 +4542,17 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testFullOnTopNLongVirtualColumn()
+  public void testFullOnTopNAggregateLongVirtualColumn()
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .dimension(new DefaultDimensionSpec("ql_expr", "ql_alias", ColumnType.LONG))
-        .metric("maxIndex")
+        .virtualColumns(new ExpressionVirtualColumn("v0", "index", ColumnType.LONG, ExprMacroTable.nil()))
+        .dimension(new DefaultDimensionSpec("quality", "quality"))
+        .metric("sumIndex")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
-        .aggregators(
-            Lists.newArrayList(
-                Iterables.concat(
-                    commonAggregators,
-                    Lists.newArrayList(
-                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
-                        new DoubleMinAggregatorFactory("minIndex", "index")
-                    )
-                )
-            )
-        )
-        .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
-        .virtualColumns(new ExpressionVirtualColumn("ql_expr", "qualityLong", ColumnType.LONG, ExprMacroTable.nil()))
+        .aggregators(Collections.singletonList(new LongSumAggregatorFactory("sumIndex", "v0")))
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -4572,41 +4561,21 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                        .put("ql_alias", 1400L)
-                        .put(QueryRunnerTestHelper.INDEX_METRIC, 217725.41940800005D)
-                        .put("rows", 279L)
-                        .put("addRowsIndexConstant", 218005.41940800005D)
-                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
-                        .put("maxIndex", 1870.061029D)
-                        .put("minIndex", 91.270553D)
-                        .build(),
+                                .put("quality", "mezzanine")
+                                .put("sumIndex", 217586L)
+                                .build(),
                     ImmutableMap.<String, Object>builder()
-                        .put("ql_alias", 1600L)
-                        .put(QueryRunnerTestHelper.INDEX_METRIC, 210865.67977600006D)
-                        .put("rows", 279L)
-                        .put("addRowsIndexConstant", 211145.67977600006D)
-                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
-                        .put("maxIndex", 1862.737933D)
-                        .put("minIndex", 99.284525D)
-                        .build(),
+                                .put("quality", "premium")
+                                .put("sumIndex", 210722L)
+                                .build(),
                     ImmutableMap.<String, Object>builder()
-                        .put("ql_alias", 1000L)
-                        .put(QueryRunnerTestHelper.INDEX_METRIC, 12270.807093D)
-                        .put("rows", 93L)
-                        .put("addRowsIndexConstant", 12364.807093D)
-                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
-                        .put("maxIndex", 277.273533D)
-                        .put("minIndex", 71.315931D)
-                        .build(),
+                                .put("quality", "automotive")
+                                .put("sumIndex", 12226L)
+                                .build(),
                     ImmutableMap.<String, Object>builder()
-                        .put("ql_alias", 1200L)
-                        .put(QueryRunnerTestHelper.INDEX_METRIC, 12086.472791D)
-                        .put("rows", 93L)
-                        .put("addRowsIndexConstant", 12180.472791D)
-                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
-                        .put("maxIndex", 193.787574D)
-                        .put("minIndex", 84.710523D)
-                        .build()
+                                .put("quality", "entertainment")
+                                .put("sumIndex", 12038L)
+                                .build()
                 )
             )
         )
