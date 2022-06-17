@@ -176,27 +176,15 @@ public class KillUnusedSegmentsTest
       KillUnusedSegments unusedSegmentsKiller = new KillUnusedSegments(
           segmentsMetadataManager,
           indexingServiceClient,
-          new TestDruidCoordinatorConfig(
-              null,
-              null,
-              Duration.parse("PT76400S"),
-              null,
-              new Duration(1),
-              Duration.parse("PT86400S"),
-              Duration.parse("PT86400S"),
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              1000,
-              Duration.ZERO,
-              false
-          )
+          new TestDruidCoordinatorConfig.Builder()
+              .withCoordinatorIndexingPeriod(Duration.parse("PT76400S"))
+              .withLoadTimeoutDelay(new Duration(1))
+              .withCoordinatorKillPeriod(Duration.parse("PT86400S"))
+              .withCoordinatorKillDurationToRetain(Duration.parse("PT86400S"))
+              .withCoordinatorKillMaxSegments(1000)
+              .withLoadQueuePeonRepeatDelay(Duration.ZERO)
+              .withCoordinatorKillIgnoreDurationToRetain(false)
+              .build()
       );
 
       Assert.assertEquals(
@@ -217,27 +205,15 @@ public class KillUnusedSegmentsTest
       KillUnusedSegments unusedSegmentsKiller = new KillUnusedSegments(
           null,
           null,
-          new TestDruidCoordinatorConfig(
-              null,
-              null,
-              Duration.parse("PT76400S"),
-              null,
-              new Duration(1),
-              Duration.parse("PT86400S"),
-              Duration.parse("PT86400S"),
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              1000,
-              Duration.ZERO,
-              false
-          )
+          new TestDruidCoordinatorConfig.Builder()
+              .withCoordinatorIndexingPeriod(Duration.parse("PT76400S"))
+              .withLoadTimeoutDelay(new Duration(1))
+              .withCoordinatorKillPeriod(Duration.parse("PT86400S"))
+              .withCoordinatorKillDurationToRetain(Duration.parse("PT86400S"))
+              .withCoordinatorKillMaxSegments(1000)
+              .withLoadQueuePeonRepeatDelay(Duration.ZERO)
+              .withCoordinatorKillIgnoreDurationToRetain(false)
+              .build()
       );
       Assert.assertEquals((Long) Duration.parse("PT86400S").getMillis(), unusedSegmentsKiller.getRetainDuration());
 
@@ -245,27 +221,15 @@ public class KillUnusedSegmentsTest
       unusedSegmentsKiller = new KillUnusedSegments(
           null,
           null,
-          new TestDruidCoordinatorConfig(
-              null,
-              null,
-              Duration.parse("PT76400S"),
-              null,
-              new Duration(1),
-              Duration.parse("PT86400S"),
-              Duration.parse("PT-86400S"),
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              1000,
-              Duration.ZERO,
-              false
-          )
+          new TestDruidCoordinatorConfig.Builder()
+              .withCoordinatorIndexingPeriod(Duration.parse("PT76400S"))
+              .withLoadTimeoutDelay(new Duration(1))
+              .withCoordinatorKillPeriod(Duration.parse("PT86400S"))
+              .withCoordinatorKillDurationToRetain(Duration.parse("PT-86400S"))
+              .withCoordinatorKillMaxSegments(1000)
+              .withLoadQueuePeonRepeatDelay(Duration.ZERO)
+              .withCoordinatorKillIgnoreDurationToRetain(false)
+              .build()
       );
       Assert.assertEquals((Long) Duration.parse("PT-86400S").getMillis(), unusedSegmentsKiller.getRetainDuration());
     }
@@ -282,27 +246,15 @@ public class KillUnusedSegmentsTest
       KillUnusedSegments unusedSegmentsKiller = new KillUnusedSegments(
           null,
           null,
-          new TestDruidCoordinatorConfig(
-              null,
-              null,
-              Duration.parse("PT76400S"),
-              null,
-              new Duration(1),
-              Duration.parse("PT86400S"),
-              Duration.parse("PT86400S"),
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              1000,
-              Duration.ZERO,
-              true
-          )
+          new TestDruidCoordinatorConfig.Builder()
+              .withCoordinatorIndexingPeriod(Duration.parse("PT76400S"))
+              .withLoadTimeoutDelay(new Duration(1))
+              .withCoordinatorKillPeriod(Duration.parse("PT86400S"))
+              .withCoordinatorKillDurationToRetain(Duration.parse("PT86400S"))
+              .withCoordinatorKillMaxSegments(1000)
+              .withLoadQueuePeonRepeatDelay(Duration.ZERO)
+              .withCoordinatorKillIgnoreDurationToRetain(true)
+              .build()
       );
       Assert.assertEquals(
           DateTimes.COMPARE_DATE_AS_STRING_MAX,
@@ -313,27 +265,15 @@ public class KillUnusedSegmentsTest
       unusedSegmentsKiller = new KillUnusedSegments(
           null,
           null,
-          new TestDruidCoordinatorConfig(
-              null,
-              null,
-              Duration.parse("PT76400S"),
-              null,
-              new Duration(1),
-              Duration.parse("PT86400S"),
-              Duration.parse("PT-86400S"),
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              1000,
-              Duration.ZERO,
-              false
-          )
+          new TestDruidCoordinatorConfig.Builder()
+              .withCoordinatorIndexingPeriod(Duration.parse("PT76400S"))
+              .withLoadTimeoutDelay(new Duration(1))
+              .withCoordinatorKillPeriod(Duration.parse("PT86400S"))
+              .withCoordinatorKillDurationToRetain(Duration.parse("PT-86400S"))
+              .withCoordinatorKillMaxSegments(1000)
+              .withLoadQueuePeonRepeatDelay(Duration.ZERO)
+              .withCoordinatorKillIgnoreDurationToRetain(false)
+              .build()
       );
 
       DateTime expectedTime = DateTimes.nowUtc().minus(Duration.parse("PT-86400S").getMillis());
@@ -343,27 +283,15 @@ public class KillUnusedSegmentsTest
       unusedSegmentsKiller = new KillUnusedSegments(
           null,
           null,
-          new TestDruidCoordinatorConfig(
-              null,
-              null,
-              Duration.parse("PT76400S"),
-              null,
-              new Duration(1),
-              Duration.parse("PT86400S"),
-              Duration.parse("PT86400S"),
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              1000,
-              Duration.ZERO,
-              false
-          )
+          new TestDruidCoordinatorConfig.Builder()
+              .withCoordinatorIndexingPeriod(Duration.parse("PT76400S"))
+              .withLoadTimeoutDelay(new Duration(1))
+              .withCoordinatorKillPeriod(Duration.parse("PT86400S"))
+              .withCoordinatorKillDurationToRetain(Duration.parse("PT86400S"))
+              .withCoordinatorKillMaxSegments(1000)
+              .withLoadQueuePeonRepeatDelay(Duration.ZERO)
+              .withCoordinatorKillIgnoreDurationToRetain(false)
+              .build()
       );
       expectedTime = DateTimes.nowUtc().minus(Duration.parse("PT86400S").getMillis());
       Assert.assertEquals(expectedTime, unusedSegmentsKiller.getEndTimeUpperLimit());

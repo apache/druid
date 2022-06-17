@@ -164,7 +164,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       expectedLongSumMetric.put("type", "longSum");
       expectedLongSumMetric.put("name", "val");
       expectedLongSumMetric.put("fieldName", "val");
-      expectedLongSumMetric.put("expression", null);
       CompactionState expectedState = new CompactionState(
           new DynamicPartitionsSpec(null, Long.MAX_VALUE),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
@@ -211,7 +210,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       expectedLongSumMetric.put("type", "longSum");
       expectedLongSumMetric.put("name", "val");
       expectedLongSumMetric.put("fieldName", "val");
-      expectedLongSumMetric.put("expression", null);
       Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
           new HashedPartitionsSpec(null, 3, null),
@@ -259,7 +257,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       expectedLongSumMetric.put("type", "longSum");
       expectedLongSumMetric.put("name", "val");
       expectedLongSumMetric.put("fieldName", "val");
-      expectedLongSumMetric.put("expression", null);
       Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
           new SingleDimensionPartitionsSpec(7, null, "dim", false),
@@ -310,7 +307,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       expectedLongSumMetric.put("type", "longSum");
       expectedLongSumMetric.put("name", "val");
       expectedLongSumMetric.put("fieldName", "val");
-      expectedLongSumMetric.put("expression", null);
       Assert.assertSame(DimensionRangeShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
           new DimensionRangePartitionsSpec(7, null, Arrays.asList("dim1", "dim2"), false),
@@ -358,7 +354,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       expectedLongSumMetric.put("type", "longSum");
       expectedLongSumMetric.put("name", "val");
       expectedLongSumMetric.put("fieldName", "val");
-      expectedLongSumMetric.put("expression", null);
       Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
           new SingleDimensionPartitionsSpec(7, null, "dim", false),
@@ -409,7 +404,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       expectedLongSumMetric.put("type", "longSum");
       expectedLongSumMetric.put("name", "val");
       expectedLongSumMetric.put("fieldName", "val");
-      expectedLongSumMetric.put("expression", null);
       Assert.assertSame(DimensionRangeShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
           new DimensionRangePartitionsSpec(7, null, Arrays.asList("dim1", "dim2"), false),
@@ -490,7 +484,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       expectedLongSumMetric.put("type", "longSum");
       expectedLongSumMetric.put("name", "val");
       expectedLongSumMetric.put("fieldName", "val");
-      expectedLongSumMetric.put("expression", null);
       CompactionState expectedState = new CompactionState(
           new DynamicPartitionsSpec(null, Long.MAX_VALUE),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
@@ -545,7 +538,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       expectedLongSumMetric.put("type", "longSum");
       expectedLongSumMetric.put("name", "val");
       expectedLongSumMetric.put("fieldName", "val");
-      expectedLongSumMetric.put("expression", null);
       CompactionState expectedState = new CompactionState(
           new DynamicPartitionsSpec(null, Long.MAX_VALUE),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),

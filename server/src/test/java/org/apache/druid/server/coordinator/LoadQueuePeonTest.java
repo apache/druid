@@ -88,27 +88,11 @@ public class LoadQueuePeonTest extends CuratorTestBase
         jsonMapper,
         Execs.scheduledSingleThreaded("test_load_queue_peon_scheduled-%d"),
         Execs.singleThreaded("test_load_queue_peon-%d"),
-        new TestDruidCoordinatorConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            10,
-            Duration.millis(0),
-            false
-        )
+        new TestDruidCoordinatorConfig.Builder()
+            .withCoordinatorKillMaxSegments(10)
+            .withLoadQueuePeonRepeatDelay(Duration.millis(0))
+            .withCoordinatorKillIgnoreDurationToRetain(false)
+            .build()
     );
 
     loadQueuePeon.start();
@@ -294,27 +278,12 @@ public class LoadQueuePeonTest extends CuratorTestBase
         Execs.scheduledSingleThreaded("test_load_queue_peon_scheduled-%d"),
         Execs.singleThreaded("test_load_queue_peon-%d"),
         // set time-out to 1 ms so that LoadQueuePeon will fail the assignment quickly
-        new TestDruidCoordinatorConfig(
-            null,
-            null,
-            null,
-            null,
-            new Duration(1),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            10,
-            new Duration("PT1s"),
-            false
-        )
+        new TestDruidCoordinatorConfig.Builder()
+            .withLoadTimeoutDelay(new Duration(1))
+            .withCoordinatorKillMaxSegments(10)
+            .withLoadQueuePeonRepeatDelay(new Duration("PT1s"))
+            .withCoordinatorKillIgnoreDurationToRetain(false)
+            .build()
     );
 
     loadQueuePeon.start();
@@ -357,27 +326,12 @@ public class LoadQueuePeonTest extends CuratorTestBase
         Execs.scheduledSingleThreaded("test_load_queue_peon_scheduled-%d"),
         Execs.singleThreaded("test_load_queue_peon-%d"),
         // set time-out to 1 ms so that LoadQueuePeon will fail the assignment quickly
-        new TestDruidCoordinatorConfig(
-            null,
-            null,
-            null,
-            null,
-            new Duration(1),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            10,
-            new Duration("PT1s"),
-            false
-        )
+        new TestDruidCoordinatorConfig.Builder()
+            .withLoadTimeoutDelay(new Duration(1))
+            .withCoordinatorKillMaxSegments(10)
+            .withLoadQueuePeonRepeatDelay(new Duration("PT1s"))
+            .withCoordinatorKillIgnoreDurationToRetain(false)
+            .build()
     );
 
     loadQueuePeon.start();

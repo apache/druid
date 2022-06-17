@@ -46,7 +46,10 @@
             <Or>
                 <Class name="org.apache.druid.query.scan.ScanQuery$ScanRowsLimitJsonIncludeFilter"/>
                 <Class name="org.apache.druid.query.scan.ScanQuery$ScanTimeOrderJsonIncludeFilter"/>
+                <Class name="org.apache.druid.query.scan.ScanQuery$BatchSizeJsonIncludeFilter"/>
+                <Class name="org.apache.druid.query.scan.ScanQuery$IsLegacyJsonIncludeFilter"/>
                 <Class name="org.apache.druid.query.groupby.orderby.DefaultLimitSpec$LimitJsonIncludeFilter"/>
+                <Class name="org.apache.druid.segment.VirtualColumns$JsonIncludeFilter"/>
             </Or>
         </And>
     </Match>
@@ -54,6 +57,12 @@
         <And>
             <Bug pattern="SE_BAD_FIELD_STORE" />
             <Class name="org.apache.druid.server.AsyncQueryForwardingServlet" />
+        </And>
+    </Match>
+    <Match>
+        <And>
+            <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD" />
+            <Class name="org.apache.druid.sql.calcite.planner.CapturedState" />
         </And>
     </Match>
 
