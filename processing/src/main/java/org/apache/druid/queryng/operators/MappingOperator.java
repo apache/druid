@@ -31,7 +31,7 @@ import org.apache.druid.queryng.operators.Operator.IterableOperator;
 public abstract class MappingOperator<IN, OUT> implements IterableOperator<OUT>
 {
   private final Operator<IN> input;
-  protected RowIterator<IN> inputIter;
+  protected ResultIterator<IN> inputIter;
   protected State state = State.START;
 
   public MappingOperator(FragmentContext context, Operator<IN> input)
@@ -41,7 +41,7 @@ public abstract class MappingOperator<IN, OUT> implements IterableOperator<OUT>
   }
 
   @Override
-  public RowIterator<OUT> open()
+  public ResultIterator<OUT> open()
   {
     Preconditions.checkState(state == State.START);
     inputIter = input.open();

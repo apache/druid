@@ -20,13 +20,13 @@
 package org.apache.druid.queryng.operators;
 
 import org.apache.druid.queryng.operators.Operator.EofException;
-import org.apache.druid.queryng.operators.Operator.RowIterator;
+import org.apache.druid.queryng.operators.Operator.ResultIterator;
 
 import static org.junit.Assert.fail;
 
 public class OperatorTests
 {
-  public static void assertEof(RowIterator<?> operIter)
+  public static void assertEof(ResultIterator<?> operIter)
   {
     try {
       operIter.next();

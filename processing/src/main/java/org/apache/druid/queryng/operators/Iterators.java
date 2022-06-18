@@ -21,25 +21,25 @@ package org.apache.druid.queryng.operators;
 
 import com.google.common.collect.Lists;
 import org.apache.druid.queryng.operators.Operator.EofException;
-import org.apache.druid.queryng.operators.Operator.RowIterator;
+import org.apache.druid.queryng.operators.Operator.ResultIterator;
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
 /**
- * Utility methods on top of {@link Operator.RowIterator RowIterator},
+ * Utility methods on top of {@link Operator.ResultIterator RowIterator},
  * including conversion to a Java iterator (primarily for testing.)
  */
 public class Iterators
 {
   public static class ShimIterator<T> implements Iterator<T>
   {
-    private final RowIterator<T> operIter;
+    private final ResultIterator<T> operIter;
     private boolean eof;
     private T lookAhead;
 
-    public ShimIterator(RowIterator<T> operIter)
+    public ShimIterator(ResultIterator<T> operIter)
     {
       this.operIter = operIter;
     }
@@ -71,7 +71,7 @@ public class Iterators
 
   }
 
-  public static <T> Iterable<T> toIterable(RowIterator<T> iter)
+  public static <T> Iterable<T> toIterable(ResultIterator<T> iter)
   {
     return Iterators.toIterable(Iterators.toIterator(iter));
   }
@@ -87,12 +87,12 @@ public class Iterators
     };
   }
 
-  public static <T> Iterator<T> toIterator(RowIterator<T> opIter)
+  public static <T> Iterator<T> toIterator(ResultIterator<T> opIter)
   {
     return new Iterators.ShimIterator<T>(opIter);
   }
 
-  public static <T> List<T> toList(RowIterator<T> operIter)
+  public static <T> List<T> toList(ResultIterator<T> operIter)
   {
     return Lists.newArrayList(new Iterators.ShimIterator<T>(operIter));
   }

@@ -21,7 +21,7 @@ package org.apache.druid.queryng.operators;
 
 import org.apache.druid.queryng.fragment.FragmentContext;
 import org.apache.druid.queryng.operators.Operator.EofException;
-import org.apache.druid.queryng.operators.Operator.RowIterator;
+import org.apache.druid.queryng.operators.Operator.ResultIterator;
 import org.apache.druid.queryng.operators.Operator.State;
 import org.junit.Test;
 
@@ -142,7 +142,7 @@ public class ConcatOperatorTest
     Operator<Integer> op = ConcatOperator.concatOrNot(
         context,
         Arrays.asList(input1, input2));
-    RowIterator<Integer> iter = op.open();
+    ResultIterator<Integer> iter = op.open();
     assertEquals(0, (int) iter.next());
 
     // Only first input has been opened.

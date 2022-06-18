@@ -19,7 +19,7 @@
 
 package org.apache.druid.queryng.fragment;
 
-import org.apache.druid.queryng.operators.Operator.RowIterator;
+import org.apache.druid.queryng.operators.Operator.ResultIterator;
 
 import java.util.List;
 
@@ -37,7 +37,7 @@ public interface FragmentRun<T> extends AutoCloseable
 {
   FragmentContext context();
 
-  RowIterator<T> iterator();
+  ResultIterator<T> iterator();
 
   /**
    * Materializes the entire result set as a list. Primarily for testing.

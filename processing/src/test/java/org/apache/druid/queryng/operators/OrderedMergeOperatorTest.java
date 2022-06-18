@@ -21,7 +21,7 @@ package org.apache.druid.queryng.operators;
 
 import com.google.common.collect.Ordering;
 import org.apache.druid.queryng.fragment.FragmentContext;
-import org.apache.druid.queryng.operators.Operator.RowIterator;
+import org.apache.druid.queryng.operators.Operator.ResultIterator;
 import org.apache.druid.queryng.operators.Operator.State;
 import org.apache.druid.queryng.operators.OrderedMergeOperator.Input;
 import org.junit.Test;
@@ -49,7 +49,7 @@ public class OrderedMergeOperatorTest
         Ordering.natural(),
         0,
         inputs);
-    RowIterator<Integer> iter = op.open();
+    ResultIterator<Integer> iter = op.open();
     OperatorTests.assertEof(iter);
     op.close(true);
   }
@@ -67,7 +67,7 @@ public class OrderedMergeOperatorTest
         Ordering.natural(),
         2,
         inputs);
-    RowIterator<Integer> iter = op.open();
+    ResultIterator<Integer> iter = op.open();
     OperatorTests.assertEof(iter);
     op.close(true);
   }
@@ -84,7 +84,7 @@ public class OrderedMergeOperatorTest
         Ordering.natural(),
         1,
         inputs);
-    RowIterator<Integer> iter = op.open();
+    ResultIterator<Integer> iter = op.open();
     List<Integer> results = Iterators.toList(iter);
     op.close(true);
     assertEquals(Arrays.asList(0, 1, 2), results);
@@ -103,7 +103,7 @@ public class OrderedMergeOperatorTest
         Ordering.natural(),
         2,
         inputs);
-    RowIterator<Integer> iter = op.open();
+    ResultIterator<Integer> iter = op.open();
     List<Integer> results = Iterators.toList(iter);
     op.close(true);
     assertEquals(Arrays.asList(0, 0, 1, 1, 2, 2, 3, 4), results);
@@ -124,7 +124,7 @@ public class OrderedMergeOperatorTest
         Ordering.natural(),
         2,
         inputs);
-    RowIterator<Integer> iter = op.open();
+    ResultIterator<Integer> iter = op.open();
     List<Integer> results = Iterators.toList(iter);
     assertEquals(Arrays.asList(0, 0, 1, 1), results);
 

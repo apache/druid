@@ -53,7 +53,7 @@ public class MockOperator<T> implements IterableOperator<T>
   }
 
   @Override
-  public RowIterator<T> open()
+  public ResultIterator<T> open()
   {
     Preconditions.checkState(state == State.START);
     state = State.RUN;

@@ -37,7 +37,7 @@ import org.apache.druid.queryng.fragment.FragmentHandle;
 import org.apache.druid.queryng.fragment.FragmentRun;
 import org.apache.druid.queryng.fragment.NullFragmentBuilderFactory;
 import org.apache.druid.queryng.operators.Operator.EofException;
-import org.apache.druid.queryng.operators.Operator.RowIterator;
+import org.apache.druid.queryng.operators.Operator.ResultIterator;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -350,7 +350,7 @@ public class FragmentTest
     assertNull(context.exception());
     MockOperator<Integer> op = MockOperator.ints(builder.context(), 4);
     FragmentHandle<Integer> handle = builder.handle(op);
-    RowIterator<Integer> iter = handle.run().iterator();
+    ResultIterator<Integer> iter = handle.run().iterator();
     assertEquals(FragmentContext.State.RUN, context.state());
     // Read from the iterator, just to keep Java 11 happy.
     assertNotNull(iter.next());

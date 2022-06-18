@@ -23,39 +23,25 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
-import org.apache.druid.queryng.fragment.FragmentContext;
-import org.apache.druid.queryng.operators.Operator.IterableOperator;
 
 import java.io.IOException;
+import java.util.Iterator;
 
 /**
- * The <code>SequenceOperator</code> wraps a {@link Sequence} in the
- * operator protocol. The operator will make (at most) one pass through
- * the sequence. The sequence's yielder will be defined in <code>start()</code>,
- * which may cause the sequence to start doing work and obtaining resources.
- * Each call to <code>next()</code>/<code>get()</code> will yield one result
- * from the sequence. The <code>close()</code> call will close the yielder
- * for the sequence, which should release any resources held by the sequence.
- *
- * @param <T> The type of the item (row, batch) returned by the sequence
- * and thus returned by the operator.
+ * Iterator over a sequence.
  */
-public class SequenceOperator<T> implements IterableOperator<T>
+public class SequenceIterator<T> implements Iterator<T>, AutoCloseable
 {
-  private final Sequence<T> sequence;
   private Yielder<T> yielder;
 
-  public SequenceOperator(FragmentContext context, Sequence<T> sequence)
+  public static <T> SequenceIterator<T> of(Sequence<T> sequence)
   {
-    this.sequence = sequence;
-    context.register(this);
+    return new SequenceIterator<T>(sequence);
   }
 
-  @Override
-  public ResultIterator<T> open()
+  public SequenceIterator(Sequence<T> sequence)
   {
-    Preconditions.checkState(yielder == null);
-    yielder = sequence.toYielder(
+    this.yielder = sequence.toYielder(
         null,
         new YieldingAccumulator<T, T>()
         {
@@ -67,41 +53,28 @@ public class SequenceOperator<T> implements IterableOperator<T>
           }
         }
     );
-    return this;
   }
 
   @Override
-  public T next() throws EofException
+  public boolean hasNext()
   {
-    if (yielder == null || yielder.isDone()) {
-      throw Operators.eof();
-    }
-    if (yielder.isDone()) {
-      closeYielder();
-      throw Operators.eof();
-    }
+    return !yielder.isDone();
+  }
+
+  @Override
+  public T next()
+  {
+    Preconditions.checkState(!yielder.isDone());
     T value = yielder.get();
     yielder = yielder.next(null);
     return value;
   }
 
   @Override
-  public void close(boolean cascade)
+  public void close() throws IOException
   {
     if (yielder != null) {
-      closeYielder();
-    }
-  }
-
-  private void closeYielder()
-  {
-    try {
       yielder.close();
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e.getMessage(), e);
-    }
-    finally {
       yielder = null;
     }
   }

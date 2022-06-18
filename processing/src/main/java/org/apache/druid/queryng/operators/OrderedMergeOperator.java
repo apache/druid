@@ -45,7 +45,7 @@ public class OrderedMergeOperator<T> implements IterableOperator<T>
   public static class Input<T>
   {
     private final Operator<T> input;
-    private final RowIterator<T> iter;
+    private final ResultIterator<T> iter;
     private T currentValue;
 
     public Input(Operator<T> input)
@@ -130,7 +130,7 @@ public class OrderedMergeOperator<T> implements IterableOperator<T>
   }
 
   @Override
-  public RowIterator<T> open()
+  public ResultIterator<T> open()
   {
     for (Input<T> input : inputs.get()) {
       if (!input.eof()) {

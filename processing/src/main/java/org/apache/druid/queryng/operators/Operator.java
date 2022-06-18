@@ -30,10 +30,10 @@ package org.apache.druid.queryng.operators;
  * <li>Closed.</li>
  * </ul>
  * <p>
- * Opening an operator returns a {@link Operator.RowIterator RowIterator}
+ * Opening an operator returns a {@link Operator.ResultIterator RowIterator}
  * which returns rows. The Java {@code Iterator} class has extra overhead
  * which we want to avoid on the per-row inner loop code path. A
- * {@code RowIterator} has one method: {@link Operator.RowIterator#next() next()},
+ * {@code RowIterator} has one method: {@link Operator.ResultIterator#next() next()},
  * which either returns a row (however the operator defines it), or throws an
  * {@link Operator.EofException EofException} when there are no more rows.
  * Downstream operators need not do any conditional checking: they can just
@@ -150,7 +150,7 @@ public interface Operator<T>
    * {@link static <T> Iterator<T> Operators#toIterator(Operator<T>)},
    * but that approach adds overhead.
    */
-  interface RowIterator<T>
+  interface ResultIterator<T>
   {
     T next() throws EofException;
   }
@@ -158,7 +158,7 @@ public interface Operator<T>
   /**
    * Convenience interface for an operator which is its own iterator.
    */
-  interface IterableOperator<T> extends Operator<T>, RowIterator<T>
+  interface IterableOperator<T> extends Operator<T>, ResultIterator<T>
   {
   }
 
@@ -178,7 +178,7 @@ public interface Operator<T>
    * in the {@code open()} call for simple operators,or later, on demand, for more
    * complex operators such as in a merge or union.
    */
-  RowIterator<T> open();
+  ResultIterator<T> open();
 
   /**
    * Called at two distinct times. An operator may choose to close a child

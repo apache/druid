@@ -24,7 +24,7 @@ import org.apache.druid.queryng.fragment.FragmentBuilder;
 import org.apache.druid.queryng.fragment.FragmentContext;
 import org.apache.druid.queryng.fragment.FragmentRun;
 import org.apache.druid.queryng.operators.Operator.EofException;
-import org.apache.druid.queryng.operators.Operator.RowIterator;
+import org.apache.druid.queryng.operators.Operator.ResultIterator;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -168,7 +168,7 @@ public class BasicOperatorTest
     Sequence<String> seq = Operators.toSequence(op);
     Operator<String> outer = Operators.toOperator(builder, seq);
     FragmentRun<String> run = builder.run(outer);
-    RowIterator<String> iter = run.iterator();
+    ResultIterator<String> iter = run.iterator();
     assertEquals("Mock row 0", iter.next());
     assertEquals("Mock row 1", iter.next());
     OperatorTests.assertEof(iter);

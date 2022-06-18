@@ -23,7 +23,7 @@ import org.apache.druid.queryng.fragment.FragmentBuilder;
 import org.apache.druid.queryng.fragment.FragmentHandle;
 import org.apache.druid.queryng.fragment.FragmentRun;
 import org.apache.druid.queryng.operators.Operator.EofException;
-import org.apache.druid.queryng.operators.Operator.RowIterator;
+import org.apache.druid.queryng.operators.Operator.ResultIterator;
 import org.junit.Test;
 
 import java.util.List;
@@ -43,7 +43,7 @@ public class MockOperatorTest
     MockOperator<String> op = MockOperator.strings(builder.context(), 2);
     FragmentHandle<String> handle = builder.handle(op);
     try (FragmentRun<String> run = handle.run()) {
-      RowIterator<String> iter = run.iterator();
+      ResultIterator<String> iter = run.iterator();
       assertEquals("Mock row 0", iter.next());
       assertEquals("Mock row 1", iter.next());
       OperatorTests.assertEof(iter);

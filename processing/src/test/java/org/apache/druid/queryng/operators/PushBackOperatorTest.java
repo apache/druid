@@ -21,7 +21,7 @@ package org.apache.druid.queryng.operators;
 
 import org.apache.druid.queryng.fragment.FragmentContext;
 import org.apache.druid.queryng.operators.Operator.EofException;
-import org.apache.druid.queryng.operators.Operator.RowIterator;
+import org.apache.druid.queryng.operators.Operator.ResultIterator;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -58,7 +58,7 @@ public class PushBackOperatorTest
     FragmentContext context = FragmentContext.defaultContext();
     Operator<Integer> input = MockOperator.ints(context, 2);
     PushBackOperator<Integer> op = new PushBackOperator<Integer>(context, input);
-    RowIterator<Integer> iter = op.open();
+    ResultIterator<Integer> iter = op.open();
     Integer item = iter.next();
     op.push(item);
     List<Integer> results = Operators.toList(op);
@@ -71,7 +71,7 @@ public class PushBackOperatorTest
   {
     FragmentContext context = FragmentContext.defaultContext();
     Operator<Integer> input = MockOperator.ints(context, 2);
-    RowIterator<Integer> iter = input.open();
+    ResultIterator<Integer> iter = input.open();
     Integer item = iter.next();
     PushBackOperator<Integer> op = new PushBackOperator<Integer>(context, input, iter, item);
     List<Integer> results = Operators.toList(op);

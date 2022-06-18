@@ -30,13 +30,13 @@ import org.apache.druid.queryng.operators.Operator.IterableOperator;
 public class PushBackOperator<T> implements IterableOperator<T>
 {
   private final Operator<T> input;
-  private RowIterator<T> inputIter;
+  private ResultIterator<T> inputIter;
   private T pushed;
 
   public PushBackOperator(
       FragmentContext context,
       Operator<T> input,
-      RowIterator<T> inputIter,
+      ResultIterator<T> inputIter,
       T pushed)
   {
     this.input = input;
@@ -51,7 +51,7 @@ public class PushBackOperator<T> implements IterableOperator<T>
   }
 
   @Override
-  public RowIterator<T> open()
+  public ResultIterator<T> open()
   {
     if (inputIter == null) {
       inputIter = input.open();

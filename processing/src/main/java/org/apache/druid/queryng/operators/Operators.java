@@ -22,8 +22,11 @@ package org.apache.druid.queryng.operators;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryRunner;
 import org.apache.druid.queryng.fragment.DAGBuilder;
 import org.apache.druid.queryng.operators.Operator.EofException;
+import org.apache.druid.queryng.operators.general.QueryRunnerOperator;
 
 import java.util.Iterator;
 import java.util.List;
@@ -123,6 +126,17 @@ public class Operators
       return ((OperatorWrapperSequence<T>) sequence).unwrap();
     }
     return null;
+  }
+
+  /**
+   * Create an operator which wraps a query runner which allows a query runner
+   * to be an input to an operator. The runner, and its sequence, will be optimized
+   * away at runtime if both the upstream and downstream items are both operators,
+   * but the shim is left in place if the upstream is actually a query runner.
+   */
+  public static <T> QueryRunnerOperator<T> toOperator(QueryRunner<T> runner, QueryPlus<T> query)
+  {
+    return new QueryRunnerOperator<T>(runner, query);
   }
 
   public static <T> Iterator<T> toIterator(Operator<T> op)

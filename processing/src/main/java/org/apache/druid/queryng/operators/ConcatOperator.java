@@ -46,7 +46,7 @@ public class ConcatOperator<T> implements IterableOperator<T>
 
   private final Iterator<Operator<T>> childIter;
   private Operator<T> current;
-  private RowIterator<T> currentIter;
+  private ResultIterator<T> currentIter;
 
   public ConcatOperator(FragmentContext context, List<Operator<T>> children)
   {
@@ -55,7 +55,7 @@ public class ConcatOperator<T> implements IterableOperator<T>
   }
 
   @Override
-  public RowIterator<T> open()
+  public ResultIterator<T> open()
   {
     return this;
   }

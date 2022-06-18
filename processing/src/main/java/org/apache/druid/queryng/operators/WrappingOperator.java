@@ -41,10 +41,10 @@ public abstract class WrappingOperator<T> implements Operator<T>
   }
 
   @Override
-  public RowIterator<T> open()
+  public ResultIterator<T> open()
   {
     Preconditions.checkState(state == State.START);
-    RowIterator<T> inputIter = input.open();
+    ResultIterator<T> inputIter = input.open();
     state = State.RUN;
     onOpen();
     return inputIter;

@@ -23,14 +23,14 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.queryng.fragment.FragmentContext.State;
 import org.apache.druid.queryng.operators.Iterators;
 import org.apache.druid.queryng.operators.Operator;
-import org.apache.druid.queryng.operators.Operator.RowIterator;
+import org.apache.druid.queryng.operators.Operator.ResultIterator;
 
 import java.util.List;
 
 public class FragmentRunImpl<T> implements FragmentRun<T>
 {
   private final FragmentContextImpl context;
-  private RowIterator<T> rootIter;
+  private ResultIterator<T> rootIter;
 
   public FragmentRunImpl(FragmentContextImpl context, Operator<T> root)
   {
@@ -48,7 +48,7 @@ public class FragmentRunImpl<T> implements FragmentRun<T>
   }
 
   @Override
-  public RowIterator<T> iterator()
+  public ResultIterator<T> iterator()
   {
     Preconditions.checkState(context.state == State.RUN);
     return rootIter;
