@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.tester;
 
-import com.google.api.client.util.Strings;
+import com.google.common.base.Strings;
 import org.apache.calcite.sql.SqlNode;
 
 /**
