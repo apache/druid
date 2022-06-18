@@ -126,8 +126,8 @@ String functions accept strings, and return a type appropriate to the function.
 Time functions can be used with:
 
 - Druid's primary timestamp column, `__time`;
-- Any column storing millisecond timestamps, through the `MILLIS_TO_TIMESTAMP` function; and
-- Any column storing string timestamps, through use of the `TIME_PARSE` function.
+- Numeric values representing milliseconds since the epoch, through the MILLIS_TO_TIMESTAMP function; and
+- String timestamps, through the TIME_PARSE function.
 
 By default, time operations use the UTC time zone. You can change the time zone by setting the connection
 context parameter `sqlTimeZone` to the name of another time zone, like `America/Los_Angeles`, or to an offset like
@@ -148,6 +148,12 @@ of its upper bound, which makes it awkward to write time filters correctly. For 
 `TIME_IN_INTERVAL(__time, '2000-01-01/2000-02-01')` is
 `__time BETWEEN TIMESTAMP '2000-01-01 00:00:00' AND TIMESTAMP '2000-01-31 23:59:59.999'`.
 
+Druid processes timestamps internally as longs (64-bit integers) representing milliseconds since the epoch. Therefore,
+time functions perform best when used with the primary timestamp column, or with timestamps stored in long columns as
+milliseconds and accessed with MILLIS_TO_TIMESTAMP. Other timestamp representations, include string timestamps and
+POSIX timestamps (seconds since the epoch) require query-time conversion to Druid's internal form, which adds additional
+overhead.
+
 |Function|Notes|
 |--------|-----|
 |`CURRENT_TIMESTAMP`|Current timestamp in the connection's time zone.|
@@ -159,8 +165,8 @@ of its upper bound, which makes it awkward to write time filters correctly. For 
 |`TIME_EXTRACT(timestamp_expr, [unit, [timezone]])`|Extracts a time part from `expr`, returning it as a number. Unit can be EPOCH, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), DOY (day of year), WEEK (week of [week year](https://en.wikipedia.org/wiki/ISO_week_date)), MONTH (1 through 12), QUARTER (1 through 4), or YEAR. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `EXTRACT` but is more flexible. Unit and time zone must be literals, and must be provided quoted, like `TIME_EXTRACT(__time, 'HOUR')` or `TIME_EXTRACT(__time, 'HOUR', 'America/Los_Angeles')`.|
 |`TIME_PARSE(string_expr, [pattern, [timezone]])`|Parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO8601 (e.g. `2000-01-02T03:04:05Z`) if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00", and will be used as the time zone for strings that do not include a time zone offset. Pattern and time zone must be literals. Strings that cannot be parsed as timestamps will be returned as NULL.|
 |`TIME_FORMAT(timestamp_expr, [pattern, [timezone]])`|Formats a timestamp as a string with a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO8601 (e.g. `2000-01-02T03:04:05Z`) if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". Pattern and time zone must be literals.|
-|`TIME_IN_INTERVAL(timestamp_expr, interval)`|Returns whether a timestamp is contained within a particular interval. The interval must be a literal string containing any ISO8601 interval, such as `'2001-01-01/P1D'` or `2001-01-01T01:00:00/2001-01-02T01:00:00`. The start instant of the interval is inclusive and the end instant is exclusive.|
-|`MILLIS_TO_TIMESTAMP(millis_expr)`|Converts a number of milliseconds since the epoch into a timestamp.|
+|`TIME_IN_INTERVAL(timestamp_expr, interval)`|Returns whether a timestamp is contained within a particular interval. The interval must be a literal string containing any ISO8601 interval, such as `'2001-01-01/P1D'` or `'2001-01-01T01:00:00/2001-01-02T01:00:00'`. The start instant of the interval is inclusive and the end instant is exclusive.|
+|`MILLIS_TO_TIMESTAMP(millis_expr)`|Converts a number of milliseconds since the epoch (1970-01-01 00:00:00 UTC) into a timestamp.|
 |`TIMESTAMP_TO_MILLIS(timestamp_expr)`|Converts a timestamp into a number of milliseconds since the epoch.|
 |`EXTRACT(unit FROM timestamp_expr)`|Extracts a time part from `expr`, returning it as a number. Unit can be EPOCH, MICROSECOND, MILLISECOND, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), ISODOW (ISO day of week), DOY (day of year), WEEK (week of year), MONTH, QUARTER, YEAR, ISOYEAR, DECADE, CENTURY or MILLENNIUM. Units must be provided unquoted, like `EXTRACT(HOUR FROM __time)`.|
 |`FLOOR(timestamp_expr TO unit)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
