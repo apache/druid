@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
@@ -117,7 +118,7 @@ public class AzureInputSource extends CloudObjectInputSource
         blobHolder -> new InputFileAttribute(blobHolder.getBlobLength())
     );
 
-    if (org.apache.commons.lang.StringUtils.isNotBlank(getFilter())) {
+    if (StringUtils.isNotBlank(getFilter())) {
       return Streams.sequentialStreamFrom(splitIterator)
       .map(objects -> objects.stream()
                              .map(azureCloudBlobToLocationConverter::createCloudObjectLocation)

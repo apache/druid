@@ -87,9 +87,9 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   );
 
   private static final List<URI> URIS_BEFORE_FILTER = Arrays.asList(
-      URI.create("s3://foo/bar/file.csv"),
-      URI.create("s3://bar/foo/file2.csv"),
-      URI.create("s3://bar/foo/file3.txt")
+      URI.create("gs://foo/bar/file.csv"),
+      URI.create("gs://bar/foo/file2.csv"),
+      URI.create("gs://bar/foo/file3.txt")
   );
 
   private static final List<List<CloudObjectLocation>> EXPECTED_OBJECTS =

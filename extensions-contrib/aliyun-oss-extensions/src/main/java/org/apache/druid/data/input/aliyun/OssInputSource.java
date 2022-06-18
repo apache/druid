@@ -28,6 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputSplit;
@@ -116,7 +117,7 @@ public class OssInputSource extends CloudObjectInputSource
         object -> new InputFileAttribute(object.getSize())
     );
 
-    if (org.apache.commons.lang.StringUtils.isNotBlank(getFilter())) {
+    if (StringUtils.isNotBlank(getFilter())) {
       return Streams.sequentialStreamFrom(splitIterator)
       .map(objects -> objects.stream()
                              .map(OssUtils::summaryToCloudObjectLocation)
