@@ -47,7 +47,6 @@
                 <Class name="org.apache.druid.query.scan.ScanQuery$ScanRowsLimitJsonIncludeFilter"/>
                 <Class name="org.apache.druid.query.scan.ScanQuery$ScanTimeOrderJsonIncludeFilter"/>
                 <Class name="org.apache.druid.query.scan.ScanQuery$BatchSizeJsonIncludeFilter"/>
-                <Class name="org.apache.druid.query.scan.ScanQuery$IsLegacyJsonIncludeFilter"/>
                 <Class name="org.apache.druid.query.groupby.orderby.DefaultLimitSpec$LimitJsonIncludeFilter"/>
                 <Class name="org.apache.druid.segment.VirtualColumns$JsonIncludeFilter"/>
             </Or>
