@@ -53,6 +53,6 @@ public class Access
   @Override
   public String toString()
   {
-    return StringUtils.format("Access{Allowed: %s, Message: %s}", allowed, message);
+    return StringUtils.format("Allowed:%s, Message:%s", allowed, message);
   }
 }
