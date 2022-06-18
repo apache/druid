@@ -19,7 +19,7 @@
 
 package org.apache.druid.catalog;
 
-import org.apache.druid.catalog.SchemaRegistry.SchemaDefn;
+import org.apache.druid.catalog.SchemaRegistry.SchemaSpec;
 
 import javax.inject.Inject;
 
@@ -57,7 +57,7 @@ public class LocalMetadataCatalog implements MetadataCatalog
   @Override
   public List<TableMetadata> tables(String schemaName)
   {
-    SchemaDefn schema = schemaRegistry.schema(schemaName);
+    SchemaSpec schema = schemaRegistry.schema(schemaName);
     if (schema == null || !schema.writable()) {
       return Collections.emptyList();
     }
@@ -67,7 +67,7 @@ public class LocalMetadataCatalog implements MetadataCatalog
   @Override
   public Set<String> tableNames(String schemaName)
   {
-    SchemaDefn schema = schemaRegistry.schema(schemaName);
+    SchemaSpec schema = schemaRegistry.schema(schemaName);
     if (schema == null || !schema.writable()) {
       return Collections.emptySet();
     }
