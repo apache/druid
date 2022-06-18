@@ -389,16 +389,18 @@ public class SqlLifecycle
   public Set<ResourceAction> runAnalyzeResources(AuthenticationResult authenticationResult)
   {
     validate(authenticationResult);
-    return planner.resourceActions();
+    return getRequiredResourceActions();
   }
 
   public Set<ResourceAction> getRequiredResourceActions()
   {
-    return Preconditions.checkNotNull(planner, "validationResult").resourceActions();
+    return Preconditions
+        .checkNotNull(planner, "validationResult")
+        .resourceActions(authConfig.authorizeQueryContextParams());
   }
 
   /**
-   * Cancel all native queries associated to this lifecycle.
+   * Cancel all native queries associated with this lifecycle.
    *
    * This method is thread-safe.
    */
