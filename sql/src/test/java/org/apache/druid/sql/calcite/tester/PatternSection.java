@@ -361,7 +361,7 @@ public class PatternSection extends TestSection
   @Override
   public int hashCode()
   {
-    return java.util.Objects.hash(section, name, expected);
+    return Objects.hash(section, name, expected);
   }
 
   @Override
