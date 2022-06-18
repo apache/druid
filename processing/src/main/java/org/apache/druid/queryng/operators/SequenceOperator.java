@@ -80,7 +80,6 @@ public class SequenceOperator<T> implements IterableOperator<T>
       closeYielder();
       throw Operators.eof();
     }
-    Preconditions.checkState(yielder != null);
     T value = yielder.get();
     yielder = yielder.next(null);
     return value;
