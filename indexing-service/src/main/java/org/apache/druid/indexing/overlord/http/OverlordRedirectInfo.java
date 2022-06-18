@@ -42,7 +42,11 @@ public class OverlordRedirectInfo implements RedirectInfo
   private static final Set<String> LOCAL_GET_PATHS = ImmutableSet.of(
       "/druid/indexer/v1/task/*/log",
       "/druid/indexer/v1/task/*/reports",
-      "/druid/indexer/v1/task/*/segments"
+      "/druid/indexer/v1/task/*/segments",
+      "/druid/indexer/v1/worker",
+      "/druid/indexer/v1/worker/history",
+      "/druid/indexer/v1/tasks",
+      "/druid/indexer/v1/*Tasks"
   );
 
   private final TaskMaster taskMaster;

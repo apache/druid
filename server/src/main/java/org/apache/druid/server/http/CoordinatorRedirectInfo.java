@@ -39,8 +39,8 @@ public class CoordinatorRedirectInfo implements RedirectInfo
   );
 
   private static final Set<String> LOCAL_GET_PATHS = ImmutableSet.of(
-    "/druid-ext/basic-security/authentication/db",
-    "/druid-ext/basic-security/authorization/db"
+      "/druid-ext/basic-security/authentication/db/*",
+      "/druid-ext/basic-security/authorization/db/*"
   );
 
   private final DruidCoordinator coordinator;
