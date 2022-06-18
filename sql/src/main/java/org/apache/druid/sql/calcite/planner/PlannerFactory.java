@@ -123,12 +123,12 @@ public class PlannerFactory
     thePlanner.getPlannerContext()
               .setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
     try {
-      thePlanner.validate(false);
+      thePlanner.validate();
     }
     catch (SqlParseException | ValidationException e) {
       throw new RuntimeException(e);
     }
-    thePlanner.getPlannerContext().setAuthorizationResult(Access.OK);
+    thePlanner.authorize(ra -> Access.OK, false);
     return thePlanner;
   }
 

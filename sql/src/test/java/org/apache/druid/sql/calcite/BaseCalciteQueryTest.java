@@ -987,7 +987,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
     SqlLifecycle lifecycle = lifecycleFactory.factorize();
     lifecycle.initialize(sql, new QueryContext(contexts));
-    return lifecycle.runAnalyzeResources(authenticationResult).getResourceActions();
+    return lifecycle.runAnalyzeResources(authenticationResult);
   }
 
   public SqlLifecycleFactory getSqlLifecycleFactory(

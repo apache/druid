@@ -55,7 +55,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
-import org.apache.druid.sql.calcite.planner.ValidationResult;
 import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.http.SqlQuery;
 
@@ -69,6 +68,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -118,7 +118,6 @@ public class SqlLifecycle
    */
   private DruidPlanner planner;
   private PlannerContext plannerContext;
-  private ValidationResult validationResult;
   private PrepareResult prepareResult;
   private PlannerResult plannerResult;
 
@@ -202,14 +201,13 @@ public class SqlLifecycle
     }
     transition(State.INITIALIZED, State.AUTHORIZING);
     validate(authenticationResult);
-    Access access = doAuthorize(
+    doAuthorize(resourceActions ->
         AuthorizationUtils.authorizeAllResourceActions(
             authenticationResult,
-            validationResult.getResourceActions(),
+            resourceActions,
             plannerFactory.getAuthorizerMapper()
         )
     );
-    checkAccess(access);
   }
 
   /**
@@ -224,21 +222,20 @@ public class SqlLifecycle
     transition(State.INITIALIZED, State.AUTHORIZING);
     AuthenticationResult authResult = AuthorizationUtils.authenticationResultFromRequest(req);
     validate(authResult);
-    Access access = doAuthorize(
+    doAuthorize(resourceActions ->
         AuthorizationUtils.authorizeAllResourceActions(
             req,
-            validationResult.getResourceActions(),
+            resourceActions,
             plannerFactory.getAuthorizerMapper()
         )
     );
-    checkAccess(access);
   }
 
   /**
    * Perform the validation step on the Druid planner, leaving the planner
    * ready to perform either prepare or plan.
    */
-  private ValidationResult validate(AuthenticationResult authenticationResult)
+  private void validate(AuthenticationResult authenticationResult)
   {
     try {
       planner = plannerFactory.createPlanner(sql, queryContext);
@@ -247,8 +244,7 @@ public class SqlLifecycle
       plannerContext.setAuthenticationResult(authenticationResult);
       // set parameters on planner context, if parameters have already been set
       plannerContext.setParameters(parameters);
-      validationResult = planner.validate(authConfig.authorizeQueryContextParams());
-      return validationResult;
+      planner.validate();
     }
     // we can't collapse catch clauses since SqlPlanningException has type-sensitive constructors.
     catch (SqlParseException e) {
@@ -259,22 +255,19 @@ public class SqlLifecycle
     }
   }
 
-  private Access doAuthorize(final Access authorizationResult)
+  private void doAuthorize(Function<Set<ResourceAction>, Access> authorizer)
   {
+    Access authorizationResult = planner.authorize(
+        authorizer,
+        authConfig.authorizeQueryContextParams());
     if (!authorizationResult.isAllowed()) {
       // Not authorized; go straight to Jail, do not pass Go.
       transition(State.AUTHORIZING, State.UNAUTHORIZED);
     } else {
       transition(State.AUTHORIZING, State.AUTHORIZED);
     }
-    return authorizationResult;
-  }
-
-  private void checkAccess(Access access)
-  {
-    plannerContext.setAuthorizationResult(access);
-    if (!access.isAllowed()) {
-      throw new ForbiddenException(access.toString());
+    if (!authorizationResult.isAllowed()) {
+      throw new ForbiddenException(authorizationResult.toString());
     }
   }
 
@@ -393,14 +386,15 @@ public class SqlLifecycle
   }
 
   @VisibleForTesting
-  public ValidationResult runAnalyzeResources(AuthenticationResult authenticationResult)
+  public Set<ResourceAction> runAnalyzeResources(AuthenticationResult authenticationResult)
   {
-    return validate(authenticationResult);
+    validate(authenticationResult);
+    return planner.resourceActions();
   }
 
   public Set<ResourceAction> getRequiredResourceActions()
   {
-    return Preconditions.checkNotNull(validationResult, "validationResult").getResourceActions();
+    return Preconditions.checkNotNull(planner, "validationResult").resourceActions();
   }
 
   /**
@@ -469,10 +463,10 @@ public class SqlLifecycle
         metricBuilder.setDimension("id", plannerContext.getSqlQueryId());
         metricBuilder.setDimension("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
       }
-      if (validationResult != null) {
+      if (planner != null && planner.resourceActions() != null) {
         metricBuilder.setDimension(
             "dataSource",
-            validationResult.getResourceActions()
+            planner.resourceActions()
                             .stream()
                             .map(action -> action.getResource().getName())
                             .collect(Collectors.toList())

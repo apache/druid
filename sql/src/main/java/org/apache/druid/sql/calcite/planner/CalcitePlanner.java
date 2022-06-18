@@ -70,8 +70,12 @@ import java.util.List;
 import java.util.Properties;
 
 /**
- * Calcite planner. Clone of Calcite's {@code SqlPlannerImpl},
- * but with the validator made accessible.
+ * Calcite planner. Clone of Calcite's
+ * {@link  org.apache.calcite.prepare.PlannerImpl}, as of version 1.21,
+ * but with the validator made accessible, and with the minimum of formatting
+ * changes needed to pass Druid's static checks. Note that the resulting code
+ * is more Calcite-like than Druid-like. There seemed no value in restructuring
+ * the code just to be more Druid-like.
  */
 public class CalcitePlanner implements Planner, ViewExpander
 {

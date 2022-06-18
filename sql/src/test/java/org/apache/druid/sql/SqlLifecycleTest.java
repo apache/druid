@@ -42,7 +42,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
-import org.apache.druid.sql.calcite.planner.ValidationResult;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlParameter;
 import org.easymock.EasyMock;
@@ -51,8 +50,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;
+
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -137,17 +136,15 @@ public class SqlLifecycleTest
     // test authorization
     DruidPlanner mockPlanner = EasyMock.createMock(DruidPlanner.class);
     PlannerContext mockPlannerContext = EasyMock.createMock(PlannerContext.class);
-    ValidationResult validationResult = new ValidationResult(Collections.emptySet());
     EasyMock.expect(plannerFactory.createPlanner(EasyMock.eq(sql), EasyMock.anyObject())).andReturn(mockPlanner).once();
     EasyMock.expect(mockPlanner.getPlannerContext()).andReturn(mockPlannerContext).once();
     mockPlannerContext.setAuthenticationResult(CalciteTests.REGULAR_USER_AUTH_RESULT);
     EasyMock.expectLastCall();
     mockPlannerContext.setParameters(parameters);
     EasyMock.expectLastCall();
-    EasyMock.expect(plannerFactory.getAuthorizerMapper()).andReturn(CalciteTests.TEST_AUTHORIZER_MAPPER).once();
-    mockPlannerContext.setAuthorizationResult(Access.OK);
+    mockPlanner.validate();
     EasyMock.expectLastCall();
-    EasyMock.expect(mockPlanner.validate(false)).andReturn(validationResult).once();
+    EasyMock.expect(mockPlanner.authorize(EasyMock.anyObject(), EasyMock.eq(false))).andReturn(Access.OK).once();
     EasyMock.expectLastCall();
 
     EasyMock.replay(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext);
@@ -212,8 +209,8 @@ public class SqlLifecycleTest
   public void testStateTransitionHttpRequest()
       throws ValidationException, SqlParseException, RelConversionException, IOException
   {
-    // this test is a duplicate of testStateTransition except with a slight variation of how validate and authorize
-    // is run
+    // this test is a duplicate of testStateTransition except with a slight
+    // variation of how validate and authorize is run
     SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
     final String sql = "select 1 + ?";
     Assert.assertEquals(SqlLifecycle.State.NEW, lifecycle.getState());
@@ -229,24 +226,21 @@ public class SqlLifecycleTest
     // test authorization
     DruidPlanner mockPlanner = EasyMock.createMock(DruidPlanner.class);
     PlannerContext mockPlannerContext = EasyMock.createMock(PlannerContext.class);
-    ValidationResult validationResult = new ValidationResult(Collections.emptySet());
     EasyMock.expect(plannerFactory.createPlanner(EasyMock.eq(sql), EasyMock.anyObject())).andReturn(mockPlanner).once();
     EasyMock.expect(mockPlanner.getPlannerContext()).andReturn(mockPlannerContext).once();
     mockPlannerContext.setAuthenticationResult(CalciteTests.REGULAR_USER_AUTH_RESULT);
     EasyMock.expectLastCall();
     mockPlannerContext.setParameters(parameters);
     EasyMock.expectLastCall();
-    EasyMock.expect(plannerFactory.getAuthorizerMapper()).andReturn(CalciteTests.TEST_AUTHORIZER_MAPPER).once();
-    mockPlannerContext.setAuthorizationResult(Access.OK);
+    mockPlanner.validate();
     EasyMock.expectLastCall();
-    EasyMock.expect(mockPlanner.validate(false)).andReturn(validationResult).once();
+    EasyMock.expect(mockPlanner.authorize(EasyMock.anyObject(), EasyMock.eq(false))).andReturn(Access.OK).once();
     EasyMock.expectLastCall();
 
+    // Note: can't check the request usage with mocks: the code is run
+    // in a function which the mock doesn't actually call.
     HttpServletRequest request = EasyMock.createMock(HttpServletRequest.class);
-    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT).times(2);
-    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
-    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
-    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT).once();
     EasyMock.expectLastCall();
     EasyMock.replay(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, request);
 

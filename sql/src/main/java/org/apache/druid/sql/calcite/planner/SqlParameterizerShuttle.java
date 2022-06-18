@@ -62,29 +62,29 @@ public class SqlParameterizerShuttle extends SqlShuttle
   @Override
   public SqlNode visit(SqlDynamicParam param)
   {
-    try {
-      if (plannerContext.getParameters().size() <= param.getIndex()) {
-        throw new IAE("Parameter at position [%s] is not bound", param.getIndex());
-      }
-      TypedValue paramBinding = plannerContext.getParameters().get(param.getIndex());
-      if (paramBinding == null) {
-        throw new IAE("Parameter at position [%s] is not bound", param.getIndex());
-      }
-      if (paramBinding.value == null) {
-        return SqlLiteral.createNull(param.getParserPosition());
-      }
-      SqlTypeName typeName = SqlTypeName.getNameForJdbcType(paramBinding.type.typeId);
-      if (SqlTypeName.APPROX_TYPES.contains(typeName)) {
-        return SqlLiteral.createApproxNumeric(paramBinding.value.toString(), param.getParserPosition());
-      }
-      if (SqlTypeName.TIMESTAMP.equals(typeName) && paramBinding.value instanceof Long) {
-        return SqlLiteral.createTimestamp(
-            TimestampString.fromMillisSinceEpoch((Long) paramBinding.value),
-            0,
-            param.getParserPosition()
-        );
-      }
+    if (plannerContext.getParameters().size() <= param.getIndex()) {
+      throw new IAE("Parameter at position [%s] is not bound", param.getIndex());
+    }
+    TypedValue paramBinding = plannerContext.getParameters().get(param.getIndex());
+    if (paramBinding == null) {
+      throw new IAE("Parameter at position [%s] is not bound", param.getIndex());
+    }
+    if (paramBinding.value == null) {
+      return SqlLiteral.createNull(param.getParserPosition());
+    }
+    SqlTypeName typeName = SqlTypeName.getNameForJdbcType(paramBinding.type.typeId);
+    if (SqlTypeName.APPROX_TYPES.contains(typeName)) {
+      return SqlLiteral.createApproxNumeric(paramBinding.value.toString(), param.getParserPosition());
+    }
+    if (SqlTypeName.TIMESTAMP.equals(typeName) && paramBinding.value instanceof Long) {
+      return SqlLiteral.createTimestamp(
+          TimestampString.fromMillisSinceEpoch((Long) paramBinding.value),
+          0,
+          param.getParserPosition()
+      );
+    }
 
+    try {
       // This throws ClassCastException for a DATE parameter given as
       // an Integer. The parameter is left in place and is replaced
       // properly later by RelParameterizerShuttle.
