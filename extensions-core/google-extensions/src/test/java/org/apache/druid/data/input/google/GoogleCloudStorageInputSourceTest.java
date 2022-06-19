@@ -56,7 +56,9 @@ import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -105,6 +107,9 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   private static final DateTime NOW = DateTimes.nowUtc();
   private static final byte[] CONTENT =
       StringUtils.toUtf8(StringUtils.format("%d,hello,world", NOW.getMillis()));
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testSerde() throws Exception
@@ -179,6 +184,20 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
     Assert.assertEquals(EXPECTED_OBJECTS, splits.map(InputSplit::get).collect(Collectors.toList()));
   }
 
+  @Test
+  public void testIllegalObjectsAndPrefixes()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    // constructor will explode
+    new GoogleCloudStorageInputSource(
+        STORAGE,
+        INPUT_DATA_CONFIG,
+        null,
+        PREFIXES,
+        EXPECTED_OBJECTS.get(0),
+        "*.csv"
+    );
+  }
 
   @Test
   public void testWithPrefixesSplit() throws IOException
