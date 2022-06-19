@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.apache.druid.queryng.guice.QueryNGModule;
 import org.apache.druid.server.DruidNode;
 
 import java.util.List;
@@ -77,6 +78,7 @@ public class CreateTables extends GuiceRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
+        new QueryNGModule(),
         binder -> {
           JsonConfigProvider.bindInstance(
               binder,

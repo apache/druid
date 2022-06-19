@@ -54,6 +54,7 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
+import org.apache.druid.queryng.guice.QueryNGModule;
 
 import java.io.File;
 import java.io.IOException;
@@ -106,6 +107,7 @@ public class DruidJsonValidator extends GuiceRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
+        new QueryNGModule(),
         binder -> {
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/validator");
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);

@@ -27,6 +27,7 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.queryng.fragment.FragmentBuilderFactory;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -42,6 +43,7 @@ public class QueryLifecycleFactory
   private final AuthorizerMapper authorizerMapper;
   private final DefaultQueryConfig defaultQueryConfig;
   private final AuthConfig authConfig;
+  private final FragmentBuilderFactory fragmentContextFactory;
 
   @Inject
   public QueryLifecycleFactory(
@@ -52,7 +54,8 @@ public class QueryLifecycleFactory
       final RequestLogger requestLogger,
       final AuthConfig authConfig,
       final AuthorizerMapper authorizerMapper,
-      final Supplier<DefaultQueryConfig> queryConfigSupplier
+      final Supplier<DefaultQueryConfig> queryConfigSupplier,
+      final FragmentBuilderFactory fragmentContextFactory
   )
   {
     this.warehouse = warehouse;
@@ -63,6 +66,7 @@ public class QueryLifecycleFactory
     this.authorizerMapper = authorizerMapper;
     this.defaultQueryConfig = queryConfigSupplier.get();
     this.authConfig = authConfig;
+    this.fragmentContextFactory = fragmentContextFactory;
   }
 
   public QueryLifecycle factorize()
@@ -76,6 +80,7 @@ public class QueryLifecycleFactory
         authorizerMapper,
         defaultQueryConfig,
         authConfig,
+        fragmentContextFactory,
         System.currentTimeMillis(),
         System.nanoTime()
     );

@@ -29,6 +29,7 @@ import org.apache.curator.shaded.com.google.common.collect.ImmutableList;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.queryng.guice.QueryNGModule;
 import org.apache.druid.server.log.EmittingRequestLogger;
 import org.apache.druid.server.log.EmittingRequestLoggerProvider;
 import org.apache.druid.server.log.NoopRequestLogger;
@@ -77,6 +78,7 @@ public class QueryableModuleTest
             new JacksonModule(),
             new ConfigModule(),
             new QueryRunnerFactoryModule(),
+            new QueryNGModule(),
             new DruidProcessingConfigModule(),
             new BrokerProcessingModule(),
             new LifecycleModule(),

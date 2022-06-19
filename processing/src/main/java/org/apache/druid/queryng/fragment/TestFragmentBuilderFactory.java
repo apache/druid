@@ -21,37 +21,28 @@ package org.apache.druid.queryng.fragment;
 
 import org.apache.druid.query.Query;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.queryng.config.QueryNGConfig;
 
-import javax.inject.Inject;
-
 /**
- * Creates a fragment context for the "shim" implementation of the
- * NG query engine, but only if the engine is enabled. Queries should
- * take the existence of the fragment context as their indication to use
- * the NG engine, else stick with the "classic" engine.
+ * Test version of the fragment factory which enables Query NG only if
+ * the {@code druid.queryng.enable} system property is set, and then,
+ * only for scan queries.
  */
-public class FragmentBuilderFactoryImpl implements FragmentBuilderFactory
+public class TestFragmentBuilderFactory implements FragmentBuilderFactory
 {
-  private final QueryNGConfig config;
-
-  @Inject
-  public FragmentBuilderFactoryImpl(QueryNGConfig config)
-  {
-    this.config = config;
-  }
+  private static final String ENABLED_KEY = QueryNGConfig.CONFIG_ROOT + ".enabled";
+  private static final boolean ENABLED = Boolean.parseBoolean(System.getProperty(ENABLED_KEY));
 
   @Override
-  public FragmentBuilder create(
-      final Query<?> query,
-      final ResponseContext responseContext)
+  public FragmentBuilder create(Query<?> query, ResponseContext responseContext)
   {
-    // Config imposes a number of obstacles.
-    if (!config.isEnabled(query)) {
+    //if (!ENABLED) {
+    //  return null;
+    //}
+    if (!(query instanceof ScanQuery)) {
       return null;
     }
-    // Only then do we create a fragment builder which, implicitly,
-    // enables the NG engine.
     return new FragmentBuilderImpl(query.getId(), 0, responseContext);
   }
 }

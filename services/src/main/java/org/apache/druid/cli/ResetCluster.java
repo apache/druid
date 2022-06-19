@@ -36,6 +36,7 @@ import org.apache.druid.indexing.common.task.HadoopTask;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.apache.druid.queryng.guice.QueryNGModule;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogKiller;
@@ -84,6 +85,7 @@ public class ResetCluster extends GuiceRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
+        new QueryNGModule(),
         binder -> {
           JsonConfigProvider.bindInstance(
               binder,

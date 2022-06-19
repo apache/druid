@@ -62,7 +62,7 @@ public class ScanCompactListToArrayOperator extends MappingOperator<List<Object>
       // happen, and there's a good reason for it, then we should remap
       // the result row here.
       throw new ISE(
-          "Mismatch in expected [%d] vs actual [%s] field count",
+          "Mismatch in expected [%d] vs. actual [%s] field count",
           fields.size(),
           row.size());
     }

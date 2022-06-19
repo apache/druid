@@ -46,6 +46,8 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
+import org.apache.druid.queryng.config.QueryNGConfig;
+import org.apache.druid.queryng.planner.ScanPlanner;
 import org.apache.druid.segment.Segment;
 import org.joda.time.Interval;
 
@@ -87,8 +89,18 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       final Iterable<QueryRunner<ScanResultValue>> queryRunners
   )
   {
-    // in single thread and in Jetty thread instead of processing thread
+    // In single thread and in Jetty thread instead of processing thread
     return (queryPlus, responseContext) -> {
+      if (QueryNGConfig.enabledFor(queryPlus)) {
+        Sequence<ScanResultValue> results = ScanPlanner.runMerge(
+            queryPlus,
+            queryRunners,
+            responseContext);
+        if (results != null) {
+          return results;
+        }
+      }
+
       ScanQuery query = (ScanQuery) queryPlus.getQuery();
       ScanQuery.verifyOrderByForNativeExecution(query);
 
@@ -147,7 +159,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
             ((SinkQueryRunners<ScanResultValue>) queryRunners).runnerIntervalMappingIterator()
                                                               .forEachRemaining(intervalsAndRunnersOrdered::add);
           } else {
-            throw new ISE("Number of segment descriptors does not equal number of "
+            throw new ISE("Number of segment descriptors does not equal the number of "
                           + "query runners...something went wrong!");
           }
 
@@ -295,7 +307,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     } else {
       throw new UOE(
           "Time-ordering on scan queries is only supported for queries with segment specs "
-          + "of type MultipleSpecificSegmentSpec or SpecificSegmentSpec...a [%s] was received instead.",
+          + "of type MultipleSpecificSegmentSpec or SpecificSegmentSpec. A [%s] was received instead.",
           spec.getClass().getSimpleName()
       );
     }
@@ -310,8 +322,8 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
   )
   {
     // Starting from the innermost Sequences.map:
-    // (1) Deaggregate each ScanResultValue returned by the query runners
-    // (2) Combine the deaggregated ScanResultValues into a single sequence
+    // (1) Disaggregate each ScanResultValue returned by the query runners
+    // (2) Combine the disaggregated ScanResultValues into a single sequence
     // (3) Create a sequence of results from each runner in the group and flatmerge based on timestamp
     // (4) Create a sequence of results from each runner group
     // (5) Join all the results into a single sequence
@@ -361,11 +373,14 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     @Override
     public Sequence<ScanResultValue> run(QueryPlus<ScanResultValue> queryPlus, ResponseContext responseContext)
     {
+      if (QueryNGConfig.enabledFor(queryPlus)) {
+        return ScanPlanner.runScan(queryPlus, segment, responseContext);
+      }
+
       Query<ScanResultValue> query = queryPlus.getQuery();
       if (!(query instanceof ScanQuery)) {
         throw new ISE("Got a [%s] which isn't a %s", query.getClass(), ScanQuery.class);
       }
-
       ScanQuery.verifyOrderByForNativeExecution((ScanQuery) query);
 
       // it happens in unit tests

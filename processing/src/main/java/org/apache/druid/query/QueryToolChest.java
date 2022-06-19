@@ -330,4 +330,10 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   {
     throw new UOE("Query type '%s' does not support returning results as arrays", query.getType());
   }
+
+  @SuppressWarnings("unchecked")
+  public Sequence<Object[]> resultsAsArrays(QueryPlus<ResultType> query, Sequence<ResultType> resultSequence)
+  {
+    return resultsAsArrays((QueryType) query.getQuery(), resultSequence);
+  }
 }

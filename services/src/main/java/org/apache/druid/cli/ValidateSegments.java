@@ -33,6 +33,7 @@ import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.queryng.guice.QueryNGModule;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnConfig;
 
@@ -85,6 +86,7 @@ public class ValidateSegments extends GuiceRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
+        new QueryNGModule(),
         new Module()
         {
           @Override

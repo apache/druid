@@ -46,6 +46,8 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.queryng.fragment.FragmentBuilder;
+import org.apache.druid.queryng.fragment.FragmentBuilderFactory;
 import org.apache.druid.server.QueryResource.ResourceIOReaderWriter;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
@@ -69,8 +71,9 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Class that helps a Druid server (broker, historical, etc) manage the lifecycle of a query that it is handling. It
- * ensures that a query goes through the following stages, in the proper order:
+ * Class that helps a Druid server (broker, historical, etc) manage the
+ * lifecycle of a query that it is handling. It ensures that a query goes
+ * through the following stages, in the proper order:
  *
  * <ol>
  * <li>Initialization ({@link #initialize(Query)})</li>
@@ -93,6 +96,7 @@ public class QueryLifecycle
   private final AuthorizerMapper authorizerMapper;
   private final DefaultQueryConfig defaultQueryConfig;
   private final AuthConfig authConfig;
+  private final FragmentBuilderFactory fragmentContextFactory;
   private final long startMs;
   private final long startNs;
 
@@ -112,6 +116,7 @@ public class QueryLifecycle
       final AuthorizerMapper authorizerMapper,
       final DefaultQueryConfig defaultQueryConfig,
       final AuthConfig authConfig,
+      final FragmentBuilderFactory fragmentContextFactory,
       final long startMs,
       final long startNs
   )
@@ -124,10 +129,10 @@ public class QueryLifecycle
     this.authorizerMapper = authorizerMapper;
     this.defaultQueryConfig = defaultQueryConfig;
     this.authConfig = authConfig;
+    this.fragmentContextFactory = fragmentContextFactory;
     this.startMs = startMs;
     this.startNs = startNs;
   }
-
 
   /**
    * For callers who have already authorized their query, and where simplicity is desired over flexibility. This method
@@ -278,8 +283,11 @@ public class QueryLifecycle
 
     final ResponseContext responseContext = DirectDruidClient.makeResponseContextForQuery();
 
+    final FragmentBuilder fragmentBuilder = fragmentContextFactory.create(baseQuery, responseContext);
+    @SuppressWarnings("rawtypes")
     final Sequence<?> res = QueryPlus.wrap(baseQuery)
                                   .withIdentity(authenticationResult.getIdentity())
+                                  .withFragmentBuilder(fragmentBuilder)
                                   .run(texasRanger, responseContext);
 
     return new QueryResponse(res == null ? Sequences.empty() : res, responseContext);

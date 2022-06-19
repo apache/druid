@@ -19,14 +19,17 @@
 
 package org.apache.druid.queryng.operators;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceTestHelper;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.queryng.config.QueryNGConfig;
 import org.apache.druid.queryng.fragment.FragmentBuilder;
 import org.apache.druid.queryng.fragment.FragmentBuilderFactory;
@@ -295,6 +298,43 @@ public class FragmentTest
   }
 
   @Test
+  public void testConfig()
+  {
+    Query<?> scanQuery = new Druids.ScanQueryBuilder()
+        .dataSource("foo")
+        .eternityInterval()
+        .build();
+    Query<?> scanQueryWithContext = scanQuery.withOverriddenContext(
+        ImmutableMap.of(QueryNGConfig.CONTEXT_VAR, true));
+    Query<?> otherQuery = Druids.newTimeseriesQueryBuilder()
+        .dataSource("foo")
+        .intervals(new MultipleIntervalSegmentSpec(
+            ImmutableList.of(Intervals.ETERNITY)))
+        .build();
+
+    // Completely diabled.
+    QueryNGConfig config = QueryNGConfig.create(false, false);
+    assertFalse(config.enabled());
+    assertFalse(config.isEnabled(scanQuery));
+    assertFalse(config.isEnabled(scanQueryWithContext));
+    assertFalse(config.isEnabled(otherQuery));
+
+    // Enabled, but only for scan.
+    config = QueryNGConfig.create(true, false);
+    assertTrue(config.enabled());
+    assertTrue(config.isEnabled(scanQuery));
+    assertTrue(config.isEnabled(scanQueryWithContext));
+    assertFalse(config.isEnabled(otherQuery));
+
+    // Enabled, but only for scan, and only if requested in context.
+    config = QueryNGConfig.create(true, true);
+    assertTrue(config.enabled());
+    assertFalse(config.isEnabled(scanQuery));
+    assertTrue(config.isEnabled(scanQueryWithContext));
+    assertFalse(config.isEnabled(otherQuery));
+  }
+
+  @Test
   public void testFactory()
   {
     Query<?> query = new Druids.ScanQueryBuilder()
@@ -303,13 +343,13 @@ public class FragmentTest
         .build();
 
     // Operators blocked by query: no gating context variable
-    QueryNGConfig enableConfig = QueryNGConfig.create(true);
+    QueryNGConfig enableConfig = QueryNGConfig.create(true, true);
     assertTrue(enableConfig.enabled());
     FragmentBuilderFactory enableFactory = new FragmentBuilderFactoryImpl(enableConfig);
     assertNull(enableFactory.create(query, ResponseContext.createEmpty()));
     FragmentBuilderFactory nullFactory = new NullFragmentBuilderFactory();
 
-    QueryNGConfig disableConfig = QueryNGConfig.create(false);
+    QueryNGConfig disableConfig = QueryNGConfig.create(false, false);
     assertFalse(disableConfig.enabled());
     FragmentBuilderFactory disableFactory = new FragmentBuilderFactoryImpl(disableConfig);
     assertNull(disableFactory.create(query, ResponseContext.createEmpty()));

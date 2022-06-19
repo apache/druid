@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
+import org.apache.druid.queryng.guice.QueryNGModule;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.timeline.DataSegment;
@@ -142,6 +143,7 @@ public class ExportMetadata extends GuiceRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
+        new QueryNGModule(),
         binder -> {
           JsonConfigProvider.bindInstance(
               binder,
@@ -208,7 +210,7 @@ public class ExportMetadata extends GuiceRunnable
     final Injector injector = makeInjector();
     SQLMetadataConnector dbConnector = injector.getInstance(SQLMetadataConnector.class);
     MetadataStorageTablesConfig metadataStorageTablesConfig = injector.getInstance(MetadataStorageTablesConfig.class);
-    
+
     // We export a raw CSV first, and then apply some conversions for easier imports:
     // Boolean strings are rewritten as 1 and 0
     // hexadecimal BLOB columns are rewritten with rewriteHexPayloadAsEscapedJson()
