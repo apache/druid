@@ -29,6 +29,7 @@ import org.mockito.Mockito;
 
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -37,7 +38,7 @@ public class CloudObjectInputSourceTest
 {
   private static final String SCHEME = "s3";
 
-  private static final List<URI> URIS = Arrays.asList(
+  private static final List<URI> URIS = Collections.singletonList(
       URI.create("s3://foo/bar/file.csv")
   );
 
