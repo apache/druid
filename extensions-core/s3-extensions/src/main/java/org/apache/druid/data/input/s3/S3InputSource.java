@@ -215,10 +215,21 @@ public class S3InputSource extends CloudObjectInputSource
   @Override
   protected Stream<InputSplit<List<CloudObjectLocation>>> getPrefixesSplitStream(@Nonnull SplitHintSpec splitHintSpec)
   {
-    final Iterator<List<S3ObjectSummary>> splitIterator = splitHintSpec.split(
-        getIterableObjectsFromPrefixes().iterator(),
-        object -> new InputFileAttribute(object.getSize())
-    );
+    final Iterator<List<S3ObjectSummary>> splitIterator;
+
+    // Skip files that didn't match filter from splitHintSpec.
+    if (org.apache.commons.lang.StringUtils.isNotBlank(getFilter())) {
+      splitIterator = splitHintSpec.split(
+          getIterableObjectsFromPrefixes().iterator(),
+          object -> FilenameUtils.wildcardMatch(object.getKey(), getFilter()) ? new InputFileAttribute(object.getSize()) : new InputFileAttribute(0)
+      );
+
+    } else {
+      splitIterator = splitHintSpec.split(
+          getIterableObjectsFromPrefixes().iterator(),
+          object -> new InputFileAttribute(object.getSize())
+      );
+    }
 
     // If filter is defined, apply it
     if (org.apache.commons.lang.StringUtils.isNotBlank(getFilter())) {

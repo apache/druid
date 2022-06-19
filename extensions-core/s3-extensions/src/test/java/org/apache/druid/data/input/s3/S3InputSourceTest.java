@@ -633,6 +633,34 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testGetPrefixesSplitStreamWithFilter()
+  {
+    EasyMock.reset(S3_CLIENT);
+    expectListObjects(PREFIXES.get(0), ImmutableList.of(URIS_BEFORE_FILTER.get(0)), CONTENT);
+    expectListObjects(PREFIXES.get(1), ImmutableList.of(URIS_BEFORE_FILTER.get(1), URIS_BEFORE_FILTER.get(2)), CONTENT);
+    EasyMock.replay(S3_CLIENT);
+
+    S3InputSource inputSource = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        PREFIXES,
+        null,
+        "*.csv",
+        null
+    );
+
+    Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+        new MaxSizeSplitHintSpec(null, 1)
+    );
+
+    Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
+    EasyMock.verify(S3_CLIENT);
+  }
+
+  @Test
   public void testCreateSplitsWithSplitHintSpecRespectingHint()
   {
     EasyMock.reset(S3_CLIENT);
