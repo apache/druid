@@ -106,6 +106,11 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   private static final S3InputDataConfig INPUT_DATA_CONFIG;
   private static final int MAX_LISTING_LENGTH = 10;
 
+  private static final List<CloudObjectLocation> EXPECTED_OBJECTS = Arrays.asList(
+      new CloudObjectLocation(URI.create("s3://foo/bar/file.csv")),
+      new CloudObjectLocation(URI.create("s3://bar/foo/file2.csv"))
+  );
+
   private static final List<URI> EXPECTED_URIS = Arrays.asList(
       URI.create("s3://foo/bar/file.csv"),
       URI.create("s3://bar/foo/file2.csv")
@@ -114,6 +119,12 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   private static final List<URI> EXPECTED_COMPRESSED_URIS = Arrays.asList(
       URI.create("s3://foo/bar/file.csv.gz"),
       URI.create("s3://bar/foo/file2.csv.gz")
+  );
+
+  private static final List<CloudObjectLocation> OBJECTS_BEFORE_FILTER = Arrays.asList(
+      new CloudObjectLocation(URI.create("s3://foo/bar/file.csv")),
+      new CloudObjectLocation(URI.create("s3://bar/foo/file2.csv")),
+      new CloudObjectLocation(URI.create("s3://bar/foo/file3.txt"))
   );
 
   private static final List<URI> URIS_BEFORE_FILTER = Arrays.asList(
@@ -387,7 +398,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSerdeWithNullJsonProps()
+  public void testWithNullJsonProps()
   {
     expectedException.expect(IllegalArgumentException.class);
     // constructor will explode
@@ -397,6 +408,57 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         null,
+        null,
+        null,
+        null
+    );
+  }
+
+  @Test
+  public void testIllegalObjectsAndUris()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    // constructor will explode
+    new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        EXPECTED_URIS,
+        null,
+        EXPECTED_OBJECTS,
+        null,
+        null
+    );
+  }
+
+  @Test
+  public void testIllegalObjectsAndPrefixes()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    // constructor will explode
+    new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        PREFIXES,
+        EXPECTED_OBJECTS,
+        null,
+        null
+    );
+  }
+
+  @Test
+  public void testIllegalUrisAndPrefixes()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    // constructor will explode
+    new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        EXPECTED_URIS,
+        PREFIXES,
         null,
         null,
         null
@@ -486,6 +548,28 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         URIS_BEFORE_FILTER,
         null,
         null,
+        "*.csv",
+        null
+    );
+
+    Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+        null
+    );
+
+    Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
+  }
+
+  @Test
+  public void testWithObjectsFilter()
+  {
+    S3InputSource inputSource = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        null,
+        OBJECTS_BEFORE_FILTER,
         "*.csv",
         null
     );

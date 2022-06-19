@@ -98,6 +98,22 @@ public class CloudObjectInputSourceTest
   }
 
   @Test
+  public void testInequality()
+  {
+    CloudObjectInputSource inputSource1 = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
+        .useConstructor(SCHEME, URIS, null, null, "*.parquet")
+        .defaultAnswer(Mockito.CALLS_REAL_METHODS)
+    );
+
+    CloudObjectInputSource inputSource2 = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
+        .useConstructor(SCHEME, URIS, null, null, "*.csv")
+        .defaultAnswer(Mockito.CALLS_REAL_METHODS)
+    );
+
+    Assert.assertFalse(inputSource2.equals(inputSource1));
+  }
+
+  @Test
   public void testWithUrisFilter()
   {
     CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()

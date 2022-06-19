@@ -208,7 +208,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   @Override
   public int hashCode()
   {
-    return Objects.hash(uris, prefixes, objects);
+    return Objects.hash(uris, prefixes, objects, filter);
   }
 
   private void illegalArgsChecker() throws IllegalArgumentException
