@@ -154,6 +154,66 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   public ExpectedException expectedException = ExpectedException.none();
 
   @Test
+  public void testGetUris()
+  {
+    final S3InputSource withUris = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        EXPECTED_URIS,
+        null,
+        null,
+        null,
+        null
+    );
+
+    Assert.assertEquals(
+        EXPECTED_URIS,
+        withUris.getUris()
+    );
+  }
+
+  @Test
+  public void testGetPrefixes()
+  {
+    final S3InputSource withPrefixes = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        PREFIXES,
+        null,
+        null,
+        null
+    );
+
+    Assert.assertEquals(
+        PREFIXES,
+        withPrefixes.getPrefixes()
+    );
+  }
+
+  @Test
+  public void testGetFilter()
+  {
+    final S3InputSource withUris = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        EXPECTED_URIS,
+        null,
+        null,
+        "*.parquet",
+        null
+    );
+
+    Assert.assertEquals(
+        "*.parquet",
+        withUris.getFilter()
+    );
+  }
+
+  @Test
   public void testSerdeWithUris() throws Exception
   {
     final S3InputSource withUris = new S3InputSource(
@@ -324,6 +384,23 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     final S3InputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
     Assert.assertEquals(withPrefixes, serdeWithPrefixes);
+  }
+
+  @Test
+  public void testSerdeWithNullJsonProps()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    // constructor will explode
+    new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
   }
 
   @Test
