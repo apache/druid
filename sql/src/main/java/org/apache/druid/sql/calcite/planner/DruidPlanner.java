@@ -339,7 +339,7 @@ public class DruidPlanner implements Closeable
     final RelRoot possiblyLimitedRoot = possiblyWrapRootWithOuterLimitFromContext(root);
     stateCapture.captureQueryRel(possiblyLimitedRoot);
 
-    final QueryMaker queryMaker = buildQueryMaker(possiblyLimitedRoot, insertOrReplace);
+    final QueryMaker queryMaker = buildQueryMaker(root, insertOrReplace);
     plannerContext.setQueryMaker(queryMaker);
 
     RelNode parameterized = rewriteRelDynamicParameters(possiblyLimitedRoot.rel);
@@ -363,9 +363,6 @@ public class DruidPlanner implements Closeable
                           .filter(action -> action.getAction() == Action.READ)
                           .collect(Collectors.toSet());
 
-        // TODO: This is not really a state check since there is a race condition.
-        // This can be seen as verifying that a check was done, or as redoing the
-        // check with the latest info (if the permissions are updated in between.)
         Preconditions.checkState(
             readResourceActions.isEmpty() == druidRel.getDataSourceNames().isEmpty()
             // The resources found in the plannerContext can be less than the datasources in

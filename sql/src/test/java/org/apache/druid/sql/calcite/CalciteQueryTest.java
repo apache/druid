@@ -135,7 +135,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Massive set of query tests.
+ * Large set of query tests.
  * <p>
  * The tests use a system property,
  * {@code druid.generic.useDefaultValueForNull} set external to
