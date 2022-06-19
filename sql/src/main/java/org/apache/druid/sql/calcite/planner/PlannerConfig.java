@@ -278,23 +278,25 @@ public class PlannerConfig
 
     public Builder(PlannerConfig base)
     {
-      metadataRefreshPeriod = base.metadataRefreshPeriod;
-      maxTopNLimit = base.maxTopNLimit;
-      useApproximateCountDistinct = base.useApproximateCountDistinct;
-      useApproximateTopN = base.useApproximateTopN;
-      requireTimeCondition = base.requireTimeCondition;
-      awaitInitializationOnStart = base.awaitInitializationOnStart;
-      sqlTimeZone = base.sqlTimeZone;
-      metadataSegmentCacheEnable = base.metadataSegmentCacheEnable;
-      useGroupingSetForExactDistinct = base.useGroupingSetForExactDistinct;
-      metadataSegmentCacheEnable = base.metadataSegmentCacheEnable;
-      metadataSegmentPollPeriod = base.metadataSegmentPollPeriod;
+      // Note: use accessors, not fields, since some tests change the
+      // config by defining a subclass.
+
+      metadataRefreshPeriod = base.getMetadataRefreshPeriod();
+      maxTopNLimit = base.getMaxTopNLimit();
+      useApproximateCountDistinct = base.isUseApproximateCountDistinct();
+      useApproximateTopN = base.isUseApproximateTopN();
+      requireTimeCondition = base.isRequireTimeCondition();
+      awaitInitializationOnStart = base.isAwaitInitializationOnStart();
+      sqlTimeZone = base.getSqlTimeZone();
+      metadataSegmentCacheEnable = base.isMetadataSegmentCacheEnable();
+      useGroupingSetForExactDistinct = base.isUseGroupingSetForExactDistinct();
+      metadataSegmentPollPeriod = base.getMetadataSegmentPollPeriod();
       computeInnerJoinCostAsFilter = base.computeInnerJoinCostAsFilter;
-      authorizeSystemTablesDirectly = base.authorizeSystemTablesDirectly;
-      useNativeQueryExplain = base.useNativeQueryExplain;
+      authorizeSystemTablesDirectly = base.isAuthorizeSystemTablesDirectly();
+      useNativeQueryExplain = base.isUseNativeQueryExplain();
       forceExpressionVirtualColumns = base.isForceExpressionVirtualColumns();
-      maxNumericInFilters = base.maxNumericInFilters;
-      serializeComplexValues = base.serializeComplexValues;
+      maxNumericInFilters = base.getMaxNumericInFilters();
+      serializeComplexValues = base.shouldSerializeComplexValues();
     }
 
     public Builder requireTimeCondition(boolean option)

@@ -197,14 +197,9 @@ public class SqlResourceTest extends CalciteTestBase
     executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(8, "test_sql_resource_%s"));
     walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder(), scheduler);
 
-    final PlannerConfig plannerConfig = new PlannerConfig()
-    {
-      @Override
-      public boolean shouldSerializeComplexValues()
-      {
-        return false;
-      }
-    };
+    final PlannerConfig plannerConfig = PlannerConfig.builder()
+        .serializeComplexValues(false)
+        .build();
     final DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
         conglomerate,
         walker,
