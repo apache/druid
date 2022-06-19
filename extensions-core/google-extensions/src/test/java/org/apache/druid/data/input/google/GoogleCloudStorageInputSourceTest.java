@@ -200,6 +200,21 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   }
 
   @Test
+  public void testIllegalUrisAndPrefixes()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    // constructor will explode
+    new GoogleCloudStorageInputSource(
+        STORAGE,
+        INPUT_DATA_CONFIG,
+        URIS_BEFORE_FILTER,
+        PREFIXES,
+        null,
+        "*.csv"
+    );
+  }
+
+  @Test
   public void testWithPrefixesSplit() throws IOException
   {
     EasyMock.reset(STORAGE);
