@@ -254,7 +254,7 @@ public class AzureInputSourceTest extends EasyMockSupport
     );
 
     String actualToString = azureInputSource.toString();
-    Assert.assertEquals("AzureInputSource{uris=[], prefixes=[azure://container/blob], objects=[]}", actualToString);
+    Assert.assertEquals("AzureInputSource{uris=[], prefixes=[azure://container/blob], objects=[], filter=null}", actualToString);
   }
 
   @Test
@@ -268,6 +268,8 @@ public class AzureInputSourceTest extends EasyMockSupport
                   .withNonnullFields("azureCloudBlobIterableFactory")
                   .withNonnullFields("azureCloudBlobToLocationConverter")
                   .withNonnullFields("inputDataConfig")
+                  .withNonnullFields("filter")
+                  .withNonnullFields("scheme")
                   .verify();
   }
 

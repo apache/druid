@@ -199,7 +199,8 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       return false;
     }
     CloudObjectInputSource that = (CloudObjectInputSource) o;
-    return Objects.equals(uris, that.uris) &&
+    return Objects.equals(scheme, that.scheme) &&
+           Objects.equals(uris, that.uris) &&
            Objects.equals(prefixes, that.prefixes) &&
            Objects.equals(objects, that.objects) &&
            Objects.equals(filter, that.filter);
@@ -208,7 +209,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   @Override
   public int hashCode()
   {
-    return Objects.hash(uris, prefixes, objects, filter);
+    return Objects.hash(scheme, uris, prefixes, objects, filter);
   }
 
   private void illegalArgsChecker() throws IllegalArgumentException
