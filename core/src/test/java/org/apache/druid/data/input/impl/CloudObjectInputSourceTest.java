@@ -38,13 +38,11 @@ public class CloudObjectInputSourceTest
   private static final String SCHEME = "s3";
 
   private static final List<URI> URIS = Arrays.asList(
-      URI.create("s3://foo/bar/file.csv"),
-      URI.create("s3://bar/foo/file2.csv")
+      URI.create("s3://foo/bar/file.csv")
   );
 
   private static final List<URI> URIS2 = Arrays.asList(
       URI.create("s3://foo/bar/file.csv"),
-      URI.create("s3://bar/foo/file2.csv"),
       URI.create("s3://bar/foo/file2.parquet")
   );
 
@@ -55,30 +53,6 @@ public class CloudObjectInputSourceTest
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
-
-  @Test
-  public void testWithInvalidFourArgs()
-  {
-    expectedException.expect(IllegalArgumentException.class);
-
-    // constructor will explode
-    Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, null, null, null)
-        .defaultAnswer(Mockito.CALLS_REAL_METHODS)
-    );
-  }
-
-  @Test
-  public void testWithInvalidFiveArgs()
-  {
-    expectedException.expect(IllegalArgumentException.class);
-
-    // constructor will explode
-    Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, null, null, null, null)
-        .defaultAnswer(Mockito.CALLS_REAL_METHODS)
-    );
-  }
 
   @Test
   public void testGetUris()
