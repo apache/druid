@@ -24,7 +24,7 @@ title: "Sorting and limiting (groupBy)"
 
 > Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 > This document describes the native
-> language. For information about sorting in SQL, refer to the [SQL documentation](sql-syntax.md#order-by).
+> language. For information about sorting in SQL, refer to the [SQL documentation](sql.md#order-by).
 
 The limitSpec field provides the functionality to sort and limit the set of results from a groupBy query. If you group by a single dimension and are ordering by a single metric, we highly recommend using [TopN Queries](../querying/topnquery.md) instead. The performance will be substantially better. Available options are:
 

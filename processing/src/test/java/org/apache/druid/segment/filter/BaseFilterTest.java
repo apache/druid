@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import org.apache.druid.common.config.NullHandling;
@@ -49,14 +50,13 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
-import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -75,6 +75,7 @@ import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.RowBasedStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -82,6 +83,7 @@ import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
@@ -91,6 +93,7 @@ import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
@@ -126,7 +129,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           new ExpressionVirtualColumn("vdim1", "dim1", ColumnType.STRING, TestExprMacroTable.INSTANCE),
           new ExpressionVirtualColumn("vd0", "d0", ColumnType.DOUBLE, TestExprMacroTable.INSTANCE),
           new ExpressionVirtualColumn("vf0", "f0", ColumnType.FLOAT, TestExprMacroTable.INSTANCE),
-          new ExpressionVirtualColumn("vl0", "l0", ColumnType.LONG, TestExprMacroTable.INSTANCE)
+          new ExpressionVirtualColumn("vl0", "l0", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+          new ListFilteredVirtualColumn("allow-dim0", DefaultDimensionSpec.of("dim0"), ImmutableSet.of("3", "4"), true),
+          new ListFilteredVirtualColumn("deny-dim0", DefaultDimensionSpec.of("dim0"), ImmutableSet.of("3", "4"), false),
+          new ListFilteredVirtualColumn("allow-dim2", DefaultDimensionSpec.of("dim2"), ImmutableSet.of("a"), true),
+          new ListFilteredVirtualColumn("deny-dim2", DefaultDimensionSpec.of("dim2"), ImmutableSet.of("a"), false)
       )
   );
 
@@ -137,9 +144,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           .add(new DoubleDimensionSchema("d0"))
           .add(new FloatDimensionSchema("f0"))
           .add(new LongDimensionSchema("l0"))
-          .build(),
-      null,
-      null
+          .build()
   );
 
   static final InputRowParser<Map<String, Object>> DEFAULT_PARSER = new MapInputRowParser(
@@ -386,7 +391,12 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
     final DimFilter maybeOptimized = optimize ? dimFilter.optimize() : dimFilter;
     final Filter filter = maybeOptimized.toFilter();
-    return cnf ? Filters.toCnf(filter) : filter;
+    try {
+      return cnf ? Filters.toCnf(filter) : filter;
+    }
+    catch (CNFFilterExplosionException cnfFilterExplosionException) {
+      throw new RuntimeException(cnfFilterExplosionException);
+    }
   }
 
   private DimFilter maybeOptimize(final DimFilter dimFilter)
@@ -524,11 +534,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     final Filter theFilter = makeFilter(filter);
     final Filter postFilteringFilter = new Filter()
     {
-      @Override
-      public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
-      {
-        throw new UnsupportedOperationException();
-      }
 
       @Override
       public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
@@ -537,19 +542,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public boolean supportsBitmapIndex(BitmapIndexSelector selector)
-      {
-        return false;
-      }
-
-      @Override
-      public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-      {
-        return false;
-      }
-
-      @Override
-      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
       {
         return false;
       }
@@ -561,9 +554,16 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public double estimateSelectivity(BitmapIndexSelector indexSelector)
+      public double estimateSelectivity(ColumnIndexSelector indexSelector)
       {
         return 1.0;
+      }
+
+      @Nullable
+      @Override
+      public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
+      {
+        return null;
       }
     };
 
@@ -598,28 +598,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     final Filter theFilter = makeFilter(filter);
     final Filter postFilteringFilter = new Filter()
     {
-      @Override
-      public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
-      {
-        throw new UnsupportedOperationException();
-      }
 
       @Override
       public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
       {
         return theFilter.makeMatcher(factory);
-      }
-
-      @Override
-      public boolean supportsBitmapIndex(BitmapIndexSelector selector)
-      {
-        return false;
-      }
-
-      @Override
-      public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-      {
-        return false;
       }
 
       @Override
@@ -641,15 +624,22 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
       {
         return false;
       }
 
       @Override
-      public double estimateSelectivity(BitmapIndexSelector indexSelector)
+      public double estimateSelectivity(ColumnIndexSelector indexSelector)
       {
         return 1.0;
+      }
+
+      @Nullable
+      @Override
+      public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
+      {
+        return null;
       }
     };
 
@@ -772,6 +762,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                 RowAdapters.standardRow(),
                 rowSupplier::get,
                 rowSignatureBuilder.build(),
+                false,
                 false
             )
         )

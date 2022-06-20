@@ -369,7 +369,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesUnique().isMaybeTrue());
     Assert.assertFalse(inferred.hasMultipleValues().isMaybeTrue());
-    Assert.assertTrue(inferred.hasBitmapIndexes());
+    Assert.assertFalse(inferred.hasBitmapIndexes());
     Assert.assertFalse(inferred.hasSpatialIndexes());
 
     // multiple input columns
@@ -463,7 +463,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesUnique().isMaybeTrue());
     Assert.assertTrue(inferred.hasMultipleValues().isTrue());
-    Assert.assertTrue(inferred.hasBitmapIndexes());
+    Assert.assertFalse(inferred.hasBitmapIndexes());
     Assert.assertFalse(inferred.hasSpatialIndexes());
 
     thePlan = plan("concat(scalar_string, multi_dictionary_string_nonunique)");

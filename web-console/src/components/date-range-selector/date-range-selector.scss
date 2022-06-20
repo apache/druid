@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .date-range-selector {
-  .bp3-popover-target {
+  .#{$bp-ns}-popover-target {
     display: block;
   }
 

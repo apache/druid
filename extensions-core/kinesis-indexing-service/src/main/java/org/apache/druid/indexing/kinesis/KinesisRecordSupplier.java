@@ -26,6 +26,7 @@ import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
+import com.amazonaws.services.kinesis.model.DescribeStreamRequest;
 import com.amazonaws.services.kinesis.model.ExpiredIteratorException;
 import com.amazonaws.services.kinesis.model.GetRecordsRequest;
 import com.amazonaws.services.kinesis.model.GetRecordsResult;
@@ -37,11 +38,13 @@ import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.ShardIteratorType;
+import com.amazonaws.services.kinesis.model.StreamDescription;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.amazonaws.util.AwsHostNameUtils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
 import org.apache.druid.common.aws.AWSClientUtil;
@@ -72,7 +75,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -403,6 +405,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   private final int fetchThreads;
   private final int recordBufferSize;
   private final boolean useEarliestSequenceNumber;
+  private final boolean useListShards;
 
   private ScheduledExecutorService scheduledExec;
 
@@ -425,7 +428,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
       int recordBufferFullWait,
       int fetchSequenceNumberTimeout,
       int maxRecordsPerPoll,
-      boolean useEarliestSequenceNumber
+      boolean useEarliestSequenceNumber,
+      boolean useListShards
   )
   {
     Preconditions.checkNotNull(amazonKinesis);
@@ -440,6 +444,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     this.fetchThreads = fetchThreads;
     this.recordBufferSize = recordBufferSize;
     this.useEarliestSequenceNumber = useEarliestSequenceNumber;
+    this.useListShards = useListShards;
     this.backgroundFetchEnabled = fetchThreads > 0;
 
     // the deaggregate function is implemented by the amazon-kinesis-client, whose license is not compatible with Apache.
@@ -661,34 +666,72 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     return getSequenceNumber(partition, ShardIteratorType.TRIM_HORIZON);
   }
 
+  public Set<Shard> getShards(String stream)
+  {
+    if (useListShards) {
+      return getShardsUsingListShards(stream);
+    }
+    return getShardsUsingDescribeStream(stream);
+  }
+
   /**
+   * Default method to avoid incompatibility when user doesn't have sufficient IAM permissions on AWS
+   * Not advised. getShardsUsingListShards is recommended instead if sufficient permissions are present.
+   *
+   * @param stream name of stream
+   * @return Immutable set of shards
+   */
+  private Set<Shard> getShardsUsingDescribeStream(String stream)
+  {
+    ImmutableSet.Builder<Shard> shards = ImmutableSet.builder();
+    DescribeStreamRequest describeRequest = new DescribeStreamRequest();
+    describeRequest.setStreamName(stream);
+    while (describeRequest != null) {
+      StreamDescription description = kinesis.describeStream(describeRequest).getStreamDescription();
+      List<Shard> shardResult = description.getShards();
+      shards.addAll(shardResult);
+      if (description.isHasMoreShards()) {
+        describeRequest.setExclusiveStartShardId(Iterables.getLast(shardResult).getShardId());
+      } else {
+        describeRequest = null;
+      }
+    }
+    return shards.build();
+  }
+
+  /**
+   * If the user has the IAM policy for listShards, and useListShards is true:
    * Use the API listShards which is the recommended way instead of describeStream
    * listShards can return 1000 shards per call and has a limit of 100TPS
    * This makes the method resilient to LimitExceeded exceptions (compared to 100 shards, 10 TPS of describeStream)
    *
    * @param stream name of stream
-   *
-   * @return Set of Shard ids
+   * @return Immutable set of shards
    */
+  private Set<Shard> getShardsUsingListShards(String stream)
+  {
+    ImmutableSet.Builder<Shard> shards = ImmutableSet.builder();
+    ListShardsRequest request = new ListShardsRequest().withStreamName(stream);
+    while (true) {
+      ListShardsResult result = kinesis.listShards(request);
+      shards.addAll(result.getShards());
+      String nextToken = result.getNextToken();
+      if (nextToken == null) {
+        return shards.build();
+      }
+      request = new ListShardsRequest().withNextToken(nextToken);
+    }
+  }
+
   @Override
   public Set<String> getPartitionIds(String stream)
   {
     return wrapExceptions(() -> {
-      final Set<String> retVal = new TreeSet<>();
-      ListShardsRequest request = new ListShardsRequest().withStreamName(stream);
-      while (true) {
-        ListShardsResult result = kinesis.listShards(request);
-        retVal.addAll(result.getShards()
-                            .stream()
-                            .map(Shard::getShardId)
-                            .collect(Collectors.toList())
-        );
-        String nextToken = result.getNextToken();
-        if (nextToken == null) {
-          return retVal;
-        }
-        request = new ListShardsRequest().withNextToken(nextToken);
+      ImmutableSet.Builder<String> partitionIds = ImmutableSet.builder();
+      for (Shard shard : getShards(stream)) {
+        partitionIds.add(shard.getShardId());
       }
+      return partitionIds.build();
     });
   }
 
@@ -748,6 +791,25 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
                              .stream()
                              .map(pr -> pr.currentFetch)
                              .anyMatch(fetch -> (fetch != null && !fetch.isDone()));
+  }
+
+  /**
+   * Fetches records from the specified shard to determine if it is empty.
+   * @param stream to which shard belongs
+   * @param shardId of the closed shard
+   * @return true if the closed shard is empty, false otherwise.
+   */
+  public boolean isClosedShardEmpty(String stream, String shardId)
+  {
+    String shardIterator = kinesis.getShardIterator(stream,
+                                                    shardId,
+                                                    ShardIteratorType.TRIM_HORIZON.toString())
+                                  .getShardIterator();
+    GetRecordsRequest request = new GetRecordsRequest().withShardIterator(shardIterator)
+                                                       .withLimit(1);
+    GetRecordsResult shardData = kinesis.getRecords(request);
+
+    return shardData.getRecords().isEmpty() && shardData.getNextShardIterator() == null;
   }
 
   /**

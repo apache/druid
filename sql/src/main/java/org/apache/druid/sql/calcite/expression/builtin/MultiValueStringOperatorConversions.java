@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
@@ -44,6 +44,8 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -340,8 +342,10 @@ public class MultiValueStringOperatorConversions
       if (lit == null || lit.length == 0) {
         return null;
       }
+      HashSet<String> literals = Sets.newHashSetWithExpectedSize(lit.length);
+      literals.addAll(Arrays.asList(lit));
 
-      final DruidExpression.ExpressionBuilder builder = (args) -> {
+      final DruidExpression.ExpressionGenerator builder = (args) -> {
         final StringBuilder expressionBuilder;
         if (isAllowList()) {
           expressionBuilder = new StringBuilder("filter((x) -> array_contains(");
@@ -364,7 +368,7 @@ public class MultiValueStringOperatorConversions
             (name, outputType, expression, macroTable) -> new ListFilteredVirtualColumn(
                 name,
                 druidExpressions.get(0).getSimpleExtraction().toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
-                ImmutableSet.copyOf(lit),
+                literals,
                 isAllowList()
             )
         );

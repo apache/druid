@@ -251,6 +251,12 @@ public class TypeStrategies
     }
 
     @Override
+    public boolean readRetainsBufferReference()
+    {
+      return false;
+    }
+
+    @Override
     public int write(ByteBuffer buffer, Long value, int maxSizeBytes)
     {
       checkMaxSize(buffer.remaining(), maxSizeBytes, ColumnType.LONG);
@@ -292,6 +298,12 @@ public class TypeStrategies
     }
 
     @Override
+    public boolean readRetainsBufferReference()
+    {
+      return false;
+    }
+
+    @Override
     public int write(ByteBuffer buffer, Float value, int maxSizeBytes)
     {
       checkMaxSize(buffer.remaining(), maxSizeBytes, ColumnType.FLOAT);
@@ -330,6 +342,12 @@ public class TypeStrategies
     public Double read(ByteBuffer buffer)
     {
       return buffer.getDouble();
+    }
+
+    @Override
+    public boolean readRetainsBufferReference()
+    {
+      return false;
     }
 
     @Override
@@ -377,6 +395,12 @@ public class TypeStrategies
       final byte[] blob = new byte[length];
       buffer.get(blob, 0, length);
       return StringUtils.fromUtf8(blob);
+    }
+
+    @Override
+    public boolean readRetainsBufferReference()
+    {
+      return false;
     }
 
     @Override
@@ -445,6 +469,12 @@ public class TypeStrategies
         array[i] = elementStrategy.read(buffer);
       }
       return array;
+    }
+
+    @Override
+    public boolean readRetainsBufferReference()
+    {
+      return elementStrategy.readRetainsBufferReference();
     }
 
     @Override

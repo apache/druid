@@ -48,10 +48,14 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
   public static final String MAX_REPLICATION_FACTOR = "maxReplicationFactor";
 
   private final DruidCoordinator coordinator;
+  private final String groupName;
+  private final boolean isContainCompactSegmentDuty;
 
-  public EmitClusterStatsAndMetrics(DruidCoordinator coordinator)
+  public EmitClusterStatsAndMetrics(DruidCoordinator coordinator, String groupName, boolean isContainCompactSegmentDuty)
   {
     this.coordinator = coordinator;
+    this.groupName = groupName;
+    this.isContainCompactSegmentDuty = isContainCompactSegmentDuty;
   }
 
   private void emitTieredStat(
@@ -64,6 +68,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     emitter.emit(
         new ServiceMetricEvent.Builder()
             .setDimension(DruidMetrics.TIER, tier)
+            .setDimension(DruidMetrics.DUTY_GROUP, groupName)
             .build(metricName, value)
     );
   }
@@ -78,6 +83,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     emitter.emit(
         new ServiceMetricEvent.Builder()
             .setDimension(DruidMetrics.TIER, tier)
+            .setDimension(DruidMetrics.DUTY_GROUP, groupName)
             .build(metricName, value)
     );
   }
@@ -107,6 +113,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     emitter.emit(
         new ServiceMetricEvent.Builder()
             .setDimension(DruidMetrics.DUTY, duty)
+            .setDimension(DruidMetrics.DUTY_GROUP, groupName)
             .build(metricName, value)
     );
   }
@@ -133,6 +140,21 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     CoordinatorStats stats = params.getCoordinatorStats();
     ServiceEmitter emitter = params.getEmitter();
 
+    if (DruidCoordinator.HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP.equals(groupName)) {
+      emitStatsForHistoricalManagementDuties(cluster, stats, emitter, params);
+    }
+    if (isContainCompactSegmentDuty) {
+      emitStatsForCompactSegments(cluster, stats, emitter);
+    }
+
+    // Emit coordinator runtime stats
+    emitDutyStats(emitter, "coordinator/time", stats, "runtime");
+
+    return params;
+  }
+
+  private void emitStatsForHistoricalManagementDuties(DruidCluster cluster, CoordinatorStats stats, ServiceEmitter emitter, DruidCoordinatorRuntimeParams params)
+  {
     stats.forEachTieredStat(
         "assignedCount",
         (final String tier, final long count) -> {
@@ -190,7 +212,9 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     );
 
     emitter.emit(
-        new ServiceMetricEvent.Builder().build(
+        new ServiceMetricEvent.Builder()
+            .setDimension(DruidMetrics.DUTY_GROUP, groupName)
+            .build(
             "segment/overShadowed/count",
             stats.getGlobalStat("overShadowedCount")
         )
@@ -216,12 +240,13 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
         ImmutableDruidServer server = serverHolder.getServer();
         LoadQueuePeon queuePeon = serverHolder.getPeon();
         log.info(
-            "Server[%s, %s, %s] has %,d left to load, %,d left to drop, %,d bytes queued, %,d bytes served.",
+            "Server[%s, %s, %s] has %,d left to load, %,d left to drop, %,d served, %,d bytes queued, %,d bytes served.",
             server.getName(),
             server.getType().toString(),
             server.getTier(),
             queuePeon.getSegmentsToLoad().size(),
             queuePeon.getSegmentsToDrop().size(),
+            server.getNumSegments(),
             queuePeon.getLoadQueueSize(),
             server.getCurrSize()
         );
@@ -269,24 +294,28 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
         .forEach((final String serverName, final LoadQueuePeon queuePeon) -> {
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.SERVER, serverName).build(
                   "segment/loadQueue/size", queuePeon.getLoadQueueSize()
               )
           );
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.SERVER, serverName).build(
                   "segment/loadQueue/failed", queuePeon.getAndResetFailedAssignCount()
               )
           );
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.SERVER, serverName).build(
                   "segment/loadQueue/count", queuePeon.getSegmentsToLoad().size()
               )
           );
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.SERVER, serverName).build(
                   "segment/dropQueue/count", queuePeon.getSegmentsToDrop().size()
               )
@@ -299,6 +328,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
           final int numUnavailableUsedSegmentsInDataSource = entry.getIntValue();
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.DATASOURCE, dataSource).build(
                   "segment/unavailable/count", numUnavailableUsedSegmentsInDataSource
               )
@@ -314,132 +344,13 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
 
             emitter.emit(
                 new ServiceMetricEvent.Builder()
+                    .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                     .setDimension(DruidMetrics.TIER, tier)
                     .setDimension(DruidMetrics.DATASOURCE, dataSource).build(
                     "segment/underReplicated/count", underReplicationCount
                 )
             );
           }
-        }
-    );
-
-    emitter.emit(
-        new ServiceMetricEvent.Builder().build(
-            "compact/task/count",
-            stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
-        )
-    );
-
-    emitter.emit(
-        new ServiceMetricEvent.Builder().build(
-            "compactTask/maxSlot/count",
-            stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT)
-        )
-    );
-
-    emitter.emit(
-        new ServiceMetricEvent.Builder().build(
-            "compactTask/availableSlot/count",
-            stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT)
-        )
-    );
-
-    stats.forEachDataSourceStat(
-        CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING,
-        (final String dataSource, final long count) -> {
-          emitter.emit(
-              new ServiceMetricEvent.Builder()
-                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("segment/waitCompact/bytes", count)
-          );
-        }
-    );
-
-    stats.forEachDataSourceStat(
-        CompactSegments.TOTAL_COUNT_OF_SEGMENTS_AWAITING,
-        (final String dataSource, final long count) -> {
-          emitter.emit(
-              new ServiceMetricEvent.Builder()
-                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("segment/waitCompact/count", count)
-          );
-        }
-    );
-
-    stats.forEachDataSourceStat(
-        CompactSegments.TOTAL_INTERVAL_OF_SEGMENTS_AWAITING,
-        (final String dataSource, final long count) -> {
-          emitter.emit(
-              new ServiceMetricEvent.Builder()
-                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("interval/waitCompact/count", count)
-          );
-        }
-    );
-
-    stats.forEachDataSourceStat(
-        CompactSegments.TOTAL_SIZE_OF_SEGMENTS_SKIPPED,
-        (final String dataSource, final long count) -> {
-          emitter.emit(
-              new ServiceMetricEvent.Builder()
-                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("segment/skipCompact/bytes", count)
-          );
-        }
-    );
-
-    stats.forEachDataSourceStat(
-        CompactSegments.TOTAL_COUNT_OF_SEGMENTS_SKIPPED,
-        (final String dataSource, final long count) -> {
-          emitter.emit(
-              new ServiceMetricEvent.Builder()
-                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("segment/skipCompact/count", count)
-          );
-        }
-    );
-
-    stats.forEachDataSourceStat(
-        CompactSegments.TOTAL_INTERVAL_OF_SEGMENTS_SKIPPED,
-        (final String dataSource, final long count) -> {
-          emitter.emit(
-              new ServiceMetricEvent.Builder()
-                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("interval/skipCompact/count", count)
-          );
-        }
-    );
-
-    stats.forEachDataSourceStat(
-        CompactSegments.TOTAL_SIZE_OF_SEGMENTS_COMPACTED,
-        (final String dataSource, final long count) -> {
-          emitter.emit(
-              new ServiceMetricEvent.Builder()
-                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("segment/compacted/bytes", count)
-          );
-        }
-    );
-
-    stats.forEachDataSourceStat(
-        CompactSegments.TOTAL_COUNT_OF_SEGMENTS_COMPACTED,
-        (final String dataSource, final long count) -> {
-          emitter.emit(
-              new ServiceMetricEvent.Builder()
-                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("segment/compacted/count", count)
-          );
-        }
-    );
-
-    stats.forEachDataSourceStat(
-        CompactSegments.TOTAL_INTERVAL_OF_SEGMENTS_COMPACTED,
-        (final String dataSource, final long count) -> {
-          emitter.emit(
-              new ServiceMetricEvent.Builder()
-                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .build("interval/compacted/count", count)
-          );
         }
     );
 
@@ -453,20 +364,155 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
               .sum();
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
                   .build("segment/size", totalSizeOfUsedSegments)
           );
           emitter.emit(
               new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
                   .build("segment/count", dataSourceWithUsedSegments.getNumObjects())
           );
         }
     );
+  }
 
-    // Emit coordinator runtime stats
-    emitDutyStats(emitter, "coordinator/time", stats, "runtime");
+  private void emitStatsForCompactSegments(DruidCluster cluster, CoordinatorStats stats, ServiceEmitter emitter)
+  {
+    emitter.emit(
+        new ServiceMetricEvent.Builder()
+            .setDimension(DruidMetrics.DUTY_GROUP, groupName)
+            .build(
+            "compact/task/count",
+            stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+        )
+    );
 
-    return params;
+    emitter.emit(
+        new ServiceMetricEvent.Builder()
+            .setDimension(DruidMetrics.DUTY_GROUP, groupName)
+            .build(
+            "compactTask/maxSlot/count",
+            stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT)
+        )
+    );
+
+    emitter.emit(
+        new ServiceMetricEvent.Builder()
+            .setDimension(DruidMetrics.DUTY_GROUP, groupName)
+            .build(
+            "compactTask/availableSlot/count",
+            stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT)
+        )
+    );
+
+    stats.forEachDataSourceStat(
+        CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING,
+        (final String dataSource, final long count) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("segment/waitCompact/bytes", count)
+          );
+        }
+    );
+
+    stats.forEachDataSourceStat(
+        CompactSegments.TOTAL_COUNT_OF_SEGMENTS_AWAITING,
+        (final String dataSource, final long count) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("segment/waitCompact/count", count)
+          );
+        }
+    );
+
+    stats.forEachDataSourceStat(
+        CompactSegments.TOTAL_INTERVAL_OF_SEGMENTS_AWAITING,
+        (final String dataSource, final long count) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("interval/waitCompact/count", count)
+          );
+        }
+    );
+
+    stats.forEachDataSourceStat(
+        CompactSegments.TOTAL_SIZE_OF_SEGMENTS_SKIPPED,
+        (final String dataSource, final long count) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("segment/skipCompact/bytes", count)
+          );
+        }
+    );
+
+    stats.forEachDataSourceStat(
+        CompactSegments.TOTAL_COUNT_OF_SEGMENTS_SKIPPED,
+        (final String dataSource, final long count) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("segment/skipCompact/count", count)
+          );
+        }
+    );
+
+    stats.forEachDataSourceStat(
+        CompactSegments.TOTAL_INTERVAL_OF_SEGMENTS_SKIPPED,
+        (final String dataSource, final long count) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("interval/skipCompact/count", count)
+          );
+        }
+    );
+
+    stats.forEachDataSourceStat(
+        CompactSegments.TOTAL_SIZE_OF_SEGMENTS_COMPACTED,
+        (final String dataSource, final long count) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("segment/compacted/bytes", count)
+          );
+        }
+    );
+
+    stats.forEachDataSourceStat(
+        CompactSegments.TOTAL_COUNT_OF_SEGMENTS_COMPACTED,
+        (final String dataSource, final long count) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("segment/compacted/count", count)
+          );
+        }
+    );
+
+    stats.forEachDataSourceStat(
+        CompactSegments.TOTAL_INTERVAL_OF_SEGMENTS_COMPACTED,
+        (final String dataSource, final long count) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DUTY_GROUP, groupName)
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("interval/compacted/count", count)
+          );
+        }
+    );
   }
 }

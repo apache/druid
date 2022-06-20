@@ -16,9 +16,7 @@
  * limitations under the License.
  */
 
-function nonEmptyArray(a: any) {
-  return Array.isArray(a) && Boolean(a.length);
-}
+import { nonEmptyArray } from '../utils';
 
 export interface InputSource {
   type: string;
@@ -41,6 +39,10 @@ export interface InputSource {
 
   // hdfs
   paths?: string;
+
+  // http
+  httpAuthenticationUsername?: any;
+  httpAuthenticationPassword?: any;
 }
 
 export function issueWithInputSource(inputSource: InputSource | undefined): string | undefined {

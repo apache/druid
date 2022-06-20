@@ -45,29 +45,27 @@ public class MinSqlAggregator extends SimpleSqlAggregator
       final String name,
       final AggregateCall aggregateCall,
       final ExprMacroTable macroTable,
-      final String fieldName,
-      final String expression
+      final String fieldName
   )
   {
     final ColumnType valueType = Calcites.getColumnTypeForRelDataType(aggregateCall.getType());
-    return Aggregation.create(createMinAggregatorFactory(valueType, name, fieldName, expression, macroTable));
+    return Aggregation.create(createMinAggregatorFactory(valueType, name, fieldName, macroTable));
   }
 
   private static AggregatorFactory createMinAggregatorFactory(
       final ColumnType aggregationType,
       final String name,
       final String fieldName,
-      final String expression,
       final ExprMacroTable macroTable
   )
   {
     switch (aggregationType.getType()) {
       case LONG:
-        return new LongMinAggregatorFactory(name, fieldName, expression, macroTable);
+        return new LongMinAggregatorFactory(name, fieldName, null, macroTable);
       case FLOAT:
-        return new FloatMinAggregatorFactory(name, fieldName, expression, macroTable);
+        return new FloatMinAggregatorFactory(name, fieldName, null, macroTable);
       case DOUBLE:
-        return new DoubleMinAggregatorFactory(name, fieldName, expression, macroTable);
+        return new DoubleMinAggregatorFactory(name, fieldName, null, macroTable);
       default:
         throw new UnsupportedSQLQueryException("MIN aggregator is not supported for '%s' type", aggregationType);
     }

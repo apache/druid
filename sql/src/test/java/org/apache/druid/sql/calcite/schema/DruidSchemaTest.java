@@ -86,11 +86,11 @@ import java.util.stream.Collectors;
 
 public class DruidSchemaTest extends DruidSchemaTestCommon
 {
-  private SpecificSegmentsQuerySegmentWalker walker = null;
+  private SpecificSegmentsQuerySegmentWalker walker;
   private TestServerInventoryView serverView;
   private List<ImmutableDruidServer> druidServers;
-  private DruidSchema schema = null;
-  private DruidSchema schema2 = null;
+  private DruidSchema schema;
+  private DruidSchema schema2;
   private CountDownLatch buildTableLatch = new CountDownLatch(1);
   private CountDownLatch markDataSourceLatch = new CountDownLatch(1);
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();

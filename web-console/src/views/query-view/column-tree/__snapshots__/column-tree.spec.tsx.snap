@@ -28,7 +28,7 @@ exports[`ColumnTree matches snapshot 1`] = `
   <div
     className="tree-container"
   >
-    <Blueprint3.Tree
+    <Blueprint4.Tree
       contents={
         Array [
           Object {
@@ -36,7 +36,7 @@ exports[`ColumnTree matches snapshot 1`] = `
               Object {
                 "icon": "time",
                 "id": "__time",
-                "label": <Blueprint3.Popover2
+                "label": <Blueprint4.Popover2
                   autoFocus={false}
                   boundary="clippingParents"
                   captureDismiss={false}
@@ -57,17 +57,18 @@ exports[`ColumnTree matches snapshot 1`] = `
                   openOnTargetFocus={true}
                   position="right"
                   positioningStrategy="absolute"
+                  shouldReturnFocusOnClose={false}
                   targetTagName="span"
                   transitionDuration={300}
                   usePortal={true}
                 >
                   __time
-                </Blueprint3.Popover2>,
+                </Blueprint4.Popover2>,
               },
               Object {
                 "icon": "numerical",
                 "id": "added",
-                "label": <Blueprint3.Popover2
+                "label": <Blueprint4.Popover2
                   autoFocus={false}
                   boundary="clippingParents"
                   captureDismiss={false}
@@ -88,17 +89,18 @@ exports[`ColumnTree matches snapshot 1`] = `
                   openOnTargetFocus={true}
                   position="right"
                   positioningStrategy="absolute"
+                  shouldReturnFocusOnClose={false}
                   targetTagName="span"
                   transitionDuration={300}
                   usePortal={true}
                 >
                   added
-                </Blueprint3.Popover2>,
+                </Blueprint4.Popover2>,
               },
               Object {
                 "icon": "numerical",
                 "id": "addedBy10",
-                "label": <Blueprint3.Popover2
+                "label": <Blueprint4.Popover2
                   autoFocus={false}
                   boundary="clippingParents"
                   captureDismiss={false}
@@ -119,19 +121,20 @@ exports[`ColumnTree matches snapshot 1`] = `
                   openOnTargetFocus={true}
                   position="right"
                   positioningStrategy="absolute"
+                  shouldReturnFocusOnClose={false}
                   targetTagName="span"
                   transitionDuration={300}
                   usePortal={true}
                 >
                   addedBy10
-                </Blueprint3.Popover2>,
+                </Blueprint4.Popover2>,
               },
             ],
             "className": undefined,
             "icon": "th",
             "id": "wikipedia",
             "isExpanded": true,
-            "label": <Blueprint3.Popover2
+            "label": <Blueprint4.Popover2
               boundary="clippingParents"
               captureDismiss={false}
               content={
@@ -151,12 +154,13 @@ exports[`ColumnTree matches snapshot 1`] = `
               openOnTargetFocus={true}
               position="right"
               positioningStrategy="absolute"
+              shouldReturnFocusOnClose={false}
               targetTagName="span"
               transitionDuration={300}
               usePortal={true}
             >
               wikipedia
-            </Blueprint3.Popover2>,
+            </Blueprint4.Popover2>,
           },
         ]
       }

@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -38,6 +39,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
+import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorker;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
@@ -67,6 +69,7 @@ import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -238,6 +241,28 @@ public class CompactSegmentsTest
   }
 
   @Test
+  public void testSerde() throws Exception
+  {
+    final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
+    final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
+
+    JSON_MAPPER.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(DruidCoordinatorConfig.class, COORDINATOR_CONFIG)
+            .addValue(ObjectMapper.class, JSON_MAPPER)
+            .addValue(IndexingServiceClient.class, indexingServiceClient)
+    );
+
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, indexingServiceClient);
+    String compactSegmentString = JSON_MAPPER.writeValueAsString(compactSegments);
+    CompactSegments serdeCompactSegments = JSON_MAPPER.readValue(compactSegmentString, CompactSegments.class);
+
+    Assert.assertNotNull(serdeCompactSegments);
+    Assert.assertEquals(COORDINATOR_CONFIG.getCompactionSkipLockedIntervals(), serdeCompactSegments.isSkipLockedIntervals());
+    Assert.assertEquals(indexingServiceClient, serdeCompactSegments.getIndexingServiceClient());
+  }
+
+  @Test
   public void testRun()
   {
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
@@ -343,13 +368,13 @@ public class CompactSegmentsTest
           DATA_SOURCE_PREFIX + i,
           0,
           TOTAL_BYTE_PER_DATASOURCE,
-          0,
+          40,
           0,
           TOTAL_INTERVAL_PER_DATASOURCE,
-          0,
+          1,
           0,
           TOTAL_SEGMENT_PER_DATASOURCE / 2,
-          0
+          4
       );
     }
 
@@ -365,13 +390,13 @@ public class CompactSegmentsTest
           DATA_SOURCE_PREFIX + i,
           0,
           TOTAL_BYTE_PER_DATASOURCE,
-          0,
+          40,
           0,
           TOTAL_INTERVAL_PER_DATASOURCE,
-          0,
+          1,
           0,
           TOTAL_SEGMENT_PER_DATASOURCE / 2,
-          0
+          4
       );
     }
 
@@ -441,16 +466,16 @@ public class CompactSegmentsTest
           dataSourceName,
           TOTAL_BYTE_PER_DATASOURCE - 120 - 40 * (compactionRunCount + 1),
           120 + 40 * (compactionRunCount + 1),
-          0,
+          40,
           TOTAL_INTERVAL_PER_DATASOURCE - 3 - (compactionRunCount + 1),
           3 + (compactionRunCount + 1),
-          0,
+          1,
           TOTAL_SEGMENT_PER_DATASOURCE - 12 - 4 * (compactionRunCount + 1),
           // 12 segments was compressed before any auto compaction
           // 4 segments was compressed in this run of auto compaction
           // Each previous auto compaction run resulted in 2 compacted segments (4 segments compacted into 2 segments)
           12 + 4 + 2 * (compactionRunCount),
-          0
+          4
       );
     }
 
@@ -466,15 +491,15 @@ public class CompactSegmentsTest
         dataSourceName,
         0,
         TOTAL_BYTE_PER_DATASOURCE,
-        0,
+        40,
         0,
         TOTAL_INTERVAL_PER_DATASOURCE,
-        0,
+        1,
         0,
         // 12 segments was compressed before any auto compaction
         // 32 segments needs compaction which is now compacted into 16 segments (4 segments compacted into 2 segments each run)
         12 + 16,
-        0
+        4
     );
   }
 
@@ -506,13 +531,13 @@ public class CompactSegmentsTest
           DATA_SOURCE_PREFIX + i,
           0,
           TOTAL_BYTE_PER_DATASOURCE,
-          0,
+          40,
           0,
           TOTAL_INTERVAL_PER_DATASOURCE,
-          0,
+          1,
           0,
           TOTAL_SEGMENT_PER_DATASOURCE / 2,
-          0
+          4
       );
     }
 
@@ -529,13 +554,13 @@ public class CompactSegmentsTest
           DATA_SOURCE_PREFIX + i,
           0,
           TOTAL_BYTE_PER_DATASOURCE,
-          0,
+          40,
           0,
           TOTAL_INTERVAL_PER_DATASOURCE,
-          0,
+          1,
           0,
           TOTAL_SEGMENT_PER_DATASOURCE / 2,
-          0
+          4
       );
     }
 
@@ -602,13 +627,13 @@ public class CompactSegmentsTest
           // Minus 120 bytes accounting for the three skipped segments' original size
           TOTAL_BYTE_PER_DATASOURCE - 120 - 40 * (compactionRunCount + 1),
           40 * (compactionRunCount + 1),
-          1200,
+          1240,
           TOTAL_INTERVAL_PER_DATASOURCE - 3 - (compactionRunCount + 1),
           (compactionRunCount + 1),
-          3,
+          4,
           TOTAL_SEGMENT_PER_DATASOURCE - 12 - 4 * (compactionRunCount + 1),
           4 + 2 * (compactionRunCount),
-          12
+          16
       );
     }
 
@@ -625,13 +650,13 @@ public class CompactSegmentsTest
         0,
         // Minus 120 bytes accounting for the three skipped segments' original size
         TOTAL_BYTE_PER_DATASOURCE - 120,
-        1200,
+        1240,
         0,
         TOTAL_INTERVAL_PER_DATASOURCE - 3,
-        3,
+        4,
         0,
         16,
-        12
+        16
     );
   }
 
@@ -698,6 +723,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -705,6 +731,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -762,6 +789,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -769,6 +797,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -820,6 +849,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -827,6 +857,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -878,6 +909,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -885,6 +917,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -944,6 +977,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -951,6 +985,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1005,6 +1040,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -1012,6 +1048,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1065,6 +1102,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -1072,6 +1110,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1166,6 +1205,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -1173,6 +1213,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1291,6 +1332,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -1298,6 +1340,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1352,6 +1395,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -1359,6 +1403,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1417,6 +1462,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -1424,6 +1470,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1563,6 +1610,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -1570,6 +1618,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1659,6 +1708,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -1666,6 +1716,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1702,6 +1753,132 @@ public class CompactSegmentsTest
     Assert.assertNotNull(actual);
     ClientCompactionTaskGranularitySpec expected = new ClientCompactionTaskGranularitySpec(Granularities.YEAR, null, null);
     Assert.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testCompactWithMetricsSpecShouldSetPreserveExistingMetricsTrue()
+  {
+    final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
+    final String dataSource = DATA_SOURCE_PREFIX + 0;
+    compactionConfigs.add(
+        new DataSourceCompactionConfig(
+            dataSource,
+            0,
+            500L,
+            null,
+            new Period("PT0H"), // smaller than segment interval
+            new UserCompactionTaskQueryTuningConfig(
+                null,
+                null,
+                null,
+                null,
+                null,
+                partitionsSpec,
+                null,
+                null,
+                null,
+                null,
+                null,
+                3,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            ),
+            null,
+            null,
+            new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
+            null,
+            null,
+            null
+        )
+    );
+    doCompactSegments(compactSegments, compactionConfigs);
+    ArgumentCaptor<ClientCompactionTaskQueryTuningConfig> clientCompactionTaskQueryTuningConfigArgumentCaptor = ArgumentCaptor.forClass(
+        ClientCompactionTaskQueryTuningConfig.class);
+    Mockito.verify(mockIndexingServiceClient).compactSegments(
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.anyInt(),
+        clientCompactionTaskQueryTuningConfigArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any()
+    );
+    Assert.assertNotNull(clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue());
+    Assert.assertNotNull(clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue().getAppendableIndexSpec());
+    Assert.assertTrue(((OnheapIncrementalIndex.Spec) clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue().getAppendableIndexSpec()).isPreserveExistingMetrics());
+  }
+
+  @Test
+  public void testCompactWithoutMetricsSpecShouldSetPreserveExistingMetricsFalse()
+  {
+    final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
+    final String dataSource = DATA_SOURCE_PREFIX + 0;
+    compactionConfigs.add(
+        new DataSourceCompactionConfig(
+            dataSource,
+            0,
+            500L,
+            null,
+            new Period("PT0H"), // smaller than segment interval
+            new UserCompactionTaskQueryTuningConfig(
+                null,
+                null,
+                null,
+                null,
+                null,
+                partitionsSpec,
+                null,
+                null,
+                null,
+                null,
+                null,
+                3,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            ),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
+    );
+    doCompactSegments(compactSegments, compactionConfigs);
+    ArgumentCaptor<ClientCompactionTaskQueryTuningConfig> clientCompactionTaskQueryTuningConfigArgumentCaptor = ArgumentCaptor.forClass(
+        ClientCompactionTaskQueryTuningConfig.class);
+    Mockito.verify(mockIndexingServiceClient).compactSegments(
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.anyInt(),
+        clientCompactionTaskQueryTuningConfigArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any()
+    );
+    Assert.assertNotNull(clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue());
+    Assert.assertNotNull(clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue().getAppendableIndexSpec());
+    Assert.assertFalse(((OnheapIncrementalIndex.Spec) clientCompactionTaskQueryTuningConfigArgumentCaptor.getValue().getAppendableIndexSpec()).isPreserveExistingMetrics());
   }
 
   private void verifySnapshot(
@@ -1757,13 +1934,13 @@ public class CompactSegmentsTest
               DATA_SOURCE_PREFIX + i,
               TOTAL_BYTE_PER_DATASOURCE - 40 * (compactionRunCount + 1),
               40 * (compactionRunCount + 1),
-              0,
+              40,
               TOTAL_INTERVAL_PER_DATASOURCE - (compactionRunCount + 1),
               (compactionRunCount + 1),
-              0,
+              1,
               TOTAL_SEGMENT_PER_DATASOURCE - 4 * (compactionRunCount + 1),
               2 * (compactionRunCount + 1),
-              0
+              4
           );
         } else {
           verifySnapshot(
@@ -1772,13 +1949,13 @@ public class CompactSegmentsTest
               DATA_SOURCE_PREFIX + i,
               TOTAL_BYTE_PER_DATASOURCE - 40 * (compactionRunCount + 1),
               40 * (compactionRunCount + 1),
-              0,
+              40,
               TOTAL_INTERVAL_PER_DATASOURCE - (compactionRunCount + 1),
               (compactionRunCount + 1),
-              0,
+              1,
               TOTAL_SEGMENT_PER_DATASOURCE - 4 * (compactionRunCount + 1),
               2 * compactionRunCount + 4,
-              0
+              4
           );
         }
       }
@@ -1791,13 +1968,13 @@ public class CompactSegmentsTest
             DATA_SOURCE_PREFIX + i,
             TOTAL_BYTE_PER_DATASOURCE - 40 * compactionRunCount,
             40 * compactionRunCount,
-            0,
+            40,
             TOTAL_INTERVAL_PER_DATASOURCE - compactionRunCount,
             compactionRunCount,
-            0,
+            1,
             TOTAL_SEGMENT_PER_DATASOURCE - 4 * compactionRunCount,
             2 * compactionRunCount,
-            0
+            4
         );
       }
     }
@@ -1979,6 +2156,7 @@ public class CompactSegmentsTest
                   null,
                   null,
                   null,
+                  null,
                   partitionsSpec,
                   null,
                   null,
@@ -1986,6 +2164,7 @@ public class CompactSegmentsTest
                   null,
                   null,
                   maxNumConcurrentSubTasks,
+                  null,
                   null,
                   null,
                   null,
@@ -2186,9 +2365,7 @@ public class CompactSegmentsTest
             new CompactionState(
                 compactionPartitionsSpec,
                 clientCompactionTaskQuery.getDimensionsSpec() == null ? null : new DimensionsSpec(
-                    clientCompactionTaskQuery.getDimensionsSpec().getDimensions(),
-                    null,
-                    null
+                    clientCompactionTaskQuery.getDimensionsSpec().getDimensions()
                 ),
                 metricsSpec,
                 transformSpec,

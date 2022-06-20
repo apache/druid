@@ -17,11 +17,12 @@
  */
 
 @import '../../../blueprint-overrides/common/colors';
+@import '../../../variables';
 
 .query-error {
   padding: 20px 22px;
 
-  .bp3-dark & {
+  .#{$bp-ns}-dark & {
     background: $dark-gray3;
   }
 

@@ -33,7 +33,8 @@ sidebar_label: "Aggregation functions"
 > Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
 > This document describes the SQL language.
 
-You can use aggregation functions in the SELECT clause of any query.
+You can use aggregation functions in the SELECT clause of any [Druid SQL](./sql.md) query.
+
 Filter any aggregator using the FILTER clause, for example:
 
 ```
@@ -114,7 +115,7 @@ Load the [DataSketches extension](../development/extensions-core/datasketches-ex
 
 |Function|Notes|Default|
 |--------|-----|-------|
-|`APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`|Counts distinct values of `expr`, which can be a regular column or an [HLL sketch](../development/extensions-core/datasketches-hll.md) column. Results are always approximate, regardless of the value of [`useApproximateCountDistinct`](sql-connection-context.md). The `lgK` and `tgtHllType` parameters here are, like the equivalents in the [aggregator](../development/extensions-core/datasketches-hll.md#aggregators), described in the HLL sketch documentation. See also `COUNT(DISTINCT expr)`.|`0`|
+|`APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`|Counts distinct values of `expr`, which can be a regular column or an [HLL sketch](../development/extensions-core/datasketches-hll.md) column. Results are always approximate, regardless of the value of [`useApproximateCountDistinct`](sql-query-context.md). The `lgK` and `tgtHllType` parameters here are, like the equivalents in the [aggregator](../development/extensions-core/datasketches-hll.md#aggregators), described in the HLL sketch documentation. See also `COUNT(DISTINCT expr)`.|`0`|
 |`DS_HLL(expr, [lgK, tgtHllType])`|Creates an [HLL sketch](../development/extensions-core/datasketches-hll.md) on the values of `expr`, which can be a regular column or a column containing HLL sketches. The `lgK` and `tgtHllType` parameters are described in the HLL sketch documentation.|`'0'` (STRING)|
 
 
@@ -124,7 +125,7 @@ Load the [DataSketches extension](../development/extensions-core/datasketches-ex
 
 |Function|Notes|Default|
 |--------|-----|-------|
-|`APPROX_COUNT_DISTINCT_DS_THETA(expr, [size])`|Counts distinct values of `expr`, which can be a regular column or a [Theta sketch](../development/extensions-core/datasketches-theta.md) column. Results are always approximate, regardless of the value of [`useApproximateCountDistinct`](sql-connection-context.md). The `size` parameter is described in the Theta sketch documentation. See also `COUNT(DISTINCT expr)`.|`0`|
+|`APPROX_COUNT_DISTINCT_DS_THETA(expr, [size])`|Counts distinct values of `expr`, which can be a regular column or a [Theta sketch](../development/extensions-core/datasketches-theta.md) column. Results are always approximate, regardless of the value of [`useApproximateCountDistinct`](sql-query-context.md). The `size` parameter is described in the Theta sketch documentation. See also `COUNT(DISTINCT expr)`.|`0`|
 |`DS_THETA(expr, [size])`|Creates a [Theta sketch](../development/extensions-core/datasketches-theta.md) on the values of `expr`, which can be a regular column or a column containing Theta sketches. The `size` parameter is described in the Theta sketch documentation.|`'0.0'` (STRING)|
 
 

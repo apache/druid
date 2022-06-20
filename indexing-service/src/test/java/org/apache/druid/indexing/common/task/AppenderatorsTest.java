@@ -141,7 +141,7 @@ public class AppenderatorsTest
           new MapInputRowParser(
               new JSONParseSpec(
                   new TimestampSpec("ts", "auto", null),
-                  new DimensionsSpec(null, null, null),
+                  DimensionsSpec.EMPTY,
                   null,
                   null,
                   null
@@ -183,7 +183,7 @@ public class AppenderatorsTest
           objectMapper,
           () -> 0
       );
-      IndexMerger indexMerger = new IndexMergerV9(
+      IndexMergerV9 indexMerger = new IndexMergerV9(
           objectMapper,
           indexIO,
           OffHeapMemorySegmentWriteOutMediumFactory.instance()

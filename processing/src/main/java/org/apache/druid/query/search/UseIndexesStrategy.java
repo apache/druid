@@ -26,20 +26,23 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.IdentityExtractionFn;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.search.CursorOnlyStrategy.CursorBasedExecutor;
-import org.apache.druid.segment.ColumnSelectorBitmapIndexSelector;
+import org.apache.druid.segment.ColumnSelectorColumnIndexSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.column.NumericColumn;
 import org.joda.time.Interval;
 
@@ -78,7 +81,7 @@ public class UseIndexesStrategy extends SearchStrategy
       final List<DimensionSpec> nonBitmapSuppDims = pair.rhs;
 
       if (bitmapSuppDims.size() > 0) {
-        final BitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(
+        final ColumnIndexSelector selector = new ColumnSelectorColumnIndexSelector(
             index.getBitmapFactoryForDimensions(),
             VirtualColumns.EMPTY,
             index
@@ -89,7 +92,7 @@ public class UseIndexesStrategy extends SearchStrategy
         // Note: if some filters support bitmap indexes but others are not, the current implementation always employs
         // the cursor-based plan. This can be more optimized. One possible optimization is generating a bitmap index
         // from the non-bitmap-support filter, and then use it to compute the filtered result by intersecting bitmaps.
-        if (filter == null || filter.supportsBitmapIndex(selector)) {
+        if (filter == null || filter.getBitmapColumnIndex(selector) != null) {
           final ImmutableBitmap timeFilteredBitmap = makeTimeFilteredBitmap(index, segment, filter, interval);
           builder.add(new IndexOnlyExecutor(query, segment, timeFilteredBitmap, bitmapSuppDims));
         } else {
@@ -152,13 +155,18 @@ public class UseIndexesStrategy extends SearchStrategy
     if (filter == null) {
       baseFilter = null;
     } else {
-      final BitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(
+      final ColumnIndexSelector selector = new ColumnSelectorColumnIndexSelector(
           index.getBitmapFactoryForDimensions(),
           VirtualColumns.EMPTY,
           index
       );
-      Preconditions.checkArgument(filter.supportsBitmapIndex(selector), "filter[%s] should support bitmap", filter);
-      baseFilter = filter.getBitmapIndex(selector);
+      final BitmapColumnIndex columnIndex = filter.getBitmapColumnIndex(selector);
+      Preconditions.checkNotNull(
+          columnIndex,
+          "filter[%s] should support bitmap",
+          filter
+      );
+      baseFilter = columnIndex.computeBitmapResult(new DefaultBitmapResultFactory(selector.getBitmapFactory()));
     }
 
     final ImmutableBitmap timeFilteredBitmap;
@@ -251,21 +259,19 @@ public class UseIndexesStrategy extends SearchStrategy
           continue;
         }
 
-        final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
-        Preconditions.checkArgument(bitmapIndex != null,
-                                    "Dimension [%s] should support bitmap index", dimension.getDimension()
-        );
+        final ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
 
         ExtractionFn extractionFn = dimension.getExtractionFn();
         if (extractionFn == null) {
           extractionFn = IdentityExtractionFn.getInstance();
         }
-        for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
-          String dimVal = extractionFn.apply(bitmapIndex.getValue(i));
+        // if indexSupplier is null here, it means the column is missing
+        if (indexSupplier == null) {
+          String dimVal = extractionFn.apply(null);
           if (!searchQuerySpec.accept(dimVal)) {
             continue;
           }
-          ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
+          ImmutableBitmap bitmap = bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), index.getNumRows());
           if (timeFilteredBitmap != null) {
             bitmap = bitmapFactory.intersection(Arrays.asList(timeFilteredBitmap, bitmap));
           }
@@ -273,6 +279,25 @@ public class UseIndexesStrategy extends SearchStrategy
             retVal.addTo(new SearchHit(dimension.getOutputName(), dimVal), bitmap.size());
             if (retVal.size() >= limit) {
               return retVal;
+            }
+          }
+        } else {
+          final DictionaryEncodedStringValueIndex bitmapIndex =
+              indexSupplier.as(DictionaryEncodedStringValueIndex.class);
+          for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
+            String dimVal = extractionFn.apply(bitmapIndex.getValue(i));
+            if (!searchQuerySpec.accept(dimVal)) {
+              continue;
+            }
+            ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
+            if (timeFilteredBitmap != null) {
+              bitmap = bitmapFactory.intersection(Arrays.asList(timeFilteredBitmap, bitmap));
+            }
+            if (!bitmap.isEmpty()) {
+              retVal.addTo(new SearchHit(dimension.getOutputName(), dimVal), bitmap.size());
+              if (retVal.size() >= limit) {
+                return retVal;
+              }
             }
           }
         }

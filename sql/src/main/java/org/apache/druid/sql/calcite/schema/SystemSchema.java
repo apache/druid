@@ -123,6 +123,8 @@ public class SystemSchema extends AbstractSchema
    * where 1 = true and 0 = false to make it easy to count number of segments
    * which are published, available etc.
    */
+  private static final long IS_ACTIVE_FALSE = 0L;
+  private static final long IS_ACTIVE_TRUE = 1L;
   private static final long IS_PUBLISHED_FALSE = 0L;
   private static final long IS_PUBLISHED_TRUE = 1L;
   private static final long IS_AVAILABLE_TRUE = 1L;
@@ -140,6 +142,7 @@ public class SystemSchema extends AbstractSchema
       .add("partition_num", ColumnType.LONG)
       .add("num_replicas", ColumnType.LONG)
       .add("num_rows", ColumnType.LONG)
+      .add("is_active", ColumnType.LONG)
       .add("is_published", ColumnType.LONG)
       .add("is_available", ColumnType.LONG)
       .add("is_realtime", ColumnType.LONG)
@@ -313,7 +316,10 @@ public class SystemSchema extends AbstractSchema
                   (long) segment.getShardSpec().getPartitionNum(),
                   numReplicas,
                   numRows,
-                  IS_PUBLISHED_TRUE, //is_published is true for published segments
+                  //is_active is true for published segments that are not overshadowed
+                  val.isOvershadowed() ? IS_ACTIVE_FALSE : IS_ACTIVE_TRUE,
+                  //is_published is true for published segments
+                  IS_PUBLISHED_TRUE,
                   isAvailable,
                   isRealtime,
                   val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
@@ -350,8 +356,10 @@ public class SystemSchema extends AbstractSchema
                   (long) val.getValue().getSegment().getShardSpec().getPartitionNum(),
                   numReplicas,
                   val.getValue().getNumRows(),
-                  IS_PUBLISHED_FALSE,
+                  // is_active is true for unpublished segments iff they are realtime
+                  val.getValue().isRealtime() /* is_active */,
                   // is_published is false for unpublished segments
+                  IS_PUBLISHED_FALSE,
                   // is_available is assumed to be always true for segments announced by historicals or realtime tasks
                   IS_AVAILABLE_TRUE,
                   val.getValue().isRealtime(),

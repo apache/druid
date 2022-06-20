@@ -39,7 +39,7 @@ import java.util.function.Function;
  * It's counterpart for incremental index is {@link
  * org.apache.druid.segment.incremental.IncrementalIndexColumnSelectorFactory}.
  */
-public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
+public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory, RowIdSupplier
 {
   private final QueryableIndex index;
   private final VirtualColumns virtualColumns;
@@ -193,17 +193,27 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
     }
   }
 
+  @Nullable
+  @Override
+  public RowIdSupplier getRowIdSupplier()
+  {
+    return this;
+  }
+
+  @Override
+  public long getRowId()
+  {
+    return offset.getOffset();
+  }
+
   @Override
   @Nullable
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     if (virtualColumns.exists(columnName)) {
-      return virtualColumns.getColumnCapabilities(
-          QueryableIndexStorageAdapter.getColumnInspectorForIndex(index),
-          columnName
-      );
+      return virtualColumns.getColumnCapabilities(index, columnName);
     }
 
-    return QueryableIndexStorageAdapter.getColumnCapabilities(index, columnName);
+    return index.getColumnCapabilities(columnName);
   }
 }

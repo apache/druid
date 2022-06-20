@@ -149,11 +149,11 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
 
   private static final CloseableStupidPool<ByteBuffer> BUFFER_POOL = new CloseableStupidPool<>(
       "GroupByQueryEngine-bufferPool",
-      () -> ByteBuffer.allocateDirect(PROCESSING_CONFIG.intermediateComputeSizeBytes())
+      () -> ByteBuffer.allocate(PROCESSING_CONFIG.intermediateComputeSizeBytes())
   );
 
   private static final TestBlockingPool MERGE_BUFFER_POOL = new TestBlockingPool(
-      () -> ByteBuffer.allocateDirect(PROCESSING_CONFIG.intermediateComputeSizeBytes()),
+      () -> ByteBuffer.allocate(PROCESSING_CONFIG.intermediateComputeSizeBytes()),
       PROCESSING_CONFIG.getNumMergeBuffers()
   );
 

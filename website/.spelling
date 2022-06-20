@@ -55,6 +55,7 @@ DRUIDVERSION
 DataSketches
 DateTime
 DateType
+dimensionsSpec
 DimensionSpec
 DimensionSpecs
 Dockerfile
@@ -112,6 +113,7 @@ InputFormat
 InputSource
 InputSources
 Integer.MAX_VALUE
+ioConfig
 JBOD
 JDBC
 JDK
@@ -283,6 +285,7 @@ gzipped
 hadoop
 hasher
 hashtable
+high-QPS
 historicals
 hostname
 hostnames
@@ -294,6 +297,7 @@ influxdb
 ingestionSpec
 injective
 inlined
+inSubQueryThreshold
 interruptible
 jackson-jq
 javadoc
@@ -374,6 +378,7 @@ procs
 programmatically
 proto
 proxied
+QPS
 quantile
 quantiles
 queryable
@@ -395,10 +400,12 @@ rollups
 rsync
 runtime
 schemas
+schemaless
 searchable
 secondaryPartitionPruning
 seekable-stream
 servlet
+setProcessingThreadNames
 simple-client-sslcontext
 sharded
 sharding
@@ -526,6 +533,7 @@ error_msg
 exprs
 group_id
 interval_expr
+is_active
 is_available
 is_leader
 is_overshadowed
@@ -556,11 +564,15 @@ useApproximateCountDistinct
 useGroupingSetForExactDistinct
 useApproximateTopN
 wikipedia
+enableTimeBoundaryPlanning
+TimeBoundary
+druid.query.default.context.enableTimeBoundaryPlanning
 IEC
  - ../docs/comparisons/druid-vs-elasticsearch.md
 100x
  - ../docs/configuration/logging.md
 _common
+appenders
  - ../docs/dependencies/deep-storage.md
 druid-hdfs-storage
 druid-s3-extensions
@@ -629,6 +641,7 @@ maxFetchCapacityBytes
 maxFetchRetry
 prefetchTriggerBytes
 shardSpecs
+sharedAccessStorageToken
  - ../docs/development/extensions-contrib/cloudfiles.md
 StaticCloudFilesFirehose
 cloudfiles
@@ -668,7 +681,6 @@ baseDataSource
 baseDataSource-hashCode
 classpathPrefix
 derivativeDataSource
-dimensionsSpec
 druid.extensions.hadoopDependenciesDir
 hadoopDependencyCoordinates
 maxTaskCount
@@ -692,6 +704,7 @@ doubleMeanNoNulls
 doubleMin
 doubleSum
 druid.generic.useDefaultValueForNull
+druid.generic.ignoreNullsForStringCardinality
 limitSpec
 longMax
 longAny
@@ -1128,7 +1141,6 @@ datetime
 f.example.com
 filePattern
 forceExtendableShardSpecs
-granularitySpec
 ignoreInvalidRows
 ignoreWhenNoSegments
 indexSpecForIntermediatePersists
@@ -1424,6 +1436,7 @@ Sys
 SysMonitor
 TaskCountStatsMonitor
 TaskSlotCountStatsMonitor
+WorkerTaskCountStatsMonitor
 bufferCapacity
 bufferpoolName
 cms
@@ -1455,6 +1468,7 @@ poolName
 remoteAddress
 segmentAvailabilityConfirmed
 serviceName
+taskIngestionMode
 taskStatus
 taskType
 threadPoolNumBusyThreads.
@@ -1553,6 +1567,7 @@ D1
 D2
 D3
 druid.query.groupBy.defaultStrategy
+druid.query.groupBy.maxSelectorDictionarySize
 druid.query.groupBy.maxMergingDictionarySize
 druid.query.groupBy.maxOnDiskStorage
 druid.query.groupBy.maxResults.
@@ -1562,9 +1577,11 @@ maxResults
 orderby
 orderbys
 outputName
+pre-existing
 pushdown
 row1
 subtotalsSpec
+tradeoff
 unnested
 unnesting
  - ../docs/querying/having.md
@@ -1835,7 +1852,6 @@ cpuacct
 dataSourceName
 datetime
 defaultHistory
-dimensionsSpec
 doubleMax
 doubleMin
 doubleSum
@@ -1854,6 +1870,7 @@ druid_taskLock
 druid_taskLog
 druid_tasks
 DruidQueryRel
+durationToRetain
 ec2
 equalDistribution
 extractionFn
@@ -1952,7 +1969,6 @@ dimensionExclusions
 expr
 jackson-jq
 missingValue
-schemaless
 skipBytesInMemoryOverheadCheck
 spatialDimensions
 useFieldDiscovery

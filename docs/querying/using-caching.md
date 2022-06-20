@@ -61,11 +61,14 @@ To control **segment caching** on the Broker, set the `useCache` and `populateCa
 druid.broker.cache.useCache=true
 druid.broker.cache.populateCache=true
 ```
+
 To control **whole-query caching** on the Broker, set the `useResultLevelCache` and `populateResultLevelCache` runtime properties. For example, to set the Broker to use and populate the whole-query cache for queries:
+
 ```
 druid.broker.cache.useResultLevelCache=true
 druid.broker.cache.populateResultLevelCache=true
 ```
+
 See [Broker caching](../configuration/index.md#broker-caching) for a description of all available Broker cache configurations.
  
 ## Enabling caching in the query context

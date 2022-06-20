@@ -24,6 +24,7 @@ import com.jayway.jsonpath.spi.json.JsonProvider;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.UOE;
 
+import javax.annotation.Nullable;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,12 +45,12 @@ public class ObjectFlatteners
   }
 
   public static <T> ObjectFlattener<T> create(
-      final JSONPathSpec flattenSpec,
+      @Nullable final JSONPathSpec flattenSpecInput,
       final FlattenerMaker<T> flattenerMaker
   )
   {
     final Map<String, Function<T, Object>> extractors = new LinkedHashMap<>();
-
+    final JSONPathSpec flattenSpec = flattenSpecInput == null ? JSONPathSpec.DEFAULT : flattenSpecInput;
     for (final JSONPathFieldSpec fieldSpec : flattenSpec.getFields()) {
       final Function<T, Object> extractor;
 

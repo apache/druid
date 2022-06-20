@@ -124,6 +124,12 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
       }
 
       @Override
+      public boolean canCompare()
+      {
+        return false;
+      }
+
+      @Override
       public int compare(ByteBuffer o1, ByteBuffer o2)
       {
         throw new UnsupportedOperationException();

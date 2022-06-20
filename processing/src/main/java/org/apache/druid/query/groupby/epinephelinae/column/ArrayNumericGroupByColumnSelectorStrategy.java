@@ -20,8 +20,10 @@
 package org.apache.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.annotations.VisibleForTesting;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.DictionaryBuilding;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
@@ -30,31 +32,36 @@ import org.apache.druid.segment.data.ComparableList;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.List;
 
-public abstract class ArrayNumericGroupByColumnSelectorStrategy<T extends Comparable> implements GroupByColumnSelectorStrategy
+public abstract class ArrayNumericGroupByColumnSelectorStrategy<T extends Comparable>
+    implements GroupByColumnSelectorStrategy
 {
   protected static final int GROUP_BY_MISSING_VALUE = -1;
 
   protected final List<List<T>> dictionary;
-  protected final Object2IntOpenHashMap<List<T>> reverseDictionary;
+  protected final Object2IntMap<List<T>> reverseDictionary;
+  protected long estimatedFootprint = 0L;
 
-  public ArrayNumericGroupByColumnSelectorStrategy()
+  private final int valueFootprint;
+
+  public ArrayNumericGroupByColumnSelectorStrategy(final int valueFootprint)
   {
-    dictionary = new ArrayList<>();
-    reverseDictionary = new Object2IntOpenHashMap<>();
-    reverseDictionary.defaultReturnValue(-1);
+    this.dictionary = DictionaryBuilding.createDictionary();
+    this.reverseDictionary = DictionaryBuilding.createReverseDictionary();
+    this.valueFootprint = valueFootprint;
   }
 
   @VisibleForTesting
   ArrayNumericGroupByColumnSelectorStrategy(
       List<List<T>> dictionary,
-      Object2IntOpenHashMap<List<T>> reverseDictionary
+      Object2IntOpenHashMap<List<T>> reverseDictionary,
+      int valueFootprint
   )
   {
     this.dictionary = dictionary;
     this.reverseDictionary = reverseDictionary;
+    this.valueFootprint = valueFootprint;
   }
 
   @Override
@@ -83,16 +90,17 @@ public abstract class ArrayNumericGroupByColumnSelectorStrategy<T extends Compar
   }
 
   @Override
-  public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
+  public int initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
   {
-    final int groupingKey = (int) getOnlyValue(selector);
-    valuess[columnIndex] = groupingKey;
+    final long priorFootprint = estimatedFootprint;
+    valuess[columnIndex] = computeDictionaryId(selector);
+    return (int) (estimatedFootprint - priorFootprint);
   }
 
   @Override
   public void initGroupingKeyColumnValue(
       int keyBufferPosition,
-      int columnIndex,
+      int dimensionIndex,
       Object rowObj,
       ByteBuffer keyBuffer,
       int[] stack
@@ -101,9 +109,9 @@ public abstract class ArrayNumericGroupByColumnSelectorStrategy<T extends Compar
     final int groupingKey = (int) rowObj;
     writeToKeyBuffer(keyBufferPosition, groupingKey, keyBuffer);
     if (groupingKey == GROUP_BY_MISSING_VALUE) {
-      stack[columnIndex] = 0;
+      stack[dimensionIndex] = 0;
     } else {
-      stack[columnIndex] = 1;
+      stack[dimensionIndex] = 1;
     }
 
   }
@@ -119,23 +127,29 @@ public abstract class ArrayNumericGroupByColumnSelectorStrategy<T extends Compar
     return false;
   }
 
-  @Override
-  public abstract Object getOnlyValue(ColumnValueSelector selector);
-
+  protected abstract int computeDictionaryId(ColumnValueSelector selector);
 
   @Override
-  public void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer)
+  public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
   {
-    keyBuffer.putInt(keyBufferPosition, (int) obj);
+    final long priorFootprint = estimatedFootprint;
+
+    // computeDictionaryId updates estimatedFootprint
+    keyBuffer.putInt(keyBufferPosition, computeDictionaryId(selector));
+
+    return (int) (estimatedFootprint - priorFootprint);
   }
 
-  int addToIndexedDictionary(List<T> t)
+  protected int addToIndexedDictionary(List<T> t)
   {
     final int dictId = reverseDictionary.getInt(t);
     if (dictId < 0) {
       final int size = dictionary.size();
       dictionary.add(t);
       reverseDictionary.put(t, size);
+
+      // Footprint estimate: one pointer, one value per list entry.
+      estimatedFootprint += DictionaryBuilding.estimateEntryFootprint(t.size() * (Long.BYTES + valueFootprint));
       return size;
     }
     return dictId;
@@ -177,5 +191,19 @@ public abstract class ArrayNumericGroupByColumnSelectorStrategy<T extends Compar
         return 1;
       }
     };
+  }
+
+  @Override
+  public void reset()
+  {
+    dictionary.clear();
+    reverseDictionary.clear();
+    estimatedFootprint = 0;
+  }
+
+  @VisibleForTesting
+  void writeToKeyBuffer(int keyBufferPosition, int groupingKey, ByteBuffer keyBuffer)
+  {
+    keyBuffer.putInt(keyBufferPosition, groupingKey);
   }
 }

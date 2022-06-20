@@ -52,6 +52,8 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestObjectColumnSelector;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
@@ -81,6 +83,19 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   private static IncrementalIndex INCREMENTAL_INDEX;
   private static IncrementalIndexStorageAdapter INCREMENTAL_INDEX_STORAGE_ADAPTER;
   private static List<StorageAdapter> ADAPTERS;
+
+  private static final ColumnCapabilities SINGLE_VALUE = new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
+                                                                                     .setDictionaryEncoded(true)
+                                                                                     .setDictionaryValuesUnique(true)
+                                                                                     .setDictionaryValuesSorted(true)
+                                                                                     .setHasMultipleValues(false)
+                                                                                     .setHasNulls(true);
+  private static final ColumnCapabilities MULTI_VAL = new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
+                                                                                  .setDictionaryEncoded(true)
+                                                                                  .setDictionaryValuesUnique(true)
+                                                                                  .setDictionaryValuesSorted(true)
+                                                                                  .setHasMultipleValues(true)
+                                                                                  .setHasNulls(true);
 
   @BeforeClass
   public static void setup()
@@ -394,7 +409,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     Assert.assertTrue(
         ExpressionSelectors.canMapOverDictionary(
             Parser.parse("dim1 == 2", ExprMacroTable.nil()).analyzeInputs(),
-            ColumnCapabilities.Capable.FALSE
+            SINGLE_VALUE
         )
     );
   }
@@ -405,7 +420,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     Assert.assertTrue(
         ExpressionSelectors.canMapOverDictionary(
             Parser.parse("concat(dim1, dim1) == 2", ExprMacroTable.nil()).analyzeInputs(),
-            ColumnCapabilities.Capable.FALSE
+            SINGLE_VALUE
         )
     );
   }
@@ -416,7 +431,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     Assert.assertTrue(
         ExpressionSelectors.canMapOverDictionary(
             Parser.parse("dim1 == 2", ExprMacroTable.nil()).analyzeInputs(),
-            ColumnCapabilities.Capable.TRUE
+            MULTI_VAL
         )
     );
   }
@@ -427,7 +442,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     Assert.assertFalse(
         ExpressionSelectors.canMapOverDictionary(
             Parser.parse("dim1 == 2", ExprMacroTable.nil()).analyzeInputs(),
-            ColumnCapabilities.Capable.UNKNOWN
+            new ColumnCapabilitiesImpl()
         )
     );
   }
@@ -438,7 +453,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     Assert.assertFalse(
         ExpressionSelectors.canMapOverDictionary(
             Parser.parse("array_contains(dim1, 2)", ExprMacroTable.nil()).analyzeInputs(),
-            ColumnCapabilities.Capable.FALSE
+            ColumnCapabilitiesImpl.createDefault().setType(ColumnType.STRING_ARRAY)
         )
     );
   }
@@ -449,7 +464,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     Assert.assertFalse(
         ExpressionSelectors.canMapOverDictionary(
             Parser.parse("array_contains(dim1, 2)", ExprMacroTable.nil()).analyzeInputs(),
-            ColumnCapabilities.Capable.TRUE
+            MULTI_VAL
         )
     );
   }
@@ -460,7 +475,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     Assert.assertFalse(
         ExpressionSelectors.canMapOverDictionary(
             Parser.parse("array_contains(dim1, 2)", ExprMacroTable.nil()).analyzeInputs(),
-            ColumnCapabilities.Capable.UNKNOWN
+            new ColumnCapabilitiesImpl()
         )
     );
   }
@@ -471,7 +486,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     Assert.assertTrue(
         ExpressionSelectors.canMapOverDictionary(
             Parser.parse("dim1 == 2", ExprMacroTable.nil()).analyzeInputs(),
-            ColumnCapabilities.Capable.FALSE
+            SINGLE_VALUE
         )
     );
   }

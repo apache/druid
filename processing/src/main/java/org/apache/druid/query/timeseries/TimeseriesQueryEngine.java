@@ -82,7 +82,11 @@ public class TimeseriesQueryEngine
    * Run a single-segment, single-interval timeseries query on a particular adapter. The query must have been
    * scoped down to a single interval before calling this method.
    */
-  public Sequence<Result<TimeseriesResultValue>> process(final TimeseriesQuery query, final StorageAdapter adapter)
+  public Sequence<Result<TimeseriesResultValue>> process(
+      final TimeseriesQuery query,
+      final StorageAdapter adapter,
+      @Nullable final TimeseriesQueryMetrics timeseriesQueryMetrics
+  )
   {
     if (adapter == null) {
       throw new SegmentMissingException(
@@ -106,9 +110,9 @@ public class TimeseriesQueryEngine
     final Sequence<Result<TimeseriesResultValue>> result;
 
     if (doVectorize) {
-      result = processVectorized(query, adapter, filter, interval, gran, descending);
+      result = processVectorized(query, adapter, filter, interval, gran, descending, timeseriesQueryMetrics);
     } else {
-      result = processNonVectorized(query, adapter, filter, interval, gran, descending);
+      result = processNonVectorized(query, adapter, filter, interval, gran, descending, timeseriesQueryMetrics);
     }
 
     final int limit = query.getLimit();
@@ -125,7 +129,8 @@ public class TimeseriesQueryEngine
       @Nullable final Filter filter,
       final Interval queryInterval,
       final Granularity gran,
-      final boolean descending
+      final boolean descending,
+      final TimeseriesQueryMetrics timeseriesQueryMetrics
   )
   {
     final boolean skipEmptyBuckets = query.isSkipEmptyBuckets();
@@ -137,7 +142,7 @@ public class TimeseriesQueryEngine
         query.getVirtualColumns(),
         descending,
         QueryContexts.getVectorSize(query),
-        null
+        timeseriesQueryMetrics
     );
 
     if (cursor == null) {
@@ -251,7 +256,8 @@ public class TimeseriesQueryEngine
       @Nullable final Filter filter,
       final Interval queryInterval,
       final Granularity gran,
-      final boolean descending
+      final boolean descending,
+      final TimeseriesQueryMetrics timeseriesQueryMetrics
   )
   {
     final boolean skipEmptyBuckets = query.isSkipEmptyBuckets();
@@ -299,7 +305,8 @@ public class TimeseriesQueryEngine
               agg.close();
             }
           }
-        }
+        },
+        timeseriesQueryMetrics
     );
   }
 }

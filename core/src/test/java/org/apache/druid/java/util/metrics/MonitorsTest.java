@@ -23,12 +23,22 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.List;
 
 public class MonitorsTest
 {
+  private static final String CPU_ARCH = System.getProperty("os.arch");
+
+  @Before
+  public void before()
+  {
+    // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
+    Assume.assumeFalse("aarch64".equals(CPU_ARCH));
+  }
 
   @Test
   public void testSetFeed()

@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.groupby.epinephelinae.collection.HashTableUtils;
 import org.apache.druid.query.groupby.epinephelinae.collection.MemoryOpenHashTable;
+import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -207,7 +208,7 @@ public class HashVectorGrouper implements VectorGrouper
   }
 
   @Override
-  public CloseableIterator<Grouper.Entry<Memory>> iterator()
+  public CloseableIterator<Grouper.Entry<MemoryPointer>> iterator()
   {
     if (!initialized) {
       // it's possible for iterator() to be called before initialization when
@@ -217,8 +218,11 @@ public class HashVectorGrouper implements VectorGrouper
 
     final IntIterator baseIterator = hashTable.bucketIterator();
 
-    return new CloseableIterator<Grouper.Entry<Memory>>()
+    return new CloseableIterator<Grouper.Entry<MemoryPointer>>()
     {
+      final MemoryPointer reusableKey = new MemoryPointer();
+      final ReusableEntry<MemoryPointer> reusableEntry = new ReusableEntry<>(reusableKey, new Object[aggregators.size()]);
+
       @Override
       public boolean hasNext()
       {
@@ -226,23 +230,19 @@ public class HashVectorGrouper implements VectorGrouper
       }
 
       @Override
-      public Grouper.Entry<Memory> next()
+      public Grouper.Entry<MemoryPointer> next()
       {
         final int bucket = baseIterator.nextInt();
         final int bucketPosition = hashTable.bucketMemoryPosition(bucket);
 
-        final Memory keyMemory = hashTable.memory().region(
-            bucketPosition + hashTable.bucketKeyOffset(),
-            hashTable.keySize()
-        );
+        reusableKey.set(hashTable.memory(), bucketPosition + hashTable.bucketKeyOffset());
 
-        final Object[] values = new Object[aggregators.size()];
         final int aggregatorsOffset = bucketPosition + hashTable.bucketValueOffset();
         for (int i = 0; i < aggregators.size(); i++) {
-          values[i] = aggregators.get(hashTable.memory().getByteBuffer(), aggregatorsOffset, i);
+          reusableEntry.getValues()[i] = aggregators.get(hashTable.memory().getByteBuffer(), aggregatorsOffset, i);
         }
 
-        return new Grouper.Entry<>(keyMemory, values);
+        return reusableEntry;
       }
 
       @Override
