@@ -27,9 +27,7 @@ import com.google.inject.Inject;
 import org.apache.druid.data.input.orc.guice.Orc;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
@@ -55,26 +53,6 @@ public class OrcExtensionsModule implements DruidModule
                 new NamedType(OrcInputFormat.class, "orc")
       )
     );
-  }
-
-  public void initialize(Configuration conf)
-  {
-    //Initializing seperately since during eager initialization, resolving
-    //namenode hostname throws an error if nodes are ephemeral
-
-    // Ensure that FileSystem class level initialization happens with correct CL
-    // See https://github.com/apache/druid/issues/1714
-    ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
-    try {
-      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-      FileSystem.get(conf);
-    }
-    catch (IOException ex) {
-      throw new RuntimeException(ex);
-    }
-    finally {
-      Thread.currentThread().setContextClassLoader(currCtxCl);
-    }
   }
 
   @Override
