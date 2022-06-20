@@ -151,6 +151,7 @@ public class DefaultOfflineAppenderatorFactoryTest
         null,
         null,
         null,
+        null,
         null
     );
 

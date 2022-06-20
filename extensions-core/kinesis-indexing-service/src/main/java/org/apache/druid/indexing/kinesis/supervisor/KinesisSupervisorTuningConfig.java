@@ -79,6 +79,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -116,7 +117,8 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod,
       @JsonProperty("repartitionTransitionDuration") Period repartitionTransitionDuration,
       @JsonProperty("offsetFetchPeriod") Period offsetFetchPeriod,
-      @JsonProperty("useListShards") Boolean useListShards
+      @JsonProperty("useListShards") Boolean useListShards,
+      @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads
   )
   {
     super(
@@ -144,7 +146,8 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         maxParseExceptions,
         maxSavedParseExceptions,
         maxRecordsPerPoll,
-        intermediateHandoffPeriod
+        intermediateHandoffPeriod,
+        numPersistThreads
     );
 
     this.workerThreads = workerThreads;
@@ -271,6 +274,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            ", repartitionTransitionDuration=" + getRepartitionTransitionDuration() +
            ", useListShards=" + isUseListShards() +
+           ", numPersistThreads=" + getNumPersistThreads() +
            '}';
   }
 
@@ -302,7 +306,8 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         getMaxParseExceptions(),
         getMaxSavedParseExceptions(),
         getMaxRecordsPerPollConfigured(),
-        getIntermediateHandoffPeriod()
+        getIntermediateHandoffPeriod(),
+        getNumPersistThreads()
     );
   }
 }

@@ -567,6 +567,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     {
       return baseConfig.getSegmentWriteOutMediumFactory();
     }
+
+    @Override
+    public int getNumPersistThreads()
+    {
+      return baseConfig.getNumPersistThreads();
+    }
   }
 
   private IndexMerger wrapIndexMerger(IndexMerger baseMerger)
