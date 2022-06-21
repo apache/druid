@@ -119,6 +119,9 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
    * this input sources backend API. This is called internally by {@link #createSplits} and {@link #estimateNumSplits},
    * only if {@link #prefixes} is set, otherwise the splits are created directly from {@link #uris} or {@link #objects}.
    * Calling if {@link #prefixes} is not set is likely to either lead to an empty iterator or null pointer exception.
+   *
+   * If {@link #filter} is set, the filter will be applied on {@link #uris} or {@link #objects}.
+   * {@link #filter} uses a glob notation, for example: "*.parquet".
    */
   protected abstract Stream<InputSplit<List<CloudObjectLocation>>> getPrefixesSplitStream(SplitHintSpec splitHintSpec);
 
