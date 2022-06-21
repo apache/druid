@@ -317,7 +317,7 @@ class ExpressionTestHelper
   )
   {
     final RexNode rexNode = rexBuilder.makeCall(op, exprs);
-    final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(rowSignature, TestExprMacroTable.INSTANCE);
+    final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(rowSignature, TestExprMacroTable.INSTANCE, false);
 
     final DimFilter filter = Expressions.toFilter(PLANNER_CONTEXT, rowSignature, virtualColumnRegistry, rexNode);
     Assert.assertEquals("Filter for: " + rexNode, expectedFilter, filter);

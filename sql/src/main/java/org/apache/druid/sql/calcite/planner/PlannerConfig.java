@@ -34,7 +34,7 @@ public class PlannerConfig
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
   public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
   public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
-  public static final String CTX_KEY_USE_DEFAULT_EXPRESSION_EXPLAIN = "useDefaultExpressionExplain";
+  public static final String CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS = "forceExpressionVirtualColumns";
   public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
   public static final int NUM_FILTER_NOT_USED = -1;
 
@@ -78,7 +78,7 @@ public class PlannerConfig
   private boolean useNativeQueryExplain = false;
 
   @JsonProperty
-  private boolean useDefaultExpressionExplain = false;
+  private boolean forceExpressionVirtualColumns = false;
 
   @JsonProperty
   private int maxNumericInFilters = NUM_FILTER_NOT_USED;
@@ -161,13 +161,12 @@ public class PlannerConfig
   }
 
   /**
-   * @return true if SQL expressions like {@code MV_FILTER_ONLY,
-   * MV_FILTER_NONE} should use "expression"-type virtual columns, false if they
-   * should use "mv-filtered"-type virtual columns.
+   * @return true if special virtual columns should not be optimized and should
+   * always be of type "expressions", false otherwise.
    */
-  public boolean isUseDefaultExpressionExplain()
+  public boolean isForceExpressionVirtualColumns()
   {
-    return useDefaultExpressionExplain;
+    return forceExpressionVirtualColumns;
   }
 
   public PlannerConfig withOverrides(final QueryContext queryContext)
@@ -199,9 +198,9 @@ public class PlannerConfig
         CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
         isUseNativeQueryExplain()
     );
-    newConfig.useDefaultExpressionExplain = queryContext.getAsBoolean(
-        CTX_KEY_USE_DEFAULT_EXPRESSION_EXPLAIN,
-        isUseDefaultExpressionExplain()
+    newConfig.forceExpressionVirtualColumns = queryContext.getAsBoolean(
+        CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS,
+        isForceExpressionVirtualColumns()
     );
     final int systemConfigMaxNumericInFilters = getMaxNumericInFilters();
     final int queryContextMaxNumericInFilters = queryContext.getAsInt(
@@ -262,7 +261,8 @@ public class PlannerConfig
            serializeComplexValues == that.serializeComplexValues &&
            Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod) &&
            Objects.equals(sqlTimeZone, that.sqlTimeZone) &&
-           useNativeQueryExplain == that.useNativeQueryExplain;
+           useNativeQueryExplain == that.useNativeQueryExplain &&
+           forceExpressionVirtualColumns == that.forceExpressionVirtualColumns;
   }
 
   @Override
@@ -280,7 +280,8 @@ public class PlannerConfig
         metadataSegmentCacheEnable,
         metadataSegmentPollPeriod,
         serializeComplexValues,
-        useNativeQueryExplain
+        useNativeQueryExplain,
+        forceExpressionVirtualColumns
     );
   }
 

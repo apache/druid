@@ -387,6 +387,15 @@ public class DruidExpression
     return virtualColumnCreator.create(name, outputType, expression.get(), macroTable);
   }
 
+  public VirtualColumn toExpressionVirtualColumn(
+      final String name,
+      final ColumnType outputType,
+      final ExprMacroTable macroTable
+  )
+  {
+    return DEFAULT_VIRTUAL_COLUMN_BUILDER.create(name, outputType, expression.get(), macroTable);
+  }
+
   public NodeType getType()
   {
     return nodeType;

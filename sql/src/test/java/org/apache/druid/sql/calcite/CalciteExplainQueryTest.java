@@ -290,7 +290,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
     // Test plan as default expressions
     final Map<String, Object> defaultExprContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     defaultExprContext.put(PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN, true);
-    defaultExprContext.put(PlannerConfig.CTX_KEY_USE_DEFAULT_EXPRESSION_EXPLAIN, true);
+    defaultExprContext.put(PlannerConfig.CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS, true);
 
     final String expectedPlanWithDefaultExpressions = "[{"
                                                       + "\"query\":{\"queryType\":\"scan\","
@@ -305,7 +305,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
                                                       + "\"filter\":null,"
                                                       + "\"columns\":[\"v0\",\"v1\"],"
                                                       + "\"legacy\":false,"
-                                                      + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useDefaultExpressionExplain\":true,\"useNativeQueryExplain\":true,\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
+                                                      + "\"context\":{\"defaultTimeout\":300000,\"forceExpressionVirtualColumns\":true,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useNativeQueryExplain\":true,\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
                                                       + "\"descending\":false,"
                                                       + "\"granularity\":{\"type\":\"all\"}},"
                                                       + "\"signature\":[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"v1\",\"type\":\"STRING\"}]"

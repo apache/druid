@@ -167,7 +167,11 @@ public class DruidQuery
   {
     final RelDataType outputRowType = partialQuery.leafRel().getRowType();
     if (virtualColumnRegistry == null) {
-      virtualColumnRegistry = VirtualColumnRegistry.create(sourceRowSignature, plannerContext.getExprMacroTable());
+      virtualColumnRegistry = VirtualColumnRegistry.create(
+          sourceRowSignature,
+          plannerContext.getExprMacroTable(),
+          plannerContext.getPlannerConfig().isForceExpressionVirtualColumns()
+      );
     }
 
     // Now the fun begins.
