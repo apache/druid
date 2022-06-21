@@ -60,7 +60,7 @@ import org.junit.rules.ExpectedException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -355,7 +355,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
 
   private static class FailableAppenderator implements Appenderator
   {
-    private final Map<SegmentIdWithShardSpec, List<InputRow>> rows = new HashMap<>();
+    private final Map<SegmentIdWithShardSpec, List<InputRow>> rows = new TreeMap<>();
 
     private boolean dropEnabled = true;
     private boolean persistEnabled = true;
