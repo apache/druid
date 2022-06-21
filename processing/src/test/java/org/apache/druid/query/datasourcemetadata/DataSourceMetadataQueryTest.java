@@ -79,13 +79,13 @@ public class DataSourceMetadataQueryTest
                                                 .intervals("2013/2014")
                                                 .context(
                                                     ImmutableMap.of(
-                                                        "priority",
+                                                        QueryContexts.PRIORITY_KEY,
                                                         1,
-                                                        "useCache",
+                                                        QueryContexts.USE_CACHE_KEY,
                                                         true,
-                                                        "populateCache",
+                                                        QueryContexts.POPULATE_CACHE_KEY,
                                                         "true",
-                                                        "finalize",
+                                                        QueryContexts.FINALIZE_KEY,
                                                         true
                                                     )
                                                 ).build();
@@ -103,12 +103,12 @@ public class DataSourceMetadataQueryTest
     );
 
     Assert.assertEquals((Integer) 1, serdeQuery.getContextValue(QueryContexts.PRIORITY_KEY));
-    Assert.assertEquals(true, serdeQuery.getContextValue("useCache"));
-    Assert.assertEquals("true", serdeQuery.getContextValue("populateCache"));
-    Assert.assertEquals(true, serdeQuery.getContextValue("finalize"));
-    Assert.assertEquals(true, serdeQuery.getContextBoolean("useCache", false));
-    Assert.assertEquals(true, serdeQuery.getContextBoolean("populateCache", false));
-    Assert.assertEquals(true, serdeQuery.getContextBoolean("finalize", false));
+    Assert.assertEquals(true, serdeQuery.getContextValue(QueryContexts.USE_CACHE_KEY));
+    Assert.assertEquals("true", serdeQuery.getContextValue(QueryContexts.POPULATE_CACHE_KEY));
+    Assert.assertEquals(true, serdeQuery.getContextValue(QueryContexts.FINALIZE_KEY));
+    Assert.assertEquals(true, serdeQuery.getContextBoolean(QueryContexts.USE_CACHE_KEY, false));
+    Assert.assertEquals(true, serdeQuery.getContextBoolean(QueryContexts.POPULATE_CACHE_KEY, false));
+    Assert.assertEquals(true, serdeQuery.getContextBoolean(QueryContexts.FINALIZE_KEY, false));
   }
 
   @Test

@@ -202,7 +202,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
     expectedLongSumMetric.put("type", "longSum");
     expectedLongSumMetric.put("name", "val");
     expectedLongSumMetric.put("fieldName", "val");
-    expectedLongSumMetric.put("expression", null);
     return new CompactionState(
       new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
       new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
@@ -355,7 +354,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
         expectedLongSumMetric.put("type", "longSum");
         expectedLongSumMetric.put("name", "val");
         expectedLongSumMetric.put("fieldName", "val");
-        expectedLongSumMetric.put("expression", null);
         CompactionState expectedState = new CompactionState(
             new HashedPartitionsSpec(null, 3, null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
@@ -648,7 +646,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
     expectedLongSumMetric.put("type", "longSum");
     expectedLongSumMetric.put("name", "val");
     expectedLongSumMetric.put("fieldName", "val");
-    expectedLongSumMetric.put("expression", null);
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
@@ -710,7 +707,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
     expectedLongSumMetric.put("type", "longSum");
     expectedLongSumMetric.put("name", "val");
     expectedLongSumMetric.put("fieldName", "val");
-    expectedLongSumMetric.put("expression", null);
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),

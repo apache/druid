@@ -3964,7 +3964,7 @@ name: JNI binding for Zstd
 license_category: binary
 module: java-core
 license_name: BSD-2-Clause License
-version: 1.3.3-1
+version: 1.5.2-3
 copyright: Luben Karavelov
 license_file_path: licenses/bin/zstd-jni.BSD2
 libraries:
@@ -4567,7 +4567,7 @@ name: Apache ORC libraries
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: 1.7.2
+version: 1.7.4
 libraries:
   - org.apache.orc: orc-mapreduce
   - org.apache.orc: orc-core
@@ -5028,7 +5028,7 @@ libraries:
 name: DNS Java
 license_category: binary
 module: java-core
-license_name: BSD 2-Clause license
+license_name: BSD-2-Clause License
 version: 2.1.7
 libraries:
   - dnsjava: dnsjava

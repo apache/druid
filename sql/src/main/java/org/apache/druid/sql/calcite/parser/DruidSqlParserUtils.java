@@ -32,8 +32,10 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlTimestampLiteral;
 import org.apache.calcite.tools.ValidationException;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.AndDimFilter;
@@ -56,6 +58,7 @@ import org.joda.time.base.AbstractInterval;
 import java.sql.Timestamp;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -412,5 +415,25 @@ public class DruidSqlParserUtils
     Timestamp sqlTimestamp = Timestamp.valueOf(((SqlTimestampLiteral) sqlNode).toFormattedString());
     ZonedDateTime zonedTimestamp = sqlTimestamp.toLocalDateTime().atZone(timeZone.toTimeZone().toZoneId());
     return String.valueOf(zonedTimestamp.toInstant().toEpochMilli());
+  }
+
+  /**
+   * Throws an IAE with appropriate message if the granularity supplied is not present in
+   * {@link org.apache.druid.java.util.common.granularity.Granularities}. It also filters out NONE as it is not a valid
+   * granularity that can be supplied in PARTITIONED BY
+   */
+  public static void throwIfUnsupportedGranularityInPartitionedBy(Granularity granularity)
+  {
+    if (!GranularityType.isStandard(granularity)) {
+      throw new IAE(
+          "The granularity specified in PARTITIONED BY is not supported. "
+          + "Please use an equivalent of these granularities: %s.",
+          Arrays.stream(GranularityType.values())
+                .filter(granularityType -> !granularityType.equals(GranularityType.NONE))
+                .map(Enum::name)
+                .map(StringUtils::toLowerCase)
+                .collect(Collectors.joining(", "))
+      );
+    }
   }
 }

@@ -71,6 +71,7 @@
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/net\.minidev/json\-smart@.*$</packageUrl>
     <cve>CVE-2021-27568</cve>
+    <cve>CVE-2021-31684</cve>
   </suppress>
 
 
@@ -340,6 +341,7 @@
      <cve>CVE-2018-11765</cve>
      <cve>CVE-2020-9492</cve>
      <cve>CVE-2022-26612</cve>
+     <cve>CVE-2018-8009</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -526,6 +528,38 @@
    file name: pac4j-core-3.8.3.jar
    ]]></notes>
     <cve>CVE-2021-44878</cve>
+  </suppress>
+
+  <suppress>
+    <!-- cassandra-all-1.0.8.jar -->
+    <notes><![CDATA[
+   file name: cassandra-all-1.0.8.jar
+   ]]></notes>
+    <cve>CVE-2020-17516</cve>
+  </suppress>
+
+  <suppress>
+    <!-- jackson-dataformat-cbor-2.10.5.jar -->
+    <notes><![CDATA[
+   file name: jackson-dataformat-cbor-2.10.5.jar
+   ]]></notes>
+    <cve>CVE-2020-28491</cve>
+  </suppress>
+
+  <suppress>
+    <!-- okhttp -->
+    <notes><![CDATA[
+   file name: okhttp-*.jar
+   ]]></notes>
+    <cve>CVE-2021-0341</cve>
+  </suppress>
+
+  <suppress>
+    <!-- parquet-format-structures-1.12.0.jar -->
+    <notes><![CDATA[
+   file name: parquet-format-structures-1.12.0.jar
+   ]]></notes>
+    <cve>CVE-2021-41561</cve>
   </suppress>
 
 </suppressions>

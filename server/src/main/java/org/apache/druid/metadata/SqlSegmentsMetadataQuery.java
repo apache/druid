@@ -233,12 +233,25 @@ public class SqlSegmentsMetadataQuery
             )
         );
 
-        if (i == intervals.size() - 1) {
-          sb.append(")");
-        } else {
+        if (i != intervals.size() - 1) {
           sb.append(" OR ");
         }
       }
+
+      if (matchMode == IntervalMode.OVERLAPS) {
+        // Segments with both endpoints outside 0000/10000 may overlap the search intervals but not match the
+        // generated SQL conditions. We need to add one more OR condition to catch all of these.
+        sb.append(
+            StringUtils.format(
+                " OR start < %2$s OR %1$send%1$s >= %3$s",
+                connector.getQuoteString(),
+                ":minmatch",
+                ":maxmatch"
+            )
+        );
+      }
+
+      sb.append(")");
     }
 
     final Query<Map<String, Object>> sql = handle
@@ -247,12 +260,17 @@ public class SqlSegmentsMetadataQuery
         .bind("used", used)
         .bind("dataSource", dataSource);
 
-    if (compareAsString) {
+    if (compareAsString && !intervals.isEmpty()) {
       final Iterator<Interval> iterator = intervals.iterator();
       for (int i = 0; iterator.hasNext(); i++) {
-        Interval interval = iterator.next();
-        sql.bind(StringUtils.format("start%d", i), interval.getStart().toString())
-           .bind(StringUtils.format("end%d", i), interval.getEnd().toString());
+        final Interval interval = iterator.next();
+        sql.bind(StringUtils.format("start%d", i), interval.getStart().toString());
+        sql.bind(StringUtils.format("end%d", i), interval.getEnd().toString());
+      }
+
+      if (matchMode == IntervalMode.OVERLAPS) {
+        sql.bind("minmatch", "0000-"); // '-' is lexicographically lower than '0' so this catches negative-year starts
+        sql.bind("maxmatch", "10000-"); // Catches end points at 10000 or after
       }
     }
 
@@ -269,7 +287,8 @@ public class SqlSegmentsMetadataQuery
               } else {
                 // Must re-check that the interval matches, even if comparing as string, because the *segment interval*
                 // might not be string-comparable. (Consider a query interval like "2000-01-01/3000-01-01" and a
-                // segment interval like "20010/20011".)
+                // segment interval like "20010/20011". Consider also a segment interval with endpoints prior to
+                // year 0000 or after year 9999.)
                 for (Interval interval : intervals) {
                   if (matchMode.apply(interval, dataSegment.getInterval())) {
                     return true;

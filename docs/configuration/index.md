@@ -764,7 +764,7 @@ Prior to version 0.13.0, Druid string columns treated `''` and `null` values as 
 |---|---|---|
 |`druid.generic.useDefaultValueForNull`|When set to `true`, `null` values will be stored as `''` for string columns and `0` for numeric columns. Set to `false` to store and query data in SQL compatible mode.|`true`|
 |`druid.generic.ignoreNullsForStringCardinality`|When set to `true`, `null` values will be ignored for the built-in cardinality aggregator over string columns. Set to `false` to include `null` values while estimating cardinality of only string columns using the built-in cardinality aggregator. This setting takes effect only when `druid.generic.useDefaultValueForNull` is set to `true` and is ignored in SQL compatibility mode. Additionally, empty strings (equivalent to null) are not counted when this is set to `true`. |`false`|
-This mode does have a storage size and query performance cost, see [segment documentation](../design/segments.md#sql-compatible-null-handling) for more details.
+This mode does have a storage size and query performance cost, see [segment documentation](../design/segments.md#handling-null-values) for more details.
 
 ### HTTP Client
 
@@ -954,7 +954,7 @@ These configuration options control the behavior of the Lookup dynamic configura
 
 ##### Automatic compaction dynamic configuration
 
-You can set or update automatic compaction properties dynamically using the
+You can set or update [automatic compaction](../ingestion/automatic-compaction.md) properties dynamically using the
 [Coordinator API](../operations/api-reference.md#automatic-compaction-configuration) without restarting Coordinators.
 
 For details about segment compaction, see [Segment size optimization](../operations/segment-optimization.md).
@@ -987,8 +987,12 @@ Automatic compaction config example:
 }
 ```
 
-Compaction tasks fail when higher priority tasks cause Druid to revoke their locks. By default, realtime tasks like ingestion have a higher priority than compaction tasks. Therefore frequent conflicts between compaction tasks and realtime tasks can cause the coordinator's automatic compaction to get stuck.
-You may see this issue with streaming ingestion from Kafka and Kinesis, which ingest late-arriving data. To mitigate this problem, set `skipOffsetFromLatest` to a value large enough so that arriving data tends to fall outside the offset value from the current time. This way you can avoid conflicts between compaction tasks and realtime ingestion tasks.
+Compaction tasks fail when higher priority tasks cause Druid to revoke their locks. By default, realtime tasks like ingestion have a higher priority than compaction tasks. Frequent conflicts between compaction tasks and realtime tasks can cause the Coordinator's automatic compaction to hang.
+You may see this issue with streaming ingestion from Kafka and Kinesis, which ingest late-arriving data.
+
+To mitigate this problem, set `skipOffsetFromLatest` to a value large enough so that arriving data tends to fall outside the offset value from the current time. This way you can avoid conflicts between compaction tasks and realtime ingestion tasks.
+For example, if you want to skip over segments from thirty days prior to the end time of the most recent segment, assign `"skipOffsetFromLatest": "P30D"`.
+For more information, see [Avoid conflicts with ingestion](../ingestion/automatic-compaction.md#avoid-conflicts-with-ingestion).
 
 ###### Automatic compaction tuningConfig
 
@@ -1524,6 +1528,7 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks.|8 * 1024|
 |`druid.server.http.enableForwardedRequestCustomizer`|If enabled, adds Jetty ForwardedRequestCustomizer which reads X-Forwarded-* request headers to manipulate servlet request object when Druid is used behind a proxy.|false|
 |`druid.server.http.allowedHttpMethods`|List of HTTP methods that should be allowed in addition to the ones required by Druid APIs. Druid APIs require GET, PUT, POST, and DELETE, which are always allowed. This option is not useful unless you have installed an extension that needs these additional HTTP methods or that adds functionality related to CORS. None of Druid's bundled extensions require these methods.|[]|
+|`druid.server.http.contentSecurityPolicy`|Content-Security-Policy header value to set on each non-POST response. Setting this property to an empty string, or omitting it, both result in the default `frame-ancestors: none` being set.|`frame-ancestors 'none'`|
 
 #### Indexer Processing Resources
 
@@ -1633,6 +1638,7 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.server.http.unannouncePropagationDelay`|How long to wait for ZooKeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
 |`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks.|8 * 1024|
+|`druid.server.http.contentSecurityPolicy`|Content-Security-Policy header value to set on each non-POST response. Setting this property to an empty string, or omitting it, both result in the default `frame-ancestors: none` being set.|`frame-ancestors 'none'`|
 
 ##### Processing
 
@@ -1772,6 +1778,7 @@ Druid uses Jetty to serve HTTP requests. Each query being processed consumes a s
 |`druid.server.http.unannouncePropagationDelay`|How long to wait for ZooKeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
 |`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks. |8 * 1024|
+|`druid.server.http.contentSecurityPolicy`|Content-Security-Policy header value to set on each non-POST response. Setting this property to an empty string, or omitting it, both result in the default `frame-ancestors: none` being set.|`frame-ancestors 'none'`|
 
 ##### Client Configuration
 
