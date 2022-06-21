@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
@@ -92,11 +93,14 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       ScanQuery query = (ScanQuery) queryPlus.getQuery();
       ScanQuery.verifyOrderByForNativeExecution(query);
 
-      // Note: this variable is effective only when queryContext has a timeout.
-      // See the comment of ResponseContext.Key.TIMEOUT_AT.
-      final long timeoutAt = System.currentTimeMillis() + QueryContexts.getTimeout(queryPlus.getQuery());
-      responseContext.putTimeoutTime(timeoutAt);
-
+      try {
+        // Note: this variable is effective only when queryContext has a timeout.
+        // See the comment of ResponseContext.Key.TIMEOUT_AT.
+        final long timeoutAt = System.currentTimeMillis() + QueryContexts.getTimeout(queryPlus.getQuery());
+        responseContext.putTimeoutTime(timeoutAt);
+      } catch (NumberFormatException e) {
+        throw new BadQueryContextException(e);
+      }
       if (query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
         // Use normal strategy
         Sequence<ScanResultValue> returnedRows = Sequences.concat(
