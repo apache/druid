@@ -98,7 +98,8 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         // See the comment of ResponseContext.Key.TIMEOUT_AT.
         final long timeoutAt = System.currentTimeMillis() + QueryContexts.getTimeout(queryPlus.getQuery());
         responseContext.putTimeoutTime(timeoutAt);
-      } catch (NumberFormatException e) {
+      }
+      catch (NumberFormatException e) {
         throw new BadQueryContextException(e);
       }
       if (query.getTimeOrder().equals(ScanQuery.Order.NONE)) {

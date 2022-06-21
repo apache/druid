@@ -21,7 +21,6 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonParseException;
 
 public class BadQueryContextException extends BadQueryException
 {
