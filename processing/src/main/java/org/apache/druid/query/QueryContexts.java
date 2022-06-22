@@ -418,9 +418,14 @@ public class QueryContexts
 
   public static <T> long getTimeout(Query<T> query, long defaultTimeout)
   {
-    final long timeout = parseLong(query, TIMEOUT_KEY, defaultTimeout);
-    Preconditions.checkState(timeout >= 0, "Timeout must be a non negative value, but was [%s]", timeout);
-    return timeout;
+    try {
+      final long timeout = parseLong(query, TIMEOUT_KEY, defaultTimeout);
+      Preconditions.checkState(timeout >= 0, "Timeout must be a non negative value, but was [%s]", timeout);
+      return timeout;
+    }
+    catch (NumberFormatException e) {
+      throw new BadQueryContextException(e);
+    }
   }
 
   public static <T> Query<T> withTimeout(Query<T> query, long timeout)
