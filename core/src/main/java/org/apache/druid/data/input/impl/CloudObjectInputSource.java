@@ -132,26 +132,23 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   )
   {
     if (!CollectionUtils.isNullOrEmpty(objects)) {
+      Stream<CloudObjectLocation> objectStream = objects.stream();
+
       if (StringUtils.isNotBlank(filter)) {
-        return objects.stream()
-                      .filter(object -> FilenameUtils.wildcardMatch(object.getPath(), filter))
-                      .map(object -> new InputSplit<>(Collections.singletonList(object)));
-      } else {
-        return objects.stream().map(object -> new InputSplit<>(Collections.singletonList(object)));
+        objectStream = objectStream.filter(object -> FilenameUtils.wildcardMatch(object.getPath(), filter));
       }
+
+      return objectStream.map(object -> new InputSplit<>(Collections.singletonList(object)));
     }
 
     if (!CollectionUtils.isNullOrEmpty(uris)) {
+      Stream<URI> uriStream = uris.stream();
+
       if (StringUtils.isNotBlank(filter)) {
-        return uris.stream()
-                   .filter(uri -> FilenameUtils.wildcardMatch(uri.toString(), filter))
-                   .map(CloudObjectLocation::new)
-                   .map(object -> new InputSplit<>(Collections.singletonList(object)));
-      } else {
-        return uris.stream()
-                   .map(CloudObjectLocation::new)
-                   .map(object -> new InputSplit<>(Collections.singletonList(object)));
+        uriStream = uriStream.filter(uri -> FilenameUtils.wildcardMatch(uri.toString(), filter));
       }
+
+      return uriStream.map(CloudObjectLocation::new).map(object -> new InputSplit<>(Collections.singletonList(object)));
     }
 
     return getPrefixesSplitStream(getSplitHintSpecOrDefault(splitHintSpec));
