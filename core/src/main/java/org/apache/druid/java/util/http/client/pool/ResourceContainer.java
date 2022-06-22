@@ -24,5 +24,6 @@ package org.apache.druid.java.util.http.client.pool;
 public interface ResourceContainer<ResourceType>
 {
   ResourceType get();
+  boolean isPresent();
   void returnResource();
 }

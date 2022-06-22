@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.GroupByMergedQueryRunner;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
@@ -115,7 +116,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
                     .overrideContext(
                         ImmutableMap.<String, Object>builder()
                             .put(GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V1)
-                            .put("finalize", false)
+                            .put(QueryContexts.FINALIZE_KEY, false)
 
                             // Always request array result rows when passing the query down.
                             .put(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true)

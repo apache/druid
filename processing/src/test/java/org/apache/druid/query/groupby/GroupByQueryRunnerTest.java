@@ -7524,7 +7524,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             new LongLastAggregatorFactory("innerlast", "index", null)
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
-        .overrideContext(ImmutableMap.of("finalize", true))
+        .overrideContext(ImmutableMap.of(QueryContexts.FINALIZE_KEY, true))
         .build();
 
     GroupByQuery query = makeQueryBuilder()

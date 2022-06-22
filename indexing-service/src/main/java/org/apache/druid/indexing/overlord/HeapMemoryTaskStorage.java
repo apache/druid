@@ -30,6 +30,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
@@ -231,6 +232,18 @@ public class HeapMemoryTaskStorage implements TaskStorage
       }
     });
     return tasks;
+  }
+
+  @Override
+  public List<TaskStatusPlus> getTaskStatusPlusList(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String datasource
+  )
+  {
+    return getTaskInfos(taskLookups, datasource).stream()
+                                                .map(Task::toTaskIdentifierInfo)
+                                                .map(TaskStatusPlus::fromTaskIdentifierInfo)
+                                                .collect(Collectors.toList());
   }
 
   private List<TaskInfo<Task, TaskStatus>> getRecentlyCreatedAlreadyFinishedTaskInfoSince(
