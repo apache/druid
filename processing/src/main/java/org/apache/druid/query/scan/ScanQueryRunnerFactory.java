@@ -92,8 +92,8 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       ScanQuery query = (ScanQuery) queryPlus.getQuery();
       ScanQuery.verifyOrderByForNativeExecution(query);
 
-        // Note: this variable is effective only when queryContext has a timeout.
-        // See the comment of ResponseContext.Key.TIMEOUT_AT.
+      // Note: this variable is effective only when queryContext has a timeout.
+      // See the comment of ResponseContext.Key.TIMEOUT_AT.
       final long timeoutAt = System.currentTimeMillis() + QueryContexts.getTimeout(queryPlus.getQuery());
       responseContext.putTimeoutTime(timeoutAt);
 
