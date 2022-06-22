@@ -62,14 +62,8 @@ public class AzureInputSource extends CloudObjectInputSource
   private final AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobToLocationConverter;
   private final AzureInputDataConfig inputDataConfig;
 
-  public static<T> Iterable<T> iteratorToIterable(Iterator<T> iterator)
-  {
-      return new Iterable<T>() {
-          @Override
-          public Iterator<T> iterator() {
-              return iterator;
-          }
-      };
+  public static Iterable<CloudBlobHolder> iteratorToIterable(Iterator<CloudBlobHolder> iterator) {
+    return () -> iterator;
   }
 
   @JsonCreator
