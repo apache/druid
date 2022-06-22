@@ -129,7 +129,7 @@
         <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
 
         <!-- Using -DskipTests or -P skip-tests will skip both the unit tests and
-             the "new" integration tests. To skip just the unit tests (but run the 
+             the "new" integration tests. To skip just the unit tests (but run the
              new integration tests by setting the required profile), use -DskipUTs=true.
              -->
         <skipUTs>false</skipUTs>
@@ -1191,7 +1191,7 @@
                         <exclude>org/apache/druid/benchmark/**/*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/**/*Benchmark*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/testing/**/*</exclude>  <!-- integration-tests -->
-                        <!-- The ITs has test code sprinked through the module tree. Remove the following
+                        <!-- The ITs has test code sprinkled through the module tree. Remove the following
                              once the old version is retired. -->
                         <exclude>org/apache/druid/server/coordination/ServerManagerForQueryErrorTest.class</exclude>
                         <exclude>org/apache/druid/guice/SleepModule.class</exclude>
