@@ -27,6 +27,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.Iterators;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.InputEntity;
@@ -117,15 +118,6 @@ public class OssInputSource extends CloudObjectInputSource
         object -> new InputFileAttribute(object.getSize())
     );
 
-    if (StringUtils.isNotBlank(getFilter())) {
-      return Streams.sequentialStreamFrom(splitIterator)
-      .map(objects -> objects.stream()
-                             .map(OssUtils::summaryToCloudObjectLocation)
-                             .filter(object -> FilenameUtils.wildcardMatch(object.getPath(), getFilter()))
-                             .collect(Collectors.toList()))
-      .map(InputSplit::new);
-    }
-
     return Streams.sequentialStreamFrom(splitIterator)
                   .map(objects -> objects.stream()
                                          .map(OssUtils::summaryToCloudObjectLocation)
@@ -183,10 +175,22 @@ public class OssInputSource extends CloudObjectInputSource
 
   private Iterable<OSSObjectSummary> getIterableObjectsFromPrefixes()
   {
-    return () -> OssUtils.objectSummaryIterator(
-        clientSupplier.get(),
-        getPrefixes(),
-        inputDataConfig.getMaxListingLength()
-    );
+    return () -> {
+      Iterator<OSSObjectSummary> iterator = OssUtils.objectSummaryIterator(
+          clientSupplier.get(),
+          getPrefixes(),
+          inputDataConfig.getMaxListingLength()
+      );
+
+      // Skip files that didn't match filter.
+      if (StringUtils.isNotBlank(getFilter())) {
+        iterator = Iterators.filter(
+            iterator,
+            object -> FilenameUtils.wildcardMatch(object.getKey(), getFilter())
+        );
+      }
+
+      return iterator;
+    };
   }
 }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.api.services.storage.model.StorageObject;
+import com.google.common.collect.Iterators;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.InputEntity;
@@ -106,14 +107,6 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
         }
     );
 
-    if (StringUtils.isNotBlank(getFilter())) {
-      return Streams.sequentialStreamFrom(splitIterator)
-                    .map(objects -> objects.stream().map(this::byteSourceFromStorageObject)
-                    .filter(object -> FilenameUtils.wildcardMatch(object.getPath(), getFilter()))
-                    .collect(Collectors.toList()))
-                    .map(InputSplit::new);
-    }
-
     return Streams.sequentialStreamFrom(splitIterator)
                   .map(objects -> objects.stream().map(this::byteSourceFromStorageObject).collect(Collectors.toList()))
                   .map(InputSplit::new);
@@ -132,12 +125,23 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
 
   private Iterable<StorageObject> storageObjectIterable()
   {
-    return () ->
-        GoogleUtils.lazyFetchingStorageObjectsIterator(
-            storage,
-            getPrefixes().iterator(),
-            inputDataConfig.getMaxListingLength()
+    return () -> {
+      Iterator<StorageObject> iterator = GoogleUtils.lazyFetchingStorageObjectsIterator(
+          storage,
+          getPrefixes().iterator(),
+          inputDataConfig.getMaxListingLength()
+      );
+
+      // Skip files that didn't match filter.
+      if (StringUtils.isNotBlank(getFilter())) {
+        iterator = Iterators.filter(
+            iterator,
+            object -> FilenameUtils.wildcardMatch(object.getName(), getFilter())
         );
+      }
+
+      return iterator;
+    };
   }
 
   @Override

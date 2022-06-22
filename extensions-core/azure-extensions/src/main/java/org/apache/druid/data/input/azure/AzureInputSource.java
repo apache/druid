@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterators;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.InputFileAttribute;
@@ -60,6 +61,16 @@ public class AzureInputSource extends CloudObjectInputSource
   private final AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
   private final AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobToLocationConverter;
   private final AzureInputDataConfig inputDataConfig;
+
+  public static<T> Iterable<T> iteratorToIterable(Iterator<T> iterator)
+  {
+      return new Iterable<T>() {
+          @Override
+          public Iterator<T> iterator() {
+              return iterator;
+          }
+      };
+  }
 
   @JsonCreator
   public AzureInputSource(
@@ -118,15 +129,6 @@ public class AzureInputSource extends CloudObjectInputSource
         blobHolder -> new InputFileAttribute(blobHolder.getBlobLength())
     );
 
-    if (StringUtils.isNotBlank(getFilter())) {
-      return Streams.sequentialStreamFrom(splitIterator)
-      .map(objects -> objects.stream()
-                             .map(azureCloudBlobToLocationConverter::createCloudObjectLocation)
-                             .filter(object -> FilenameUtils.wildcardMatch(object.getPath(), getFilter()))
-                             .collect(Collectors.toList()))
-      .map(InputSplit::new);
-    }
-
     return Streams.sequentialStreamFrom(splitIterator)
                   .map(objects -> objects.stream()
                                          .map(azureCloudBlobToLocationConverter::createCloudObjectLocation)
@@ -136,7 +138,17 @@ public class AzureInputSource extends CloudObjectInputSource
 
   private Iterable<CloudBlobHolder> getIterableObjectsFromPrefixes()
   {
-    return azureCloudBlobIterableFactory.create(getPrefixes(), inputDataConfig.getMaxListingLength());
+    Iterator<CloudBlobHolder> iterator = azureCloudBlobIterableFactory.create(getPrefixes(), inputDataConfig.getMaxListingLength()).iterator();
+
+    // Skip files that didn't match filter.
+    if (StringUtils.isNotBlank(getFilter())) {
+      iterator = Iterators.filter(
+          iterator,
+          object -> FilenameUtils.wildcardMatch(object.getName(), getFilter())
+      );
+    }
+
+    return iteratorToIterable(iterator);
   }
 
   @Override
