@@ -187,6 +187,7 @@ public class KillUnusedSegmentsTest
               .withCoordinatorKillMaxSegments(1000)
               .withLoadQueuePeonRepeatDelay(Duration.ZERO)
               .withCoordinatorKillIgnoreDurationToRetain(false)
+              .withCoordinatorKillBufferPeriod(Duration.parse("PT3154000000S"))
               .build()
       );
 
@@ -216,6 +217,7 @@ public class KillUnusedSegmentsTest
               .withCoordinatorKillMaxSegments(1000)
               .withLoadQueuePeonRepeatDelay(Duration.ZERO)
               .withCoordinatorKillIgnoreDurationToRetain(false)
+              .withCoordinatorKillBufferPeriod(Duration.parse("PT3154000000S"))
               .build()
       );
       Assert.assertEquals((Long) Duration.parse("PT86400S").getMillis(), unusedSegmentsKiller.getRetainDuration());
@@ -232,6 +234,7 @@ public class KillUnusedSegmentsTest
               .withCoordinatorKillMaxSegments(1000)
               .withLoadQueuePeonRepeatDelay(Duration.ZERO)
               .withCoordinatorKillIgnoreDurationToRetain(false)
+              .withCoordinatorKillBufferPeriod(Duration.parse("PT3154000000S"))
               .build()
       );
       Assert.assertEquals((Long) Duration.parse("PT-86400S").getMillis(), unusedSegmentsKiller.getRetainDuration());
@@ -257,6 +260,7 @@ public class KillUnusedSegmentsTest
               .withCoordinatorKillMaxSegments(1000)
               .withLoadQueuePeonRepeatDelay(Duration.ZERO)
               .withCoordinatorKillIgnoreDurationToRetain(true)
+              .withCoordinatorKillBufferPeriod(Duration.parse("PT3154000000S"))
               .build()
       );
       Assert.assertEquals(
@@ -276,6 +280,7 @@ public class KillUnusedSegmentsTest
               .withCoordinatorKillMaxSegments(1000)
               .withLoadQueuePeonRepeatDelay(Duration.ZERO)
               .withCoordinatorKillIgnoreDurationToRetain(false)
+              .withCoordinatorKillBufferPeriod(Duration.parse("PT3154000000S"))
               .build()
       );
 
@@ -294,6 +299,7 @@ public class KillUnusedSegmentsTest
               .withCoordinatorKillMaxSegments(1000)
               .withLoadQueuePeonRepeatDelay(Duration.ZERO)
               .withCoordinatorKillIgnoreDurationToRetain(false)
+              .withCoordinatorKillBufferPeriod(Duration.parse("PT3154000000S"))
               .build()
       );
       expectedTime = DateTimes.nowUtc().minus(Duration.parse("PT86400S").getMillis());
