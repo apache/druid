@@ -20,7 +20,9 @@
 package org.apache.druid.data.input.azure;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
@@ -182,6 +184,13 @@ public class AzureInputSourceTest extends EasyMockSupport
     List<List<CloudObjectLocation>> expectedCloudLocations = ImmutableList.of(ImmutableList.of(CLOUD_OBJECT_LOCATION_1));
     List<CloudBlobHolder> expectedCloudBlobs = ImmutableList.of(cloudBlobDruid1);
     Iterator<CloudBlobHolder> expectedCloudBlobsIterator = expectedCloudBlobs.iterator();
+    String filter = "*.csv";
+
+    expectedCloudBlobsIterator = Iterators.filter(
+        expectedCloudBlobsIterator,
+        object -> FilenameUtils.wildcardMatch(object.getName(), filter)
+    );
+
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_LISTING_LENGTH);
     EasyMock.expect(azureCloudBlobIterableFactory.create(prefixes, MAX_LISTING_LENGTH)).andReturn(
         azureCloudBlobIterable);
@@ -189,6 +198,8 @@ public class AzureInputSourceTest extends EasyMockSupport
     EasyMock.expect(azureCloudBlobToLocationConverter.createCloudObjectLocation(cloudBlobDruid1))
             .andReturn(CLOUD_OBJECT_LOCATION_1);
     EasyMock.expect(cloudBlobDruid1.getBlobLength()).andReturn(100L).anyTimes();
+    EasyMock.expect(cloudBlobDruid1.getName()).andReturn(BLOB_PATH).anyTimes();
+
     replayAll();
 
     azureInputSource = new AzureInputSource(
@@ -200,7 +211,7 @@ public class AzureInputSourceTest extends EasyMockSupport
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS,
-        "*.csv"
+        filter
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> cloudObjectStream = azureInputSource.getPrefixesSplitStream(
