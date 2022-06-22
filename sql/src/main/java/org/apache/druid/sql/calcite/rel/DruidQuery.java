@@ -652,6 +652,7 @@ public class DruidQuery
         // replace with an identifier expression of the new virtual column name
         return DruidExpression.ofColumn(expression.getDruidType(), name);
       } else {
+        // do nothing
         return expression;
       }
     });
@@ -715,36 +716,6 @@ public class DruidQuery
     List<VirtualColumn> columns = new ArrayList<>(virtualColumns);
     columns.sort(Comparator.comparing(VirtualColumn::getOutputName));
     return VirtualColumns.create(columns);
-  }
-
-  /**
-   * Rewrites any "specialized" virtual column expressions as top level virtual
-   * columns so that their native implementation can be used.
-   *
-   * @return Set of specialized virtual column names.
-   */
-  private Set<String> rewriteSpecializedVirtualColumns()
-  {
-    Set<String> specialized = new HashSet<>();
-
-    virtualColumnRegistry.visitAllSubExpressions((expression) -> {
-      switch (expression.getType()) {
-        case SPECIALIZED:
-          // add the expression to the top level of the registry as a standalone virtual column
-          final String name = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-              expression,
-              expression.getDruidType()
-          );
-          specialized.add(name);
-          // replace with an identifier expression of the new virtual column name
-          return DruidExpression.ofColumn(expression.getDruidType(), name);
-        default:
-          // do nothing
-          return expression;
-      }
-    });
-
-    return specialized;
   }
 
   /**

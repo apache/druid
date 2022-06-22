@@ -326,4 +326,43 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(new Object[]{expectedPlanWithMvfiltered, expectedResources})
     );
   }
+
+  @Test
+  public void testExplainSelectTimestampExpression() throws Exception
+  {
+    // Skip vectorization since otherwise the "context" will change for each subtest.
+    skipVectorize();
+
+    final String explainSql = "EXPLAIN PLAN FOR SELECT"
+                              + " TIME_PARSE(dim1)"
+                              + " FROM druid.foo";
+
+    final Map<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    queryContext.put(PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN, true);
+
+    final String expectedPlan = "[{"
+                                + "\"query\":{\"queryType\":\"scan\","
+                                + "\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},"
+                                + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
+                                + "\"virtualColumns\":["
+                                + "{\"type\":\"expression\",\"name\":\"v0\",\"expression\":\"timestamp_parse(\\\"dim1\\\",null,'UTC')\",\"outputType\":\"LONG\"}"
+                                + "],"
+                                + "\"resultFormat\":\"compactedList\","
+                                + "\"columns\":[\"v0\"],"
+                                + "\"legacy\":false,"
+                                + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useNativeQueryExplain\":true,\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
+                                + "\"granularity\":{\"type\":\"all\"}},"
+                                + "\"signature\":[{\"name\":\"v0\",\"type\":\"LONG\"}]"
+                                + "}]";
+    final String expectedResources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
+
+    // Verify the query plan
+    testQuery(
+        explainSql,
+        queryContext,
+        ImmutableList.of(),
+        ImmutableList.of(new Object[]{expectedPlan, expectedResources})
+    );
+  }
+
 }

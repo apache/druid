@@ -139,13 +139,13 @@ public class VirtualColumnRegistry
   @Nullable
   public VirtualColumn getVirtualColumn(String virtualColumnName)
   {
-    ExpressionAndTypeHint expressionAndType = virtualColumnsByName.get(virtualColumnName);
-    if (expressionAndType == null) {
+    ExpressionAndTypeHint registeredColumn = virtualColumnsByName.get(virtualColumnName);
+    if (registeredColumn == null) {
       return null;
     }
 
-    DruidExpression expression = expressionAndType.getExpression();
-    ColumnType columnType = expressionAndType.getTypeHint();
+    DruidExpression expression = registeredColumn.getExpression();
+    ColumnType columnType = registeredColumn.getTypeHint();
     return forceExpressionVirtualColumns
            ? expression.toExpressionVirtualColumn(virtualColumnName, columnType, macroTable)
            : expression.toVirtualColumn(virtualColumnName, columnType, macroTable);
