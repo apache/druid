@@ -264,7 +264,7 @@ public class CliCoordinator extends ServerRunnable
             }
             conditionalIndexingServiceDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.on",
-                "true",
+                "false",
                 Predicates.equalTo("true"),
                 KillUnusedSegments.class
             );
