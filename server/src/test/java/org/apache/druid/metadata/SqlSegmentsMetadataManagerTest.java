@@ -46,12 +46,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.skife.jdbi.v2.Batch;
-import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.IOException;
-import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -389,7 +385,7 @@ public class SqlSegmentsMetadataManagerTest
     sqlSegmentsMetadataManager.poll();
 
     // We alter the segment table to allow nullable last_used in order to test compatibility during druid upgrade from version without last_used.
-    allowLastUsedToBeNullable();
+    derbyConnectorRule.allowLastUsedToBeNullable();
 
     Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
     int numChangedSegments = sqlSegmentsMetadataManager.markAsUnusedAllSegmentsInDataSource("wikipedia");
@@ -936,35 +932,4 @@ public class SqlSegmentsMetadataManagerTest
     Assert.assertTrue(dataSegmentSet.contains(segment1));
     Assert.assertTrue(dataSegmentSet.contains(newSegment2));
   }
-
-  /**
-   * Allows us to test backwards compatibility of segments table where null values are possible for last_used column.
-   */
-  private void allowLastUsedToBeNullable()
-  {
-    try {
-      derbyConnectorRule.getConnector().retryWithHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle)
-            {
-              final Batch batch = handle.createBatch();
-              batch.add(
-                  StringUtils.format(
-                      "ALTER TABLE %1$s ALTER COLUMN LAST_USED NULL",
-                      derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable().toUpperCase(Locale.ENGLISH)
-                  )
-              );
-              batch.execute();
-              return null;
-            }
-          }
-      );
-    }
-    catch (Exception e) {
-      return;
-    }
-  }
-
 }

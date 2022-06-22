@@ -28,6 +28,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
@@ -38,6 +39,8 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 
 public class SQLMetadataConnectorTest
@@ -106,6 +109,101 @@ public class SQLMetadataConnectorTest
     for (String table : tables) {
       dropTable(table);
     }
+  }
+
+  /**
+   * This is a test for the upgrade path where a cluster is upgrading from a version that did not have last_used
+   * in the segments table.
+   */
+  @Test
+  public void testAlterSegmentTableAddLastUsed()
+  {
+    connector.createSegmentTable();
+
+    // Drop column last_used to bring us in line with pre-upgrade state
+    derbyConnectorRule.getConnector().retryWithHandle(
+        new HandleCallback<Void>()
+        {
+          @Override
+          public Void withHandle(Handle handle)
+          {
+            final Batch batch = handle.createBatch();
+            batch.add(
+                StringUtils.format(
+                    "ALTER TABLE %1$s DROP COLUMN LAST_USED",
+                    derbyConnectorRule.metadataTablesConfigSupplier()
+                                      .get()
+                                      .getSegmentsTable()
+                                      .toUpperCase(Locale.ENGLISH)
+                )
+            );
+            batch.execute();
+            return null;
+          }
+        }
+    );
+
+    connector.alterSegmentTableAddLastUsed();
+    connector.tableHasColumn(
+        derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
+        "LAST_USED"
+    );
+  }
+
+  @Test
+  public void testUpdateSegmentTablePopulateLastUsed()
+  {
+    connector.createSegmentTable();
+    derbyConnectorRule.allowLastUsedToBeNullable();
+
+    connector.getDBI().withHandle(
+        (Handle handle) -> handle.createStatement(StringUtils.format(
+            "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
+            + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+            derbyConnectorRule.metadataTablesConfigSupplier()
+                              .get()
+                              .getSegmentsTable()
+                              .toUpperCase(Locale.ENGLISH),
+            connector.getQuoteString()
+        ))
+                                 .bind("id", "fakeId")
+                                 .bind("dataSource", "fakeDataSource")
+                                 .bind("created_date", "fakeDate")
+                                 .bind("start", "fakeStart")
+                                 .bind("end", "fakeEnd")
+                                 .bind("partitioned", false)
+                                 .bind("version", "fakeVersion")
+                                 .bind("used", false)
+                                 .bind("payload", new byte[10])
+        .execute()
+    );
+
+    Assert.assertEquals(1, getCountOfRowsWithLastUsedNull());
+    connector.updateSegmentTablePopulateLastUsed();
+    Assert.assertEquals(0, getCountOfRowsWithLastUsedNull());
+  }
+
+  private int getCountOfRowsWithLastUsedNull()
+  {
+    return connector.retryWithHandle(
+        new HandleCallback<Integer>()
+        {
+          @Override
+          public Integer withHandle(Handle handle)
+          {
+            List<Map<String, Object>> lst = handle.select(
+                StringUtils.format(
+                    "SELECT * FROM %1$s WHERE LAST_USED IS NULL",
+                    derbyConnectorRule.metadataTablesConfigSupplier()
+                                      .get()
+                                      .getSegmentsTable()
+                                      .toUpperCase(Locale.ENGLISH)
+                )
+            );
+            return lst.size();
+          }
+        }
+    );
   }
 
   @Test
