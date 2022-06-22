@@ -180,6 +180,8 @@ With table-level UNION ALL, the rows from the unioned tables are not guaranteed 
 any particular order. They may be processed in an interleaved fashion. If you need a particular result ordering,
 use [ORDER BY](#order-by) on the outer query.
 
+> You can perform filtering, ordering, and grouping either inside the queries or on the results of the UNION ALL, but not in both places.
+
 ## EXPLAIN PLAN
 
 Add "EXPLAIN PLAN FOR" to the beginning of any query to get information about how it will be translated. In this case,
