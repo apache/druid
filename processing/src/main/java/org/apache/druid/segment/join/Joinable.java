@@ -86,8 +86,11 @@ public interface Joinable extends ReferenceCountedObject
   );
 
   /**
-   * Returns all nonnull values from a particular column if they are all unique, if there are "maxNumValues" or fewer,
-   * and if the column exists and supports this operation. Otherwise, returns an empty Optional.
+   * Returns all non-null values from a particular column along with a flag to tell if they are all unique in the column.
+   * If the non-null values are greater than "maxNumValues" or if the column doesn't exists or doesn't supports this
+   * operation, returns an object with empty set for column values and false for uniqueness flag.
+   * The uniqueness flag will only be true if we've collected all non-null values in the column and found that they're
+   * all unique. In all other cases it will be false.
    *
    * The returned set may be passed to {@link org.apache.druid.query.filter.InDimFilter}. For efficiency,
    * implementations should prefer creating the returned set with
@@ -96,7 +99,7 @@ public interface Joinable extends ReferenceCountedObject
    * @param columnName   name of the column
    * @param maxNumValues maximum number of values to return
    */
-  Optional<Set<String>> getNonNullColumnValuesIfAllUnique(String columnName, int maxNumValues);
+  ColumnValuesWithUniqueFlag getNonNullColumnValues(String columnName, int maxNumValues);
 
   /**
    * Searches a column from this Joinable for a particular value, finds rows that match,
@@ -125,4 +128,27 @@ public interface Joinable extends ReferenceCountedObject
       long maxCorrelationSetSize,
       boolean allowNonKeyColumnSearch
   );
+
+
+  class ColumnValuesWithUniqueFlag
+  {
+    final Set<String> columnValues;
+    final boolean allUnique;
+
+    public ColumnValuesWithUniqueFlag(Set<String> columnValues, boolean allUnique)
+    {
+      this.columnValues = columnValues;
+      this.allUnique = allUnique;
+    }
+
+    public Set<String> getColumnValues()
+    {
+      return columnValues;
+    }
+
+    public boolean isAllUnique()
+    {
+      return allUnique;
+    }
+  }
 }

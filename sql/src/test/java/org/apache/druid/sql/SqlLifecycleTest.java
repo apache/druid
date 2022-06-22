@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql;
 
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.SqlType;
@@ -29,6 +30,7 @@ import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.QueryStackTests;
@@ -61,6 +63,7 @@ public class SqlLifecycleTest
   private ServiceEmitter serviceEmitter;
   private RequestLogger requestLogger;
   private SqlLifecycleFactory sqlLifecycleFactory;
+  private DefaultQueryConfig defaultQueryConfig;
 
   @Before
   public void setup()
@@ -68,12 +71,15 @@ public class SqlLifecycleTest
     this.plannerFactory = EasyMock.createMock(PlannerFactory.class);
     this.serviceEmitter = EasyMock.createMock(ServiceEmitter.class);
     this.requestLogger = EasyMock.createMock(RequestLogger.class);
+    this.defaultQueryConfig = new DefaultQueryConfig(ImmutableMap.of("DEFAULT_KEY", "DEFAULT_VALUE"));
+
     this.sqlLifecycleFactory = new SqlLifecycleFactory(
         plannerFactory,
         serviceEmitter,
         requestLogger,
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new AuthConfig()
+        new AuthConfig(),
+        Suppliers.ofInstance(defaultQueryConfig)
     );
   }
 
@@ -85,9 +91,31 @@ public class SqlLifecycleTest
     final Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true");
     lifecycle.initialize(sql, new QueryContext(queryContext));
     Assert.assertEquals(SqlLifecycle.State.INITIALIZED, lifecycle.getState());
-    Assert.assertEquals(1, lifecycle.getQueryContext().getMergedParams().size());
+    Assert.assertEquals(2, lifecycle.getQueryContext().getMergedParams().size());
     // should contain only query id, not bySegment since it is not valid for SQL
     Assert.assertTrue(lifecycle.getQueryContext().getMergedParams().containsKey(PlannerContext.CTX_SQL_QUERY_ID));
+  }
+
+  @Test
+  public void testDefaultQueryContextIsApplied()
+  {
+    SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
+    // lifecycle should not have a query context is there on it when created/factorized
+    Assert.assertNull(lifecycle.getQueryContext());
+    final String sql = "select 1 + ?";
+    final Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true");
+    QueryContext testQueryContext = new QueryContext(queryContext);
+    // default query context isn't applied to query context until lifecycle is initialized
+    for (String defaultContextKey : defaultQueryConfig.getContext().keySet()) {
+      Assert.assertFalse(testQueryContext.getMergedParams().containsKey(defaultContextKey));
+    }
+    lifecycle.initialize(sql, testQueryContext);
+    Assert.assertEquals(SqlLifecycle.State.INITIALIZED, lifecycle.getState());
+    Assert.assertEquals(2, lifecycle.getQueryContext().getMergedParams().size());
+    // should lifecycle should contain default query context values after initialization
+    for (String defaultContextKey : defaultQueryConfig.getContext().keySet()) {
+      Assert.assertTrue(lifecycle.getQueryContext().getMergedParams().containsKey(defaultContextKey));
+    }
   }
 
   @Test

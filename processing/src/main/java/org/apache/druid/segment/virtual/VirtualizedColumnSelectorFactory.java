@@ -24,7 +24,10 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.RowIdSupplier;
 import org.apache.druid.segment.VirtualColumns;
+
+import javax.annotation.Nullable;
 
 /**
  * {@link ColumnSelectorFactory} which can create selectors for both virtual and non-virtual columns
@@ -60,5 +63,12 @@ public class VirtualizedColumnSelectorFactory extends VirtualizedColumnInspector
     } else {
       return baseFactory.makeColumnValueSelector(columnName);
     }
+  }
+
+  @Nullable
+  @Override
+  public RowIdSupplier getRowIdSupplier()
+  {
+    return baseFactory.getRowIdSupplier();
   }
 }

@@ -71,6 +71,7 @@
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/net\.minidev/json\-smart@.*$</packageUrl>
     <cve>CVE-2021-27568</cve>
+    <cve>CVE-2021-31684</cve>
   </suppress>
 
 
@@ -340,14 +341,19 @@
      <cve>CVE-2018-11765</cve>
      <cve>CVE-2020-9492</cve>
      <cve>CVE-2022-26612</cve>
+     <cve>CVE-2018-8009</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
      file name: hadoop-*-3.3.1.jar
      ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.hadoop/hadoop\-.*@.*$</packageUrl>
     <cve>CVE-2018-11765</cve>
     <cve>CVE-2020-9492</cve>
+    <cve>CVE-2021-31684</cve>
+    <cve>CVE-2021-35517</cve>
+    <cve>CVE-2021-35516</cve>
+    <cve>CVE-2021-35515</cve>
+    <cve>CVE-2021-36090</cve>
   </suppress>
   <suppress>
     <!-- The CVE is not applicable to kafka-clients. -->
@@ -467,6 +473,8 @@
     <cve>CVE-2019-16335</cve>
     <cve>CVE-2019-14893</cve>
     <cve>CVE-2019-14540</cve>
+    <cve>CVE-2021-37136</cve>
+    <cve>CVE-2021-37137</cve>
   </suppress>
 
   <suppress>
@@ -526,6 +534,38 @@
    file name: pac4j-core-3.8.3.jar
    ]]></notes>
     <cve>CVE-2021-44878</cve>
+  </suppress>
+
+  <suppress>
+    <!-- cassandra-all-1.0.8.jar -->
+    <notes><![CDATA[
+   file name: cassandra-all-1.0.8.jar
+   ]]></notes>
+    <cve>CVE-2020-17516</cve>
+  </suppress>
+
+  <suppress>
+    <!-- jackson-dataformat-cbor-2.10.5.jar -->
+    <notes><![CDATA[
+   file name: jackson-dataformat-cbor-2.10.5.jar
+   ]]></notes>
+    <cve>CVE-2020-28491</cve>
+  </suppress>
+
+  <suppress>
+    <!-- okhttp -->
+    <notes><![CDATA[
+   file name: okhttp-*.jar
+   ]]></notes>
+    <cve>CVE-2021-0341</cve>
+  </suppress>
+
+  <suppress>
+    <!-- parquet-format-structures-1.12.0.jar -->
+    <notes><![CDATA[
+   file name: parquet-format-structures-1.12.0.jar
+   ]]></notes>
+    <cve>CVE-2021-41561</cve>
   </suppress>
 
 </suppressions>

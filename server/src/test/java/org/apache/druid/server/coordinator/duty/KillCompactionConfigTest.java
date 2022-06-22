@@ -86,27 +86,12 @@ public class KillCompactionConfigTest
   @Test
   public void testRunSkipIfLastRunLessThanPeriod()
   {
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig(
-        null,
-        null,
-        null,
-        new Duration("PT5S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new Duration(Long.MAX_VALUE),
-        null,
-        null,
-        null,
-        null,
-        10,
-        null,
-        false
-    );
+    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
+        .withMetadataStoreManagementPeriod(new Duration("PT5S"))
+        .withCoordinatorCompactionKillPeriod(new Duration(Long.MAX_VALUE))
+        .withCoordinatorKillMaxSegments(10)
+        .withCoordinatorKillIgnoreDurationToRetain(false)
+        .build();
     killCompactionConfig = new KillCompactionConfig(
         druidCoordinatorConfig,
         mockSqlSegmentsMetadataManager,
@@ -123,27 +108,12 @@ public class KillCompactionConfigTest
   @Test
   public void testConstructorFailIfInvalidPeriod()
   {
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig(
-        null,
-        null,
-        null,
-        new Duration("PT5S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new Duration("PT3S"),
-        null,
-        null,
-        null,
-        null,
-        10,
-        null,
-        false
-    );
+    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
+        .withMetadataStoreManagementPeriod(new Duration("PT5S"))
+        .withCoordinatorCompactionKillPeriod(new Duration("PT3S"))
+        .withCoordinatorKillMaxSegments(10)
+        .withCoordinatorKillIgnoreDurationToRetain(false)
+        .build();
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage("Coordinator compaction configuration kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod");
     killCompactionConfig = new KillCompactionConfig(
@@ -173,27 +143,12 @@ public class KillCompactionConfigTest
         ArgumentMatchers.eq(CoordinatorCompactionConfig.empty()))
     ).thenReturn(CoordinatorCompactionConfig.empty());
 
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig(
-        null,
-        null,
-        null,
-        new Duration("PT5S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new Duration("PT6S"),
-        null,
-        null,
-        null,
-        null,
-        10,
-        null,
-        false
-    );
+    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
+        .withMetadataStoreManagementPeriod(new Duration("PT5S"))
+        .withCoordinatorCompactionKillPeriod(new Duration("PT6S"))
+        .withCoordinatorKillMaxSegments(10)
+        .withCoordinatorKillIgnoreDurationToRetain(false)
+        .build();
     killCompactionConfig = new KillCompactionConfig(
         druidCoordinatorConfig,
         mockSqlSegmentsMetadataManager,
@@ -279,27 +234,12 @@ public class KillCompactionConfigTest
         ArgumentMatchers.any())
     ).thenReturn(ConfigManager.SetResult.ok());
 
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig(
-        null,
-        null,
-        null,
-        new Duration("PT5S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new Duration("PT6S"),
-        null,
-        null,
-        null,
-        null,
-        10,
-        null,
-        false
-    );
+    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
+        .withMetadataStoreManagementPeriod(new Duration("PT5S"))
+        .withCoordinatorCompactionKillPeriod(new Duration("PT6S"))
+        .withCoordinatorKillMaxSegments(10)
+        .withCoordinatorKillIgnoreDurationToRetain(false)
+        .build();
     killCompactionConfig = new KillCompactionConfig(
         druidCoordinatorConfig,
         mockSqlSegmentsMetadataManager,
@@ -399,27 +339,12 @@ public class KillCompactionConfigTest
       }
     });
 
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig(
-        null,
-        null,
-        null,
-        new Duration("PT5S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new Duration("PT6S"),
-        null,
-        null,
-        null,
-        null,
-        10,
-        null,
-        false
-    );
+    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
+        .withMetadataStoreManagementPeriod(new Duration("PT5S"))
+        .withCoordinatorCompactionKillPeriod(new Duration("PT6S"))
+        .withCoordinatorKillMaxSegments(10)
+        .withCoordinatorKillIgnoreDurationToRetain(false)
+        .build();
     killCompactionConfig = new KillCompactionConfig(
         druidCoordinatorConfig,
         mockSqlSegmentsMetadataManager,

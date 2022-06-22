@@ -17,34 +17,32 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.planner;
+package org.apache.druid.sql.calcite.planner.convertlet;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.fun.SqlLibraryOperators;
+import org.apache.calcite.sql.SqlOperatorBinding;
+import org.apache.calcite.sql.fun.SqlAbstractTimeFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql2rel.SqlRexContext;
 import org.apache.calcite.sql2rel.SqlRexConvertlet;
-import org.apache.calcite.sql2rel.SqlRexConvertletTable;
-import org.apache.calcite.sql2rel.StandardConvertletTable;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-public class DruidConvertletTable implements SqlRexConvertletTable
+public class CurrentTimestampAndFriendsConvertletFactory implements DruidConvertletFactory
 {
-  // Apply a convertlet that doesn't do anything other than a "dumb" call translation.
-  private static final SqlRexConvertlet BYPASS_CONVERTLET = StandardConvertletTable.INSTANCE::convertCall;
+  public static final CurrentTimestampAndFriendsConvertletFactory INSTANCE =
+      new CurrentTimestampAndFriendsConvertletFactory();
 
   /**
    * Use instead of {@link SqlStdOperatorTable#CURRENT_TIMESTAMP} to get the proper default precision.
@@ -58,85 +56,37 @@ public class DruidConvertletTable implements SqlRexConvertletTable
   private static final SqlFunction LOCALTIMESTAMP =
       new CurrentTimestampSqlFunction("LOCALTIMESTAMP", SqlTypeName.TIMESTAMP);
 
-  private static final List<SqlOperator> CURRENT_TIME_CONVERTLET_OPERATORS =
+  private static final List<SqlOperator> SQL_OPERATORS =
       ImmutableList.<SqlOperator>builder()
-          .add(CURRENT_TIMESTAMP)
-          .add(SqlStdOperatorTable.CURRENT_TIME)
-          .add(SqlStdOperatorTable.CURRENT_DATE)
-          .add(LOCALTIMESTAMP)
-          .add(SqlStdOperatorTable.LOCALTIME)
-          .build();
+                   .add(CURRENT_TIMESTAMP)
+                   .add(SqlStdOperatorTable.CURRENT_TIME)
+                   .add(SqlStdOperatorTable.CURRENT_DATE)
+                   .add(LOCALTIMESTAMP)
+                   .add(SqlStdOperatorTable.LOCALTIME)
+                   .build();
 
-  // Operators we don't have standard conversions for, but which can be converted into ones that do by
-  // Calcite's StandardConvertletTable.
-  private static final List<SqlOperator> STANDARD_CONVERTLET_OPERATORS =
-      ImmutableList.<SqlOperator>builder()
-          .add(SqlStdOperatorTable.ROW)
-          .add(SqlStdOperatorTable.NOT_IN)
-          .add(SqlStdOperatorTable.NOT_LIKE)
-          .add(SqlStdOperatorTable.BETWEEN)
-          .add(SqlStdOperatorTable.NOT_BETWEEN)
-          .add(SqlStdOperatorTable.SYMMETRIC_BETWEEN)
-          .add(SqlStdOperatorTable.SYMMETRIC_NOT_BETWEEN)
-          .add(SqlStdOperatorTable.ITEM)
-          .add(SqlStdOperatorTable.TIMESTAMP_ADD)
-          .add(SqlStdOperatorTable.TIMESTAMP_DIFF)
-          .add(SqlStdOperatorTable.UNION)
-          .add(SqlStdOperatorTable.UNION_ALL)
-          .add(SqlStdOperatorTable.NULLIF)
-          .add(SqlStdOperatorTable.COALESCE)
-          .add(SqlLibraryOperators.NVL)
-          .build();
-
-  private final Map<SqlOperator, SqlRexConvertlet> table;
-
-  public DruidConvertletTable(final PlannerContext plannerContext)
+  private CurrentTimestampAndFriendsConvertletFactory()
   {
-    this.table = createConvertletMap(plannerContext);
+    // Singleton.
   }
 
   @Override
-  public SqlRexConvertlet get(SqlCall call)
+  public SqlRexConvertlet createConvertlet(PlannerContext plannerContext)
   {
-    if (call.getKind() == SqlKind.EXTRACT && call.getOperandList().get(1).getKind() != SqlKind.LITERAL) {
-      // Avoid using the standard convertlet for EXTRACT(TIMEUNIT FROM col), since we want to handle it directly
-      // in ExtractOperationConversion.
-      return BYPASS_CONVERTLET;
-    } else {
-      final SqlRexConvertlet convertlet = table.get(call.getOperator());
-      return convertlet != null ? convertlet : StandardConvertletTable.INSTANCE.get(call);
-    }
+    return new CurrentTimestampAndFriendsConvertlet(plannerContext);
   }
 
-  public static List<SqlOperator> knownOperators()
+  @Override
+  public List<SqlOperator> operators()
   {
-    final ArrayList<SqlOperator> retVal = new ArrayList<>(
-        CURRENT_TIME_CONVERTLET_OPERATORS.size() + STANDARD_CONVERTLET_OPERATORS.size()
-    );
-
-    retVal.addAll(CURRENT_TIME_CONVERTLET_OPERATORS);
-    retVal.addAll(STANDARD_CONVERTLET_OPERATORS);
-
-    return retVal;
-  }
-
-  private static Map<SqlOperator, SqlRexConvertlet> createConvertletMap(final PlannerContext plannerContext)
-  {
-    final SqlRexConvertlet currentTimestampAndFriends = new CurrentTimestampAndFriendsConvertlet(plannerContext);
-    final Map<SqlOperator, SqlRexConvertlet> table = new HashMap<>();
-
-    for (SqlOperator operator : CURRENT_TIME_CONVERTLET_OPERATORS) {
-      table.put(operator, currentTimestampAndFriends);
-    }
-
-    return table;
+    return SQL_OPERATORS;
   }
 
   private static class CurrentTimestampAndFriendsConvertlet implements SqlRexConvertlet
   {
     private final PlannerContext plannerContext;
 
-    public CurrentTimestampAndFriendsConvertlet(final PlannerContext plannerContext)
+    private CurrentTimestampAndFriendsConvertlet(PlannerContext plannerContext)
     {
       this.plannerContext = plannerContext;
     }
@@ -174,6 +124,31 @@ public class DruidConvertletTable implements SqlRexConvertletTable
         );
       } else {
         throw new ISE("Should not have got here, operator was: %s", operator);
+      }
+    }
+  }
+
+  /**
+   * Similar to {@link SqlAbstractTimeFunction}, but default precision is
+   * {@link DruidTypeSystem#DEFAULT_TIMESTAMP_PRECISION} instead of 0.
+   */
+  private static class CurrentTimestampSqlFunction extends SqlAbstractTimeFunction
+  {
+    private final SqlTypeName typeName;
+
+    public CurrentTimestampSqlFunction(final String name, final SqlTypeName typeName)
+    {
+      super(name, typeName);
+      this.typeName = typeName;
+    }
+
+    @Override
+    public RelDataType inferReturnType(SqlOperatorBinding opBinding)
+    {
+      if (opBinding.getOperandCount() == 0) {
+        return opBinding.getTypeFactory().createSqlType(typeName, DruidTypeSystem.DEFAULT_TIMESTAMP_PRECISION);
+      } else {
+        return super.inferReturnType(opBinding);
       }
     }
   }

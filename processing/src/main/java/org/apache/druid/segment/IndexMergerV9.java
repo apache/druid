@@ -337,7 +337,7 @@ public class IndexMergerV9 implements IndexMerger
           ColumnDescriptor columnDesc = ColumnDescriptor
               .builder()
               .setValueType(dimCapabilities.get(i).getType())
-              .addSerde(new NullColumnPartSerde(indexMergeResult.rowCount))
+              .addSerde(new NullColumnPartSerde(indexMergeResult.rowCount, indexSpec.getBitmapSerdeFactory()))
               .build();
           makeColumn(v9Smoosher, mergedDimensions.get(i), columnDesc);
         }

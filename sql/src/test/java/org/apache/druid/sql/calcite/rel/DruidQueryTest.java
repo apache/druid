@@ -62,7 +62,7 @@ public class DruidQueryTest
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
         selectorFilter,
-        VirtualColumnRegistry.create(RowSignature.empty(), TestExprMacroTable.INSTANCE)
+        VirtualColumnRegistry.create(RowSignature.empty(), TestExprMacroTable.INSTANCE, false)
     );
     verify(pair, dataSource, selectorFilter, Intervals.ETERNITY);
   }
@@ -74,7 +74,7 @@ public class DruidQueryTest
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
         filterWithInterval,
-        VirtualColumnRegistry.create(RowSignature.empty(), TestExprMacroTable.INSTANCE)
+        VirtualColumnRegistry.create(RowSignature.empty(), TestExprMacroTable.INSTANCE, false)
     );
     verify(pair, dataSource, selectorFilter, Intervals.utc(100, 200));
   }
@@ -86,7 +86,7 @@ public class DruidQueryTest
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
         filterWithInterval,
-        VirtualColumnRegistry.create(RowSignature.empty(), TestExprMacroTable.INSTANCE)
+        VirtualColumnRegistry.create(RowSignature.empty(), TestExprMacroTable.INSTANCE, false)
     );
     verify(pair, dataSource, selectorFilter, Intervals.utc(100, 200));
   }
@@ -99,7 +99,7 @@ public class DruidQueryTest
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
         otherFilter,
-        VirtualColumnRegistry.create(RowSignature.empty(), TestExprMacroTable.INSTANCE)
+        VirtualColumnRegistry.create(RowSignature.empty(), TestExprMacroTable.INSTANCE, false)
     );
     verify(pair, expectedDataSource, otherFilter, Intervals.utc(100, 200));
   }
@@ -112,7 +112,7 @@ public class DruidQueryTest
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
         otherFilter,
-        VirtualColumnRegistry.create(RowSignature.empty(), TestExprMacroTable.INSTANCE)
+        VirtualColumnRegistry.create(RowSignature.empty(), TestExprMacroTable.INSTANCE, false)
     );
     verify(pair, expectedDataSource, otherFilter, Intervals.utc(100, 200));
   }
@@ -125,7 +125,7 @@ public class DruidQueryTest
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
         otherFilter,
-        VirtualColumnRegistry.create(RowSignature.empty(), TestExprMacroTable.INSTANCE)
+        VirtualColumnRegistry.create(RowSignature.empty(), TestExprMacroTable.INSTANCE, false)
     );
     verify(pair, expectedDataSource, otherFilter, Intervals.utc(100, 200));
   }
@@ -138,7 +138,7 @@ public class DruidQueryTest
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
         otherFilter,
-        VirtualColumnRegistry.create(RowSignature.empty(), TestExprMacroTable.INSTANCE)
+        VirtualColumnRegistry.create(RowSignature.empty(), TestExprMacroTable.INSTANCE, false)
     );
     verify(pair, expectedDataSource, otherFilter, Intervals.utc(100, 200));
   }
@@ -156,7 +156,7 @@ public class DruidQueryTest
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
         dataSource,
         queryFilter,
-        VirtualColumnRegistry.create(RowSignature.empty(), TestExprMacroTable.INSTANCE)
+        VirtualColumnRegistry.create(RowSignature.empty(), TestExprMacroTable.INSTANCE, false)
     );
     verify(pair, expectedDataSource, otherFilter, Intervals.utc(150, 200));
   }

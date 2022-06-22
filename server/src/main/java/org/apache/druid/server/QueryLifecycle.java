@@ -157,7 +157,7 @@ public class QueryLifecycle
         throw new ISE("Unauthorized");
       }
 
-      final QueryLifecycle.QueryResponse queryResponse = execute();
+      final QueryResponse queryResponse = execute();
       results = queryResponse.getResults();
     }
     catch (Throwable e) {
@@ -278,7 +278,7 @@ public class QueryLifecycle
 
     final ResponseContext responseContext = DirectDruidClient.makeResponseContextForQuery();
 
-    final Sequence res = QueryPlus.wrap(baseQuery)
+    final Sequence<?> res = QueryPlus.wrap(baseQuery)
                                   .withIdentity(authenticationResult.getIdentity())
                                   .run(texasRanger, responseContext);
 

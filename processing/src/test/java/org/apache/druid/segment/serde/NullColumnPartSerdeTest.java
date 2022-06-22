@@ -26,6 +26,7 @@ import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -40,7 +41,7 @@ public class NullColumnPartSerdeTest extends InitializedNullHandlingTest
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
 
-    final NullColumnPartSerde partSerde = new NullColumnPartSerde(10);
+    final NullColumnPartSerde partSerde = new NullColumnPartSerde(10, new RoaringBitmapSerdeFactory(null));
     final String json = mapper.writeValueAsString(partSerde);
     Assert.assertEquals(partSerde, mapper.readValue(json, ColumnPartSerde.class));
   }
@@ -48,7 +49,7 @@ public class NullColumnPartSerdeTest extends InitializedNullHandlingTest
   @Test
   public void testDeserializer()
   {
-    final NullColumnPartSerde partSerde = new NullColumnPartSerde(10);
+    final NullColumnPartSerde partSerde = new NullColumnPartSerde(10, new RoaringBitmapSerdeFactory(null));
     final ColumnBuilder builder = new ColumnBuilder().setType(ValueType.DOUBLE);
     partSerde.getDeserializer().read(Mockito.mock(ByteBuffer.class), builder, Mockito.mock(ColumnConfig.class));
     final ColumnCapabilities columnCapabilities = builder.build().getCapabilities();

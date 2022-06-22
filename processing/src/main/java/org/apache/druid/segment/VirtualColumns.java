@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -501,4 +502,20 @@ public class VirtualColumns implements Cacheable
     return virtualColumns.toString();
   }
 
+  /**
+   * {@link JsonInclude} filter for {@code getVirtualColumns()}.
+   *
+   * This API works by "creative" use of equals. It requires warnings to be suppressed
+   * and also requires spotbugs exclusions (see spotbugs-exclude.xml).
+   */
+  @SuppressWarnings({"EqualsAndHashcode", "EqualsHashCode"})
+  public static class JsonIncludeFilter // lgtm [java/inconsistent-equals-and-hashcode]
+  {
+    @Override
+    public boolean equals(Object obj)
+    {
+      return obj instanceof VirtualColumns &&
+             ((VirtualColumns) obj).virtualColumns.isEmpty();
+    }
+  }
 }
