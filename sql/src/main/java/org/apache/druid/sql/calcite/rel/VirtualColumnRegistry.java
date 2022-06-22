@@ -49,11 +49,13 @@ public class VirtualColumnRegistry
   private final Map<String, ExpressionAndTypeHint> virtualColumnsByName;
   private final String virtualColumnPrefix;
   private int virtualColumnCounter;
+  private boolean forceExpressionVirtualColumns;
 
   private VirtualColumnRegistry(
       RowSignature baseRowSignature,
       ExprMacroTable macroTable,
       String virtualColumnPrefix,
+      boolean forceExpressionVirtualColumns,
       Map<ExpressionAndTypeHint, String> virtualColumnsByExpression,
       Map<String, ExpressionAndTypeHint> virtualColumnsByName
   )
@@ -63,14 +65,20 @@ public class VirtualColumnRegistry
     this.virtualColumnPrefix = virtualColumnPrefix;
     this.virtualColumnsByExpression = virtualColumnsByExpression;
     this.virtualColumnsByName = virtualColumnsByName;
+    this.forceExpressionVirtualColumns = forceExpressionVirtualColumns;
   }
 
-  public static VirtualColumnRegistry create(final RowSignature rowSignature, final ExprMacroTable macroTable)
+  public static VirtualColumnRegistry create(
+      final RowSignature rowSignature,
+      final ExprMacroTable macroTable,
+      final boolean forceExpressionVirtualColumns
+  )
   {
     return new VirtualColumnRegistry(
         rowSignature,
         macroTable,
         Calcites.findUnusedPrefixForDigits("v", rowSignature.getColumnNames()),
+        forceExpressionVirtualColumns,
         new HashMap<>(),
         new HashMap<>()
     );
@@ -124,14 +132,23 @@ public class VirtualColumnRegistry
   }
 
   /**
-   * Get existing virtual column by column name
+   * Get existing virtual column by column name.
+   *
+   * @return null if a virtual column for the given name does not exist.
    */
   @Nullable
   public VirtualColumn getVirtualColumn(String virtualColumnName)
   {
-    return Optional.ofNullable(virtualColumnsByName.get(virtualColumnName))
-                   .map(v -> v.getExpression().toVirtualColumn(virtualColumnName, v.getTypeHint(), macroTable))
-                   .orElse(null);
+    ExpressionAndTypeHint registeredColumn = virtualColumnsByName.get(virtualColumnName);
+    if (registeredColumn == null) {
+      return null;
+    }
+
+    DruidExpression expression = registeredColumn.getExpression();
+    ColumnType columnType = registeredColumn.getTypeHint();
+    return forceExpressionVirtualColumns
+           ? expression.toExpressionVirtualColumn(virtualColumnName, columnType, macroTable)
+           : expression.toVirtualColumn(virtualColumnName, columnType, macroTable);
   }
 
   @Nullable
@@ -223,7 +240,7 @@ public class VirtualColumnRegistry
   )
   {
     final String name = getOrCreateVirtualColumnForExpression(expression, valueType);
-    return virtualColumnsByName.get(name).expression.toVirtualColumn(name, valueType, macroTable);
+    return getVirtualColumn(name);
   }
 
   /**

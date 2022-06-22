@@ -37,6 +37,7 @@ import org.skife.jdbi.v2.util.StringMapper;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.sql.SQLException;
+import java.util.Locale;
 
 public class MySQLConnector extends SQLMetadataConnector
 {
@@ -175,6 +176,12 @@ public class MySQLConnector extends SQLMetadataConnector
     // this is MySQL's way of indicating you want results streamed back
     // see http://dev.mysql.com/doc/connector-j/5.1/en/connector-j-reference-implementation-notes.html
     return Integer.MIN_VALUE;
+  }
+
+  @Override
+  public String limitClause(int limit)
+  {
+    return String.format(Locale.ENGLISH, "LIMIT %d", limit);
   }
 
   @Override

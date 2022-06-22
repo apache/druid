@@ -44,7 +44,7 @@ public class QueryContextsTest
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
         false,
-        new HashMap()
+        new HashMap<>()
     );
     Assert.assertEquals(300_000, QueryContexts.getDefaultTimeout(query));
   }
@@ -56,7 +56,7 @@ public class QueryContextsTest
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
         false,
-        new HashMap()
+        new HashMap<>()
     );
     Assert.assertEquals(300_000, QueryContexts.getTimeout(query));
 
@@ -205,5 +205,58 @@ public class QueryContextsTest
     );
     Assert.assertTrue(QueryContexts.isDebug(query));
     Assert.assertTrue(QueryContexts.isDebug(query.getContext()));
+  }
+
+  @Test
+  public void testGetAs()
+  {
+    Assert.assertNull(QueryContexts.getAsString("foo", null, null));
+    Assert.assertEquals("default", QueryContexts.getAsString("foo", null, "default"));
+    Assert.assertEquals("value", QueryContexts.getAsString("foo", "value", "default"));
+    try {
+      QueryContexts.getAsString("foo", 10, null);
+      Assert.fail();
+    }
+    catch (IAE e) {
+      // Expected
+    }
+
+    Assert.assertFalse(QueryContexts.getAsBoolean("foo", null, false));
+    Assert.assertTrue(QueryContexts.getAsBoolean("foo", null, true));
+    Assert.assertTrue(QueryContexts.getAsBoolean("foo", "true", false));
+    Assert.assertTrue(QueryContexts.getAsBoolean("foo", true, false));
+    try {
+      QueryContexts.getAsBoolean("foo", 10, false);
+      Assert.fail();
+    }
+    catch (IAE e) {
+      // Expected
+    }
+
+    Assert.assertEquals(10, QueryContexts.getAsInt("foo", null, 10));
+    Assert.assertEquals(20, QueryContexts.getAsInt("foo", "20", 10));
+    Assert.assertEquals(20, QueryContexts.getAsInt("foo", 20, 10));
+    Assert.assertEquals(20, QueryContexts.getAsInt("foo", 20L, 10));
+    Assert.assertEquals(20, QueryContexts.getAsInt("foo", 20D, 10));
+    try {
+      QueryContexts.getAsInt("foo", true, 20);
+      Assert.fail();
+    }
+    catch (IAE e) {
+      // Expected
+    }
+
+    Assert.assertEquals(10L, QueryContexts.getAsLong("foo", null, 10));
+    Assert.assertEquals(20L, QueryContexts.getAsLong("foo", "20", 10));
+    Assert.assertEquals(20L, QueryContexts.getAsLong("foo", 20, 10));
+    Assert.assertEquals(20L, QueryContexts.getAsLong("foo", 20L, 10));
+    Assert.assertEquals(20L, QueryContexts.getAsLong("foo", 20D, 10));
+    try {
+      QueryContexts.getAsLong("foo", true, 20);
+      Assert.fail();
+    }
+    catch (IAE e) {
+      // Expected
+    }
   }
 }

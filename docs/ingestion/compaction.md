@@ -47,7 +47,7 @@ Compaction does not improve performance in all situations. For example, if you r
 
 You can configure the Druid Coordinator to perform automatic compaction, also called auto-compaction, for a datasource. Using its [segment search policy](../design/coordinator.md#segment-search-policy-in-automatic-compaction), the Coordinator periodically identifies segments for compaction starting from newest to oldest. When the Coordinator discovers segments that have not been compacted or segments that were compacted with a different or changed spec, it submits compaction tasks for the time interval covering those segments.
 
-Automatic compaction works in most use cases and should be your first option. To learn more about automatic compaction, see [Compacting Segments](../design/coordinator.md#automatic-compaction).
+Automatic compaction works in most use cases and should be your first option. To learn more, see [Automatic compaction](../ingestion/automatic-compaction.md).
 
 In cases where you require more control over compaction, you can manually submit compaction tasks. For example:
 
@@ -63,7 +63,9 @@ During compaction, Druid overwrites the original set of segments with the compac
 You can set `dropExisting` in `ioConfig` to "true" in the compaction task to configure Druid to replace all existing segments fully contained by the interval. See the suggestion for reindexing with finer granularity under [Implementation considerations](native-batch.md#implementation-considerations) for an example.
 > WARNING: `dropExisting` in `ioConfig` is a beta feature.
 
-If an ingestion task needs to write data to a segment for a time interval locked for compaction, by default the ingestion task supersedes the compaction task and the compaction task fails without finishing. For manual compaction tasks, you can adjust the input spec interval to avoid conflicts between ingestion and compaction. For automatic compaction, you can set the `skipOffsetFromLatest` key to adjust the auto-compaction starting point from the current time to reduce the chance of conflicts between ingestion and compaction. See [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for more information. Another option is to set the compaction task to higher priority than the ingestion task.
+If an ingestion task needs to write data to a segment for a time interval locked for compaction, by default the ingestion task supersedes the compaction task and the compaction task fails without finishing. For manual compaction tasks, you can adjust the input spec interval to avoid conflicts between ingestion and compaction. For automatic compaction, you can set the `skipOffsetFromLatest` key to adjust the auto-compaction starting point from the current time to reduce the chance of conflicts between ingestion and compaction.
+Another option is to set the compaction task to higher priority than the ingestion task.
+For more information, see [Avoid conflicts with ingestion](../ingestion/automatic-compaction.md#avoid-conflicts-with-ingestion).
 
 ### Segment granularity handling
 
@@ -83,7 +85,7 @@ If you configure query granularity in compaction to go from a finer granularity 
 
 ### Dimension handling
 
-Apache Druid supports schema changes. Therefore, dimensions can be different across segments even if they are a part of the same data source. See [Different schemas among segments](../design/segments.md#different-schemas-among-segments). If the input segments have different dimensions, the resulting compacted segment includes all dimensions of the input segments.
+Apache Druid supports schema changes. Therefore, dimensions can be different across segments even if they are a part of the same datasource. See [Segments with different schemas](../design/segments.md#segments-with-different-schemas). If the input segments have different dimensions, the resulting compacted segment includes all dimensions of the input segments.
 
 Even when the input segments have the same set of dimensions, the dimension order or the data type of dimensions can be different. The dimensions of recent segments precede that of old segments in terms of data types and the ordering because more recent segments are more likely to have the preferred order and data types.
 
@@ -221,6 +223,5 @@ Druid supports two supported `inputSpec` formats:
 
 See the following topics for more information:
 - [Segment optimization](../operations/segment-optimization.md) for guidance to determine if compaction will help in your case.
-- [Compacting Segments](../design/coordinator.md#automatic-compaction) for details on how the Coordinator manages automatic compaction.
-- [Automatic compaction configuration API](../operations/api-reference.md#automatic-compaction-configuration)
-and [Automatic compaction configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for automatic compaction configuration information.
+- [Automatic compaction](../ingestion/automatic-compaction.md) for how to enable and configure automatic compaction.
+

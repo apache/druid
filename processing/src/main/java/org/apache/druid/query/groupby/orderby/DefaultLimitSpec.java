@@ -156,7 +156,7 @@ public class DefaultLimitSpec implements LimitSpec
 
   /**
    * Limit for this query; behaves like SQL "LIMIT". Will always be positive. {@link Integer#MAX_VALUE} is used in
-   * situations where the user wants an effectively unlimited resultset.
+   * situations where the user wants an effectively unlimited result set.
    */
   @JsonProperty
   @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = LimitJsonIncludeFilter.class)
@@ -580,24 +580,16 @@ public class DefaultLimitSpec implements LimitSpec
   /**
    * {@link JsonInclude} filter for {@link #getLimit()}.
    *
-   * This API works by "creative" use of equals. It requires warnings to be suppressed and also requires spotbugs
-   * exclusions (see spotbugs-exclude.xml).
+   * This API works by "creative" use of equals. It requires warnings to be suppressed
+   * and also requires spotbugs exclusions (see spotbugs-exclude.xml).
    */
   @SuppressWarnings({"EqualsAndHashcode", "EqualsHashCode"})
-  static class LimitJsonIncludeFilter // lgtm [java/inconsistent-equals-and-hashcode]
+  public static class LimitJsonIncludeFilter // lgtm [java/inconsistent-equals-and-hashcode]
   {
     @Override
     public boolean equals(Object obj)
     {
-      if (obj == null) {
-        return false;
-      }
-
-      if (obj.getClass() == this.getClass()) {
-        return true;
-      }
-
-      return obj instanceof Long && (long) obj == Long.MAX_VALUE;
+      return obj instanceof Integer && (Integer) obj == Integer.MAX_VALUE;
     }
   }
 }

@@ -163,7 +163,8 @@ public class DoubleNumericColumnPartSerdeV2 implements ColumnPartSerde
       builder.setType(ValueType.DOUBLE)
              .setHasMultipleValues(false)
              .setHasNulls(hasNulls)
-             .setNumericColumnSupplier(new DoubleNumericColumnSupplier(column, bitmap));
+             .setNumericColumnSupplier(new DoubleNumericColumnSupplier(column, bitmap))
+             .setNullValueIndexSupplier(bitmap);
     };
   }
 }
