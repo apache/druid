@@ -27,7 +27,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
@@ -39,14 +39,12 @@ import java.util.Objects;
 
 public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 {
-  public static final Comparator LONG_COMPARATOR = Comparators.<Long>naturalNullsFirst();
+  public static final Comparator<Long> LONG_COMPARATOR = Comparators.naturalNullsFirst();
 
   private volatile boolean hasNulls = false;
 
-
-  @Nullable
   @Override
-  public Long processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
+  public EncodedKeyComponent<Long> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
     if (dimValues instanceof List) {
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
@@ -56,19 +54,13 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
     if (l == null) {
       hasNulls = NullHandling.sqlCompatible();
     }
-    return l;
+    return new EncodedKeyComponent<>(l, Long.BYTES);
   }
 
   @Override
   public void setSparseIndexed()
   {
     hasNulls = NullHandling.sqlCompatible();
-  }
-
-  @Override
-  public long estimateEncodedKeyComponentSize(Long key)
-  {
-    return Long.BYTES;
   }
 
   @Override
@@ -104,7 +96,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   @Override
   public ColumnCapabilities getColumnCapabilities()
   {
-    ColumnCapabilitiesImpl builder = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
+    ColumnCapabilitiesImpl builder = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG);
     if (hasNulls) {
       builder.setHasNulls(hasNulls);
     }

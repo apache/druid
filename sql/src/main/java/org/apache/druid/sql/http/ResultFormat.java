@@ -22,6 +22,7 @@ package org.apache.druid.sql.http;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -29,7 +30,6 @@ import javax.ws.rs.core.MediaType;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.List;
 
 public enum ResultFormat
 {
@@ -128,7 +128,7 @@ public enum ResultFormat
      */
     void writeResponseStart() throws IOException;
 
-    void writeHeader(List<String> columnNames) throws IOException;
+    void writeHeader(RelDataType rowType, boolean includeTypes, boolean includeSqlTypes) throws IOException;
 
     /**
      * Start of each result row.

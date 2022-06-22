@@ -21,6 +21,7 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import { useQueryManager } from '../../hooks';
+import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { queryDruidSql } from '../../utils';
 import { Loader } from '../loader/loader';
 
@@ -39,7 +40,7 @@ export interface LookupValuesTableProps {
 export const LookupValuesTable = React.memo(function LookupValuesTable(
   props: LookupValuesTableProps,
 ) {
-  const [columnsState] = useQueryManager<string, LookupRow[]>({
+  const [entriesState] = useQueryManager<string, LookupRow[]>({
     processQuery: async (lookupId: string) => {
       return await queryDruidSql<LookupRow>({
         query: `SELECT "k", "v" FROM ${SqlRef.column(lookupId, 'lookup')} LIMIT 5000`,
@@ -49,32 +50,38 @@ export const LookupValuesTable = React.memo(function LookupValuesTable(
   });
 
   function renderTable() {
+    const entries = entriesState.data || [];
     return (
       <ReactTable
-        data={columnsState.data || []}
-        defaultPageSize={20}
+        data={entries}
+        defaultPageSize={SMALL_TABLE_PAGE_SIZE}
+        pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
+        showPagination={entries.length > SMALL_TABLE_PAGE_SIZE}
         filterable
+        noDataText={
+          entriesState.getErrorMessage() ||
+          'Lookup data not found. If this is a new lookup it might not have propagated yet.'
+        }
         columns={[
           {
             Header: 'Key',
             accessor: 'k',
+            className: 'padded',
+            width: 300,
           },
           {
             Header: 'Value',
             accessor: 'v',
+            className: 'padded',
           },
         ]}
-        noDataText={
-          columnsState.getErrorMessage() ||
-          'Lookup data not found. If this is a new lookup it might not have propagated yet.'
-        }
       />
     );
   }
 
   return (
     <div className="lookup-columns-table">
-      <div className="main-area">{columnsState.loading ? <Loader /> : renderTable()}</div>
+      <div className="main-area">{entriesState.loading ? <Loader /> : renderTable()}</div>
     </div>
   );
 });

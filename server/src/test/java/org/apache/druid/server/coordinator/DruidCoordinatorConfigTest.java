@@ -43,12 +43,13 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(new Duration("PT60s"), config.getCoordinatorPeriod());
     Assert.assertEquals(new Duration("PT1800s"), config.getCoordinatorIndexingPeriod());
     Assert.assertEquals(86400000, config.getCoordinatorKillPeriod().getMillis());
-    Assert.assertEquals(-1000, config.getCoordinatorKillDurationToRetain().getMillis());
-    Assert.assertEquals(0, config.getCoordinatorKillMaxSegments());
+    Assert.assertEquals(7776000000L, config.getCoordinatorKillDurationToRetain().getMillis());
+    Assert.assertEquals(100, config.getCoordinatorKillMaxSegments());
     Assert.assertEquals(new Duration(15 * 60 * 1000), config.getLoadTimeoutDelay());
     Assert.assertEquals(Duration.millis(50), config.getLoadQueuePeonRepeatDelay());
     Assert.assertEquals("http", config.getLoadQueuePeonType());
     Assert.assertTrue(config.getCompactionSkipLockedIntervals());
+    Assert.assertFalse(config.getCoordinatorKillIgnoreDurationToRetain());
 
     //with non-defaults
     Properties props = new Properties();
@@ -64,6 +65,7 @@ public class DruidCoordinatorConfigTest
     props.setProperty("druid.coordinator.loadqueuepeon.repeatDelay", "PT0.100s");
     props.setProperty("druid.coordinator.loadqueuepeon.type", "curator");
     props.setProperty("druid.coordinator.compaction.skipLockedIntervals", "false");
+    props.setProperty("druid.coordinator.kill.ignoreDurationToRetain", "true");
 
     factory = Config.createFactory(props);
     config = factory.build(DruidCoordinatorConfig.class);
@@ -78,5 +80,13 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(Duration.millis(100), config.getLoadQueuePeonRepeatDelay());
     Assert.assertEquals("curator", config.getLoadQueuePeonType());
     Assert.assertFalse(config.getCompactionSkipLockedIntervals());
+    Assert.assertTrue(config.getCoordinatorKillIgnoreDurationToRetain());
+
+    // Test negative druid.coordinator.kill.durationToRetain now that it is valid.
+    props = new Properties();
+    props.setProperty("druid.coordinator.kill.durationToRetain", "PT-1s");
+    factory = Config.createFactory(props);
+    config = factory.build(DruidCoordinatorConfig.class);
+    Assert.assertEquals(new Duration("PT-1s"), config.getCoordinatorKillDurationToRetain());
   }
 }

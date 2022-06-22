@@ -25,6 +25,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.RowIdSupplier;
 import org.apache.druid.segment.SingleScanTimeDimensionSelector;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -37,10 +38,10 @@ import javax.annotation.Nullable;
  * The basic implementation of {@link ColumnSelectorFactory} over an {@link IncrementalIndex}. It's counterpart for
  * historical segments is {@link org.apache.druid.segment.QueryableIndexColumnSelectorFactory}.
  */
-class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
+class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, RowIdSupplier
 {
   private final IncrementalIndexStorageAdapter adapter;
-  private final IncrementalIndex<?> index;
+  private final IncrementalIndex index;
   private final VirtualColumns virtualColumns;
   private final boolean descending;
   private final IncrementalIndexRowHolder rowHolder;
@@ -85,7 +86,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
       if (capabilities == null) {
         return DimensionSelector.constant(null, extractionFn);
       }
-      if (capabilities.getType().isNumeric()) {
+      if (capabilities.isNumeric()) {
         return ValueTypes.makeNumericWrappingDimensionSelector(
             capabilities.getType(),
             makeColumnValueSelector(dimension),
@@ -132,5 +133,18 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
 
     // Use adapter.getColumnCapabilities instead of index.getCapabilities (see note in IncrementalIndexStorageAdapater)
     return adapter.getColumnCapabilities(columnName);
+  }
+
+  @Nullable
+  @Override
+  public RowIdSupplier getRowIdSupplier()
+  {
+    return this;
+  }
+
+  @Override
+  public long getRowId()
+  {
+    return rowHolder.get().getRowIndex();
   }
 }

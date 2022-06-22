@@ -176,7 +176,7 @@ public class PartialDimensionCardinalityTaskTest
     public void requiresPartitionDimension() throws Exception
     {
       exception.expect(IllegalArgumentException.class);
-      exception.expectMessage("partitionDimension must be specified");
+      exception.expectMessage("partitionDimensions must be specified");
 
       ParallelIndexTuningConfig tuningConfig = new ParallelIndexTestingFactory.TuningConfigBuilder()
           .partitionsSpec(

@@ -56,8 +56,6 @@ public class BalanceSegments implements CoordinatorDuty
   protected final Map<String, ConcurrentHashMap<SegmentId, BalancerSegmentHolder>> currentlyMovingSegments =
       new HashMap<>();
 
-  private static final int DEFAULT_RESERVOIR_SIZE = 1;
-
   public BalanceSegments(DruidCoordinator coordinator)
   {
     this.coordinator = coordinator;
@@ -144,6 +142,8 @@ public class BalanceSegments implements CoordinatorDuty
     }
 
     final int maxSegmentsToMove = Math.min(params.getCoordinatorDynamicConfig().getMaxSegmentsToMove(), numSegments);
+
+    // Prioritize moving segments from decomissioning servers.
     int decommissioningMaxPercentOfMaxSegmentsToMove =
         params.getCoordinatorDynamicConfig().getDecommissioningMaxPercentOfMaxSegmentsToMove();
     int maxSegmentsToMoveFromDecommissioningNodes =
@@ -155,6 +155,7 @@ public class BalanceSegments implements CoordinatorDuty
     Pair<Integer, Integer> decommissioningResult =
         balanceServers(params, decommissioningServers, activeServers, maxSegmentsToMoveFromDecommissioningNodes);
 
+    // After moving segments from decomissioning servers, move the remaining segments from the rest of the servers.
     int maxGeneralSegmentsToMove = maxSegmentsToMove - decommissioningResult.lhs;
     log.info("Processing %d segments for balancing between active servers", maxGeneralSegmentsToMove);
     Pair<Integer, Integer> generalResult =
@@ -184,6 +185,13 @@ public class BalanceSegments implements CoordinatorDuty
   )
   {
     if (maxSegmentsToMove <= 0) {
+      log.debug("maxSegmentsToMove is 0; no balancing work can be performed.");
+      return new Pair<>(0, 0);
+    } else if (toMoveFrom.isEmpty()) {
+      log.debug("toMoveFrom is empty; no balancing work can be performed.");
+      return new Pair<>(0, 0);
+    } else if (toMoveTo.isEmpty()) {
+      log.debug("toMoveTo is empty; no balancing work can be peformed.");
       return new Pair<>(0, 0);
     }
 
@@ -192,12 +200,21 @@ public class BalanceSegments implements CoordinatorDuty
     final int maxToLoad = params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue();
     int moved = 0, unmoved = 0;
 
-    Iterator<BalancerSegmentHolder> segmentsToMove = strategy.pickSegmentsToMove(
-        toMoveFrom,
-        params.getBroadcastDatasources(),
-        params.getCoordinatorDynamicConfig().useBatchedSegmentSampler() ? maxSegmentsToMove : DEFAULT_RESERVOIR_SIZE,
-        params.getCoordinatorDynamicConfig().getPercentOfSegmentsToConsiderPerMove()
-    );
+    Iterator<BalancerSegmentHolder> segmentsToMove;
+    // The pick method depends on if the operator has enabled batched segment sampling in the Coorinator dynamic config.
+    if (params.getCoordinatorDynamicConfig().useBatchedSegmentSampler()) {
+      segmentsToMove = strategy.pickSegmentsToMove(
+          toMoveFrom,
+          params.getBroadcastDatasources(),
+          maxSegmentsToMove
+      );
+    } else {
+      segmentsToMove = strategy.pickSegmentsToMove(
+          toMoveFrom,
+          params.getBroadcastDatasources(),
+          params.getCoordinatorDynamicConfig().getPercentOfSegmentsToConsiderPerMove()
+      );
+    }
 
     //noinspection ForLoopThatDoesntUseLoopVariable
     for (int iter = 0; (moved + unmoved) < maxSegmentsToMove; ++iter) {

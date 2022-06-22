@@ -21,7 +21,7 @@ import React from 'react';
 
 import { RuleEditor } from './rule-editor';
 
-describe('rule editor', () => {
+describe('RuleEditor', () => {
   it('matches snapshot no tier in rule', () => {
     const ruleEditor = (
       <RuleEditor

@@ -20,7 +20,7 @@
 package org.apache.druid.segment.virtual;
 
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.segment.vector.NilVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -34,7 +34,7 @@ class ExpressionVectorInputBinding implements Expr.VectorInputBinding
 {
   private final Map<String, VectorValueSelector> numeric;
   private final Map<String, VectorObjectSelector> objects;
-  private final Map<String, ExprType> types;
+  private final Map<String, ExpressionType> types;
   private final NilVectorSelector nilSelector;
 
   private final ReadableVectorInspector vectorInspector;
@@ -48,14 +48,14 @@ class ExpressionVectorInputBinding implements Expr.VectorInputBinding
     this.nilSelector = NilVectorSelector.create(this.vectorInspector);
   }
 
-  public ExpressionVectorInputBinding addNumeric(String name, ExprType type, VectorValueSelector selector)
+  public ExpressionVectorInputBinding addNumeric(String name, ExpressionType type, VectorValueSelector selector)
   {
     numeric.put(name, selector);
     types.put(name, type);
     return this;
   }
 
-  public ExpressionVectorInputBinding addObjectSelector(String name, ExprType type, VectorObjectSelector selector)
+  public ExpressionVectorInputBinding addObjectSelector(String name, ExpressionType type, VectorObjectSelector selector)
   {
     objects.put(name, selector);
     types.put(name, type);
@@ -63,7 +63,7 @@ class ExpressionVectorInputBinding implements Expr.VectorInputBinding
   }
 
   @Override
-  public ExprType getType(String name)
+  public ExpressionType getType(String name)
   {
     return types.get(name);
   }

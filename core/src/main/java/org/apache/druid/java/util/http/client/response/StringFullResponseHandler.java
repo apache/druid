@@ -41,7 +41,7 @@ public class StringFullResponseHandler
   @Override
   public ClientResponse<StringFullResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
-    return ClientResponse.unfinished(new StringFullResponseHolder(response.getStatus(), response, charset));
+    return ClientResponse.unfinished(new StringFullResponseHolder(response, charset));
   }
 
   @Override

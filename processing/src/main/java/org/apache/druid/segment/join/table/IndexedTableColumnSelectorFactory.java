@@ -27,6 +27,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nonnull;
@@ -49,12 +50,12 @@ public class IndexedTableColumnSelectorFactory implements ColumnSelectorFactory
   @Nullable
   static ColumnCapabilities columnCapabilities(final IndexedTable table, final String columnName)
   {
-    final ValueType valueType = table.rowSignature().getColumnType(columnName).orElse(null);
+    final ColumnType valueType = table.rowSignature().getColumnType(columnName).orElse(null);
 
     if (valueType != null) {
       final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl().setType(valueType);
 
-      if (valueType == ValueType.STRING) {
+      if (valueType.is(ValueType.STRING)) {
         // IndexedTables are not _really_ dictionary-encoded, but we fake it using the row number as the dict. code.
         capabilities.setDictionaryEncoded(true);
       }

@@ -27,7 +27,7 @@ import org.apache.druid.query.filter.SelectorPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.SimpleAscendingOffset;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VSizeColumnarInts;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
@@ -46,7 +46,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   @Test
   public void testDefaultType()
   {
-    Assert.assertEquals(ValueType.COMPLEX, forSelector(null).defaultType());
+    Assert.assertEquals(ColumnType.UNKNOWN_COMPLEX, forSelector(null).defaultType());
   }
 
   @Test

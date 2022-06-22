@@ -21,8 +21,11 @@ package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Objects;
 
 public class TaskLocation
@@ -73,6 +76,27 @@ public class TaskLocation
   public int getTlsPort()
   {
     return tlsPort;
+  }
+
+  public URL makeURL(final String encodedPathAndQueryString) throws MalformedURLException
+  {
+    final String scheme;
+    final int portToUse;
+
+    if (tlsPort > 0) {
+      scheme = "https";
+      portToUse = tlsPort;
+    } else {
+      scheme = "http";
+      portToUse = port;
+    }
+
+    if (!encodedPathAndQueryString.startsWith("/")) {
+      throw new IAE("Path must start with '/'");
+    }
+
+    // Use URL constructor, not URI, since the path is already encoded.
+    return new URL(scheme, host, portToUse, encodedPathAndQueryString);
   }
 
   @Override

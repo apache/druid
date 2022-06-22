@@ -37,6 +37,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.generator.GeneratorColumnSchema;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
@@ -145,7 +146,7 @@ public class ExpressionSelectorBenchmark
                 new ExpressionVirtualColumn(
                     "v",
                     "timestamp_floor(__time, 'PT1H')",
-                    ValueType.LONG,
+                    ColumnType.LONG,
                     TestExprMacroTable.INSTANCE
                 )
             )
@@ -239,7 +240,7 @@ public class ExpressionSelectorBenchmark
                 new ExpressionVirtualColumn(
                     "v",
                     "timestamp_format(__time, 'yyyy-MM-dd')",
-                    ValueType.STRING,
+                    ColumnType.STRING,
                     TestExprMacroTable.INSTANCE
                 )
             )
@@ -304,7 +305,7 @@ public class ExpressionSelectorBenchmark
                 new ExpressionVirtualColumn(
                     "v",
                     "strlen(s)",
-                    ValueType.STRING,
+                    ColumnType.STRING,
                     TestExprMacroTable.INSTANCE
                 )
             )
@@ -336,7 +337,7 @@ public class ExpressionSelectorBenchmark
                 new ExpressionVirtualColumn(
                     "v",
                     "strlen(s)",
-                    ValueType.STRING,
+                    ColumnType.STRING,
                     TestExprMacroTable.INSTANCE
                 )
             )
@@ -350,7 +351,7 @@ public class ExpressionSelectorBenchmark
         .map(cursor -> {
           final DimensionSelector selector = cursor
               .getColumnSelectorFactory()
-              .makeDimensionSelector(new DefaultDimensionSpec("v", "v", ValueType.STRING));
+              .makeDimensionSelector(new DefaultDimensionSpec("v", "v", ColumnType.STRING));
 
           consumeDimension(cursor, selector, blackhole);
           return null;
@@ -397,7 +398,7 @@ public class ExpressionSelectorBenchmark
                 new ExpressionVirtualColumn(
                     "v",
                     "n + 1",
-                    ValueType.LONG,
+                    ColumnType.LONG,
                     TestExprMacroTable.INSTANCE
                 )
             )
@@ -429,7 +430,7 @@ public class ExpressionSelectorBenchmark
                 new ExpressionVirtualColumn(
                     "v",
                     "concat(n, ' is my favorite number') == '3 is my favorite number'",
-                    ValueType.LONG,
+                    ColumnType.LONG,
                     TestExprMacroTable.INSTANCE
                 )
             )

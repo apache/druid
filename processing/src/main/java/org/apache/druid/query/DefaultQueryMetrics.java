@@ -201,7 +201,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void vectorized(final boolean vectorized)
   {
-    // Emit nothing by default.
+    setDimension("vectorized", vectorized);
   }
 
   @Override

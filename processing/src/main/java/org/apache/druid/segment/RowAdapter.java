@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.segment.column.ColumnHolder;
+
 import java.util.function.Function;
 import java.util.function.ToLongFunction;
 
@@ -30,8 +32,23 @@ public interface RowAdapter<RowType>
 {
   /**
    * Returns a function that retrieves timestamps from rows.
+   *
+   * The default implementation delegates to {@link #columnFunction} and expects it to already contain long-typed
+   * values or nulls. Nulls, if present, will be converted to zeroes.
    */
-  ToLongFunction<RowType> timestampFunction();
+  default ToLongFunction<RowType> timestampFunction()
+  {
+    final Function<RowType, Object> timeColumnFunction = columnFunction(ColumnHolder.TIME_COLUMN_NAME);
+    return row -> {
+      final Object obj = timeColumnFunction.apply(row);
+
+      if (obj == null) {
+        return 0L;
+      } else {
+        return (long) obj;
+      }
+    };
+  }
 
   /**
    * Returns a function that retrieves the value for column "columnName" from rows.

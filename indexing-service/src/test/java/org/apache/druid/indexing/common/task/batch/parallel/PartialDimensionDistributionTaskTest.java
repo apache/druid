@@ -25,6 +25,7 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -97,10 +98,10 @@ public class PartialDimensionDistributionTaskTest
     }
 
     @Test
-    public void requiresSingleDimensionPartitions()
+    public void requiresMultiDimensionPartitions()
     {
       exception.expect(IllegalArgumentException.class);
-      exception.expectMessage("single_dim partitionsSpec required");
+      exception.expectMessage("range partitionsSpec required");
 
       PartitionsSpec partitionsSpec = new HashedPartitionsSpec(null, 1, null);
       ParallelIndexTuningConfig tuningConfig =
@@ -174,10 +175,10 @@ public class PartialDimensionDistributionTaskTest
     }
 
     @Test
-    public void requiresPartitionDimension() throws Exception
+    public void requiresPartitionDimensions() throws Exception
     {
       exception.expect(IllegalArgumentException.class);
-      exception.expectMessage("partitionDimension must be specified");
+      exception.expectMessage("partitionDimensions must be specified");
 
       ParallelIndexTuningConfig tuningConfig = new ParallelIndexTestingFactory.TuningConfigBuilder()
           .partitionsSpec(
@@ -373,10 +374,10 @@ public class PartialDimensionDistributionTaskTest
       PartitionBoundaries partitions = distribution.getEvenPartitionsByMaxSize(1);
       Assert.assertEquals(minBloomFilterBits + 2, partitions.size()); // 2 = min + max
 
-      String minDimensionValue = dimensionValues.get(0);
+      StringTuple minDimensionValue = StringTuple.create(dimensionValues.get(0));
       Assert.assertEquals(minDimensionValue, ((StringSketch) distribution).getMin());
 
-      String maxDimensionValue = dimensionValues.get(dimensionValues.size() - 1);
+      StringTuple maxDimensionValue = StringTuple.create(dimensionValues.get(dimensionValues.size() - 1));
       Assert.assertEquals(maxDimensionValue, ((StringSketch) distribution).getMax());
     }
 

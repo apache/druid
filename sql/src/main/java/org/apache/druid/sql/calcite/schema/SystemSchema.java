@@ -45,8 +45,8 @@ import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.client.InventoryView;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
@@ -67,8 +67,8 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -123,6 +123,8 @@ public class SystemSchema extends AbstractSchema
    * where 1 = true and 0 = false to make it easy to count number of segments
    * which are published, available etc.
    */
+  private static final long IS_ACTIVE_FALSE = 0L;
+  private static final long IS_ACTIVE_TRUE = 1L;
   private static final long IS_PUBLISHED_FALSE = 0L;
   private static final long IS_PUBLISHED_TRUE = 1L;
   private static final long IS_AVAILABLE_TRUE = 1L;
@@ -131,72 +133,73 @@ public class SystemSchema extends AbstractSchema
 
   static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
-      .add("segment_id", ValueType.STRING)
-      .add("datasource", ValueType.STRING)
-      .add("start", ValueType.STRING)
-      .add("end", ValueType.STRING)
-      .add("size", ValueType.LONG)
-      .add("version", ValueType.STRING)
-      .add("partition_num", ValueType.LONG)
-      .add("num_replicas", ValueType.LONG)
-      .add("num_rows", ValueType.LONG)
-      .add("is_published", ValueType.LONG)
-      .add("is_available", ValueType.LONG)
-      .add("is_realtime", ValueType.LONG)
-      .add("is_overshadowed", ValueType.LONG)
-      .add("shard_spec", ValueType.STRING)
-      .add("dimensions", ValueType.STRING)
-      .add("metrics", ValueType.STRING)
-      .add("last_compaction_state", ValueType.STRING)
+      .add("segment_id", ColumnType.STRING)
+      .add("datasource", ColumnType.STRING)
+      .add("start", ColumnType.STRING)
+      .add("end", ColumnType.STRING)
+      .add("size", ColumnType.LONG)
+      .add("version", ColumnType.STRING)
+      .add("partition_num", ColumnType.LONG)
+      .add("num_replicas", ColumnType.LONG)
+      .add("num_rows", ColumnType.LONG)
+      .add("is_active", ColumnType.LONG)
+      .add("is_published", ColumnType.LONG)
+      .add("is_available", ColumnType.LONG)
+      .add("is_realtime", ColumnType.LONG)
+      .add("is_overshadowed", ColumnType.LONG)
+      .add("shard_spec", ColumnType.STRING)
+      .add("dimensions", ColumnType.STRING)
+      .add("metrics", ColumnType.STRING)
+      .add("last_compaction_state", ColumnType.STRING)
       .build();
 
   static final RowSignature SERVERS_SIGNATURE = RowSignature
       .builder()
-      .add("server", ValueType.STRING)
-      .add("host", ValueType.STRING)
-      .add("plaintext_port", ValueType.LONG)
-      .add("tls_port", ValueType.LONG)
-      .add("server_type", ValueType.STRING)
-      .add("tier", ValueType.STRING)
-      .add("curr_size", ValueType.LONG)
-      .add("max_size", ValueType.LONG)
-      .add("is_leader", ValueType.LONG)
+      .add("server", ColumnType.STRING)
+      .add("host", ColumnType.STRING)
+      .add("plaintext_port", ColumnType.LONG)
+      .add("tls_port", ColumnType.LONG)
+      .add("server_type", ColumnType.STRING)
+      .add("tier", ColumnType.STRING)
+      .add("curr_size", ColumnType.LONG)
+      .add("max_size", ColumnType.LONG)
+      .add("is_leader", ColumnType.LONG)
       .build();
 
   static final RowSignature SERVER_SEGMENTS_SIGNATURE = RowSignature
       .builder()
-      .add("server", ValueType.STRING)
-      .add("segment_id", ValueType.STRING)
+      .add("server", ColumnType.STRING)
+      .add("segment_id", ColumnType.STRING)
       .build();
 
   static final RowSignature TASKS_SIGNATURE = RowSignature
       .builder()
-      .add("task_id", ValueType.STRING)
-      .add("group_id", ValueType.STRING)
-      .add("type", ValueType.STRING)
-      .add("datasource", ValueType.STRING)
-      .add("created_time", ValueType.STRING)
-      .add("queue_insertion_time", ValueType.STRING)
-      .add("status", ValueType.STRING)
-      .add("runner_status", ValueType.STRING)
-      .add("duration", ValueType.LONG)
-      .add("location", ValueType.STRING)
-      .add("host", ValueType.STRING)
-      .add("plaintext_port", ValueType.LONG)
-      .add("tls_port", ValueType.LONG)
-      .add("error_msg", ValueType.STRING)
+      .add("task_id", ColumnType.STRING)
+      .add("group_id", ColumnType.STRING)
+      .add("type", ColumnType.STRING)
+      .add("datasource", ColumnType.STRING)
+      .add("created_time", ColumnType.STRING)
+      .add("queue_insertion_time", ColumnType.STRING)
+      .add("status", ColumnType.STRING)
+      .add("runner_status", ColumnType.STRING)
+      .add("duration", ColumnType.LONG)
+      .add("location", ColumnType.STRING)
+      .add("host", ColumnType.STRING)
+      .add("plaintext_port", ColumnType.LONG)
+      .add("tls_port", ColumnType.LONG)
+      .add("error_msg", ColumnType.STRING)
       .build();
 
   static final RowSignature SUPERVISOR_SIGNATURE = RowSignature
       .builder()
-      .add("supervisor_id", ValueType.STRING)
-      .add("state", ValueType.STRING)
-      .add("detailed_state", ValueType.STRING)
-      .add("healthy", ValueType.LONG)
-      .add("type", ValueType.STRING)
-      .add("source", ValueType.STRING)
-      .add("suspended", ValueType.LONG)
-      .add("spec", ValueType.STRING)
+      .add("supervisor_id", ColumnType.STRING)
+      .add("state", ColumnType.STRING)
+      .add("detailed_state", ColumnType.STRING)
+      .add("healthy", ColumnType.LONG)
+      .add("type", ColumnType.STRING)
+      .add("source", ColumnType.STRING)
+      .add("suspended", ColumnType.LONG)
+      .add("spec", ColumnType.STRING)
       .build();
 
   private final Map<String, Table> tableMap;
@@ -206,7 +209,7 @@ public class SystemSchema extends AbstractSchema
       final DruidSchema druidSchema,
       final MetadataSegmentView metadataView,
       final TimelineServerView serverView,
-      final InventoryView serverInventoryView,
+      final FilteredServerInventoryView serverInventoryView,
       final AuthorizerMapper authorizerMapper,
       final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
       final @IndexingService DruidLeaderClient overlordDruidLeaderClient,
@@ -313,7 +316,10 @@ public class SystemSchema extends AbstractSchema
                   (long) segment.getShardSpec().getPartitionNum(),
                   numReplicas,
                   numRows,
-                  IS_PUBLISHED_TRUE, //is_published is true for published segments
+                  //is_active is true for published segments that are not overshadowed
+                  val.isOvershadowed() ? IS_ACTIVE_FALSE : IS_ACTIVE_TRUE,
+                  //is_published is true for published segments
+                  IS_PUBLISHED_TRUE,
                   isAvailable,
                   isRealtime,
                   val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
@@ -350,8 +356,10 @@ public class SystemSchema extends AbstractSchema
                   (long) val.getValue().getSegment().getShardSpec().getPartitionNum(),
                   numReplicas,
                   val.getValue().getNumRows(),
-                  IS_PUBLISHED_FALSE,
+                  // is_active is true for unpublished segments iff they are realtime
+                  val.getValue().isRealtime() /* is_active */,
                   // is_published is false for unpublished segments
+                  IS_PUBLISHED_FALSE,
                   // is_available is assumed to be always true for segments announced by historicals or realtime tasks
                   IS_AVAILABLE_TRUE,
                   val.getValue().isRealtime(),
@@ -480,13 +488,13 @@ public class SystemSchema extends AbstractSchema
 
     private final AuthorizerMapper authorizerMapper;
     private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
-    private final InventoryView serverInventoryView;
+    private final FilteredServerInventoryView serverInventoryView;
     private final DruidLeaderClient overlordLeaderClient;
     private final DruidLeaderClient coordinatorLeaderClient;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
-        InventoryView serverInventoryView,
+        FilteredServerInventoryView serverInventoryView,
         AuthorizerMapper authorizerMapper,
         DruidLeaderClient overlordLeaderClient,
         DruidLeaderClient coordinatorLeaderClient
@@ -665,7 +673,7 @@ public class SystemSchema extends AbstractSchema
             druidNode.getHostAndPort(),
             druidNode.getHostAndTlsPort(),
             dataNodeService.getMaxSize(),
-            dataNodeService.getType(),
+            dataNodeService.getServerType(),
             dataNodeService.getTier(),
             dataNodeService.getPriority()
         );

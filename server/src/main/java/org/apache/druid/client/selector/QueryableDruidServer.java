@@ -24,7 +24,7 @@ import org.apache.druid.query.QueryRunner;
 
 /**
  */
-public class QueryableDruidServer<T extends QueryRunner>
+public class QueryableDruidServer<T extends QueryRunner<?>>
 {
   private final DruidServer server;
   private final T queryRunner;

@@ -193,6 +193,7 @@ These additional tools were largely used to bootstrap the initial `LICENSE`, `LI
 | [jar-notice-lister](bin/jar-notice-lister.py) | Point this to an extracted Druid binary distribution, and give it a temp scratch directory, and it will output NOTICE information for all the Druid JAR files. |
 
 
+
 The `licenses.yaml` dependency registry serves to help ease the process of managing releases and maintaining `LICENSE` and `NOTICE` compliance for a project as complex and with as many dependencies as Druid.
 
 ## Release notes
@@ -205,9 +206,12 @@ It is also the release managers responsibility for correctly assigning all PRs m
 | [get-milestone-prs](bin/get-milestone-prs.py) | lists PRs between tags or commits and the milestone associated with them. |
 | [tag-missing-milestones](bin/tag-missing-milestones.py) | Find pull requests which the milestone is missing and tag them properly. |
 | [find-missing-backports](bin/find-missing-backports.py) | Find PRs which have been back-ported to one release branch but not another. Useful if a bug fix release based on the previous release is required during a release cycle. |
+| [make-linkable-release-notes](bin/make-linkable-release-notes.py) | given input of a version, input markdown file path, and output markdown file path, will rewrite markdown headers of the input file to have embedded links in the release notes style. |
 
 
 Next create an issue in the Druid github to contain the release notes and allow the community to provide feedback prior to the release. Make sure to attach it to the release milestone in github. It is highly recommended to review [previous release notes for reference](https://github.com/apache/druid/releases) of how to best structure them. Be sure to call out any exciting new features, important bug fixes, and any compatibility concerns for users or operators to consider when upgrading to this release.
+
+The [make-linkable-release-notes](bin/make-linkable-release-notes.py) script can assist in converting plain markdown into a version with headers that have embedded self links, to allow directly linking to specific release note entries.
 
 ## Web console package version
 Make sure the web console Javascript package version matches the upcoming release version prior to making tags and artifacts. You can find the release version in [package.json](../web-console/package.json). This should be set correctly, but if it isn't, it can be set with: 

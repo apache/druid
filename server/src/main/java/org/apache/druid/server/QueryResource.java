@@ -26,9 +26,9 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.joda.ser.DateTimeSerializer;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
@@ -46,7 +46,7 @@ import org.apache.druid.query.BadJsonQueryException;
 import org.apache.druid.query.BadQueryException;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
@@ -55,6 +55,7 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
@@ -106,7 +107,6 @@ public class QueryResource implements QueryCountStatsProvider
   protected final ObjectMapper serializeDateTimeAsLongJsonMapper;
   protected final ObjectMapper serializeDateTimeAsLongSmileMapper;
   protected final QueryScheduler queryScheduler;
-  protected final AuthConfig authConfig;
   protected final AuthorizerMapper authorizerMapper;
 
   private final ResponseContextConfig responseContextConfig;
@@ -135,7 +135,6 @@ public class QueryResource implements QueryCountStatsProvider
     this.serializeDateTimeAsLongJsonMapper = serializeDataTimeAsLong(jsonMapper);
     this.serializeDateTimeAsLongSmileMapper = serializeDataTimeAsLong(smileMapper);
     this.queryScheduler = queryScheduler;
-    this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
     this.responseContextConfig = responseContextConfig;
     this.selfNode = selfNode;
@@ -181,28 +180,19 @@ public class QueryResource implements QueryCountStatsProvider
   ) throws IOException
   {
     final QueryLifecycle queryLifecycle = queryLifecycleFactory.factorize();
-    Query<?> query = null;
 
     final ResourceIOReaderWriter ioReaderWriter = createResourceIOReaderWriter(req, pretty != null);
 
     final String currThreadName = Thread.currentThread().getName();
     try {
-      queryLifecycle.initialize(readQuery(req, in, ioReaderWriter));
-      query = queryLifecycle.getQuery();
-      final String queryId = query.getId();
-
-      final String queryThreadName = StringUtils.format(
-          "%s[%s_%s_%s]",
-          currThreadName,
-          query.getType(),
-          query.getDataSource().getTableNames(),
-          queryId
-      );
-
+      final Query<?> query = readQuery(req, in, ioReaderWriter);
+      queryLifecycle.initialize(query);
+      final String queryId = queryLifecycle.getQueryId();
+      final String queryThreadName = queryLifecycle.threadName(currThreadName);
       Thread.currentThread().setName(queryThreadName);
 
       if (log.isDebugEnabled()) {
-        log.debug("Got query [%s]", query);
+        log.debug("Got query [%s]", queryLifecycle.getQuery());
       }
 
       final Access authResult = queryLifecycle.authorize(req);
@@ -215,7 +205,7 @@ public class QueryResource implements QueryCountStatsProvider
       final ResponseContext responseContext = queryResponse.getResponseContext();
       final String prevEtag = getPreviousEtag(req);
 
-      if (prevEtag != null && prevEtag.equals(responseContext.get(ResponseContext.Key.ETAG))) {
+      if (prevEtag != null && prevEtag.equals(responseContext.getEntityTag())) {
         queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), -1);
         successfulQueryCount.incrementAndGet();
         return Response.notModified().build();
@@ -224,16 +214,7 @@ public class QueryResource implements QueryCountStatsProvider
       final Yielder<?> yielder = Yielders.each(results);
 
       try {
-        boolean shouldFinalize = QueryContexts.isFinalize(query, true);
-        boolean serializeDateTimeAsLong =
-            QueryContexts.isSerializeDateTimeAsLong(query, false)
-            || (!shouldFinalize && QueryContexts.isSerializeDateTimeAsLongInner(query, false));
-
-        final ObjectWriter jsonWriter = ioReaderWriter.getResponseWriter().newOutputWriter(
-            queryLifecycle.getToolChest(),
-            queryLifecycle.getQuery(),
-            serializeDateTimeAsLong
-        );
+        final ObjectWriter jsonWriter = queryLifecycle.newOutputWriter(ioReaderWriter);
 
         Response.ResponseBuilder responseBuilder = Response
             .ok(
@@ -274,16 +255,13 @@ public class QueryResource implements QueryCountStatsProvider
             )
             .header("X-Druid-Query-Id", queryId);
 
-        Object entityTag = responseContext.remove(ResponseContext.Key.ETAG);
-        if (entityTag != null) {
-          responseBuilder.header(HEADER_ETAG, entityTag);
-        }
+        transferEntityTag(responseContext, responseBuilder);
 
         DirectDruidClient.removeMagicResponseContextFields(responseContext);
 
-        //Limit the response-context header, see https://github.com/apache/druid/issues/2331
-        //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
-        //and encodes the string using ASCII, so 1 char is = 1 byte
+        // Limit the response-context header, see https://github.com/apache/druid/issues/2331
+        // Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
+        // and encodes the string using ASCII, so 1 char is = 1 byte
         final ResponseContext.SerializationResult serializationResult = responseContext.serializeWith(
             jsonMapper,
             responseContextConfig.getMaxResponseContextHeaderSize()
@@ -364,7 +342,12 @@ public class QueryResource implements QueryCountStatsProvider
 
       log.noStackTrace()
          .makeAlert(e, "Exception handling request")
-         .addData("query", query != null ? jsonMapper.writeValueAsString(query) : "unparseable query")
+         .addData(
+             "query",
+             queryLifecycle.getQuery() != null
+             ? jsonMapper.writeValueAsString(queryLifecycle.getQuery())
+             : "unparseable query"
+         )
          .addData("peer", req.getRemoteAddr())
          .emit();
 
@@ -381,7 +364,7 @@ public class QueryResource implements QueryCountStatsProvider
       final ResourceIOReaderWriter ioReaderWriter
   ) throws IOException
   {
-    Query baseQuery;
+    final Query<?> baseQuery;
     try {
       baseQuery = ioReaderWriter.getRequestMapper().readValue(in, Query.class);
     }
@@ -391,9 +374,14 @@ public class QueryResource implements QueryCountStatsProvider
     String prevEtag = getPreviousEtag(req);
 
     if (prevEtag != null) {
-      baseQuery = baseQuery.withOverriddenContext(
-          ImmutableMap.of(HEADER_IF_NONE_MATCH, prevEtag)
-      );
+      if (baseQuery.getQueryContext() == null) {
+        QueryContext context = new QueryContext(baseQuery.getContext());
+        context.addSystemParam(HEADER_IF_NONE_MATCH, prevEtag);
+
+        return baseQuery.withOverriddenContext(context.getMergedParams());
+      } else {
+        baseQuery.getQueryContext().addSystemParam(HEADER_IF_NONE_MATCH, prevEtag);
+      }
     }
 
     return baseQuery;
@@ -556,5 +544,14 @@ public class QueryResource implements QueryCountStatsProvider
   public long getTimedOutQueryCount()
   {
     return timedOutQueryCount.get();
+  }
+
+  @VisibleForTesting
+  public static void transferEntityTag(ResponseContext context, Response.ResponseBuilder builder)
+  {
+    Object entityTag = context.remove(Keys.ETAG);
+    if (entityTag != null) {
+      builder.header(HEADER_ETAG, entityTag);
+    }
   }
 }

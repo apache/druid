@@ -101,18 +101,21 @@ public abstract class Granularity implements Cacheable
     return result;
   }
 
+  /**
+   * Returns a list of standard granularities that are equal to, or finer than, a provided granularity.
+   *
+   * ALL will not be returned unless the provided granularity is ALL. NONE will never be returned, even if the
+   * provided granularity is NONE. This is because the main usage of this function in production is segment
+   * allocation, and we do not wish to generate NONE-granular segments.
+   */
   public static List<Granularity> granularitiesFinerThan(final Granularity gran0)
   {
     final List<Granularity> retVal = new ArrayList<>();
     final DateTime origin = (gran0 instanceof PeriodGranularity) ? ((PeriodGranularity) gran0).getOrigin() : null;
     final DateTimeZone tz = (gran0 instanceof PeriodGranularity) ? ((PeriodGranularity) gran0).getTimeZone() : null;
     for (GranularityType gran : GranularityType.values()) {
-      /**
-       * All and None are excluded b/c when asked to give all granularities finer
-       * than "TEN_MINUTE", you want the answer to be "FIVE_MINUTE, MINUTE and SECOND"
-       * it doesn't make sense to include ALL or None to be part of this.
-       */
-      if (gran == GranularityType.ALL || gran == GranularityType.NONE) {
+      // Exclude ALL, unless we're looking for granularities finer than ALL; always exclude NONE.
+      if ((gran == GranularityType.ALL && !gran0.equals(Granularities.ALL)) || gran == GranularityType.NONE) {
         continue;
       }
       final Granularity segmentGranularity = gran.create(origin, tz);

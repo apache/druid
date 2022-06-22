@@ -21,7 +21,6 @@ package org.apache.druid.segment.column;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -43,6 +42,7 @@ import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -607,13 +607,6 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
   @Override
   public void close() throws IOException
   {
-    CloseQuietly.close(cachedDictionary);
-
-    if (column != null) {
-      column.close();
-    }
-    if (multiValueColumn != null) {
-      multiValueColumn.close();
-    }
+    CloseableUtils.closeAll(cachedDictionary, column, multiValueColumn);
   }
 }

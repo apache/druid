@@ -21,16 +21,24 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
+import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.joda.time.DateTime;
+import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
@@ -50,6 +58,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
     implements MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
@@ -69,6 +80,11 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   private final String lockTable;
 
   private final TaskInfoMapper<EntryType, StatusType> taskInfoMapper;
+  private final TaskStatusMapper taskStatusMapper;
+  private final TaskStatusMapperFromPayload taskStatusMapperFromPayload;
+  private final TaskIdentifierMapper taskIdentifierMapper;
+
+  private Future<Boolean> taskMigrationCompleteFuture;
 
   @SuppressWarnings("PMD.UnnecessaryFullyQualifiedName")
   public SQLMetadataStorageActionHandler(
@@ -95,6 +111,9 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     this.logTable = logTable;
     this.lockTable = lockTable;
     this.taskInfoMapper = new TaskInfoMapper<>(jsonMapper, entryType, statusType);
+    this.taskStatusMapper = new TaskStatusMapper(jsonMapper);
+    this.taskStatusMapperFromPayload = new TaskStatusMapperFromPayload(jsonMapper);
+    this.taskIdentifierMapper = new TaskIdentifierMapper(jsonMapper);
   }
 
   protected SQLMetadataConnector getConnector()
@@ -139,15 +158,17 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
       final String dataSource,
       final EntryType entry,
       final boolean active,
-      final StatusType status
+      final StatusType status,
+      final String type,
+      final String groupId
   ) throws EntryExistsException
   {
     try {
       getConnector().retryWithHandle(
           (HandleCallback<Void>) handle -> {
             final String sql = StringUtils.format(
-                "INSERT INTO %s (id, created_date, datasource, payload, active, status_payload) "
-                + "VALUES (:id, :created_date, :datasource, :payload, :active, :status_payload)",
+                "INSERT INTO %s (id, created_date, datasource, payload, type, group_id, active, status_payload) "
+                + "VALUES (:id, :created_date, :datasource, :payload, :type, :group_id, :active, :status_payload)",
                 getEntryTable()
             );
             handle.createStatement(sql)
@@ -155,6 +176,8 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                   .bind("created_date", timestamp.toString())
                   .bind("datasource", dataSource)
                   .bind("payload", jsonMapper.writeValueAsBytes(entry))
+                  .bind("type", type)
+                  .bind("group_id", groupId)
                   .bind("active", active)
                   .bind("status_payload", jsonMapper.writeValueAsBytes(status))
                   .execute();
@@ -269,40 +292,255 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   @Override
-  public List<TaskInfo<EntryType, StatusType>> getCompletedTaskInfo(
+  public List<TaskInfo<EntryType, StatusType>> getTaskInfos(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String dataSource
+  )
+  {
+    return getConnector().retryTransaction(
+        (handle, status) -> {
+          final List<TaskInfo<EntryType, StatusType>> tasks = new ArrayList<>();
+          for (Entry<TaskLookupType, TaskLookup> entry : taskLookups.entrySet()) {
+            final Query<Map<String, Object>> query;
+            switch (entry.getKey()) {
+              case ACTIVE:
+                query = createActiveTaskStreamingQuery(
+                    handle,
+                    dataSource
+                );
+                tasks.addAll(query.map(taskInfoMapper).list());
+                break;
+              case COMPLETE:
+                CompleteTaskLookup completeTaskLookup = (CompleteTaskLookup) entry.getValue();
+                query = createCompletedTaskStreamingQuery(
+                    handle,
+                    completeTaskLookup.getTasksCreatedPriorTo(),
+                    completeTaskLookup.getMaxTaskStatuses(),
+                    dataSource
+                );
+                tasks.addAll(query.map(taskInfoMapper).list());
+                break;
+              default:
+                throw new IAE("Unknown TaskLookupType: [%s]", entry.getKey());
+            }
+          }
+          return tasks;
+        },
+        3,
+        SQLMetadataConnector.DEFAULT_MAX_TRIES
+    );
+  }
+
+  @Override
+  public List<TaskInfo<TaskIdentifier, StatusType>> getTaskStatusList(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String dataSource
+  )
+  {
+    boolean fetchPayload = true;
+    if (taskMigrationCompleteFuture != null && taskMigrationCompleteFuture.isDone()) {
+      try {
+        fetchPayload = !taskMigrationCompleteFuture.get();
+      }
+      catch (Exception e) {
+        log.info(e, "Exception getting task migration future");
+      }
+    }
+    return getTaskStatusList(taskLookups, dataSource, fetchPayload);
+  }
+
+  @VisibleForTesting
+  List<TaskInfo<TaskIdentifier, StatusType>> getTaskStatusList(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String dataSource,
+      boolean fetchPayload
+  )
+  {
+    ResultSetMapper<TaskInfo<TaskIdentifier, StatusType>> resultSetMapper =
+        fetchPayload ? taskStatusMapperFromPayload : taskStatusMapper;
+    return getConnector().retryTransaction(
+        (handle, status) -> {
+          final List<TaskInfo<TaskIdentifier, StatusType>> taskMetadataInfos = new ArrayList<>();
+          for (Entry<TaskLookupType, TaskLookup> entry : taskLookups.entrySet()) {
+            final Query<Map<String, Object>> query;
+            switch (entry.getKey()) {
+              case ACTIVE:
+                query = fetchPayload
+                        ? createActiveTaskStreamingQuery(handle, dataSource)
+                        : createActiveTaskSummaryStreamingQuery(handle, dataSource);
+                taskMetadataInfos.addAll(query.map(resultSetMapper).list());
+                break;
+              case COMPLETE:
+                CompleteTaskLookup completeTaskLookup = (CompleteTaskLookup) entry.getValue();
+                DateTime priorTo = completeTaskLookup.getTasksCreatedPriorTo();
+                Integer limit = completeTaskLookup.getMaxTaskStatuses();
+                query = fetchPayload
+                        ? createCompletedTaskStreamingQuery(handle, priorTo, limit, dataSource)
+                        : createCompletedTaskSummaryStreamingQuery(handle, priorTo, limit, dataSource);
+                taskMetadataInfos.addAll(query.map(resultSetMapper).list());
+                break;
+              default:
+                throw new IAE("Unknown TaskLookupType: [%s]", entry.getKey());
+            }
+          }
+          return taskMetadataInfos;
+        },
+        3,
+        SQLMetadataConnector.DEFAULT_MAX_TRIES
+    );
+  }
+
+  /**
+   * Fetches the columns needed to build TaskStatusPlus for completed tasks
+   * Please note that this requires completion of data migration to avoid empty values for task type and groupId
+   * Recommended for GET /tasks API
+   * Uses streaming SQL query to avoid fetching too many rows at once into memory
+   * @param handle db handle
+   * @param dataSource datasource to which the tasks belong. null if we don't want to filter
+   * @return Query object for TaskStatusPlus for completed tasks of interest
+   */
+  private Query<Map<String, Object>> createCompletedTaskSummaryStreamingQuery(
+      Handle handle,
       DateTime timestamp,
       @Nullable Integer maxNumStatuses,
       @Nullable String dataSource
   )
   {
-    return getConnector().retryWithHandle(
-        handle -> {
-          final Query<Map<String, Object>> query = createCompletedTaskInfoQuery(
-              handle,
-              timestamp,
-              maxNumStatuses,
-              dataSource
-          );
-          return query.map(taskInfoMapper).list();
-        }
+    String sql = StringUtils.format(
+        "SELECT "
+        + "  id, "
+        + "  created_date, "
+        + "  datasource, "
+        + "  group_id, "
+        + "  type, "
+        + "  status_payload "
+        + "FROM "
+        + "  %s "
+        + "WHERE "
+        + getWhereClauseForInactiveStatusesSinceQuery(dataSource)
+        + "ORDER BY created_date DESC",
+        getEntryTable()
     );
+
+    if (maxNumStatuses != null) {
+      sql = decorateSqlWithLimit(sql);
+    }
+    Query<Map<String, Object>> query = handle.createQuery(sql)
+                                             .bind("start", timestamp.toString())
+                                             .setFetchSize(connector.getStreamingFetchSize());
+
+    if (maxNumStatuses != null) {
+      query = query.bind("n", maxNumStatuses);
+    }
+    if (dataSource != null) {
+      query = query.bind("ds", dataSource);
+    }
+    return query;
   }
 
-  @Override
-  public List<TaskInfo<EntryType, StatusType>> getActiveTaskInfo(@Nullable String dataSource)
+  /**
+   * Fetches the columns needed to build a Task object with payload for completed tasks
+   * This requires the task payload which can be large. Please use only when necessary.
+   * For example for ingestion tasks view before migration of the new columns
+   * Uses streaming SQL query to avoid fetching too many rows at once into memory
+   * @param handle db handle
+   * @param dataSource datasource to which the tasks belong. null if we don't want to filter
+   * @return Query object for completed TaskInfos of interest
+   */
+  private Query<Map<String, Object>> createCompletedTaskStreamingQuery(
+      Handle handle,
+      DateTime timestamp,
+      @Nullable Integer maxNumStatuses,
+      @Nullable String dataSource
+  )
   {
-    return getConnector().retryWithHandle(
-        handle -> {
-          final Query<Map<String, Object>> query = createActiveTaskInfoQuery(
-              handle,
-              dataSource
-          );
-          return query.map(taskInfoMapper).list();
-        }
+    String sql = StringUtils.format(
+        "SELECT "
+        + "  id, "
+        + "  status_payload, "
+        + "  created_date, "
+        + "  datasource, "
+        + "  payload "
+        + "FROM "
+        + "  %s "
+        + "WHERE "
+        + getWhereClauseForInactiveStatusesSinceQuery(dataSource)
+        + "ORDER BY created_date DESC",
+        getEntryTable()
     );
+
+    if (maxNumStatuses != null) {
+      sql = decorateSqlWithLimit(sql);
+    }
+    Query<Map<String, Object>> query = handle.createQuery(sql)
+                                             .bind("start", timestamp.toString())
+                                             .setFetchSize(connector.getStreamingFetchSize());
+
+    if (maxNumStatuses != null) {
+      query = query.bind("n", maxNumStatuses);
+    }
+    if (dataSource != null) {
+      query = query.bind("ds", dataSource);
+    }
+    return query;
   }
 
-  private Query<Map<String, Object>> createActiveTaskInfoQuery(Handle handle, @Nullable String dataSource)
+  protected abstract String decorateSqlWithLimit(String sql);
+
+  private String getWhereClauseForInactiveStatusesSinceQuery(@Nullable String datasource)
+  {
+    String sql = StringUtils.format("active = FALSE AND created_date >= :start ");
+    if (datasource != null) {
+      sql += " AND datasource = :ds ";
+    }
+    return sql;
+  }
+
+  /**
+   * Fetches the columns needed to build TaskStatusPlus for active tasks
+   * Please note that this requires completion of data migration to avoid empty values for task type and groupId
+   * Recommended for GET /tasks API
+   * Uses streaming SQL query to avoid fetching too many rows at once into memory
+   * @param handle db handle
+   * @param dataSource datasource to which the tasks belong. null if we don't want to filter
+   * @return Query object for TaskStatusPlus for active tasks of interest
+   */
+  private Query<Map<String, Object>> createActiveTaskSummaryStreamingQuery(Handle handle, @Nullable String dataSource)
+  {
+    String sql = StringUtils.format(
+        "SELECT "
+        + "  id, "
+        + "  status_payload, "
+        + "  group_id, "
+        + "  type, "
+        + "  datasource, "
+        + "  created_date "
+        + "FROM "
+        + "  %s "
+        + "WHERE "
+        + getWhereClauseForActiveStatusesQuery(dataSource)
+        + "ORDER BY created_date",
+        entryTable
+    );
+
+    Query<Map<String, Object>> query = handle.createQuery(sql)
+                                             .setFetchSize(connector.getStreamingFetchSize());
+    if (dataSource != null) {
+      query = query.bind("ds", dataSource);
+    }
+    return query;
+  }
+
+  /**
+   * Fetches the columns needed to build Task objects with payload for active tasks
+   * This requires the task payload which can be large. Please use only when necessary.
+   * For example for ingestion tasks view before migration of the new columns
+   * Uses streaming SQL query to avoid fetching too many rows at once into memory
+   * @param handle db handle
+   * @param dataSource datasource to which the tasks belong. null if we don't want to filter
+   * @return Query object for active TaskInfos of interest
+   */
+  private Query<Map<String, Object>> createActiveTaskStreamingQuery(Handle handle, @Nullable String dataSource)
   {
     String sql = StringUtils.format(
         "SELECT "
@@ -319,7 +557,8 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         entryTable
     );
 
-    Query<Map<String, Object>> query = handle.createQuery(sql);
+    Query<Map<String, Object>> query = handle.createQuery(sql)
+                                             .setFetchSize(connector.getStreamingFetchSize());
     if (dataSource != null) {
       query = query.bind("ds", dataSource);
     }
@@ -333,6 +572,109 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
       sql += " AND datasource = :ds ";
     }
     return sql;
+  }
+
+  private class TaskStatusMapperFromPayload implements ResultSetMapper<TaskInfo<TaskIdentifier, StatusType>>
+  {
+    private final ObjectMapper objectMapper;
+
+    TaskStatusMapperFromPayload(ObjectMapper objectMapper)
+    {
+      this.objectMapper = objectMapper;
+    }
+
+    @Override
+    public TaskInfo<TaskIdentifier, StatusType> map(int index, ResultSet resultSet, StatementContext context)
+        throws SQLException
+    {
+      return toTaskIdentifierInfo(objectMapper, resultSet, true);
+    }
+  }
+
+  private class TaskStatusMapper implements ResultSetMapper<TaskInfo<TaskIdentifier, StatusType>>
+  {
+    private final ObjectMapper objectMapper;
+
+    TaskStatusMapper(ObjectMapper objectMapper)
+    {
+      this.objectMapper = objectMapper;
+    }
+
+    @Override
+    public TaskInfo<TaskIdentifier, StatusType> map(int index, ResultSet resultSet, StatementContext context)
+        throws SQLException
+    {
+      return toTaskIdentifierInfo(objectMapper, resultSet, false);
+    }
+  }
+
+  private TaskInfo<TaskIdentifier, StatusType> toTaskIdentifierInfo(ObjectMapper objectMapper,
+                                                                    ResultSet resultSet,
+                                                                    boolean usePayload
+  ) throws SQLException
+  {
+    String type;
+    String groupId;
+    if (usePayload) {
+      try {
+        ObjectNode payload = objectMapper.readValue(resultSet.getBytes("payload"), ObjectNode.class);
+        type = payload.get("type").asText();
+        groupId = payload.get("groupId").asText();
+      }
+      catch (IOException e) {
+        log.error(e, "Encountered exception while deserializing task payload");
+        throw new SQLException(e);
+      }
+    } else {
+      type = resultSet.getString("type");
+      groupId = resultSet.getString("group_id");
+    }
+
+    String id = resultSet.getString("id");
+    DateTime createdTime = DateTimes.of(resultSet.getString("created_date"));
+    StatusType status;
+    try {
+      status = objectMapper.readValue(resultSet.getBytes("status_payload"), statusType);
+    }
+    catch (IOException e) {
+      log.error(e, "Encountered exception while deserializing task status_payload");
+      throw new SQLException(e);
+    }
+    String datasource = resultSet.getString("datasource");
+    TaskIdentifier taskIdentifier = new TaskIdentifier(id, groupId, type);
+
+    return new TaskInfo<>(id, createdTime, status, datasource, taskIdentifier);
+  }
+
+  static class TaskIdentifierMapper implements ResultSetMapper<TaskIdentifier>
+  {
+    private final ObjectMapper objectMapper;
+
+    TaskIdentifierMapper(ObjectMapper objectMapper)
+    {
+      this.objectMapper = objectMapper;
+    }
+
+    @Override
+    public TaskIdentifier map(int index, ResultSet resultSet, StatementContext context)
+        throws SQLException
+    {
+      try {
+        ObjectNode payload = objectMapper.readValue(resultSet.getBytes("payload"), ObjectNode.class);
+        // If field is absent (older task version), use blank string to avoid a loop of migration of such tasks.
+        JsonNode type = payload.get("type");
+        JsonNode groupId = payload.get("groupId");
+        return new TaskIdentifier(
+            resultSet.getString("id"),
+            groupId == null ? "" : groupId.asText(),
+            type == null ? "" : type.asText()
+        );
+      }
+      catch (IOException e) {
+        log.error(e, "Encountered exception while deserializing task payload");
+        throw new SQLException(e);
+      }
+    }
   }
 
   static class TaskInfoMapper<EntryType, StatusType> implements ResultSetMapper<TaskInfo<EntryType, StatusType>>
@@ -379,13 +721,6 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
       return taskInfo;
     }
   }
-
-  protected abstract Query<Map<String, Object>> createCompletedTaskInfoQuery(
-      Handle handle,
-      DateTime timestamp,
-      @Nullable Integer maxNumStatuses,
-      @Nullable String dataSource
-  );
 
   @Override
   public boolean addLock(final String entryId, final LockType lock)
@@ -629,5 +964,106 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                             .map(Entry::getKey)
                             .findAny()
                             .orElse(null);
+  }
+
+  private List<TaskIdentifier> fetchTaskMetadatas(String tableName, String id, int limit)
+  {
+    List<TaskIdentifier> taskIdentifiers = new ArrayList<>();
+    connector.retryWithHandle(
+        new HandleCallback<Void>()
+        {
+          @Override
+          public Void withHandle(Handle handle)
+          {
+            String sql = StringUtils.format(
+                "SELECT * FROM %1$s WHERE id > '%2$s' AND type IS null ORDER BY id %3$s",
+                tableName,
+                id,
+                connector.limitClause(limit)
+            );
+            Query<Map<String, Object>> query = handle.createQuery(sql);
+            taskIdentifiers.addAll(query.map(taskIdentifierMapper).list());
+            return null;
+          }
+        }
+    );
+    return taskIdentifiers;
+  }
+
+  private void updateTaskMetadatas(String tasksTable, List<TaskIdentifier> taskIdentifiers)
+  {
+    connector.retryWithHandle(
+        new HandleCallback<Void>()
+        {
+          @Override
+          public Void withHandle(Handle handle)
+          {
+            Batch batch = handle.createBatch();
+            String sql = "UPDATE %1$s SET type = '%2$s', group_id = '%3$s' WHERE id = '%4$s'";
+            for (TaskIdentifier metadata : taskIdentifiers) {
+              batch.add(StringUtils.format(sql, tasksTable, metadata.getType(), metadata.getGroupId(), metadata.getId())
+              );
+            }
+            batch.execute();
+            return null;
+          }
+        }
+    );
+  }
+
+  @Override
+  public void populateTaskTypeAndGroupIdAsync()
+  {
+    ExecutorService executorService = Executors.newSingleThreadExecutor();
+    taskMigrationCompleteFuture = executorService.submit(
+        () -> populateTaskTypeAndGroupId()
+    );
+  }
+
+  /**
+   * Utility to migrate existing tasks to the new schema by populating type and groupId synchronously
+   *
+   * @return true if successful
+   */
+  @VisibleForTesting
+  boolean populateTaskTypeAndGroupId()
+  {
+    log.info("Populate fields task and group_id of task entry table [%s] from payload", entryTable);
+    String id = "";
+    int limit = 100;
+    int count = 0;
+    while (true) {
+      List<TaskIdentifier> taskIdentifiers;
+      try {
+        taskIdentifiers = fetchTaskMetadatas(entryTable, id, limit);
+      }
+      catch (Exception e) {
+        log.warn(e, "Task migration failed while reading entries from task table");
+        return false;
+      }
+      if (taskIdentifiers.isEmpty()) {
+        break;
+      }
+      try {
+        updateTaskMetadatas(entryTable, taskIdentifiers);
+        count += taskIdentifiers.size();
+        log.info("Successfully updated type and groupId for [%d] tasks", count);
+      }
+      catch (Exception e) {
+        log.warn(e, "Task migration failed while updating entries in task table");
+        return false;
+      }
+      id = taskIdentifiers.get(taskIdentifiers.size() - 1).getId();
+
+      try {
+        Thread.sleep(1000);
+      }
+      catch (InterruptedException e) {
+        log.info("Interrupted, exiting!");
+        Thread.currentThread().interrupt();
+      }
+    }
+    log.info("Task migration for table [%s] successful", entryTable);
+    return true;
   }
 }

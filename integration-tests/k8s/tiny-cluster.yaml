@@ -150,7 +150,6 @@ spec:
 
         # Processing threads and buffers
         druid.processing.buffer.sizeBytes=25000000
-        druid.processing.numThreads=1
         druid.sql.enable=true
       extra.jvm.options: |-
         -Xmx512m

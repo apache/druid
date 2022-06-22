@@ -55,6 +55,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
@@ -173,6 +174,8 @@ public class AppenderatorImpl implements Appenderator
   private volatile Throwable persistError;
 
   private final boolean isOpenSegments;
+  private final boolean useMaxMemoryEstimates;
+
   /**
    * Use next Map to store metadata (File, SegmentId) for a hydrant for batch appenderator
    * in order to facilitate the mapping of the QueryableIndex associated with a given hydrant
@@ -208,7 +211,8 @@ public class AppenderatorImpl implements Appenderator
       Cache cache,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean isOpenSegments
+      boolean isOpenSegments,
+      boolean useMaxMemoryEstimates
   )
   {
     this.myId = id;
@@ -225,6 +229,7 @@ public class AppenderatorImpl implements Appenderator
     this.rowIngestionMeters = Preconditions.checkNotNull(rowIngestionMeters, "rowIngestionMeters");
     this.parseExceptionHandler = Preconditions.checkNotNull(parseExceptionHandler, "parseExceptionHandler");
     this.isOpenSegments = isOpenSegments;
+    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
 
     if (sinkQuerySegmentWalker == null) {
       this.sinkTimeline = new VersionedIntervalTimeline<>(
@@ -238,11 +243,10 @@ public class AppenderatorImpl implements Appenderator
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
 
     if (isOpenSegments) {
-      log.info("Running open segments appenderator");
+      log.debug("Running open segments appenderator");
     } else {
-      log.info("Running closed segments appenderator");
+      log.debug("Running closed segments appenderator");
     }
-
   }
 
   @Override
@@ -260,7 +264,6 @@ public class AppenderatorImpl implements Appenderator
   @Override
   public Object startJob()
   {
-    tuningConfig.getBasePersistDirectory().mkdirs();
     lockBasePersistDirectory();
     final Object retVal = bootstrapSinksFromDisk();
     initializeExecutors();
@@ -381,7 +384,8 @@ public class AppenderatorImpl implements Appenderator
           }
         }
 
-        if (!skipBytesInMemoryOverheadCheck && bytesCurrentlyInMemory.get() - bytesToBePersisted > maxBytesTuningConfig) {
+        if (!skipBytesInMemoryOverheadCheck
+            && bytesCurrentlyInMemory.get() - bytesToBePersisted > maxBytesTuningConfig) {
           // We are still over maxBytesTuningConfig even after persisting.
           // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
           final String alertMessage = StringUtils.format(
@@ -496,9 +500,10 @@ public class AppenderatorImpl implements Appenderator
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
+          useMaxMemoryEstimates,
           null
       );
-      bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed(retVal));
+      bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed());
 
       try {
         segmentAnnouncer.announceSegment(retVal.getSegment());
@@ -922,6 +927,8 @@ public class AppenderatorImpl implements Appenderator
             schema.getDimensionsSpec(),
             mergedTarget,
             tuningConfig.getIndexSpec(),
+            tuningConfig.getIndexSpecForIntermediatePersists(),
+            new BaseProgressIndicator(),
             tuningConfig.getSegmentWriteOutMediumFactory(),
             tuningConfig.getMaxColumnsToMerge()
         );
@@ -1099,6 +1106,8 @@ public class AppenderatorImpl implements Appenderator
   {
     if (basePersistDirLock == null) {
       try {
+        FileUtils.mkdirp(tuningConfig.getBasePersistDirectory());
+
         basePersistDirLockChannel = FileChannel.open(
             computeLockFile().toPath(),
             StandardOpenOption.CREATE,
@@ -1296,6 +1305,7 @@ public class AppenderatorImpl implements Appenderator
             tuningConfig.getAppendableIndexSpec(),
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,
+            useMaxMemoryEstimates,
             null,
             hydrants
         );
@@ -1341,7 +1351,7 @@ public class AppenderatorImpl implements Appenderator
       // i.e. those that haven't been persisted for *InMemory counters, or pushed to deep storage for the total counter.
       rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
       bytesCurrentlyInMemory.addAndGet(-sink.getBytesInMemory());
-      bytesCurrentlyInMemory.addAndGet(-calculateSinkMemoryInUsed(sink));
+      bytesCurrentlyInMemory.addAndGet(-calculateSinkMemoryInUsed());
       for (FireHydrant hydrant : sink) {
         // Decrement memory used by all Memory Mapped Hydrant
         if (!hydrant.equals(sink.getCurrHydrant())) {
@@ -1476,7 +1486,7 @@ public class AppenderatorImpl implements Appenderator
   private File createPersistDirIfNeeded(SegmentIdWithShardSpec identifier) throws IOException
   {
     final File persistDir = computePersistDir(identifier);
-    org.apache.commons.io.FileUtils.forceMkdir(persistDir);
+    FileUtils.mkdirp(persistDir);
 
     objectMapper.writeValue(computeIdentifierFile(identifier), identifier);
 
@@ -1585,7 +1595,7 @@ public class AppenderatorImpl implements Appenderator
     return total;
   }
 
-  private int calculateSinkMemoryInUsed(Sink sink)
+  private int calculateSinkMemoryInUsed()
   {
     if (skipBytesInMemoryOverheadCheck) {
       return 0;

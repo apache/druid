@@ -32,7 +32,8 @@ import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.sql.calcite.external.ExternalTableScan;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 import javax.annotation.Nullable;
@@ -53,24 +54,24 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
       final RelTraitSet traitSet,
       @Nullable final RelOptTable table,
       final DruidTable druidTable,
-      final QueryMaker queryMaker,
+      final PlannerContext plannerContext,
       final PartialDruidQuery partialQuery
   )
   {
-    super(cluster, traitSet, queryMaker);
+    super(cluster, traitSet, plannerContext);
     this.table = table;
     this.druidTable = Preconditions.checkNotNull(druidTable, "druidTable");
     this.partialQuery = Preconditions.checkNotNull(partialQuery, "partialQuery");
   }
 
   /**
-   * Create a DruidQueryRel representing a full scan.
+   * Create a DruidQueryRel representing a full scan of a builtin table or lookup.
    */
-  public static DruidQueryRel fullScan(
+  public static DruidQueryRel scanTable(
       final LogicalTableScan scanRel,
       final RelOptTable table,
       final DruidTable druidTable,
-      final QueryMaker queryMaker
+      final PlannerContext plannerContext
   )
   {
     return new DruidQueryRel(
@@ -78,15 +79,36 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         scanRel.getCluster().traitSetOf(Convention.NONE),
         Preconditions.checkNotNull(table, "table"),
         druidTable,
-        queryMaker,
+        plannerContext,
         PartialDruidQuery.create(scanRel)
     );
   }
 
-  public static DruidQueryRel fullScan(
+  /**
+   * Create a DruidQueryRel representing a full scan of external data.
+   */
+  public static DruidQueryRel scanExternal(
+      final ExternalTableScan scanRel,
+      final PlannerContext plannerContext
+  )
+  {
+    return new DruidQueryRel(
+        scanRel.getCluster(),
+        scanRel.getCluster().traitSetOf(Convention.NONE),
+        null,
+        scanRel.getDruidTable(),
+        plannerContext,
+        PartialDruidQuery.create(scanRel)
+    );
+  }
+
+  /**
+   * Create a DruidQueryRel representing a full scan of inline, literal values.
+   */
+  public static DruidQueryRel scanValues(
       final LogicalValues valuesRel,
       final DruidTable druidTable,
-      final QueryMaker queryMaker
+      final PlannerContext plannerContext
   )
   {
     return new DruidQueryRel(
@@ -94,7 +116,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         valuesRel.getTraitSet(), // the traitSet of valuesRel should be kept
         null,
         druidTable,
-        queryMaker,
+        plannerContext,
         PartialDruidQuery.create(valuesRel)
     );
   }
@@ -125,7 +147,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         getTraitSet().replace(DruidConvention.instance()),
         table,
         druidTable,
-        getQueryMaker(),
+        getPlannerContext(),
         partialQuery
     );
   }
@@ -150,19 +172,9 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         getTraitSet().plusAll(newQueryBuilder.getRelTraits()),
         table,
         druidTable,
-        getQueryMaker(),
+        getPlannerContext(),
         newQueryBuilder
     );
-  }
-
-  @Override
-  public Sequence<Object[]> runQuery()
-  {
-    // runQuery doesn't need to finalize aggregations, because the fact that runQuery is happening suggests this
-    // is the outermost query and it will actually get run as a native query. Druid's native query layer will
-    // finalize aggregations for the outermost query even if we don't explicitly ask it to.
-
-    return getQueryMaker().runQuery(toDruidQuery(false));
   }
 
   public DruidTable getDruidTable()
@@ -189,7 +201,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
     final DruidQuery druidQuery = toDruidQueryForExplaining();
 
     try {
-      queryString = getQueryMaker().getJsonMapper().writeValueAsString(druidQuery.getQuery());
+      queryString = getPlannerContext().getJsonMapper().writeValueAsString(druidQuery.getQuery());
     }
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);

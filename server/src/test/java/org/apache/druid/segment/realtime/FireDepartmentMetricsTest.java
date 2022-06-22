@@ -34,6 +34,12 @@ public class FireDepartmentMetricsTest
   }
 
   @Test
+  public void testSnapshotBeforeProcessing()
+  {
+    Assert.assertEquals(0L, metrics.snapshot().messageGap());
+  }
+
+  @Test
   public void testSnapshotAfterProcessingOver()
   {
     metrics.reportMessageMaxTimestamp(10);

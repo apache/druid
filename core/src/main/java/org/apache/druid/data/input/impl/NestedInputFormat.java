@@ -37,7 +37,7 @@ public abstract class NestedInputFormat implements InputFormat
 
   protected NestedInputFormat(@Nullable JSONPathSpec flattenSpec)
   {
-    this.flattenSpec = flattenSpec == null ? JSONPathSpec.DEFAULT : flattenSpec;
+    this.flattenSpec = flattenSpec;
   }
 
   @Nullable

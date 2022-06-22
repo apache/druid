@@ -52,15 +52,16 @@ import java.util.Optional;
 
 public class DruidClusterAdminClient
 {
+  public static final String COORDINATOR_DOCKER_CONTAINER_NAME = "/druid-coordinator";
+  public static final String COORDINATOR_TWO_DOCKER_CONTAINER_NAME = "/druid-coordinator-two";
+  public static final String HISTORICAL_DOCKER_CONTAINER_NAME = "/druid-historical";
+  public static final String OVERLORD_DOCKER_CONTAINER_NAME = "/druid-overlord";
+  public static final String OVERLORD_TWO_DOCKER_CONTAINER_NAME = "/druid-overlord-two";
+  public static final String BROKER_DOCKER_CONTAINER_NAME = "/druid-broker";
+  public static final String ROUTER_DOCKER_CONTAINER_NAME = "/druid-router";
+  public static final String MIDDLEMANAGER_DOCKER_CONTAINER_NAME = "/druid-middlemanager";
+
   private static final Logger LOG = new Logger(DruidClusterAdminClient.class);
-  private static final String COORDINATOR_DOCKER_CONTAINER_NAME = "/druid-coordinator";
-  private static final String COORDINATOR_TWO_DOCKER_CONTAINER_NAME = "/druid-coordinator-two";
-  private static final String HISTORICAL_DOCKER_CONTAINER_NAME = "/druid-historical";
-  private static final String OVERLORD_DOCKER_CONTAINER_NAME = "/druid-overlord";
-  private static final String OVERLORD_TWO_DOCKER_CONTAINER_NAME = "/druid-overlord-two";
-  private static final String BROKER_DOCKER_CONTAINER_NAME = "/druid-broker";
-  private static final String ROUTER_DOCKER_CONTAINER_NAME = "/druid-router";
-  private static final String MIDDLEMANAGER_DOCKER_CONTAINER_NAME = "/druid-middlemanager";
 
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
@@ -199,12 +200,9 @@ public class DruidClusterAdminClient
     return runCommandInDockerContainer(MIDDLEMANAGER_DOCKER_CONTAINER_NAME, cmd);
   }
 
-  private Pair<String, String> runCommandInDockerContainer(String serviceName, String... cmd) throws Exception
+  public Pair<String, String> runCommandInDockerContainer(String serviceName, String... cmd) throws Exception
   {
-    DockerClient dockerClient = DockerClientBuilder.getInstance()
-                                                   .withDockerCmdExecFactory((new NettyDockerCmdExecFactory())
-                                                                                 .withConnectTimeout(10 * 1000))
-                                                   .build();
+    DockerClient dockerClient = newClient();
     ByteArrayOutputStream stdout = new ByteArrayOutputStream();
     ByteArrayOutputStream stderr = new ByteArrayOutputStream();
     ExecCreateCmdResponse execCreateCmdResponse = dockerClient.execCreateCmd(findDockerContainer(dockerClient, serviceName))
@@ -219,23 +217,38 @@ public class DruidClusterAdminClient
     return new Pair<>(stdout.toString(StandardCharsets.UTF_8.name()), stderr.toString(StandardCharsets.UTF_8.name()));
   }
 
-  private void restartDockerContainer(String serviceName)
+  public void restartDockerContainer(String serviceName)
   {
-    DockerClient dockerClient = DockerClientBuilder.getInstance()
-                                                   .withDockerCmdExecFactory((new NettyDockerCmdExecFactory())
-                                                                                 .withConnectTimeout(10 * 1000))
-                                                   .build();
+    DockerClient dockerClient = newClient();
     dockerClient.restartContainerCmd(findDockerContainer(dockerClient, serviceName)).exec();
+  }
+
+  public void killAndRestartDockerContainer(String serviceName)
+  {
+    final DockerClient dockerClient = newClient();
+    final String containerId = findDockerContainer(dockerClient, serviceName);
+
+    dockerClient.killContainerCmd(containerId).withSignal("SIGKILL").exec();
+    dockerClient.startContainerCmd(containerId).exec();
+  }
+
+  private static DockerClient newClient()
+  {
+    return DockerClientBuilder
+        .getInstance()
+        .withDockerCmdExecFactory((new NettyDockerCmdExecFactory()).withConnectTimeout(10 * 1000))
+        .build();
   }
 
   private String findDockerContainer(DockerClient dockerClient, String serviceName)
   {
 
     List<Container> containers = dockerClient.listContainersCmd().exec();
-    Optional<String> containerName = containers.stream()
-                                               .filter(container -> Arrays.asList(container.getNames()).contains(serviceName))
-                                               .findFirst()
-                                               .map(container -> container.getId());
+    Optional<String> containerName = containers
+        .stream()
+        .filter(container -> Arrays.asList(container.getNames()).contains(serviceName))
+        .findFirst()
+        .map(Container::getId);
 
     if (!containerName.isPresent()) {
       LOG.error("Cannot find docker container for " + serviceName);
@@ -272,11 +285,11 @@ public class DruidClusterAdminClient
                 LOG.error("Channel disconnected");
               } else {
                 // log stack trace for unknown exception
-                LOG.error(e, "");
+                LOG.error(e, "Error while waiting for [%s] to be ready", host);
               }
             } else {
               // log stack trace for unknown exception
-              LOG.error(e, "");
+              LOG.error(e, "Error while waiting for [%s] to be ready", host);
             }
 
             return false;
@@ -304,7 +317,7 @@ public class DruidClusterAdminClient
             return response.getStatus().equals(HttpResponseStatus.OK) || response.getStatus().equals(HttpResponseStatus.TEMPORARY_REDIRECT);
           }
           catch (Throwable e) {
-            LOG.error(e, "");
+            LOG.error(e, "Error while posting dynamic config");
             return false;
           }
         },

@@ -32,8 +32,8 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -137,8 +137,8 @@ public class ArrayOfDoublesSketchToEstimatePostAggregatorTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("count", ValueType.LONG)
-                    .add("a", ValueType.DOUBLE)
+                    .add("count", ColumnType.LONG)
+                    .add("a", ColumnType.DOUBLE)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );

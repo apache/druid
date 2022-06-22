@@ -108,7 +108,7 @@ public interface VectorColumnProcessorFactory<T>
   default boolean useDictionaryEncodedSelector(ColumnCapabilities capabilities)
   {
     Preconditions.checkArgument(capabilities != null, "Capabilities must not be null");
-    Preconditions.checkArgument(capabilities.getType() == ValueType.STRING, "Must only be called on a STRING column");
+    Preconditions.checkArgument(capabilities.is(ValueType.STRING), "Must only be called on a STRING column");
     return capabilities.isDictionaryEncoded().and(capabilities.areDictionaryValuesUnique()).isTrue();
   }
 }

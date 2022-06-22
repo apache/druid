@@ -23,7 +23,7 @@ import { Capabilities } from '../../../utils';
 
 import { LookupsCard } from './lookups-card';
 
-describe('lookups card', () => {
+describe('LookupsCard', () => {
   it('matches snapshot', () => {
     const lookupsCard = <LookupsCard capabilities={Capabilities.FULL} />;
 

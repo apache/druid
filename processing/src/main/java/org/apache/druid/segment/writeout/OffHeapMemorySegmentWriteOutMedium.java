@@ -36,6 +36,14 @@ public final class OffHeapMemorySegmentWriteOutMedium implements SegmentWriteOut
   }
 
   @Override
+  public SegmentWriteOutMedium makeChildWriteOutMedium()
+  {
+    OffHeapMemorySegmentWriteOutMedium medium = new OffHeapMemorySegmentWriteOutMedium();
+    closer.register(medium);
+    return medium;
+  }
+
+  @Override
   public Closer getCloser()
   {
     return closer;

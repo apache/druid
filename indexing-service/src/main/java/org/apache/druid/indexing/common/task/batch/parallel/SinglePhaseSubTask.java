@@ -39,6 +39,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
+import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -53,6 +54,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
@@ -160,7 +162,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         groupId,
         taskResource,
         ingestionSchema.getDataSchema().getDataSource(),
-        context
+        context,
+        AbstractTask.computeBatchIngestionMode(ingestionSchema.getIOConfig())
     );
 
     if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup()) {
@@ -171,7 +174,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
-    this.missingIntervalsInOverwriteMode = !ingestionSchema.getIOConfig().isAppendToExisting()
+    this.missingIntervalsInOverwriteMode = ingestionSchema.getIOConfig().isAppendToExisting() != true
                                            && ingestionSchema.getDataSchema()
                                                              .getGranularitySpec()
                                                              .inputIntervals()
@@ -193,7 +196,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   {
     return determineLockGranularityAndTryLock(
         new SurrogateTaskActionClient(supervisorTaskId, taskActionClient),
-        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals()
+        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals(),
+        ingestionSchema.getIOConfig()
     );
   }
 
@@ -296,7 +300,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   @Override
   public boolean requireLockExistingSegments()
   {
-    return !ingestionSchema.getIOConfig().isAppendToExisting();
+    return getIngestionMode() != IngestionMode.APPEND;
   }
 
   @Override
@@ -386,11 +390,15 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         new SupervisorTaskAccess(getSupervisorTaskId(), taskClient),
         getIngestionSchema().getDataSchema(),
         getTaskLockHelper(),
-        ingestionSchema.getIOConfig().isAppendToExisting(),
+        getIngestionMode(),
         partitionsSpec,
         useLineageBasedSegmentAllocation
     );
 
+    final boolean useMaxMemoryEstimates = getContextValue(
+        Tasks.USE_MAX_MEMORY_ESTIMATES,
+        Tasks.DEFAULT_USE_MAX_MEMORY_ESTIMATES
+    );
     final Appenderator appenderator = BatchAppenderators.newAppenderator(
         getId(),
         toolbox.getAppenderatorsManager(),
@@ -399,7 +407,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         dataSchema,
         tuningConfig,
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        useMaxMemoryEstimates
     );
     boolean exceptionOccurred = false;
     try (
@@ -489,7 +498,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    Map<String, List<String>> events = new HashMap<>();
+    Map<String, List<ParseExceptionReport>> events = new HashMap<>();
 
     boolean needsBuildSegments = false;
 
@@ -509,8 +518,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     if (needsBuildSegments) {
       events.put(
           RowIngestionMeters.BUILD_SEGMENTS,
-          IndexTaskUtils.getMessagesFromSavedParseExceptions(
-              parseExceptionHandler.getSavedParseExceptions()
+          IndexTaskUtils.getReportListFromSavedParseExceptions(
+              parseExceptionHandler.getSavedParseExceptionReports()
           )
       );
     }
@@ -634,8 +643,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
-    List<String> parseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        parseExceptionHandler.getSavedParseExceptions()
+    List<ParseExceptionReport> parseExceptionMessages = IndexTaskUtils.getReportListFromSavedParseExceptions(
+        parseExceptionHandler.getSavedParseExceptionReports()
     );
 
     if (parseExceptionMessages != null) {

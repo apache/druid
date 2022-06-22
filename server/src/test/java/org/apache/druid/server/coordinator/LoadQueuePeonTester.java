@@ -37,26 +37,12 @@ public class LoadQueuePeonTester extends CuratorLoadQueuePeon
         null,
         Execs.scheduledSingleThreaded("LoadQueuePeonTester--%d"),
         null,
-        new TestDruidCoordinatorConfig(
-            null,
-            null,
-            null,
-            null,
-            new Duration(1),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            10,
-            new Duration("PT1s")
-        )
+        new TestDruidCoordinatorConfig.Builder()
+            .withLoadTimeoutDelay(new Duration(1))
+            .withCoordinatorKillMaxSegments(10)
+            .withLoadQueuePeonRepeatDelay(new Duration("PT1s"))
+            .withCoordinatorKillIgnoreDurationToRetain(false)
+            .build()
     );
   }
 

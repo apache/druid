@@ -24,54 +24,32 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.RowIdSupplier;
 
-import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Basic expression {@link ColumnValueSelector}. Evaluates {@link Expr} into {@link ExprEval} against
  * {@link Expr.ObjectBinding} which are backed by the underlying expression input {@link ColumnValueSelector}s
  */
-public class ExpressionColumnValueSelector implements ColumnValueSelector<ExprEval>
+public class ExpressionColumnValueSelector extends BaseExpressionColumnValueSelector
 {
-  final Expr.ObjectBinding bindings;
-  final Expr expression;
+  private final Expr.ObjectBinding bindings;
+  private final Expr expression;
 
-  public ExpressionColumnValueSelector(Expr expression, Expr.ObjectBinding bindings)
+  public ExpressionColumnValueSelector(
+      Expr expression,
+      Expr.ObjectBinding bindings,
+      @Nullable RowIdSupplier rowIdSupplier
+  )
   {
+    super(rowIdSupplier);
     this.bindings = Preconditions.checkNotNull(bindings, "bindings");
     this.expression = Preconditions.checkNotNull(expression, "expression");
   }
 
   @Override
-  public double getDouble()
-  {
-    // No Assert for null handling as ExprEval already have it.
-    return getObject().asDouble();
-  }
-
-  @Override
-  public float getFloat()
-  {
-    // No Assert for null handling as ExprEval already have it.
-    return (float) getObject().asDouble();
-  }
-
-  @Override
-  public long getLong()
-  {
-    // No Assert for null handling as ExprEval already have it.
-    return getObject().asLong();
-  }
-
-  @Override
-  public Class<ExprEval> classOfObject()
-  {
-    return ExprEval.class;
-  }
-
-  @Nonnull
-  @Override
-  public ExprEval getObject()
+  protected ExprEval<?> eval()
   {
     return expression.eval(bindings);
   }
@@ -79,16 +57,8 @@ public class ExpressionColumnValueSelector implements ColumnValueSelector<ExprEv
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    super.inspectRuntimeShape(inspector);
     inspector.visit("expression", expression);
     inspector.visit("bindings", bindings);
-  }
-
-  @Override
-  public boolean isNull()
-  {
-    // It is possible for an expression to have a non-null String value but it can return null when parsed
-    // as a primitive long/float/double.
-    // ExprEval.isNumericNull checks whether the parsed primitive value is null or not.
-    return getObject().isNumericNull();
   }
 }

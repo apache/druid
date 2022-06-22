@@ -41,21 +41,6 @@
           "type": "doubleSum",
           "name": "delta",
           "fieldName": "delta"
-        },
-        {
-          "name": "thetaSketch",
-          "type": "thetaSketch",
-          "fieldName": "user"
-        },
-        {
-          "name": "quantilesDoublesSketch",
-          "type": "quantilesDoublesSketch",
-          "fieldName": "delta"
-        },
-        {
-          "name": "HLLSketchBuild",
-          "type": "HLLSketchBuild",
-          "fieldName": "user"
         }
       ],
       "granularitySpec": {
@@ -78,9 +63,8 @@
       "type": "index_parallel",
       "maxNumConcurrentSubTasks": 10,
       "partitionsSpec": {
-        "type": "hashed"
+        "type": "dynamic"
       },
-      "forceGuaranteedRollup": true,
       "splitHintSpec": {
         "type": "maxSize",
         "maxNumFiles": 1

@@ -99,6 +99,7 @@ public class HashBasedNumberedShardSpecTest
         "{\"type\": \"hashed\", \"partitions\": 2, \"partitionNum\": 1, \"partitionDimensions\":[\"visitor_id\"]}",
         ShardSpec.class
     );
+    Assert.assertEquals(ShardSpec.Type.HASHED, specWithPartitionDimensions.getType());
     Assert.assertEquals(1, specWithPartitionDimensions.getPartitionNum());
     Assert.assertEquals(2, specWithPartitionDimensions.getNumCorePartitions());
     Assert.assertEquals(2, ((HashBasedNumberedShardSpec) specWithPartitionDimensions).getNumBuckets());

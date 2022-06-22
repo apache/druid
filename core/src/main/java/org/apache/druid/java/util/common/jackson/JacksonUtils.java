@@ -19,9 +19,14 @@
 
 package org.apache.druid.java.util.common.jackson;
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Map;
 
@@ -40,7 +45,9 @@ public final class JacksonUtils
       {
       };
 
-  /** Silences Jackson's {@link IOException}. */
+  /**
+   * Silences Jackson's {@link IOException}.
+   */
   public static <T> T readValue(ObjectMapper mapper, byte[] bytes, Class<T> valueClass)
   {
     try {
@@ -48,6 +55,37 @@ public final class JacksonUtils
     }
     catch (IOException e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Returns a serializer for a particular class. If you have a {@link SerializerProvider}, this is better than calling
+   * {@link JsonGenerator#writeObject(Object)} or {@link ObjectMapper#writeValue(JsonGenerator, Object)}, because it
+   * avoids re-creating the {@link SerializerProvider} for each serialized object.
+   */
+  public static JsonSerializer<Object> getSerializer(final SerializerProvider serializerProvider, final Class<?> clazz)
+      throws JsonMappingException
+  {
+    // cache = true, property = null because this is what DefaultSerializerProvider.serializeValue would do.
+    return serializerProvider.findTypedValueSerializer(clazz, true, null);
+  }
+
+  /**
+   * Serializes an object using a {@link JsonGenerator}. If you have a {@link SerializerProvider}, this is better than
+   * calling {@link JsonGenerator#writeObject(Object)}, because it avoids re-creating the {@link SerializerProvider}
+   * for each serialized object.
+   */
+  public static void writeObjectUsingSerializerProvider(
+      final JsonGenerator jsonGenerator,
+      final SerializerProvider serializers,
+      @Nullable final Object o
+  ) throws IOException
+  {
+    if (o == null) {
+      jsonGenerator.writeNull();
+    } else {
+      final JsonSerializer<Object> serializer = getSerializer(serializers, o.getClass());
+      serializer.serialize(o, jsonGenerator, serializers);
     }
   }
 

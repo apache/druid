@@ -28,7 +28,7 @@ import com.google.inject.Key;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-import org.apache.druid.client.InventoryView;
+import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
@@ -36,6 +36,7 @@ import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -76,7 +77,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   @Mock
   AuthorizerMapper authorizerMapper;
   @Mock
-  private InventoryView serverInventoryView;
+  private FilteredServerInventoryView serverInventoryView;
   @Mock
   private DruidLeaderClient coordinatorDruidLeaderClient;
   @Mock
@@ -109,7 +110,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
           binder.bind(ViewManager.class).toInstance(viewManager);
           binder.bind(Escalator.class).toInstance(escalator);
           binder.bind(AuthorizerMapper.class).toInstance(authorizerMapper);
-          binder.bind(InventoryView.class).toInstance(serverInventoryView);
+          binder.bind(FilteredServerInventoryView.class).toInstance(serverInventoryView);
           binder.bind(SegmentManager.class).toInstance(segmentManager);
           binder.bind(DruidLeaderClient.class)
                 .annotatedWith(Coordinator.class)
@@ -118,7 +119,8 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
                 .annotatedWith(IndexingService.class)
                 .toInstance(overlordDruidLeaderClient);
           binder.bind(DruidNodeDiscoveryProvider.class).toInstance(druidNodeDiscoveryProvider);
-          binder.bind(ObjectMapper.class).toInstance(objectMapper);
+          binder.bind(DruidSchemaManager.class).toInstance(new NoopDruidSchemaManager());
+          binder.bind(ObjectMapper.class).annotatedWith(Json.class).toInstance(objectMapper);
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
           binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupReferencesManager);
         },

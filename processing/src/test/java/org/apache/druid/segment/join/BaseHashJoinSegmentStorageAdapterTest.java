@@ -29,7 +29,7 @@ import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
@@ -39,6 +39,7 @@ import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Assert;
@@ -52,7 +53,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-public class BaseHashJoinSegmentStorageAdapterTest
+public class BaseHashJoinSegmentStorageAdapterTest extends InitializedNullHandlingTest
 {
   public static JoinFilterRewriteConfig DEFAULT_JOIN_FILTER_REWRITE_CONFIG = new JoinFilterRewriteConfig(
       true,
@@ -267,7 +268,7 @@ public class BaseHashJoinSegmentStorageAdapterTest
     return new ExpressionVirtualColumn(
         columnName,
         expression,
-        ValueType.STRING,
+        ColumnType.STRING,
         ExprMacroTable.nil()
     );
   }

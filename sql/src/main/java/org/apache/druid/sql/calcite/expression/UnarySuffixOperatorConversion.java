@@ -50,16 +50,14 @@ public class UnarySuffixOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    return OperatorConversions.convertCall(
+    return OperatorConversions.convertCallBuilder(
         plannerContext,
         rowSignature,
         rexNode,
-        operands -> DruidExpression.fromExpression(
-            StringUtils.format(
-                "(%s %s)",
-                Iterables.getOnlyElement(operands).getExpression(),
-                druidOperator
-            )
+        operands -> StringUtils.format(
+            "(%s %s)",
+            Iterables.getOnlyElement(operands).getExpression(),
+            druidOperator
         )
     );
   }

@@ -252,6 +252,10 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     // getSegments() should return an empty set if announceHistoricalSegments() failed
     for (DataSegment segment : retVal.getSegments()) {
       metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
+      metricBuilder.setDimension(
+          DruidMetrics.PARTITIONING_TYPE,
+          segment.getShardSpec() == null ? null : segment.getShardSpec().getType()
+      );
       toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
     }
 

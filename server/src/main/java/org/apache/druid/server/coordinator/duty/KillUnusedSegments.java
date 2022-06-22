@@ -29,6 +29,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.utils.CollectionUtils;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -36,8 +38,11 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Completely removes information about unused segments whose end time is older than {@link #retainDuration} from now
- * from the metadata store. This action is called "to kill a segment".
+ * Completely removes information about unused segments who have an interval end that comes before
+ * now - {@link #retainDuration} from the metadata store. retainDuration can be a positive or negative duration,
+ * negative meaning the interval end target will be in the future. Also, retainDuration can be ignored,
+ * meaning that there is no upper bound to the end interval of segments that will be killed. This action is called
+ * "to kill a segment".
  *
  * See org.apache.druid.indexing.common.task.KillUnusedSegmentsTask.
  */
@@ -47,6 +52,7 @@ public class KillUnusedSegments implements CoordinatorDuty
 
   private final long period;
   private final long retainDuration;
+  private final boolean ignoreRetainDuration;
   private final int maxSegmentsToKill;
   private long lastKillTime = 0;
 
@@ -66,8 +72,15 @@ public class KillUnusedSegments implements CoordinatorDuty
         "coordinator kill period must be greater than druid.coordinator.period.indexingPeriod"
     );
 
+    this.ignoreRetainDuration = config.getCoordinatorKillIgnoreDurationToRetain();
     this.retainDuration = config.getCoordinatorKillDurationToRetain().getMillis();
-    Preconditions.checkArgument(this.retainDuration >= 0, "coordinator kill retainDuration must be >= 0");
+    if (this.ignoreRetainDuration) {
+      log.debug(
+          "druid.coordinator.kill.durationToRetain [%s] will be ignored when discovering segments to kill "
+          + "because you have set druid.coordinator.kill.ignoreDurationToRetain to True.",
+          this.retainDuration
+      );
+    }
 
     this.maxSegmentsToKill = config.getCoordinatorKillMaxSegments();
     Preconditions.checkArgument(this.maxSegmentsToKill > 0, "coordinator kill maxSegments must be > 0");
@@ -75,7 +88,7 @@ public class KillUnusedSegments implements CoordinatorDuty
     log.info(
         "Kill Task scheduling enabled with period [%s], retainDuration [%s], maxSegmentsToKill [%s]",
         this.period,
-        this.retainDuration,
+        this.ignoreRetainDuration ? "IGNORING" : this.retainDuration,
         this.maxSegmentsToKill
     );
 
@@ -86,19 +99,10 @@ public class KillUnusedSegments implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    boolean killAllDataSources = params.getCoordinatorDynamicConfig().isKillUnusedSegmentsInAllDataSources();
-    Collection<String> specificDataSourcesToKill =
+    Collection<String> dataSourcesToKill =
         params.getCoordinatorDynamicConfig().getSpecificDataSourcesToKillUnusedSegmentsIn();
 
-    if (killAllDataSources && specificDataSourcesToKill != null && !specificDataSourcesToKill.isEmpty()) {
-      log.error(
-          "killAllDataSources can't be true when specificDataSourcesToKill is non-empty. No kill tasks are scheduled."
-      );
-      return params;
-    }
-
-    Collection<String> dataSourcesToKill = specificDataSourcesToKill;
-    if (killAllDataSources) {
+    if (CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
       dataSourcesToKill = segmentsMetadataManager.retrieveAllDataSourceNames();
     }
 
@@ -126,17 +130,46 @@ public class KillUnusedSegments implements CoordinatorDuty
     return params;
   }
 
+  /**
+   * For a given datasource and limit of segments that can be killed in one task, determine the interval to be
+   * submitted with the kill task.
+   *
+   * @param dataSource dataSource whose unused segments are being killed.
+   * @param limit the maximum number of segments that can be included in the kill task.
+   * @return {@link Interval} to be used in the kill task.
+   */
   @VisibleForTesting
   @Nullable
   Interval findIntervalForKill(String dataSource, int limit)
   {
     List<Interval> unusedSegmentIntervals =
-        segmentsMetadataManager.getUnusedSegmentIntervals(dataSource, DateTimes.nowUtc().minus(retainDuration), limit);
+        segmentsMetadataManager.getUnusedSegmentIntervals(dataSource, getEndTimeUpperLimit(), limit);
 
     if (unusedSegmentIntervals != null && unusedSegmentIntervals.size() > 0) {
       return JodaUtils.umbrellaInterval(unusedSegmentIntervals);
     } else {
       return null;
     }
+  }
+
+  /**
+   * Calculate the {@link DateTime} that wil form the upper bound when looking for segments that are
+   * eligible to be killed. If ignoreDurationToRetain is true, we have no upper bound and return a DateTime object
+   * for "max" time that works when comparing date strings.
+   *
+   * @return {@link DateTime} representing the upper bound time used when looking for segments to kill.
+   */
+  @VisibleForTesting
+  DateTime getEndTimeUpperLimit()
+  {
+    return ignoreRetainDuration
+           ? DateTimes.COMPARE_DATE_AS_STRING_MAX
+           : DateTimes.nowUtc().minus(retainDuration);
+  }
+
+  @VisibleForTesting
+  Long getRetainDuration()
+  {
+    return retainDuration;
   }
 }
