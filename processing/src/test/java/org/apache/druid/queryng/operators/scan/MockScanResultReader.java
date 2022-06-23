@@ -21,6 +21,8 @@ package org.apache.druid.queryng.operators.scan;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
 import org.apache.druid.query.scan.ScanResultValue;
@@ -33,7 +35,6 @@ import org.joda.time.Interval;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -86,7 +87,7 @@ public class MockScanResultReader implements IterableOperator<ScanResultValue>
       columns.add(ColumnHolder.TIME_COLUMN_NAME);
     }
     for (int i = 1; i < columnCount; i++) {
-      columns.add("Column" + Integer.toString(i));
+      columns.add("Column" + i);
     }
     this.targetCount = targetCount;
     this.batchSize = batchSize;
@@ -106,7 +107,7 @@ public class MockScanResultReader implements IterableOperator<ScanResultValue>
     Instant base = Instant.parse("2021-10-24T00:00:00Z");
     Duration grainOffset = grain.multipliedBy(offset);
     Instant start = base.plus(grainOffset);
-    return new Interval(start.toEpochMilli(), start.plus(grain).toEpochMilli());
+    return Intervals.utc(start.toEpochMilli(), start.plus(grain).toEpochMilli());
   }
 
   @Override
@@ -156,7 +157,7 @@ public class MockScanResultReader implements IterableOperator<ScanResultValue>
   {
     List<Map<String, Object>> batch = new ArrayList<>(n);
     for (int i = 0; i < n; i++) {
-      Map<String, Object> values = new HashMap<>(columns.size());
+      Map<String, Object> values = Maps.newHashMapWithExpectedSize(columns.size());
       if (!columns.isEmpty()) {
         values.put(ColumnHolder.TIME_COLUMN_NAME, nextTs);
       }

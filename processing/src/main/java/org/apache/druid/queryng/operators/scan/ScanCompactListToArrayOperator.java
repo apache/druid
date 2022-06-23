@@ -28,11 +28,11 @@ import java.util.List;
 
 /**
  * Converts individual scan query rows with the
- * {@link org.apache.druid.query.scan.ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST
+ * {@link org.apache.druid.query.scan.ScanQuery.ResultFormat#RESULT_FORMAT_COMPACTED_LIST
  * ResultFormat.RESULT_FORMAT_COMPACTED_LIST} format into an object array with fields
  * in the order given by the output schema.
  *
- * @See {@link org.apache.druid.query.scan.ScanQueryQueryToolChest.resultsAsArrays
+ * @See {@link org.apache.druid.query.scan.ScanQueryQueryToolChest#resultsAsArrays
  * ScanQueryQueryToolChest.resultsAsArrays}
  */
 public class ScanCompactListToArrayOperator extends MappingOperator<List<Object>, Object[]>

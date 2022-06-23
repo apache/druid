@@ -21,7 +21,9 @@ package org.apache.druid.queryng.operators.scan;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.Cursor;
@@ -32,20 +34,25 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 /**
- * The cursor reader is a leaf operator which uses a cursor to access
- * data, which is returned via the operator protocol. Converts cursor
- * data into one of two supported Druid formats. Enforces a query row limit.
+ * The cursor reader is a leaf operator which uses a cursor to access data,
+ * which is returned via the operator protocol. Converts cursor data into one
+ * of two supported Druid formats. Enforces a query row limit.
  * <p>
  * Unlike most operators, this one is created on the fly by its parent
  * to scan a specific query known only at runtime. A storage adapter may
  * choose to create one or more queries: each is handled by an instance of this
  * class.
+ * <p>
+ * As a small performance boost, we create a layer of "accessors" on top of
+ * the column selectors. The accesors encode the column-specific logic to
+ * avoid the need for if-statements on every row.
  *
  * @see {@link org.apache.druid.query.scan.ScanQueryEngine}
  */
-public class CursorReader implements Iterator<Object>
+public class CursorReader implements Iterator<List<?>>
 {
   private final Cursor cursor;
   private final List<String> selectedColumns;
@@ -53,6 +60,9 @@ public class CursorReader implements Iterator<Object>
   private final int batchSize;
   private final ResultFormat resultFormat;
   private final List<Supplier<Object>> columnAccessors;
+  private final boolean hasTimeout;
+  private final long timeoutAt;
+  private final String queryId;
   private long targetCount;
   private long rowCount;
 
@@ -62,7 +72,9 @@ public class CursorReader implements Iterator<Object>
       final long limit,
       final int batchSize,
       final ResultFormat resultFormat,
-      final boolean isLegacy
+      final boolean isLegacy,
+      final long timeoutAt,
+      final String queryId
   )
   {
     this.cursor = cursor;
@@ -71,6 +83,9 @@ public class CursorReader implements Iterator<Object>
     this.batchSize = batchSize;
     this.resultFormat = resultFormat;
     this.columnAccessors = buildAccessors(isLegacy);
+    this.hasTimeout = timeoutAt < Long.MAX_VALUE;
+    this.timeoutAt = timeoutAt;
+    this.queryId = queryId;
   }
 
   private List<Supplier<Object>> buildAccessors(final boolean isLegacy)
@@ -121,8 +136,14 @@ public class CursorReader implements Iterator<Object>
   }
 
   @Override
-  public Object next()
+  public List<?> next()
   {
+    if (!hasNext()) {
+      throw new NoSuchElementException();
+    }
+    if (hasTimeout && System.currentTimeMillis() >= timeoutAt) {
+      throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out", queryId));
+    }
     targetCount = Math.min(limit - rowCount, rowCount + batchSize);
     switch (resultFormat) {
       case RESULT_FORMAT_LIST:
@@ -130,7 +151,7 @@ public class CursorReader implements Iterator<Object>
       case RESULT_FORMAT_COMPACTED_LIST:
         return nextAsCompactList();
       default:
-        throw new UOE("resultFormat[%s] is not supported", resultFormat.toString());
+        throw new UOE("resultFormat [%s] is not supported", resultFormat.toString());
     }
   }
 
@@ -154,7 +175,7 @@ public class CursorReader implements Iterator<Object>
    * Convert a cursor row into a simple list of maps, where each map
    * represents a single event, and each map entry represents a column.
    */
-  public Object nextAsListOfMaps()
+  public List<?> nextAsListOfMaps()
   {
     final List<Map<String, Object>> events = new ArrayList<>(batchSize);
     while (hasNextRow()) {
@@ -168,7 +189,7 @@ public class CursorReader implements Iterator<Object>
     return events;
   }
 
-  public Object nextAsCompactList()
+  public List<?> nextAsCompactList()
   {
     final List<List<Object>> events = new ArrayList<>(batchSize);
     while (hasNextRow()) {

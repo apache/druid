@@ -32,14 +32,25 @@ import org.apache.druid.queryng.config.QueryNGConfig;
 public class TestFragmentBuilderFactory implements FragmentBuilderFactory
 {
   private static final String ENABLED_KEY = QueryNGConfig.CONFIG_ROOT + ".enabled";
-  private static final boolean ENABLED = Boolean.parseBoolean(System.getProperty(ENABLED_KEY));
+
+  private boolean enabled;
+
+  public TestFragmentBuilderFactory()
+  {
+    this.enabled = Boolean.parseBoolean(System.getProperty(ENABLED_KEY));
+  }
+
+  public TestFragmentBuilderFactory(boolean enabled)
+  {
+    this.enabled = enabled;
+  }
 
   @Override
   public FragmentBuilder create(Query<?> query, ResponseContext responseContext)
   {
-    //if (!ENABLED) {
-    //  return null;
-    //}
+    if (!enabled) {
+      return null;
+    }
     if (!(query instanceof ScanQuery)) {
       return null;
     }

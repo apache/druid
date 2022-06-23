@@ -51,8 +51,9 @@ public class ScanResultOffsetOperator extends MappingOperator<ScanResultValue, S
   {
     if (rowCount == 0) {
       return skip();
+    } else {
+      return inputIter.next();
     }
-    return inputIter.next();
   }
 
   private ScanResultValue skip() throws EofException

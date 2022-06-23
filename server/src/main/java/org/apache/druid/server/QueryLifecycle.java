@@ -282,9 +282,7 @@ public class QueryLifecycle
     transition(State.AUTHORIZED, State.EXECUTING);
 
     final ResponseContext responseContext = DirectDruidClient.makeResponseContextForQuery();
-
     final FragmentBuilder fragmentBuilder = fragmentContextFactory.create(baseQuery, responseContext);
-    @SuppressWarnings("rawtypes")
     final Sequence<?> res = QueryPlus.wrap(baseQuery)
                                   .withIdentity(authenticationResult.getIdentity())
                                   .withFragmentBuilder(fragmentBuilder)

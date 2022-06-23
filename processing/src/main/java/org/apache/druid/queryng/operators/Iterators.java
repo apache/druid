@@ -97,4 +97,16 @@ public class Iterators
     return Lists.newArrayList(new Iterators.ShimIterator<T>(operIter));
   }
 
+  public static <T> ResultIterator<T> emptyIterator()
+  {
+    return new ResultIterator<T>()
+    {
+      @Override
+      public T next() throws EofException
+      {
+        throw Operators.eof();
+      }
+    };
+  }
+
 }

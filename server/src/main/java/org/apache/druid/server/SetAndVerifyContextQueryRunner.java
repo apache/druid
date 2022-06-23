@@ -49,7 +49,7 @@ public class SetAndVerifyContextQueryRunner<T> implements QueryRunner<T>
   public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
     return baseRunner.run(
-        QueryPlus.wrap(withTimeoutAndMaxScatterGatherBytes(queryPlus.getQuery(), serverConfig)),
+        queryPlus.withQuery(withTimeoutAndMaxScatterGatherBytes(queryPlus.getQuery(), serverConfig)),
         responseContext
     );
   }

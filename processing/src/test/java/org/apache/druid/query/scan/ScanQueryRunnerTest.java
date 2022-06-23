@@ -35,6 +35,7 @@ import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
@@ -47,7 +48,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.MapLookupExtractor;
@@ -84,7 +84,6 @@ import java.util.Set;
 @RunWith(Parameterized.class)
 public class ScanQueryRunnerTest extends InitializedNullHandlingTest
 {
-
   private static final VirtualColumn EXPR_COLUMN =
       new ExpressionVirtualColumn("expr", "index * 2", ColumnType.LONG, TestExprMacroTable.INSTANCE);
 
@@ -151,7 +150,6 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
   @Parameterized.Parameters(name = "{0}, legacy = {1}")
   public static Iterable<Object[]> constructorFeeder()
   {
-
     return QueryRunnerTestHelper.cartesian(
         QueryRunnerTestHelper.makeQueryRunners(
             FACTORY
@@ -160,11 +158,11 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     );
   }
 
-  private final QueryRunner runner;
+  private final QueryRunner<ScanResultValue> runner;
   private final boolean legacy;
   private final List<String> columns;
 
-  public ScanQueryRunnerTest(final QueryRunner runner, final boolean legacy)
+  public ScanQueryRunnerTest(final QueryRunner<ScanResultValue> runner, final boolean legacy)
   {
     this.runner = runner;
     this.legacy = legacy;
@@ -204,10 +202,17 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                  .legacy(legacy);
   }
 
+  protected Pair<QueryPlus<ScanResultValue>, ResponseContext> queryPlusPlus(ScanQuery query)
+  {
+    ResponseContext responseContext = ResponseContext.createEmpty();
+    QueryPlus<ScanResultValue> queryPlus = QueryPlus
+        .wrap(query);
+    return Pair.of(queryPlus, responseContext);
+  }
+
   @Test
   public void testFullOnSelect()
   {
-
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
         .virtualColumns(EXPR_COLUMN)
@@ -222,7 +227,8 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
             (obj, lng) -> {},
             (metrics) -> {}
         ).withWaitMeasuredFromNow();
-    Iterable<ScanResultValue> results = metricsEmittingQueryRunner.run(QueryPlus.wrap(query)).toList();
+    Pair<QueryPlus<ScanResultValue>, ResponseContext> qpp = queryPlusPlus(query);
+    Iterable<ScanResultValue> results = metricsEmittingQueryRunner.run(qpp.lhs, qpp.rhs).toList();
 
     List<ScanResultValue> expectedResults = toExpected(
         toFullEvents(V_0112_0114),
@@ -244,7 +250,8 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+    Pair<QueryPlus<ScanResultValue>, ResponseContext> qpp = queryPlusPlus(query);
+    Iterable<ScanResultValue> results = runner.run(qpp.lhs, qpp.rhs).toList();
 
     List<ScanResultValue> expectedResults = toExpected(
         toFullEvents(V_0112_0114),
@@ -267,7 +274,8 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         )
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+    Pair<QueryPlus<ScanResultValue>, ResponseContext> qpp = queryPlusPlus(query);
+    Iterable<ScanResultValue> results = runner.run(qpp.lhs, qpp.rhs).toList();
 
     final List<List<Map<String, Object>>> expectedEvents = toEvents(
         new String[]{
@@ -316,7 +324,8 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         .columns(QueryRunnerTestHelper.MARKET_DIMENSION, QueryRunnerTestHelper.INDEX_METRIC)
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+    Pair<QueryPlus<ScanResultValue>, ResponseContext> qpp = queryPlusPlus(query);
+    Iterable<ScanResultValue> results = runner.run(qpp.lhs, qpp.rhs).toList();
 
     List<ScanResultValue> expectedResults = toExpected(
         toEvents(
@@ -353,7 +362,8 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+    Pair<QueryPlus<ScanResultValue>, ResponseContext> qpp = queryPlusPlus(query);
+    Iterable<ScanResultValue> results = runner.run(qpp.lhs, qpp.rhs).toList();
 
     List<ScanResultValue> expectedResults = toExpected(
         toEvents(
@@ -393,7 +403,8 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
           .limit(limit)
           .build();
 
-      Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+      Pair<QueryPlus<ScanResultValue>, ResponseContext> qpp = queryPlusPlus(query);
+      Iterable<ScanResultValue> results = runner.run(qpp.lhs, qpp.rhs).toList();
 
       final List<List<Map<String, Object>>> events = toEvents(
           new String[]{
@@ -452,10 +463,12 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         .columns(QueryRunnerTestHelper.QUALITY_DIMENSION, QueryRunnerTestHelper.INDEX_METRIC)
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+    Pair<QueryPlus<ScanResultValue>, ResponseContext> qpp = queryPlusPlus(query);
+    Iterable<ScanResultValue> results = runner.run(qpp.lhs, qpp.rhs).toList();
+    qpp = queryPlusPlus(query);
     Iterable<ScanResultValue> resultsOptimize = TOOL_CHEST
         .postMergeQueryDecoration(TOOL_CHEST.mergeResults(TOOL_CHEST.preMergeQueryDecoration(runner)))
-        .run(QueryPlus.wrap(query))
+        .run(qpp.lhs, qpp.rhs)
         .toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
@@ -511,7 +524,8 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         )
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+    Pair<QueryPlus<ScanResultValue>, ResponseContext> qpp = queryPlusPlus(query);
+    Iterable<ScanResultValue> results = runner.run(qpp.lhs, qpp.rhs).toList();
 
     List<ScanResultValue> expectedResults = Collections.emptyList();
 
@@ -526,7 +540,8 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         .columns("foo", "foo2")
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+    Pair<QueryPlus<ScanResultValue>, ResponseContext> qpp = queryPlusPlus(query);
+    Iterable<ScanResultValue> results = runner.run(qpp.lhs, qpp.rhs).toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
         legacy ? new String[]{getTimestampName() + ":TIME"} : new String[0],
@@ -561,7 +576,8 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
           .context(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false))
           .build();
 
-      Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+      Pair<QueryPlus<ScanResultValue>, ResponseContext> qpp = queryPlusPlus(query);
+      Iterable<ScanResultValue> results = runner.run(qpp.lhs, qpp.rhs).toList();
       String[] seg1Results = new String[]{
           "2011-01-12T00:00:00.000Z\tspot\tautomotive\tpreferred\tapreferred\t100.000000",
           "2011-01-12T00:00:00.000Z\tspot\tbusiness\tpreferred\tbpreferred\t100.000000",
@@ -648,7 +664,8 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
           .order(ScanQuery.Order.DESCENDING)
           .build();
 
-      Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+      Pair<QueryPlus<ScanResultValue>, ResponseContext> qpp = queryPlusPlus(query);
+      Iterable<ScanResultValue> results = runner.run(qpp.lhs, qpp.rhs).toList();
       String[] seg1Results = new String[]{
           "2011-01-12T00:00:00.000Z\tspot\tautomotive\tpreferred\tapreferred\t100.000000",
           "2011-01-12T00:00:00.000Z\tspot\tbusiness\tpreferred\tbpreferred\t100.000000",
@@ -760,7 +777,8 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
           .limit(limit)
           .build();
 
-      Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+      Pair<QueryPlus<ScanResultValue>, ResponseContext> qpp = queryPlusPlus(query);
+      Iterable<ScanResultValue> results = runner.run(qpp.lhs, qpp.rhs).toList();
       final List<List<Map<String, Object>>> ascendingEvents = toEvents(
           new String[]{
               legacy ? getTimestampName() + ":TIME" : ColumnHolder.TIME_COLUMN_NAME,
@@ -850,7 +868,8 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
           .limit(limit)
           .build();
 
-      Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+      Pair<QueryPlus<ScanResultValue>, ResponseContext> qpp = queryPlusPlus(query);
+      Iterable<ScanResultValue> results = runner.run(qpp.lhs, qpp.rhs).toList();
       String[] expectedRet = (String[]) ArrayUtils.addAll(seg1Results, seg2Results);
       ArrayUtils.reverse(expectedRet);
       final List<List<Map<String, Object>>> descendingEvents = toEvents(
@@ -908,17 +927,17 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         .virtualColumns(EXPR_COLUMN)
         .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
         .build();
-    ResponseContext responseContext = DefaultResponseContext.createEmpty();
     final long timeoutAt = System.currentTimeMillis();
-    responseContext.putTimeoutTime(timeoutAt);
+    Pair<QueryPlus<ScanResultValue>, ResponseContext> qpp = queryPlusPlus(query);
+    qpp.rhs.putTimeoutTime(timeoutAt);
     try {
-      runner.run(QueryPlus.wrap(query), responseContext).toList();
+      runner.run(qpp.lhs, qpp.rhs).toList();
       Assert.fail("didn't timeout");
     }
     catch (RuntimeException e) {
       Assert.assertTrue(e instanceof QueryTimeoutException);
       Assert.assertEquals("Query timeout", ((QueryTimeoutException) e).getErrorCode());
-      Assert.assertEquals(timeoutAt, responseContext.getTimeoutTime().longValue());
+      Assert.assertEquals(timeoutAt, qpp.rhs.getTimeoutTime().longValue());
     }
   }
 
@@ -931,6 +950,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
         .build();
     try {
+      Pair<QueryPlus<ScanResultValue>, ResponseContext> qpp = queryPlusPlus(query);
       FACTORY.mergeRunners(
           DirectQueryProcessingPool.INSTANCE,
           ImmutableList.of(
@@ -942,7 +962,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                 }
                 return runner.run(queryPlus, responseContext);
               })
-      ).run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
+      ).run(qpp.lhs, qpp.rhs).toList();
 
       Assert.fail("didn't timeout");
     }
@@ -961,6 +981,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 0))
         .build();
 
+    Pair<QueryPlus<ScanResultValue>, ResponseContext> qpp = queryPlusPlus(query);
     Iterable<ScanResultValue> results = FACTORY.mergeRunners(
         DirectQueryProcessingPool.INSTANCE,
         ImmutableList.of(
@@ -972,7 +993,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               }
               return runner.run(queryPlus, responseContext);
             })
-    ).run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
+    ).run(qpp.lhs, qpp.rhs).toList();
 
     List<ScanResultValue> expectedResults = toExpected(
         toFullEvents(V_0112_0114),
@@ -1148,8 +1169,8 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
 
       Assert.assertEquals(expected.getSegmentId(), actual.getSegmentId());
 
-      Set exColumns = Sets.newTreeSet(expected.getColumns());
-      Set acColumns = Sets.newTreeSet(actual.getColumns());
+      Set<String> exColumns = Sets.newTreeSet(expected.getColumns());
+      Set<String> acColumns = Sets.newTreeSet(actual.getColumns());
       Assert.assertEquals(exColumns, acColumns);
 
       Iterator<Map<String, Object>> expectedEvts = ((List<Map<String, Object>>) expected.getEvents()).iterator();
