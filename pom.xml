@@ -1174,6 +1174,9 @@
                         <exclude>org/apache/druid/server/initialization/jetty/*Module*</exclude>
                         <exclude>org/apache/druid/guice/http/*</exclude>
 
+                        <!-- Ignore cli tools -->
+                        <exclude>org/apache/druid/cli/UpdateTables.java</exclude>
+
                         <!-- Ignore generated code -->
                         <exclude>org/apache/druid/math/expr/antlr/Expr*</exclude>  <!-- core -->
                         <exclude>org/apache/druid/**/generated/*Benchmark*</exclude>  <!-- benchmarks -->
