@@ -40,6 +40,8 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.data.ComparableList;
+import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.junit.Assert;
@@ -63,7 +65,7 @@ public class TestHelper
 
   public static IndexMergerV9 getTestIndexMergerV9(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
-    return new IndexMergerV9(JSON_MAPPER, getTestIndexIO(), segmentWriteOutMediumFactory);
+    return new IndexMergerV9(JSON_MAPPER, getTestIndexIO(), segmentWriteOutMediumFactory, true);
   }
 
   public static IndexIO getTestIndexIO()
@@ -372,7 +374,7 @@ public class TestHelper
     }
   }
 
-  private static void assertRow(String msg, ResultRow expected, ResultRow actual)
+  public static void assertRow(String msg, ResultRow expected, ResultRow actual)
   {
     Assert.assertEquals(
         StringUtils.format("%s: row length", msg),
@@ -407,6 +409,16 @@ public class TestHelper
             ((Number) expectedValue).doubleValue(),
             ((Number) actualValue).doubleValue(),
             Math.abs(((Number) expectedValue).doubleValue() * 1e-6)
+        );
+      } else if (expectedValue instanceof ComparableStringArray && actualValue instanceof List) {
+        Assert.assertArrayEquals(
+            ((ComparableStringArray) expectedValue).getDelegate(),
+            ExprEval.coerceListToArray((List) actualValue, true).rhs
+        );
+      } else if (expectedValue instanceof ComparableList && actualValue instanceof List) {
+        Assert.assertArrayEquals(
+            ((ComparableList) expectedValue).getDelegate().toArray(new Object[0]),
+            ExprEval.coerceListToArray((List) actualValue, true).rhs
         );
       } else {
         Assert.assertEquals(

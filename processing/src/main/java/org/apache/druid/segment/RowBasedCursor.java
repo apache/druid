@@ -69,7 +69,8 @@ public class RowBasedCursor<RowType> implements Cursor
             rowWalker::currentRow,
             () -> rowId,
             rowAdapter,
-            () -> rowSignature,
+            rowSignature,
+            false,
             false
         )
     );

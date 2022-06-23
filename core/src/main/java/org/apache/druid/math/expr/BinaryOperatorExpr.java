@@ -21,7 +21,9 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -150,10 +152,78 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
 
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    throw new IllegalArgumentException("unsupported type " + ExprType.STRING);
+    throw new IAE("operator '%s' in expression (%s %s %s) is not supported on type 'string'.",
+                  this.op,
+                  this.left.stringify(),
+                  this.op,
+                  this.right.stringify());
   }
 
   protected abstract long evalLong(long left, long right);
 
   protected abstract double evalDouble(double left, double right);
+}
+
+@SuppressWarnings("ClassName")
+abstract class BinaryBooleanOpExprBase extends BinaryOpExprBase
+{
+  BinaryBooleanOpExprBase(String op, Expr left, Expr right)
+  {
+    super(op, left, right);
+  }
+
+  @Override
+  public ExprEval eval(ObjectBinding bindings)
+  {
+    ExprEval leftVal = left.eval(bindings);
+    ExprEval rightVal = right.eval(bindings);
+
+    // Result of any Binary expressions is null if any of the argument is null.
+    // e.g "select null * 2 as c;" or "select null + 1 as c;" will return null as per Standard SQL spec.
+    if (NullHandling.sqlCompatible() && (leftVal.value() == null || rightVal.value() == null)) {
+      return ExprEval.of(null);
+    }
+
+    ExpressionType type = ExpressionTypeConversion.autoDetect(leftVal, rightVal);
+    boolean result;
+    switch (type.getType()) {
+      case STRING:
+        result = evalString(leftVal.asString(), rightVal.asString());
+        break;
+      case LONG:
+        result = evalLong(leftVal.asLong(), rightVal.asLong());
+        break;
+      case DOUBLE:
+      default:
+        if (NullHandling.sqlCompatible() && (leftVal.isNumericNull() || rightVal.isNumericNull())) {
+          return ExprEval.of(null);
+        }
+        result = evalDouble(leftVal.asDouble(), rightVal.asDouble());
+        break;
+    }
+    if (!ExpressionProcessing.useStrictBooleans() && !type.is(ExprType.STRING)) {
+      return ExprEval.ofBoolean(result, type.getType());
+    }
+    return ExprEval.ofLongBoolean(result);
+  }
+
+  protected boolean evalString(@Nullable String left, @Nullable String right)
+  {
+    throw new IllegalArgumentException("unsupported type " + ExprType.STRING);
+  }
+
+  protected abstract boolean evalLong(long left, long right);
+
+  protected abstract boolean evalDouble(double left, double right);
+
+  @Nullable
+  @Override
+  public ExpressionType getOutputType(InputBindingInspector inspector)
+  {
+    ExpressionType implicitCast = super.getOutputType(inspector);
+    if (ExpressionProcessing.useStrictBooleans() || Types.isNullOr(implicitCast, ExprType.STRING)) {
+      return ExpressionType.LONG;
+    }
+    return implicitCast;
+  }
 }

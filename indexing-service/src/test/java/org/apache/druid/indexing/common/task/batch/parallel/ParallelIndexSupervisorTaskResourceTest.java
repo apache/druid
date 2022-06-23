@@ -448,6 +448,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -558,7 +559,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
                   baseInputSource.withSplit(split),
                   getIngestionSchema().getIOConfig().getInputFormat(),
                   getIngestionSchema().getIOConfig().isAppendToExisting(),
-                  null
+                  getIngestionSchema().getIOConfig().isDropExisting()
               ),
               getIngestionSchema().getTuningConfig()
           ),
@@ -683,7 +684,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           new SupervisorTaskAccess(getSupervisorTaskId(), taskClient),
           getIngestionSchema().getDataSchema(),
           getTaskLockHelper(),
-          getIngestionSchema().getIOConfig().isAppendToExisting(),
+          AbstractTask.computeBatchIngestionMode(getIngestionSchema().getIOConfig()),
           partitionsSpec,
           true
       );

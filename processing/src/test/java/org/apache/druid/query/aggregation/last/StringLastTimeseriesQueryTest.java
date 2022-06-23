@@ -31,6 +31,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.SerializablePairLongStringSerde;
+import org.apache.druid.query.timeseries.DefaultTimeseriesQueryMetrics;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
@@ -74,7 +75,7 @@ public class StringLastTimeseriesQueryTest
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.SECOND)
                 .withMetrics(new CountAggregatorFactory("cnt"))
-                .withMetrics(new StringLastAggregatorFactory(LAST_CLIENT_TYPE, CLIENT_TYPE, 1024))
+                .withMetrics(new StringLastAggregatorFactory(LAST_CLIENT_TYPE, CLIENT_TYPE, null, 1024))
                 .build()
         )
         .setMaxRowCount(1000)
@@ -117,10 +118,10 @@ public class StringLastTimeseriesQueryTest
                                   .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                                   .aggregators(
                                       ImmutableList.of(
-                                          new StringLastAggregatorFactory("nonfolding", CLIENT_TYPE, 1024),
-                                          new StringLastAggregatorFactory("folding", LAST_CLIENT_TYPE, 1024),
-                                          new StringLastAggregatorFactory("nonexistent", "nonexistent", 1024),
-                                          new StringLastAggregatorFactory("numeric", "cnt", 1024)
+                                          new StringLastAggregatorFactory("nonfolding", CLIENT_TYPE, null, 1024),
+                                          new StringLastAggregatorFactory("folding", LAST_CLIENT_TYPE, null, 1024),
+                                          new StringLastAggregatorFactory("nonexistent", "nonexistent", null, 1024),
+                                          new StringLastAggregatorFactory("numeric", "cnt", null, 1024)
                                       )
                                   )
                                   .build();
@@ -139,11 +140,12 @@ public class StringLastTimeseriesQueryTest
         )
     );
 
+    final DefaultTimeseriesQueryMetrics defaultTimeseriesQueryMetrics = new DefaultTimeseriesQueryMetrics();
     final Iterable<Result<TimeseriesResultValue>> iiResults =
-        engine.process(query, new IncrementalIndexStorageAdapter(incrementalIndex)).toList();
+        engine.process(query, new IncrementalIndexStorageAdapter(incrementalIndex), defaultTimeseriesQueryMetrics).toList();
 
     final Iterable<Result<TimeseriesResultValue>> qiResults =
-        engine.process(query, new QueryableIndexStorageAdapter(queryableIndex)).toList();
+        engine.process(query, new QueryableIndexStorageAdapter(queryableIndex), defaultTimeseriesQueryMetrics).toList();
 
     TestHelper.assertExpectedResults(expectedResults, iiResults, "incremental index");
     TestHelper.assertExpectedResults(expectedResults, qiResults, "queryable index");

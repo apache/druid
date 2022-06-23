@@ -170,7 +170,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public ColumnType getFinalizedType()
+  public ColumnType getResultType()
   {
     return round ? ColumnType.LONG : ColumnType.DOUBLE;
   }

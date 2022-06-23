@@ -25,6 +25,7 @@ import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.List;
 
 public class ExpressionLambdaBufferAggregator implements BufferAggregator
 {
@@ -35,28 +36,29 @@ public class ExpressionLambdaBufferAggregator implements BufferAggregator
   private final ExpressionLambdaAggregatorInputBindings bindings;
   private final int maxSizeBytes;
   private final boolean isNullUnlessAggregated;
+  private final boolean aggregateNullInputs;
+  private final List<String> inputColumns;
   private final ExpressionType outputType;
 
   public ExpressionLambdaBufferAggregator(
-      Expr lambda,
-      ExprEval<?> initialValue,
-      ExpressionLambdaAggregatorInputBindings bindings,
-      boolean isNullUnlessAggregated,
+      final ExpressionLambdaAggregatorFactory.FactorizePlan thePlan,
       int maxSizeBytes
   )
   {
-    this.lambda = lambda;
-    this.initialValue = initialValue;
+    this.lambda = thePlan.getExpression();
+    this.initialValue = thePlan.getInitialValue();
     this.outputType = initialValue.type();
-    this.bindings = bindings;
-    this.isNullUnlessAggregated = isNullUnlessAggregated;
+    this.bindings = thePlan.getBindings();
+    this.isNullUnlessAggregated = thePlan.isNullUnlessAggregated();
+    this.aggregateNullInputs = thePlan.shouldAggregateNullInputs();
+    this.inputColumns = thePlan.getInputs();
     this.maxSizeBytes = maxSizeBytes;
   }
 
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    ExprEval.serialize(buf, position, initialValue, maxSizeBytes);
+    ExprEval.serialize(buf, position, outputType, initialValue, maxSizeBytes);
     // set a bit to indicate we haven't aggregated on top of expression type (not going to lie this could be nicer)
     if (isNullUnlessAggregated) {
       buf.put(position, (byte) (buf.get(position) | NOT_AGGREGATED_BIT));
@@ -66,10 +68,17 @@ public class ExpressionLambdaBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    ExprEval<?> acc = ExprEval.deserialize(buf, position, outputType);
+    if (!aggregateNullInputs) {
+      for (String column : inputColumns) {
+        if (bindings.get(column) == null) {
+          return;
+        }
+      }
+    }
+    ExprEval<?> acc = ExprEval.deserialize(buf, position, maxSizeBytes, outputType, true);
     bindings.setAccumulator(acc);
     ExprEval<?> newAcc = lambda.eval(bindings);
-    ExprEval.serialize(buf, position, newAcc, maxSizeBytes);
+    ExprEval.serialize(buf, position, outputType, newAcc, maxSizeBytes);
     // scrub not aggregated bit
     buf.put(position, (byte) (buf.get(position) & IS_AGGREGATED_MASK));
   }
@@ -81,25 +90,25 @@ public class ExpressionLambdaBufferAggregator implements BufferAggregator
     if (isNullUnlessAggregated && (buf.get(position) & NOT_AGGREGATED_BIT) != 0) {
       return null;
     }
-    return ExprEval.deserialize(buf, position, outputType).value();
+    return ExprEval.deserialize(buf, position, maxSizeBytes, outputType, false).value();
   }
 
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return (float) ExprEval.deserialize(buf, position, outputType).asDouble();
+    return (float) ExprEval.deserialize(buf, position, maxSizeBytes, outputType, true).asDouble();
   }
 
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    return ExprEval.deserialize(buf, position, outputType).asDouble();
+    return ExprEval.deserialize(buf, position, maxSizeBytes, outputType, true).asDouble();
   }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    return ExprEval.deserialize(buf, position, outputType).asLong();
+    return ExprEval.deserialize(buf, position, maxSizeBytes, outputType, true).asLong();
   }
 
   @Override

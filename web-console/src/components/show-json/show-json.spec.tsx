@@ -21,7 +21,7 @@ import React from 'react';
 
 import { ShowJson } from './show-json';
 
-describe('rule editor', () => {
+describe('ShowJson', () => {
   it('matches snapshot', () => {
     const showJson = <ShowJson endpoint="test" downloadFilename="test" />;
     const { container } = render(showJson);

@@ -113,7 +113,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
@@ -178,14 +178,14 @@ import java.util.concurrent.Executors;
 public class TaskLifecycleTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper MAPPER;
-  private static final IndexMergerV9 INDEX_MERGER_V9;
+  private static final IndexMergerV9Factory INDEX_MERGER_V9_FACTORY;
   private static final IndexIO INDEX_IO;
   private static final TestUtils TEST_UTILS;
 
   static {
     TEST_UTILS = new TestUtils();
     MAPPER = TEST_UTILS.getTestObjectMapper();
-    INDEX_MERGER_V9 = TEST_UTILS.getTestIndexMergerV9();
+    INDEX_MERGER_V9_FACTORY = TEST_UTILS.getIndexMergerV9Factory();
     INDEX_IO = TEST_UTILS.getTestIndexIO();
   }
 
@@ -602,8 +602,21 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new TaskAuditLogConfig(true)
     );
     File tmpDir = temporaryFolder.newFolder();
-    taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null, null, false, false,
-                                TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name());
+    taskConfig = new TaskConfig(
+        tmpDir.toString(),
+        null,
+        null,
+        50000,
+        null,
+        false,
+        null,
+        null,
+        null,
+        false,
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null
+    );
 
     return new TaskToolboxFactory(
         taskConfig,
@@ -672,7 +685,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         MapCache.create(0),
         FireDepartmentTest.NO_CACHE_CONFIG,
         new CachePopulatorStats(),
-        INDEX_MERGER_V9,
+        INDEX_MERGER_V9_FACTORY,
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),

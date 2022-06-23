@@ -121,7 +121,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", taskCount=" + getTaskCount() +
            ", taskDuration=" + getTaskDuration() +
            ", consumerProperties=" + consumerProperties +
-           ", autoScalerConfig=" + getAutoscalerConfig() +
+           ", autoScalerConfig=" + getAutoScalerConfig() +
            ", pollTimeout=" + pollTimeout +
            ", startDelay=" + getStartDelay() +
            ", period=" + getPeriod() +

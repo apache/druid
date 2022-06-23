@@ -65,6 +65,57 @@ public interface BalancerStrategy
    *                                   the interval or period-based broadcast rules. For simplicity of the initial
    *                                   implementation, only forever broadcast rules are supported.
    * @param reservoirSize the reservoir size maintained by the Reservoir Sampling algorithm.
+   * @return Iterator for set of {@link BalancerSegmentHolder} containing segment to move and server they currently
+   * reside on, or empty if there are no segments to pick from (i. e. all provided serverHolders are empty).
+   */
+  default Iterator<BalancerSegmentHolder> pickSegmentsToMove(
+      List<ServerHolder> serverHolders,
+      Set<String> broadcastDatasources,
+      int reservoirSize
+  )
+  {
+    return new Iterator<BalancerSegmentHolder>()
+    {
+      private Iterator<BalancerSegmentHolder> it = sample();
+      private Iterator<BalancerSegmentHolder> sample()
+      {
+        return ReservoirSegmentSampler.getRandomBalancerSegmentHolders(
+            serverHolders,
+            broadcastDatasources,
+            reservoirSize
+        ).iterator();
+      }
+
+      @Override
+      public boolean hasNext()
+      {
+        if (it.hasNext()) {
+          return true;
+        }
+        it = sample();
+        return it.hasNext();
+      }
+
+      @Override
+      public BalancerSegmentHolder next()
+      {
+        return it.next();
+      }
+    };
+  }
+
+  /**
+   * Pick the best segments to move from one of the supplied set of servers according to the balancing strategy. This
+   * is the deprecated way of picking a segment to move. pickSegmentsToMove(List<ServerHoler>, Set<String>, int) uses
+   * a more performant bathced sampling method that will become the default picking mode in the future.
+   *
+   * @param serverHolders set of historicals to consider for moving segments
+   * @param broadcastDatasources Datasources that contain segments which were loaded via broadcast rules.
+   *                             Balancing strategies should avoid rebalancing segments for such datasources, since
+   *                             they should be loaded on all servers anyway.
+   *                             NOTE: this should really be handled on a per-segment basis, to properly support
+   *                                   the interval or period-based broadcast rules. For simplicity of the initial
+   *                                   implementation, only forever broadcast rules are supported.
    * @param percentOfSegmentsToConsider The percentage of the total number of segments that we will consider when
    *                                    choosing which segment to move. {@link CoordinatorDynamicConfig} defines a
    *                                    config percentOfSegmentsToConsiderPerMove that will be used as an argument
@@ -72,45 +123,13 @@ public interface BalancerStrategy
    * @return Iterator for set of {@link BalancerSegmentHolder} containing segment to move and server they currently
    * reside on, or empty if there are no segments to pick from (i. e. all provided serverHolders are empty).
    */
+  @Deprecated
   default Iterator<BalancerSegmentHolder> pickSegmentsToMove(
       List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
-      int reservoirSize,
       double percentOfSegmentsToConsider
   )
   {
-    if (reservoirSize > 1) {
-      return new Iterator<BalancerSegmentHolder>()
-      {
-        private Iterator<BalancerSegmentHolder> it = sample();
-
-        private Iterator<BalancerSegmentHolder> sample()
-        {
-          return ReservoirSegmentSampler.getRandomBalancerSegmentHolders(
-              serverHolders,
-              broadcastDatasources,
-              reservoirSize
-          ).iterator();
-        }
-
-        @Override
-        public boolean hasNext()
-        {
-          if (it.hasNext()) {
-            return true;
-          }
-          it = sample();
-          return it.hasNext();
-        }
-
-        @Override
-        public BalancerSegmentHolder next()
-        {
-          return it.next();
-        }
-      };
-    }
-
     return new Iterator<BalancerSegmentHolder>()
     {
       private BalancerSegmentHolder next = sample();

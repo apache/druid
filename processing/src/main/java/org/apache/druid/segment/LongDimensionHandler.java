@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -62,7 +64,13 @@ public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
   }
 
   @Override
-  public DimensionIndexer<Long, Long, Long> makeIndexer()
+  public DimensionSchema getDimensionSchema(ColumnCapabilities capabilities)
+  {
+    return new LongDimensionSchema(dimensionName);
+  }
+
+  @Override
+  public DimensionIndexer<Long, Long, Long> makeIndexer(boolean useMaxMemoryEstimates)
   {
     return new LongDimensionIndexer();
   }

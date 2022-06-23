@@ -104,12 +104,13 @@ function start() {
      _error "${DRUID_PID_FILE} exists with pid '$(<${DRUID_PID_FILE})'. Either shutdown druid or delete this file."
   fi
 
+  export DRUID_SKIP_JAVA_CHECK=1 # Make it simpler to develop the web console when localhost is on JDK11
   "$(_get_code_root)/distribution/target/apache-druid-$(_get_druid_version)/bin/start-micro-quickstart" > /dev/null &
   local pid="$!"
   echo "$pid" > "$DRUID_PID_FILE"
   _log "Druid started with pid ${pid}"
 
-  _wait_for_200_response "http://localhost:8888/unified-console.html" 3 20
+  _wait_for_200_response "http://localhost:8888/unified-console.html" 3 30
 }
 
 function stop() {

@@ -29,6 +29,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.transform.Transform;
 import org.apache.druid.segment.transform.TransformSpec;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -56,7 +57,10 @@ public class InputRowSchemas
             dataSchema.getDimensionsSpec(),
             dataSchema.getTransformSpec(),
             dataSchema.getAggregators()
-        )
+        ),
+        Arrays.stream(dataSchema.getAggregators())
+              .map(AggregatorFactory::getName)
+              .collect(Collectors.toSet())
     );
   }
 

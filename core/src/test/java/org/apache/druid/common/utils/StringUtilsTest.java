@@ -23,7 +23,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
+
 /**
+ *
  */
 public class StringUtilsTest
 {
@@ -76,4 +79,12 @@ public class StringUtilsTest
     Assert.assertEquals(4, StringUtils.estimatedBinaryLengthAsUTF8(invalid));
   }
 
+  @Test
+  public void testToUtf8ByteBuffer()
+  {
+    Assert.assertNull(StringUtils.toUtf8ByteBuffer(null));
+    Assert.assertEquals(ByteBuffer.allocate(0), StringUtils.toUtf8ByteBuffer(""));
+    Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("foo")), StringUtils.toUtf8ByteBuffer("foo"));
+    Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("🙂")), StringUtils.toUtf8ByteBuffer("🙂"));
+  }
 }

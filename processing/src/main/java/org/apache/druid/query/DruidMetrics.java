@@ -34,6 +34,7 @@ public class DruidMetrics
   public static final String ID = "id";
   public static final String TASK_ID = "taskId";
   public static final String STATUS = "status";
+  public static final String TASK_INGESTION_MODE = "taskIngestionMode";
 
   public static final String PARTITIONING_TYPE = "partitioningType";
 
@@ -51,7 +52,7 @@ public class DruidMetrics
   {
     int retVal = 0;
     for (AggregatorFactory agg : aggs) {
-      if (agg.getType().is(ValueType.COMPLEX)) {
+      if (agg.getIntermediateType().is(ValueType.COMPLEX)) {
         retVal++;
       }
     }

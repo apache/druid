@@ -23,6 +23,8 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
+import org.apache.datasketches.memory.DefaultMemoryRequestServer;
+import org.apache.datasketches.memory.MemoryRequestServer;
 import org.apache.datasketches.memory.WritableMemory;
 
 import java.nio.ByteBuffer;
@@ -31,6 +33,7 @@ import java.util.IdentityHashMap;
 
 public class HllSketchBuildBufferAggregatorHelper
 {
+  private static final MemoryRequestServer MEM_REQ_SERVER = new DefaultMemoryRequestServer();
   private final int lgK;
   private final int size;
   private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
@@ -123,7 +126,8 @@ public class HllSketchBuildBufferAggregatorHelper
 
   private WritableMemory getMemory(final ByteBuffer buf)
   {
-    return memCache.computeIfAbsent(buf, b -> WritableMemory.writableWrap(b, ByteOrder.LITTLE_ENDIAN));
+    return memCache.computeIfAbsent(buf,
+        b -> WritableMemory.writableWrap(b, ByteOrder.LITTLE_ENDIAN, MEM_REQ_SERVER));
   }
 
   private void putSketchIntoCache(final ByteBuffer buf, final int position, final HllSketch sketch)

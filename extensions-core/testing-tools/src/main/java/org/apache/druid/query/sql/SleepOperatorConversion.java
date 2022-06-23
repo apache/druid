@@ -57,6 +57,6 @@ public class SleepOperatorConversion implements SqlOperatorConversion
   @Override
   public DruidExpression toDruidExpression(PlannerContext plannerContext, RowSignature rowSignature, RexNode rexNode)
   {
-    return OperatorConversions.convertCall(plannerContext, rowSignature, rexNode, "sleep");
+    return OperatorConversions.convertDirectCall(plannerContext, rowSignature, rexNode, "sleep");
   }
 }

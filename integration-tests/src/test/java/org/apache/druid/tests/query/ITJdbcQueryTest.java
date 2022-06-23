@@ -26,9 +26,8 @@ import org.apache.druid.https.SSLClientConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.tests.TestNGGroup;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
@@ -77,7 +76,7 @@ public class ITJdbcQueryTest
   SSLClientConfig sslConfig;
 
   @Inject
-  private CoordinatorResourceTestClient coordinatorClient;
+  private DataLoaderHelper dataLoaderHelper;
 
   @BeforeMethod
   public void before()
@@ -108,9 +107,7 @@ public class ITJdbcQueryTest
         )
     };
     // ensure that wikipedia segments are loaded completely
-    ITRetryUtil.retryUntilTrue(
-        () -> coordinatorClient.areSegmentsLoaded(WIKIPEDIA_DATA_SOURCE), "wikipedia segment load"
-    );
+    dataLoaderHelper.waitUntilDatasourceIsReady(WIKIPEDIA_DATA_SOURCE);
   }
 
   @Test

@@ -28,7 +28,6 @@ import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
@@ -38,6 +37,7 @@ import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
@@ -228,27 +228,25 @@ public class JoinableFactoryWrapper
           columnsRequiredByJoinClauses.remove(column, 1);
         }
 
-        final Optional<Filter> filter =
+        final JoinClauseToFilterConversion joinClauseToFilterConversion =
             convertJoinToFilter(
                 clause,
                 Sets.union(requiredColumns, columnsRequiredByJoinClauses.elementSet()),
                 maxNumFilterValues
             );
 
-        if (filter.isPresent()) {
-          filterList.add(filter.get());
-        } else {
+        // add the converted filter to the filter list
+        if (joinClauseToFilterConversion.getConvertedFilter() != null) {
+          filterList.add(joinClauseToFilterConversion.getConvertedFilter());
+        }
+        // if the converted filter is partial, keep the join clause too
+        if (!joinClauseToFilterConversion.isJoinClauseFullyConverted()) {
           clausesToUse.add(clause);
           atStart = false;
         }
       } else {
         clausesToUse.add(clause);
       }
-    }
-
-    // Sanity check. If this exception is ever thrown, it's a bug.
-    if (filterList.size() + clausesToUse.size() != clauses.size()) {
-      throw new ISE("Lost a join clause during planning");
     }
 
     return Pair.of(filterList, clausesToUse);
@@ -260,11 +258,17 @@ public class JoinableFactoryWrapper
    * The requirements are:
    *
    * - it must be an INNER equi-join
-   * - the right-hand columns referenced by the condition must not have any duplicate values
+   * - the right-hand columns referenced by the condition must not have any duplicate values. If there are duplicates
+   *   values in the column, then the join is tried to be converted to a filter while maintaining the join clause on top
+   *   as well for correct results.
    * - no columns from the right-hand side can appear in "requiredColumns"
+   *
+   * @return {@link JoinClauseToFilterConversion} object which contains the converted filter for the clause and a boolean
+   * to represent whether the converted filter encapsulates the whole clause or not. More semantics of the object are
+   * present in the class level docs.
    */
   @VisibleForTesting
-  static Optional<Filter> convertJoinToFilter(
+  static JoinClauseToFilterConversion convertJoinToFilter(
       final JoinableClause clause,
       final Set<String> requiredColumns,
       final int maxNumFilterValues
@@ -276,28 +280,74 @@ public class JoinableFactoryWrapper
         && clause.getCondition().getEquiConditions().size() > 0) {
       final List<Filter> filters = new ArrayList<>();
       int numValues = maxNumFilterValues;
+      boolean joinClauseFullyConverted = true;
 
       for (final Equality condition : clause.getCondition().getEquiConditions()) {
         final String leftColumn = condition.getLeftExpr().getBindingIfIdentifier();
 
         if (leftColumn == null) {
-          return Optional.empty();
+          return new JoinClauseToFilterConversion(null, false);
         }
 
-        final Optional<Set<String>> columnValuesForFilter =
-            clause.getJoinable().getNonNullColumnValuesIfAllUnique(condition.getRightColumn(), numValues);
+        Joinable.ColumnValuesWithUniqueFlag columnValuesWithUniqueFlag =
+            clause.getJoinable().getNonNullColumnValues(condition.getRightColumn(), numValues);
+        // For an empty values set, isAllUnique flag will be true only if the column had no non-null values.
+        if (columnValuesWithUniqueFlag.getColumnValues().isEmpty()) {
+          if (columnValuesWithUniqueFlag.isAllUnique()) {
+            return new JoinClauseToFilterConversion(FalseFilter.instance(), true);
+          } else {
+            joinClauseFullyConverted = false;
+          }
+          continue;
+        }
 
-        if (columnValuesForFilter.isPresent()) {
-          numValues -= columnValuesForFilter.get().size();
-          filters.add(Filters.toFilter(new InDimFilter(leftColumn, columnValuesForFilter.get())));
-        } else {
-          return Optional.empty();
+        numValues -= columnValuesWithUniqueFlag.getColumnValues().size();
+        filters.add(Filters.toFilter(new InDimFilter(leftColumn, columnValuesWithUniqueFlag.getColumnValues())));
+        if (!columnValuesWithUniqueFlag.isAllUnique()) {
+          joinClauseFullyConverted = false;
         }
       }
 
-      return Optional.of(Filters.and(filters));
+      return new JoinClauseToFilterConversion(Filters.maybeAnd(filters).orElse(null), joinClauseFullyConverted);
     }
 
-    return Optional.empty();
+    return new JoinClauseToFilterConversion(null, false);
+  }
+
+  /**
+   * Encapsulates the conversion which happened for a joinable clause.
+   * convertedFilter represents the filter which got generated from the conversion.
+   * joinClauseFullyConverted represents whether convertedFilter fully encapsulated the joinable clause or not.
+   * Encapsulation of the clause means that the filter can replace the whole joinable clause.
+   *
+   * If convertedFilter is null and joinClauseFullyConverted is true, it means that all parts of the joinable clause can
+   * be broken into filters. Further, all the clause conditions are on columns where the right side is only null values.
+   * In that case, we replace joinable with a FalseFilter.
+   * If convertedFilter is null and joinClauseFullyConverted is false, it means that no parts of the joinable clause can
+   * be broken into filters.
+   * If convertedFilter is non-null, then joinClauseFullyConverted represents whether the filter encapsulates the clause
+   * which was converted.
+   */
+  private static class JoinClauseToFilterConversion
+  {
+    private final @Nullable Filter convertedFilter;
+    private final boolean joinClauseFullyConverted;
+
+    public JoinClauseToFilterConversion(@Nullable Filter convertedFilter, boolean joinClauseFullyConverted)
+    {
+      this.convertedFilter = convertedFilter;
+      this.joinClauseFullyConverted = joinClauseFullyConverted;
+    }
+
+    @Nullable
+    public Filter getConvertedFilter()
+    {
+      return convertedFilter;
+    }
+
+    public boolean isJoinClauseFullyConverted()
+    {
+      return joinClauseFullyConverted;
+    }
   }
 }

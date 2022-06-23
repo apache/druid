@@ -28,13 +28,12 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
-import org.apache.druid.math.expr.vector.LongOutLongInFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.LongOutLongInFunctionVectorValueProcessor;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -111,9 +110,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-
-      return shuttle.visit(new TimestampFloorExpr(newArgs));
+      return shuttle.visit(new TimestampFloorExpr(shuttle.visitAll(args)));
     }
 
     @Nullable
@@ -133,7 +130,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
     {
       ExprVectorProcessor<?> processor;
-      processor = new LongOutLongInFunctionVectorProcessor(
+      processor = new LongOutLongInFunctionVectorValueProcessor(
           CastToTypeVectorProcessor.cast(args.get(0).buildVectorized(inspector), ExpressionType.LONG),
           inspector.getMaxVectorSize()
       )
@@ -189,8 +186,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-      return shuttle.visit(new TimestampFloorDynamicExpr(newArgs));
+      return shuttle.visit(new TimestampFloorDynamicExpr(shuttle.visitAll(args)));
     }
 
     @Nullable

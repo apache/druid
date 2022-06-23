@@ -28,6 +28,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.timeseries.DefaultTimeseriesQueryMetrics;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
@@ -47,7 +48,7 @@ public class DistinctCountTimeseriesQueryTest extends InitializedNullHandlingTes
 {
 
   @Test
-  public void testTopNWithDistinctCountAgg() throws Exception
+  public void testTimeseriesWithDistinctCountAgg() throws Exception
   {
     TimeseriesQueryEngine engine = new TimeseriesQueryEngine();
 
@@ -100,7 +101,7 @@ public class DistinctCountTimeseriesQueryTest extends InitializedNullHandlingTes
                                   .build();
 
     final Iterable<Result<TimeseriesResultValue>> results =
-        engine.process(query, new IncrementalIndexStorageAdapter(index)).toList();
+        engine.process(query, new IncrementalIndexStorageAdapter(index), new DefaultTimeseriesQueryMetrics()).toList();
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<>(

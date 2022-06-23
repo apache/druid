@@ -39,7 +39,7 @@ import java.util.function.Function;
  * It's counterpart for incremental index is {@link
  * org.apache.druid.segment.incremental.IncrementalIndexColumnSelectorFactory}.
  */
-public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
+public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory, RowIdSupplier
 {
   private final QueryableIndex index;
   private final VirtualColumns virtualColumns;
@@ -172,7 +172,7 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
   @SuppressWarnings("unchecked")
   private <T extends BaseColumn> T getCachedColumn(final String columnName, final Class<T> clazz)
   {
-    return (T) columnCache.computeIfAbsent(
+    final BaseColumn cachedColumn = columnCache.computeIfAbsent(
         columnName,
         name -> {
           ColumnHolder holder = index.getColumnHolder(name);
@@ -185,6 +185,25 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
           }
         }
     );
+
+    if (cachedColumn != null && clazz.isAssignableFrom(cachedColumn.getClass())) {
+      return (T) cachedColumn;
+    } else {
+      return null;
+    }
+  }
+
+  @Nullable
+  @Override
+  public RowIdSupplier getRowIdSupplier()
+  {
+    return this;
+  }
+
+  @Override
+  public long getRowId()
+  {
+    return offset.getOffset();
   }
 
   @Override
@@ -192,12 +211,9 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     if (virtualColumns.exists(columnName)) {
-      return virtualColumns.getColumnCapabilities(
-          QueryableIndexStorageAdapter.getColumnInspectorForIndex(index),
-          columnName
-      );
+      return virtualColumns.getColumnCapabilities(index, columnName);
     }
 
-    return QueryableIndexStorageAdapter.getColumnCapabilities(index, columnName);
+    return index.getColumnCapabilities(columnName);
   }
 }

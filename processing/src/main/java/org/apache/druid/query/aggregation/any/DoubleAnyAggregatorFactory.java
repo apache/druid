@@ -209,15 +209,15 @@ public class DoubleAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public ColumnType getType()
+  public ColumnType getIntermediateType()
   {
     return storeDoubleAsFloat ? ColumnType.FLOAT : ColumnType.DOUBLE;
   }
 
   @Override
-  public ColumnType getFinalizedType()
+  public ColumnType getResultType()
   {
-    return getType();
+    return getIntermediateType();
   }
 
   @Override

@@ -80,9 +80,11 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -227,7 +229,8 @@ public class OverlordTest
         null,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        workerTaskRunnerQueryAdapter
+        workerTaskRunnerQueryAdapter,
+        null
     );
     Response response = overlordResource.getLeader();
     Assert.assertEquals(druidNode.getHostAndPort(), response.getEntity());
@@ -455,31 +458,31 @@ public class OverlordTest
     }
 
     @Override
-    public long getTotalTaskSlotCount()
+    public Map<String, Long> getTotalTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getIdleTaskSlotCount()
+    public Map<String, Long> getIdleTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getUsedTaskSlotCount()
+    public Map<String, Long> getUsedTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getLazyTaskSlotCount()
+    public Map<String, Long> getLazyTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getBlacklistedTaskSlotCount()
+    public Map<String, Long> getBlacklistedTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }

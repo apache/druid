@@ -21,6 +21,8 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -33,10 +35,12 @@ import org.apache.druid.segment.join.JoinPrefixUtils;
 import org.apache.druid.segment.join.JoinType;
 
 import javax.annotation.Nullable;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Represents a join of two datasources.
@@ -175,6 +179,7 @@ public class JoinDataSource implements DataSource
 
   @JsonProperty
   @Nullable
+  @JsonInclude(Include.NON_NULL)
   public DimFilter getLeftFilter()
   {
     return leftFilter;
@@ -219,6 +224,22 @@ public class JoinDataSource implements DataSource
   public boolean isConcrete()
   {
     return false;
+  }
+
+  /**
+   * Computes a set of column names for left table expressions in join condition which may already have been defined as
+   * a virtual column in the virtual column registry. It helps to remove any extraenous virtual columns created and only
+   * use the relevant ones.
+   * @return a set of column names which might be virtual columns on left table in join condition
+   */
+  public Set<String> getVirtualColumnCandidates()
+  {
+    return getConditionAnalysis().getEquiConditions()
+                                 .stream()
+                                 .filter(equality -> equality.getLeftExpr() != null)
+                                 .map(equality -> equality.getLeftExpr().analyzeInputs().getRequiredBindings())
+                                 .flatMap(Set::stream)
+                                 .collect(Collectors.toSet());
   }
 
   @Override

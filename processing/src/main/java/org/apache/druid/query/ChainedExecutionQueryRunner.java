@@ -138,10 +138,10 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
 
             try {
               return new MergeIterable<>(
-                  ordering.nullsFirst(),
                   QueryContexts.hasTimeout(query) ?
                       future.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS) :
-                      future.get()
+                      future.get(),
+                  ordering.nullsFirst()
               ).iterator();
             }
             catch (InterruptedException e) {

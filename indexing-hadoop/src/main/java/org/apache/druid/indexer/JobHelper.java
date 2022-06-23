@@ -95,7 +95,7 @@ public class JobHelper
   public static final String INDEX_ZIP = "index.zip";
 
   /**
-   * Dose authenticate against a secured hadoop cluster
+   * Does authenticate against a secured hadoop cluster
    * In case of any bug fix make sure to fix the code at HdfsStorageAuthentication#authenticate as well.
    *
    */
@@ -410,6 +410,9 @@ public class JobHelper
       boolean jobSucceeded,
       HadoopIngestionSpec indexerSchema)
   {
+    // Ensure we are authenticated before we try to delete intermediate paths!
+    authenticate();
+
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(indexerSchema);
     final Configuration configuration = JobHelper.injectSystemProperties(new Configuration(), config);
     config.addJobProperties(configuration);

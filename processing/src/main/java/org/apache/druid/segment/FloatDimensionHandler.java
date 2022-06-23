@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -62,7 +64,13 @@ public class FloatDimensionHandler implements DimensionHandler<Float, Float, Flo
   }
 
   @Override
-  public DimensionIndexer<Float, Float, Float> makeIndexer()
+  public DimensionSchema getDimensionSchema(ColumnCapabilities capabilities)
+  {
+    return new FloatDimensionSchema(dimensionName);
+  }
+
+  @Override
+  public DimensionIndexer<Float, Float, Float> makeIndexer(boolean useMaxMemoryEstimates)
   {
     return new FloatDimensionIndexer();
   }

@@ -28,12 +28,14 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -41,6 +43,8 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.apache.druid.java.util.http.client.response.ObjectOrErrorResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerResource;
@@ -217,7 +221,16 @@ public abstract class IndexTaskClient implements AutoCloseable
       boolean retry
   ) throws IOException, ChannelException, NoTaskLocationException
   {
-    return submitRequest(taskId, null, method, encodedPathSuffix, encodedQueryString, new byte[0], retry);
+    return submitRequest(
+        taskId,
+        null,
+        method,
+        encodedPathSuffix,
+        encodedQueryString,
+        new byte[0],
+        new StringFullResponseHandler(StandardCharsets.UTF_8),
+        retry
+    );
   }
 
   /**
@@ -239,6 +252,7 @@ public abstract class IndexTaskClient implements AutoCloseable
         encodedPathSuffix,
         encodedQueryString,
         content,
+        new StringFullResponseHandler(StandardCharsets.UTF_8),
         retry
     );
   }
@@ -262,6 +276,7 @@ public abstract class IndexTaskClient implements AutoCloseable
         encodedPathSuffix,
         encodedQueryString,
         content,
+        new StringFullResponseHandler(StandardCharsets.UTF_8),
         retry
     );
   }
@@ -293,13 +308,14 @@ public abstract class IndexTaskClient implements AutoCloseable
   /**
    * Sends an HTTP request to the task of the specified {@code taskId} and returns a response if it succeeded.
    */
-  private StringFullResponseHolder submitRequest(
+  protected <IntermediateType, FinalType> FinalType submitRequest(
       String taskId,
       @Nullable String mediaType, // nullable if content is empty
       HttpMethod method,
       String encodedPathSuffix,
       @Nullable String encodedQueryString,
       byte[] content,
+      HttpResponseHandler<IntermediateType, FinalType> responseHandler,
       boolean retry
   ) throws IOException, ChannelException, NoTaskLocationException
   {
@@ -333,21 +349,38 @@ public abstract class IndexTaskClient implements AutoCloseable
           content
       );
 
-      StringFullResponseHolder response = null;
+      Either<StringFullResponseHolder, FinalType> response = null;
       try {
         // Netty throws some annoying exceptions if a connection can't be opened, which happens relatively frequently
         // for tasks that happen to still be starting up, so test the connection first to keep the logs clean.
         checkConnection(request.getUrl().getHost(), request.getUrl().getPort());
 
-        response = submitRequest(request);
+        response = submitRequest(request, responseHandler);
 
-        int responseCode = response.getStatus().getCode();
-        if (responseCode / 100 == 2) {
-          return response;
-        } else if (responseCode == 400) { // don't bother retrying if it's a bad request
-          throw new IAE("Received 400 Bad Request with body: %s", response.getContent());
+        if (response.isValue()) {
+          return response.valueOrThrow();
         } else {
-          throw new IOE("Received status [%d] and content [%s]", responseCode, response.getContent());
+          final StringBuilder exceptionMessage = new StringBuilder();
+          final HttpResponseStatus httpResponseStatus = response.error().getStatus();
+          final String httpResponseContent = response.error().getContent();
+          exceptionMessage.append("Received server error with status [").append(httpResponseStatus).append("]");
+
+          if (!Strings.isNullOrEmpty(httpResponseContent)) {
+            final String choppedMessage =
+                StringUtils.chop(
+                    StringUtils.nullToEmptyNonDruidDataString(httpResponseContent),
+                    1000
+                );
+
+            exceptionMessage.append("; first 1KB of body: ").append(choppedMessage);
+          }
+
+          if (httpResponseStatus.getCode() == 400) {
+            // don't bother retrying if it's a bad request
+            throw new IAE(exceptionMessage.toString());
+          } else {
+            throw new IOE(exceptionMessage.toString());
+          }
         }
       }
       catch (IOException | ChannelException e) {
@@ -360,9 +393,10 @@ public abstract class IndexTaskClient implements AutoCloseable
         // eventually be updated.
 
         final Duration delay;
-        if (response != null && response.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
+        if (response != null && !response.isValue()
+            && response.error().getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
           String headerId = StringUtils.urlDecode(
-              response.getResponse().headers().get(ChatHandlerResource.TASK_ID_HEADER)
+              response.error().getResponse().headers().get(ChatHandlerResource.TASK_ID_HEADER)
           );
           if (headerId != null && !headerId.equals(taskId)) {
             log.warn(
@@ -381,22 +415,24 @@ public abstract class IndexTaskClient implements AutoCloseable
         final String urlForLog = request.getUrl().toString();
         if (!retry) {
           // if retry=false, we probably aren't too concerned if the operation doesn't succeed (i.e. the request was
-          // for informational purposes only) so don't log a scary stack trace
-          log.info("submitRequest failed for [%s], with message [%s]", urlForLog, e.getMessage());
+          // for informational purposes only); log at INFO instead of WARN.
+          log.noStackTrace().info(e, "submitRequest failed for [%s]", urlForLog);
           throw e;
         } else if (delay == null) {
-          log.warn(e, "Retries exhausted for [%s], last exception:", urlForLog);
+          // When retrying, log the final failure at WARN level, since it is likely to be bad news.
+          log.warn(e, "submitRequest failed for [%s]", urlForLog);
           throw e;
         } else {
           try {
             final long sleepTime = delay.getMillis();
-            log.warn(
-                "Bad response HTTP [%s] from [%s]; will try again in [%s] (body/exception: [%s])",
-                (response != null ? response.getStatus().getCode() : "no response"),
+            // When retrying, log non-final failures at INFO level.
+            log.noStackTrace().info(
+                e,
+                "submitRequest failed for [%s]; will try again in [%s]",
                 urlForLog,
-                new Duration(sleepTime).toString(),
-                (response != null ? response.getContent() : e.getMessage())
+                new Duration(sleepTime).toString()
             );
+
             Thread.sleep(sleepTime);
           }
           catch (InterruptedException e2) {
@@ -421,11 +457,17 @@ public abstract class IndexTaskClient implements AutoCloseable
     }
   }
 
-  private StringFullResponseHolder submitRequest(Request request) throws IOException, ChannelException
+  private <IntermediateType, FinalType> Either<StringFullResponseHolder, FinalType> submitRequest(
+      Request request,
+      HttpResponseHandler<IntermediateType, FinalType> responseHandler
+  ) throws IOException, ChannelException
   {
+    final ObjectOrErrorResponseHandler<IntermediateType, FinalType> wrappedHandler =
+        new ObjectOrErrorResponseHandler<>(responseHandler);
+
     try {
       log.debug("HTTP %s: %s", request.getMethod().getName(), request.getUrl().toString());
-      return httpClient.go(request, new StringFullResponseHandler(StandardCharsets.UTF_8), httpTimeout).get();
+      return httpClient.go(request, wrappedHandler, httpTimeout).get();
     }
     catch (Exception e) {
       throw throwIfPossible(e);

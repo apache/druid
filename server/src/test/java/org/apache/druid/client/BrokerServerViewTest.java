@@ -599,7 +599,8 @@ public class BrokerServerViewTest extends CuratorTestBase
         zkPathsConfig,
         curator,
         jsonMapper,
-        Predicates.alwaysTrue()
+        Predicates.alwaysTrue(),
+        "test"
     )
     {
       @Override
@@ -697,7 +698,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     final SmileFactory smileFactory = new SmileFactory();
     smileFactory.configure(SmileGenerator.Feature.ENCODE_BINARY_AS_7BIT, false);
     smileFactory.delegateToTextual(true);
-    final ObjectMapper retVal = new DefaultObjectMapper(smileFactory);
+    final ObjectMapper retVal = new DefaultObjectMapper(smileFactory, "broker");
     retVal.getFactory().setCodec(retVal);
     return retVal;
   }

@@ -19,21 +19,27 @@
 
 package org.apache.druid.indexing.kafka.supervisor;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.KafkaRecordSupplier;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Duration;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 public class KafkaSupervisorIOConfigTest
@@ -259,5 +265,56 @@ public class KafkaSupervisorIOConfigTest
                 )
             ), KafkaSupervisorIOConfig.class
         );
+  }
+
+  @Test
+  public void testAutoScalingConfigSerde() throws JsonProcessingException
+  {
+    HashMap<String, Object> autoScalerConfig = new HashMap<>();
+    autoScalerConfig.put("enableTaskAutoScaler", true);
+    autoScalerConfig.put("lagCollectionIntervalMillis", 500);
+    autoScalerConfig.put("lagCollectionRangeMillis", 500);
+    autoScalerConfig.put("scaleOutThreshold", 0);
+    autoScalerConfig.put("triggerScaleOutFractionThreshold", 0.0);
+    autoScalerConfig.put("scaleInThreshold", 1000000);
+    autoScalerConfig.put("triggerScaleInFractionThreshold", 0.8);
+    autoScalerConfig.put("scaleActionStartDelayMillis", 0);
+    autoScalerConfig.put("scaleActionPeriodMillis", 100);
+    autoScalerConfig.put("taskCountMax", 2);
+    autoScalerConfig.put("taskCountMin", 1);
+    autoScalerConfig.put("scaleInStep", 1);
+    autoScalerConfig.put("scaleOutStep", 2);
+    autoScalerConfig.put("minTriggerScaleActionFrequencyMillis", 1200000);
+
+    final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
+    consumerProperties.put("bootstrap.servers", "localhost:8082");
+
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
+        "test",
+        null,
+        1,
+        1,
+        new Period("PT1H"),
+        consumerProperties,
+        mapper.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class),
+        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+        new Period("P1D"),
+        new Period("PT30S"),
+        true,
+        new Period("PT30M"),
+        null,
+        null,
+        null
+    );
+    String ioConfig = mapper.writeValueAsString(kafkaSupervisorIOConfig);
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig1 = mapper.readValue(ioConfig, KafkaSupervisorIOConfig.class);
+    Assert.assertNotNull(kafkaSupervisorIOConfig1.getAutoScalerConfig());
+    Assert.assertTrue(kafkaSupervisorIOConfig1.getAutoScalerConfig().getEnableTaskAutoScaler());
+    Assert.assertEquals(1, kafkaSupervisorIOConfig1.getAutoScalerConfig().getTaskCountMin());
+    Assert.assertEquals(2, kafkaSupervisorIOConfig1.getAutoScalerConfig().getTaskCountMax());
+    Assert.assertEquals(
+        1200000,
+        kafkaSupervisorIOConfig1.getAutoScalerConfig().getMinTriggerScaleActionFrequencyMillis()
+    );
   }
 }

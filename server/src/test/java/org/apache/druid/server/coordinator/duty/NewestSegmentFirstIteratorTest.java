@@ -94,12 +94,14 @@ public class NewestSegmentFirstIteratorTest
         null,
         null,
         null,
+        null,
+        null,
         null
     );
     Assert.assertEquals(
         new DynamicPartitionsSpec(null, Long.MAX_VALUE),
         NewestSegmentFirstIterator.findPartitionsSpecFromConfig(
-            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment(), null)
         )
     );
   }
@@ -118,7 +120,9 @@ public class NewestSegmentFirstIteratorTest
             null,
             null,
             null,
+            null,
             new DynamicPartitionsSpec(null, null),
+            null,
             null,
             null,
             null,
@@ -135,12 +139,14 @@ public class NewestSegmentFirstIteratorTest
         null,
         null,
         null,
+        null,
+        null,
         null
     );
     Assert.assertEquals(
         new DynamicPartitionsSpec(null, Long.MAX_VALUE),
         NewestSegmentFirstIterator.findPartitionsSpecFromConfig(
-            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment(), null)
         )
     );
   }
@@ -159,7 +165,9 @@ public class NewestSegmentFirstIteratorTest
             null,
             null,
             null,
+            null,
             new DynamicPartitionsSpec(null, 1000L),
+            null,
             null,
             null,
             null,
@@ -176,12 +184,14 @@ public class NewestSegmentFirstIteratorTest
         null,
         null,
         null,
+        null,
+        null,
         null
     );
     Assert.assertEquals(
         new DynamicPartitionsSpec(null, 1000L),
         NewestSegmentFirstIterator.findPartitionsSpecFromConfig(
-            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment(), null)
         )
     );
   }
@@ -200,7 +210,9 @@ public class NewestSegmentFirstIteratorTest
             null,
             null,
             null,
+            null,
             new DynamicPartitionsSpec(100, 1000L),
+            null,
             null,
             null,
             null,
@@ -217,12 +229,14 @@ public class NewestSegmentFirstIteratorTest
         null,
         null,
         null,
+        null,
+        null,
         null
     );
     Assert.assertEquals(
         new DynamicPartitionsSpec(100, 1000L),
         NewestSegmentFirstIterator.findPartitionsSpecFromConfig(
-            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment(), null)
         )
     );
   }
@@ -239,7 +253,9 @@ public class NewestSegmentFirstIteratorTest
         new UserCompactionTaskQueryTuningConfig(
             null,
             null,
+            null,
             1000L,
+            null,
             null,
             null,
             null,
@@ -258,12 +274,14 @@ public class NewestSegmentFirstIteratorTest
         null,
         null,
         null,
+        null,
+        null,
         null
     );
     Assert.assertEquals(
         new DynamicPartitionsSpec(100, 1000L),
         NewestSegmentFirstIterator.findPartitionsSpecFromConfig(
-            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment(), null)
         )
     );
   }
@@ -282,7 +300,9 @@ public class NewestSegmentFirstIteratorTest
             null,
             null,
             null,
+            null,
             new DynamicPartitionsSpec(null, null),
+            null,
             null,
             null,
             null,
@@ -299,12 +319,14 @@ public class NewestSegmentFirstIteratorTest
         null,
         null,
         null,
+        null,
+        null,
         null
     );
     Assert.assertEquals(
         new DynamicPartitionsSpec(null, Long.MAX_VALUE),
         NewestSegmentFirstIterator.findPartitionsSpecFromConfig(
-            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment(), null)
         )
     );
   }
@@ -321,9 +343,11 @@ public class NewestSegmentFirstIteratorTest
         new UserCompactionTaskQueryTuningConfig(
             null,
             null,
+            null,
             1000L,
             null,
             new DynamicPartitionsSpec(null, null),
+            null,
             null,
             null,
             null,
@@ -340,12 +364,14 @@ public class NewestSegmentFirstIteratorTest
         null,
         null,
         null,
+        null,
+        null,
         null
     );
     Assert.assertEquals(
         new DynamicPartitionsSpec(null, Long.MAX_VALUE),
         NewestSegmentFirstIterator.findPartitionsSpecFromConfig(
-            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment(), null)
         )
     );
   }
@@ -364,7 +390,9 @@ public class NewestSegmentFirstIteratorTest
             null,
             null,
             null,
+            null,
             new HashedPartitionsSpec(null, 10, ImmutableList.of("dim")),
+            null,
             null,
             null,
             null,
@@ -381,12 +409,14 @@ public class NewestSegmentFirstIteratorTest
         null,
         null,
         null,
+        null,
+        null,
         null
     );
     Assert.assertEquals(
         new HashedPartitionsSpec(null, 10, ImmutableList.of("dim")),
         NewestSegmentFirstIterator.findPartitionsSpecFromConfig(
-            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment(), null)
         )
     );
   }
@@ -405,7 +435,9 @@ public class NewestSegmentFirstIteratorTest
             null,
             null,
             null,
+            null,
             new SingleDimensionPartitionsSpec(10000, null, "dim", false),
+            null,
             null,
             null,
             null,
@@ -422,12 +454,14 @@ public class NewestSegmentFirstIteratorTest
         null,
         null,
         null,
+        null,
+        null,
         null
     );
     Assert.assertEquals(
         new SingleDimensionPartitionsSpec(10000, null, "dim", false),
         NewestSegmentFirstIterator.findPartitionsSpecFromConfig(
-            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment(), null)
         )
     );
   }

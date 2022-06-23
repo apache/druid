@@ -19,7 +19,9 @@
 
 package org.apache.druid.cli;
 
+import com.github.rvesse.airline.annotations.Command;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
@@ -29,7 +31,6 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
-import io.airlift.airline.Command;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.curator.ZkEnablementConfig;
@@ -45,6 +46,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.MiddleManagerServiceModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -76,11 +78,13 @@ import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.server.metrics.WorkerTaskCountStatsProvider;
 import org.apache.druid.timeline.PruneLastCompactionState;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  *
@@ -107,9 +111,16 @@ public class CliMiddleManager extends ServerRunnable
   }
 
   @Override
+  protected Set<NodeRole> getNodeRoles(Properties properties)
+  {
+    return ImmutableSet.of(NodeRole.MIDDLE_MANAGER);
+  }
+
+  @Override
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
+        new MiddleManagerServiceModule(),
         new Module()
         {
           @Override
@@ -126,7 +137,8 @@ public class CliMiddleManager extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.worker", WorkerConfig.class);
 
             binder.bind(TaskRunner.class).to(ForkingTaskRunner.class);
-            binder.bind(ForkingTaskRunner.class).in(LazySingleton.class);
+            binder.bind(ForkingTaskRunner.class).in(ManageLifecycle.class);
+            binder.bind(WorkerTaskCountStatsProvider.class).to(ForkingTaskRunner.class);
 
             binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
             binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexSupervisorTaskClient>>() {})
@@ -159,12 +171,9 @@ public class CliMiddleManager extends ServerRunnable
 
             LifecycleModule.register(binder, Server.class);
 
-            bindNodeRoleAndAnnouncer(
+            bindAnnouncer(
                 binder,
-                DiscoverySideEffectsProvider
-                    .builder(NodeRole.MIDDLE_MANAGER)
-                    .serviceClasses(ImmutableList.of(WorkerNodeService.class))
-                    .build()
+                DiscoverySideEffectsProvider.create()
             );
 
             Jerseys.addResource(binder, SelfDiscoveryResource.class);

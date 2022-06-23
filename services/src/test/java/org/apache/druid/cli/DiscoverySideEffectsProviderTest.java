@@ -20,12 +20,20 @@
 package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.multibindings.ProvidesIntoSet;
+import com.google.inject.name.Named;
+import org.apache.druid.cli.ServerRunnable.DiscoverySideEffectsProvider;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.DruidService;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.AbstractDruidServiceModule;
+import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.server.DruidNode;
 import org.junit.Assert;
@@ -43,8 +51,6 @@ import java.util.List;
 @RunWith(MockitoJUnitRunner.class)
 public class DiscoverySideEffectsProviderTest
 {
-  private static final boolean USE_LEGACY_ANNOUNCER = true;
-
   private NodeRole nodeRole;
   @Mock
   private DruidNode druidNode;
@@ -57,8 +63,6 @@ public class DiscoverySideEffectsProviderTest
   private ServiceAnnouncer legacyAnnouncer;
   @Mock
   private Lifecycle lifecycle;
-  @Mock
-  private Injector injector;
   private List<Lifecycle.Handler> lifecycleHandlers;
 
   private ServerRunnable.DiscoverySideEffectsProvider target;
@@ -68,8 +72,6 @@ public class DiscoverySideEffectsProviderTest
   {
     nodeRole = NodeRole.HISTORICAL;
     lifecycleHandlers = new ArrayList<>();
-    Mockito.when(injector.getInstance(DiscoverableDruidService.class)).thenReturn(new DiscoverableDruidService());
-    Mockito.when(injector.getInstance(UnDiscoverableDruidService.class)).thenReturn(new UnDiscoverableDruidService());
     Mockito.doAnswer((invocation) -> {
       DiscoveryDruidNode discoveryDruidNode = invocation.getArgument(0);
       boolean isAllServicesDiscoverable =
@@ -77,26 +79,30 @@ public class DiscoverySideEffectsProviderTest
       Assert.assertTrue(isAllServicesDiscoverable);
       return null;
     }).when(discoverableOnlyAnnouncer).announce(ArgumentMatchers.any(DiscoveryDruidNode.class));
-    Mockito.doAnswer((invocation) -> lifecycleHandlers.add(invocation.getArgument(0)))
-           .when(lifecycle).addHandler(
-        ArgumentMatchers.any(Lifecycle.Handler.class),
-        ArgumentMatchers.eq(Lifecycle.Stage.ANNOUNCEMENTS)
-      );
-    target = new ServerRunnable.DiscoverySideEffectsProvider(
-        nodeRole,
-        ImmutableList.of(DiscoverableDruidService.class, UnDiscoverableDruidService.class),
-        USE_LEGACY_ANNOUNCER,
-        druidNode,
-        discoverableOnlyAnnouncer,
-        legacyAnnouncer,
-        lifecycle,
-        injector
-    );
+    Mockito
+        .doAnswer((invocation) -> lifecycleHandlers.add(invocation.getArgument(0)))
+        .when(lifecycle)
+        .addHandler(ArgumentMatchers.any(Lifecycle.Handler.class), ArgumentMatchers.eq(Lifecycle.Stage.ANNOUNCEMENTS));
+    target = DiscoverySideEffectsProvider.withLegacyAnnouncer();
   }
 
   @Test
   public void testGetShouldAddAnnouncementsForDiscoverableServices() throws Exception
   {
+    createInjector(
+        ImmutableList.of(new DiscoverableServiceTestModule(), new UndiscoverableServiceTestModule())
+    ).injectMembers(target);
+    ServerRunnable.DiscoverySideEffectsProvider.Child child = target.get();
+    Assert.assertNotNull(child);
+    Assert.assertEquals(1, lifecycleHandlers.size());
+    // Start the lifecycle handler. This will make announcements via the announcer
+    lifecycleHandlers.get(0).start();
+  }
+
+  @Test
+  public void testInjectWithEmptyDruidService() throws Exception
+  {
+    createInjector(ImmutableList.of()).injectMembers(target);
     ServerRunnable.DiscoverySideEffectsProvider.Child child = target.get();
     Assert.assertNotNull(child);
     Assert.assertEquals(1, lifecycleHandlers.size());
@@ -125,7 +131,7 @@ public class DiscoverySideEffectsProviderTest
   /**
    * Dummy service which is not discoverable.
    */
-  private static class UnDiscoverableDruidService extends DruidService
+  private static class UndiscoverableDruidService extends DruidService
   {
     @Override
     public String getName()
@@ -138,5 +144,54 @@ public class DiscoverySideEffectsProviderTest
     {
       return false;
     }
+  }
+
+  private static class DiscoverableServiceTestModule extends AbstractDruidServiceModule
+  {
+    @ProvidesIntoSet
+    @Named("historical")
+    public Class<? extends DruidService> getDiscoverableDruidService()
+    {
+      return DiscoverableDruidService.class;
+    }
+
+    @Override
+    protected NodeRole getNodeRoleKey()
+    {
+      return NodeRole.HISTORICAL;
+    }
+  }
+
+  private static class UndiscoverableServiceTestModule extends AbstractDruidServiceModule
+  {
+    @ProvidesIntoSet
+    @Named("historical")
+    public Class<? extends DruidService> getUndiscoverableDruidService()
+    {
+      return UndiscoverableDruidService.class;
+    }
+
+    @Override
+    protected NodeRole getNodeRoleKey()
+    {
+      return NodeRole.HISTORICAL;
+    }
+  }
+
+  private Injector createInjector(List<Module> modules)
+  {
+    List<Module> finalModules = new ArrayList<>(modules);
+    finalModules.addAll(
+        ImmutableList.of(
+            GuiceRunnable.registerNodeRoleModule(ImmutableSet.of(nodeRole)),
+            binder -> {
+              binder.bind(DruidNodeAnnouncer.class).toInstance(discoverableOnlyAnnouncer);
+              binder.bind(DruidNode.class).annotatedWith(Self.class).toInstance(druidNode);
+              binder.bind(ServiceAnnouncer.class).toInstance(legacyAnnouncer);
+              binder.bind(Lifecycle.class).toInstance(lifecycle);
+            }
+        )
+    );
+    return GuiceInjectors.makeStartupInjectorWithModules(finalModules);
   }
 }

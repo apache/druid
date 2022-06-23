@@ -17,16 +17,57 @@
  */
 
 import { getMetricSpecs } from './metric-spec';
+import { JSON_SAMPLE } from './test-fixtures';
 
 describe('metric-spec', () => {
-  it('getMetricSecs', () => {
-    expect(getMetricSpecs({ header: ['header'], rows: [] }, {})).toMatchInlineSnapshot(`
-      Array [
-        Object {
-          "name": "count",
-          "type": "count",
+  describe('getMetricSecs', () => {
+    it('works for empty', () => {
+      expect(getMetricSpecs({ header: ['header'], rows: [] }, {}, false)).toEqual([
+        { name: 'count', type: 'count' },
+      ]);
+    });
+
+    it('works with json', () => {
+      expect(getMetricSpecs(JSON_SAMPLE, {}, false)).toEqual([
+        {
+          name: 'count',
+          type: 'count',
         },
-      ]
-    `);
+        {
+          fieldName: 'followers',
+          name: 'sum_followers',
+          type: 'longSum',
+        },
+        {
+          fieldName: 'spend',
+          name: 'sum_spend',
+          type: 'doubleSum',
+        },
+      ]);
+    });
+
+    it('works with csv', () => {
+      expect(getMetricSpecs(JSON_SAMPLE, {}, true)).toEqual([
+        {
+          name: 'count',
+          type: 'count',
+        },
+        {
+          fieldName: 'followers',
+          name: 'sum_followers',
+          type: 'longSum',
+        },
+        {
+          fieldName: 'spend',
+          name: 'sum_spend',
+          type: 'doubleSum',
+        },
+        {
+          fieldName: 'id',
+          name: 'sum_id',
+          type: 'longSum',
+        },
+      ]);
+    });
   });
 });

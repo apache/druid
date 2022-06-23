@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .lookup-edit-dialog {
-  &.bp3-dialog {
+  &.#{$bp-ns}-dialog {
     height: 80vh;
     width: 600px;
   }
@@ -27,9 +29,5 @@
     padding: 15px 5px 5px 15px;
     flex: 1;
     overflow: auto;
-  }
-
-  .ace_gutter-layer {
-    background-color: #27313c;
   }
 }

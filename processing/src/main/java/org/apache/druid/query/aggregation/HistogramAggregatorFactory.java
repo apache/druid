@@ -209,7 +209,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
    * actual type is {@link Histogram}
    */
   @Override
-  public ColumnType getType()
+  public ColumnType getIntermediateType()
   {
     return TYPE;
   }
@@ -218,7 +218,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
    * actual type is {@link HistogramVisual}
    */
   @Override
-  public ColumnType getFinalizedType()
+  public ColumnType getResultType()
   {
     return TYPE_VISUAL;
   }

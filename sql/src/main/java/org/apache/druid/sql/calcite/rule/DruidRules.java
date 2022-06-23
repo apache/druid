@@ -29,7 +29,6 @@ import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidOuterQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidRel;
@@ -51,7 +50,6 @@ public class DruidRules
 
   public static List<RelOptRule> rules(PlannerContext plannerContext)
   {
-    boolean enableLeftScanDirect = QueryContexts.getEnableJoinLeftScanDirect(plannerContext.getQueryContext());
     return ImmutableList.of(
         new DruidQueryRule<>(
             Filter.class,
@@ -92,10 +90,10 @@ public class DruidRules
         DruidOuterQueryRule.WHERE_FILTER,
         DruidOuterQueryRule.SELECT_PROJECT,
         DruidOuterQueryRule.SORT,
-        DruidUnionRule.instance(),
-        DruidUnionDataSourceRule.instance(),
+        new DruidUnionRule(plannerContext),
+        new DruidUnionDataSourceRule(plannerContext),
         DruidSortUnionRule.instance(),
-        DruidJoinRule.instance(enableLeftScanDirect)
+        DruidJoinRule.instance(plannerContext)
     );
   }
 

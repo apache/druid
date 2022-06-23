@@ -28,7 +28,7 @@ describe('utils', () => {
         type: 'index_parallel',
         inputSource: {
           type: 'http',
-          uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+          uris: ['https://website.com/wikipedia.json.gz'],
         },
         inputFormat: {
           type: 'json',

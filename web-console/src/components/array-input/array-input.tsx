@@ -16,10 +16,16 @@
  * limitations under the License.
  */
 
-import { Intent, TextArea } from '@blueprintjs/core';
+import { Button, Intent, Position, TextArea } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
+import classNames from 'classnames';
 import React, { useState } from 'react';
 
 import { compact } from '../../utils';
+import { Suggestion, SuggestionMenu } from '../suggestion-menu/suggestion-menu';
+
+import './array-input.scss';
 
 export interface ArrayInputProps {
   className?: string;
@@ -29,10 +35,11 @@ export interface ArrayInputProps {
   large?: boolean;
   disabled?: boolean;
   intent?: Intent;
+  suggestions?: Suggestion[];
 }
 
 export const ArrayInput = React.memo(function ArrayInput(props: ArrayInputProps) {
-  const { className, placeholder, large, disabled, intent, onChange } = props;
+  const { className, values, placeholder, large, disabled, intent, onChange, suggestions } = props;
   const [intermediateValue, setIntermediateValue] = useState<string | undefined>();
 
   const handleChange = (e: any) => {
@@ -46,21 +53,36 @@ export const ArrayInput = React.memo(function ArrayInput(props: ArrayInputProps)
     );
   };
 
+  function handleSuggestionSelect(suggestion: undefined | string) {
+    if (!suggestion) return;
+    onChange((values || []).concat([suggestion]));
+  }
+
   return (
-    <TextArea
-      className={className}
-      value={
-        typeof intermediateValue !== 'undefined'
-          ? intermediateValue
-          : props.values?.join(', ') || ''
-      }
-      onChange={handleChange}
-      onBlur={() => setIntermediateValue(undefined)}
-      placeholder={placeholder}
-      large={large}
-      disabled={disabled}
-      intent={intent}
-      fill
-    />
+    <div className={classNames('array-input', className)}>
+      <TextArea
+        className={className}
+        value={
+          typeof intermediateValue !== 'undefined' ? intermediateValue : values?.join(', ') || ''
+        }
+        onChange={handleChange}
+        onBlur={() => setIntermediateValue(undefined)}
+        placeholder={placeholder}
+        large={large}
+        disabled={disabled}
+        intent={intent}
+        fill
+      />
+      {suggestions && (
+        <Popover2
+          className="suggestion-button"
+          content={<SuggestionMenu suggestions={suggestions} onSuggest={handleSuggestionSelect} />}
+          position={Position.BOTTOM_RIGHT}
+          autoFocus={false}
+        >
+          <Button icon={IconNames.PLUS} minimal />
+        </Popover2>
+      )}
+    </div>
   );
 });

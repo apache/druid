@@ -38,5 +38,9 @@
     .zero-pad {
       visibility: hidden;
     }
+
+    .unselectable {
+      user-select: none;
+    }
   }
 }

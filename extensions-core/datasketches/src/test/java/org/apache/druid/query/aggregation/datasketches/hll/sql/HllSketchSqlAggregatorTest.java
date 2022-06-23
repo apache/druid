@@ -28,6 +28,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -295,7 +296,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                               ImmutableMap.of(
                                                   TimeseriesQuery.SKIP_EMPTY_BUCKETS,
                                                   true,
-                                                  "sqlQueryId",
+                                                  BaseQuery.SQL_QUERY_ID,
                                                   "dummy"
                                               ),
                                               "d0"
@@ -478,14 +479,14 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           new FieldAccessPostAggregator("p1", "a1"),
                           new HllSketchToEstimatePostAggregator("p3", new FieldAccessPostAggregator("p2", "a0"), false),
                           new HllSketchToEstimatePostAggregator("p5", new FieldAccessPostAggregator("p4", "a0"), false),
-                          new ExpressionPostAggregator("p6", "(p5 + 1)", null, TestExprMacroTable.INSTANCE),
+                          new ExpressionPostAggregator("p6", "(\"p5\" + 1)", null, TestExprMacroTable.INSTANCE),
                           new HllSketchToEstimatePostAggregator("p8", new FieldAccessPostAggregator("p7", "a2"), false),
                           new HllSketchToEstimatePostAggregator(
                               "p10",
                               new FieldAccessPostAggregator("p9", "a0"),
                               false
                           ),
-                          new ExpressionPostAggregator("p11", "abs(p10)", null, TestExprMacroTable.INSTANCE),
+                          new ExpressionPostAggregator("p11", "abs(\"p10\")", null, TestExprMacroTable.INSTANCE),
                           new HllSketchToEstimateWithBoundsPostAggregator(
                               "p13",
                               new FieldAccessPostAggregator("p12", "a0"),
@@ -499,7 +500,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           new FieldAccessPostAggregator("p16", "a3"),
                           new HllSketchToStringPostAggregator("p18", new FieldAccessPostAggregator("p17", "a0")),
                           new HllSketchToStringPostAggregator("p20", new FieldAccessPostAggregator("p19", "a0")),
-                          new ExpressionPostAggregator("p21", "upper(p20)", null, TestExprMacroTable.INSTANCE),
+                          new ExpressionPostAggregator("p21", "upper(\"p20\")", null, TestExprMacroTable.INSTANCE),
                           new HllSketchToEstimatePostAggregator("p23", new FieldAccessPostAggregator("p22", "a0"), true)
                       )
                   )

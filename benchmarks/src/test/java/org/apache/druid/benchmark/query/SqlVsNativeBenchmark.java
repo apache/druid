@@ -115,7 +115,7 @@ public class SqlVsNativeBenchmark
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     plannerFactory = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
@@ -162,7 +162,7 @@ public class SqlVsNativeBenchmark
   public void queryPlanner(Blackhole blackhole) throws Exception
   {
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(null, sqlQuery)) {
-      final PlannerResult plannerResult = planner.plan(sqlQuery);
+      final PlannerResult plannerResult = planner.plan();
       final Sequence<Object[]> resultSequence = plannerResult.run();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
       blackhole.consume(lastRow);

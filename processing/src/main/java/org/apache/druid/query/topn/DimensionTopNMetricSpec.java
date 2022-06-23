@@ -20,6 +20,7 @@
 package org.apache.druid.query.topn;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -28,6 +29,8 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.joda.time.DateTime;
+
+import javax.annotation.Nullable;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -59,7 +62,9 @@ public class DimensionTopNMetricSpec implements TopNMetricSpec
   {
   }
 
+  @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getPreviousStop()
   {
     return previousStop;

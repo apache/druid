@@ -100,7 +100,7 @@ public class DataSourcesResourceTest
         new DataSegment(
             "datasource1",
             Intervals.of("2010-01-01/P1D"),
-            "",
+            "v0",
             null,
             null,
             null,
@@ -113,7 +113,7 @@ public class DataSourcesResourceTest
         new DataSegment(
             "datasource1",
             Intervals.of("2010-01-22/P1D"),
-            "",
+            "v0",
             null,
             null,
             null,
@@ -126,7 +126,7 @@ public class DataSourcesResourceTest
         new DataSegment(
             "datasource2",
             Intervals.of("2010-01-01/P1D"),
-            "",
+            "v0",
             null,
             null,
             null,
@@ -1018,16 +1018,24 @@ public class DataSourcesResourceTest
   public void testMarkSegmentsAsUnused()
   {
     final DruidDataSource dataSource1 = new DruidDataSource("datasource1", new HashMap<>());
-    final Set<String> segmentIds =
-        dataSegmentList.stream().map(ds -> ds.getId().toString()).collect(Collectors.toSet());
+    final Set<SegmentId> segmentIds =
+        dataSegmentList.stream()
+                       .filter(segment -> segment.getDataSource().equals(dataSource1.getName()))
+                       .map(DataSegment::getId)
+                       .collect(Collectors.toSet());
 
     EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(server)).once();
     EasyMock.expect(server.getDataSource("datasource1")).andReturn(dataSource1).once();
-    EasyMock.expect(segmentsMetadataManager.markSegmentsAsUnused("datasource1", segmentIds)).andReturn(1).once();
+    EasyMock.expect(segmentsMetadataManager.markSegmentsAsUnused(segmentIds)).andReturn(1).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
 
     final DataSourcesResource.MarkDataSourceSegmentsPayload payload =
-        new DataSourcesResource.MarkDataSourceSegmentsPayload(null, segmentIds);
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(
+            null,
+            segmentIds.stream()
+                      .map(SegmentId::toString)
+                      .collect(Collectors.toSet())
+        );
 
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(inventoryView, segmentsMetadataManager, null, null, null, null);
@@ -1041,16 +1049,24 @@ public class DataSourcesResourceTest
   public void testMarkSegmentsAsUnusedNoChanges()
   {
     final DruidDataSource dataSource1 = new DruidDataSource("datasource1", new HashMap<>());
-    final Set<String> segmentIds =
-        dataSegmentList.stream().map(ds -> ds.getId().toString()).collect(Collectors.toSet());
+    final Set<SegmentId> segmentIds =
+        dataSegmentList.stream()
+                       .filter(segment -> segment.getDataSource().equals(dataSource1.getName()))
+                       .map(DataSegment::getId)
+                       .collect(Collectors.toSet());
 
     EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(server)).once();
     EasyMock.expect(server.getDataSource("datasource1")).andReturn(dataSource1).once();
-    EasyMock.expect(segmentsMetadataManager.markSegmentsAsUnused("datasource1", segmentIds)).andReturn(0).once();
+    EasyMock.expect(segmentsMetadataManager.markSegmentsAsUnused(segmentIds)).andReturn(0).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
 
     final DataSourcesResource.MarkDataSourceSegmentsPayload payload =
-        new DataSourcesResource.MarkDataSourceSegmentsPayload(null, segmentIds);
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(
+            null,
+            segmentIds.stream()
+                      .map(SegmentId::toString)
+                      .collect(Collectors.toSet())
+        );
 
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(inventoryView, segmentsMetadataManager, null, null, null, null);
@@ -1064,18 +1080,26 @@ public class DataSourcesResourceTest
   public void testMarkSegmentsAsUnusedException()
   {
     final DruidDataSource dataSource1 = new DruidDataSource("datasource1", new HashMap<>());
-    final Set<String> segmentIds =
-        dataSegmentList.stream().map(ds -> ds.getId().toString()).collect(Collectors.toSet());
+    final Set<SegmentId> segmentIds =
+        dataSegmentList.stream()
+                       .filter(segment -> segment.getDataSource().equals(dataSource1.getName()))
+                       .map(DataSegment::getId)
+                       .collect(Collectors.toSet());
 
     EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(server)).once();
     EasyMock.expect(server.getDataSource("datasource1")).andReturn(dataSource1).once();
-    EasyMock.expect(segmentsMetadataManager.markSegmentsAsUnused("datasource1", segmentIds))
+    EasyMock.expect(segmentsMetadataManager.markSegmentsAsUnused(segmentIds))
             .andThrow(new RuntimeException("Exception occurred"))
             .once();
     EasyMock.replay(segmentsMetadataManager, inventoryView, server);
 
     final DataSourcesResource.MarkDataSourceSegmentsPayload payload =
-        new DataSourcesResource.MarkDataSourceSegmentsPayload(null, segmentIds);
+        new DataSourcesResource.MarkDataSourceSegmentsPayload(
+            null,
+            segmentIds.stream()
+                      .map(SegmentId::toString)
+                      .collect(Collectors.toSet())
+        );
 
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(inventoryView, segmentsMetadataManager, null, null, null, null);

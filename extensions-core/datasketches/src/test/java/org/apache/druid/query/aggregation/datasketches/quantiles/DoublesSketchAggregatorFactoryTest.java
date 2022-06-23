@@ -84,6 +84,21 @@ public class DoublesSketchAggregatorFactoryTest
   }
 
   @Test
+  public void testGuessAggregatorHeapFootprint()
+  {
+    DoublesSketchAggregatorFactory factory = new DoublesSketchAggregatorFactory(
+        "myFactory",
+        "myField",
+        128,
+        null
+    );
+    Assert.assertEquals(64, factory.guessAggregatorHeapFootprint(1));
+    Assert.assertEquals(1056, factory.guessAggregatorHeapFootprint(100));
+    Assert.assertEquals(4128, factory.guessAggregatorHeapFootprint(1000));
+    Assert.assertEquals(34848, factory.guessAggregatorHeapFootprint(1_000_000_000_000L));
+  }
+
+  @Test
   public void testMaxIntermediateSize()
   {
     DoublesSketchAggregatorFactory factory = new DoublesSketchAggregatorFactory(
