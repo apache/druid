@@ -39,7 +39,7 @@ import org.apache.curator.test.TestingCluster;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
@@ -3114,7 +3114,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new NoopChatHandlerProvider(),
         testUtils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
-        new NoopIndexingServiceClient(),
+        new NoopOverlordClient(),
         null,
         null,
         null

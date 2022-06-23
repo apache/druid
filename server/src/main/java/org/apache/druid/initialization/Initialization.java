@@ -62,6 +62,7 @@ import org.apache.druid.guice.security.EscalatorModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
+import org.apache.druid.rpc.guice.ServiceClientModule;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumModule;
 import org.apache.druid.server.emitter.EmitterModule;
 import org.apache.druid.server.initialization.AuthenticatorMapperModule;
@@ -429,7 +430,8 @@ public class Initialization
         new AuthorizerModule(),
         new AuthorizerMapperModule(),
         new StartupLoggingModule(),
-        new ExternalStorageAccessSecurityModule()
+        new ExternalStorageAccessSecurityModule(),
+        new ServiceClientModule()
     );
 
     ModuleList actualModules = new ModuleList(baseInjector, nodeRoles);

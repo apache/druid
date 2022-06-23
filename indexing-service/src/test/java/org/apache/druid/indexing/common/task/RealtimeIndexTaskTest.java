@@ -30,7 +30,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -1006,7 +1006,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         new NoopChatHandlerProvider(),
         testUtils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
-        new NoopIndexingServiceClient(),
+        new NoopOverlordClient(),
         null,
         null,
         null
