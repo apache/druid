@@ -175,6 +175,7 @@ Redis
 S3
 SDK
 SIGAR
+SigV4
 SPNEGO
 SqlInputSource
 SQLServer
@@ -266,6 +267,8 @@ druid–kubernetes-extensions
 e.g.
 encodings
 endian
+endpointSigningRegion
+endpointUrl
 enum
 expr
 failover

@@ -42,13 +42,22 @@ public class S3InputSourceConfig
   private PasswordProvider accessKeyId;
   @JsonProperty
   private PasswordProvider secretAccessKey;
+  @JsonProperty
+  private String region;
+  @JsonProperty
+  private String endpointUrl;
+  @JsonProperty
+  private String endpointSigningRegion;
 
   @JsonCreator
   public S3InputSourceConfig(
       @JsonProperty("accessKeyId") @Nullable PasswordProvider accessKeyId,
       @JsonProperty("secretAccessKey") @Nullable PasswordProvider secretAccessKey,
       @JsonProperty("assumeRoleArn") @Nullable String assumeRoleArn,
-      @JsonProperty("assumeRoleExternalId") @Nullable String assumeRoleExternalId
+      @JsonProperty("assumeRoleExternalId") @Nullable String assumeRoleExternalId,
+      @JsonProperty("region") @Nullable String region,
+      @JsonProperty("endpointUrl") @Nullable String endpointUrl,
+      @JsonProperty("endpointSigningRegion") @Nullable String endpointSigningRegion
   )
   {
     this.assumeRoleArn = assumeRoleArn;
@@ -57,6 +66,9 @@ public class S3InputSourceConfig
       this.accessKeyId = Preconditions.checkNotNull(accessKeyId, "accessKeyId cannot be null if secretAccessKey is given");
       this.secretAccessKey = Preconditions.checkNotNull(secretAccessKey, "secretAccessKey cannot be null if accessKeyId is given");
     }
+    this.region = region;
+    this.endpointUrl = endpointUrl;
+    this.endpointSigningRegion = endpointSigningRegion;
   }
 
   @Nullable
@@ -83,6 +95,24 @@ public class S3InputSourceConfig
     return secretAccessKey;
   }
 
+  @Nullable
+  public String getRegion()
+  {
+    return region;
+  }
+
+  @Nullable
+  public String getEndpointUrl()
+  {
+    return endpointUrl;
+  }
+
+  @Nullable
+  public String getEndpointSigningRegion()
+  {
+    return endpointSigningRegion;
+  }
+
   @JsonIgnore
   public boolean isCredentialsConfigured()
   {
@@ -94,10 +124,13 @@ public class S3InputSourceConfig
   public String toString()
   {
     return "S3InputSourceConfig{" +
-           "accessKeyId=" + accessKeyId +
+           "assumeRoleArn='" + assumeRoleArn + '\'' +
+           ", assumeRoleExternalId='" + assumeRoleExternalId + '\'' +
+           ", accessKeyId=" + accessKeyId +
            ", secretAccessKey=" + secretAccessKey +
-           ", assumeRoleArn=" + assumeRoleArn +
-           ", assumeRoleExternalId=" + assumeRoleExternalId +
+           ", region='" + region + '\'' +
+           ", endpointUrl='" + endpointUrl + '\'' +
+           ", endpointSigningRegion='" + endpointSigningRegion + '\'' +
            '}';
   }
 
@@ -111,15 +144,26 @@ public class S3InputSourceConfig
       return false;
     }
     S3InputSourceConfig that = (S3InputSourceConfig) o;
-    return Objects.equals(accessKeyId, that.accessKeyId) &&
+    return Objects.equals(assumeRoleArn, that.assumeRoleArn) &&
+           Objects.equals(assumeRoleExternalId, that.assumeRoleExternalId) &&
+           Objects.equals(accessKeyId, that.accessKeyId) &&
            Objects.equals(secretAccessKey, that.secretAccessKey) &&
-           Objects.equals(assumeRoleArn, that.assumeRoleArn) &&
-           Objects.equals(assumeRoleExternalId, that.assumeRoleExternalId);
+           Objects.equals(region, that.region) &&
+           Objects.equals(endpointUrl, that.endpointUrl) &&
+           Objects.equals(endpointSigningRegion, that.endpointSigningRegion);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(accessKeyId, secretAccessKey, assumeRoleArn, assumeRoleExternalId);
+    return Objects.hash(
+        assumeRoleArn,
+        assumeRoleExternalId,
+        accessKeyId,
+        secretAccessKey,
+        region,
+        endpointUrl,
+        endpointSigningRegion
+    );
   }
 }

@@ -21,6 +21,7 @@ package org.apache.druid.data.input.s3;
 
 import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
@@ -45,6 +46,7 @@ import com.google.inject.Injector;
 import com.google.inject.Provides;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
 import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
@@ -127,7 +129,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   );
 
   private static final S3InputSourceConfig CLOUD_CONFIG_PROPERTIES = new S3InputSourceConfig(
-      new DefaultPasswordProvider("myKey"), new DefaultPasswordProvider("mySecret"), null, null);
+      new DefaultPasswordProvider("myKey"), new DefaultPasswordProvider("mySecret"), null, null, null, null, null);
 
   private static final List<CloudObjectLocation> EXPECTED_LOCATION =
       ImmutableList.of(new CloudObjectLocation("foo", "bar/file.csv"));
@@ -229,6 +231,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     S3InputSourceConfig mockConfigPropertiesWithoutKeyAndSecret = EasyMock.createMock(S3InputSourceConfig.class);
     EasyMock.reset(mockConfigPropertiesWithoutKeyAndSecret);
     EasyMock.expect(mockConfigPropertiesWithoutKeyAndSecret.getAssumeRoleArn()).andStubReturn(null);
+    EasyMock.expect(mockConfigPropertiesWithoutKeyAndSecret.getRegion()).andStubReturn(null);
+    EasyMock.expect(mockConfigPropertiesWithoutKeyAndSecret.getEndpointUrl()).andStubReturn(null);
+    EasyMock.expect(mockConfigPropertiesWithoutKeyAndSecret.getEndpointSigningRegion()).andStubReturn(null);
     EasyMock.expect(mockConfigPropertiesWithoutKeyAndSecret.isCredentialsConfigured())
             .andStubReturn(false);
     EasyMock.replay(mockConfigPropertiesWithoutKeyAndSecret);
@@ -250,6 +255,109 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     withPrefixes.createEntity(new CloudObjectLocation("bucket", "path"));
     EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     EasyMock.verify(mockConfigPropertiesWithoutKeyAndSecret);
+  }
+
+  @Test
+  public void testS3InputSourceUseRegionFromConfig()
+  {
+    S3InputSourceConfig mockConfig = EasyMock.createMock(S3InputSourceConfig.class);
+    EasyMock.reset(mockConfig);
+    EasyMock.expect(mockConfig.getAssumeRoleArn()).andStubReturn(null);
+    EasyMock.expect(mockConfig.getRegion()).andStubReturn("us-west-1");
+    EasyMock.expect(mockConfig.getEndpointUrl()).andStubReturn(null);
+    EasyMock.expect(mockConfig.getEndpointSigningRegion()).andStubReturn(null);
+    EasyMock.expect(mockConfig.isCredentialsConfigured())
+            .andStubReturn(false);
+    EasyMock.replay(mockConfig);
+    EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getAmazonS3ClientBuilder())
+            .andStubReturn(AMAZON_S3_CLIENT_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
+            .andReturn(SERVICE);
+    EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    final S3InputSource withPrefixes = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        null,
+        EXPECTED_LOCATION,
+        mockConfig
+    );
+    Assert.assertNotNull(withPrefixes);
+    // This is to force the s3ClientSupplier to initialize the ServerSideEncryptingAmazonS3
+    withPrefixes.createEntity(new CloudObjectLocation("bucket", "path"));
+    EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.verify(mockConfig);
+  }
+
+  @Test
+  public void testS3InputSourceUseUrlFromConfig()
+  {
+    S3InputSourceConfig mockConfig = EasyMock.createMock(S3InputSourceConfig.class);
+    EasyMock.reset(mockConfig);
+    EasyMock.expect(mockConfig.getAssumeRoleArn()).andStubReturn(null);
+    EasyMock.expect(mockConfig.getRegion()).andStubReturn(null);
+    EasyMock.expect(mockConfig.getEndpointUrl()).andStubReturn("http://s3-us-east-1.amazonaws.com/");
+    EasyMock.expect(mockConfig.getEndpointSigningRegion()).andStubReturn(null);
+    EasyMock.expect(mockConfig.isCredentialsConfigured())
+            .andStubReturn(false);
+    EasyMock.replay(mockConfig);
+    EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getAmazonS3ClientBuilder())
+            .andStubReturn(AMAZON_S3_CLIENT_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
+            .andReturn(SERVICE);
+    EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    AMAZON_S3_CLIENT_BUILDER.setEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("http://s3-us-west-2.amazonaws.com/", "us-west-2");
+    final S3InputSource withPrefixes = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        null,
+        EXPECTED_LOCATION,
+        mockConfig
+    );
+    Assert.assertNotNull(withPrefixes);
+    // This is to force the s3ClientSupplier to initialize the ServerSideEncryptingAmazonS3
+    withPrefixes.createEntity(new CloudObjectLocation("bucket", "path"));
+    EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.verify(mockConfig);
+  }
+
+  @Test
+  public void testS3InputSourceUseSigningFromConfig()
+  {
+    S3InputSourceConfig mockConfig = EasyMock.createMock(S3InputSourceConfig.class);
+    EasyMock.reset(mockConfig);
+    EasyMock.expect(mockConfig.getAssumeRoleArn()).andStubReturn(null);
+    EasyMock.expect(mockConfig.getRegion()).andStubReturn(null);
+    EasyMock.expect(mockConfig.getEndpointUrl()).andStubReturn(null);
+    EasyMock.expect(mockConfig.getEndpointSigningRegion()).andStubReturn("us-west-1");
+    EasyMock.expect(mockConfig.isCredentialsConfigured())
+            .andStubReturn(false);
+    EasyMock.replay(mockConfig);
+    EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getAmazonS3ClientBuilder())
+            .andStubReturn(AMAZON_S3_CLIENT_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
+            .andReturn(SERVICE);
+    EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    final S3InputSource withPrefixes = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        null,
+        EXPECTED_LOCATION,
+        mockConfig
+    );
+    Assert.assertNotNull(withPrefixes);
+    // This is to force the s3ClientSupplier to initialize the ServerSideEncryptingAmazonS3
+    withPrefixes.createEntity(new CloudObjectLocation("bucket", "path"));
+    EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.verify(mockConfig);
   }
 
   @Test

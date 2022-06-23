@@ -23,6 +23,7 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
+import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
@@ -31,6 +32,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.InputEntity;
@@ -119,6 +121,21 @@ public class S3InputSource extends CloudObjectInputSource
               }
             } else {
               applyAssumeRole(s3ClientBuilder, s3InputSourceConfig, awsCredentialsProvider);
+            }
+            if (!Strings.isNullOrEmpty(s3InputSourceConfig.getRegion())) {
+              s3ClientBuilder.getAmazonS3ClientBuilder().setRegion(s3InputSourceConfig.getRegion());
+            }
+            if (!Strings.isNullOrEmpty(s3InputSourceConfig.getEndpointUrl()) || !Strings.isNullOrEmpty(s3InputSourceConfig.getEndpointSigningRegion())) {
+              if (Strings.isNullOrEmpty(s3InputSourceConfig.getEndpointSigningRegion())) {
+                s3ClientBuilder.getAmazonS3ClientBuilder().setEndpointConfiguration(
+                    new AwsClientBuilder.EndpointConfiguration(s3InputSourceConfig.getEndpointUrl(), s3ClientBuilder.getAmazonS3ClientBuilder().getEndpoint().getSigningRegion()));
+              } else if (Strings.isNullOrEmpty(s3InputSourceConfig.getEndpointUrl())) {
+                s3ClientBuilder.getAmazonS3ClientBuilder().setEndpointConfiguration(
+                    new AwsClientBuilder.EndpointConfiguration(s3ClientBuilder.getAmazonS3ClientBuilder().getEndpoint().getServiceEndpoint(), s3InputSourceConfig.getEndpointSigningRegion()));
+              } else {
+                s3ClientBuilder.getAmazonS3ClientBuilder().setEndpointConfiguration(
+                    new AwsClientBuilder.EndpointConfiguration(s3InputSourceConfig.getEndpointUrl(), s3InputSourceConfig.getEndpointSigningRegion()));
+              }
             }
             return s3ClientBuilder.build();
           } else {
