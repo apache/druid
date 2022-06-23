@@ -2022,7 +2022,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.40.v20210413
+version: 9.4.41.v20210516
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
