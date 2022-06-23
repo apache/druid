@@ -48,8 +48,11 @@ public class SetAndVerifyContextQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
+    // No metrics past this point: metrics are not thread-safe.
     return baseRunner.run(
-        queryPlus.withQuery(withTimeoutAndMaxScatterGatherBytes(queryPlus.getQuery(), serverConfig)),
+        queryPlus
+          .withQuery(withTimeoutAndMaxScatterGatherBytes(queryPlus.getQuery(), serverConfig))
+          .withoutMetrics(),
         responseContext
     );
   }

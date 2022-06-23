@@ -230,15 +230,16 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     return resultSequence.flatMap(
         result -> {
           // Generics? Where we're going, we don't need generics.
-          final List rows = (List) result.getEvents();
-          final Iterable arrays = Iterables.transform(rows, (Function) mapper);
+          @SuppressWarnings("unchecked")
+          final List<Object[]> rows = (List<Object[]>) result.getEvents();
+          @SuppressWarnings("unchecked")
+          final Iterable<Object[]> arrays = Iterables.transform(rows, (Function) mapper);
           return Sequences.simple(arrays);
         }
     );
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public Sequence<Object[]> resultsAsArrays(QueryPlus<ScanResultValue> queryPlus, Sequence<ScanResultValue> resultSequence)
   {
     ScanQuery query = (ScanQuery) queryPlus.getQuery();

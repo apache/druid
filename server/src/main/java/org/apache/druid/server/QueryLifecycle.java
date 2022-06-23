@@ -71,7 +71,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Class that helps a Druid server (broker, historical, etc) manage the
+ * Helps a Druid server (broker, historical, etc) manage the
  * lifecycle of a query that it is handling. It ensures that a query goes
  * through the following stages, in the proper order:
  *

@@ -106,6 +106,14 @@ public final class QueryPlus<T>
     }
   }
 
+  public QueryPlus<T> withoutMetrics()
+  {
+    if (queryMetrics == null) {
+      return this;
+    }
+    return new QueryPlus<>(query, null, identity, fragmentBuilder);
+  }
+
   /**
    * Returns a QueryPlus object without the components which are unsafe for concurrent use from multiple threads,
    * therefore couldn't be passed down in concurrent or async {@link QueryRunner}s.

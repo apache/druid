@@ -212,17 +212,6 @@ public class ScanQueryOperator implements Operator<ScanResultValue>
     }
   }
 
-  public enum Limit
-  {
-    NONE,
-    /**
-     * If we're performing time-ordering, we want to scan through the first `limit` rows in each
-     * segment ignoring the number of rows already counted on other segments.
-     */
-    LOCAL,
-    GLOBAL
-  }
-
   protected final FragmentContext context;
   private final ScanQuery query;
   private final Segment segment;

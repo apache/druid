@@ -207,7 +207,6 @@ public class DruidStatement implements Closeable
     }
   }
 
-
   public DruidStatement execute(List<TypedValue> parameters)
   {
     synchronized (lock) {
@@ -384,7 +383,6 @@ public class DruidStatement implements Closeable
         field.getName()
     );
   }
-
 
   private DruidStatement closeAndPropagateThrowable(Throwable t)
   {

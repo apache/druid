@@ -58,18 +58,20 @@ public class ScanPlanner
 {
   /**
    * Sets up an operator over a ScanResultValue operator.  Its behaviour
-   * varies depending on whether the query is returning time-ordered values and whether the CTX_KEY_OUTERMOST
-   * flag is false.
+   * varies depending on whether the query is returning time-ordered values
+   * and whether the CTX_KEY_OUTERMOST flag is false.
    * <p>
    * Behaviours:
    * <ol>
-   * <li>No time ordering: expects the child to produce ScanResultValues which each contain up to query.batchSize events.
-   *     The operator will be "done" when the limit of events is reached.  The final ScanResultValue might contain
+   * <li>No time ordering: expects the child to produce ScanResultValues which
+   *     each contain up to query.batchSize events. The operator will be "done"
+   *     when the limit of events is reached.  The final ScanResultValue might contain
    *     fewer than batchSize events so that the limit number of events is returned.</li>
    * <li>Time Ordering, CTX_KEY_OUTERMOST false: Same behaviour as no time ordering.</li>
-   * <li>Time Ordering, CTX_KEY_OUTERMOST=true or null: The child operator in this case should produce ScanResultValues
-   *    that contain only one event each for the CachingClusteredClient n-way merge.  This operator will perform
-   *    batching according to query batch size until the limit is reached.</li>
+   * <li>Time Ordering, CTX_KEY_OUTERMOST=true or null: The child operator in this
+   *     case should produce ScanResultValues that contain only one event each for
+   *     the CachingClusteredClient n-way merge.  This operator will perform
+   *     batching according to query batch size until the limit is reached.</li>
    * </ol>
    *
    * @see {@link org.apache.druid.query.scan.ScanQueryLimitRowIterator}
@@ -127,7 +129,8 @@ public class ScanPlanner
       historicalQuery =
           queryToRun.withOverriddenContext(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false));
     }
-    QueryPlus<ScanResultValue> historicalQueryPlus = queryPlus.withQuery(historicalQuery);
+    // No metrics past this point: metrics are not thread-safe.
+    QueryPlus<ScanResultValue> historicalQueryPlus = queryPlus.withQuery(historicalQuery).withoutMetrics();
     FragmentContext fragmentContext = queryPlus.fragmentBuilder().context();
     Operator<ScanResultValue> oper = Operators.toOperator(
         input,
