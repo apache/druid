@@ -69,6 +69,14 @@ Before running or debugging the apps, you should do a `mvn clean install -Pdist 
 
 You may also add `-Ddruid.console.skip=true` to the command if you're focusing on backend servers instead of frontend project. This option saves great building time.
 
+## Debugging Running Druid from Intellij
+Intellij IDEA debugger can attach to a local or remote Java process (Druid process). 
+First, you must enable debugging in the application.
+For Druid services (such as Overlord, Coordinator, etc), include the following as JVM config `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=<PORT>` where `<PORT>` is any available port.
+For the peons (workers on Middle Manager), include the following `agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0` in runtime properties `druid.indexer.runner.javaOpts` of the Middle Manager. Note that `address=0` will tell the debugger to assign ephemeral port.
+Once the above is done, you can attach the debugger to the running process by creating a Remote configuration in the Run/Debug Configurations dialog of Intellij (see: https://www.jetbrains.com/help/idea/tutorial-remote-debug.html#debugger_rc). Note that you must set the port value to that of the JVM argument above.
+For the peons (workers on Middle Manager), you can find the assigned ephemeral port by checking the first line of the task log.
+
 ## XML App Def
 You can configure application definitions in XML for import into IntelliJ. Below are a few examples. These should be placed in an XML file in `.idea/runConfigurations` in the Druid source code.
 
