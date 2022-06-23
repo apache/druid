@@ -607,7 +607,8 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
         "json_path_index_test",
         false,
         true,
-        new Pair<>(false, false)
+        new Pair<>(false, false),
+        true
     );
 
     doTestQuery("json_path_index_test", "/indexer/json_path_index_queries.json");
