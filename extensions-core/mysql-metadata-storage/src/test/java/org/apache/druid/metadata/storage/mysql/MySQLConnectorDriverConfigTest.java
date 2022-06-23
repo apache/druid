@@ -22,6 +22,8 @@ package org.apache.druid.metadata.storage.mysql;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
+
 public class MySQLConnectorDriverConfigTest
 {
   @Test
@@ -32,5 +34,14 @@ public class MySQLConnectorDriverConfigTest
                   .usingGetClass()
                   .withNonnullFields("driverClassName")
                   .verify();
+  }
+
+  @Test
+  public void testCreate()
+  {
+    MySQLConnectorDriverConfig config = MySQLConnectorDriverConfig.create(null);
+    assertEquals(MySQLConnectorDriverConfig.MYSQL_DRIVER, config.getDriverClassName());
+    config = MySQLConnectorDriverConfig.create("myDriver");
+    assertEquals("myDriver", config.getDriverClassName());
   }
 }
